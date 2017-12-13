@@ -14,6 +14,11 @@ int main(int argc, char** argv)
   using heif::Box;
   using heif::fourcc;
 
+  if (argc != 2) {
+    fprintf(stderr, "USAGE: %s <filename>\n", argv[0]);
+    return 1;
+  }
+
   std::ifstream istr(argv[1]);
 
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
@@ -51,7 +56,11 @@ int main(int argc, char** argv)
   de265_start_worker_threads(ctx,1);
   de265_push_data(ctx, hdrs.data(), hdrs.size(), 0, nullptr);
   de265_push_data(ctx, data.data(), data.size(), 0, nullptr);
+#if LIBDE265_NUMERIC_VERSION >= 0x02000000
   de265_push_end_of_stream(ctx);
+#else
+  de265_flush_data(ctx);
+#endif
 
   FILE* fh = fopen("out.bin", "wb");
   fwrite(hdrs.data(),1,hdrs.size(),fh);
@@ -59,13 +68,32 @@ int main(int argc, char** argv)
   fclose(fh);
 
   for (;;) {
+#if LIBDE265_NUMERIC_VERSION >= 0x02000000
     int action = de265_get_action(ctx, 1);
     printf("libde265 action: %d\n",action);
 
     if (action==de265_action_get_image) {
       printf("image decoded !\n");
     }
+#else
+    int more;
+    de265_error err;
+    do {
+      more = 0;
+      err = de265_decode(ctx, &more);
+      if (err != DE265_OK) {
+        printf("Error decoding: %s (%d)\n", de265_get_error_text(err), err);
+        break;
+      }
 
+      const struct de265_image* image = de265_get_next_picture(ctx);
+      if (image) {
+        printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
+            de265_get_image_height(image, 0));
+        de265_release_next_picture(ctx);
+      }
+    } while (more);
+#endif
     break;
     //#define de265_action_push_more_input     1
     //#define de265_action_end_of_stream       4
