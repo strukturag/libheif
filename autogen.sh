@@ -2,7 +2,7 @@
 set -eu
 #
 # HEIF codec.
-# Copyright (c) 2013 struktur AG, Joachim Bauch <bauch@struktur.de>
+# Copyright (c) 2017 struktur AG, Joachim Bauch <bauch@struktur.de>
 #
 # This file is part of libheif.
 #
