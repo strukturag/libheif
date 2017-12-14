@@ -60,16 +60,35 @@ int main(int argc, char** argv)
       meta_box = box;
     }
   }
-
+  if (!meta_box) {
+    fprintf(stderr, "Not a valid HEIF file (no 'meta' box found)\n");
+    return 1;
+  }
 
   std::shared_ptr<Box_iloc> iloc_box = std::dynamic_pointer_cast<Box_iloc>(meta_box->get_child_box(fourcc("iloc")));
   std::shared_ptr<Box> iprp_box = meta_box->get_child_box(fourcc("iprp"));
+  if (!iloc_box || !iprp_box) {
+    fprintf(stderr, "Not a valid HEIF file (no 'iloc' and/or 'iprp' box found)\n");
+    return 1;
+  }
   std::shared_ptr<Box> ipco_box = iprp_box->get_child_box(fourcc("ipco"));
+  if (!ipco_box) {
+    fprintf(stderr, "Not a valid HEIF file (no 'ipco' box found)\n");
+    return 1;
+  }
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(ipco_box->get_child_box(fourcc("hvcC")));
+  if (!hvcC_box) {
+    fprintf(stderr, "Not a valid HEIF file (no 'hvcC' box found)\n");
+    return 1;
+  }
 
   std::ifstream istr2(argv[1]);
   std::vector<uint8_t> hdrs = hvcC_box->get_headers();
   std::vector<uint8_t> data = iloc_box->read_all_data(istr2);
+  if (hdrs.empty() || data.empty()) {
+    fprintf(stderr, "Not a valid HEIF file (no HEVC content found)\n");
+    return 1;
+  }
 
   de265_decoder_context* ctx = de265_new_decoder();
   de265_start_worker_threads(ctx,1);
