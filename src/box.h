@@ -61,11 +61,7 @@ namespace heif {
   {
   public:
     BitstreamRange(std::istream* istr, uint64_t length, BitstreamRange* parent = nullptr) {
-      m_remaining = length;
-      m_end_reached = (length==0);
-
-      m_istr = istr;
-      m_parent_range = parent;
+      construct(istr, length, parent);
     }
 
     bool read(int n) {
@@ -139,6 +135,15 @@ namespace heif {
 
     std::istream* get_istream() { return m_istr; }
 
+  protected:
+    void construct(std::istream* istr, uint64_t length, BitstreamRange* parent) {
+      m_remaining = length;
+      m_end_reached = (length==0);
+
+      m_istr = istr;
+      m_parent_range = parent;
+    }
+
   private:
     std::istream* m_istr = nullptr;
     BitstreamRange* m_parent_range = nullptr;
@@ -193,7 +198,7 @@ namespace heif {
 
     Error write(std::ostream& ostr) const;
 
-    std::string dump(Indent&) const;
+    virtual std::string dump(Indent&) const;
 
 
     // --- full box
@@ -407,7 +412,11 @@ namespace heif {
 
   class Box_hvcC : public Box {
   public:
-  Box_hvcC(const BoxHeader& hdr) : Box(hdr) { }
+    Box_hvcC(const BoxHeader& hdr) : Box(hdr) {
+#if defined(__EMSCRIPTEN__)
+      m_general_constraint_indicator_flags.resize(NUM_CONSTRAINT_INDICATOR_FLAGS);
+#endif
+    }
 
     std::string dump(Indent&) const override;
 
@@ -417,12 +426,17 @@ namespace heif {
     Error parse(BitstreamRange& range);
 
   private:
+    static const size_t NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
     uint8_t  m_configuration_version;
     uint8_t  m_general_profile_space;
     bool     m_general_tier_flag;
     uint8_t  m_general_profile_idc;
     uint32_t m_general_profile_compatibility_flags;
-    std::array<bool,48> m_general_constraint_indicator_flags;
+#if !defined(__EMSCRIPTEN__)
+    std::array<bool,NUM_CONSTRAINT_INDICATOR_FLAGS> m_general_constraint_indicator_flags;
+#else
+    std::vector<bool> m_general_constraint_indicator_flags;
+#endif
     uint8_t  m_general_level_idc;
 
     uint16_t m_min_spatial_segmentation_idc;
