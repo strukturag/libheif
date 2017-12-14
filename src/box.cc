@@ -410,7 +410,7 @@ Error Box_ftyp::parse(BitstreamRange& range)
 
   int n_minor_brands = (get_box_size()-get_header_size()-8)/4;
 
-  for (int i=0;i<n_minor_brands;i++) {
+  for (int i=0;i<n_minor_brands && !range.error();i++) {
     m_compatible_brands.push_back( read32(range) );
   }
 
@@ -617,9 +617,15 @@ std::vector<uint8_t> Box_iloc::read_all_data(std::istream& istr) const
 {
   std::vector<uint8_t> data;
 
+  uint64_t max_size = get_box_size();
   for (const auto& item : m_items) {
     for (const auto& extent : item.extents) {
       istr.seekg(extent.offset + item.base_offset, std::ios::beg);
+      if (istr.eof()) {
+        // Out-of-bounds
+        data.clear();
+        return data;
+      }
 
       uint64_t bytes_read = 0;
 
@@ -633,6 +639,11 @@ std::vector<uint8_t> Box_iloc::read_all_data(std::istream& istr) const
         uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
 
         size_t old_size = data.size();
+        if (bytes_read + size32 > max_size) {
+          // Out-of-bounds
+          data.clear();
+          return data;
+        }
         data.resize( old_size + size32);
         istr.read((char*)data.data() + old_size, size32);
 
@@ -842,7 +853,7 @@ Error Box_hvcC::parse(BitstreamRange& range)
 
   int nArrays = read8(range);
 
-  for (int i=0; i<nArrays; i++)
+  for (int i=0; i<nArrays && !range.error(); i++)
     {
       byte = read8(range);
 
@@ -852,7 +863,7 @@ Error Box_hvcC::parse(BitstreamRange& range)
       array.m_NAL_unit_type = (byte & 0x3F);
 
       int nUnits = read16(range);
-      for (int u=0; u<nUnits; u++) {
+      for (int u=0; u<nUnits && !range.error(); u++) {
 
         std::vector<uint8_t> nal_unit;
         int size = read16(range);
