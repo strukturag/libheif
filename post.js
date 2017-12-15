@@ -1,39 +1,3 @@
-var CanvasDrawer = function(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext("2d");
-    this.image_data = null;
-};
-
-CanvasDrawer.prototype.draw = function(image) {
-    var w = image.get_width();
-    var h = image.get_height();
-    if (w != this.canvas.width || h != this.canvas.height ||
-            !this.image_data) {
-        this.canvas.width = w;
-        this.canvas.height = h;
-        this.image_data = this.ctx.createImageData(w, h);
-        var image_data = this.image_data.data;
-        // Start with a white image.
-        for (var i=0; i<w*h; i++) {
-            image_data[i*4+3] = 255;
-        }
-    }
-
-    image.display(this.image_data, function(display_image_data) {
-        if (window.requestAnimationFrame) {
-            this.pending_image_data = display_image_data;
-            window.requestAnimationFrame(function() {
-                if (this.pending_image_data) {
-                    this.ctx.putImageData(this.pending_image_data, 0, 0);
-                    this.pending_image_data = null;
-                }
-            }.bind(this));
-        } else {
-            this.ctx.putImageData(display_image_data, 0, 0);
-        }
-    }.bind(this));
-};
-
 function StringToArrayBuffer(str) {
     var buf = new ArrayBuffer(str.length);
     var bufView = new Uint8Array(buf);
@@ -81,8 +45,6 @@ HeifDecoder.prototype.decode = function(buffer) {
 
 var libheif = {
     // Expose high-level API.
-    /** @expose */
-    CanvasDrawer: CanvasDrawer,
     /** @expose */
     HeifDecoder: HeifDecoder,
 
