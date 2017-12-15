@@ -54,6 +54,9 @@ namespace heif {
     Error(ErrorCode c) : error_code(c) { }
 
     static Error OK;
+
+    bool operator==(const Error& other) const { return error_code == other.error_code; }
+    bool operator!=(const Error& other) const { return !(*this == other); }
   };
 
 
@@ -228,7 +231,7 @@ namespace heif {
     Box(const BoxHeader& hdr) : BoxHeader(hdr) { }
     virtual ~Box() { }
 
-    static std::shared_ptr<Box> read(BitstreamRange& range);
+    static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
     virtual Error write(std::ostream& ostr) const { return Error::OK; }
 

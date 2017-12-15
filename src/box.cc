@@ -35,6 +35,9 @@
 
 using namespace heif;
 
+static const size_t MAX_CHILDREN_PER_BOX = 1024;
+static const int MAX_ILOC_ITEMS = 1024;
+static const int MAX_ILOC_EXTENDS_PER_ITEM = 32;
 
 heif::Error heif::Error::OK(heif::Error::Ok);
 
@@ -273,12 +276,12 @@ Error BoxHeader::parse_full_box_header(BitstreamRange& range)
 }
 
 
-std::shared_ptr<heif::Box> Box::read(BitstreamRange& range)
+Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 {
   BoxHeader hdr;
   hdr.parse(range);
   if (range.error()) {
-    return nullptr;
+    return range.get_error();
   }
 
   std::shared_ptr<Box> box;
@@ -338,9 +341,11 @@ std::shared_ptr<heif::Box> Box::read(BitstreamRange& range)
                           hdr.get_box_size() - hdr.get_header_size(),
                           &range);
 
-  box->parse(boxrange);
-
-  return box;
+  Error err = box->parse(boxrange);
+  if (err == Error::OK) {
+    *result = std::move(box);
+  }
+  return err;
 }
 
 
@@ -381,15 +386,22 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 
 Error Box::read_children(BitstreamRange& range)
 {
-  while (!range.eof()) {
-    auto box = Box::read(range);
-
-    if (box) {
-      m_children.push_back(box);
+  while (!range.eof() && !range.error()) {
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    if (error != Error::OK) {
+      return error;
     }
+
+    if (m_children.size() > MAX_CHILDREN_PER_BOX) {
+      // Sanity check.
+      return Error(Error::ParseError);
+    }
+
+    m_children.push_back(std::move(box));
   }
 
-  return Error::OK;
+  return range.get_error();
 }
 
 
@@ -468,9 +480,7 @@ Error Box_meta::parse(BitstreamRange& range)
   }
   */
 
-  read_children(range);
-
-  return Error::OK;
+  return read_children(range);
 }
 
 
@@ -594,6 +604,10 @@ Error Box_iloc::parse(BitstreamRange& range)
   int base_offset_size = (values4 >> 4) & 0xF;
 
   int item_count = read16(range);
+  // Sanity check.
+  if (item_count > MAX_ILOC_ITEMS) {
+    return Error(Error::ParseError);
+  }
 
   for (int i=0;i<item_count;i++) {
     Item item;
@@ -611,6 +625,10 @@ Error Box_iloc::parse(BitstreamRange& range)
     }
 
     int extent_count = read16(range);
+    // Sanity check.
+    if (extent_count > MAX_ILOC_EXTENDS_PER_ITEM) {
+      return Error(Error::ParseError);
+    }
 
     for (int e=0;e<extent_count;e++) {
       Extent extent;
@@ -644,7 +662,7 @@ Error Box_iloc::parse(BitstreamRange& range)
 
   //printf("end limit: %d\n",sizeLimit);
 
-  return Error::OK;
+  return range.get_error();
 }
 
 
@@ -765,7 +783,7 @@ Error Box_infe::parse(BitstreamRange& range)
     }
   }
 
-  return Error::OK;
+  return range.get_error();
 }
 
 
@@ -800,9 +818,7 @@ Error Box_iinf::parse(BitstreamRange& range)
     item_count = read32(range);
   }
 
-  read_children(range);
-
-  return Error::OK;
+  return read_children(range);
 }
 
 
@@ -821,9 +837,7 @@ Error Box_iprp::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  read_children(range);
-
-  return Error::OK;
+  return read_children(range);
 }
 
 
@@ -842,9 +856,7 @@ Error Box_ipco::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  read_children(range);
-
-  return Error::OK;
+  return read_children(range);
 }
 
 

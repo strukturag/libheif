@@ -46,9 +46,9 @@ int main(int argc, char** argv)
   std::shared_ptr<Box_meta> meta_box;
 
   for (;;) {
-    auto box = Box::read(range);
-
-    if (!box || range.error()) {
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    if (error != Error::OK || range.error() || range.eof()) {
       break;
     }
 

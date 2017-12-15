@@ -75,6 +75,16 @@ static std::string dump_box(Box* box) {
   return box->dump(indent);
 }
 
+static std::shared_ptr<Box> Box_read(BitstreamRange& range) {
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box);
+  if (error != Error::OK) {
+    return nullptr;
+  }
+
+  return box;
+}
+
 class EmscriptenBitstreamRange : public BitstreamRange {
  public:
   explicit EmscriptenBitstreamRange(const std::string& data)
@@ -120,7 +130,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     ;
 
   emscripten::class_<Box, emscripten::base<BoxHeader>>("Box")
-    .class_function("read", &Box::read)
+    .class_function("read", &Box_read, emscripten::allow_raw_pointers())
     .function("get_child_box", &Box::get_child_box)
     .function("dump", &dump_box, emscripten::allow_raw_pointers())
     .smart_ptr<std::shared_ptr<Box>>()
