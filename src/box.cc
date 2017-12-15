@@ -380,7 +380,7 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
     }
   }
 
-  return std::move(result);
+  return result;
 }
 
 
