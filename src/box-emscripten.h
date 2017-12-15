@@ -17,7 +17,10 @@ static std::string get_headers_string(Box_hvcC* box) {
     return "";
   }
 
-  std::vector<uint8_t> r = box->get_headers();
+  std::vector<uint8_t> r;
+  if (!box->get_headers(&r)) {
+    return "";
+  }
   return std::string(reinterpret_cast<const char*>(r.data()), r.size());
 }
 
@@ -28,7 +31,10 @@ static std::string read_all_data_string(Box_iloc* box,
   }
 
   std::istrstream s(data.data(), data.size());
-  std::vector<uint8_t> r = box->read_all_data(s);
+  std::vector<uint8_t> r;
+  if (!box->read_all_data(s, &r)) {
+    return "";
+  }
   return std::string(reinterpret_cast<const char*>(r.data()), r.size());
 }
 

@@ -366,6 +366,19 @@ std::shared_ptr<Box> Box::get_child_box(uint32_t short_type) const
 }
 
 
+std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) const
+{
+  std::vector<std::shared_ptr<Box>> result;
+  for (auto& box : m_children) {
+    if (box->get_short_type()==short_type) {
+      result.push_back(box);
+    }
+  }
+
+  return std::move(result);
+}
+
+
 Error Box::read_children(BitstreamRange& range)
 {
   while (!range.eof()) {
@@ -468,6 +481,50 @@ std::string Box_meta::dump(Indent& indent) const
   sstr << dump_children(indent);
 
   return sstr.str();
+}
+
+
+bool Box_meta::get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const {
+  std::shared_ptr<Box> iprp_box = get_child_box(fourcc("iprp"));
+  if (!iprp_box) {
+    return false;
+  }
+
+  std::shared_ptr<Box> ipco_box = iprp_box->get_child_box(fourcc("ipco"));
+  if (!ipco_box) {
+    return false;
+  }
+
+  // HEVC image headers.
+  std::vector<std::shared_ptr<Box>> hvcC_boxes = ipco_box->get_child_boxes(fourcc("hvcC"));
+  if (hvcC_boxes.empty()) {
+    // No images in the file.
+    images->clear();
+    return true;
+  }
+
+  // HEVC image data.
+  std::shared_ptr<Box_iloc> iloc = std::dynamic_pointer_cast<Box_iloc>(get_child_box(fourcc("iloc")));
+  if (!iloc || iloc->get_items().size() != hvcC_boxes.size()) {
+    // TODO(jojo): Can images share a header?
+    return false;
+  }
+
+  const std::vector<Box_iloc::Item>& iloc_items = iloc->get_items();
+  for (size_t i = 0; i < hvcC_boxes.size(); i++) {
+    Box_hvcC* hvcC = static_cast<Box_hvcC*>(hvcC_boxes[i].get());
+    std::vector<uint8_t> data;
+    if (!hvcC->get_headers(&data)) {
+      return false;
+    }
+    if (!iloc->read_data(iloc_items[i], istr, &data)) {
+      return false;
+    }
+
+    images->push_back(std::move(data));
+  }
+
+  return true;
 }
 
 
@@ -613,48 +670,57 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-bool Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
+bool Box_iloc::read_data(const Item& item, std::istream& istr, std::vector<uint8_t>* dest) const
 {
   uint64_t curpos = istr.tellg();
   istr.seekg(0, std::ios_base::end);
   uint64_t max_size = istr.tellg();
   istr.seekg(curpos, std::ios_base::beg);
-  for (const auto& item : m_items) {
-    for (const auto& extent : item.extents) {
-      istr.seekg(extent.offset + item.base_offset, std::ios::beg);
-      if (istr.eof()) {
+  for (const auto& extent : item.extents) {
+    istr.seekg(extent.offset + item.base_offset, std::ios::beg);
+    if (istr.eof()) {
+      // Out-of-bounds
+      dest->clear();
+      return false;
+    }
+
+    uint64_t bytes_read = 0;
+
+    for (;;) {
+      dest->push_back(0);
+      dest->push_back(0);
+      dest->push_back(1);
+
+      uint8_t size[4];
+      istr.read((char*)size,4);
+      uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
+      bytes_read += 4;
+
+      if (max_size - bytes_read < size32) {
         // Out-of-bounds
         dest->clear();
         return false;
       }
 
-      uint64_t bytes_read = 0;
+      size_t old_size = dest->size();
+      dest->resize(old_size + size32);
+      istr.read((char*)dest->data() + old_size, size32);
+      bytes_read += size32;
 
-      for (;;) {
-        dest->push_back(0);
-        dest->push_back(0);
-        dest->push_back(1);
-
-        uint8_t size[4];
-        istr.read((char*)size,4);
-        uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
-        bytes_read += 4;
-
-        if (max_size - bytes_read < size32) {
-          // Out-of-bounds
-          dest->clear();
-          return false;
-        }
-
-        size_t old_size = dest->size();
-        dest->resize(old_size + size32);
-        istr.read((char*)dest->data() + old_size, size32);
-        bytes_read += size32;
-
-        if (bytes_read >= extent.length) {
-          break;
-        }
+      if (bytes_read >= extent.length) {
+        break;
       }
+    }
+  }
+
+  return true;
+}
+
+bool Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
+{
+  for (const auto& item : m_items) {
+    if (!read_data(item, istr, dest)) {
+      return false;
     }
   }
 

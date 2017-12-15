@@ -235,6 +235,7 @@ namespace heif {
     virtual std::string dump(Indent&) const;
 
     std::shared_ptr<Box> get_child_box(uint32_t short_type) const;
+    std::vector<std::shared_ptr<Box>> get_child_boxes(uint32_t short_type) const;
 
   protected:
     virtual Error parse(BitstreamRange& range);
@@ -268,6 +269,8 @@ namespace heif {
   Box_meta(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
+
+    bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
 
   protected:
     Error parse(BitstreamRange& range);
@@ -326,6 +329,7 @@ namespace heif {
 
     const std::vector<Item>& get_items() const { return m_items; }
 
+    bool read_data(const Item& item, std::istream& istr, std::vector<uint8_t>* dest) const;
     bool read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
 
   protected:

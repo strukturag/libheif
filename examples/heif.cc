@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
   heif::BitstreamRange range(&istr, maxSize);
 
-  std::shared_ptr<Box> meta_box;
+  std::shared_ptr<Box_meta> meta_box;
 
   for (;;) {
     auto box = Box::read(range);
@@ -57,7 +57,7 @@ int main(int argc, char** argv)
     std::cout << box->dump(indent);
 
     if (box->get_short_type() == fourcc("meta")) {
-      meta_box = box;
+      meta_box = std::dynamic_pointer_cast<Box_meta>(box);
     }
   }
   if (!meta_box) {
@@ -65,39 +65,18 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  std::shared_ptr<Box_iloc> iloc_box = std::dynamic_pointer_cast<Box_iloc>(meta_box->get_child_box(fourcc("iloc")));
-  std::shared_ptr<Box> iprp_box = meta_box->get_child_box(fourcc("iprp"));
-  if (!iloc_box || !iprp_box) {
-    fprintf(stderr, "Not a valid HEIF file (no 'iloc' and/or 'iprp' box found)\n");
-    return 1;
-  }
-  std::shared_ptr<Box> ipco_box = iprp_box->get_child_box(fourcc("ipco"));
-  if (!ipco_box) {
-    fprintf(stderr, "Not a valid HEIF file (no 'ipco' box found)\n");
-    return 1;
-  }
-  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(ipco_box->get_child_box(fourcc("hvcC")));
-  if (!hvcC_box) {
-    fprintf(stderr, "Not a valid HEIF file (no 'hvcC' box found)\n");
-    return 1;
-  }
-
+  std::vector<std::vector<uint8_t>> images;
   std::ifstream istr2(argv[1]);
-  std::vector<uint8_t> hdrs;
-  if (!hvcC_box->get_headers(&hdrs)) {
-    fprintf(stderr, "Not a valid HEIF file (could not get HEVC headers)\n");
-    return 1;
-  }
-  std::vector<uint8_t> data;
-  if (!iloc_box->read_all_data(istr2, &data) || data.empty()) {
-    fprintf(stderr, "Not a valid HEIF file (could not get HEVC data)\n");
+  if (!meta_box->get_images(istr2, &images)) {
+    fprintf(stderr, "Not a valid HEIF file (could not get images)\n");
     return 1;
   }
 
   de265_decoder_context* ctx = de265_new_decoder();
   de265_start_worker_threads(ctx,1);
-  de265_push_data(ctx, hdrs.data(), hdrs.size(), 0, nullptr);
-  de265_push_data(ctx, data.data(), data.size(), 0, nullptr);
+  for (const auto& item : images) {
+    de265_push_data(ctx, item.data(), item.size(), 0, nullptr);
+  }
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
   de265_push_end_of_stream(ctx);
 #else
@@ -105,8 +84,9 @@ int main(int argc, char** argv)
 #endif
 
   FILE* fh = fopen("out.bin", "wb");
-  fwrite(hdrs.data(),1,hdrs.size(),fh);
-  fwrite(data.data(),1,data.size(),fh);
+  for (const auto& item : images) {
+    fwrite(item.data(),1,item.size(),fh);
+  }
   fclose(fh);
 
   for (;;) {
