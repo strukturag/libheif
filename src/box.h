@@ -339,8 +339,6 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    uint16_t m_item_ID;
-
     std::vector<Item> m_items;
   };
 
