@@ -255,7 +255,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     uint32_t m_major_brand;
@@ -273,7 +273,7 @@ namespace heif {
     bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
   };
 
 
@@ -284,7 +284,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     uint32_t m_pre_defined;
@@ -301,7 +301,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     uint16_t m_item_ID;
@@ -333,7 +333,7 @@ namespace heif {
     bool read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     uint16_t m_item_ID;
@@ -349,7 +349,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
       uint16_t m_item_ID;
@@ -370,7 +370,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     //std::vector< std::shared_ptr<Box_infe> > m_iteminfos;
@@ -384,7 +384,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
   };
 
 
@@ -395,7 +395,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
   };
 
 
@@ -406,7 +406,7 @@ namespace heif {
     std::string dump(Indent&) const override;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     uint32_t m_image_width;
@@ -427,7 +427,7 @@ namespace heif {
     bool get_headers(std::vector<uint8_t>* dest) const;
 
   protected:
-    Error parse(BitstreamRange& range);
+    Error parse(BitstreamRange& range) override;
 
   private:
     static const size_t NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
