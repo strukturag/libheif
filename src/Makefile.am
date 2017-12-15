@@ -1,6 +1,11 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-lib_LTLIBRARIES = libheif.la
+bin_PROGRAMS =
+lib_LTLIBRARIES =
+
+if !ENABLE_LIBFUZZER
+lib_LTLIBRARIES += libheif.la
+endif
 
 libheif_ladir = \
         $(includedir)/libheif
@@ -19,3 +24,13 @@ libheif_la_SOURCES = \
 
 libheif_la_HEADERS = \
   box.h
+
+if ENABLE_LIBFUZZER
+bin_PROGRAMS += libheif-fuzzer
+endif
+
+libheif_fuzzer_DEPENDENCIES =
+libheif_fuzzer_CXXFLAGS =
+libheif_fuzzer_LDFLAGS =
+libheif_fuzzer_LDADD =
+libheif_fuzzer_SOURCES = $(libheif_la_SOURCES) fuzzer.cc

@@ -25,6 +25,7 @@ AC_PROG_GREP
 AM_INIT_AUTOMAKE([foreign])
 
 AX_CXX_COMPILE_STDCXX_11()
+
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_FUNC_ERROR_AT_LINE
@@ -44,6 +45,17 @@ PKG_CHECK_MODULES([libde265], [libde265], [
 
 AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$have_libde265" != "xno"])
 AC_MSG_NOTICE([Building examples: $have_libde265])
+
+AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
+    [Enable fuzzing with libFuzzer.]))
+if eval "test x$enable_libfuzzer = xyes"; then
+    AC_MSG_NOTICE([Enable libFuzzer])
+    LIBFUZZER_FLAGS="-fsanitize=fuzzer,address"
+    CFLAGS="$CFLAGS $LIBFUZZER_FLAGS"
+    CXXFLAGS="$CXXFLAGS $LIBFUZZER_FLAGS"
+fi
+AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" = "xyes"])
+AC_SUBST(ENABLE_LIBFUZZER)
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
