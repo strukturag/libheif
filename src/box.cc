@@ -935,6 +935,11 @@ Error Box_hvcC::parse(BitstreamRange& range)
 
         std::vector<uint8_t> nal_unit;
         int size = read16(range);
+        if (!size) {
+          // Ignore empty NAL units.
+          continue;
+        }
+
         if (range.read(size)) {
           nal_unit.resize(size);
           range.get_istream()->read((char*)nal_unit.data(), size);
