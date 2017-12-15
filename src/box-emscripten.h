@@ -12,6 +12,25 @@
 
 namespace heif {
 
+static std::vector<std::string> Box_meta_get_images(Box_meta* box,
+    const std::string& data) {
+  std::vector<std::string> result;
+  if (!box) {
+    return result;
+  }
+
+  std::istrstream s(data.data(), data.size());
+  std::vector<std::vector<uint8_t>> r;
+  if (!box->get_images(s, &r)) {
+    return result;
+  }
+
+  for (std::vector<uint8_t> v : r) {
+    result.push_back(std::string(reinterpret_cast<char*>(v.data()), v.size()));
+  }
+  return result;
+}
+
 static std::string get_headers_string(Box_hvcC* box) {
   if (!box) {
     return "";
@@ -107,6 +126,11 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .smart_ptr<std::shared_ptr<Box>>()
     ;
 
+  emscripten::class_<Box_meta, emscripten::base<Box>>("Box_meta")
+    .function("get_images", &Box_meta_get_images,
+        emscripten::allow_raw_pointers())
+    ;
+
   emscripten::class_<Box_iloc, emscripten::base<Box>>("Box_iloc")
     .function("read_all_data", &read_all_data_string,
         emscripten::allow_raw_pointers())
@@ -116,6 +140,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .function("get_headers", &get_headers_string,
         emscripten::allow_raw_pointers())
     ;
+
+  emscripten::register_vector<std::string>("StringVector");
 }
 
 }  // namespace heif

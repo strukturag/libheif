@@ -29,6 +29,5 @@ var Module = {
         console.error(text);
     },
     canvas: {},
-    noInitialRun: true,
-    noFSInit: true
+    noInitialRun: true
 };

@@ -43,11 +43,10 @@ function StringToArrayBuffer(str) {
     return buf;
 }
 
-var HeifDecoder = function(libde265) {
-    this.libde265 = libde265;
+var HeifDecoder = function() {
 };
 
-HeifDecoder.prototype.decode = function(buffer, image_callback, callback) {
+HeifDecoder.prototype.decode = function(buffer) {
     var input = new libheif.BitstreamRange(buffer);
     var box;
     var meta_box;
@@ -65,86 +64,19 @@ HeifDecoder.prototype.decode = function(buffer, image_callback, callback) {
 
     if (!meta_box) {
         console.log("No meta box found");
-        return false;
+        return [];
     }
 
-    var iloc_box = meta_box.get_child_box(libheif.fourcc("iloc"));
-    if (!iloc_box) {
-        console.log("No iloc box found");
-        return false;
+    var images = meta_box.get_images(buffer);
+    if (!images) {
+        return [];
     }
-    var iprp_box = meta_box.get_child_box(libheif.fourcc("iprp"));
-    if (!iprp_box) {
-        console.log("No iprp box found");
-        return false;
+    var result = [];
+    var size = images.size();
+    for (var i = 0; i < size; i++) {
+        result.push(new Uint8Array(StringToArrayBuffer(images.get(i))));
     }
-    var ipco_box = iprp_box.get_child_box(libheif.fourcc("ipco"));
-    if (!ipco_box) {
-        console.log("No ipco box found");
-        return false;
-    }
-    var hvcC_box = ipco_box.get_child_box(libheif.fourcc("hvcC"));
-    if (!hvcC_box) {
-        console.log("No hvcC box found");
-        return false;
-    }
-
-    var pending_buffers = [];
-    var hevc_headers = hvcC_box.get_headers();
-    if (hevc_headers) {
-        pending_buffers.push(new Uint8Array(StringToArrayBuffer(hevc_headers)));
-    }
-    var hevc_data = iloc_box.read_all_data(buffer);
-    if (hevc_data) {
-        pending_buffers.push(new Uint8Array(StringToArrayBuffer(hevc_data)));
-    }
-    if (!pending_buffers.length) {
-        console.log("No data to decode");
-        return false;
-    }
-
-    var hevc_decoder = new this.libde265.Decoder();
-    hevc_decoder.disable_filters(true);
-
-    hevc_decoder.set_image_callback(function(image) {
-        image_callback(image);
-    });
-
-    var do_decode = function() {
-        console.log("Decoding");
-        hevc_decoder.decode(function(error) {
-            switch (error) {
-                case this.libde265.DE265_OK:
-                    if (!hevc_decoder.has_more()) {
-                        callback(error);
-                        return;
-                    }
-                    break;
-                case this.libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA:
-                    if (pending_buffers === null) {
-                        // No more data available to decode.
-                        callback(error);
-                        return;
-                    } else if (pending_buffers.length) {
-                        // Pass more data to decoder.
-                        hevc_decoder.push_data(pending_buffers.shift(), 0);
-                    } else {
-                        // All data has been passed.
-                        pending_buffers = null;
-                        hevc_decoder.flush();
-                    }
-                    break;
-                default:
-                    console.log("Error while decoding", error);
-                    callback(error);
-                    return;
-            }
-            setTimeout(do_decode, 0);
-        });
-    };
-    // Start decoding deferred.
-    setTimeout(do_decode, 0);
-    return true;
+    return result;
 };
 
 var libheif = {
