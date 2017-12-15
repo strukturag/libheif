@@ -613,41 +613,43 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-std::vector<uint8_t> Box_iloc::read_all_data(std::istream& istr) const
+bool Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
 {
-  std::vector<uint8_t> data;
-
-  uint64_t max_size = get_box_size();
+  uint64_t curpos = istr.tellg();
+  istr.seekg(0, std::ios_base::end);
+  uint64_t max_size = istr.tellg();
+  istr.seekg(curpos, std::ios_base::beg);
   for (const auto& item : m_items) {
     for (const auto& extent : item.extents) {
       istr.seekg(extent.offset + item.base_offset, std::ios::beg);
       if (istr.eof()) {
         // Out-of-bounds
-        data.clear();
-        return data;
+        dest->clear();
+        return false;
       }
 
       uint64_t bytes_read = 0;
 
       for (;;) {
-        data.push_back(0);
-        data.push_back(0);
-        data.push_back(1);
+        dest->push_back(0);
+        dest->push_back(0);
+        dest->push_back(1);
 
         uint8_t size[4];
         istr.read((char*)size,4);
         uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
+        bytes_read += 4;
 
-        size_t old_size = data.size();
-        if (bytes_read + size32 > max_size) {
+        if (max_size - bytes_read < size32) {
           // Out-of-bounds
-          data.clear();
-          return data;
+          dest->clear();
+          return false;
         }
-        data.resize( old_size + size32);
-        istr.read((char*)data.data() + old_size, size32);
 
-        bytes_read += size32 +4;
+        size_t old_size = dest->size();
+        dest->resize(old_size + size32);
+        istr.read((char*)dest->data() + old_size, size32);
+        bytes_read += size32;
 
         if (bytes_read >= extent.length) {
           break;
@@ -656,7 +658,7 @@ std::vector<uint8_t> Box_iloc::read_all_data(std::istream& istr) const
     }
   }
 
-  return data;
+  return true;
 }
 
 
@@ -948,19 +950,17 @@ std::string Box_hvcC::dump(Indent& indent) const
 }
 
 
-std::vector<uint8_t> Box_hvcC::get_headers() const
+bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 {
-  std::vector<uint8_t> data;
-
   for (const auto& array : m_nal_array) {
     for (const auto& unit : array.m_nal_units) {
-      data.push_back(0);
-      data.push_back(0);
-      data.push_back(1);
+      dest->push_back(0);
+      dest->push_back(0);
+      dest->push_back(1);
 
-      data.insert(data.end(), unit.begin(), unit.end());
+      dest->insert(dest->end(), unit.begin(), unit.end());
     }
   }
 
-  return data;
+  return true;
 }

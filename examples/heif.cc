@@ -83,10 +83,14 @@ int main(int argc, char** argv)
   }
 
   std::ifstream istr2(argv[1]);
-  std::vector<uint8_t> hdrs = hvcC_box->get_headers();
-  std::vector<uint8_t> data = iloc_box->read_all_data(istr2);
-  if (hdrs.empty() || data.empty()) {
-    fprintf(stderr, "Not a valid HEIF file (no HEVC content found)\n");
+  std::vector<uint8_t> hdrs;
+  if (!hvcC_box->get_headers(&hdrs)) {
+    fprintf(stderr, "Not a valid HEIF file (could not get HEVC headers)\n");
+    return 1;
+  }
+  std::vector<uint8_t> data;
+  if (!iloc_box->read_all_data(istr2, &data) || data.empty()) {
+    fprintf(stderr, "Not a valid HEIF file (could not get HEVC data)\n");
     return 1;
   }
 

@@ -326,7 +326,7 @@ namespace heif {
 
     const std::vector<Item>& get_items() const { return m_items; }
 
-    std::vector<uint8_t> read_all_data(std::istream& istr) const;
+    bool read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
 
   protected:
     Error parse(BitstreamRange& range);
@@ -420,7 +420,7 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    std::vector<uint8_t> get_headers() const;
+    bool get_headers(std::vector<uint8_t>* dest) const;
 
   protected:
     Error parse(BitstreamRange& range);
