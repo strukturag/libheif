@@ -18,12 +18,13 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <strstream>
+#include <sstream>
 
 #include "box.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  std::istrstream stream(size ? reinterpret_cast<const char*>(data) : nullptr, size);
+  std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
+  std::basic_istringstream<char> stream(s);
   heif::BitstreamRange range(&stream, size);
   for (;;) {
     std::shared_ptr<heif::Box> box;

@@ -5,7 +5,7 @@
 
 #include <memory>
 #include <string>
-#include <strstream>
+#include <sstream>
 #include <vector>
 
 #include "box.h"
@@ -19,7 +19,7 @@ static std::vector<std::string> Box_meta_get_images(Box_meta* box,
     return result;
   }
 
-  std::istrstream s(data.data(), data.size());
+  std::basic_istringstream<char> s(data);
   std::vector<std::vector<uint8_t>> r;
   if (!box->get_images(s, &r)) {
     return result;
@@ -49,7 +49,7 @@ static std::string read_all_data_string(Box_iloc* box,
     return "";
   }
 
-  std::istrstream s(data.data(), data.size());
+  std::basic_istringstream<char> s(data);
   std::vector<uint8_t> r;
   if (!box->read_all_data(s, &r)) {
     return "";
@@ -90,8 +90,8 @@ class EmscriptenBitstreamRange : public BitstreamRange {
   explicit EmscriptenBitstreamRange(const std::string& data)
     : BitstreamRange(nullptr, 0),
       data_(data),
-      stream_(data_.data(), data_.size()) {
-    construct(&stream_, data_.size(), nullptr);
+      stream_(std::move(data_)) {
+    construct(&stream_, data.size(), nullptr);
   }
   bool error() const {
     return BitstreamRange::error();
@@ -99,7 +99,7 @@ class EmscriptenBitstreamRange : public BitstreamRange {
 
  private:
   std::string data_;
-  std::istrstream stream_;
+  std::basic_istringstream<char> stream_;
 };
 
 EMSCRIPTEN_BINDINGS(libheif) {
