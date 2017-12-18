@@ -134,4 +134,5 @@ int main(int argc, char** argv)
     //#define de265_action_push_more_input     1
     //#define de265_action_end_of_stream       4
   }
+  de265_free_decoder(ctx);
 }
