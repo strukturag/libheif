@@ -818,6 +818,11 @@ Error Box_iinf::parse(BitstreamRange& range)
     item_count = read32(range);
   }
 
+  if (item_count == 0) {
+    return Error::OK;
+  }
+
+  // TODO: Only try to read "item_count" children.
   return read_children(range);
 }
 
