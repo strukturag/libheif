@@ -28,6 +28,10 @@
 #include <limits>
 #include <istream>
 
+#include "error.h"
+#include "logging.h"
+#include "bitstream.h"
+
 
 namespace heif {
 
@@ -37,149 +41,6 @@ namespace heif {
             (string[1]<<16) |
             (string[2]<< 8) |
             (string[3]));
-  }
-
-
-  class Error
-  {
-  public:
-    enum ErrorCode {
-      Ok,
-      ParseError,
-      EndOfData
-    } error_code;
-
-
-    Error() : error_code(Ok) { }
-    Error(ErrorCode c) : error_code(c) { }
-
-    static Error OK;
-
-    bool operator==(const Error& other) const { return error_code == other.error_code; }
-    bool operator!=(const Error& other) const { return !(*this == other); }
-  };
-
-
-  class BitstreamRange
-  {
-  public:
-    BitstreamRange(std::istream* istr, uint64_t length, BitstreamRange* parent = nullptr) {
-      construct(istr, length, parent);
-    }
-
-    bool read(int n) {
-      if (n<0) {
-        return false;
-      }
-      if (m_remaining >= static_cast<uint64_t>(n)) {
-        if (m_parent_range) {
-          m_parent_range->read(n);
-        }
-
-        m_remaining -= n;
-        m_end_reached = (m_remaining==0);
-
-        return true;
-      }
-      else if (m_remaining==0) {
-        m_error = true;
-        return false;
-      }
-      else {
-        if (m_parent_range) {
-          m_parent_range->read(m_remaining);
-        }
-
-        m_istr->seekg(m_remaining, std::ios::cur);
-        m_remaining = 0;
-        m_end_reached = true;
-        m_error = true;
-        return false;
-      }
-    }
-
-    void skip_to_end_of_file() {
-      m_istr->seekg(0, std::ios_base::end);
-      m_remaining = 0;
-      m_end_reached = true;
-    }
-
-    void skip_to_end_of_box() {
-      if (m_remaining) {
-        m_istr->seekg(m_remaining, std::ios_base::cur);
-        m_remaining = 0;
-      }
-
-      m_end_reached = true;
-    }
-
-    void set_eof_reached() {
-      m_remaining = 0;
-      m_end_reached = true;
-
-      if (m_parent_range) {
-        m_parent_range->set_eof_reached();
-      }
-    }
-
-    bool eof() const {
-      return m_end_reached;
-    }
-
-    bool error() const {
-      return m_error;
-    }
-
-    Error get_error() const {
-      if (m_error) {
-        return Error(Error::EndOfData);
-      }
-      else {
-        return Error::OK;
-      }
-    }
-
-    std::istream* get_istream() { return m_istr; }
-
-  protected:
-    void construct(std::istream* istr, uint64_t length, BitstreamRange* parent) {
-      m_remaining = length;
-      m_end_reached = (length==0);
-
-      m_istr = istr;
-      m_parent_range = parent;
-    }
-
-  private:
-    std::istream* m_istr = nullptr;
-    BitstreamRange* m_parent_range = nullptr;
-
-    uint64_t m_remaining;
-    bool m_end_reached = false;
-    bool m_error = false;
-  };
-
-
-  class Indent {
-  public:
-  Indent() : m_indent(0) { }
-
-    int get_indent() const { return m_indent; }
-
-    void operator++(int) { m_indent++; }
-    void operator--(int) { m_indent--; if (m_indent<0) m_indent=0; }
-
-  private:
-    int m_indent;
-  };
-
-
-  inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent) {
-    for (int i=0;i<indent.get_indent();i++) {
-      ostr << "| ";
-    }
-
-    return ostr;
   }
 
 

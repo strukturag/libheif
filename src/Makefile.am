@@ -23,7 +23,10 @@ libheif_la_SOURCES = \
   box.cc
 
 libheif_la_HEADERS = \
-  box.h
+  box.h \
+  bitstream.h \
+  error.h \
+  logging.h
 
 if ENABLE_LIBFUZZER
 bin_PROGRAMS += libheif-fuzzer
