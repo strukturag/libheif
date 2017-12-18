@@ -18,6 +18,9 @@
  * along with heif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <errno.h>
+#include <string.h>
+
 #include "box.h"
 #include "libde265/de265.h"
 
@@ -33,12 +36,17 @@ int main(int argc, char** argv)
   using heif::Box;
   using heif::fourcc;
 
-  if (argc != 2) {
-    fprintf(stderr, "USAGE: %s <filename>\n", argv[0]);
+  if (argc < 2) {
+    fprintf(stderr, "USAGE: %s <filename> [output]\n", argv[0]);
     return 1;
   }
 
-  std::ifstream istr(argv[1]);
+  const char* input_filename = argv[1];
+  const char* output_filename = nullptr;
+  if (argc >= 3) {
+    output_filename = argv[2];
+  }
+  std::ifstream istr(input_filename);
 
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
   heif::BitstreamRange range(&istr, maxSize);
@@ -66,7 +74,7 @@ int main(int argc, char** argv)
   }
 
   std::vector<std::vector<uint8_t>> images;
-  std::ifstream istr2(argv[1]);
+  std::ifstream istr2(input_filename);
   if (!meta_box->get_images(istr2, &images)) {
     fprintf(stderr, "Not a valid HEIF file (could not get images)\n");
     return 1;
@@ -83,11 +91,17 @@ int main(int argc, char** argv)
   de265_flush_data(ctx);
 #endif
 
-  FILE* fh = fopen("out.bin", "wb");
-  for (const auto& item : images) {
-    fwrite(item.data(),1,item.size(),fh);
+  if (output_filename) {
+    FILE* fh = fopen(output_filename, "wb");
+    if (!fh) {
+      fprintf(stderr, "Could not open %s for writing: %s\n", output_filename, strerror(errno));
+    } else {
+      for (const auto& item : images) {
+        fwrite(item.data(),1,item.size(),fh);
+      }
+      fclose(fh);
+    }
   }
-  fclose(fh);
 
   for (;;) {
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
