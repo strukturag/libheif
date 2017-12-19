@@ -760,6 +760,8 @@ Error Box_infe::parse(BitstreamRange& range)
   }
 
   if (get_version() >= 2) {
+    m_hidden_item = (get_flags() & 1);
+
     if (get_version() == 2) {
       m_item_ID = read16(range);
     }
@@ -798,7 +800,8 @@ std::string Box_infe::dump(Indent& indent) const
        << indent << "item_name: " << m_item_name << "\n"
        << indent << "content_type: " << m_content_type << "\n"
        << indent << "content_encoding: " << m_content_encoding << "\n"
-       << indent << "item uri type: " << m_item_uri_type << "\n";
+       << indent << "item uri type: " << m_item_uri_type << "\n"
+       << indent << "hidden item: " << std::boolalpha << m_hidden_item << "\n";
 
   return sstr.str();
 }

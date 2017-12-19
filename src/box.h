@@ -74,6 +74,8 @@ namespace heif {
 
     uint8_t get_version() const { return m_version; }
 
+    uint32_t get_flags() const { return m_flags; }
+
   private:
     uint64_t m_size = 0;
     uint32_t m_header_size = 0;
@@ -213,6 +215,8 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
+    bool is_hidden_item() const { return m_hidden_item; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 
@@ -225,6 +229,9 @@ namespace heif {
       std::string m_content_type;
       std::string m_content_encoding;
       std::string m_item_uri_type;
+
+      // if set, this item should not be part of the presentation (i.e. hidden)
+      bool m_hidden_item = false;
     };
 
 
