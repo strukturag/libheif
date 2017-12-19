@@ -327,6 +327,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_ispe>(hdr);
     break;
 
+  case fourcc("iref"):
+    box = std::make_shared<Box_iref>(hdr);
+    break;
+
   case fourcc("hvcC"):
     box = std::make_shared<Box_hvcC>(hdr);
     break;
@@ -897,6 +901,65 @@ std::string Box_ispe::dump(Indent& indent) const
 
   sstr << indent << "image width: " << m_image_width << "\n"
        << indent << "image height: " << m_image_height << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_iref::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  while (!range.eof()) {
+    Reference ref;
+
+    Error err = ref.header.parse(range);
+    if (err != Error::OK) {
+      return err;
+    }
+
+    if (get_version()==0) {
+      ref.from_item_ID = read16(range);
+      int nRefs = read16(range);
+      for (int i=0;i<nRefs;i++) {
+        ref.to_item_ID.push_back( read16(range) );
+        if (range.eof()) {
+          break;
+        }
+      }
+    }
+    else {
+      ref.from_item_ID = read32(range);
+      int nRefs = read16(range);
+      for (int i=0;i<nRefs;i++) {
+        ref.to_item_ID.push_back( read32(range) );
+        if (range.eof()) {
+          break;
+        }
+      }
+    }
+
+    m_references.push_back(ref);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_iref::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  for (const auto& ref : m_references) {
+    sstr << indent << "reference with type '" << ref.header.get_type_string() << "'"
+         << " from ID: " << ref.from_item_ID
+         << " to IDs: ";
+    for (uint32_t id : ref.to_item_ID) {
+      sstr << id << " ";
+    }
+    sstr << "\n";
+  }
 
   return sstr.str();
 }

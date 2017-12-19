@@ -286,6 +286,27 @@ namespace heif {
   };
 
 
+  class Box_iref : public Box {
+  public:
+  Box_iref(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    struct Reference {
+      BoxHeader header;
+
+      uint32_t from_item_ID;
+      std::vector<uint32_t> to_item_ID;
+    };
+
+    std::vector<Reference> m_references;
+  };
+
+
   class Box_hvcC : public Box {
   public:
     Box_hvcC(const BoxHeader& hdr) : Box(hdr) {
