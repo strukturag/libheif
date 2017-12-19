@@ -331,6 +331,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_ispe>(hdr);
     break;
 
+  case fourcc("auxC"):
+    box = std::make_shared<Box_auxC>(hdr);
+    break;
+
   case fourcc("iref"):
     box = std::make_shared<Box_iref>(hdr);
     break;
@@ -964,6 +968,37 @@ std::string Box_ipma::dump(Indent& indent) const
     }
     indent--;
   }
+
+  return sstr.str();
+}
+
+
+Error Box_auxC::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  m_aux_type = read_string(range);
+
+  while (!range.eof()) {
+    m_aux_subtypes.push_back( read8(range) );
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_auxC::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "aux type: " << m_aux_type << "\n"
+       << indent << "aux subtypes: ";
+  for (uint8_t subtype : m_aux_subtypes) {
+    sstr << std::hex << std::setw(2) << std::setfill('0') << ((int)subtype) << " ";
+  }
+
+  sstr << "\n";
 
   return sstr.str();
 }

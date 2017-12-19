@@ -309,6 +309,21 @@ namespace heif {
   };
 
 
+  class Box_auxC : public Box {
+  public:
+  Box_auxC(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    std::string m_aux_type;
+    std::vector<uint8_t> m_aux_subtypes;
+  };
+
+
   class Box_iref : public Box {
   public:
   Box_iref(const BoxHeader& hdr) : Box(hdr) { }
