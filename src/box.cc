@@ -784,7 +784,7 @@ Error Box_infe::parse(BitstreamRange& range)
     m_item_protection_index = read16(range);
     uint32_t item_type =read32(range);
     if (item_type != 0) {
-      m_item_type = to_fourcc(read32(range));
+      m_item_type = to_fourcc(item_type);
     }
 
     m_item_name = read_string(range);
