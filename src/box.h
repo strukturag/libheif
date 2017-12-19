@@ -324,6 +324,20 @@ namespace heif {
   };
 
 
+  class Box_irot : public Box {
+  public:
+  Box_irot(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    int m_rotation; // in degrees (CCW)
+  };
+
+
   class Box_iref : public Box {
   public:
   Box_iref(const BoxHeader& hdr) : Box(hdr) { }

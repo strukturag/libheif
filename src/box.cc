@@ -335,6 +335,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_auxC>(hdr);
     break;
 
+  case fourcc("irot"):
+    box = std::make_shared<Box_irot>(hdr);
+    break;
+
   case fourcc("iref"):
     box = std::make_shared<Box_iref>(hdr);
     break;
@@ -999,6 +1003,30 @@ std::string Box_auxC::dump(Indent& indent) const
   }
 
   sstr << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_irot::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  uint16_t rotation = read8(range);
+  rotation &= 0x03;
+
+  m_rotation = rotation * 90;
+
+  return range.get_error();
+}
+
+
+std::string Box_irot::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "rotation: " << m_rotation << " degrees (CCW)\n";
 
   return sstr.str();
 }
