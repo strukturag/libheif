@@ -286,6 +286,29 @@ namespace heif {
   };
 
 
+  class Box_ipma : public Box {
+  public:
+  Box_ipma(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    struct Entry {
+      struct PropertyAssociation {
+        bool essential;
+        uint16_t property_index;
+      };
+
+      uint32_t item_ID;
+      std::vector<PropertyAssociation> associations;
+    };
+
+    std::vector<Entry> m_entries;
+  };
+
+
   class Box_iref : public Box {
   public:
   Box_iref(const BoxHeader& hdr) : Box(hdr) { }

@@ -230,7 +230,7 @@ heif::Error heif::BoxHeader::write(std::ostream& ostr) const
 std::string BoxHeader::dump(Indent& indent) const
 {
   std::stringstream sstr;
-  sstr << indent << "Box: " << get_type_string() << "\n";
+  sstr << indent << "Box: " << get_type_string() << " -----\n";
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
   if (m_is_full_box) {
@@ -321,6 +321,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 
   case fourcc("ipco"):
     box = std::make_shared<Box_ipco>(hdr);
+    break;
+
+  case fourcc("ipma"):
+    box = std::make_shared<Box_ipma>(hdr);
     break;
 
   case fourcc("ispe"):
@@ -901,6 +905,65 @@ std::string Box_ispe::dump(Indent& indent) const
 
   sstr << indent << "image width: " << m_image_width << "\n"
        << indent << "image height: " << m_image_height << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_ipma::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  int entry_cnt = read32(range);
+  for (int i=0;i<entry_cnt;i++) {
+    Entry entry;
+    if (get_version()<1) {
+      entry.item_ID = read16(range);
+    }
+    else {
+      entry.item_ID = read32(range);
+    }
+
+    int assoc_cnt = read8(range);
+    for (int k=0;k<assoc_cnt;k++) {
+      Entry::PropertyAssociation association;
+
+      uint16_t index;
+      if (get_flags() & 1) {
+        index = read16(range);
+        association.essential = !!(index & 0x8000);
+        association.property_index = (index & 0x7fff);
+      }
+      else {
+        index = read8(range);
+        association.essential = !!(index & 0x80);
+        association.property_index = (index & 0x7f);
+      }
+
+      entry.associations.push_back(association);
+    }
+
+    m_entries.push_back(entry);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_ipma::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  for (const Entry& entry : m_entries) {
+    sstr << indent << "associations for item ID: " << entry.item_ID << "\n";
+    indent++;
+    for (const auto& assoc : entry.associations) {
+      sstr << indent << "property index: " << assoc.property_index
+           << " (essential: " << std::boolalpha << assoc.essential << ")\n";
+    }
+    indent--;
+  }
 
   return sstr.str();
 }
