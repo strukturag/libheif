@@ -347,6 +347,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_hvcC>(hdr);
     break;
 
+  case fourcc("grpl"):
+    box = std::make_shared<Box_grpl>(hdr);
+    break;
+
   default:
     box = std::make_shared<Box>(hdr);
     break;
@@ -1243,4 +1247,60 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
   }
 
   return true;
+}
+
+
+Error Box_grpl::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  //return read_children(range);
+
+  while (!range.eof()) {
+    EntityGroup group;
+    Error err = group.header.parse(range);
+    if (err != Error::OK) {
+      return err;
+    }
+
+    err = group.header.parse_full_box_header(range);
+    if (err != Error::OK) {
+      return err;
+    }
+
+    group.group_id = read32(range);
+    int nEntities = read32(range);
+    for (int i=0;i<nEntities;i++) {
+      if (range.eof()) {
+        break;
+      }
+
+      group.entity_ids.push_back( read32(range) );
+    }
+
+    m_entity_groups.push_back(group);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_grpl::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  for (const auto& group : m_entity_groups) {
+    sstr << indent << "group type: " << group.header.get_type_string() << "\n"
+         << indent << "| group id: " << group.group_id << "\n"
+         << indent << "| entity IDs: ";
+
+    for (uint32_t id : group.entity_ids) {
+      sstr << id << " ";
+    }
+
+    sstr << "\n";
+  }
+
+  return sstr.str();
 }

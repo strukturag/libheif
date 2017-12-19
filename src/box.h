@@ -409,6 +409,26 @@ namespace heif {
 
     std::vector<NalArray> m_nal_array;
   };
+
+
+  class Box_grpl : public Box {
+  public:
+  Box_grpl(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    struct EntityGroup {
+      BoxHeader header;
+      uint32_t group_id;
+
+      std::vector<uint32_t> entity_ids;
+    };
+
+    std::vector<EntityGroup> m_entity_groups;
+  };
 }
 
 #endif
