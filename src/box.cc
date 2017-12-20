@@ -377,6 +377,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
   if (err == Error::OK) {
     *result = std::move(box);
   }
+
+  boxrange.skip_to_end_of_box();
+
   return err;
 }
 

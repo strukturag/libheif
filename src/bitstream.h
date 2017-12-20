@@ -79,6 +79,10 @@ namespace heif {
 
     void skip_to_end_of_box() {
       if (m_remaining) {
+        if (m_parent_range) {
+          m_parent_range->read(m_remaining);
+        }
+
         m_istr->seekg(m_remaining, std::ios_base::cur);
         m_remaining = 0;
       }
