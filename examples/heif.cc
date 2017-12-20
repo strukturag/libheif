@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "box.h"
+#include "heif_file.h"
 #include "libde265/de265.h"
 
 #include <fstream>
@@ -135,4 +136,20 @@ int main(int argc, char** argv)
     //#define de265_action_end_of_stream       4
   }
   de265_free_decoder(ctx);
+
+
+  // ==============================================================================
+
+  HeifFile heifFile;
+  Error err = heifFile.read_from_file(input_filename);
+
+  if (err != Error::OK) {
+    std::cerr << "error: " << err << "\n";
+    return 0;
+  }
+
+  std::cout << "num images: " << heifFile.get_num_images() << "\n";
+  std::cout << "primary image: " << heifFile.get_primary_image_ID() << "\n";
+
+  return 0;
 }

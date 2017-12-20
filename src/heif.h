@@ -30,9 +30,11 @@ extern "C" {
 struct heif;
 struct heif_image;
 
-heif* heif_read_from_file(int fd);
+heif* heif_read_from_file(const char* filename);
 
 heif* heif_read_from_memory(const uint8_t* mem, uint64_t size);
+
+heif* heif_read_from_file_descriptor(int fd);
 
 void heif_free(heif*);
 

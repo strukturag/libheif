@@ -20,9 +20,12 @@ libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBH
 
 libheif_la_SOURCES = \
   box.h \
-  box.cc
+  box.cc \
+  heif_file.h \
+  heif_file.cc
 
 libheif_la_HEADERS = \
+  heif_file.h \
   box.h \
   bitstream.h \
   error.h \

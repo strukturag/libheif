@@ -471,6 +471,18 @@ Error Box_ftyp::parse(BitstreamRange& range)
 }
 
 
+bool Box_ftyp::has_compatible_brand(uint32_t brand) const
+{
+  for (uint32_t b : m_compatible_brands) {
+    if (b==brand) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 std::string Box_ftyp::dump(Indent& indent) const
 {
   std::stringstream sstr;

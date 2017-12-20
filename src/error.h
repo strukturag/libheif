@@ -27,6 +27,7 @@
 #include <memory>
 #include <limits>
 #include <istream>
+#include <ostream>
 
 
 namespace heif {
@@ -36,19 +37,54 @@ namespace heif {
   public:
     enum ErrorCode {
       Ok,
-      ParseError,
-      EndOfData
+      InvalidInput,
     } error_code;
 
+    enum SubErrorCode {
+      // --- InvalidInput
+      Unspecified,
+      ParseError,
+      EndOfData,
+      NoCompatibleBrandType,
+      NoMetaBox,
+      NoHdlrBox,
+      NoPitmBox,
+      NoIprpBox,
+      NoIpcoBox,
+      NoIpmaBox,
+      NoIlocBox,
+      NoPictHandler
+    } sub_error_code;
 
-    Error() : error_code(Ok) { }
-    Error(ErrorCode c) : error_code(c) { }
+  Error()
+    : error_code(Ok)
+    {
+    }
+
+
+  Error(SubErrorCode sc)    // TODO: hack, remove me later
+    : error_code(InvalidInput),
+      sub_error_code(sc)
+      {
+      }
+
+  Error(ErrorCode c, SubErrorCode sc = SubErrorCode::Unspecified)
+    : error_code(c),
+      sub_error_code(sc)
+    {
+    }
 
     static Error OK;
 
     bool operator==(const Error& other) const { return error_code == other.error_code; }
     bool operator!=(const Error& other) const { return !(*this == other); }
   };
+
+
+  inline std::ostream& operator<<(std::ostream& ostr, const Error& err) {
+    ostr << err.error_code << "/" << err.sub_error_code;
+    return ostr;
+  }
 }
 
 #endif
