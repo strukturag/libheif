@@ -1,0 +1,45 @@
+before_script:
+  - ci-apt-get-update
+  - ci-apt-get-install --no-install-recommends autoconf automake libtool pkg-config
+  - ./autogen.sh
+
+build-standalone:
+  stage: build
+  script:
+    - ./configure
+    - make
+
+build-libde265:
+  stage: build
+  script:
+    - add-apt-repository ppa:strukturag/libde265
+    - ci-apt-get-update
+    - ci-apt-get-install --no-install-recommends libde265-dev
+    - ./configure
+    - make
+
+build-convert:
+  stage: build
+  script:
+    - add-apt-repository ppa:strukturag/libde265
+    - ci-apt-get-update
+    - ci-apt-get-install --no-install-recommends libde265-dev libjpeg-dev libpng-dev
+    - ./configure
+    - make
+
+build-emscripten:
+  stage: test
+  variables:
+    EMSCRIPTEN_VERSION: 1.37.26
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - emscripten/
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - ./libheif.js
+  script:
+    - mkdir -p emscripten
+    - ./scripts/install-emscripten.sh $EMSCRIPTEN_VERSION emscripten
+    - source ./emscripten/emsdk-portable/emsdk_env.sh && ./build-emscripten.sh
