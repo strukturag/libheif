@@ -172,7 +172,7 @@ std::string heif::BoxHeader::get_type_string() const
   if (m_type == fourcc("uuid")) {
     // 8-4-4-4-12
 
-    std::stringstream sstr;
+    std::ostringstream sstr;
     sstr << std::hex;
     sstr << std::setfill('0');
     sstr << std::setw(2);
@@ -229,7 +229,7 @@ heif::Error heif::BoxHeader::write(std::ostream& ostr) const
 
 std::string BoxHeader::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << indent << "Box: " << get_type_string() << " -----\n";
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
@@ -386,7 +386,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 
 std::string Box::dump(Indent& indent ) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
 
   sstr << BoxHeader::dump(indent);
 
@@ -442,7 +442,7 @@ Error Box::read_children(BitstreamRange& range)
 
 std::string Box::dump_children(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
 
   bool first = true;
 
@@ -497,7 +497,7 @@ bool Box_ftyp::has_compatible_brand(uint32_t brand) const
 
 std::string Box_ftyp::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
 
   sstr << BoxHeader::dump(indent);
 
@@ -538,7 +538,7 @@ Error Box_meta::parse(BitstreamRange& range)
 
 std::string Box_meta::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << dump_children(indent);
 
@@ -609,7 +609,7 @@ Error Box_hdlr::parse(BitstreamRange& range)
 
 std::string Box_hdlr::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "pre_defined: " << m_pre_defined << "\n"
        << indent << "handler_type: " << to_fourcc(m_handler_type) << "\n"
@@ -631,7 +631,7 @@ Error Box_pitm::parse(BitstreamRange& range)
 
 std::string Box_pitm::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "item_ID: " << m_item_ID << "\n";
 
@@ -753,7 +753,7 @@ Error Box_iloc::parse(BitstreamRange& range)
 
 std::string Box_iloc::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   for (const Item& item : m_items) {
@@ -876,7 +876,7 @@ Error Box_infe::parse(BitstreamRange& range)
 
 std::string Box_infe::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "item_ID: " << m_item_ID << "\n"
@@ -917,7 +917,7 @@ Error Box_iinf::parse(BitstreamRange& range)
 
 std::string Box_iinf::dump(Indent& indent ) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << dump_children(indent);
@@ -936,7 +936,7 @@ Error Box_iprp::parse(BitstreamRange& range)
 
 std::string Box_iprp::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << dump_children(indent);
@@ -955,7 +955,7 @@ Error Box_ipco::parse(BitstreamRange& range)
 
 std::string Box_ipco::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << dump_children(indent);
@@ -977,7 +977,7 @@ Error Box_ispe::parse(BitstreamRange& range)
 
 std::string Box_ispe::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "image width: " << m_image_width << "\n"
@@ -1041,7 +1041,7 @@ const std::vector<Box_ipma::PropertyAssociation>* Box_ipma::get_properties_for_i
 
 std::string Box_ipma::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   for (const Entry& entry : m_entries) {
@@ -1074,7 +1074,7 @@ Error Box_auxC::parse(BitstreamRange& range)
 
 std::string Box_auxC::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "aux type: " << m_aux_type << "\n"
@@ -1104,7 +1104,7 @@ Error Box_irot::parse(BitstreamRange& range)
 
 std::string Box_irot::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "rotation: " << m_rotation << " degrees (CCW)\n";
@@ -1131,7 +1131,7 @@ Error Box_imir::parse(BitstreamRange& range)
 
 std::string Box_imir::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "mirror axis: ";
@@ -1163,7 +1163,7 @@ Error Box_clap::parse(BitstreamRange& range)
 
 std::string Box_clap::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "clean_aperture: " << m_clean_aperture_width.numerator
@@ -1221,7 +1221,7 @@ Error Box_iref::parse(BitstreamRange& range)
 
 std::string Box_iref::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   for (const auto& ref : m_references) {
@@ -1315,7 +1315,7 @@ Error Box_hvcC::parse(BitstreamRange& range)
 
 std::string Box_hvcC::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   sstr << indent << "configuration_version: " << ((int)m_configuration_version) << "\n"
@@ -1430,7 +1430,7 @@ Error Box_grpl::parse(BitstreamRange& range)
 
 std::string Box_grpl::dump(Indent& indent) const
 {
-  std::stringstream sstr;
+  std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   for (const auto& group : m_entity_groups) {
