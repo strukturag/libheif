@@ -364,6 +364,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     break;
   }
 
+  if (hdr.get_box_size() <= hdr.get_header_size()) {
+    // Sanity check.
+    return Error(Error::ParseError);
+  }
 
   BitstreamRange boxrange(range.get_istream(),
                           hdr.get_box_size() - hdr.get_header_size(),
@@ -461,7 +465,12 @@ Error Box_ftyp::parse(BitstreamRange& range)
   m_major_brand = read32(range);
   m_minor_version = read32(range);
 
-  int n_minor_brands = (get_box_size()-get_header_size()-8)/4;
+  if (get_box_size() <= get_header_size() + 8) {
+    // Sanity check.
+    return Error(Error::ParseError);
+  }
+
+  int n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
 
   for (int i=0;i<n_minor_brands && !range.error();i++) {
     m_compatible_brands.push_back( read32(range) );
