@@ -46,6 +46,18 @@ HeifFile::~HeifFile()
 }
 
 
+std::vector<uint32_t> HeifFile::get_image_IDs() const
+{
+  std::vector<uint32_t> IDs;
+
+  for (const auto& image : m_images) {
+    IDs.push_back(image.second.m_infe_box->get_item_ID());
+  }
+
+  return IDs;
+}
+
+
 Error HeifFile::read_from_file(const char* input_filename)
 {
   std::ifstream istr(input_filename);
@@ -207,8 +219,11 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 }
 
 
-Error HeifFile::get_image(uint16_t ID, struct de265_image** img, std::istream& TODO_istr) const
+Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const
 {
+  assert(img);
+
+
   // --- get the image from the list of all images
 
   auto image_iter = m_images.find(ID);
@@ -307,6 +322,8 @@ Error HeifFile::get_image(uint16_t ID, struct de265_image** img, std::istream& T
 
     if (action==de265_action_get_image) {
       printf("image decoded !\n");
+
+      *img = de265_get_next_picture(ctx);
     }
 #else
     int more;
@@ -321,6 +338,8 @@ Error HeifFile::get_image(uint16_t ID, struct de265_image** img, std::istream& T
 
       const struct de265_image* image = de265_get_next_picture(ctx);
       if (image) {
+        *img = image;
+
         printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
             de265_get_image_height(image, 0));
         de265_release_next_picture(ctx);

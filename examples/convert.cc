@@ -72,91 +72,58 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  uint64_t maxSize = std::numeric_limits<uint64_t>::max();
-  heif::BitstreamRange range(&istr, maxSize);
 
-  std::shared_ptr<Box_meta> meta_box;
-
-  for (;;) {
-    std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
-    if (error != Error::OK || range.error() || range.eof()) {
-      break;
-    }
-
-    if (box->get_short_type() == fourcc("meta")) {
-      meta_box = std::dynamic_pointer_cast<Box_meta>(box);
-      break;
-    }
-  }
-  if (!meta_box) {
-    fprintf(stderr, "Not a valid HEIF file (no 'meta' box found)\n");
+  HeifFile heifFile;
+  Error err = heifFile.read_from_file(input_filename.c_str());
+  if (err != Error::OK) {
+    std::cerr << "Could not read HEIF file: " << err << "\n";
     return 1;
   }
 
-  std::vector<std::vector<uint8_t>> images;
-  std::ifstream istr2(input_filename.c_str());
-  if (!meta_box->get_images(istr2, &images)) {
-    fprintf(stderr, "Not a valid HEIF file (could not get images)\n");
-    return 1;
-  }
+  int num_images = heifFile.get_num_images();
 
-  if (images.empty()) {
+  if (num_images==0) {
     fprintf(stderr, "File doesn't contain any images\n");
     return 1;
   }
 
-  de265_decoder_context* ctx = de265_new_decoder();
-  de265_start_worker_threads(ctx,1);
-  for (const auto& item : images) {
-    de265_push_data(ctx, item.data(), item.size(), 0, nullptr);
-  }
-#if LIBDE265_NUMERIC_VERSION >= 0x02000000
-  de265_push_end_of_stream(ctx);
-#else
-  de265_flush_data(ctx);
-#endif
+  printf("File contains %d images\n", num_images);
+
+
+  std::vector<uint32_t> imageIDs = heifFile.get_image_IDs();
 
   std::string filename;
-  printf("File contains %zu images\n", images.size());
-#if LIBDE265_NUMERIC_VERSION >= 0x02000000
-  // TODO #error "Decoding with newer versions of libde265 is not implemented yet."
-#else
   size_t image_index = 1;  // Image filenames are "1" based.
-  int more;
-  de265_error err;
-  do {
-    more = 0;
-    err = de265_decode(ctx, &more);
-    if (err != DE265_OK) {
-      printf("Error decoding: %s (%d)\n", de265_get_error_text(err), err);
-      break;
+
+  for (uint32_t imageID : imageIDs) {
+
+    if (num_images>1) {
+      std::ostringstream s;
+      s << output_filename.substr(0, output_filename.find('.'));
+      s << "-" << image_index;
+      s << output_filename.substr(output_filename.find('.'));
+      filename.assign(s.str());
+    } else {
+      filename.assign(output_filename);
     }
 
-    const struct de265_image* image = de265_get_next_picture(ctx);
-    if (image) {
-      printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
-          de265_get_image_height(image, 0));
-      if (images.size() > 1) {
-        std::ostringstream s;
-        s << output_filename.substr(0, output_filename.find('.'));
-        s << "-" << image_index;
-        s << output_filename.substr(output_filename.find('.'));
-        filename.assign(s.str());
-      } else {
-        filename.assign(output_filename);
-      }
-      bool written = encoder->Encode(image, filename.c_str());
-      de265_release_next_picture(ctx);
-      if (!written) {
-        break;
-      }
-
-      printf("Written to %s\n", filename.c_str());
-      image_index++;
+    const de265_image* img;
+    err = heifFile.get_image(imageID, &img, istr);
+    if (err != Error::OK) {
+      std::cerr << "Could not read HEIF image: " << err << "\n";
+      return 1;
     }
-  } while (more);
-#endif
-  de265_free_decoder(ctx);
+
+    bool written = encoder->Encode(img, filename.c_str());
+    if (!written) {
+      fprintf(stderr,"could not write image\n");
+    }
+
+    //de265_release_next_picture(ctx);
+
+    printf("Written to %s\n", filename.c_str());
+    image_index++;
+  }
+
   return 0;
 }

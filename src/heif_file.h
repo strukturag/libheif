@@ -43,7 +43,9 @@ namespace heif {
 
     uint16_t get_primary_image_ID() const { return m_primary_image_ID; }
 
-    Error get_image(uint16_t ID, struct de265_image** img, std::istream& TODO_istr) const;
+    std::vector<uint32_t> get_image_IDs() const;
+
+    Error get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const;
 
   private:
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
