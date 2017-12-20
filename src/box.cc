@@ -654,8 +654,20 @@ Error Box_iloc::parse(BitstreamRange& range)
   int offset_size = (values4 >> 12) & 0xF;
   int length_size = (values4 >>  8) & 0xF;
   int base_offset_size = (values4 >> 4) & 0xF;
+  int index_size = 0;
 
-  int item_count = read16(range);
+  if (get_version()>1) {
+    index_size = (values4 & 0xF);
+  }
+
+  int item_count;
+  if (get_version()<2) {
+    item_count = read16(range);
+  }
+  else {
+    item_count = read32(range);
+  }
+
   // Sanity check.
   if (item_count > MAX_ILOC_ITEMS) {
     return Error(Error::ParseError);
@@ -664,7 +676,18 @@ Error Box_iloc::parse(BitstreamRange& range)
   for (int i=0;i<item_count;i++) {
     Item item;
 
-    item.item_ID = read16(range);
+    if (get_version()<2) {
+      item.item_ID = read16(range);
+    }
+    else {
+      item.item_ID = read32(range);
+    }
+
+    if (get_version()>=1) {
+      values4 = read16(range);
+      item.construction_method = (values4 & 0xF);
+    }
+
     item.data_reference_index = read16(range);
 
     item.base_offset = 0;
@@ -684,6 +707,16 @@ Error Box_iloc::parse(BitstreamRange& range)
 
     for (int e=0;e<extent_count;e++) {
       Extent extent;
+
+      if (get_version()>1 && index_size>0) {
+        if (index_size==4) {
+          extent.index = read32(range);
+        }
+        else if (index_size==8) {
+          extent.index = ((uint64_t)read32(range)) << 32;
+          extent.index |= read32(range);
+        }
+      }
 
       extent.offset = 0;
       if (offset_size==4) {

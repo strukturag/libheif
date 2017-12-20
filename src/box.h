@@ -198,14 +198,16 @@ namespace heif {
     std::string dump(Indent&) const override;
 
     struct Extent {
+      uint64_t index = 0;
       uint64_t offset;
       uint64_t length;
     };
 
     struct Item {
-      uint16_t item_ID;
+      uint32_t item_ID;
+      uint8_t  construction_method = 0; // >= V1
       uint16_t data_reference_index;
-      uint64_t base_offset;
+      uint64_t base_offset = 0;
 
       std::vector<Extent> extents;
     };
