@@ -2,6 +2,11 @@
 set -e
 
 emconfigure ./configure
+if [ ! -e "Makefile" ]; then
+    # Most likely the first run of "emscripten" which will generate the
+    # config file and terminate. Run "emconfigure" again.
+    emconfigure ./configure
+fi
 emmake make
 
 export TOTAL_MEMORY=8388608
