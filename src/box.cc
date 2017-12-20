@@ -339,6 +339,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_irot>(hdr);
     break;
 
+  case fourcc("clap"):
+    box = std::make_shared<Box_clap>(hdr);
+    break;
+
   case fourcc("iref"):
     box = std::make_shared<Box_iref>(hdr);
     break;
@@ -1031,6 +1035,41 @@ std::string Box_irot::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   sstr << indent << "rotation: " << m_rotation << " degrees (CCW)\n";
+
+  return sstr.str();
+}
+
+
+Error Box_clap::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  m_clean_aperture_width.numerator   = read32(range);
+  m_clean_aperture_width.denominator = read32(range);
+  m_clean_aperture_height.numerator   = read32(range);
+  m_clean_aperture_height.denominator = read32(range);
+  m_horizontal_offset.numerator   = read32(range);
+  m_horizontal_offset.denominator = read32(range);
+  m_vertical_offset.numerator   = read32(range);
+  m_vertical_offset.denominator = read32(range);
+
+  return range.get_error();
+}
+
+
+std::string Box_clap::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "clean_aperture: " << m_clean_aperture_width.numerator
+       << "/" << m_clean_aperture_width.denominator << " x "
+       << m_clean_aperture_height.numerator << "/"
+       << m_clean_aperture_height.denominator << "\n";
+  sstr << indent << "offset: " << m_horizontal_offset.numerator << "/"
+       << m_horizontal_offset.denominator << " ; "
+       << m_vertical_offset.numerator << "/"
+       << m_vertical_offset.denominator << "\n";
 
   return sstr.str();
 }

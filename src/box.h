@@ -44,6 +44,12 @@ namespace heif {
   }
 
 
+  class Fraction {
+  public:
+    int numerator, denominator;
+  };
+
+
   class BoxHeader {
   public:
     BoxHeader();
@@ -335,6 +341,23 @@ namespace heif {
 
   private:
     int m_rotation; // in degrees (CCW)
+  };
+
+
+  class Box_clap : public Box {
+  public:
+  Box_clap(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    Fraction m_clean_aperture_width;
+    Fraction m_clean_aperture_height;
+    Fraction m_horizontal_offset;
+    Fraction m_vertical_offset;
   };
 
 
