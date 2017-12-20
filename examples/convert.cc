@@ -118,11 +118,11 @@ int main(int argc, char** argv)
 #endif
 
   std::string filename;
-  size_t image_index = 1;  // Image filenames are "1" based.
   printf("File contains %zu images\n", images.size());
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
-  #error "Decoding with newer versions of libde265 is not implemented yet."
+  // TODO #error "Decoding with newer versions of libde265 is not implemented yet."
 #else
+  size_t image_index = 1;  // Image filenames are "1" based.
   int more;
   de265_error err;
   do {
