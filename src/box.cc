@@ -339,6 +339,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_irot>(hdr);
     break;
 
+  case fourcc("imir"):
+    box = std::make_shared<Box_imir>(hdr);
+    break;
+
   case fourcc("clap"):
     box = std::make_shared<Box_clap>(hdr);
     break;
@@ -1035,6 +1039,37 @@ std::string Box_irot::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   sstr << indent << "rotation: " << m_rotation << " degrees (CCW)\n";
+
+  return sstr.str();
+}
+
+
+Error Box_imir::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  uint16_t axis = read8(range);
+  if (axis & 1) {
+    m_axis = MirrorAxis::Horizontal;
+  }
+  else {
+    m_axis = MirrorAxis::Vertical;
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_imir::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "mirror axis: ";
+  switch (m_axis) {
+  case MirrorAxis::Vertical:   sstr << "vertical\n"; break;
+  case MirrorAxis::Horizontal: sstr << "horizontal\n"; break;
+  }
 
   return sstr.str();
 }

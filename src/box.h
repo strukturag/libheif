@@ -344,6 +344,25 @@ namespace heif {
   };
 
 
+  class Box_imir : public Box {
+  public:
+  Box_imir(const BoxHeader& hdr) : Box(hdr) { }
+
+    enum class MirrorAxis : uint8_t {
+      Vertical = 0,
+      Horizontal = 1
+    };
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    MirrorAxis m_axis;
+  };
+
+
   class Box_clap : public Box {
   public:
   Box_clap(const BoxHeader& hdr) : Box(hdr) { }
