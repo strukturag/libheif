@@ -50,7 +50,7 @@ AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
     [Enable fuzzing with libFuzzer.]))
 if eval "test x$enable_libfuzzer = xyes"; then
     AC_MSG_NOTICE([Enable libFuzzer])
-    LIBFUZZER_FLAGS="-fsanitize=fuzzer,address"
+    LIBFUZZER_FLAGS="-fsanitize=fuzzer-no-link,address,shift,integer -fno-sanitize-recover=shift,integer"
     CFLAGS="$CFLAGS $LIBFUZZER_FLAGS"
     CXXFLAGS="$CXXFLAGS $LIBFUZZER_FLAGS"
 fi
