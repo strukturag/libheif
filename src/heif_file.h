@@ -21,8 +21,6 @@
 #ifndef LIBHEIF_HEIF_FILE_H
 #define LIBHEIF_HEIF_FILE_H
 
-#include "libde265/de265.h"
-
 #include "box.h"
 
 #include <map>
