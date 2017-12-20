@@ -43,6 +43,8 @@ int main(int argc, char** argv)
   }
 
   const char* input_filename = argv[1];
+
+#if 0
   const char* output_filename = nullptr;
   if (argc >= 3) {
     output_filename = argv[2];
@@ -136,7 +138,7 @@ int main(int argc, char** argv)
     //#define de265_action_end_of_stream       4
   }
   de265_free_decoder(ctx);
-
+#endif
 
   // ==============================================================================
 
@@ -147,6 +149,9 @@ int main(int argc, char** argv)
     std::cerr << "error: " << err << "\n";
     return 0;
   }
+
+
+  std::cout << "----------------------------------------------------------\n";
 
   std::cout << "num images: " << heifFile.get_num_images() << "\n";
   std::cout << "primary image: " << heifFile.get_primary_image_ID() << "\n";

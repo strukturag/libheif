@@ -229,6 +229,8 @@ namespace heif {
 
     bool is_hidden_item() const { return m_hidden_item; }
 
+    uint16_t get_item_ID() const { return m_item_ID; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 

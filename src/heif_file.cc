@@ -26,6 +26,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <assert.h>
 
 
 using namespace heif;
@@ -141,12 +142,28 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     return Error(Error::InvalidInput, Error::NoIlocBox);
   }
 
+  std::shared_ptr<Box> iinf_box = m_meta_box->get_child_box(fourcc("iinf"));
+  if (!iinf_box) {
+    return Error(Error::InvalidInput, Error::NoIinfBox);
+  }
+
 
 
   // --- build list of images
 
   m_primary_image_ID = pitm_box->get_item_ID();
 
+  std::vector<std::shared_ptr<Box>> infe_boxes = iinf_box->get_child_boxes(fourcc("infe"));
+
+  for (auto& box : infe_boxes) {
+    std::shared_ptr<Box_infe> infe_box = std::dynamic_pointer_cast<Box_infe>(box);
+    assert(infe_box);
+
+    Image img;
+    img.m_infe_box = infe_box;
+
+    m_images.insert( std::make_pair(infe_box->get_item_ID(), img) );
+  }
 
 #if 0
   // HEVC image headers.

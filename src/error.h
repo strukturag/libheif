@@ -53,6 +53,7 @@ namespace heif {
       NoIpcoBox,
       NoIpmaBox,
       NoIlocBox,
+      NoIinfBox,
       NoPictHandler
     } sub_error_code;
 

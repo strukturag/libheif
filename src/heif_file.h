@@ -55,7 +55,7 @@ namespace heif {
       std::shared_ptr<Box_infe> m_infe_box;
     };
 
-    std::map<uint32_t, Image> m_images;  // map from image ID to info structure
+    std::map<uint16_t, Image> m_images;  // map from image ID to info structure
 
     uint32_t m_primary_image_ID;
 
