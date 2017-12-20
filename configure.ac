@@ -42,6 +42,7 @@ PKG_CHECK_MODULES([libde265], [libde265], [
     AC_SUBST(libde265_LIBS)
     have_libde265="yes"
 ], [have_libde265="no"])
+AM_CONDITIONAL([HAVE_LIBDE265], [test "x$have_libde265" = "xyes"])
 
 AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$have_libde265" != "xno"])
 AC_MSG_NOTICE([Building examples: $have_libde265])
