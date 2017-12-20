@@ -11,6 +11,7 @@ compile
 config.*
 configure
 depcomp
+examples/convert
 examples/heif
 install-sh
 libtool

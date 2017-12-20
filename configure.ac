@@ -44,6 +44,35 @@ PKG_CHECK_MODULES([libde265], [libde265], [
 ], [have_libde265="no"])
 AM_CONDITIONAL([HAVE_LIBDE265], [test "x$have_libde265" = "xyes"])
 
+AC_CHECK_HEADERS([jpeglib.h])
+AC_CHECK_LIB([jpeg], [jpeg_CreateCompress], [
+    AC_DEFINE([HAVE_LIBJPEG], [1], [Whether libjpeg was found.])
+    libjpeg_CFLAGS=""
+    AC_SUBST(libjpeg_CFLAGS)
+    libjpeg_LIBS="-ljpeg"
+    AC_SUBST(libjpeg_LIBS)
+    have_libjpeg="yes"
+], [have_libjpeg="no"])
+if eval "test x$have_libjpeg = xno"; then
+AC_CHECK_LIB([jpeg], [jpeg_destroy_compress], [
+    AC_DEFINE([HAVE_LIBJPEG], [1], [Whether libjpeg was found.])
+    libjpeg_CFLAGS=""
+    AC_SUBST(libjpeg_CFLAGS)
+    libjpeg_LIBS="-ljpeg"
+    AC_SUBST(libjpeg_LIBS)
+    have_libjpeg="yes"
+], [have_libjpeg="no"])
+fi
+AM_CONDITIONAL([HAVE_LIBJPEG], [test "x$have_libjpeg" = "xyes"])
+
+PKG_CHECK_MODULES([libpng], [libpng], [
+    AC_DEFINE([HAVE_LIBPNG], [1], [Whether libpng was found.])
+    AC_SUBST(libpng_CFLAGS)
+    AC_SUBST(libpng_LIBS)
+    have_libpng="yes"
+], [have_libpng="no"])
+AM_CONDITIONAL([HAVE_LIBPNG], [test "x$have_libpng" = "xyes"])
+
 AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$have_libde265" != "xno"])
 AC_MSG_NOTICE([Building examples: $have_libde265])
 
