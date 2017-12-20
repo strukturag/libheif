@@ -112,6 +112,8 @@ namespace heif {
     std::shared_ptr<Box> get_child_box(uint32_t short_type) const;
     std::vector<std::shared_ptr<Box>> get_child_boxes(uint32_t short_type) const;
 
+    const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const { return m_children; }
+
   protected:
     virtual Error parse(BitstreamRange& range);
 
@@ -231,6 +233,8 @@ namespace heif {
 
     uint16_t get_item_ID() const { return m_item_ID; }
 
+    std::string get_item_type() const { return m_item_type; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 
@@ -306,15 +310,17 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
+    struct PropertyAssociation {
+      bool essential;
+      uint16_t property_index;
+    };
+
+    const std::vector<PropertyAssociation>* get_properties_for_item_ID(uint32_t itemID) const;
+
   protected:
     Error parse(BitstreamRange& range) override;
 
     struct Entry {
-      struct PropertyAssociation {
-        bool essential;
-        uint16_t property_index;
-      };
-
       uint32_t item_ID;
       std::vector<PropertyAssociation> associations;
     };

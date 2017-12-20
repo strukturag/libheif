@@ -38,6 +38,8 @@ namespace heif {
     enum ErrorCode {
       Ok,
       InvalidInput,
+      NonexistingImage,
+      Unsupported
     } error_code;
 
     enum SubErrorCode {
@@ -54,7 +56,11 @@ namespace heif {
       NoIpmaBox,
       NoIlocBox,
       NoIinfBox,
-      NoPictHandler
+      NoPictHandler,
+      NoPropertiesForItemID,
+      NonexistingPropertyReferenced,
+      UnsupportedImageType,
+      NoInputDataInFile
     } sub_error_code;
 
   Error()

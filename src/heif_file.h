@@ -27,6 +27,8 @@
 
 #include <map>
 
+struct de265_image;
+
 
 namespace heif {
 
@@ -39,9 +41,9 @@ namespace heif {
 
     int get_num_images() const { return m_images.size(); }
 
-    int get_primary_image_ID() const { return m_primary_image_ID; }
+    uint16_t get_primary_image_ID() const { return m_primary_image_ID; }
 
-    struct de265_image* get_image(uint32_t ID);
+    Error get_image(uint16_t ID, struct de265_image** img, std::istream& TODO_istr) const;
 
   private:
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
@@ -59,7 +61,7 @@ namespace heif {
 
     std::map<uint16_t, Image> m_images;  // map from image ID to info structure
 
-    uint32_t m_primary_image_ID;
+    uint16_t m_primary_image_ID;
 
 
     Error parse_heif_file(BitstreamRange& bitstream);

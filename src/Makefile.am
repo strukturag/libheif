@@ -12,7 +12,9 @@ libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY)
 libheif_la_CXXFLAGS = \
-  $(CFLAG_VISIBILITY)
+  $(CFLAG_VISIBILITY) $(libde265_CFLAGS)
+libheif_LDADD = $(libde265_LIBS)
+
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
 

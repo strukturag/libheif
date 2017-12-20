@@ -156,5 +156,12 @@ int main(int argc, char** argv)
   std::cout << "num images: " << heifFile.get_num_images() << "\n";
   std::cout << "primary image: " << heifFile.get_primary_image_ID() << "\n";
 
+  uint16_t primary_image_ID = heifFile.get_primary_image_ID();
+
+  std::ifstream istr(input_filename);
+
+  struct de265_image* img;
+  err = heifFile.get_image(primary_image_ID, &img, istr);
+
   return 0;
 }

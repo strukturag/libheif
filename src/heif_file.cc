@@ -28,6 +28,10 @@
 #include <iostream>
 #include <assert.h>
 
+extern "C" {
+#include <libde265/de265.h>
+}
+
 
 using namespace heif;
 
@@ -203,7 +207,166 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 }
 
 
-struct de265_image* HeifFile::get_image(uint32_t ID)
+Error HeifFile::get_image(uint16_t ID, struct de265_image** img, std::istream& TODO_istr) const
 {
-  return nullptr;
+  // --- get the image from the list of all images
+
+  auto image_iter = m_images.find(ID);
+  if (image_iter == m_images.end()) {
+    return Error(Error::NonexistingImage);
+  }
+
+  const Image& image = image_iter->second;
+
+
+  // --- get properties for this image
+
+  std::vector< std::shared_ptr<Box> > properties;
+
+  const std::vector<Box_ipma::PropertyAssociation>* property_assoc = m_ipma_box->get_properties_for_item_ID(ID);
+  if (property_assoc == nullptr) {
+    return Error(Error::InvalidInput, Error::NoPropertiesForItemID);
+  }
+
+  auto allProperties = m_ipco_box->get_all_child_boxes();
+  for (const  Box_ipma::PropertyAssociation& assoc : *property_assoc) {
+    if (assoc.property_index > allProperties.size()) {
+      return Error(Error::InvalidInput, Error::NonexistingPropertyReferenced);
+    }
+
+    if (assoc.property_index > 0) {
+      properties.push_back(allProperties[assoc.property_index - 1]);
+    }
+
+    // TODO: essential flag ?
+  }
+
+
+
+  // --- decode image, depending on its type
+
+  std::string item_type = image.m_infe_box->get_item_type();
+
+  if (item_type == "hvc1") {
+    // --- --- --- HEVC
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_hvcC> hvcC_box;
+    for (auto& prop_box : properties) {
+      if (prop_box->get_short_type() == fourcc("hvcC")) {
+        hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop_box);
+        assert(hvcC_box);
+      }
+    }
+
+    // --- get coded image data pointers
+
+    auto items = m_iloc_box->get_items();
+    const Box_iloc::Item* item = nullptr;
+    for (const auto& i : items) {
+      if (i.item_ID == ID) {
+        item = &i;
+        break;
+      }
+    }
+
+    if (!item) {
+      return Error(Error::InvalidInput, Error::NoInputDataInFile);
+    }
+
+
+    std::vector<uint8_t> data;
+    if (!hvcC_box->get_headers(&data)) {
+      // TODO
+    }
+
+    if (!m_iloc_box->read_data(*item, TODO_istr, &data)) {
+      // TODO
+    }
+
+
+
+    // --- decode HEVC image with libde265
+
+    de265_decoder_context* ctx = de265_new_decoder();
+    de265_start_worker_threads(ctx,1);
+
+    de265_push_data(ctx, data.data(), data.size(), 0, nullptr);
+
+#if LIBDE265_NUMERIC_VERSION >= 0x02000000
+    de265_push_end_of_stream(ctx);
+#else
+    de265_flush_data(ctx);
+#endif
+
+
+#if LIBDE265_NUMERIC_VERSION >= 0x02000000
+    int action = de265_get_action(ctx, 1);
+    printf("libde265 action: %d\n",action);
+
+    if (action==de265_action_get_image) {
+      printf("image decoded !\n");
+    }
+#else
+    int more;
+    de265_error err;
+    do {
+      more = 0;
+      err = de265_decode(ctx, &more);
+      if (err != DE265_OK) {
+        printf("Error decoding: %s (%d)\n", de265_get_error_text(err), err);
+        break;
+      }
+
+      const struct de265_image* image = de265_get_next_picture(ctx);
+      if (image) {
+        printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
+            de265_get_image_height(image, 0));
+        de265_release_next_picture(ctx);
+      }
+    } while (more);
+#endif
+
+
+    FILE* fh = fopen("out.bin", "wb");
+    fwrite(data.data(), 1, data.size(), fh);
+    fclose(fh);
+  }
+  else {
+    return Error(Error::Unsupported, Error::UnsupportedImageType);
+  }
+
+#if 0
+  // HEVC image headers.
+  std::vector<std::shared_ptr<Box>> hvcC_boxes = ipco_box->get_child_boxes(fourcc("hvcC"));
+  if (hvcC_boxes.empty()) {
+    // No images in the file.
+    images->clear();
+    return true;
+  }
+
+  // HEVC image data.
+  std::shared_ptr<Box_iloc> iloc = std::dynamic_pointer_cast<Box_iloc>(get_child_box(fourcc("iloc")));
+  if (!iloc || iloc->get_items().size() != hvcC_boxes.size()) {
+    // TODO(jojo): Can images share a header?
+    return false;
+  }
+
+  const std::vector<Box_iloc::Item>& iloc_items = iloc->get_items();
+  for (size_t i = 0; i < hvcC_boxes.size(); i++) {
+    Box_hvcC* hvcC = static_cast<Box_hvcC*>(hvcC_boxes[i].get());
+    std::vector<uint8_t> data;
+    if (!hvcC->get_headers(&data)) {
+      return false;
+    }
+    if (!iloc->read_data(iloc_items[i], istr, &data)) {
+      return false;
+    }
+
+    images->push_back(std::move(data));
+  }
+#endif
+
+  return Error::OK;
 }
