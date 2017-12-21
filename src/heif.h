@@ -48,13 +48,15 @@ heif_image* heif_get_image(heif* h, int image_index);
 // --- heif_image
 
 enum heif_compression_format {
-  heif_compression_HEVC,
-  heif_compression_AVC,
-  heif_compression_JPEG
+  heif_compression_undefined = 0,
+  heif_compression_HEVC = 1,
+  heif_compression_AVC = 2,
+  heif_compression_JPEG = 3
 };
 
 
 enum heif_chroma {
+  heif_chroma_undefined=99,
   heif_chroma_mono=0,
   heif_chroma_420=1,
   heif_chroma_422=2,
@@ -62,6 +64,7 @@ enum heif_chroma {
 };
 
 enum heif_colorspace {
+  heif_colorspace_undefined=99,
   heif_colorspace_YCbCr=0,
   heif_colorspace_GBR  =1
 };
@@ -76,8 +79,6 @@ enum heif_channel {
   heif_channel_Alpha = 6
 };
 
-
-struct heif_image;
 
 int heif_image_get_width(const struct heif_image*,enum heif_channel channel);
 
@@ -97,8 +98,8 @@ void heif_image_release(const struct heif_image*);
 
 
 
+enum heif_compression_format heif_image_get_compression_format(heif_image*);
 
-enum heif_compression_format heif_image_get_compression_format(heif_image*)
 
 /*
 int  heif_image_get_number_of_data_chunks(heif_image* img);

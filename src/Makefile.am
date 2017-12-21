@@ -21,14 +21,12 @@ libheif_la_SOURCES = \
   box.h \
   box.cc \
   heif_file.h \
-  heif_file.cc
+  heif_file.cc \
+  heif_image.h \
+  heif_image.cc
 
 libheif_la_HEADERS = \
-  box.h \
-  bitstream.h \
-  error.h \
-  heif_file.h \
-  logging.h
+  heif.h
 
 if ENABLE_LIBFUZZER
 bin_PROGRAMS += box-fuzzer
