@@ -40,7 +40,8 @@ namespace heif {
       InvalidInput,
       NonexistingImage,
       Unsupported,
-      MemoryAllocationError
+      MemoryAllocationError,
+      NoSuitableDecoder
     } error_code;
 
     enum SubErrorCode {

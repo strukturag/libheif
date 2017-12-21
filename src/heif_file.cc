@@ -516,6 +516,7 @@ Error HeifFile::decode_image(uint16_t ID,
                              std::shared_ptr<HeifPixelImage>& img,
                              std::istream& TODO_istr) const
 {
+#if HAVE_LIBDE265
   const de265_image* de265img = nullptr;
 
   Error err = get_image(ID, &de265img, TODO_istr);
@@ -567,4 +568,7 @@ Error HeifFile::decode_image(uint16_t ID,
 #endif
 
   return Error::OK;
+#else
+  return Error(Error::NoSuitableDecoder);
+#endif
 }
