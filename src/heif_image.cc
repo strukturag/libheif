@@ -72,6 +72,18 @@ int HeifPixelImage::get_height(enum heif_channel channel) const
 }
 
 
+std::set<heif_channel> HeifPixelImage::get_channel_set() const
+{
+  std::set<heif_channel> channels;
+
+  for (const auto& plane : m_planes) {
+    channels.insert(plane.first);
+  }
+
+  return channels;
+}
+
+
 uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
 {
   auto iter = m_planes.find(channel);

@@ -26,6 +26,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 
 class HeifPixelImage
@@ -47,6 +48,8 @@ class HeifPixelImage
   int get_height(enum heif_channel channel) const;
 
   heif_chroma get_chroma_format() const;
+
+  std::set<enum heif_channel> get_channel_set() const;
 
   int get_bits_per_pixel(enum heif_channel channel) const;
 

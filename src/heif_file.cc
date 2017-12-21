@@ -23,11 +23,13 @@
 #endif
 
 #include "heif_file.h"
+#include "heif_image.h"
 
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <assert.h>
+#include <string.h>
 
 #if HAVE_LIBDE265
 #include <libde265/de265.h>
@@ -505,6 +507,62 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     images->push_back(std::move(data));
   }
 #endif
+
+  return Error::OK;
+}
+
+
+Error HeifFile::decode_image(uint16_t ID,
+                             std::shared_ptr<HeifPixelImage>& img,
+                             std::istream& TODO_istr) const
+{
+  const de265_image* de265img = nullptr;
+
+  Error err = get_image(ID, &de265img, TODO_istr);
+  if (err != Error::OK) {
+    return err;
+  }
+
+  img = std::make_shared<HeifPixelImage>();
+
+  img->create( de265_get_image_width(de265img, 0),
+               de265_get_image_height(de265img, 0),
+               heif_colorspace_YCbCr, // TODO
+               (heif_chroma)de265_get_chroma_format(de265img) );
+
+
+  // --- transfer data from de265_image to HeifPixelImage
+
+  heif_channel channel2plane[3] = {
+    heif_channel_Y,
+    heif_channel_Cb,
+    heif_channel_Cr
+  };
+
+
+  for (int c=0;c<3;c++) {
+    int bpp = de265_get_bits_per_pixel(de265img, c);
+
+    int stride;
+    const uint8_t* data = de265_get_image_plane(de265img, c, &stride);
+
+    int w = de265_get_image_width(de265img, c);
+    int h = de265_get_image_height(de265img, c);
+
+
+    img->add_plane(channel2plane[c], w,h, bpp);
+
+    int dst_stride;
+    uint8_t* dst_mem = img->get_plane(channel2plane[c], &dst_stride);
+
+    int bytes_per_pixel = (bpp+7)/8;
+
+    for (int y=0;y<h;y++) {
+      memcpy(dst_mem + y*dst_stride, data + y*stride, w * bytes_per_pixel);
+    }
+  }
+
+  de265_release_picture(de265img);
 
   return Error::OK;
 }
