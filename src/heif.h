@@ -54,8 +54,53 @@ enum heif_compression_format {
 };
 
 
+enum heif_chroma {
+  heif_chroma_mono=0,
+  heif_chroma_420=1,
+  heif_chroma_422=2,
+  heif_chroma_444=3
+};
+
+enum heif_colorspace {
+  heif_colorspace_YCbCr=0,
+  heif_colorspace_GBR  =1
+};
+
+enum heif_channel {
+  heif_channel_Y = 0,
+  heif_channel_Cb = 1,
+  heif_channel_Cr = 2,
+  heif_channel_R = 3,
+  heif_channel_G = 4,
+  heif_channel_B = 5,
+  heif_channel_Alpha = 6
+};
+
+
+struct heif_image;
+
+int heif_image_get_width(const struct heif_image*,enum heif_channel channel);
+
+int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
+
+enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
+
+int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
+
+/* The |out_stride| is returned as "bytes per line".
+   When out_stride is NULL, no value will be written. */
+const uint8_t* heif_image_get_plane(const struct heif_image*,
+                                    enum heif_channel channel,
+                                    int* out_stride);
+
+void heif_image_release(const struct heif_image*);
+
+
+
+
 enum heif_compression_format heif_image_get_compression_format(heif_image*)
 
+/*
 int  heif_image_get_number_of_data_chunks(heif_image* img);
 
 void heif_image_get_data_chunk(heif_image* img, int chunk_index,
@@ -63,12 +108,10 @@ void heif_image_get_data_chunk(heif_image* img, int chunk_index,
                                int const* data_size);
 
 void heif_image_free_data_chunk(heif_image* img, int chunk_index);
+*/
 
-void heif_image_free(heif_image* img);
 
-
-struct de265_image* heif_decode_hevc_image(heif_image* img);
-
+//struct de265_image* heif_decode_hevc_image(heif_image* img);
 
 #ifdef __cplusplus
 }
