@@ -36,6 +36,7 @@ namespace heif {
     ~HeifFile();
 
     Error read_from_file(const char* input_filename);
+    Error read_from_memory(const void* data, size_t size);
 
     int get_num_images() const { return m_images.size(); }
 

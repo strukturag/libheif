@@ -26,6 +26,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <assert.h>
 
 extern "C" {
@@ -65,6 +66,18 @@ Error HeifFile::read_from_file(const char* input_filename)
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
   heif::BitstreamRange range(&istr, maxSize);
 
+
+  Error error = parse_heif_file(range);
+  return error;
+}
+
+
+Error HeifFile::read_from_memory(const void* data, size_t size) {
+  // TODO: Work on passed memory directly instead of creating a copy here.
+  std::string s(size ? static_cast<const char*>(data) : nullptr, size);
+  std::istringstream stream(std::move(s));
+
+  heif::BitstreamRange range(&stream, size);
 
   Error error = parse_heif_file(range);
   return error;
