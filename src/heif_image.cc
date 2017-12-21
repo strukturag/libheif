@@ -89,6 +89,10 @@ uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
   auto iter = m_planes.find(channel);
   assert(iter != m_planes.end());
 
+  if (out_stride) {
+    *out_stride = iter->second.width;
+  }
+
   return iter->second.mem.data();
 }
 
@@ -97,6 +101,10 @@ const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_str
 {
   auto iter = m_planes.find(channel);
   assert(iter != m_planes.end());
+
+  if (out_stride) {
+    *out_stride = iter->second.width;
+  }
 
   return iter->second.mem.data();
 }

@@ -35,9 +35,9 @@ inline uint8_t clip(float value) {
   }
 }
 
-bool PngEncoder::Encode(const struct de265_image* image,
+bool PngEncoder::Encode(const std::shared_ptr<HeifPixelImage>& image,
     const std::string& filename) {
-  if (de265_get_chroma_format(image) != de265_chroma_420) {
+  if (image->get_chroma_format() != heif_chroma_420) {
     fprintf(stderr, "Only YUV420 images supported.\n");
     return false;
   }
@@ -72,8 +72,8 @@ bool PngEncoder::Encode(const struct de265_image* image,
 
   png_init_io(png_ptr, fp);
 
-  int width = de265_get_image_width(image, 0);
-  int height = de265_get_image_height(image, 0);
+  int width = image->get_width();
+  int height = image->get_height();
   static const int kBitDepth = 8;
   static const int kColorType = PNG_COLOR_TYPE_RGB;
   png_set_IHDR(png_ptr, info_ptr, width, height, kBitDepth, kColorType,
@@ -86,14 +86,14 @@ bool PngEncoder::Encode(const struct de265_image* image,
   }
 
   int stride_y;
-  const uint8_t* row_y = de265_get_image_plane(image, 0, &stride_y);
+  const uint8_t* row_y = image->get_plane(heif_channel_Y, &stride_y);
   int stride_u;
-  const uint8_t* row_u = de265_get_image_plane(image, 1, &stride_u);
+  const uint8_t* row_u = image->get_plane(heif_channel_Cb, &stride_u);
   int stride_v;
-  const uint8_t* row_v = de265_get_image_plane(image, 2, &stride_v);
+  const uint8_t* row_v = image->get_plane(heif_channel_Cr, &stride_v);
 
-  switch (de265_get_chroma_format(image)) {
-    case de265_chroma_420:
+  switch (image->get_chroma_format()) {
+    case heif_chroma_420:
       // Simple YUV -> RGB conversion:
       // R = 1.164 * (Y - 16) + 1.596 * (V - 128)
       // G = 1.164 * (Y - 16) - 0.813 * (V - 128) - 0.391 * (U - 128)

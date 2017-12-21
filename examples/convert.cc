@@ -132,8 +132,8 @@ int main(int argc, char** argv)
       filename.assign(output_filename);
     }
 
-    const de265_image* img = nullptr;
-    err = heifFile.get_image(imageID, &img, istr);
+    std::shared_ptr<HeifPixelImage> img;
+    err = heifFile.decode_image(imageID, img, istr);
     if (err != Error::OK) {
       std::cerr << "Could not read HEIF image: " << err << "\n";
       return 1;

@@ -47,7 +47,7 @@ class HeifPixelImage
 
   int get_height(enum heif_channel channel) const;
 
-  heif_chroma get_chroma_format() const;
+  heif_chroma get_chroma_format() const { return m_chroma; }
 
   std::set<enum heif_channel> get_channel_set() const;
 

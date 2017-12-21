@@ -21,13 +21,14 @@
 #define EXAMPLE_ENCODER_H
 
 #include <string>
+#include <memory>
 
-#include "libde265/de265.h"
+#include "heif_image.h"
 
 class Encoder {
  public:
   virtual ~Encoder() {}
-  virtual bool Encode(const struct de265_image* image,
+  virtual bool Encode(const std::shared_ptr<HeifPixelImage>& image,
       const std::string& filename) = 0;
 };
 

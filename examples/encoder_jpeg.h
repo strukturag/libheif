@@ -32,7 +32,7 @@ class JpegEncoder : public Encoder {
  public:
   JpegEncoder(int quality);
 
-  bool Encode(const struct de265_image* image,
+  bool Encode(const std::shared_ptr<HeifPixelImage>& image,
       const std::string& filename) override;
 
  private:

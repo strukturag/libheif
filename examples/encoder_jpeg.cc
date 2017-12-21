@@ -35,9 +35,9 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
   longjmp(handler->setjmp_buffer, 1);
 }
 
-bool JpegEncoder::Encode(const struct de265_image* image,
+bool JpegEncoder::Encode(const std::shared_ptr<HeifPixelImage>& image,
     const std::string& filename) {
-  if (de265_get_chroma_format(image) != de265_chroma_420) {
+  if (image->get_chroma_format() != heif_chroma_420) {
     fprintf(stderr, "Only YUV420 images supported.\n");
     return false;
   }
@@ -62,8 +62,8 @@ bool JpegEncoder::Encode(const struct de265_image* image,
   jpeg_create_compress(&cinfo);
   jpeg_stdio_dest(&cinfo, fp);
 
-  cinfo.image_width = de265_get_image_width(image, 0);
-  cinfo.image_height = de265_get_image_height(image, 0);
+  cinfo.image_width = image->get_width();
+  cinfo.image_height = image->get_height();
   cinfo.input_components = 3;
   cinfo.in_color_space = JCS_YCbCr;
   jpeg_set_defaults(&cinfo);
@@ -73,11 +73,11 @@ bool JpegEncoder::Encode(const struct de265_image* image,
   jpeg_start_compress(&cinfo, kWriteAllTables);
 
   int stride_y;
-  const uint8_t* row_y = de265_get_image_plane(image, 0, &stride_y);
+  const uint8_t* row_y = image->get_plane(heif_channel_Y, &stride_y);
   int stride_u;
-  const uint8_t* row_u = de265_get_image_plane(image, 1, &stride_u);
+  const uint8_t* row_u = image->get_plane(heif_channel_Cb, &stride_u);
   int stride_v;
-  const uint8_t* row_v = de265_get_image_plane(image, 2, &stride_v);
+  const uint8_t* row_v = image->get_plane(heif_channel_Cr, &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,
