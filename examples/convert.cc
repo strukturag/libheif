@@ -21,6 +21,7 @@
 #include "config.h"
 #endif
 
+#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -39,31 +40,52 @@
 
 using namespace heif;
 
+static int usage(const char* command) {
+  fprintf(stderr, "USAGE: %s [-q quality] <filename> <output>\n", command);
+  return 1;
+}
+
 int main(int argc, char** argv)
 {
   using heif::BoxHeader;
   using heif::Box;
   using heif::fourcc;
 
-  if (argc < 3) {
-    fprintf(stderr, "USAGE: %s <filename> <output>\n", argv[0]);
-    return 1;
+  int opt;
+  int quality = -1;  // Use default quality.
+  while ((opt = getopt(argc, argv, "q:")) != -1) {
+    switch (opt) {
+    case 'q':
+      quality = atoi(optarg);
+      break;
+    default: /* '?' */
+      return usage(argv[0]);
+    }
   }
 
-  std::string input_filename(argv[1]);
-  std::string output_filename(argv[2]);
+  if (optind + 2 > argc) {
+    // Need input and output filenames as additional arguments.
+    return usage(argv[0]);
+  }
+
+  std::string input_filename(argv[optind++]);
+  std::string output_filename(argv[optind++]);
   std::ifstream istr(input_filename.c_str());
 
   std::unique_ptr<Encoder> encoder;
 #if HAVE_LIBJPEG
-  if (output_filename.find(".jpg") == output_filename.size() - 4) {
-    // TODO(jojo): Should this be configurable?
-    static const int kJpegQuality = 90;
-    encoder.reset(new JpegEncoder(kJpegQuality));
+  if (output_filename.size() > 4 &&
+      output_filename.find(".jpg") == output_filename.size() - 4) {
+    static const int kDefaultJpegQuality = 90;
+    if (quality == -1) {
+      quality = kDefaultJpegQuality;
+    }
+    encoder.reset(new JpegEncoder(quality));
   }
 #endif  // HAVE_LIBJPEG
 #if HAVE_LIBPNG
-  if (output_filename.find(".png") == output_filename.size() - 4) {
+  if (output_filename.size() > 4 &&
+      output_filename.find(".png") == output_filename.size() - 4) {
     encoder.reset(new PngEncoder());
   }
 #endif  // HAVE_LIBPNG
