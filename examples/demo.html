@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>libheif decoder demo</title>
+<style type="text/css">
+body {
+    font-family: sans-serif;
+}
+#form, select {
+    margin: 1em 0;
+}
+.hidden {
+    display: none;
+}
+</style>
+</head>
+<body>
+<h1>libheif decoder demo</h1>
+<div id="form" class="hidden">
+    <div>
+        Select HEIF image file to display:
+    </div>
+    <input type="file" id="file">
+</div>
+<select id="images" class="hidden"></select>
+<div id="loading">
+    Loading, please wait...
+</div>
+<div id="decoding" class="hidden">
+    Decoding, please wait...
+</div>
+<div id="container" class="hidden">
+    <canvas id="canvas"></canvas>
+</div>
+<div id="error-format" class="hidden">
+    The selected file is not a valid HEIF file or the specific format is not
+    supported yet.<br>
+    If you selected is a valid HEIF file and still see this error, please send
+    the file to
+    <a target="_blank" href="mailto:opensource@struktur.de">opensource@struktur.de</a>
+    so we can improve the library.
+</div>
+<script>
+(function() {
+
+    function show(id) {
+        document.getElementById(id).style.display = "block";
+    }
+
+    function hide(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+    var CanvasDrawer = function(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
+        this.image_data = null;
+    };
+
+    CanvasDrawer.prototype.draw = function(image) {
+        var w = image.get_width();
+        var h = image.get_height();
+        if (w != this.canvas.width || h != this.canvas.height ||
+                !this.image_data) {
+            this.canvas.width = w;
+            this.canvas.height = h;
+            this.image_data = this.ctx.createImageData(w, h);
+            var image_data = this.image_data.data;
+            // Start with a white image.
+            for (var i=0; i<w*h; i++) {
+                image_data[i*4+3] = 255;
+            }
+        }
+
+        image.display(this.image_data, function(display_image_data) {
+            if (window.requestAnimationFrame) {
+                this.pending_image_data = display_image_data;
+                window.requestAnimationFrame(function() {
+                    if (this.pending_image_data) {
+                        this.ctx.putImageData(this.pending_image_data, 0, 0);
+                        this.pending_image_data = null;
+                    }
+                }.bind(this));
+            } else {
+                this.ctx.putImageData(display_image_data, 0, 0);
+            }
+        }.bind(this));
+    };
+
+    function HeifDemo(libheif, libde265) {
+        this.libheif = libheif;
+        this.libde265 = libde265;
+        this.canvas = document.getElementById("canvas");
+        this.image_data = [];
+        this.images_select = document.getElementById("images");
+        this.images_select.addEventListener("change", function(event) {
+            var index = parseInt(event.target.value, 10);
+            if (index >= 0 && index < this.image_data.length) {
+                this._decodeImage(this.image_data[index]);
+            }
+        }.bind(this));
+        this.drawer = new CanvasDrawer(canvas);
+        this.decoder = new libheif.HeifDecoder();
+    }
+
+    HeifDemo.prototype.reset = function() {
+        this.canvas.width = 0;
+        this.canvas.height = 0;
+    };
+
+    HeifDemo.prototype.loadUrl = function(url) {
+        var request = new XMLHttpRequest();
+        console.log("Downloading", url);
+        request.open("get", url, true);
+        request.responseType = "arraybuffer";
+        hide("container");
+        show("loading");
+        request.onload = function(event) {
+            hide("loading");
+            if (request.status !== 200) {
+                console.log("Downloading failed", request);
+                return;
+            }
+
+            var data = request.response;
+            var remaining = data.byteLength;
+            console.log("Received", remaining, "bytes");
+            var buffer = new Uint8Array(data, 0, remaining);
+            this.loadBuffer(buffer);
+        }.bind(this);
+        request.send();
+    };
+
+    HeifDemo.prototype.loadBuffer = function(buffer) {
+        hide("error-format");
+        show("loading");
+        this.image_data = this.decoder.decode(buffer);
+        hide("loading");
+        if (!this.image_data || !this.image_data.length) {
+            hide("container");
+            show("error-format");
+            return false;
+        }
+        this._decodeImage(this.image_data[0]);
+        if (this.image_data.length > 1) {
+            show("images");
+            while (this.images_select.firstChild) {
+                this.images_select.removeChild(this.images_select.firstChild);
+            }
+            for (var i = 0; i < this.image_data.length; i++) {
+                var option = document.createElement("option"); 
+                option.setAttribute("value", i);
+                var label = document.createTextNode("Image " + (i+1));
+                option.appendChild(label);
+                this.images_select.appendChild(option);
+            }
+        }
+        return true;
+    };
+
+    HeifDemo.prototype._decodeImage = function(image_data) {
+        hide("container");
+        show("decoding");
+        this.reset();
+        var hevc_decoder = new libde265.Decoder();
+        hevc_decoder.disable_filters(true);
+        hevc_decoder.set_image_callback(function(image) {
+            show("container");
+            hide("decoding");
+            console.log("Received image", image.get_width(), image.get_height());
+            this.drawer.draw(image);
+        }.bind(this));
+
+        var finished_callback = function(error) {
+            hide("decoding");
+            if (error !== this.libde265.DE265_OK && !this.decoded_images.length) {
+                hide("container");
+                show("error-format");
+            }
+            console.log("Decoding finished with", this.libde265.de265_get_error_text(error), error);
+        }.bind(this);
+
+        hevc_decoder.push_data(image_data, 0);
+        hevc_decoder.flush();
+
+        var do_decode = function() {
+            console.log("Decoding");
+            hevc_decoder.decode(function(error) {
+                switch (error) {
+                    case libde265.DE265_OK:
+                        if (!hevc_decoder.has_more()) {
+                            finished_callback(error);
+                            return;
+                        }
+                        break;
+                    default:
+                        console.log("Error while decoding", error);
+                        finished_callback(error);
+                        return;
+                }
+                setTimeout(do_decode, 0);
+            });
+        };
+
+        // Start decoding deferred.
+        setTimeout(do_decode, 0);
+    };
+
+    window.onload = function() {
+        hide("loading");
+        if (typeof libheif === "undefined") {
+            alert("libheif could not be loaded, please check your browser console for details.");
+            return;
+        } else if (typeof libde265 === "undefined") {
+            alert("libde265 could not be loaded, please check your browser console for details.");
+            return;
+        }
+
+        console.log("Using libheif unreleased");
+        console.log("Using libde265", libde265.de265_get_version());
+        var demo = new HeifDemo(libheif, libde265);
+
+        show("form");
+
+        document.getElementById("file").addEventListener("change", function(event) {
+            var files = event.target.files;
+            if (!files || !files.length) {
+                return;
+            }
+
+            hide("container");
+            hide("error-format");
+            hide("decoding");
+            show("loading");
+            demo.reset();
+            var file = files[0];
+            var reader = new FileReader();
+            reader.onload = (function(theFile) {
+                return function(e) {
+                    setTimeout(function() {
+                        show("container");
+                        var buffer = e.target.result;
+                        if (!demo.loadBuffer(buffer)) {
+                            hide("container");
+                            show("error-format");
+                        }
+                    }, 1);
+                };
+            })(file);
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Start with example image.
+        var url = "example.heic";
+        demo.loadUrl(url);
+    };
+
+}).call();
+</script>
+<script src="libheif.js"></script>
+<script src="libde265.js"></script>
+</body>
+</html>
