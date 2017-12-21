@@ -38,6 +38,8 @@
 #include "encoder_png.h"
 #endif
 
+#define UNUSED(x) (void)x
+
 using namespace heif;
 
 static int usage(const char* command) {
@@ -53,6 +55,7 @@ int main(int argc, char** argv)
 
   int opt;
   int quality = -1;  // Use default quality.
+  UNUSED(quality);  // The quality will only be used by encoders that support it.
   while ((opt = getopt(argc, argv, "q:")) != -1) {
     switch (opt) {
     case 'q':
