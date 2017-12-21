@@ -175,6 +175,7 @@ body {
                 show("error-format");
             }
             console.log("Decoding finished with", this.libde265.de265_get_error_text(error), error);
+            hevc_decoder.free();
         }.bind(this);
 
         hevc_decoder.push_data(image_data, 0);
