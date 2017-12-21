@@ -34,6 +34,11 @@ HeifDecoder.prototype.decode = function(buffer) {
     for (var i = 0; i < size; i++) {
         var idx = images.get(i);
         var img = input.get_compressed_image_data(idx, buffer);
+        if (!img || img.error_code) {
+            console.log("Could not get image data for id", idx, img);
+            continue;
+        }
+
         result.push({
             "primary": idx === primary,
             "type": img.type,
