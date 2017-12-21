@@ -144,10 +144,18 @@ Error HeifFile::read_from_file(const char* input_filename)
 }
 
 
-Error HeifFile::read_from_memory(const void* data, size_t size) {
-  // TODO: Work on passed memory directly instead of creating a copy here.
-  std::string s(size ? static_cast<const char*>(data) : nullptr, size);
-  std::istringstream stream(std::move(s));
+
+Error HeifFile::read_from_memory(const void* data, size_t size)
+{
+  class memory_wrapped_stream : public std::basic_streambuf<char, std::char_traits<char> > {
+  public:
+    memory_wrapped_stream(char* data, uint64_t length) {
+      setg(data, data, data+length);
+    }
+  };
+
+  memory_wrapped_stream streambuf((char*)data, size);
+  std::istream stream(&streambuf);
 
   heif::BitstreamRange range(&stream, size);
 
