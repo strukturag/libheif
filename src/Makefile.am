@@ -40,15 +40,28 @@ libheif_la_LIBADD += \
 endif
 
 if ENABLE_LIBFUZZER
-bin_PROGRAMS += libheif-fuzzer
+bin_PROGRAMS += box-fuzzer
+if HAVE_LIBDE265
+bin_PROGRAMS += file-fuzzer
+endif
 endif
 
-libheif_fuzzer_DEPENDENCIES =
-libheif_fuzzer_CXXFLAGS =
-libheif_fuzzer_LDFLAGS = -fsanitize=fuzzer
-libheif_fuzzer_LDADD =
-libheif_fuzzer_SOURCES = $(libheif_la_SOURCES) fuzzer.cc
+box_fuzzer_DEPENDENCIES =
+box_fuzzer_CXXFLAGS =
+box_fuzzer_LDFLAGS = -fsanitize=fuzzer
+box_fuzzer_LDADD =
+box_fuzzer_SOURCES = $(libheif_la_SOURCES) box-fuzzer.cc
+
 if HAVE_LIBDE265
-libheif_fuzzer_LDADD += \
-  $(libde265_LIBS)
+box_fuzzer_LDADD += $(libde265_LIBS)
+endif
+
+file_fuzzer_DEPENDENCIES =
+file_fuzzer_CXXFLAGS =
+file_fuzzer_LDFLAGS = -fsanitize=fuzzer
+file_fuzzer_LDADD =
+file_fuzzer_SOURCES = $(libheif_la_SOURCES) file-fuzzer.cc
+
+if HAVE_LIBDE265
+file_fuzzer_LDADD += $(libde265_LIBS)
 endif

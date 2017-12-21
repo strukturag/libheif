@@ -17,20 +17,38 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <assert.h>
 #include <sstream>
 
+#include "libde265/de265.h"
+
 #include "box.h"
+#include "heif_file.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+  heif::HeifFile file;
+  heif::Error error = file.read_from_memory(data, size);
+  if (error != heif::Error::OK) {
+    // Not a valid HEIF file passed (which is most likely while fuzzing).
+    return 0;
+  }
+
+  file.get_primary_image_ID();
+  int images_count = file.get_num_images();
+  std::vector<uint32_t> ids = file.get_image_IDs();
+  assert(ids.size() == images_count);
+  if (ids.empty()) {
+    // File doesn't contain any images.
+    return 0;
+  }
+
   std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
-  std::basic_istringstream<char> stream(s);
-  heif::BitstreamRange range(&stream, size);
-  for (;;) {
-    std::shared_ptr<heif::Box> box;
-    heif::Error error = heif::Box::read(range, &box);
-    if (error != heif::Error::OK || range.error()) {
-      break;
+  for (int i = 0; i < images_count; ++i) {
+    const struct de265_image* img;
+    std::istringstream stream(s);
+    error = file.get_image(ids[i], &img, stream);
+    if (error != heif::Error::OK) {
+      // Ignore, we are only interested in crashes here.
     }
   }
   return 0;
