@@ -98,12 +98,13 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     m_top_level_boxes.push_back(box);
 
 
+#if !defined(HAVE_LIBFUZZER)
     // dump box content for debugging
 
     heif::Indent indent;
     std::cout << "\n";
     std::cout << box->dump(indent);
-
+#endif
 
     // extract relevant boxes (ftyp, meta)
 
