@@ -27,22 +27,22 @@ extern "C" {
 
 #include <stdint.h>
 
-struct heif;
+struct heif_context;
 struct heif_image;
 
-heif* heif_read_from_file(const char* filename);
+heif_context* heif_read_from_file(const char* filename);
 
-heif* heif_read_from_memory(const uint8_t* mem, uint64_t size);
+heif_context* heif_read_from_memory(const uint8_t* mem, uint64_t size);
 
-heif* heif_read_from_file_descriptor(int fd);
+heif_context* heif_read_from_file_descriptor(int fd);
 
-void heif_free(heif*);
+void heif_free(heif_context*);
 
-heif_image* heif_get_primary_image(heif* h);
+heif_image* heif_get_primary_image(heif_context* h);
 
-int heif_get_number_of_images(heif* h);
+int heif_get_number_of_images(heif_context* h);
 
-heif_image* heif_get_image(heif* h, int image_index);
+heif_image* heif_get_image(heif_context* h, int image_index);
 
 
 // --- heif_image
