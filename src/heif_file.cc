@@ -346,12 +346,12 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     }
 #else
     int more;
-    de265_error err;
+    de265_error decode_err;
     do {
       more = 0;
-      err = de265_decode(ctx, &more);
-      if (err != DE265_OK) {
-        printf("Error decoding: %s (%d)\n", de265_get_error_text(err), err);
+      decode_err = de265_decode(ctx, &more);
+      if (decode_err != DE265_OK) {
+        printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
         break;
       }
 
