@@ -60,6 +60,8 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   }
 
   uint8_t version = data[0];
+  (void)version; // version is unused
+
   uint8_t flags = data[1];
   int field_size = ((flags & 1) ? 32 : 16);
 
