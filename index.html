@@ -166,6 +166,7 @@ body {
         hevc_decoder.set_image_callback(function(image) {
             show("container");
             hide("decoding");
+            hide("error-format");
             console.log("Received image", image.get_width(), image.get_height());
             this.drawer.draw(image);
         }.bind(this));
