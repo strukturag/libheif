@@ -44,6 +44,24 @@ build-convert:
     - ./configure
     - make
 
+build-convert-new:
+  stage: build
+  variables:
+    CCACHE_COMPRESS: "true"
+    CCACHE_DIR: "$CI_PROJECT_DIR/.ccache"
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .ccache
+  script:
+    - ci-apt-get-install --no-install-recommends libjpeg-dev libpng-dev
+    - git clone --depth 1 -b frame-parallel https://github.com/strukturag/libde265.git
+    - ( cd libde265 && ./autogen.sh )
+    - ( cd libde265 && ./configure --prefix=$CI_PROJECT_DIR/libde265/dist --disable-dec265 --disable-sherlock265 --disable-hdrcopy --disable-enc265 --disable-acceleration_speed )
+    - ( cd libde265 && make && make install )
+    - PKG_CONFIG_PATH=$CI_PROJECT_DIR/libde265/dist/lib/pkgconfig/ ./configure
+    - make
+
 build-emscripten:
   stage: test
   variables:
