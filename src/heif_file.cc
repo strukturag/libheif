@@ -29,10 +29,9 @@
 #include <sstream>
 #include <assert.h>
 
-extern "C" {
+#if HAVE_LIBDE265
 #include <libde265/de265.h>
-}
-
+#endif
 
 using namespace heif;
 
@@ -307,7 +306,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   return Error::OK;
 }
 
-Error HeifFile::get_image_data(uint16_t ID, std::istream& TODO_istr,
+Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
     std::string* image_type, std::vector<uint8_t>* data) const {
   // --- get the image from the list of all images
 
@@ -395,7 +394,7 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
 
   std::string image_type;
   std::vector<uint8_t> data;
-  Error error = get_image_data(ID, TODO_istr, &image_type, &data);
+  Error error = get_compressed_image_data(ID, TODO_istr, &image_type, &data);
   if (error != Error::OK) {
     return error;
   }
@@ -403,6 +402,7 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
   // --- decode image, depending on its type
 
   if (image_type == "hvc1") {
+#if HAVE_LIBDE265
     // --- --- --- HEVC
 
     // --- decode HEVC image with libde265
@@ -450,10 +450,12 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     } while (more);
 #endif
 
-
     FILE* fh = fopen("out.bin", "wb");
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);
+#else
+    return Error(Error::Unsupported, Error::UnsupportedImageType);
+#endif  // HAVE_LIBDE265
   }
   else if (image_type == "grid") {
     ImageGrid grid;
