@@ -38,6 +38,7 @@ using namespace heif;
 static const size_t MAX_CHILDREN_PER_BOX = 1024;
 static const int MAX_ILOC_ITEMS = 1024;
 static const int MAX_ILOC_EXTENDS_PER_ITEM = 32;
+static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 
 heif::Error heif::Error::OK(heif::Error::Ok);
 
@@ -353,6 +354,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 
   case fourcc("hvcC"):
     box = std::make_shared<Box_hvcC>(hdr);
+    break;
+
+  case fourcc("idat"):
+    box = std::make_shared<Box_idat>(hdr);
     break;
 
   case fourcc("grpl"):
@@ -1395,6 +1400,49 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
   }
 
   return true;
+}
+
+
+Error Box_idat::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  m_data_start_pos = range.get_istream()->tellg();
+
+  return range.get_error();
+}
+
+
+std::string Box_idat::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_idat::read_data(BitstreamRange& range, uint64_t start, uint64_t length,
+                          std::vector<uint8_t>& out_data) const
+{
+  // move to start of data
+  range.get_istream()->seekg(m_data_start_pos + (std::streampos)start, std::ios_base::beg);
+
+  // reserve space for the data in the output array
+  auto curr_size = out_data.size();
+
+  if (curr_size + length > MAX_MEMORY_BLOCK_SIZE) {
+    return Error(Error::MemoryAllocationError);
+  }
+
+  out_data.resize(curr_size + length);
+  uint8_t* data = &out_data[curr_size];
+
+  range.get_istream()->read((char*)data, length);
+
+  return Error::OK;
 }
 
 

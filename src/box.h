@@ -469,6 +469,22 @@ namespace heif {
   };
 
 
+  class Box_idat : public Box {
+  public:
+  Box_idat(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+    Error read_data(BitstreamRange& range, uint64_t start, uint64_t length,
+                    std::vector<uint8_t>& out_data) const;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    std::streampos m_data_start_pos;
+  };
+
+
   class Box_grpl : public Box {
   public:
   Box_grpl(const BoxHeader& hdr) : Box(hdr) { }
