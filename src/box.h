@@ -149,7 +149,7 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
+    //bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
 
   protected:
     Error parse(BitstreamRange& range) override;
@@ -214,8 +214,10 @@ namespace heif {
 
     const std::vector<Item>& get_items() const { return m_items; }
 
-    bool read_data(const Item& item, std::istream& istr, std::vector<uint8_t>* dest) const;
-    bool read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
+    Error read_data(const Item& item, std::istream& istr,
+                    const std::shared_ptr<class Box_idat>&,
+                    std::vector<uint8_t>* dest) const;
+    //Error read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
 
   protected:
     Error parse(BitstreamRange& range) override;
@@ -475,7 +477,7 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    Error read_data(BitstreamRange& range, uint64_t start, uint64_t length,
+    Error read_data(std::istream& istr, uint64_t start, uint64_t length,
                     std::vector<uint8_t>& out_data) const;
 
   protected:

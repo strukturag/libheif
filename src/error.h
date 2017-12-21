@@ -57,6 +57,7 @@ namespace heif {
       NoIpmaBox,
       NoIlocBox,
       NoIinfBox,
+      NoIdatBox,
       NoPictHandler,
       NoPropertiesForItemID,
       NonexistingPropertyReferenced,

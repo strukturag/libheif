@@ -551,6 +551,7 @@ std::string Box_meta::dump(Indent& indent) const
 }
 
 
+#if 0
 bool Box_meta::get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const {
   std::shared_ptr<Box> iprp_box = get_child_box(fourcc("iprp"));
   if (!iprp_box) {
@@ -593,6 +594,7 @@ bool Box_meta::get_images(std::istream& istr, std::vector<std::vector<uint8_t>>*
 
   return true;
 }
+#endif
 
 
 Error Box_hdlr::parse(BitstreamRange& range)
@@ -783,63 +785,83 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-bool Box_iloc::read_data(const Item& item, std::istream& istr, std::vector<uint8_t>* dest) const
+Error Box_iloc::read_data(const Item& item, std::istream& istr,
+                          const std::shared_ptr<Box_idat>& idat,
+                          std::vector<uint8_t>* dest) const
 {
   uint64_t curpos = istr.tellg();
   istr.seekg(0, std::ios_base::end);
   uint64_t max_size = istr.tellg();
   istr.seekg(curpos, std::ios_base::beg);
   for (const auto& extent : item.extents) {
-    istr.seekg(extent.offset + item.base_offset, std::ios::beg);
-    if (istr.eof()) {
-      // Out-of-bounds
-      dest->clear();
-      return false;
-    }
-
-    uint64_t bytes_read = 0;
-
-    for (;;) {
-      dest->push_back(0);
-      dest->push_back(0);
-      dest->push_back(1);
-
-      uint8_t size[4];
-      istr.read((char*)size,4);
-      uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
-      bytes_read += 4;
-
-      if (max_size - bytes_read < size32) {
+    if (item.construction_method == 0) {
+      istr.seekg(extent.offset + item.base_offset, std::ios::beg);
+      if (istr.eof()) {
         // Out-of-bounds
         dest->clear();
-        return false;
+        return Error(Error::InvalidInput);
       }
 
-      size_t old_size = dest->size();
-      dest->resize(old_size + size32);
-      istr.read((char*)dest->data() + old_size, size32);
-      bytes_read += size32;
 
-      if (bytes_read >= extent.length) {
-        break;
+      // TODO: here, we should simply read raw data and the specific codec should handle
+      // startcode insertion
+
+      uint64_t bytes_read = 0;
+
+      for (;;) {
+        dest->push_back(0);
+        dest->push_back(0);
+        dest->push_back(1);
+
+        uint8_t size[4];
+        istr.read((char*)size,4);
+        uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
+        bytes_read += 4;
+
+        if (max_size - bytes_read < size32) {
+          // Out-of-bounds
+          dest->clear();
+          return Error(Error::InvalidInput);
+        }
+
+        size_t old_size = dest->size();
+        dest->resize(old_size + size32);
+        istr.read((char*)dest->data() + old_size, size32);
+        bytes_read += size32;
+
+        if (bytes_read >= extent.length) {
+          break;
+        }
       }
+    }
+    else if (item.construction_method==1) {
+      if (!idat) {
+        return Error(Error::NoIdatBox);
+      }
+
+      idat->read_data(istr,
+                      extent.offset + item.base_offset,
+                      extent.length,
+                      *dest);
     }
   }
 
-  return true;
+  return Error::OK;
 }
 
-bool Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
+/*
+Error Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
 {
   for (const auto& item : m_items) {
-    if (!read_data(item, istr, dest)) {
-      return false;
+    Error err = read_data(item, istr, dest);
+    if (err != Error::OK) {
+      return err;
     }
   }
 
-  return true;
+  return Error::OK;
 }
-
+*/
 
 Error Box_infe::parse(BitstreamRange& range)
 {
@@ -1424,11 +1446,11 @@ std::string Box_idat::dump(Indent& indent) const
 }
 
 
-Error Box_idat::read_data(BitstreamRange& range, uint64_t start, uint64_t length,
+Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
                           std::vector<uint8_t>& out_data) const
 {
   // move to start of data
-  range.get_istream()->seekg(m_data_start_pos + (std::streampos)start, std::ios_base::beg);
+  istr.seekg(m_data_start_pos + (std::streampos)start, std::ios_base::beg);
 
   // reserve space for the data in the output array
   auto curr_size = out_data.size();
@@ -1440,7 +1462,7 @@ Error Box_idat::read_data(BitstreamRange& range, uint64_t start, uint64_t length
   out_data.resize(curr_size + length);
   uint8_t* data = &out_data[curr_size];
 
-  range.get_istream()->read((char*)data, length);
+  istr.read((char*)data, length);
 
   return Error::OK;
 }

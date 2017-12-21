@@ -55,6 +55,7 @@ namespace heif {
     std::shared_ptr<Box_ipco> m_ipco_box;
     std::shared_ptr<Box_ipma> m_ipma_box;
     std::shared_ptr<Box_iloc> m_iloc_box;
+    std::shared_ptr<Box_idat> m_idat_box;
 
     struct Image {
       std::shared_ptr<Box_infe> m_infe_box;

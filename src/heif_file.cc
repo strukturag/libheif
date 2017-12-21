@@ -172,6 +172,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     return Error(Error::InvalidInput, Error::NoIlocBox);
   }
 
+  m_idat_box = std::dynamic_pointer_cast<Box_idat>(m_meta_box->get_child_box(fourcc("idat")));
+
   std::shared_ptr<Box> iinf_box = m_meta_box->get_child_box(fourcc("iinf"));
   if (!iinf_box) {
     return Error(Error::InvalidInput, Error::NoIinfBox);
@@ -276,6 +278,19 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
 
   std::string item_type = image.m_infe_box->get_item_type();
 
+
+  // --- get coded image data pointers
+
+  auto items = m_iloc_box->get_items();
+  const Box_iloc::Item* item = nullptr;
+  for (const auto& i : items) {
+    if (i.item_ID == ID) {
+      item = &i;
+      break;
+    }
+  }
+
+
   if (item_type == "hvc1") {
     // --- --- --- HEVC
 
@@ -289,28 +304,18 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
       }
     }
 
-    // --- get coded image data pointers
-
-    auto items = m_iloc_box->get_items();
-    const Box_iloc::Item* item = nullptr;
-    for (const auto& i : items) {
-      if (i.item_ID == ID) {
-        item = &i;
-        break;
-      }
-    }
-
-    if (!item) {
-      return Error(Error::InvalidInput, Error::NoInputDataInFile);
-    }
-
-
     std::vector<uint8_t> data;
     if (!hvcC_box->get_headers(&data)) {
       // TODO
     }
 
-    if (!m_iloc_box->read_data(*item, TODO_istr, &data)) {
+
+    if (!item) {
+      return Error(Error::InvalidInput, Error::NoInputDataInFile);
+    }
+
+    Error err = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, &data);
+    if (err != Error::OK) {
       // TODO
     }
 
@@ -365,6 +370,22 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     FILE* fh = fopen("out.bin", "wb");
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);
+  }
+  else if (item_type == "grid") {
+    if (!item) {
+      return Error(Error::InvalidInput, Error::NoInputDataInFile);
+    }
+
+    std::vector<uint8_t> data;
+    Error err = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, &data);
+    if (err != Error::OK) {
+      // TODO
+    }
+
+
+    for (uint8_t d : data) {
+      std::cout << std::hex << ((int)d) << "\n";
+    }
   }
   else {
     return Error(Error::Unsupported, Error::UnsupportedImageType);
