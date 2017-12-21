@@ -158,10 +158,7 @@ body {
         return true;
     };
 
-    HeifDemo.prototype._decodeImage = function(image_data) {
-        hide("container");
-        show("decoding");
-        this.reset();
+    HeifDemo.prototype._decodeImageHEVC = function(image_data) {
         var hevc_decoder = new libde265.Decoder();
         hevc_decoder.disable_filters(true);
         hevc_decoder.set_image_callback(function(image) {
@@ -204,6 +201,21 @@ body {
 
         // Start decoding deferred.
         setTimeout(do_decode, 0);
+    };
+
+    HeifDemo.prototype._decodeImage = function(image) {
+        hide("container");
+        show("decoding");
+        this.reset();
+        switch (image.type) {
+            case "hvc1":
+                this._decodeImageHEVC(image.data);
+                break;
+            default:
+                hide("container");
+                show("error-format");
+                break;
+        }
     };
 
     window.onload = function() {
