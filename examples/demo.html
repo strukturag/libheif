@@ -164,6 +164,7 @@ body {
         hevc_decoder.set_image_callback(function(image) {
             show("container");
             hide("decoding");
+            hide("error-format");
             console.log("Received image", image.get_width(), image.get_height());
             this.drawer.draw(image);
         }.bind(this));
@@ -173,6 +174,9 @@ body {
             if (error !== this.libde265.DE265_OK && !this.decoded_images.length) {
                 hide("container");
                 show("error-format");
+            } else {
+                show("container");
+                hide("error-format");
             }
             console.log("Decoding finished with", this.libde265.de265_get_error_text(error), error);
             hevc_decoder.free();
