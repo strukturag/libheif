@@ -133,7 +133,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .class_function("read", &Box_read, emscripten::allow_raw_pointers())
     .function("get_child_box", &Box::get_child_box)
     .function("dump", &dump_box, emscripten::allow_raw_pointers())
-    .smart_ptr<std::shared_ptr<Box>>()
+    .smart_ptr<std::shared_ptr<Box>>("Box")
     ;
 
   emscripten::class_<Box_meta, emscripten::base<Box>>("Box_meta")
