@@ -9,53 +9,9 @@
 #include <vector>
 
 #include "box.h"
+#include "heif_file.h"
 
 namespace heif {
-
-static std::vector<std::string> Box_meta_get_images(Box_meta* box,
-    const std::string& data) {
-  std::vector<std::string> result;
-  if (!box) {
-    return result;
-  }
-
-  std::basic_istringstream<char> s(data);
-  std::vector<std::vector<uint8_t>> r;
-  if (!box->get_images(s, &r)) {
-    return result;
-  }
-
-  for (std::vector<uint8_t> v : r) {
-    result.push_back(std::string(reinterpret_cast<char*>(v.data()), v.size()));
-  }
-  return result;
-}
-
-static std::string get_headers_string(Box_hvcC* box) {
-  if (!box) {
-    return "";
-  }
-
-  std::vector<uint8_t> r;
-  if (!box->get_headers(&r)) {
-    return "";
-  }
-  return std::string(reinterpret_cast<const char*>(r.data()), r.size());
-}
-
-static std::string read_all_data_string(Box_iloc* box,
-    const std::string& data) {
-  if (!box) {
-    return "";
-  }
-
-  std::basic_istringstream<char> s(data);
-  std::vector<uint8_t> r;
-  if (!box->read_all_data(s, &r)) {
-    return "";
-  }
-  return std::string(reinterpret_cast<const char*>(r.data()), r.size());
-}
 
 static std::string dump_box_header(BoxHeader* header) {
   if (!header) {
@@ -102,9 +58,43 @@ class EmscriptenBitstreamRange : public BitstreamRange {
   std::basic_istringstream<char> stream_;
 };
 
+static Error HeifFile_read_from_memory(HeifFile* file,
+    const std::string& data) {
+  if (!file) {
+    return Error(Error::Unsupported, Error::Unspecified);
+  }
+
+  return file->read_from_memory(data.data(), data.size());
+}
+
+static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
+    uint16_t ID, const std::string& data) {
+  emscripten::val result = emscripten::val::object();
+  if (!file) {
+    return result;
+  }
+
+  std::string image_type;
+  std::vector<uint8_t> image_data;
+
+  std::istringstream s(data);
+  Error err = file->get_compressed_image_data(ID, s, &image_type, &image_data);
+  if (err != Error::OK) {
+    return emscripten::val(err);
+  }
+
+  result.set("type", image_type);
+  result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
+      image_data.size()));
+  return result;
+}
+
 EMSCRIPTEN_BINDINGS(libheif) {
   emscripten::class_<Error>("Error")
     .constructor<>()
+    .class_property("OK", &Error::OK)
+    .property("error_code", &Error::error_code)
+    .property("sub_error_code", &Error::sub_error_code)
     ;
 
   emscripten::class_<BitstreamRange>("BitstreamRangeBase")
@@ -136,22 +126,47 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .smart_ptr<std::shared_ptr<Box>>("Box")
     ;
 
-  emscripten::class_<Box_meta, emscripten::base<Box>>("Box_meta")
-    .function("get_images", &Box_meta_get_images,
+  emscripten::class_<HeifFile>("HeifFile")
+    .constructor<>()
+    .function("read_from_memory", &HeifFile_read_from_memory,
+        emscripten::allow_raw_pointers())
+    .function("get_num_images", &HeifFile::get_num_images)
+    .function("get_primary_image_ID", &HeifFile::get_primary_image_ID)
+    .function("get_image_IDs", &HeifFile::get_image_IDs)
+    .function("get_compressed_image_data", &HeifFile_get_compressed_image_data,
         emscripten::allow_raw_pointers())
     ;
 
-  emscripten::class_<Box_iloc, emscripten::base<Box>>("Box_iloc")
-    .function("read_all_data", &read_all_data_string,
-        emscripten::allow_raw_pointers())
+  emscripten::enum_<Error::ErrorCode>("ErrorCode")
+    .value("Ok", Error::ErrorCode::Ok)
+    .value("InvalidInput", Error::ErrorCode::InvalidInput)
+    .value("NonexistingImage", Error::ErrorCode::NonexistingImage)
+    .value("Unsupported", Error::ErrorCode::Unsupported)
+    .value("MemoryAllocationError", Error::ErrorCode::MemoryAllocationError)
     ;
-
-  emscripten::class_<Box_hvcC, emscripten::base<Box>>("Box_hvcC")
-    .function("get_headers", &get_headers_string,
-        emscripten::allow_raw_pointers())
+  emscripten::enum_<Error::SubErrorCode>("SubErrorCode")
+    .value("Unspecified", Error::SubErrorCode::Unspecified)
+    .value("ParseError", Error::SubErrorCode::ParseError)
+    .value("EndOfData", Error::SubErrorCode::EndOfData)
+    .value("NoCompatibleBrandType", Error::SubErrorCode::NoCompatibleBrandType)
+    .value("NoMetaBox", Error::SubErrorCode::NoMetaBox)
+    .value("NoHdlrBox", Error::SubErrorCode::NoHdlrBox)
+    .value("NoPitmBox", Error::SubErrorCode::NoPitmBox)
+    .value("NoIprpBox", Error::SubErrorCode::NoIprpBox)
+    .value("NoIpcoBox", Error::SubErrorCode::NoIpcoBox)
+    .value("NoIpmaBox", Error::SubErrorCode::NoIpmaBox)
+    .value("NoIlocBox", Error::SubErrorCode::NoIlocBox)
+    .value("NoIinfBox", Error::SubErrorCode::NoIinfBox)
+    .value("NoIdatBox", Error::SubErrorCode::NoIdatBox)
+    .value("NoPictHandler", Error::SubErrorCode::NoPictHandler)
+    .value("NoPropertiesForItemID", Error::SubErrorCode::NoPropertiesForItemID)
+    .value("NonexistingPropertyReferenced", Error::SubErrorCode::NonexistingPropertyReferenced)
+    .value("UnsupportedImageType", Error::SubErrorCode::UnsupportedImageType)
+    .value("NoInputDataInFile", Error::SubErrorCode::NoInputDataInFile)
     ;
 
   emscripten::register_vector<std::string>("StringVector");
+  emscripten::register_vector<uint32_t>("UInt32Vector");
 }
 
 }  // namespace heif

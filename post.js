@@ -11,34 +11,34 @@ var HeifDecoder = function() {
 };
 
 HeifDecoder.prototype.decode = function(buffer) {
-    var input = new libheif.BitstreamRange(buffer);
-    var box;
-    var meta_box;
-    while (true) {
-        box = libheif.Box.read(input);
-        if (!box || input.error()) {
-            break;
-        }
-
-        console.log(box.dump());
-        if (box.get_short_type() == libheif.fourcc("meta")) {
-            meta_box = box;
-        }
-    }
-
-    if (!meta_box) {
-        console.log("No meta box found");
+    var input = new libheif.HeifFile();
+    var error = input.read_from_memory(buffer);
+    if (error.error_code !== libheif.Error.OK.error_code) {
+        console.log("Could not parse HEIF file", error);
         return [];
     }
 
-    var images = meta_box.get_images(buffer);
+    if (!input.get_num_images()) {
+        console.log("No images found");
+        return [];
+    }
+
+    var images = input.get_image_IDs();
     if (!images) {
         return [];
     }
+
+    var primary = input.get_primary_image_ID();
     var result = [];
     var size = images.size();
     for (var i = 0; i < size; i++) {
-        result.push(new Uint8Array(StringToArrayBuffer(images.get(i))));
+        var idx = images.get(i);
+        var img = input.get_compressed_image_data(idx, buffer);
+        result.push({
+            "primary": idx === primary,
+            "type": img.type,
+            "data": new Uint8Array(StringToArrayBuffer(img.data))
+        });
     }
     return result;
 };
@@ -59,7 +59,15 @@ var libheif = {
     /** @expose */
     BitstreamRange: Module.BitstreamRange,
     /** @expose */
-    Box: Module.Box
+    Box: Module.Box,
+    /** @expose */
+    Error: Module.Error,
+    /** @expose */
+    ErrorCode: Module.ErrorCode,
+    /** @expose */
+    HeifFile: Module.HeifFile,
+    /** @expose */
+    SubErrorCode: Module.SubErrorCode
 };
 
 // don't pollute the global namespace
