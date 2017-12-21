@@ -307,12 +307,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   return Error::OK;
 }
 
-
-Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const
-{
-  assert(img);
-
-
+Error HeifFile::get_image_data(uint16_t ID, std::istream& TODO_istr,
+    std::string* image_type, std::vector<uint8_t>* data) const {
   // --- get the image from the list of all images
 
   auto image_iter = m_images.find(ID);
@@ -345,12 +341,7 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     // TODO: essential flag ?
   }
 
-
-
-  // --- decode image, depending on its type
-
   std::string item_type = image.m_infe_box->get_item_type();
-
 
   // --- get coded image data pointers
 
@@ -362,8 +353,11 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
       break;
     }
   }
+  if (!item) {
+    return Error(Error::InvalidInput, Error::NoInputDataInFile);
+  }
 
-
+  Error error = Error(Error::Unsupported, Error::UnsupportedImageType);
   if (item_type == "hvc1") {
     // --- --- --- HEVC
 
@@ -377,22 +371,39 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
       }
     }
 
-    std::vector<uint8_t> data;
-    if (!hvcC_box->get_headers(&data)) {
+    if (!hvcC_box->get_headers(data)) {
       // TODO
     }
 
 
-    if (!item) {
-      return Error(Error::InvalidInput, Error::NoInputDataInFile);
-    }
+    error = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, data);
+  } else if (item_type == "grid") {
+    error = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, data);
+  }
 
-    Error err = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, &data);
-    if (err != Error::OK) {
-      // TODO
-    }
+  if (error != Error::OK) {
+    return error;
+  }
 
+  image_type->assign(item_type);
+  return Error::OK;
+}
 
+Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const
+{
+  assert(img);
+
+  std::string image_type;
+  std::vector<uint8_t> data;
+  Error error = get_image_data(ID, TODO_istr, &image_type, &data);
+  if (error != Error::OK) {
+    return error;
+  }
+
+  // --- decode image, depending on its type
+
+  if (image_type == "hvc1") {
+    // --- --- --- HEVC
 
     // --- decode HEVC image with libde265
 
@@ -444,23 +455,13 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);
   }
-  else if (item_type == "grid") {
-    if (!item) {
-      return Error(Error::InvalidInput, Error::NoInputDataInFile);
-    }
-
-    std::vector<uint8_t> data;
-    Error err = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, &data);
-    if (err != Error::OK) {
-      // TODO
-    }
-
-
+  else if (image_type == "grid") {
     ImageGrid grid;
     grid.parse(data);
     std::cout << grid.dump();
   }
   else {
+    // Should not reach this, was already rejected by "get_image_data".
     return Error(Error::Unsupported, Error::UnsupportedImageType);
   }
 
