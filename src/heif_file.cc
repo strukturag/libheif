@@ -562,7 +562,9 @@ Error HeifFile::decode_image(uint16_t ID,
     }
   }
 
+#if LIBDE265_NUMERIC_VERSION >= 0x02000000
   de265_release_picture(de265img);
+#endif
 
   return Error::OK;
 }
