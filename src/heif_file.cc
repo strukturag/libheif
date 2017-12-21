@@ -149,15 +149,8 @@ Error HeifFile::read_from_file(const char* input_filename)
 
 Error HeifFile::read_from_memory(const void* data, size_t size)
 {
-  class memory_wrapped_stream : public std::basic_streambuf<char, std::char_traits<char> > {
-  public:
-    memory_wrapped_stream(char* data, uint64_t length) {
-      setg(data, data, data+length);
-    }
-  };
-
-  memory_wrapped_stream streambuf((char*)data, size);
-  std::istream stream(&streambuf);
+  std::string s(static_cast<const char*>(data), size);
+  std::istringstream stream(std::move(s));
 
   heif::BitstreamRange range(&stream, size);
 
