@@ -149,6 +149,8 @@ Error HeifFile::read_from_file(const char* input_filename)
 
 Error HeifFile::read_from_memory(const void* data, size_t size)
 {
+  // TODO: Work on passed memory directly instead of creating a copy here.
+  // Note: we cannot use basic_streambuf for this, because it does not support seeking
   std::string s(static_cast<const char*>(data), size);
   std::istringstream stream(std::move(s));
 
