@@ -38,6 +38,17 @@ The program `convert` converts all images stored in an HEIF file to JPEG or PNG.
 The program `heif` is a simple, minimal decoder that dumps the file structure to the console.
 
 
+## Compiling
+
+This library uses a standard autoconf/automake build system.
+After downloading, run `./autogen.sh` to build the configuration scripts,
+then call `./configure` and `make`.
+Make sure that you compile and install [libde265](https://github.com/strukturag/libde265)
+first, so that the configuration script will find this.
+Preferably, download the `frame-parallel` branch of libde265, as this uses a
+more recent API than version in the `master` branch.
+
+
 ## Compiling to JavaScript
 
 libheif can also be compiled to JavaScript using
