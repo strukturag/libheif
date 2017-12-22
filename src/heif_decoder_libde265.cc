@@ -128,11 +128,8 @@ void libde265_v2_decode_image(void* decoder_raw, struct heif_pixel_image** out_i
   de265_push_end_of_stream(decoder->ctx);
 
   int action = de265_get_action(decoder->ctx, 1);
-  printf("libde265 action: %d\n",action);
 
   if (action==de265_action_get_image) {
-    printf("image decoded !\n");
-
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
       *out_img = convert_libde265_image_to_heif_image(img);

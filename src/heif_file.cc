@@ -46,6 +46,11 @@ public:
 
   std::string dump() const;
 
+  uint32_t get_width() const { return m_output_width; }
+  uint32_t get_height() const { return m_output_height; }
+  uint16_t get_rows() const { return m_rows; }
+  uint16_t get_columns() const { return m_columns; }
+
 private:
   uint16_t m_rows;
   uint16_t m_columns;
@@ -251,6 +256,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   m_idat_box = std::dynamic_pointer_cast<Box_idat>(m_meta_box->get_child_box(fourcc("idat")));
 
+  m_iref_box = std::dynamic_pointer_cast<Box_iref>(m_meta_box->get_child_box(fourcc("iref")));
+
   std::shared_ptr<Box> iinf_box = m_meta_box->get_child_box(fourcc("iinf"));
   if (!iinf_box) {
     return Error(Error::InvalidInput, Error::NoIinfBox);
@@ -399,6 +406,7 @@ Error HeifFile::decode_image(uint16_t ID,
                              std::istream& TODO_istr) const
 {
   std::string image_type;
+
   std::vector<uint8_t> data;
   Error error = get_compressed_image_data(ID, TODO_istr, &image_type, &data);
   if (error != Error::OK) {
@@ -427,17 +435,110 @@ Error HeifFile::decode_image(uint16_t ID,
 #endif
   }
   else if (image_type == "grid") {
-    ImageGrid grid;
-    grid.parse(data);
-    std::cout << grid.dump();
-
-    // --- generate image of full output size
-
-    std::shared_ptr<HeifPixelImage> output_image;
+    return decode_full_grid_image(ID, img, TODO_istr, data);
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
     return Error(Error::Unsupported, Error::UnsupportedImageType);
+  }
+
+  return Error::OK;
+}
+
+
+Error HeifFile::decode_full_grid_image(uint16_t ID,
+                                       std::shared_ptr<HeifPixelImage>& img,
+                                       std::istream& TODO_istr,
+                                       const std::vector<uint8_t>& grid_data) const
+{
+  ImageGrid grid;
+  grid.parse(grid_data);
+  std::cout << grid.dump();
+
+
+  if (!m_iref_box) {
+    return Error(Error::NoIrefBox);
+  }
+
+  std::vector<uint32_t> image_references = m_iref_box->get_references(ID);
+
+  if ((int)image_references.size() != grid.get_rows() * grid.get_columns()) {
+    return Error(Error::InvalidInput, Error::ImagesMissingInGrid);
+  }
+
+  // --- generate image of full output size
+
+  int w = grid.get_width();
+  int h = grid.get_height();
+  int bpp = 8; // TODO: how do we know ?
+
+  img = std::make_shared<HeifPixelImage>();
+  img->create(w,h,
+              heif_colorspace_YCbCr, // TODO: how do we know ?
+              heif_chroma_420); // TODO: how do we know ?
+
+  img->add_plane(heif_channel_Y,  w,h, bpp);
+  img->add_plane(heif_channel_Cb, w/2,h/2, bpp);
+  img->add_plane(heif_channel_Cr, w/2,h/2, bpp);
+
+  int y0=0;
+  int reference_idx = 0;
+
+  for (int y=0;y<grid.get_rows();y++) {
+    int x0=0;
+    int tile_height;
+
+    for (int x=0;x<grid.get_columns();x++) {
+
+      std::shared_ptr<HeifPixelImage> tile_img;
+
+      Error err = decode_image(image_references[reference_idx],
+                               tile_img,
+                               TODO_istr);
+      if (err != Error::OK) {
+        return err;
+      }
+
+
+      // --- copy tile into output image
+
+      int src_width  = tile_img->get_width();
+      int src_height = tile_img->get_height();
+
+      tile_height = src_height;
+
+      for (heif_channel channel : { heif_channel_Y, heif_channel_Cb, heif_channel_Cr }) {
+        int tile_stride;
+        uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
+
+        int out_stride;
+        uint8_t* out_data = img->get_plane(channel, &out_stride);
+
+        int copy_width  = std::min(src_width, w - x0);
+        int copy_height = std::min(src_height, h - y0);
+
+        int xs=x0, ys=y0;
+
+        if (channel != heif_channel_Y) {
+          copy_width /= 2;
+          copy_height /= 2;
+          xs /= 2;
+          ys /= 2;
+        }
+
+        for (int py=0;py<copy_height;py++) {
+          memcpy(out_data + xs + (ys+py)*out_stride,
+                 tile_data + py*tile_stride,
+                 copy_width);
+        }
+      }
+
+      x0 += src_width;
+
+      reference_idx++;
+    }
+
+    y0 += tile_height;
   }
 
   return Error::OK;

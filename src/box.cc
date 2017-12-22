@@ -1270,6 +1270,42 @@ std::string Box_iref::dump(Indent& indent) const
 }
 
 
+bool Box_iref::has_references(uint32_t itemID) const
+{
+  for (const Reference& ref : m_references) {
+    if (ref.from_item_ID == itemID) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+uint32_t Box_iref::get_reference_type(uint32_t itemID) const
+{
+  for (const Reference& ref : m_references) {
+    if (ref.from_item_ID == itemID) {
+      return ref.header.get_short_type();
+    }
+  }
+
+  return 0;
+}
+
+
+std::vector<uint32_t> Box_iref::get_references(uint32_t itemID) const
+{
+  for (const Reference& ref : m_references) {
+    if (ref.from_item_ID == itemID) {
+      return ref.to_item_ID;
+    }
+  }
+
+  return std::vector<uint32_t>();
+}
+
+
 Error Box_hvcC::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);

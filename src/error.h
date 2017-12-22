@@ -59,11 +59,13 @@ namespace heif {
       NoIlocBox,
       NoIinfBox,
       NoIdatBox,
+      NoIrefBox,
       NoPictHandler,
       NoPropertiesForItemID,
       NonexistingPropertyReferenced,
       UnsupportedImageType,
-      NoInputDataInFile
+      NoInputDataInFile,
+      ImagesMissingInGrid
     } sub_error_code;
 
   Error()

@@ -61,6 +61,7 @@ namespace heif {
     std::shared_ptr<Box_ipma> m_ipma_box;
     std::shared_ptr<Box_iloc> m_iloc_box;
     std::shared_ptr<Box_idat> m_idat_box;
+    std::shared_ptr<Box_iref> m_iref_box;
 
     struct Image {
       std::shared_ptr<Box_infe> m_infe_box;
@@ -72,6 +73,10 @@ namespace heif {
 
 
     Error parse_heif_file(BitstreamRange& bitstream);
+    Error decode_full_grid_image(uint16_t ID,
+                                 std::shared_ptr<HeifPixelImage>& img,
+                                 std::istream& TODO_istr,
+                                 const std::vector<uint8_t>& grid_data) const;
   };
 
 }

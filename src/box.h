@@ -404,6 +404,10 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
+    bool has_references(uint32_t itemID) const;
+    uint32_t get_reference_type(uint32_t itemID) const;
+    std::vector<uint32_t> get_references(uint32_t itemID) const;
+
   protected:
     Error parse(BitstreamRange& range) override;
 
