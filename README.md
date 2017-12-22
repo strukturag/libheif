@@ -1,6 +1,6 @@
 # libheif
 
-libheif is a ISO/IEC 23008-12:2017 HEIF file format decoder (encoder to come).
+libheif is an ISO/IEC 23008-12:2017 HEIF file format decoder (encoder to come).
 
 HEIF is a new image file format employing HEVC (h.265) image coding for the
 best compression ratios currently possible.
@@ -34,7 +34,7 @@ See the header file `heif.h` for the complete C API.
 ## Example programs
 
 Two example programs are provided in the `examples` directory.
-The program `convert` converts all images stored on a HEIF file to JPEG or PNG.
+The program `convert` converts all images stored in an HEIF file to JPEG or PNG.
 The program `heif` is a simple, minimal decoder that dumps the file structure to the console.
 
 
