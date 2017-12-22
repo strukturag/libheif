@@ -35,7 +35,7 @@ inline uint8_t clip(float value) {
   }
 }
 
-bool PngEncoder::Encode(const std::shared_ptr<HeifPixelImage>& image,
+bool PngEncoder::Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
     const std::string& filename) {
   if (image->get_chroma_format() != heif_chroma_420) {
     fprintf(stderr, "Only YUV420 images supported.\n");

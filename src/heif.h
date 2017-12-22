@@ -31,20 +31,32 @@ struct heif_context;  // TODO  heif_context == HeifFile, which is not so nice
 struct heif_image;
 struct heif_pixel_image;
 
+struct heif_error
+{
+  int code;
+  int subcode;
+  const char* message;
+};
 
-heif_context* heif_read_from_file(const char* filename);
 
-heif_context* heif_read_from_memory(const uint8_t* mem, uint64_t size);
+heif_context* heif_context_alloc();
 
-heif_context* heif_read_from_file_descriptor(int fd);
+void heif_context_free(heif_context*);
 
-void heif_free(heif_context*);
+heif_error heif_context_read_from_file(heif_context*, const char* filename);
 
-heif_image* heif_get_primary_image(heif_context* h);
+heif_error heif_context_read_from_memory(heif_context*, const uint8_t* mem, uint64_t size);
 
-int heif_get_number_of_images(heif_context* h);
+// TODO
+heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-heif_image* heif_get_image(heif_context* h, int image_index);
+// NOTE: data types will change ! (TODO)
+heif_error heif_context_get_primary_image(heif_context* h, heif_pixel_image**);
+
+int heif_context_get_number_of_images(heif_context* h);
+
+// NOTE: data types will change ! (TODO)
+heif_error heif_get_image(heif_context* h, int image_index, heif_pixel_image**);
 
 
 // --- heif_image

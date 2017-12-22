@@ -20,14 +20,89 @@
 
 #include "heif.h"
 #include "heif_image.h"
+#include "heif_file.h"
+#include "error.h"
+
 
 #include <memory>
+
+using namespace heif;
 
 
 struct heif_pixel_image
 {
-  std::shared_ptr<HeifPixelImage> image;
+  std::shared_ptr<heif::HeifPixelImage> image;
 };
+
+
+
+struct heif_context
+{
+  std::shared_ptr<heif::HeifFile> context;
+};
+
+
+heif_context* heif_context_alloc()
+{
+  struct heif_context* ctx = new heif_context;
+  ctx->context = std::make_shared<HeifFile>();
+
+  return ctx;
+}
+
+void heif_context_free(heif_context* ctx)
+{
+  delete ctx;
+}
+
+heif_error heif_context_read_from_file(heif_context* ctx, const char* filename)
+{
+  Error err = ctx->context->read_from_file(filename);
+  return err.error_struct();
+}
+
+heif_error heif_context_read_from_memory(heif_context* ctx, const uint8_t* mem, uint64_t size)
+{
+  Error err = ctx->context->read_from_memory(mem,size);
+  return err.error_struct();
+}
+
+// TODO
+//heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
+
+// NOTE: data types will change ! (TODO)
+heif_error heif_context_get_primary_image(heif_context* ctx, heif_pixel_image** img)
+{
+  if (!img) {
+    // TODO
+  }
+
+  uint16_t primary_ID = ctx->context->get_primary_image_ID();
+  *img = new heif_pixel_image();
+
+  Error err = ctx->context->decode_image(primary_ID, (*img)->image);
+  return err.error_struct();
+}
+
+
+int heif_context_get_number_of_images(heif_context* ctx)
+{
+  return ctx->context->get_num_images();
+}
+
+
+// NOTE: data types will change ! (TODO)
+heif_error heif_get_image(heif_context* ctx, int image_ID, heif_pixel_image** img)
+{
+  if (!img) {
+    // TODO
+  }
+
+  Error err = ctx->context->decode_image(image_ID, (*img)->image);
+  return err.error_struct();
+}
+
+
 
 
 struct heif_pixel_image* heif_pixel_image_create(int width, int height,

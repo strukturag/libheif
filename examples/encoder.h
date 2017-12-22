@@ -28,7 +28,7 @@
 class Encoder {
  public:
   virtual ~Encoder() {}
-  virtual bool Encode(const std::shared_ptr<HeifPixelImage>& image,
+  virtual bool Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
       const std::string& filename) = 0;
 };
 

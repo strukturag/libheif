@@ -25,12 +25,12 @@
 
 #include <map>
 
-struct de265_image;
-class HeifPixelImage;
-class HeifImage;
-
 
 namespace heif {
+
+  class HeifPixelImage;
+  class HeifImage;
+
 
   class HeifFile {
   public:
@@ -50,12 +50,13 @@ namespace heif {
 
     std::string get_image_type(uint32_t ID) const;
 
-    Error get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
-                                    std::vector<uint8_t>* out_data) const;
+    Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
 
-    Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img, std::istream& TODO_istr) const;
+    Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img) const;
 
   private:
+    std::unique_ptr<std::istream> m_input_stream;
+
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
 
     std::shared_ptr<Box_ftyp> m_ftyp_box;
@@ -73,13 +74,15 @@ namespace heif {
 
     std::map<uint16_t, Image> m_images;  // map from image ID to info structure
 
+    // list of image items (does not include hidden images or Exif data)
+    std::vector<uint32_t> m_valid_image_IDs;
+
     uint16_t m_primary_image_ID;
 
 
     Error parse_heif_file(BitstreamRange& bitstream);
     Error decode_full_grid_image(uint16_t ID,
                                  std::shared_ptr<HeifPixelImage>& img,
-                                 std::istream& TODO_istr,
                                  const std::vector<uint8_t>& grid_data) const;
 
     const Image& get_image_info(uint32_t ID) const;

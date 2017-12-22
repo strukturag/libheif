@@ -35,7 +35,7 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
   longjmp(handler->setjmp_buffer, 1);
 }
 
-bool JpegEncoder::Encode(const std::shared_ptr<HeifPixelImage>& image,
+bool JpegEncoder::Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
     const std::string& filename) {
   if (image->get_chroma_format() != heif_chroma_420) {
     fprintf(stderr, "Only YUV420 images supported.\n");

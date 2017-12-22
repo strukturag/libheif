@@ -140,10 +140,10 @@ std::vector<uint32_t> HeifFile::get_image_IDs() const
 
 Error HeifFile::read_from_file(const char* input_filename)
 {
-  std::ifstream istr(input_filename);
+  m_input_stream = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
 
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
-  heif::BitstreamRange range(&istr, maxSize);
+  heif::BitstreamRange range(m_input_stream.get(), maxSize);
 
 
   Error error = parse_heif_file(range);
@@ -157,9 +157,10 @@ Error HeifFile::read_from_memory(const void* data, size_t size)
   // TODO: Work on passed memory directly instead of creating a copy here.
   // Note: we cannot use basic_streambuf for this, because it does not support seeking
   std::string s(static_cast<const char*>(data), size);
-  std::istringstream stream(std::move(s));
 
-  heif::BitstreamRange range(&stream, size);
+  m_input_stream = std::unique_ptr<std::istream>(new std::istringstream(std::move(s)));
+
+  heif::BitstreamRange range(m_input_stream.get(), size);
 
   Error error = parse_heif_file(range);
   return error;
@@ -281,40 +282,6 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     m_images.insert( std::make_pair(infe_box->get_item_ID(), img) );
   }
 
-#if 0
-  // HEVC image headers.
-  std::vector<std::shared_ptr<Box>> hvcC_boxes = ipco_box->get_child_boxes(fourcc("hvcC"));
-  if (hvcC_boxes.empty()) {
-    // No images in the file.
-    images->clear();
-    return true;
-  }
-
-  // HEVC image data.
-  std::shared_ptr<Box_iloc> iloc = std::dynamic_pointer_cast<Box_iloc>(get_child_box(fourcc("iloc")));
-  if (!iloc || iloc->get_items().size() != hvcC_boxes.size()) {
-    // TODO(jojo): Can images share a header?
-    return false;
-  }
-
-  const std::vector<Box_iloc::Item>& iloc_items = iloc->get_items();
-  for (size_t i = 0; i < hvcC_boxes.size(); i++) {
-    Box_hvcC* hvcC = static_cast<Box_hvcC*>(hvcC_boxes[i].get());
-    std::vector<uint8_t> data;
-    if (!hvcC->get_headers(&data)) {
-      return false;
-    }
-    if (!iloc->read_data(iloc_items[i], istr, &data)) {
-      return false;
-    }
-
-    images->push_back(std::move(data));
-  }
-
-  return true;
-#endif
-
-
   return Error::OK;
 }
 
@@ -344,8 +311,7 @@ std::string HeifFile::get_image_type(uint32_t ID) const
 }
 
 
-Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
-                                          std::vector<uint8_t>* data) const {
+Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* data) const {
 
   if (!image_exists(ID)) {
     return Error(Error::NonexistingImage);
@@ -411,7 +377,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
     }
 
 
-    error = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, data);
+    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   } else if (item_type == "grid") {
   }
 
@@ -424,13 +390,12 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
 
 
 Error HeifFile::decode_image(uint16_t ID,
-                             std::shared_ptr<HeifPixelImage>& img,
-                             std::istream& TODO_istr) const
+                             std::shared_ptr<HeifPixelImage>& img) const
 {
   std::string image_type = get_image_type(ID);
 
   std::vector<uint8_t> data;
-  Error error = get_compressed_image_data(ID, TODO_istr, &data);
+  Error error = get_compressed_image_data(ID, &data);
   if (error != Error::OK) {
     return error;
   }
@@ -457,10 +422,10 @@ Error HeifFile::decode_image(uint16_t ID,
 #endif
   }
   else if (image_type == "grid") {
-    return decode_full_grid_image(ID, img, TODO_istr, data);
+    return decode_full_grid_image(ID, img, data);
   }
   else if (image_type == "iden") {
-    //return decode_derived_image(ID, img, TODO_istr);
+    //return decode_derived_image(ID, img);
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
@@ -475,7 +440,6 @@ Error HeifFile::decode_image(uint16_t ID,
 // It will crash badly if we get anything else.
 Error HeifFile::decode_full_grid_image(uint16_t ID,
                                        std::shared_ptr<HeifPixelImage>& img,
-                                       std::istream& TODO_istr,
                                        const std::vector<uint8_t>& grid_data) const
 {
   ImageGrid grid;
@@ -520,8 +484,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
       std::shared_ptr<HeifPixelImage> tile_img;
 
       Error err = decode_image(image_references[reference_idx],
-                               tile_img,
-                               TODO_istr);
+                               tile_img);
       if (err != Error::OK) {
         return err;
       }

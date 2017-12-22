@@ -30,6 +30,8 @@
 #include <ostream>
 
 
+#include "heif.h"
+
 namespace heif {
 
   class Error
@@ -41,7 +43,8 @@ namespace heif {
       NonexistingImage,
       Unsupported,
       MemoryAllocationError,
-      NoSuitableDecoder
+      NoSuitableDecoder,
+      APIError
     } error_code;
 
     enum SubErrorCode {
@@ -65,7 +68,8 @@ namespace heif {
       NonexistingPropertyReferenced,
       UnsupportedImageType,
       NoInputDataInFile,
-      ImagesMissingInGrid
+      ImagesMissingInGrid,
+      NullArgumentPassed
     } sub_error_code;
 
   Error()
@@ -90,6 +94,14 @@ namespace heif {
 
     bool operator==(const Error& other) const { return error_code == other.error_code; }
     bool operator!=(const Error& other) const { return !(*this == other); }
+
+    heif_error error_struct() {
+      heif_error err;
+      err.code = error_code;
+      err.subcode = sub_error_code;
+      err.message = NULL; // TODO;
+      return err;
+    }
   };
 
 

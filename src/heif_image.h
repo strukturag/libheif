@@ -29,6 +29,8 @@
 #include <set>
 
 
+namespace heif {
+
 class HeifPixelImage
 {
  public:
@@ -78,5 +80,7 @@ class HeifImage
  public:
   ~HeifImage();
 };
+
+}
 
 #endif

@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     }
 
     std::shared_ptr<HeifPixelImage> img;
-    err = heifFile.decode_image(imageID, img, istr);
+    err = heifFile.decode_image(imageID, img);
     if (err != Error::OK) {
       std::cerr << "Could not read HEIF image: " << err << "\n";
       return 1;

@@ -35,6 +35,9 @@ extern "C" {
 #include <libde265/de265.h>
 #include <stdio.h>
 
+using namespace heif;
+
+
 struct libde265_decoder
 {
   de265_decoder_context* ctx;

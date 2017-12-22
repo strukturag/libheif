@@ -24,6 +24,8 @@
 #include <assert.h>
 
 
+namespace heif {
+
 HeifPixelImage::~HeifPixelImage()
 {
 }
@@ -107,4 +109,6 @@ const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_str
   }
 
   return iter->second.mem.data();
+}
+
 }

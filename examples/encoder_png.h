@@ -26,7 +26,7 @@ class PngEncoder : public Encoder {
  public:
   PngEncoder();
 
-  bool Encode(const std::shared_ptr<HeifPixelImage>& image,
+  bool Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
       const std::string& filename) override;
 
  private:
