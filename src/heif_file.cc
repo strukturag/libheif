@@ -466,42 +466,15 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
     ImageGrid grid;
     grid.parse(data);
     std::cout << grid.dump();
+
+    // --- generate image of full output size
+
+    std::shared_ptr<HeifPixelImage> output_image;
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
     return Error(Error::Unsupported, Error::UnsupportedImageType);
   }
-
-#if 0
-  // HEVC image headers.
-  std::vector<std::shared_ptr<Box>> hvcC_boxes = ipco_box->get_child_boxes(fourcc("hvcC"));
-  if (hvcC_boxes.empty()) {
-    // No images in the file.
-    images->clear();
-    return true;
-  }
-
-  // HEVC image data.
-  std::shared_ptr<Box_iloc> iloc = std::dynamic_pointer_cast<Box_iloc>(get_child_box(fourcc("iloc")));
-  if (!iloc || iloc->get_items().size() != hvcC_boxes.size()) {
-    // TODO(jojo): Can images share a header?
-    return false;
-  }
-
-  const std::vector<Box_iloc::Item>& iloc_items = iloc->get_items();
-  for (size_t i = 0; i < hvcC_boxes.size(); i++) {
-    Box_hvcC* hvcC = static_cast<Box_hvcC*>(hvcC_boxes[i].get());
-    std::vector<uint8_t> data;
-    if (!hvcC->get_headers(&data)) {
-      return false;
-    }
-    if (!iloc->read_data(iloc_items[i], istr, &data)) {
-      return false;
-    }
-
-    images->push_back(std::move(data));
-  }
-#endif
 
   return Error::OK;
 }

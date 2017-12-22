@@ -27,8 +27,10 @@ extern "C" {
 
 #include <stdint.h>
 
-struct heif_context;
+struct heif_context;  // TODO  heif_context == HeifFile, which is not so nice
 struct heif_image;
+struct heif_pixel_image;
+
 
 heif_context* heif_read_from_file(const char* filename);
 
@@ -90,7 +92,11 @@ int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel cha
 
 /* The |out_stride| is returned as "bytes per line".
    When out_stride is NULL, no value will be written. */
-const uint8_t* heif_image_get_plane(const struct heif_image*,
+const uint8_t* heif_pixel_image_get_plane_readonly(const struct heif_pixel_image*,
+                                                   enum heif_channel channel,
+                                                   int* out_stride);
+
+uint8_t* heif_pixel_image_get_plane(struct heif_pixel_image*,
                                     enum heif_channel channel,
                                     int* out_stride);
 
@@ -113,6 +119,57 @@ void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 
 
 //struct de265_image* heif_decode_hevc_image(heif_image* img);
+
+
+
+
+struct heif_pixel_image* heif_pixel_image_create(int width, int height,
+                                                 heif_colorspace colorspace,
+                                                 heif_chroma chroma);
+
+void heif_pixel_image_add_plane(struct heif_pixel_image* image,
+                                heif_channel channel, int width, int height, int bit_depth);
+
+
+
+
+struct heif_decoder_plugin
+{
+  // Create a new decoder context for decoding an image
+  void* (*new_decoder)();
+
+  // Free the decoder context (heif_image can still be used after destruction)
+  void (*free_decoder)(void* decoder);
+
+  // Push more data into the decoder. This can be called multiple times.
+  // This may not be called after any decode_*() function has been called.
+  void (*push_data)(void* decoder, uint8_t* data,uint32_t size);
+
+
+  // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
+
+  // Decode data into a full image. All data has to be pushed into the decoder before calling this.
+  void (*decode_image)(void* decoder, struct heif_pixel_image* out_img);
+
+  // Decode only part of the image.
+  // May be useful if the input image is tiled and we only need part of it.
+  /*
+  heif_image* (*decode_partial)(void* decoder,
+                                int x_left, int y_top,
+                                int width, int height);
+  */
+
+  // Reset decoder, such that we can feed in new data for another image.
+  // void (*reset_image)(void* decoder);
+};
+
+
+const struct heif_decoder_plugin* get_decoder_plugin_libde265();
+
+
+void heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin*);
+
+// TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 
 #ifdef __cplusplus
 }
