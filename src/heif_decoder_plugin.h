@@ -38,7 +38,7 @@ struct heif_decoder_plugin
   // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
 
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
-  heif_image* (*decode_image)(void* decoder);
+  void (*decode_image)(void* decoder, struct heif_pixel_image* out_img);
 
   // Decode only part of the image.
   // May be useful if the input image is tiled and we only need part of it.
