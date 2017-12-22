@@ -49,7 +49,6 @@ namespace heif {
     Error get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
         std::string* image_type, std::vector<uint8_t>* data) const;
 
-    Error get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const;
     Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img, std::istream& TODO_istr) const;
 
   private:

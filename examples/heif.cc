@@ -160,8 +160,8 @@ int main(int argc, char** argv)
 
   std::ifstream istr(input_filename);
 
-  const struct de265_image* img;
-  err = heifFile.get_image(primary_image_ID, &img, istr);
+  std::shared_ptr<HeifPixelImage> img;
+  err = heifFile.decode_image(primary_image_ID, img, istr);
 
   return 0;
 }

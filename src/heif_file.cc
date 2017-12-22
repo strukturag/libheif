@@ -393,10 +393,11 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
   return Error::OK;
 }
 
-Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istream& TODO_istr) const
-{
-  assert(img);
 
+Error HeifFile::decode_image(uint16_t ID,
+                             std::shared_ptr<HeifPixelImage>& img,
+                             std::istream& TODO_istr) const
+{
   std::string image_type;
   std::vector<uint8_t> data;
   Error error = get_compressed_image_data(ID, TODO_istr, &image_type, &data);
@@ -407,60 +408,23 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
   // --- decode image, depending on its type
 
   if (image_type == "hvc1") {
-#if HAVE_LIBDE265
-    // --- --- --- HEVC
+    const heif_decoder_plugin* plugin = get_decoder_plugin_libde265();
+    assert(plugin); // TODO
 
-    // --- decode HEVC image with libde265
+    void* decoder = plugin->new_decoder();
+    plugin->push_data(decoder, data.data(), data.size());
+    std::shared_ptr<HeifPixelImage>* decoded_img;
+    plugin->decode_image(decoder, (heif_pixel_image**)&decoded_img);
+    plugin->free_decoder(decoder);
 
-    de265_decoder_context* ctx = de265_new_decoder();
-    de265_start_worker_threads(ctx,1);
+    img = *decoded_img;
+    delete decoded_img;
 
-    de265_push_data(ctx, data.data(), data.size(), 0, nullptr);
-
-#if LIBDE265_NUMERIC_VERSION >= 0x02000000
-    de265_push_end_of_stream(ctx);
-#else
-    de265_flush_data(ctx);
-#endif
-
-
-#if LIBDE265_NUMERIC_VERSION >= 0x02000000
-    int action = de265_get_action(ctx, 1);
-    printf("libde265 action: %d\n",action);
-
-    if (action==de265_action_get_image) {
-      printf("image decoded !\n");
-
-      *img = de265_get_next_picture(ctx);
-    }
-#else
-    int more;
-    de265_error decode_err;
-    do {
-      more = 0;
-      decode_err = de265_decode(ctx, &more);
-      if (decode_err != DE265_OK) {
-        printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
-        break;
-      }
-
-      const struct de265_image* image = de265_get_next_picture(ctx);
-      if (image) {
-        *img = image;
-
-        printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
-            de265_get_image_height(image, 0));
-        de265_release_next_picture(ctx);
-      }
-    } while (more);
-#endif
-
+#if 0
     FILE* fh = fopen("out.bin", "wb");
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);
-#else
-    return Error(Error::Unsupported, Error::UnsupportedImageType);
-#endif  // HAVE_LIBDE265
+#endif
   }
   else if (image_type == "grid") {
     ImageGrid grid;
@@ -477,13 +441,11 @@ Error HeifFile::get_image(uint16_t ID, const struct de265_image** img, std::istr
   }
 
   return Error::OK;
-}
 
 
-Error HeifFile::decode_image(uint16_t ID,
-                             std::shared_ptr<HeifPixelImage>& img,
-                             std::istream& TODO_istr) const
-{
+
+
+
 #if HAVE_LIBDE265
   const de265_image* de265img = nullptr;
 
