@@ -46,8 +46,12 @@ namespace heif {
 
     std::vector<uint32_t> get_image_IDs() const;
 
+    bool image_exists(uint32_t ID) const;
+
+    std::string get_image_type(uint32_t ID) const;
+
     Error get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
-        std::string* image_type, std::vector<uint8_t>* data) const;
+                                    std::vector<uint8_t>* out_data) const;
 
     Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img, std::istream& TODO_istr) const;
 
@@ -77,6 +81,8 @@ namespace heif {
                                  std::shared_ptr<HeifPixelImage>& img,
                                  std::istream& TODO_istr,
                                  const std::vector<uint8_t>& grid_data) const;
+
+    const Image& get_image_info(uint32_t ID) const;
   };
 
 }

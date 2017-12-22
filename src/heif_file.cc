@@ -318,16 +318,40 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   return Error::OK;
 }
 
-Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
-    std::string* image_type, std::vector<uint8_t>* data) const {
+
+bool HeifFile::image_exists(uint32_t ID) const
+{
+  auto image_iter = m_images.find(ID);
+  return image_iter != m_images.end();
+}
+
+
+const HeifFile::Image& HeifFile::get_image_info(uint32_t ID) const
+{
   // --- get the image from the list of all images
 
   auto image_iter = m_images.find(ID);
-  if (image_iter == m_images.end()) {
+  assert(image_iter != m_images.end());
+
+  return image_iter->second;
+}
+
+
+std::string HeifFile::get_image_type(uint32_t ID) const
+{
+  const Image& img = get_image_info(ID);
+  return img.m_infe_box->get_item_type();
+}
+
+
+Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
+                                          std::vector<uint8_t>* data) const {
+
+  if (!image_exists(ID)) {
     return Error(Error::NonexistingImage);
   }
 
-  const Image& image = image_iter->second;
+  const Image& image = get_image_info(ID);
 
 
   // --- get properties for this image
@@ -389,14 +413,12 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::istream& TODO_istr,
 
     error = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, data);
   } else if (item_type == "grid") {
-    error = m_iloc_box->read_data(*item, TODO_istr, m_idat_box, data);
   }
 
   if (error != Error::OK) {
     return error;
   }
 
-  image_type->assign(item_type);
   return Error::OK;
 }
 
@@ -405,10 +427,10 @@ Error HeifFile::decode_image(uint16_t ID,
                              std::shared_ptr<HeifPixelImage>& img,
                              std::istream& TODO_istr) const
 {
-  std::string image_type;
+  std::string image_type = get_image_type(ID);
 
   std::vector<uint8_t> data;
-  Error error = get_compressed_image_data(ID, TODO_istr, &image_type, &data);
+  Error error = get_compressed_image_data(ID, TODO_istr, &data);
   if (error != Error::OK) {
     return error;
   }
@@ -437,6 +459,9 @@ Error HeifFile::decode_image(uint16_t ID,
   else if (image_type == "grid") {
     return decode_full_grid_image(ID, img, TODO_istr, data);
   }
+  else if (image_type == "iden") {
+    //return decode_derived_image(ID, img, TODO_istr);
+  }
   else {
     // Should not reach this, was already rejected by "get_image_data".
     return Error(Error::Unsupported, Error::UnsupportedImageType);
@@ -446,6 +471,8 @@ Error HeifFile::decode_image(uint16_t ID,
 }
 
 
+// TODO: this function only works with YCbCr images, chroma 4:2:0, and 8 bpp at the moment
+// It will crash badly if we get anything else.
 Error HeifFile::decode_full_grid_image(uint16_t ID,
                                        std::shared_ptr<HeifPixelImage>& img,
                                        std::istream& TODO_istr,
