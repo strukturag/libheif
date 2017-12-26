@@ -477,7 +477,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
 
   for (int y=0;y<grid.get_rows();y++) {
     int x0=0;
-    int tile_height;
+    int tile_height=0;
 
     for (int x=0;x<grid.get_columns();x++) {
 
