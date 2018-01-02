@@ -39,7 +39,7 @@ using namespace heif;
 
 
 // TODO: move this somewhere else (is duplicate from heif.cc)
-struct heif_pixel_image
+struct heif_image
 {
   std::shared_ptr<heif::HeifPixelImage> image;
 };
@@ -415,7 +415,7 @@ Error HeifFile::decode_image(uint16_t ID,
     plugin->push_data(decoder, data.data(), data.size());
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
-    heif_pixel_image* decoded_img = new heif_pixel_image;
+    heif_image* decoded_img = new heif_image;
 
     plugin->decode_image(decoder, &decoded_img);
     plugin->free_decoder(decoder);

@@ -30,7 +30,13 @@
 using namespace heif;
 
 
-struct heif_pixel_image
+struct heif_image_handle
+{
+  uint32_t image_ID;
+};
+
+
+struct heif_image
 {
   std::shared_ptr<heif::HeifPixelImage> image;
 };
@@ -72,20 +78,25 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const uint8_t* mem, 
 //heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_context_get_primary_image(heif_context* ctx, heif_pixel_image** img)
+heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
   if (!img) {
     // TODO
   }
 
   uint16_t primary_ID = ctx->context->get_primary_image_ID();
-  *img = new heif_pixel_image();
 
+  *img = new heif_image_handle();
+  (*img)->image_ID = primary_ID;
+
+  /*
   Error err = ctx->context->decode_image(primary_ID, (*img)->image);
-
   assert((*img)->image);
 
   return err.error_struct();
+  */
+
+  return Error::OK.error_struct();
 }
 
 
@@ -96,62 +107,85 @@ int heif_context_get_number_of_images(heif_context* ctx)
 
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_get_image(heif_context* ctx, int image_ID, heif_pixel_image** img)
+heif_error heif_get_image_handle(heif_context* ctx, int image_ID, heif_image_handle** img)
 {
   if (!img) {
     // TODO
   }
 
+  /*
   Error err = ctx->context->decode_image(image_ID, (*img)->image);
+  return err.error_struct();
+  */
+
+  return Error::OK.error_struct();
+}
+
+
+struct heif_error heif_decode_image(struct heif_context* ctx,
+                                    const struct heif_image_handle* in_handle,
+                                    struct heif_image** out_img)
+{
+  *out_img = new heif_image();
+
+  Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
   return err.error_struct();
 }
 
 
-
-
-struct heif_pixel_image* heif_pixel_image_create(int width, int height,
-                                                 heif_colorspace colorspace,
-                                                 heif_chroma chroma)
+struct heif_image* heif_image_create(int width, int height,
+                                     heif_colorspace colorspace,
+                                     heif_chroma chroma)
 {
-  struct heif_pixel_image* pixel_image = new heif_pixel_image;
-  pixel_image->image = std::make_shared<HeifPixelImage>();
+  struct heif_image* image = new heif_image;
+  image->image = std::make_shared<HeifPixelImage>();
 
-  pixel_image->image->create(width, height, colorspace, chroma);
+  image->image->create(width, height, colorspace, chroma);
 
-  return pixel_image;
+  return image;
+}
+
+void heif_image_release(const struct heif_image* img)
+{
+  delete img;
+}
+
+void heif_image_handle_release(const struct heif_image_handle* handle)
+{
+  delete handle;
 }
 
 
-int heif_pixel_image_get_width(const struct heif_pixel_image* img,enum heif_channel channel)
+int heif_image_get_width(const struct heif_image* img,enum heif_channel channel)
 {
   return img->image->get_width();
 }
 
-int heif_pixel_image_get_height(const struct heif_pixel_image* img,enum heif_channel channel)
+int heif_image_get_height(const struct heif_image* img,enum heif_channel channel)
 {
   return img->image->get_height();
 }
 
 
-void heif_pixel_image_add_plane(struct heif_pixel_image* image,
-                                heif_channel channel, int width, int height, int bit_depth)
+void heif_image_add_plane(struct heif_image* image,
+                          heif_channel channel, int width, int height, int bit_depth)
 {
   image->image->add_plane(channel, width, height, bit_depth);
 }
 
 
-const uint8_t* heif_pixel_image_get_plane_readonly(const struct heif_pixel_image* image,
-                                                   enum heif_channel channel,
-                                                   int* out_stride)
+const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
+                                             enum heif_channel channel,
+                                             int* out_stride)
 {
   assert(image->image);
   return image->image->get_plane(channel, out_stride);
 }
 
 
-uint8_t* heif_pixel_image_get_plane_readonly(struct heif_pixel_image* image,
-                                             enum heif_channel channel,
-                                             int* out_stride)
+uint8_t* heif_image_get_plane_readonly(struct heif_image* image,
+                                       enum heif_channel channel,
+                                       int* out_stride)
 {
   return image->image->get_plane(channel, out_stride);
 }

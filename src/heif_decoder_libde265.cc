@@ -45,7 +45,7 @@ struct libde265_decoder
 
 
 
-heif_pixel_image* convert_libde265_image_to_heif_image(const struct de265_image* de265img)
+heif_image* convert_libde265_image_to_heif_image(const struct de265_image* de265img)
 {
   auto out_img = std::make_shared<HeifPixelImage>();
 
@@ -87,7 +87,7 @@ heif_pixel_image* convert_libde265_image_to_heif_image(const struct de265_image*
   }
 
 
-  heif_pixel_image* out_C_img = (heif_pixel_image*)(new std::shared_ptr<HeifPixelImage>(out_img));
+  heif_image* out_C_img = (heif_image*)(new std::shared_ptr<HeifPixelImage>(out_img));
 
   return out_C_img;
 }
@@ -124,7 +124,7 @@ void libde265_v2_push_data(void* decoder_raw, uint8_t* data,uint32_t size)
 }
 
 
-void libde265_v2_decode_image(void* decoder_raw, struct heif_pixel_image** out_img)
+void libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
@@ -152,7 +152,7 @@ void libde265_v1_push_data(void* decoder_raw, uint8_t* data,uint32_t size)
 }
 
 
-void libde265_v1_decode_image(void* decoder_raw, struct heif_pixel_image** out_img)
+void libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 

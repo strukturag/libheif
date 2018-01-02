@@ -28,8 +28,8 @@ extern "C" {
 #include <stdint.h>
 
 struct heif_context;  // TODO  heif_context == HeifFile, which is not so nice
+struct heif_image_handle;
 struct heif_image;
-struct heif_pixel_image;
 
 struct heif_error
 {
@@ -45,18 +45,21 @@ void heif_context_free(struct heif_context*);
 
 struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename);
 
-struct heif_error heif_context_read_from_memory(struct heif_context*, const uint8_t* mem, uint64_t size);
+struct heif_error heif_context_read_from_memory(struct heif_context*,
+                                                const uint8_t* mem, uint64_t size);
 
 // TODO
 struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
 
-// NOTE: data types will change ! (TODO)
-struct heif_error heif_context_get_primary_image(struct heif_context* h, struct heif_pixel_image**);
+struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
+                                                        struct heif_image_handle**);
 
 int heif_context_get_number_of_images(struct heif_context* h);
 
 // NOTE: data types will change ! (TODO)
-struct heif_error heif_get_image(struct heif_context* h, int image_index, struct heif_pixel_image**);
+struct heif_error heif_get_image_handle(struct heif_context* h,
+                                        int image_index,
+                                        struct heif_image_handle**);
 
 
 // --- heif_image
@@ -94,9 +97,15 @@ enum heif_channel {
 };
 
 
-int heif_pixel_image_get_width(const struct heif_pixel_image*,enum heif_channel channel);
+struct heif_error heif_decode_image(struct heif_context* ctx,
+                                    const struct heif_image_handle* in_handle,
+                                    struct heif_image** out_img);
 
-int heif_pixel_image_get_height(const struct heif_pixel_image*,enum heif_channel channel);
+enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
+
+int heif_image_get_width(const struct heif_image*,enum heif_channel channel);
+
+int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
@@ -104,19 +113,19 @@ int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel cha
 
 /* The |out_stride| is returned as "bytes per line".
    When out_stride is NULL, no value will be written. */
-const uint8_t* heif_pixel_image_get_plane_readonly(const struct heif_pixel_image*,
-                                                   enum heif_channel channel,
-                                                   int* out_stride);
+const uint8_t* heif_image_get_plane_readonly(const struct heif_image*,
+                                             enum heif_channel channel,
+                                             int* out_stride);
 
-uint8_t* heif_pixel_image_get_plane(struct heif_pixel_image*,
-                                    enum heif_channel channel,
-                                    int* out_stride);
+uint8_t* heif_image_get_plane(struct heif_image*,
+                              enum heif_channel channel,
+                              int* out_stride);
 
 void heif_image_release(const struct heif_image*);
 
+void heif_image_handle_release(const struct heif_image_handle*);
 
 
-enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 
 /*
@@ -135,12 +144,12 @@ void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 
 
 
-struct heif_pixel_image* heif_pixel_image_create(int width, int height,
-                                                 enum heif_colorspace colorspace,
-                                                 enum heif_chroma chroma);
+struct heif_image* heif_image_create(int width, int height,
+                                     enum heif_colorspace colorspace,
+                                     enum heif_chroma chroma);
 
-void heif_pixel_image_add_plane(struct heif_pixel_image* image,
-                                enum heif_channel channel, int width, int height, int bit_depth);
+void heif_image_add_plane(struct heif_image* image,
+                          enum heif_channel channel, int width, int height, int bit_depth);
 
 
 
@@ -161,7 +170,7 @@ struct heif_decoder_plugin
   // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
 
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
-  void (*decode_image)(void* decoder, struct heif_pixel_image** out_img);
+  void (*decode_image)(void* decoder, struct heif_image** out_img);
 
   // Decode only part of the image.
   // May be useful if the input image is tiled and we only need part of it.
