@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libheif
+Description: HEIF image codec.
+URL: https://github.com/strukturag/libheif
+Version: @VERSION@
+Requires:
+Libs: -lheif -L@libdir@
+Libs.private: @LIBS@ -lstdc++
+Cflags: -I@includedir@

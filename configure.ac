@@ -94,4 +94,5 @@ CFLAGS="$CFLAGS -Wall -Werror"
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([libheif.pc])
 AC_OUTPUT
