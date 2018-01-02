@@ -20,7 +20,7 @@ if [ "$CODENAME" = "trusty" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.
     echo "Extracting in $TMPDIR ..."
     curl "${LIBSTDC_BASE}/libstdc++6_${LIBSTDC_VERSION}_amd64.deb" > "$TMPDIR/libstdc++6_${LIBSTDC_VERSION}_amd64.deb"
     dpkg -x "$TMPDIR/libstdc++6_${LIBSTDC_VERSION}_amd64.deb" "$TMPDIR"
-    mv "$TMPDIR/usr/lib/x86_64-linux-gnu/"libstdc++* /usr/lib/x86_64-linux-gnu
+    sudo mv "$TMPDIR/usr/lib/x86_64-linux-gnu/"libstdc++* /usr/lib/x86_64-linux-gnu
     rm -rf "$TMPDIR"
 fi
 

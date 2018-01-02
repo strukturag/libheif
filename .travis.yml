@@ -1,0 +1,41 @@
+# stats available at
+# https://travis-ci.org/strukturag/libheif/
+language: cpp
+compiler:
+  - gcc
+  - clang
+cache: ccache
+sudo: required
+env:
+  - WITH_LIBDE265= WITH_GRAPHICS=
+  - WITH_LIBDE265= WITH_GRAPHICS=1
+  - WITH_LIBDE265=1 WITH_GRAPHICS=1
+  - WITH_LIBDE265=2 WITH_GRAPHICS=1
+  - EMSCRIPTEN_VERSION=1.37.26
+
+matrix:
+  exclude:
+    - compiler: clang
+      env: EMSCRIPTEN_VERSION=1.37.26
+
+before_install:
+  - dpkg-query -l "*-dev" | grep ii
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo add-apt-repository -y ppa:strukturag/libde265; fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo apt-get update -qq; fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo apt-get install -qq libde265-dev; fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then git clone --depth 1 -b frame-parallel https://github.com/strukturag/libde265.git; fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && ./autogen.sh ); fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && ./configure --prefix=$TRAVIS_BUILD_DIR/libde265/dist --disable-dec265 --disable-sherlock265 --disable-hdrcopy --disable-enc265 --disable-acceleration_speed ); fi"
+  - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && make && make install ); fi"
+  - sh -c "if [ -z \"$WITH_GRAPHICS\" ]; then sudo apt-get remove libjpeg.*-dev libpng.*-dev; fi"
+  - sh -c "if [ ! -z \"$WITH_GRAPHICS\" ]; then sudo apt-get install libjpeg-dev libpng-dev; fi"
+  - sh -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then mkdir -p emscripten; fi"
+  - sh -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then ./scripts/install-emscripten.sh $EMSCRIPTEN_VERSION emscripten; fi"
+
+before_script:
+  - ./autogen.sh
+  - PKG_CONFIG_PATH=$TRAVIS_BUILD_DIR/libde265/dist/lib/pkgconfig/ ./configure
+
+script:
+  - sh -c "if [ -z \"$EMSCRIPTEN_VERSION\" ]; then make; fi"
+  - bash -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then source ./emscripten/emsdk-portable/emsdk_env.sh && ./build-emscripten.sh; fi"
