@@ -25,6 +25,7 @@
 
 
 #include <memory>
+#include <assert.h>
 
 using namespace heif;
 
@@ -81,6 +82,9 @@ heif_error heif_context_get_primary_image(heif_context* ctx, heif_pixel_image** 
   *img = new heif_pixel_image();
 
   Error err = ctx->context->decode_image(primary_ID, (*img)->image);
+
+  assert((*img)->image);
+
   return err.error_struct();
 }
 
@@ -118,6 +122,17 @@ struct heif_pixel_image* heif_pixel_image_create(int width, int height,
 }
 
 
+int heif_pixel_image_get_width(const struct heif_pixel_image* img,enum heif_channel channel)
+{
+  return img->image->get_width();
+}
+
+int heif_pixel_image_get_height(const struct heif_pixel_image* img,enum heif_channel channel)
+{
+  return img->image->get_height();
+}
+
+
 void heif_pixel_image_add_plane(struct heif_pixel_image* image,
                                 heif_channel channel, int width, int height, int bit_depth)
 {
@@ -129,6 +144,7 @@ const uint8_t* heif_pixel_image_get_plane_readonly(const struct heif_pixel_image
                                                    enum heif_channel channel,
                                                    int* out_stride)
 {
+  assert(image->image);
   return image->image->get_plane(channel, out_stride);
 }
 

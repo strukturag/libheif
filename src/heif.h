@@ -39,24 +39,24 @@ struct heif_error
 };
 
 
-heif_context* heif_context_alloc();
+struct heif_context* heif_context_alloc();
 
-void heif_context_free(heif_context*);
+void heif_context_free(struct heif_context*);
 
-heif_error heif_context_read_from_file(heif_context*, const char* filename);
+struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename);
 
-heif_error heif_context_read_from_memory(heif_context*, const uint8_t* mem, uint64_t size);
+struct heif_error heif_context_read_from_memory(struct heif_context*, const uint8_t* mem, uint64_t size);
 
 // TODO
-heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
+struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_context_get_primary_image(heif_context* h, heif_pixel_image**);
+struct heif_error heif_context_get_primary_image(struct heif_context* h, struct heif_pixel_image**);
 
-int heif_context_get_number_of_images(heif_context* h);
+int heif_context_get_number_of_images(struct heif_context* h);
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_get_image(heif_context* h, int image_index, heif_pixel_image**);
+struct heif_error heif_get_image(struct heif_context* h, int image_index, struct heif_pixel_image**);
 
 
 // --- heif_image
@@ -94,9 +94,9 @@ enum heif_channel {
 };
 
 
-int heif_image_get_width(const struct heif_image*,enum heif_channel channel);
+int heif_pixel_image_get_width(const struct heif_pixel_image*,enum heif_channel channel);
 
-int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
+int heif_pixel_image_get_height(const struct heif_pixel_image*,enum heif_channel channel);
 
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
@@ -116,7 +116,7 @@ void heif_image_release(const struct heif_image*);
 
 
 
-enum heif_compression_format heif_image_get_compression_format(heif_image*);
+enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 
 /*
@@ -136,11 +136,11 @@ void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 
 
 struct heif_pixel_image* heif_pixel_image_create(int width, int height,
-                                                 heif_colorspace colorspace,
-                                                 heif_chroma chroma);
+                                                 enum heif_colorspace colorspace,
+                                                 enum heif_chroma chroma);
 
 void heif_pixel_image_add_plane(struct heif_pixel_image* image,
-                                heif_channel channel, int width, int height, int bit_depth);
+                                enum heif_channel channel, int width, int height, int bit_depth);
 
 
 
@@ -179,7 +179,7 @@ struct heif_decoder_plugin
 const struct heif_decoder_plugin* get_decoder_plugin_libde265();
 
 
-void heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin*);
+void heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
 
 // TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 
