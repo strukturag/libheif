@@ -107,11 +107,16 @@ int heif_context_get_number_of_images(heif_context* ctx)
 
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_get_image_handle(heif_context* ctx, int image_ID, heif_image_handle** img)
+heif_error heif_context_get_image_handle(heif_context* ctx, int image_ID, heif_image_handle** img)
 {
   if (!img) {
     // TODO
   }
+
+  const auto& IDs = ctx->context->get_image_IDs();
+
+  *img = new heif_image_handle();
+  (*img)->image_ID = IDs[image_ID];
 
   /*
   Error err = ctx->context->decode_image(image_ID, (*img)->image);
@@ -119,6 +124,13 @@ heif_error heif_get_image_handle(heif_context* ctx, int image_ID, heif_image_han
   */
 
   return Error::OK.error_struct();
+}
+
+
+int heif_context_is_primary_image(const struct heif_context* h,
+                                  const struct heif_image_handle* handle)
+{
+  return handle->image_ID == h->context->get_primary_image_ID();
 }
 
 

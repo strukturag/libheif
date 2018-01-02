@@ -57,9 +57,12 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
 int heif_context_get_number_of_images(struct heif_context* h);
 
 // NOTE: data types will change ! (TODO)
-struct heif_error heif_get_image_handle(struct heif_context* h,
-                                        int image_index,
-                                        struct heif_image_handle**);
+struct heif_error heif_context_get_image_handle(struct heif_context* h,
+                                                int image_index,
+                                                struct heif_image_handle**);
+
+int heif_context_is_primary_image(const struct heif_context* h,
+                                  const struct heif_image_handle* handle);
 
 
 // --- heif_image
