@@ -74,16 +74,13 @@ static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
     return result;
   }
 
-  std::string image_type;
   std::vector<uint8_t> image_data;
-
-  std::istringstream s(data);
-  Error err = file->get_compressed_image_data(ID, s, &image_type, &image_data);
+  Error err = file->get_compressed_image_data(ID, &image_data);
   if (err != Error::OK) {
     return emscripten::val(err);
   }
 
-  result.set("type", image_type);
+  result.set("type", file->get_image_type(ID));
   result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
       image_data.size()));
   return result;
