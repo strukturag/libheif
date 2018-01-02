@@ -69,8 +69,6 @@ int main(int argc, char** argv)
 
   uint16_t primary_image_ID = heifFile.get_primary_image_ID();
 
-  std::ifstream istr(input_filename);
-
   std::shared_ptr<HeifPixelImage> img;
   err = heifFile.decode_image(primary_image_ID, img);
 
