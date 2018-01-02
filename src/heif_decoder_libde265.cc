@@ -148,7 +148,7 @@ void libde265_v1_push_data(void* decoder_raw, uint8_t* data,uint32_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
-  de265_push_data(ctx, data, size, 0, nullptr);
+  de265_push_data(decoder->ctx, data, size, 0, nullptr);
 }
 
 
@@ -156,25 +156,25 @@ void libde265_v1_decode_image(void* decoder_raw, struct heif_pixel_image** out_i
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
-  de265_flush_data(ctx);
+  de265_flush_data(decoder->ctx);
 
   int more;
   de265_error decode_err;
   do {
     more = 0;
-    decode_err = de265_decode(ctx, &more);
+    decode_err = de265_decode(decoder->ctx, &more);
     if (decode_err != DE265_OK) {
       printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
       break;
     }
 
-    const struct de265_image* image = de265_get_next_picture(ctx);
+    const struct de265_image* image = de265_get_next_picture(decoder->ctx);
     if (image) {
       *out_img = convert_libde265_image_to_heif_image(image);
 
       printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
              de265_get_image_height(image, 0));
-      de265_release_next_picture(ctx);
+      de265_release_next_picture(decoder->ctx);
     }
   } while (more);
 }
