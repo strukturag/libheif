@@ -789,10 +789,12 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
+  istr.clear();
   uint64_t curpos = istr.tellg();
   istr.seekg(0, std::ios_base::end);
   uint64_t max_size = istr.tellg();
   istr.seekg(curpos, std::ios_base::beg);
+
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
       istr.seekg(extent.offset + item.base_offset, std::ios::beg);
