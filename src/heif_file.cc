@@ -38,6 +38,12 @@
 using namespace heif;
 
 
+// TODO: move this somewhere else (is duplicate from heif.cc)
+struct heif_pixel_image
+{
+  std::shared_ptr<heif::HeifPixelImage> image;
+};
+
 
 class ImageGrid
 {
@@ -376,7 +382,6 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
       // TODO
     }
 
-
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   } else if (item_type == "grid") {
   }
@@ -408,11 +413,14 @@ Error HeifFile::decode_image(uint16_t ID,
 
     void* decoder = plugin->new_decoder();
     plugin->push_data(decoder, data.data(), data.size());
-    std::shared_ptr<HeifPixelImage>* decoded_img;
-    plugin->decode_image(decoder, (heif_pixel_image**)&decoded_img);
+    //std::shared_ptr<HeifPixelImage>* decoded_img;
+
+    heif_pixel_image* decoded_img = new heif_pixel_image;
+
+    plugin->decode_image(decoder, &decoded_img);
     plugin->free_decoder(decoder);
 
-    img = *decoded_img;
+    img = decoded_img->image;
     delete decoded_img;
 
 #if 0
