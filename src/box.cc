@@ -998,6 +998,34 @@ std::string Box_ipco::dump(Indent& indent) const
 }
 
 
+Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
+                                           const std::shared_ptr<class Box_ipma>& ipma,
+                                           std::vector<Property>& out_properties) const
+{
+  const std::vector<Box_ipma::PropertyAssociation>* property_assoc = ipma->get_properties_for_item_ID(itemID);
+  if (property_assoc == nullptr) {
+    return Error(Error::InvalidInput, Error::NoPropertiesForItemID);
+  }
+
+  auto allProperties = get_all_child_boxes();
+  for (const  Box_ipma::PropertyAssociation& assoc : *property_assoc) {
+    if (assoc.property_index > allProperties.size()) {
+      return Error(Error::InvalidInput, Error::NonexistingPropertyReferenced);
+    }
+
+    Property prop;
+    prop.essential = assoc.essential;
+
+    if (assoc.property_index > 0) {
+      prop.property = allProperties[assoc.property_index - 1];
+      out_properties.push_back(prop);
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Error Box_ispe::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);

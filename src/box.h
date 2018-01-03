@@ -286,6 +286,15 @@ namespace heif {
   public:
   Box_ipco(const BoxHeader& hdr) : Box(hdr) { }
 
+    struct Property {
+      bool essential;
+      std::shared_ptr<Box> property;
+    };
+
+    Error get_properties_for_item_ID(uint32_t itemID,
+                                     const std::shared_ptr<class Box_ipma>&,
+                                     std::vector<Property>& out_properties) const;
+
     std::string dump(Indent&) const override;
 
   protected:

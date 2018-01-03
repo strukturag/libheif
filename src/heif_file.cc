@@ -328,24 +328,10 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
 
   // --- get properties for this image
 
-  std::vector< std::shared_ptr<Box> > properties;
-
-  const std::vector<Box_ipma::PropertyAssociation>* property_assoc = m_ipma_box->get_properties_for_item_ID(ID);
-  if (property_assoc == nullptr) {
-    return Error(Error::InvalidInput, Error::NoPropertiesForItemID);
-  }
-
-  auto allProperties = m_ipco_box->get_all_child_boxes();
-  for (const  Box_ipma::PropertyAssociation& assoc : *property_assoc) {
-    if (assoc.property_index > allProperties.size()) {
-      return Error(Error::InvalidInput, Error::NonexistingPropertyReferenced);
-    }
-
-    if (assoc.property_index > 0) {
-      properties.push_back(allProperties[assoc.property_index - 1]);
-    }
-
-    // TODO: essential flag ?
+  std::vector<Box_ipco::Property> properties;
+  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+  if (err) {
+    return err;
   }
 
   std::string item_type = image.m_infe_box->get_item_type();
@@ -371,9 +357,9 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     // --- get codec configuration
 
     std::shared_ptr<Box_hvcC> hvcC_box;
-    for (auto& prop_box : properties) {
-      if (prop_box->get_short_type() == fourcc("hvcC")) {
-        hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop_box);
+    for (auto& prop : properties) {
+      if (prop.property->get_short_type() == fourcc("hvcC")) {
+        hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop.property);
         assert(hvcC_box);
       }
     }
