@@ -25,6 +25,7 @@
 #include "heif.h"
 
 #include <vector>
+#include <memory>
 #include <map>
 #include <set>
 
@@ -51,6 +52,8 @@ class HeifPixelImage
 
   heif_chroma get_chroma_format() const { return m_chroma; }
 
+  heif_colorspace get_colorspace() const { return m_colorspace; }
+
   std::set<enum heif_channel> get_channel_set() const;
 
   int get_bits_per_pixel(enum heif_channel channel) const;
@@ -58,12 +61,18 @@ class HeifPixelImage
   uint8_t* get_plane(enum heif_channel channel, int* out_stride);
   const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
 
+
+  std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
+                                                     heif_chroma chroma) const;
+
  private:
   struct ImagePlane {
     int width;
     int height;
     int bit_depth;
+
     std::vector<uint8_t> mem;
+    int stride;
   };
 
   int m_width = 0;
@@ -72,14 +81,11 @@ class HeifPixelImage
   heif_chroma m_chroma = heif_chroma_undefined;
 
   std::map<heif_channel, ImagePlane> m_planes;
+
+  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB() const;
+  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB24() const;
 };
 
-
-class HeifImage
-{
- public:
-  ~HeifImage();
-};
 
 }
 

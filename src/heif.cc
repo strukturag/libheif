@@ -146,12 +146,17 @@ void heif_image_handle_get_resolution(const struct heif_context* h,
 
 struct heif_error heif_decode_image(struct heif_context* ctx,
                                     const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img)
+                                    struct heif_image** out_img,
+                                    heif_colorspace colorspace,
+                                    heif_chroma chroma)
 {
   *out_img = new heif_image();
 
   //Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
-  Error err = in_handle->image->decode_image((*out_img)->image);
+  Error err = in_handle->image->decode_image((*out_img)->image,
+                                             colorspace,
+                                             chroma,
+                                             nullptr);
   // TODO: colorspace conversion
 
   return err.error_struct();

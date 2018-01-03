@@ -102,13 +102,14 @@ enum heif_chroma {
   heif_chroma_mono=0,
   heif_chroma_420=1,
   heif_chroma_422=2,
-  heif_chroma_444=3
+  heif_chroma_444=3,
+  heif_chroma_interleaved_24bit=10
 };
 
 enum heif_colorspace {
   heif_colorspace_undefined=99,
   heif_colorspace_YCbCr=0,
-  heif_colorspace_GBR  =1,
+  heif_colorspace_RGB  =1,
   heif_colorspace_monochrome=2
 };
 
@@ -119,13 +120,18 @@ enum heif_channel {
   heif_channel_R = 3,
   heif_channel_G = 4,
   heif_channel_B = 5,
-  heif_channel_Alpha = 6
+  heif_channel_Alpha = 6,
+  heif_channel_interleaved = 10
 };
 
 
+// If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
+// respectively, the original colorspace is taken.
 struct heif_error heif_decode_image(struct heif_context* ctx,
                                     const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img);
+                                    struct heif_image** out_img,
+                                    enum heif_colorspace colorspace,
+                                    enum heif_chroma chroma);
 
 enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 

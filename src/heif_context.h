@@ -65,8 +65,9 @@ namespace heif {
       std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
 
       Error decode_image(std::shared_ptr<HeifPixelImage>& img,
+                         heif_colorspace colorspace = heif_colorspace_undefined,
                          heif_chroma chroma = heif_chroma_undefined,
-                         heif_colorspace colorspace = heif_colorspace_undefined) const;
+                         class HeifColorConversionParams* config = nullptr) const;
 
     private:
       std::shared_ptr<HeifFile> m_heif_file;
@@ -89,7 +90,7 @@ namespace heif {
   private:
     std::map<uint32_t, std::shared_ptr<Image>> m_all_images;
 
-    // We store this in a vector, because we need stable indices for the C API.
+    // We store this in a vector because we need stable indices for the C API.
     std::vector<std::shared_ptr<Image>> m_top_level_images;
 
     std::shared_ptr<Image> m_primary_image; // shortcut to primary image
