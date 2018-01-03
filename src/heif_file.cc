@@ -317,6 +317,20 @@ std::string HeifFile::get_image_type(uint32_t ID) const
 }
 
 
+Error HeifFile::get_properties(uint32_t imageID,
+                               std::vector<Box_ipco::Property>& properties) const
+{
+  Error err;
+  if (!m_ipco_box || !m_ipma_box) {
+    // TODO: error
+  }
+
+  err = m_ipco_box->get_properties_for_item_ID(imageID, m_ipma_box, properties);
+
+  return err;
+}
+
+
 Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* data) const {
 
   if (!image_exists(ID)) {

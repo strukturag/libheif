@@ -72,7 +72,7 @@ namespace heif {
       std::shared_ptr<HeifFile> m_heif_file;
 
       uint32_t m_id;
-      uint32_t m_width,m_height;
+      uint32_t m_width=0, m_height=0;
       bool     m_is_primary = false;
 
       bool     m_is_thumbnail = false;

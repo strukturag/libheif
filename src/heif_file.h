@@ -65,6 +65,9 @@ namespace heif {
 
     std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
+    Error get_properties(uint32_t imageID,
+                         std::vector<Box_ipco::Property>& properties) const;
+
 #if 0
     class Image {
     public:

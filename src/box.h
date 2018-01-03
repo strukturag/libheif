@@ -306,6 +306,9 @@ namespace heif {
   public:
   Box_ispe(const BoxHeader& hdr) : Box(hdr) { }
 
+    uint32_t get_width() const { return m_image_width; }
+    uint32_t get_height() const { return m_image_height; }
+
     std::string dump(Indent&) const override;
 
   protected:

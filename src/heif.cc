@@ -136,6 +136,14 @@ int heif_image_handle_is_primary_image(const struct heif_context* h,
 }
 
 
+void heif_image_handle_get_resolution(const struct heif_context* h,
+                                      const struct heif_image_handle* handle,
+                                      int* width, int* height)
+{
+  if (width) *width = handle->image->get_width();
+  if (height) *height = handle->image->get_height();
+}
+
 struct heif_error heif_decode_image(struct heif_context* ctx,
                                     const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img)

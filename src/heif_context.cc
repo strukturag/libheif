@@ -122,6 +122,28 @@ Error HeifContext::interpret_heif_file()
     }
   }
 
+
+  // --- read through properties for each image and extract image resolutions
+
+  for (auto& pair : m_all_images) {
+    auto& image = pair.second;
+
+    std::vector<Box_ipco::Property> properties;
+
+    Error err = m_heif_file->get_properties(pair.first, properties);
+    if (err) {
+      return err;
+    }
+
+    for (const auto& prop : properties) {
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+      if (ispe) {
+        image->set_resolution(ispe->get_width(),
+                              ispe->get_height());
+      }
+    }
+  }
+
   return Error::Ok;
 }
 
