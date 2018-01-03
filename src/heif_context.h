@@ -50,6 +50,13 @@ namespace heif {
 
       void set_primary(bool flag=true) { m_is_primary=flag; }
 
+      void set_is_thumbnail_of(uint32_t id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
+      void add_thumbnail(std::shared_ptr<Image> img) { m_thumbnails.push_back(img); }
+
+      bool is_thumbnail() const { return m_is_thumbnail; }
+
+      uint32_t get_id() const { return m_id; }
+
       int get_width() const { return m_width; }
       int get_height() const { return m_height; }
 
@@ -67,6 +74,9 @@ namespace heif {
       uint32_t m_id;
       uint32_t m_width,m_height;
       bool     m_is_primary = false;
+
+      bool     m_is_thumbnail = false;
+      uint32_t m_thumbnail_ref_id;
 
       std::vector<std::shared_ptr<Image>> m_thumbnails;
     };

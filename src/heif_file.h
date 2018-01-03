@@ -63,6 +63,8 @@ namespace heif {
       return iter->second.m_infe_box;
     }
 
+    std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
+
 #if 0
     class Image {
     public:

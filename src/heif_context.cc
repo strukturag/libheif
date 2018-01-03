@@ -86,8 +86,41 @@ Error HeifContext::interpret_heif_file()
 
   // --- remove thumbnails from top-level images and assign to their respective image
 
-  //m_top_level_images = m_all_images;
-  // TODO
+  auto iref_box = m_heif_file->get_iref_box();
+  if (iref_box) {
+    m_top_level_images.clear();
+
+    for (auto& pair : m_all_images) {
+      auto& image = pair.second;
+
+      uint32_t type = iref_box->get_reference_type(image->get_id());
+
+      if (type==fourcc("thmb")) {
+        std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
+        if (refs.size() != 1) {
+          // TODO incorrect thumbnail reference
+        }
+
+        image->set_is_thumbnail_of(refs[0]);
+
+        auto master_iter = m_all_images.find(refs[0]);
+        if (master_iter == m_all_images.end()) {
+          // TODO: error: referenced image does not exist
+        }
+
+        if (master_iter->second->is_thumbnail()) {
+          // TODO: error: thumbnail may not reference another thumbnail
+        }
+
+        master_iter->second->add_thumbnail(image);
+      }
+      else {
+        // 'image' is a normal image, add it as a top-level image
+
+        m_top_level_images.push_back(image);
+      }
+    }
+  }
 
   return Error::Ok;
 }
