@@ -61,8 +61,8 @@ struct heif_error heif_context_get_image_handle(struct heif_context* h,
                                                 int image_index,
                                                 struct heif_image_handle**);
 
-int heif_context_is_primary_image(const struct heif_context* h,
-                                  const struct heif_image_handle* handle);
+int heif_image_handle_is_primary_image(const struct heif_context* h,
+                                       const struct heif_image_handle* handle);
 
 
 // --- heif_image

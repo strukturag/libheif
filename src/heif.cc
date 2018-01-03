@@ -127,8 +127,8 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_ID, heif_i
 }
 
 
-int heif_context_is_primary_image(const struct heif_context* h,
-                                  const struct heif_image_handle* handle)
+int heif_image_handle_is_primary_image(const struct heif_context* h,
+                                       const struct heif_image_handle* handle)
 {
   return handle->image_ID == h->context->get_primary_image_ID();
 }
