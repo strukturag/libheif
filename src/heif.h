@@ -69,10 +69,10 @@ int heif_image_handle_is_primary_image(const struct heif_context* h,
 int heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
                                                const struct heif_image_handle* handle);
 
-int heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                    const struct heif_image_handle* handle,
-                                    int thumbnail_idx,
-                                    struct heif_image_handle** out_thumbnail_handle);
+void heif_image_handle_get_thumbnail(const struct heif_context* h,
+                                     const struct heif_image_handle* handle,
+                                     int thumbnail_idx,
+                                     struct heif_image_handle** out_thumbnail_handle);
 
 void heif_image_handle_get_resolution(const struct heif_context* h,
                                       const struct heif_image_handle* handle,
