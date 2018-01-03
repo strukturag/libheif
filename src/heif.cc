@@ -20,7 +20,8 @@
 
 #include "heif.h"
 #include "heif_image.h"
-#include "heif_file.h"
+//#include "heif_file.h"
+#include "heif_context.h"
 #include "error.h"
 
 
@@ -32,7 +33,7 @@ using namespace heif;
 
 struct heif_image_handle
 {
-  uint32_t image_ID;
+  std::shared_ptr<heif::HeifContext::Image> image;
 };
 
 
@@ -45,14 +46,14 @@ struct heif_image
 
 struct heif_context
 {
-  std::shared_ptr<heif::HeifFile> context;
+  std::shared_ptr<heif::HeifContext> context;
 };
 
 
 heif_context* heif_context_alloc()
 {
   struct heif_context* ctx = new heif_context;
-  ctx->context = std::make_shared<HeifFile>();
+  ctx->context = std::make_shared<HeifContext>();
 
   return ctx;
 }
@@ -84,10 +85,10 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
     // TODO
   }
 
-  uint16_t primary_ID = ctx->context->get_primary_image_ID();
+  //uint16_t primary_ID = ctx->context->get_primary_image_ID();
 
   *img = new heif_image_handle();
-  (*img)->image_ID = primary_ID;
+  (*img)->image = ctx->context->get_primary_image();
 
   /*
   Error err = ctx->context->decode_image(primary_ID, (*img)->image);
@@ -102,21 +103,22 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 
 int heif_context_get_number_of_images(heif_context* ctx)
 {
-  return ctx->context->get_num_images();
+  return ctx->context->get_top_level_images().size();
 }
 
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_context_get_image_handle(heif_context* ctx, int image_ID, heif_image_handle** img)
+heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_image_handle** img)
 {
   if (!img) {
     // TODO
   }
 
-  const auto& IDs = ctx->context->get_image_IDs();
+  //const auto& IDs = ctx->context->get_image_IDs();
 
   *img = new heif_image_handle();
-  (*img)->image_ID = IDs[image_ID];
+  //(*img)->image_ID = IDs[image_ID];
+  (*img)->image = ctx->context->get_top_level_images()[image_idx];
 
   /*
   Error err = ctx->context->decode_image(image_ID, (*img)->image);
@@ -130,7 +132,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_ID, heif_i
 int heif_image_handle_is_primary_image(const struct heif_context* h,
                                        const struct heif_image_handle* handle)
 {
-  return handle->image_ID == h->context->get_primary_image_ID();
+  return handle->image->is_primary();
 }
 
 
@@ -140,7 +142,10 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
 {
   *out_img = new heif_image();
 
-  Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
+  //Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
+  Error err = in_handle->image->decode_image((*out_img)->image);
+  // TODO: colorspace conversion
+
   return err.error_struct();
 }
 

@@ -394,7 +394,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
 }
 
 
-Error HeifFile::decode_image(uint16_t ID,
+Error HeifFile::decode_image(uint32_t ID,
                              std::shared_ptr<HeifPixelImage>& img) const
 {
   std::string image_type = get_image_type(ID);

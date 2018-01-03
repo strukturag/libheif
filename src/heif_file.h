@@ -24,6 +24,7 @@
 #include "box.h"
 
 #include <map>
+#include <assert.h>
 
 
 namespace heif {
@@ -52,7 +53,46 @@ namespace heif {
 
     Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
 
-    Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img) const;
+    Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
+
+
+
+    std::shared_ptr<Box_infe> get_infe_box(uint32_t imageID) {
+      auto iter = m_images.find(imageID);
+      assert(iter != m_images.end());
+      return iter->second.m_infe_box;
+    }
+
+#if 0
+    class Image {
+    public:
+      ~Image() { }
+
+      int get_width() const { return m_width; }
+      int get_height() const { return m_height; }
+
+      bool is_primary() const { return m_is_primary; }
+
+      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
+
+      Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img,
+                         heif_chroma chroma = heif_chroma_undefined,
+                         heif_colorspace colorspace = heif_colorspace_undefined) const;
+
+    private:
+      uint32_t m_id;
+      uint32_t m_width,m_height;
+      bool     m_is_primary;
+
+      std::vector<std::shared_ptr<Image>> m_thumbnails;
+    };
+
+    //std::vector<uint32_t> get_image_IDs() const;
+
+    //std::shared_ptr<Image> get_image(int id) { return m_images[idx]; }
+
+    std::set<std::shared_ptr<Image>> get_top_level_images();
+#endif
 
   private:
     std::unique_ptr<std::istream> m_input_stream;
@@ -72,12 +112,21 @@ namespace heif {
       std::shared_ptr<Box_infe> m_infe_box;
     };
 
-    std::map<uint16_t, Image> m_images;  // map from image ID to info structure
+    std::map<uint32_t, Image> m_images;  // map from image ID to info structure
 
     // list of image items (does not include hidden images or Exif data)
     std::vector<uint32_t> m_valid_image_IDs;
 
-    uint16_t m_primary_image_ID;
+    uint32_t m_primary_image_ID;
+
+
+#if 0
+    // --- for high level access
+
+    std::map<uint32_t, std::shared_ptr<Image>> m_images; // indexed with image-ID
+
+    std::shared_ptr<Image> m_primary_image; // shortcut to primary image
+#endif
 
 
     Error parse_heif_file(BitstreamRange& bitstream);

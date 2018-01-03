@@ -26,7 +26,9 @@ libheif_la_SOURCES = \
   heif_image.cc \
   heif_decoder_libde265.cc \
   heif.h \
-  heif.cc
+  heif.cc \
+  heif_context.h \
+  heif_context.cc
 
 libheif_la_HEADERS = \
   heif.h

@@ -54,15 +54,37 @@ struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, i
 struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
                                                         struct heif_image_handle**);
 
+
+// --- heif_image_handle
+
 int heif_context_get_number_of_images(struct heif_context* h);
 
-// NOTE: data types will change ! (TODO)
 struct heif_error heif_context_get_image_handle(struct heif_context* h,
                                                 int image_index,
                                                 struct heif_image_handle**);
 
 int heif_image_handle_is_primary_image(const struct heif_context* h,
                                        const struct heif_image_handle* handle);
+
+int heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
+                                               const struct heif_image_handle* handle);
+
+int heif_image_handle_get_thumbnail(const struct heif_context* h,
+                                    const struct heif_image_handle* handle,
+                                    int thumbnail_idx,
+                                    struct heif_image_handle** out_thumbnail_handle);
+
+void heif_image_handle_get_resolution(const struct heif_context* h,
+                                      const struct heif_image_handle* handle,
+                                      int* width, int* height);
+
+int  heif_image_handle_get_exif_data_size(const struct heif_context* h,
+                                          const struct heif_image_handle* handle);
+
+// out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
+void heif_image_handle_get_exif_data(const struct heif_context* h,
+                                     const struct heif_image_handle* handle,
+                                     uint8_t* out_data);
 
 
 // --- heif_image
@@ -86,7 +108,8 @@ enum heif_chroma {
 enum heif_colorspace {
   heif_colorspace_undefined=99,
   heif_colorspace_YCbCr=0,
-  heif_colorspace_GBR  =1
+  heif_colorspace_GBR  =1,
+  heif_colorspace_monochrome=2
 };
 
 enum heif_channel {

@@ -95,6 +95,8 @@ namespace heif {
     bool operator==(const Error& other) const { return error_code == other.error_code; }
     bool operator!=(const Error& other) const { return !(*this == other); }
 
+    operator bool() const { return error_code != Ok; }
+
     heif_error error_struct() {
       heif_error err;
       err.code = error_code;
