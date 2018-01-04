@@ -32,7 +32,15 @@ class JpegEncoder : public Encoder {
  public:
   JpegEncoder(int quality);
 
-  bool Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
+  heif_colorspace colorspace() const override {
+    return heif_colorspace_YCbCr;
+  }
+
+  heif_chroma chroma() const override {
+    return heif_chroma_420;
+  }
+
+  bool Encode(const struct heif_image* image,
       const std::string& filename) override;
 
  private:

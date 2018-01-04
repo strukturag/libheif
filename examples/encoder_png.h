@@ -26,7 +26,15 @@ class PngEncoder : public Encoder {
  public:
   PngEncoder();
 
-  bool Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
+  heif_colorspace colorspace() const override {
+    return heif_colorspace_RGB;
+  }
+
+  heif_chroma chroma() const override {
+    return heif_chroma_interleaved_24bit;
+  }
+
+  bool Encode(const struct heif_image* image,
       const std::string& filename) override;
 
  private:

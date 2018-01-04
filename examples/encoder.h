@@ -23,12 +23,16 @@
 #include <string>
 #include <memory>
 
-#include "heif_image.h"
+#include "heif.h"
 
 class Encoder {
  public:
   virtual ~Encoder() {}
-  virtual bool Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
+
+  virtual heif_colorspace colorspace() const = 0;
+  virtual heif_chroma chroma() const = 0;
+
+  virtual bool Encode(const struct heif_image* image,
       const std::string& filename) = 0;
 };
 

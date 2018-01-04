@@ -21,6 +21,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include <iostream>
+
 #include "encoder_jpeg.h"
 
 JpegEncoder::JpegEncoder(int quality) : quality_(quality) {
@@ -35,13 +37,8 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
   longjmp(handler->setjmp_buffer, 1);
 }
 
-bool JpegEncoder::Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
+bool JpegEncoder::Encode(const struct heif_image* image,
     const std::string& filename) {
-  if (image->get_chroma_format() != heif_chroma_420) {
-    fprintf(stderr, "Only YUV420 images supported.\n");
-    return false;
-  }
-
   FILE* fp = fopen(filename.c_str(), "wb");
   if (!fp) {
     fprintf(stderr, "Can't open %s: %s\n", filename.c_str(), strerror(errno));
@@ -62,8 +59,8 @@ bool JpegEncoder::Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
   jpeg_create_compress(&cinfo);
   jpeg_stdio_dest(&cinfo, fp);
 
-  cinfo.image_width = image->get_width();
-  cinfo.image_height = image->get_height();
+  cinfo.image_width = heif_image_get_width(image, heif_channel_Y);
+  cinfo.image_height = heif_image_get_height(image, heif_channel_Y);
   cinfo.input_components = 3;
   cinfo.in_color_space = JCS_YCbCr;
   jpeg_set_defaults(&cinfo);
@@ -73,11 +70,14 @@ bool JpegEncoder::Encode(const std::shared_ptr<heif::HeifPixelImage>& image,
   jpeg_start_compress(&cinfo, kWriteAllTables);
 
   int stride_y;
-  const uint8_t* row_y = image->get_plane(heif_channel_Y, &stride_y);
+  const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
+      &stride_y);
   int stride_u;
-  const uint8_t* row_u = image->get_plane(heif_channel_Cb, &stride_u);
+  const uint8_t* row_u = heif_image_get_plane_readonly(image, heif_channel_Cb,
+      &stride_u);
   int stride_v;
-  const uint8_t* row_v = image->get_plane(heif_channel_Cr, &stride_v);
+  const uint8_t* row_v = heif_image_get_plane_readonly(image, heif_channel_Cr,
+      &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,

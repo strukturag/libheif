@@ -21,22 +21,25 @@
 #include <errno.h>
 #include <string.h>
 
-#include "box.h"
-#include "heif_file.h"
+#include "heif.h"
 #include "libde265/de265.h"
 
 #include <fstream>
 #include <iostream>
 
-using namespace heif;
+class ContextReleaser {
+ public:
+  ContextReleaser(struct heif_context* ctx) : ctx_(ctx) {}
+  ~ContextReleaser() {
+    heif_context_free(ctx_);
+  }
 
+ private:
+  struct heif_context* ctx_;
+};
 
 int main(int argc, char** argv)
 {
-  using heif::BoxHeader;
-  using heif::Box;
-  using heif::fourcc;
-
   if (argc < 2) {
     fprintf(stderr, "USAGE: %s <filename> [output]\n", argv[0]);
     return 1;
@@ -53,24 +56,41 @@ int main(int argc, char** argv)
 
   // ==============================================================================
 
-  HeifFile heifFile;
-  Error err = heifFile.read_from_file(input_filename);
-
-  if (err != Error::OK) {
-    std::cerr << "error: " << err << "\n";
-    return 0;
+  struct heif_context* ctx = heif_context_alloc();
+  if (!ctx) {
+    fprintf(stderr, "Could not create HEIF context\n");
+    return 1;
   }
 
+  ContextReleaser cr(ctx);
+  struct heif_error err;
+  err = heif_context_read_from_file(ctx, input_filename);
+  if (err.code != 0) {
+    std::cerr << "Could not read HEIF file: " << err.message << "\n";
+    return 1;
+  }
 
   std::cout << "----------------------------------------------------------\n";
 
-  std::cout << "num images: " << heifFile.get_num_images() << "\n";
-  std::cout << "primary image: " << heifFile.get_primary_image_ID() << "\n";
+  std::cout << "num images: " << heif_context_get_number_of_images(ctx) << "\n";
 
-  uint16_t primary_image_ID = heifFile.get_primary_image_ID();
+  struct heif_image_handle* handle;
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  if (err.code != 0) {
+    std::cerr << "Could not get primage image handle: " << err.message << "\n";
+    return 1;
+  }
 
-  std::shared_ptr<HeifPixelImage> img;
-  err = heifFile.decode_image(primary_image_ID, img);
+  struct heif_image* image;
+  err = heif_decode_image(ctx, handle, &image, heif_colorspace_YCbCr,
+      heif_chroma_420);
+  if (err.code != 0) {
+    heif_image_handle_release(handle);
+    std::cerr << "Could not decode primage image: " << err.message << "\n";
+    return 1;
+  }
 
+  heif_image_release(image);
+  heif_image_handle_release(handle);
   return 0;
 }

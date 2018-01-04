@@ -26,8 +26,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "box.h"
-#include "heif_file.h"
+#include "heif.h"
 #include "libde265/de265.h"
 
 #include "encoder.h"
@@ -40,19 +39,24 @@
 
 #define UNUSED(x) (void)x
 
-using namespace heif;
-
 static int usage(const char* command) {
   fprintf(stderr, "USAGE: %s [-q quality] <filename> <output>\n", command);
   return 1;
 }
 
+class ContextReleaser {
+ public:
+  ContextReleaser(struct heif_context* ctx) : ctx_(ctx) {}
+  ~ContextReleaser() {
+    heif_context_free(ctx_);
+  }
+
+ private:
+  struct heif_context* ctx_;
+};
+
 int main(int argc, char** argv)
 {
-  using heif::BoxHeader;
-  using heif::Box;
-  using heif::fourcc;
-
   int opt;
   int quality = -1;  // Use default quality.
   UNUSED(quality);  // The quality will only be used by encoders that support it.
@@ -97,30 +101,32 @@ int main(int argc, char** argv)
     return 1;
   }
 
-
-  HeifFile heifFile;
-  Error err = heifFile.read_from_file(input_filename.c_str());
-  if (err != Error::OK) {
-    std::cerr << "Could not read HEIF file: " << err << "\n";
+  struct heif_context* ctx = heif_context_alloc();
+  if (!ctx) {
+    fprintf(stderr, "Could not create HEIF context\n");
     return 1;
   }
 
-  int num_images = heifFile.get_num_images();
+  ContextReleaser cr(ctx);
+  struct heif_error err;
+  err = heif_context_read_from_file(ctx, input_filename.c_str());
+  if (err.code != 0) {
+    std::cerr << "Could not read HEIF file: " << err.message << "\n";
+    return 1;
+  }
 
-  if (num_images==0) {
+  int num_images = heif_context_get_number_of_images(ctx);
+  if (num_images == 0) {
     fprintf(stderr, "File doesn't contain any images\n");
     return 1;
   }
 
   printf("File contains %d images\n", num_images);
 
-
-  std::vector<uint32_t> imageIDs = heifFile.get_image_IDs();
-
   std::string filename;
   size_t image_index = 1;  // Image filenames are "1" based.
 
-  for (uint32_t imageID : imageIDs) {
+  for (int idx = 0; idx < num_images; ++idx) {
 
     if (num_images>1) {
       std::ostringstream s;
@@ -132,22 +138,32 @@ int main(int argc, char** argv)
       filename.assign(output_filename);
     }
 
-    std::shared_ptr<HeifPixelImage> img;
-    err = heifFile.decode_image(imageID, img);
-    if (err != Error::OK) {
-      std::cerr << "Could not read HEIF image: " << err << "\n";
+    struct heif_image_handle* handle;
+    err = heif_context_get_image_handle(ctx, idx, &handle);
+    if (err.code) {
+      std::cerr << "Could not read HEIF image " << idx << ": "
+          << err.message << "\n";
       return 1;
     }
 
-    if (img) {
-      bool written = encoder->Encode(img, filename.c_str());
+    struct heif_image* image;
+    err = heif_decode_image(ctx, handle, &image, encoder->colorspace(),
+        encoder->chroma());
+    if (err.code) {
+      heif_image_handle_release(handle);
+      std::cerr << "Could not decode HEIF image: " << idx << ": "
+          << err.message << "\n";
+      return 1;
+    }
+
+    if (image) {
+      bool written = encoder->Encode(image, filename.c_str());
       if (!written) {
         fprintf(stderr,"could not write image\n");
+      } else {
+        printf("Written to %s\n", filename.c_str());
       }
-
-      //de265_release_next_picture(ctx);
-
-      printf("Written to %s\n", filename.c_str());
+      heif_image_release(image);
     }
 
     image_index++;
