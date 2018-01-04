@@ -68,6 +68,8 @@ namespace heif {
     Error get_properties(uint32_t imageID,
                          std::vector<Box_ipco::Property>& properties) const;
 
+    std::string debug_dump_boxes() const;
+
   private:
     std::unique_ptr<std::istream> m_input_stream;
 

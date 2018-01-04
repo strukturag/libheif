@@ -20,7 +20,7 @@
 
 #include "heif.h"
 #include "heif_image.h"
-//#include "heif_file.h"
+#include "heif_api_structs.h"
 #include "heif_context.h"
 #include "error.h"
 
@@ -29,25 +29,6 @@
 #include <assert.h>
 
 using namespace heif;
-
-
-struct heif_image_handle
-{
-  std::shared_ptr<heif::HeifContext::Image> image;
-};
-
-
-struct heif_image
-{
-  std::shared_ptr<heif::HeifPixelImage> image;
-};
-
-
-
-struct heif_context
-{
-  std::shared_ptr<heif::HeifContext> context;
-};
 
 
 heif_context* heif_context_alloc()

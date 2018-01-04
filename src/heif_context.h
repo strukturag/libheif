@@ -91,6 +91,8 @@ namespace heif {
       // TODO: move plugin registry from HeifFile to HeifContext and decode image in this class
     }
 
+    std::string debug_dump_boxes() const { return m_heif_file->debug_dump_boxes(); }
+
   private:
     std::map<uint32_t, std::shared_ptr<Image>> m_all_images;
 

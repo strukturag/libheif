@@ -24,6 +24,7 @@
 
 #include "heif_file.h"
 #include "heif_image.h"
+#include "heif_api_structs.h"
 
 #include <fstream>
 #include <iostream>
@@ -36,13 +37,6 @@
 #endif
 
 using namespace heif;
-
-
-// TODO: move this somewhere else (is duplicate from heif.cc)
-struct heif_image
-{
-  std::shared_ptr<heif::HeifPixelImage> image;
-};
 
 
 class ImageGrid
@@ -180,6 +174,30 @@ Error HeifFile::read_from_memory(const void* data, size_t size)
 }
 
 
+std::string HeifFile::debug_dump_boxes() const
+{
+  std::stringstream sstr;
+
+  bool first=true;
+
+  for (const auto& box : m_top_level_boxes) {
+    // dump box content for debugging
+
+    if (first) {
+      first = false;
+    }
+    else {
+      sstr << "\n";
+    }
+
+    heif::Indent indent;
+    sstr << box->dump(indent);
+  }
+
+  return sstr.str();
+}
+
+
 Error HeifFile::parse_heif_file(BitstreamRange& range)
 {
   // --- read all top-level boxes
@@ -193,14 +211,6 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
     m_top_level_boxes.push_back(box);
 
-
-#if !defined(HAVE_LIBFUZZER)
-    // dump box content for debugging
-
-    heif::Indent indent;
-    std::cout << "\n";
-    std::cout << box->dump(indent);
-#endif
 
     // extract relevant boxes (ftyp, meta)
 
@@ -480,7 +490,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
 {
   ImageGrid grid;
   grid.parse(grid_data);
-  std::cout << grid.dump();
+  // std::cout << grid.dump();
 
 
   if (!m_iref_box) {

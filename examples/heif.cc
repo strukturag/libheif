@@ -21,7 +21,9 @@
 #include <errno.h>
 #include <string.h>
 
+#include "config.h"
 #include "heif.h"
+#include "heif_api_structs.h"
 #include "libde265/de265.h"
 
 #include <fstream>
@@ -69,6 +71,10 @@ int main(int argc, char** argv)
     std::cerr << "Could not read HEIF file: " << err.message << "\n";
     return 1;
   }
+
+#ifndef HAVE_VISIBILITY
+  std::cout << ctx->context->debug_dump_boxes();
+#endif
 
   std::cout << "----------------------------------------------------------\n";
 
