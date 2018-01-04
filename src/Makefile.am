@@ -18,8 +18,10 @@ libheif_la_LIBADD = $(libde265_LIBS)
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
 
 libheif_la_SOURCES = \
+  bitstream.h \
   box.h \
   box.cc \
+  error.h \
   heif_file.h \
   heif_file.cc \
   heif_image.h \
@@ -28,7 +30,8 @@ libheif_la_SOURCES = \
   heif.h \
   heif.cc \
   heif_context.h \
-  heif_context.cc
+  heif_context.cc \
+  logging.h
 
 libheif_la_HEADERS = \
   heif.h
