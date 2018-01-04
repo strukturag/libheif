@@ -244,4 +244,5 @@ uint8_t* heif_image_get_plane_readonly(struct heif_image* image,
 
 void heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin* decoder_plugin)
 {
+  heif->context->register_decoder(type, decoder_plugin);
 }
