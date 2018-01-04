@@ -47,9 +47,95 @@ struct heif_context;  // TODO  heif_context == HeifFile, which is not so nice
 struct heif_image_handle;
 struct heif_image;
 
+
+enum heif_error_code {
+  // Everything ok, no error occurred.
+  heif_error_Ok = 0,
+
+  // Error in input file. Corrupted or invalid content.
+  heif_error_Invalid_input = 1,
+
+  // Input file type is not supported.
+  heif_error_Unsupported_filetype = 2,
+
+  // Image requires an unsupported decoder feature.
+  heif_error_Unsupported_feature = 3,
+
+  // Library API has been used in an invalid way.
+  heif_error_Usage_error = 4,
+
+  // Could not allocate enough memory.
+  heif_error_Memory_allocation_error = 5,
+};
+
+
+  enum heif_suberror_code {
+    // no further information available
+    heif_suberror_Unspecified = 0,
+
+    // --- Invalid_input ---
+
+    // End of data reached unexpectedly.
+    heif_suberror_End_of_data = 100,
+
+    heif_suberror_Invalid_box_size,
+
+    heif_suberror_Invalid_grid_data,
+
+    heif_suberror_Missing_grid_images,
+
+    heif_suberror_No_ftyp_box,
+
+    heif_suberror_No_idat_box,
+
+    heif_suberror_No_meta_box,
+
+    heif_suberror_No_hdlr_box,
+
+    heif_suberror_No_pitm_box,
+
+    heif_suberror_No_ipco_box,
+
+    heif_suberror_No_ipma_box,
+
+    heif_suberror_No_iloc_box,
+
+    heif_suberror_No_iinf_box,
+
+    heif_suberror_No_iprp_box,
+
+    heif_suberror_No_iref_box,
+
+    heif_suberror_No_pict_handler,
+
+    heif_suberror_Ipma_box_references_nonexisting_property,
+
+    heif_suberror_No_properties_assigned_to_item,
+
+    heif_suberror_No_item_data,
+
+
+    // --- Memory_allocation_error ---
+
+    heif_suberror_Security_limit_exceeded,
+
+
+    // --- Usage_error ---
+
+    heif_suberror_Nonexisting_image_referenced,
+
+
+    // --- Unsupported_feature ---
+
+    heif_suberror_Unsupported_codec,
+    heif_suberror_Unsupported_image_type
+  };
+
+
+
 struct heif_error
 {
-  int code;
+  enum heif_error_code code;
   int subcode;
   const char* message;
 };

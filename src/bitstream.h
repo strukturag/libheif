@@ -109,10 +109,11 @@ namespace heif {
 
     Error get_error() const {
       if (m_error) {
-        return Error(Error::EndOfData);
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_End_of_data);
       }
       else {
-        return Error::OK;
+        return Error::Ok;
       }
     }
 

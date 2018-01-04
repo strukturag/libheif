@@ -68,7 +68,9 @@ private:
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
 {
   if (data.size() < 8) {
-    return Error(Error::InvalidInput, Error::ParseError);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_grid_data,
+                 "Less than 8 bytes of data");
   }
 
   uint8_t version = data[0];
@@ -82,7 +84,9 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
 
   if (field_size == 32) {
     if (data.size() < 12) {
-      return Error(Error::InvalidInput, Error::ParseError);
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_grid_data,
+                   "Grid image data incomplete");
     }
 
     m_output_width = ((data[4] << 24) |
@@ -103,7 +107,7 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
                        (data[ 7]));
   }
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -183,7 +187,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   for (;;) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::OK || range.error() || range.eof()) {
+    if (error != Error::Ok || range.error() || range.eof()) {
       break;
     }
 
@@ -214,26 +218,34 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   // --- check whether this is a HEIF file and its structural format
 
   if (!m_ftyp_box) {
-    return Error(Error::InvalidInput);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_ftyp_box);
   }
 
   if (!m_ftyp_box->has_compatible_brand(fourcc("heic"))) {
-    return Error(Error::NoCompatibleBrandType);
+    std::stringstream sstr;
+    sstr << "File does not support the 'heic' brand.\n";
+
+    return Error(heif_error_Unsupported_filetype,
+                 heif_suberror_Unspecified,
+                 sstr.str());
   }
 
   if (!m_meta_box) {
-    return Error(Error::InvalidInput, Error::NoMetaBox);
-    // fprintf(stderr, "Not a valid HEIF file (no 'meta' box found)\n");
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_meta_box);
   }
 
 
   auto hdlr_box = std::dynamic_pointer_cast<Box_hdlr>(m_meta_box->get_child_box(fourcc("hdlr")));
   if (!hdlr_box) {
-    return Error(Error::InvalidInput, Error::NoHdlrBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_hdlr_box);
   }
 
   if (hdlr_box->get_handler_type() != fourcc("pict")) {
-    return Error(Error::InvalidInput, Error::NoPictHandler);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_pict_handler);
   }
 
 
@@ -241,27 +253,32 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   auto pitm_box = std::dynamic_pointer_cast<Box_pitm>(m_meta_box->get_child_box(fourcc("pitm")));
   if (!pitm_box) {
-    return Error(Error::InvalidInput, Error::NoPitmBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_pitm_box);
   }
 
   std::shared_ptr<Box> iprp_box = m_meta_box->get_child_box(fourcc("iprp"));
   if (!iprp_box) {
-    return Error(Error::InvalidInput, Error::NoIprpBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iprp_box);
   }
 
   m_ipco_box = std::dynamic_pointer_cast<Box_ipco>(iprp_box->get_child_box(fourcc("ipco")));
   if (!m_ipco_box) {
-    return Error(Error::InvalidInput, Error::NoIpcoBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_ipco_box);
   }
 
   m_ipma_box = std::dynamic_pointer_cast<Box_ipma>(iprp_box->get_child_box(fourcc("ipma")));
   if (!m_ipma_box) {
-    return Error(Error::InvalidInput, Error::NoIpmaBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_ipma_box);
   }
 
   m_iloc_box = std::dynamic_pointer_cast<Box_iloc>(m_meta_box->get_child_box(fourcc("iloc")));
   if (!m_iloc_box) {
-    return Error(Error::InvalidInput, Error::NoIlocBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iloc_box);
   }
 
   m_idat_box = std::dynamic_pointer_cast<Box_idat>(m_meta_box->get_child_box(fourcc("idat")));
@@ -270,7 +287,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   std::shared_ptr<Box> iinf_box = m_meta_box->get_child_box(fourcc("iinf"));
   if (!iinf_box) {
-    return Error(Error::InvalidInput, Error::NoIinfBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iinf_box);
   }
 
 
@@ -291,7 +309,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     m_images.insert( std::make_pair(infe_box->get_item_ID(), img) );
   }
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -337,7 +355,8 @@ Error HeifFile::get_properties(uint32_t imageID,
 Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* data) const {
 
   if (!image_exists(ID)) {
-    return Error(Error::NonexistingImage);
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Nonexisting_image_referenced);
   }
 
   const Image& image = get_image_info(ID);
@@ -364,10 +383,15 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     }
   }
   if (!item) {
-    return Error(Error::InvalidInput, Error::NoInputDataInFile);
+    std::stringstream sstr;
+    sstr << "Item with ID " << ID << " has no compressed data";
+
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
   }
 
-  Error error = Error(Error::Unsupported, Error::UnsupportedImageType);
+  Error error = Error(heif_error_Unsupported_feature,
+                      heif_suberror_Unsupported_codec);
   if (item_type == "hvc1") {
     // --- --- --- HEVC
 
@@ -389,11 +413,11 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
   } else if (item_type == "grid") {
   }
 
-  if (error != Error::OK) {
+  if (error != Error::Ok) {
     return error;
   }
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -404,7 +428,7 @@ Error HeifFile::decode_image(uint32_t ID,
 
   std::vector<uint8_t> data;
   Error error = get_compressed_image_data(ID, &data);
-  if (error != Error::OK) {
+  if (error != Error::Ok) {
     return error;
   }
 
@@ -439,10 +463,11 @@ Error HeifFile::decode_image(uint32_t ID,
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
-    return Error(Error::Unsupported, Error::UnsupportedImageType);
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_image_type);
   }
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -458,13 +483,22 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
 
 
   if (!m_iref_box) {
-    return Error(Error::NoIrefBox);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box,
+                 "No iref box available, but needed for grid image");
   }
 
   std::vector<uint32_t> image_references = m_iref_box->get_references(ID);
 
   if ((int)image_references.size() != grid.get_rows() * grid.get_columns()) {
-    return Error(Error::InvalidInput, Error::ImagesMissingInGrid);
+    std::stringstream sstr;
+    sstr << "Tiled image with " << grid.get_rows() << "x" <<  grid.get_columns() << "="
+         << (grid.get_rows() * grid.get_columns()) << " tiles, but only "
+         << image_references.size() << " tile images in file";
+
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Missing_grid_images,
+                 sstr.str());
   }
 
   // --- generate image of full output size
@@ -495,7 +529,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
 
       Error err = decode_image(image_references[reference_idx],
                                tile_img);
-      if (err != Error::OK) {
+      if (err != Error::Ok) {
         return err;
       }
 
@@ -541,5 +575,5 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
     y0 += tile_height;
   }
 
-  return Error::OK;
+  return Error::Ok;
 }

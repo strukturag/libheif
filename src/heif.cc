@@ -97,7 +97,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   return err.error_struct();
   */
 
-  return Error::OK.error_struct(ctx->context.get());
+  return Error::Ok.error_struct(ctx->context.get());
 }
 
 
@@ -125,7 +125,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
   return err.error_struct();
   */
 
-  return Error::OK.error_struct(ctx->context.get());
+  return Error::Ok.error_struct(ctx->context.get());
 }
 
 

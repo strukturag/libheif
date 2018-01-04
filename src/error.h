@@ -28,6 +28,7 @@
 #include <limits>
 #include <istream>
 #include <ostream>
+#include <sstream>
 
 
 #include "heif.h"
@@ -37,86 +38,52 @@ namespace heif {
   class ErrorBuffer
   {
   public:
-    ErrorBuffer() : m_buffer("Success") { }
+    ErrorBuffer() { }
 
-    void set_error(std::string err) { m_buffer = err; }
-    const char* get_error() const { return m_buffer.c_str(); }
+    void set_success() {
+      m_error_message = c_success;
+    }
+
+    void set_error(std::string err) {
+      m_buffer = err;
+      m_error_message = m_buffer.c_str();
+    }
+
+    const char* get_error() const {
+      return m_error_message;
+    }
 
   private:
+    constexpr static const char* c_success = "Success";
     std::string m_buffer;
+    const char* m_error_message = c_success;
   };
 
 
   class Error
   {
   public:
-    enum ErrorCode {
-      Ok,
-      InvalidInput,
-      NonexistingImage,
-      Unsupported,
-      MemoryAllocationError,
-      NoSuitableDecoder,
-      APIError
-    } error_code;
+    enum heif_error_code error_code;
+    enum heif_suberror_code sub_error_code;
+    std::string message;
 
-    enum SubErrorCode {
-      // --- InvalidInput
-      Unspecified,
-      ParseError,
-      EndOfData,
-      NoCompatibleBrandType,
-      NoMetaBox,
-      NoHdlrBox,
-      NoPitmBox,
-      NoIprpBox,
-      NoIpcoBox,
-      NoIpmaBox,
-      NoIlocBox,
-      NoIinfBox,
-      NoIdatBox,
-      NoIrefBox,
-      NoPictHandler,
-      NoPropertiesForItemID,
-      NonexistingPropertyReferenced,
-      UnsupportedImageType,
-      NoInputDataInFile,
-      ImagesMissingInGrid,
-      NullArgumentPassed
-    } sub_error_code;
+    Error();
 
-  Error()
-    : error_code(Ok)
-    {
-    }
+    Error(heif_error_code c,
+          heif_suberror_code sc = heif_suberror_Unspecified,
+          std::string msg="");
 
-
-  Error(SubErrorCode sc)    // TODO: hack, remove me later
-    : error_code(InvalidInput),
-      sub_error_code(sc)
-      {
-      }
-
-  Error(ErrorCode c, SubErrorCode sc = SubErrorCode::Unspecified)
-    : error_code(c),
-      sub_error_code(sc)
-    {
-    }
-
-    static Error OK;
+    static Error Ok;
 
     bool operator==(const Error& other) const { return error_code == other.error_code; }
     bool operator!=(const Error& other) const { return !(*this == other); }
 
-    operator bool() const { return error_code != Ok; }
+    operator bool() const { return error_code != heif_error_Ok; }
 
-    heif_error error_struct(ErrorBuffer* error_buffer) {
-      heif_error err;
-      err.code = error_code;
-      err.subcode = sub_error_code;
-      err.message = error_buffer->get_error();
-      return err;
-    }
+    static const char* get_error_string(heif_error_code err);
+    static const char* get_error_string(heif_suberror_code err);
+
+    heif_error error_struct(ErrorBuffer* error_buffer) const;
   };
 
 

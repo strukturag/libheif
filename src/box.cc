@@ -37,10 +37,10 @@ using namespace heif;
 
 static const size_t MAX_CHILDREN_PER_BOX = 1024;
 static const int MAX_ILOC_ITEMS = 1024;
-static const int MAX_ILOC_EXTENDS_PER_ITEM = 32;
+static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
 static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 
-heif::Error heif::Error::OK(heif::Error::Ok);
+heif::Error heif::Error::Ok(heif_error_Ok);
 
 
 std::string to_fourcc(uint32_t code)
@@ -224,7 +224,7 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 
 heif::Error heif::BoxHeader::write(std::ostream& ostr) const
 {
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -369,9 +369,15 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     break;
   }
 
-  if (hdr.get_box_size() <= hdr.get_header_size()) {
+  if (hdr.get_box_size() < hdr.get_header_size()) {
+    std::stringstream sstr;
+    sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
+         << hdr.get_header_size() << " bytes)";
+
     // Sanity check.
-    return Error(Error::ParseError);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_box_size,
+                 sstr.str());
   }
 
   BitstreamRange boxrange(range.get_istream(),
@@ -379,7 +385,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
                           &range);
 
   Error err = box->parse(boxrange);
-  if (err == Error::OK) {
+  if (err == Error::Ok) {
     *result = std::move(box);
   }
 
@@ -429,13 +435,18 @@ Error Box::read_children(BitstreamRange& range)
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::OK) {
+    if (error != Error::Ok) {
       return error;
     }
 
     if (m_children.size() > MAX_CHILDREN_PER_BOX) {
+      std::stringstream sstr;
+      sstr << "Maximum number of child boxes " << MAX_CHILDREN_PER_BOX << " exceeded.";
+
       // Sanity check.
-      return Error(Error::ParseError);
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
     }
 
     m_children.push_back(std::move(box));
@@ -475,7 +486,9 @@ Error Box_ftyp::parse(BitstreamRange& range)
 
   if (get_box_size() <= get_header_size() + 8) {
     // Sanity check.
-    return Error(Error::ParseError);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_box_size,
+                 "ftyp box too small (less than 8 bytes)");
   }
 
   int n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
@@ -677,7 +690,13 @@ Error Box_iloc::parse(BitstreamRange& range)
 
   // Sanity check.
   if (item_count > MAX_ILOC_ITEMS) {
-    return Error(Error::ParseError);
+    std::stringstream sstr;
+    sstr << "iloc box contains " << item_count << " items, which exceeds the security limit of "
+         << MAX_ILOC_ITEMS << " items.";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
   }
 
   for (int i=0;i<item_count;i++) {
@@ -708,8 +727,14 @@ Error Box_iloc::parse(BitstreamRange& range)
 
     int extent_count = read16(range);
     // Sanity check.
-    if (extent_count > MAX_ILOC_EXTENDS_PER_ITEM) {
-      return Error(Error::ParseError);
+    if (extent_count > MAX_ILOC_EXTENTS_PER_ITEM) {
+      std::stringstream sstr;
+      sstr << "Number of extents in iloc box (" << extent_count << ") exceeds security limit ("
+           << MAX_ILOC_EXTENTS_PER_ITEM << ")\n";
+
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
     }
 
     for (int e=0;e<extent_count;e++) {
@@ -801,7 +826,14 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
       if (istr.eof()) {
         // Out-of-bounds
         dest->clear();
-        return Error(Error::InvalidInput);
+
+        std::stringstream sstr;
+        sstr << "Extent in iloc box references data outside of file bounds "
+             << "(points to file position " << extent.offset + item.base_offset << ")\n";
+
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_End_of_data,
+                     sstr.str());
       }
 
 
@@ -817,13 +849,21 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
 
         uint8_t size[4];
         istr.read((char*)size,4);
-        uint32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
+        int32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
         bytes_read += 4;
 
-        if (max_size - bytes_read < size32) {
+        int32_t data_bytes_left_to_read = max_size - bytes_read;
+        if (data_bytes_left_to_read < size32) {
           // Out-of-bounds
           dest->clear();
-          return Error(Error::InvalidInput);
+
+          std::stringstream sstr;
+          sstr << "NAL size (" << size32 << ") exceeds available data in file ("
+               << data_bytes_left_to_read << ")";
+
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_End_of_data,
+                       sstr.str());
         }
 
         size_t old_size = dest->size();
@@ -838,7 +878,9 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
     }
     else if (item.construction_method==1) {
       if (!idat) {
-        return Error(Error::NoIdatBox);
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_No_idat_box,
+                     "idat box referenced in iref box is not present in file");
       }
 
       idat->read_data(istr,
@@ -848,7 +890,7 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
     }
   }
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 /*
@@ -941,7 +983,7 @@ Error Box_iinf::parse(BitstreamRange& range)
   }
 
   if (item_count == 0) {
-    return Error::OK;
+    return Error::Ok;
   }
 
   // TODO: Only try to read "item_count" children.
@@ -1004,13 +1046,24 @@ Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
 {
   const std::vector<Box_ipma::PropertyAssociation>* property_assoc = ipma->get_properties_for_item_ID(itemID);
   if (property_assoc == nullptr) {
-    return Error(Error::InvalidInput, Error::NoPropertiesForItemID);
+    std::stringstream sstr;
+    sstr << "Item (ID=" << itemID << ") has no properties assigned to it in ipma box";
+
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_properties_assigned_to_item,
+                 sstr.str());
   }
 
   auto allProperties = get_all_child_boxes();
   for (const  Box_ipma::PropertyAssociation& assoc : *property_assoc) {
     if (assoc.property_index > allProperties.size()) {
-      return Error(Error::InvalidInput, Error::NonexistingPropertyReferenced);
+      std::stringstream sstr;
+      sstr << "Nonexisting property (index=" << assoc.property_index << ") for item "
+           << " ID=" << itemID << " referenced in ipma box";
+
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Ipma_box_references_nonexisting_property,
+                   sstr.str());
     }
 
     Property prop;
@@ -1249,7 +1302,7 @@ Error Box_iref::parse(BitstreamRange& range)
     Reference ref;
 
     Error err = ref.header.parse(range);
-    if (err != Error::OK) {
+    if (err != Error::Ok) {
       return err;
     }
 
@@ -1522,7 +1575,14 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
   auto curr_size = out_data.size();
 
   if (curr_size + length > MAX_MEMORY_BLOCK_SIZE) {
-    return Error(Error::MemoryAllocationError);
+    std::stringstream sstr;
+    sstr << "idat box contained " << length << " bytes, total memory size would be "
+         << (curr_size + length) << " bytes, exceeding the security limit of "
+         << MAX_MEMORY_BLOCK_SIZE << " bytes";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
   }
 
   out_data.resize(curr_size + length);
@@ -1530,7 +1590,7 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
 
   istr.read((char*)data, length);
 
-  return Error::OK;
+  return Error::Ok;
 }
 
 
@@ -1543,12 +1603,12 @@ Error Box_grpl::parse(BitstreamRange& range)
   while (!range.eof()) {
     EntityGroup group;
     Error err = group.header.parse(range);
-    if (err != Error::OK) {
+    if (err != Error::Ok) {
       return err;
     }
 
     err = group.header.parse_full_box_header(range);
-    if (err != Error::OK) {
+    if (err != Error::Ok) {
       return err;
     }
 

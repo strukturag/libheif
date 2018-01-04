@@ -105,7 +105,7 @@ namespace heif {
 
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
-    virtual Error write(std::ostream& ostr) const { return Error::OK; }
+    virtual Error write(std::ostream& ostr) const { return Error::Ok; }
 
     virtual std::string dump(Indent&) const;
 
