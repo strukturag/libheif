@@ -29,12 +29,18 @@ libheif_la_SOURCES = \
   heif_file.cc \
   heif_image.h \
   heif_image.cc \
-  heif_decoder_libde265.cc \
   heif.h \
   heif.cc \
   heif_context.h \
   heif_context.cc \
   logging.h
+
+if HAVE_LIBDE265
+libheif_la_SOURCES += \
+  heif_decoder_libde265.cc \
+  heif_decoder_libde265.h
+endif
+
 
 libheif_la_HEADERS = \
   heif.h

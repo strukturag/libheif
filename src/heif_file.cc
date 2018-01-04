@@ -124,7 +124,9 @@ std::string ImageGrid::dump() const
 
 HeifFile::HeifFile()
 {
+#if HAVE_LIBDE265
   m_decoder_plugin = get_decoder_plugin_libde265();
+#endif
 }
 
 

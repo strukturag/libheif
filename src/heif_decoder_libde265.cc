@@ -30,8 +30,6 @@
 
 extern "C" {
 
-#if HAVE_LIBDE265
-
 #include <libde265/de265.h>
 #include <stdio.h>
 
@@ -208,11 +206,5 @@ static const struct heif_decoder_plugin decoder_libde265
 #endif
 
 const struct heif_decoder_plugin* get_decoder_plugin_libde265() { return &decoder_libde265; }
-
-#else
-
-const struct heif_decoder_plugin* get_decoder_plugin_libde265() { return NULL; }
-
-#endif
 
 }
