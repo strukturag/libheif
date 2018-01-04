@@ -134,6 +134,7 @@ void heif_image_handle_get_thumbnail(const struct heif_context* h,
   auto thumbnails = handle->image->get_thumbnails();
   assert((size_t)thumbnail_idx < thumbnails.size());
 
+  *out_thumbnail_handle = new heif_image_handle();
   (*out_thumbnail_handle)->image = thumbnails[thumbnail_idx];
 }
 
