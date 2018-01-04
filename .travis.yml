@@ -19,7 +19,6 @@ matrix:
       env: EMSCRIPTEN_VERSION=1.37.26
 
 before_install:
-  - dpkg-query -l "*-dev" | grep ii
   - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo add-apt-repository -y ppa:strukturag/libde265; fi"
   - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo apt-get update -qq; fi"
   - sh -c "if [ \"$WITH_LIBDE265\" = \"1\" ]; then sudo apt-get install -qq libde265-dev; fi"
