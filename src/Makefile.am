@@ -26,6 +26,7 @@ libheif_la_SOURCES = \
   box.cc \
   error.h \
   error.cc \
+  heif_api_structs.h \
   heif_file.h \
   heif_file.cc \
   heif_image.h \
