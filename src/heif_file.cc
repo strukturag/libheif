@@ -411,6 +411,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
 
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   } else if (item_type == "grid") {
+    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   }
 
   if (error != Error::Ok) {
@@ -428,7 +429,7 @@ Error HeifFile::decode_image(uint32_t ID,
 
   std::vector<uint8_t> data;
   Error error = get_compressed_image_data(ID, &data);
-  if (error != Error::Ok) {
+  if (error) {
     return error;
   }
 
