@@ -23,6 +23,7 @@
 #define LIBHEIF_HEIF_IMAGE_H
 
 #include "heif.h"
+#include "error.h"
 
 #include <vector>
 #include <memory>
@@ -32,7 +33,7 @@
 
 namespace heif {
 
-class HeifPixelImage
+class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 {
  public:
   ~HeifPixelImage();
@@ -64,6 +65,9 @@ class HeifPixelImage
 
   std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
                                                      heif_chroma chroma) const;
+
+  Error rotate(int angle_degrees,
+               std::shared_ptr<HeifPixelImage>& out_img);
 
  private:
   struct ImagePlane {

@@ -467,7 +467,10 @@ Error HeifFile::decode_image(uint32_t ID,
 #endif
   }
   else if (image_type == "grid") {
-    return decode_full_grid_image(ID, img, data);
+    error = decode_full_grid_image(ID, img, data);
+    if (error) {
+      return error;
+    }
   }
   else if (image_type == "iden") {
     //return decode_derived_image(ID, img);
@@ -476,6 +479,25 @@ Error HeifFile::decode_image(uint32_t ID,
     // Should not reach this, was already rejected by "get_image_data".
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_image_type);
+  }
+
+
+  // --- apply image transformations
+
+  std::vector<Box_ipco::Property> properties;
+  error = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+
+  for (const auto& property : properties) {
+    auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
+    if (rot) {
+      std::shared_ptr<HeifPixelImage> rotated_img;
+      error = img->rotate(rot->get_rotation(), rotated_img);
+      if (error) {
+        return error;
+      }
+
+      img = rotated_img;
+    }
   }
 
   return Error::Ok;

@@ -257,3 +257,80 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
 
   return outimg;
 }
+
+
+Error HeifPixelImage::rotate(int angle_degrees,
+                             std::shared_ptr<HeifPixelImage>& out_img)
+{
+  // --- create output image (or simply reuse existing image)
+
+  if (angle_degrees==0) {
+    out_img = shared_from_this();
+    return Error::Ok;
+  }
+
+  int out_width = m_width;
+  int out_height = m_height;
+
+  if (angle_degrees==90 || angle_degrees==270) {
+    std::swap(out_width, out_height);
+  }
+
+  out_img = std::make_shared<HeifPixelImage>();
+  out_img->create(out_width, out_height, m_colorspace, m_chroma);
+
+
+  // --- rotate all channels
+
+  for (const auto& plane_pair : m_planes) {
+    heif_channel channel = plane_pair.first;
+    const ImagePlane& plane = plane_pair.second;
+
+    if (plane.bit_depth != 8) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can currently only rotate images with 8 bits per pixel");
+    }
+
+
+    int out_plane_width = plane.width;
+    int out_plane_height = plane.height;
+
+    if (angle_degrees==90 || angle_degrees==270) {
+      std::swap(out_plane_width, out_plane_height);
+    }
+
+    out_img->add_plane(channel, out_plane_width, out_plane_height, plane.bit_depth);
+
+
+    int w = plane.width;
+    int h = plane.height;
+
+    int in_stride = plane.stride;
+    const uint8_t* in_data = plane.mem.data();
+
+    int out_stride;
+    uint8_t* out_data = out_img->get_plane(channel, &out_stride);
+
+    if (angle_degrees==90) {
+      for (int x=0;x<w;x++)
+        for (int y=0;y<h;y++) {
+          out_data[x*out_stride + y] = in_data[(h-1-y)*in_stride + (w-1-x)];
+        }
+    }
+    else if (angle_degrees==180) {
+      for (int y=0;y<h;y++)
+        for (int x=0;x<w;x++) {
+          out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
+        }
+    }
+    else if (angle_degrees==270) {
+      for (int x=0;x<w;x++)
+        for (int y=0;y<h;y++) {
+          out_data[x*out_stride + y] = in_data[y*in_stride + x];
+        }
+    }
+  }
+
+  return Error::Ok;
+}

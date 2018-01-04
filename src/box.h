@@ -368,6 +368,8 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
+    int get_rotation() const { return m_rotation; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 
