@@ -207,6 +207,17 @@ void heif_image_handle_release(const struct heif_image_handle* handle)
 }
 
 
+enum heif_colorspace heif_image_get_colorspace(const struct heif_image* img)
+{
+  return img->image->get_colorspace();
+}
+
+enum heif_chroma heif_image_get_chroma_format(const struct heif_image* img)
+{
+  return img->image->get_chroma_format();
+}
+
+
 int heif_image_get_width(const struct heif_image* img,enum heif_channel channel)
 {
   return img->image->get_width();
@@ -246,3 +257,16 @@ void heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder
 {
   heif->context->register_decoder(type, decoder_plugin);
 }
+
+
+
+
+/*
+int  heif_image_get_number_of_data_chunks(heif_image* img);
+
+void heif_image_get_data_chunk(heif_image* img, int chunk_index,
+                               uint8_t const*const* dataptr,
+                               int const* data_size);
+
+void heif_image_free_data_chunk(heif_image* img, int chunk_index);
+*/
