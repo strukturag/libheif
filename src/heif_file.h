@@ -22,6 +22,7 @@
 #define LIBHEIF_HEIF_FILE_H
 
 #include "box.h"
+#include "heif_decoder_libde265.h"
 
 #include <map>
 #include <assert.h>
