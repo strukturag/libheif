@@ -90,7 +90,7 @@ static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
 EMSCRIPTEN_BINDINGS(libheif) {
   emscripten::class_<Error>("Error")
     .constructor<>()
-    .class_property("OK", &Error::OK)
+    .class_property("Ok", &Error::Ok)
     .property("error_code", &Error::error_code)
     .property("sub_error_code", &Error::sub_error_code)
     ;
