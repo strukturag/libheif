@@ -36,6 +36,12 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
+AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
+    [Disable visibility definitions.]),
+    [HAVE_VISIBILITY=0],
+    [gl_VISIBILITY])
+AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
+
 PKG_CHECK_MODULES([libde265], [libde265], [
     AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
     AC_SUBST(libde265_CFLAGS)

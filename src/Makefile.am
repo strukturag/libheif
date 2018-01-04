@@ -10,9 +10,12 @@ libheif_ladir = \
 
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
-  $(CFLAG_VISIBILITY)
+  $(CFLAG_VISIBILITY) \
+  -DLIBHEIF_EXPORTS
 libheif_la_CXXFLAGS = \
-  $(CFLAG_VISIBILITY) $(libde265_CFLAGS)
+  $(CFLAG_VISIBILITY) \
+  $(libde265_CFLAGS) \
+  -DLIBHEIF_EXPORTS
 libheif_la_LIBADD = $(libde265_LIBS)
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
@@ -35,6 +38,11 @@ libheif_la_SOURCES = \
 
 libheif_la_HEADERS = \
   heif.h
+
+if HAVE_VISIBILITY
+libheif_la_CFLAGS += -DHAVE_VISIBILITY
+libheif_la_CXXFLAGS += -DHAVE_VISIBILITY
+endif
 
 if ENABLE_LIBFUZZER
 bin_PROGRAMS += box-fuzzer
