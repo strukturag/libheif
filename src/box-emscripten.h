@@ -34,7 +34,7 @@ static std::string dump_box(Box* box) {
 static std::shared_ptr<Box> Box_read(BitstreamRange& range) {
   std::shared_ptr<Box> box;
   Error error = Box::read(range, &box);
-  if (error != Error::OK) {
+  if (error) {
     return nullptr;
   }
 
@@ -61,7 +61,8 @@ class EmscriptenBitstreamRange : public BitstreamRange {
 static Error HeifFile_read_from_memory(HeifFile* file,
     const std::string& data) {
   if (!file) {
-    return Error(Error::Unsupported, Error::Unspecified);
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument);
   }
 
   return file->read_from_memory(data.data(), data.size());
@@ -76,7 +77,7 @@ static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
 
   std::vector<uint8_t> image_data;
   Error err = file->get_compressed_image_data(ID, &image_data);
-  if (err != Error::OK) {
+  if (err) {
     return emscripten::val(err);
   }
 
@@ -134,32 +135,41 @@ EMSCRIPTEN_BINDINGS(libheif) {
         emscripten::allow_raw_pointers())
     ;
 
-  emscripten::enum_<Error::ErrorCode>("ErrorCode")
-    .value("Ok", Error::ErrorCode::Ok)
-    .value("InvalidInput", Error::ErrorCode::InvalidInput)
-    .value("NonexistingImage", Error::ErrorCode::NonexistingImage)
-    .value("Unsupported", Error::ErrorCode::Unsupported)
-    .value("MemoryAllocationError", Error::ErrorCode::MemoryAllocationError)
+  emscripten::enum_<heif_error_code>("heif_error_code")
+    .value("heif_error_Ok", heif_error_Ok)
+    .value("heif_error_Input_does_not_exist", heif_error_Input_does_not_exist)
+    .value("heif_error_Invalid_input", heif_error_Invalid_input)
+    .value("heif_error_Unsupported_filetype", heif_error_Unsupported_filetype)
+    .value("heif_error_Unsupported_feature", heif_error_Unsupported_feature)
+    .value("heif_error_Usage_error", heif_error_Usage_error)
+    .value("heif_error_Memory_allocation_error", heif_error_Memory_allocation_error)
     ;
-  emscripten::enum_<Error::SubErrorCode>("SubErrorCode")
-    .value("Unspecified", Error::SubErrorCode::Unspecified)
-    .value("ParseError", Error::SubErrorCode::ParseError)
-    .value("EndOfData", Error::SubErrorCode::EndOfData)
-    .value("NoCompatibleBrandType", Error::SubErrorCode::NoCompatibleBrandType)
-    .value("NoMetaBox", Error::SubErrorCode::NoMetaBox)
-    .value("NoHdlrBox", Error::SubErrorCode::NoHdlrBox)
-    .value("NoPitmBox", Error::SubErrorCode::NoPitmBox)
-    .value("NoIprpBox", Error::SubErrorCode::NoIprpBox)
-    .value("NoIpcoBox", Error::SubErrorCode::NoIpcoBox)
-    .value("NoIpmaBox", Error::SubErrorCode::NoIpmaBox)
-    .value("NoIlocBox", Error::SubErrorCode::NoIlocBox)
-    .value("NoIinfBox", Error::SubErrorCode::NoIinfBox)
-    .value("NoIdatBox", Error::SubErrorCode::NoIdatBox)
-    .value("NoPictHandler", Error::SubErrorCode::NoPictHandler)
-    .value("NoPropertiesForItemID", Error::SubErrorCode::NoPropertiesForItemID)
-    .value("NonexistingPropertyReferenced", Error::SubErrorCode::NonexistingPropertyReferenced)
-    .value("UnsupportedImageType", Error::SubErrorCode::UnsupportedImageType)
-    .value("NoInputDataInFile", Error::SubErrorCode::NoInputDataInFile)
+  emscripten::enum_<heif_suberror_code>("heif_suberror_code")
+    .value("heif_suberror_Unspecified", heif_suberror_Unspecified)
+    .value("heif_suberror_End_of_data", heif_suberror_End_of_data)
+    .value("heif_suberror_Invalid_box_size", heif_suberror_Invalid_box_size)
+    .value("heif_suberror_No_ftyp_box", heif_suberror_No_ftyp_box)
+    .value("heif_suberror_No_idat_box", heif_suberror_No_idat_box)
+    .value("heif_suberror_No_meta_box", heif_suberror_No_meta_box)
+    .value("heif_suberror_No_hdlr_box", heif_suberror_No_hdlr_box)
+    .value("heif_suberror_No_pitm_box", heif_suberror_No_pitm_box)
+    .value("heif_suberror_No_ipco_box", heif_suberror_No_ipco_box)
+    .value("heif_suberror_No_ipma_box", heif_suberror_No_ipma_box)
+    .value("heif_suberror_No_iloc_box", heif_suberror_No_iloc_box)
+    .value("heif_suberror_No_iinf_box", heif_suberror_No_iinf_box)
+    .value("heif_suberror_No_iprp_box", heif_suberror_No_iprp_box)
+    .value("heif_suberror_No_iref_box", heif_suberror_No_iref_box)
+    .value("heif_suberror_No_pict_handler", heif_suberror_No_pict_handler)
+    .value("heif_suberror_Ipma_box_references_nonexisting_property",heif_suberror_Ipma_box_references_nonexisting_property)
+    .value("heif_suberror_No_properties_assigned_to_item",heif_suberror_No_properties_assigned_to_item)
+    .value("heif_suberror_No_item_data",heif_suberror_No_item_data)
+    .value("heif_suberror_Invalid_grid_data",heif_suberror_Invalid_grid_data)
+    .value("heif_suberror_Missing_grid_images",heif_suberror_Missing_grid_images)
+    .value("heif_suberror_Security_limit_exceeded",heif_suberror_Security_limit_exceeded)
+    .value("heif_suberror_Nonexisting_image_referenced",heif_suberror_Nonexisting_image_referenced)
+    .value("heif_suberror_Null_pointer_argument",heif_suberror_Null_pointer_argument)
+    .value("heif_suberror_Unsupported_codec",heif_suberror_Unsupported_codec)
+    .value("heif_suberror_Unsupported_image_type",heif_suberror_Unsupported_image_type)
     ;
 
   emscripten::register_vector<std::string>("StringVector");

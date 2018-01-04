@@ -43,6 +43,7 @@ const char* heif::Error::get_error_string(heif_error_code err)
 {
   switch (err) {
   case heif_error_Ok: return "Success";
+  case heif_error_Input_does_not_exist: return "Input file does not exist";
   case heif_error_Invalid_input: return "Invalid input";
   case heif_error_Unsupported_filetype: return "Unsupported file-type";
   case heif_error_Unsupported_feature: return "Unsupported feature";
@@ -88,6 +89,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
     // --- Usage_error ---
 
   case heif_suberror_Nonexisting_image_referenced: return "Non-existing image ID referenced";
+  case heif_suberror_Null_pointer_argument: return "NULL argument received";
 
 
     // --- Unsupported_feature ---

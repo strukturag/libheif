@@ -52,98 +52,104 @@ enum heif_error_code {
   // Everything ok, no error occurred.
   heif_error_Ok = 0,
 
+  // Input file does not exist.
+  heif_error_Input_does_not_exist = 1,
+
   // Error in input file. Corrupted or invalid content.
-  heif_error_Invalid_input = 1,
+  heif_error_Invalid_input = 2,
 
   // Input file type is not supported.
-  heif_error_Unsupported_filetype = 2,
+  heif_error_Unsupported_filetype = 3,
 
   // Image requires an unsupported decoder feature.
-  heif_error_Unsupported_feature = 3,
+  heif_error_Unsupported_feature = 4,
 
   // Library API has been used in an invalid way.
-  heif_error_Usage_error = 4,
+  heif_error_Usage_error = 5,
 
   // Could not allocate enough memory.
-  heif_error_Memory_allocation_error = 5,
+  heif_error_Memory_allocation_error = 6
 };
 
 
-  enum heif_suberror_code {
-    // no further information available
-    heif_suberror_Unspecified = 0,
+enum heif_suberror_code {
+  // no further information available
+  heif_suberror_Unspecified = 0,
 
-    // --- Invalid_input ---
+  // --- Invalid_input ---
 
-    // End of data reached unexpectedly.
-    heif_suberror_End_of_data = 100,
+  // End of data reached unexpectedly.
+  heif_suberror_End_of_data = 100,
 
-    // Size of box (defined in header) is wrong
-    heif_suberror_Invalid_box_size,
+  // Size of box (defined in header) is wrong
+  heif_suberror_Invalid_box_size,
 
-    // Mandatory 'ftyp' box is missing
-    heif_suberror_No_ftyp_box,
+  // Mandatory 'ftyp' box is missing
+  heif_suberror_No_ftyp_box,
 
-    heif_suberror_No_idat_box,
+  heif_suberror_No_idat_box,
 
-    heif_suberror_No_meta_box,
+  heif_suberror_No_meta_box,
 
-    heif_suberror_No_hdlr_box,
+  heif_suberror_No_hdlr_box,
 
-    heif_suberror_No_pitm_box,
+  heif_suberror_No_pitm_box,
 
-    heif_suberror_No_ipco_box,
+  heif_suberror_No_ipco_box,
 
-    heif_suberror_No_ipma_box,
+  heif_suberror_No_ipma_box,
 
-    heif_suberror_No_iloc_box,
+  heif_suberror_No_iloc_box,
 
-    heif_suberror_No_iinf_box,
+  heif_suberror_No_iinf_box,
 
-    heif_suberror_No_iprp_box,
+  heif_suberror_No_iprp_box,
 
-    heif_suberror_No_iref_box,
+  heif_suberror_No_iref_box,
 
-    heif_suberror_No_pict_handler,
+  heif_suberror_No_pict_handler,
 
-    // An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
-    heif_suberror_Ipma_box_references_nonexisting_property,
+  // An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
+  heif_suberror_Ipma_box_references_nonexisting_property,
 
-    // No properties have been assigned to an item.
-    heif_suberror_No_properties_assigned_to_item,
+  // No properties have been assigned to an item.
+  heif_suberror_No_properties_assigned_to_item,
 
-    // Image has no (compressed) data
-    heif_suberror_No_item_data,
+  // Image has no (compressed) data
+  heif_suberror_No_item_data,
 
-    // Invalid specification of image grid (tiled image)
-    heif_suberror_Invalid_grid_data,
+  // Invalid specification of image grid (tiled image)
+  heif_suberror_Invalid_grid_data,
 
-    // Tile-images in a grid image are missing
-    heif_suberror_Missing_grid_images,
-
-
-    // --- Memory_allocation_error ---
-
-    // A security limit preventing unreasonable memory allocations was exceeded by the input file.
-    // Please check whether the file is valid. If it is, contact us so that we could increase the
-    // security limits further.
-    heif_suberror_Security_limit_exceeded,
+  // Tile-images in a grid image are missing
+  heif_suberror_Missing_grid_images,
 
 
-    // --- Usage_error ---
+  // --- Memory_allocation_error ---
 
-    // An image ID was used that is not present in the file.
-    heif_suberror_Nonexisting_image_referenced,
+  // A security limit preventing unreasonable memory allocations was exceeded by the input file.
+  // Please check whether the file is valid. If it is, contact us so that we could increase the
+  // security limits further.
+  heif_suberror_Security_limit_exceeded,
 
 
-    // --- Unsupported_feature ---
+  // --- Usage_error ---
 
-    // Image was coded with an unsupported compression method.
-    heif_suberror_Unsupported_codec,
+  // An image ID was used that is not present in the file.
+  heif_suberror_Nonexisting_image_referenced,
 
-    // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
-    heif_suberror_Unsupported_image_type
-  };
+  // An API argument was given a NULL pointer, which is not allowed for that function.
+  heif_suberror_Null_pointer_argument,
+
+
+  // --- Unsupported_feature ---
+
+  // Image was coded with an unsupported compression method.
+  heif_suberror_Unsupported_codec,
+
+  // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
+  heif_suberror_Unsupported_image_type
+};
 
 
 
