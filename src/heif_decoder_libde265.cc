@@ -162,7 +162,7 @@ void libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
     more = 0;
     decode_err = de265_decode(decoder->ctx, &more);
     if (decode_err != DE265_OK) {
-      printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
+      // printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
       break;
     }
 
@@ -170,8 +170,6 @@ void libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
     if (image) {
       *out_img = convert_libde265_image_to_heif_image(image);
 
-      printf("Decoded image: %d/%d\n", de265_get_image_width(image, 0),
-             de265_get_image_height(image, 0));
       de265_release_next_picture(decoder->ctx);
     }
   } while (more);
