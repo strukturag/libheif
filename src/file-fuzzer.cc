@@ -44,9 +44,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
   for (int i = 0; i < images_count; ++i) {
-    const struct de265_image* img;
-    std::istringstream stream(s);
-    error = file.get_image(ids[i], &img, stream);
+    std::shared_ptr<heif::HeifPixelImage> img;
+    error = file.decode_image(ids[i], img);
     if (error != heif::Error::OK) {
       // Ignore, we are only interested in crashes here.
     }
