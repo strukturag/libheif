@@ -23,11 +23,16 @@ Loading the primary image in a HEIF file is as easy as this:
 heif_context* ctx = heif_context_alloc();
 heif_context_read_from_file(ctx, input_filename);
 
-heif_pixel_image* img;
-heif_context_get_primary_image(ctx, &img);
+// get a handle to the primary image
+heif_image_handle* handle;
+heif_context_get_primary_image(ctx, &handle);
+
+// decode the image and convert colorspace to RGB, saved as 24bit interleaved
+heif_image* img;
+heif_decode_image(ctx, handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
 
 int stride;
-const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_Y, &stride);
+const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 ```
 
 See the header file `heif.h` for the complete C API.
