@@ -7,6 +7,7 @@ compiler:
 cache: ccache
 sudo: required
 env:
+  - CHECK_LICENSES=1
   - WITH_LIBDE265= WITH_GRAPHICS=
   - WITH_LIBDE265= WITH_GRAPHICS=1
   - WITH_LIBDE265=1 WITH_GRAPHICS=1
@@ -15,6 +16,8 @@ env:
 
 matrix:
   exclude:
+    - compiler: clang
+      env: CHECK_LICENSES=1
     - compiler: clang
       env: EMSCRIPTEN_VERSION=1.37.26
 
@@ -26,15 +29,17 @@ before_install:
   - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && ./autogen.sh ); fi"
   - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && ./configure --prefix=$TRAVIS_BUILD_DIR/libde265/dist --disable-dec265 --disable-sherlock265 --disable-hdrcopy --disable-enc265 --disable-acceleration_speed ); fi"
   - sh -c "if [ \"$WITH_LIBDE265\" = \"2\" ]; then ( cd libde265 && make && make install ); fi"
-  - sh -c "if [ -z \"$WITH_GRAPHICS\" ]; then sudo apt-get remove libjpeg.*-dev libpng.*-dev; fi"
+  - sh -c "if [ ! -z \"$CHECK_LICENSES\" ]; then sudo apt-get install -qq devscripts; fi"
+  - sh -c "if [ -z \"$WITH_GRAPHICS\" ] && [ -z \"$CHECK_LICENSES\" ]; then sudo apt-get remove libjpeg.*-dev libpng.*-dev; fi"
   - sh -c "if [ ! -z \"$WITH_GRAPHICS\" ]; then sudo apt-get install libjpeg-dev libpng-dev; fi"
   - sh -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then mkdir -p emscripten; fi"
   - sh -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then ./scripts/install-emscripten.sh $EMSCRIPTEN_VERSION emscripten; fi"
 
 before_script:
-  - ./autogen.sh
-  - PKG_CONFIG_PATH=$TRAVIS_BUILD_DIR/libde265/dist/lib/pkgconfig/ ./configure
+  - sh -c "if [ -z \"$CHECK_LICENSES\" ]; then ./autogen.sh; fi"
+  - sh -c "if [ -z \"$CHECK_LICENSES\" ]; then PKG_CONFIG_PATH=$TRAVIS_BUILD_DIR/libde265/dist/lib/pkgconfig/ ./configure; fi"
 
 script:
-  - sh -c "if [ -z \"$EMSCRIPTEN_VERSION\" ]; then make; fi"
+  - sh -c "if [ ! -z \"$CHECK_LICENSES\" ]; then ./scripts/check-licenses.sh; fi"
+  - sh -c "if [ -z \"$EMSCRIPTEN_VERSION\" ] && [ -z \"$CHECK_LICENSES\" ]; then make; fi"
   - bash -c "if [ ! -z \"$EMSCRIPTEN_VERSION\" ]; then source ./emscripten/emsdk-portable/emsdk_env.sh && ./build-emscripten.sh; fi"
