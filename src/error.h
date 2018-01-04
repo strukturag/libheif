@@ -34,6 +34,19 @@
 
 namespace heif {
 
+  class ErrorBuffer
+  {
+  public:
+    ErrorBuffer() : m_buffer("Success") { }
+
+    void set_error(std::string err) { m_buffer = err; }
+    const char* get_error() const { return m_buffer.c_str(); }
+
+  private:
+    std::string m_buffer;
+  };
+
+
   class Error
   {
   public:
@@ -97,11 +110,11 @@ namespace heif {
 
     operator bool() const { return error_code != Ok; }
 
-    heif_error error_struct() {
+    heif_error error_struct(ErrorBuffer* error_buffer) {
       heif_error err;
       err.code = error_code;
       err.subcode = sub_error_code;
-      err.message = NULL; // TODO;
+      err.message = error_buffer->get_error();
       return err;
     }
   };

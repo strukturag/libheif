@@ -66,13 +66,13 @@ void heif_context_free(heif_context* ctx)
 heif_error heif_context_read_from_file(heif_context* ctx, const char* filename)
 {
   Error err = ctx->context->read_from_file(filename);
-  return err.error_struct();
+  return err.error_struct(ctx->context.get());
 }
 
 heif_error heif_context_read_from_memory(heif_context* ctx, const uint8_t* mem, uint64_t size)
 {
   Error err = ctx->context->read_from_memory(mem,size);
-  return err.error_struct();
+  return err.error_struct(ctx->context.get());
 }
 
 // TODO
@@ -97,7 +97,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   return err.error_struct();
   */
 
-  return Error::OK.error_struct();
+  return Error::OK.error_struct(ctx->context.get());
 }
 
 
@@ -125,7 +125,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
   return err.error_struct();
   */
 
-  return Error::OK.error_struct();
+  return Error::OK.error_struct(ctx->context.get());
 }
 
 
@@ -180,7 +180,7 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
                                              nullptr);
   // TODO: colorspace conversion
 
-  return err.error_struct();
+  return err.error_struct(ctx->context.get());
 }
 
 
