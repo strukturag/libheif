@@ -119,7 +119,9 @@ namespace heif {
 
     std::vector<std::shared_ptr<Box>> m_children;
 
-    Error read_children(BitstreamRange& range);
+    const static int READ_CHILDREN_ALL = -1;
+
+    Error read_children(BitstreamRange& range, int number = READ_CHILDREN_ALL);
 
     std::string dump_children(Indent&) const;
   };
@@ -521,6 +523,41 @@ namespace heif {
 
     std::vector<EntityGroup> m_entity_groups;
   };
+
+
+  class Box_dinf : public Box {
+  public:
+  Box_dinf(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_dref : public Box {
+  public:
+  Box_dref(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+  class Box_url : public Box {
+  public:
+  Box_url(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    std::string m_location;
+  };
+
 }
 
 #endif

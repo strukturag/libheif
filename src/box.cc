@@ -127,6 +127,10 @@ std::string read_string(BitstreamRange& range)
 {
   std::string str;
 
+  if (range.eof()) {
+    return "";
+  }
+
   for (;;) {
     if (!range.read(1)) {
       return std::string();
@@ -364,6 +368,18 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_grpl>(hdr);
     break;
 
+  case fourcc("dinf"):
+    box = std::make_shared<Box_dinf>(hdr);
+    break;
+
+  case fourcc("dref"):
+    box = std::make_shared<Box_dref>(hdr);
+    break;
+
+  case fourcc("url "):
+    box = std::make_shared<Box_url>(hdr);
+    break;
+
   default:
     box = std::make_shared<Box>(hdr);
     break;
@@ -430,8 +446,10 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 }
 
 
-Error Box::read_children(BitstreamRange& range)
+Error Box::read_children(BitstreamRange& range, int max_number)
 {
+  int count = 0;
+
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
@@ -450,6 +468,16 @@ Error Box::read_children(BitstreamRange& range)
     }
 
     m_children.push_back(std::move(box));
+
+
+    // count the new child and end reading new children when we reached the expected number
+
+    count++;
+
+    if (max_number != READ_CHILDREN_ALL &&
+        count == max_number) {
+      break;
+    }
   }
 
   return range.get_error();
@@ -1645,6 +1673,83 @@ std::string Box_grpl::dump(Indent& indent) const
 
     sstr << "\n";
   }
+
+  return sstr.str();
+}
+
+
+Error Box_dinf::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  return read_children(range);
+}
+
+
+std::string Box_dinf::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << dump_children(indent);
+
+  return sstr.str();
+}
+
+
+Error Box_dref::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  int nEntities = read32(range);
+
+  /*
+  for (int i=0;i<nEntities;i++) {
+    if (range.eof()) {
+      break;
+    }
+  }
+  */
+
+  Error err = read_children(range, nEntities);
+  if (err) {
+    return err;
+  }
+
+  if ((int)m_children.size() != nEntities) {
+    // TODO return Error(
+  }
+
+  return err;
+}
+
+
+std::string Box_dref::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << dump_children(indent);
+
+  return sstr.str();
+}
+
+
+Error Box_url::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  m_location = read_string(range);
+
+  return range.get_error();
+}
+
+
+std::string Box_url::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  //sstr << dump_children(indent);
+
+  sstr << indent << "location: " << m_location << "\n";
 
   return sstr.str();
 }
