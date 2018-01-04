@@ -25,7 +25,7 @@ if [ ! -z "$CHECK_LICENSES" ]; then
     ./scripts/check-licenses.sh
 fi
 
-if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ]; then
+if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make
 fi
@@ -33,4 +33,17 @@ fi
 if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
     echo "Building with emscripten $EMSCRIPTEN_VERSION ..."
     source ./emscripten/emsdk-portable/emsdk_env.sh && ./build-emscripten.sh
+fi
+
+if [ ! -z "$TARBALL" ]; then
+    VERSION=$(grep AC_INIT configure.ac | sed -r 's/^[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/g')
+    echo "Creating tarball for version $VERSION ..."
+    make dist
+
+    echo "Building from tarball ..."
+    tar xf libheif-$VERSION.tar*
+    pushd libheif-$VERSION
+    ./configure
+    make
+    popd
 fi
