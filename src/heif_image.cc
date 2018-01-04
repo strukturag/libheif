@@ -158,11 +158,11 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
 }
 
 
-inline int clip(int x)
+static inline uint8_t clip(int x)
 {
   if (x<0) return 0;
   if (x>255) return 255;
-  return x;
+  return static_cast<uint8_t>(x);
 }
 
 
