@@ -68,37 +68,6 @@ namespace heif {
     Error get_properties(uint32_t imageID,
                          std::vector<Box_ipco::Property>& properties) const;
 
-#if 0
-    class Image {
-    public:
-      ~Image() { }
-
-      int get_width() const { return m_width; }
-      int get_height() const { return m_height; }
-
-      bool is_primary() const { return m_is_primary; }
-
-      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
-
-      Error decode_image(uint16_t ID, std::shared_ptr<HeifPixelImage>& img,
-                         heif_chroma chroma = heif_chroma_undefined,
-                         heif_colorspace colorspace = heif_colorspace_undefined) const;
-
-    private:
-      uint32_t m_id;
-      uint32_t m_width,m_height;
-      bool     m_is_primary;
-
-      std::vector<std::shared_ptr<Image>> m_thumbnails;
-    };
-
-    //std::vector<uint32_t> get_image_IDs() const;
-
-    //std::shared_ptr<Image> get_image(int id) { return m_images[idx]; }
-
-    std::set<std::shared_ptr<Image>> get_top_level_images();
-#endif
-
   private:
     std::unique_ptr<std::istream> m_input_stream;
 
@@ -125,14 +94,7 @@ namespace heif {
     uint32_t m_primary_image_ID;
 
 
-#if 0
-    // --- for high level access
-
-    std::map<uint32_t, std::shared_ptr<Image>> m_images; // indexed with image-ID
-
-    std::shared_ptr<Image> m_primary_image; // shortcut to primary image
-#endif
-
+    const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
 
     Error parse_heif_file(BitstreamRange& bitstream);
     Error decode_full_grid_image(uint16_t ID,

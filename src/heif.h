@@ -171,11 +171,14 @@ void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 */
 
 
-//struct de265_image* heif_decode_hevc_image(heif_image* img);
 
 
 
+// --- heif_image allocation (you probably only need these functions if you are writing a plugin)
 
+// Create a new image of the specified resolution and colorspace.
+// Note: no memory for the actual image data is reserved yet. You have to use
+// heif_image_add_plane() to add the image planes required by your colorspace/chroma.
 struct heif_image* heif_image_create(int width, int height,
                                      enum heif_colorspace colorspace,
                                      enum heif_chroma chroma);
@@ -204,20 +207,10 @@ struct heif_decoder_plugin
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
   void (*decode_image)(void* decoder, struct heif_image** out_img);
 
-  // Decode only part of the image.
-  // May be useful if the input image is tiled and we only need part of it.
-  /*
-  heif_image* (*decode_partial)(void* decoder,
-                                int x_left, int y_top,
-                                int width, int height);
-  */
-
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
 };
 
-
-const struct heif_decoder_plugin* get_decoder_plugin_libde265();
 
 
 void heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);

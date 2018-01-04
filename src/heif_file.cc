@@ -32,7 +32,7 @@
 #include <string.h>
 
 #if HAVE_LIBDE265
-#include <libde265/de265.h>
+#include "heif_decoder_libde265.h"
 #endif
 
 using namespace heif;
@@ -124,6 +124,7 @@ std::string ImageGrid::dump() const
 
 HeifFile::HeifFile()
 {
+  m_decoder_plugin = get_decoder_plugin_libde265();
 }
 
 
@@ -408,17 +409,16 @@ Error HeifFile::decode_image(uint32_t ID,
   // --- decode image, depending on its type
 
   if (image_type == "hvc1") {
-    const heif_decoder_plugin* plugin = get_decoder_plugin_libde265();
-    assert(plugin); // TODO
+    assert(m_decoder_plugin); // TODO
 
-    void* decoder = plugin->new_decoder();
-    plugin->push_data(decoder, data.data(), data.size());
+    void* decoder = m_decoder_plugin->new_decoder();
+    m_decoder_plugin->push_data(decoder, data.data(), data.size());
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
     heif_image* decoded_img = new heif_image;
 
-    plugin->decode_image(decoder, &decoded_img);
-    plugin->free_decoder(decoder);
+    m_decoder_plugin->decode_image(decoder, &decoded_img);
+    m_decoder_plugin->free_decoder(decoder);
 
     img = decoded_img->image;
     delete decoded_img;
