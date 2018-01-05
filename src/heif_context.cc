@@ -111,8 +111,8 @@ Error HeifContext::interpret_heif_file()
         std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_Security_limit_exceeded,
-                       "too many thumbnail references");
+                       heif_suberror_Unspecified,
+                       "Too many thumbnail references");
         }
 
         image->set_is_thumbnail_of(refs[0]);
@@ -121,13 +121,13 @@ Error HeifContext::interpret_heif_file()
         if (master_iter == m_all_images.end()) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Nonexisting_image_referenced,
-                       "thumbnail references a non-existing image");
+                       "Thumbnail references a non-existing image");
         }
 
         if (master_iter->second->is_thumbnail()) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Nonexisting_image_referenced,
-                       "thumbnail references another thumbnail");
+                       "Thumbnail references another thumbnail");
         }
 
         master_iter->second->add_thumbnail(image);
