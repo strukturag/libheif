@@ -451,7 +451,7 @@ Error HeifFile::decode_image(struct heif_context* ctx, uint32_t ID,
     assert(m_decoder_plugin); // TODO
 
     void* decoder;
-    struct heif_error err = m_decoder_plugin->new_decoder(ctx, &decoder);
+    struct heif_error err = m_decoder_plugin->new_decoder(&decoder);
     if (err.code != heif_error_Ok) {
       return Error(err.code, err.subcode, err.message);
     }
