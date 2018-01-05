@@ -26,6 +26,8 @@
 
 
 #include <memory>
+#include <utility>
+#include <vector>
 #include <assert.h>
 
 using namespace heif;
@@ -66,10 +68,16 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
     // TODO
   }
 
+  std::shared_ptr<HeifContext::Image> primary_image = ctx->context->get_primary_image();
+  if (!primary_image) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
   //uint16_t primary_ID = ctx->context->get_primary_image_ID();
 
   *img = new heif_image_handle();
-  (*img)->image = ctx->context->get_primary_image();
+  (*img)->image = std::move(primary_image);
 
   /*
   Error err = ctx->context->decode_image(primary_ID, (*img)->image);
@@ -97,9 +105,15 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
 
   //const auto& IDs = ctx->context->get_image_IDs();
 
+  const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
+  if (image_idx < 0 || image_idx >= images.size()) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
   *img = new heif_image_handle();
   //(*img)->image_ID = IDs[image_ID];
-  (*img)->image = ctx->context->get_top_level_images()[image_idx];
+  (*img)->image = images[image_idx];
 
   /*
   Error err = ctx->context->decode_image(image_ID, (*img)->image);
