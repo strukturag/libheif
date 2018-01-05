@@ -387,6 +387,8 @@ namespace heif {
       Horizontal = 1
     };
 
+    MirrorAxis get_mirror_axis() const { return m_axis; }
+
     std::string dump(Indent&) const override;
 
   protected:

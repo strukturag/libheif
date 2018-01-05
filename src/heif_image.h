@@ -70,6 +70,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
   Error rotate(int angle_degrees,
                std::shared_ptr<HeifPixelImage>& out_img);
 
+  Error mirror_inplace(bool horizontal);
+
  private:
   struct ImagePlane {
     int width;

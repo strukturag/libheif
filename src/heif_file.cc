@@ -524,6 +524,16 @@ Error HeifFile::decode_image(uint32_t ID,
 
       img = rotated_img;
     }
+
+
+    auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
+    if (mirror) {
+      std::shared_ptr<HeifPixelImage> mirrored_img;
+      error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
+      if (error) {
+        return error;
+      }
+    }
   }
 
   return Error::Ok;

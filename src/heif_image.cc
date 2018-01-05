@@ -338,3 +338,39 @@ Error HeifPixelImage::rotate(int angle_degrees,
 
   return Error::Ok;
 }
+
+
+Error HeifPixelImage::mirror_inplace(bool horizontal)
+{
+  for (auto& plane_pair : m_planes) {
+    ImagePlane& plane = plane_pair.second;
+
+    if (plane.bit_depth != 8) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can currently only rotate images with 8 bits per pixel");
+    }
+
+
+    int w = plane.width;
+    int h = plane.height;
+
+    int stride = plane.stride;
+    uint8_t* data = plane.mem.data();
+
+    if (horizontal) {
+      for (int y=0;y<h;y++) {
+        for (int x=0;x<w/2;x++)
+          std::swap(data[y*stride + x], data[y*stride + w-1-x]);
+        }
+    }
+    else {
+      for (int y=0;y<h/2;y++) {
+        for (int x=0;x<w;x++)
+          std::swap(data[y*stride + x], data[(h-1-y)*stride + x]);
+        }
+    }
+  }
+
+  return Error::Ok;
+}
