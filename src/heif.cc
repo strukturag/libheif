@@ -95,14 +95,13 @@ size_t heif_context_get_number_of_images(heif_context* ctx)
 }
 
 
-// NOTE: data types will change ! (TODO)
 heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, heif_image_handle** img)
 {
   if (!img) {
-    // TODO
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
   }
-
-  //const auto& IDs = ctx->context->get_image_IDs();
 
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
   if (image_idx >= images.size()) {
@@ -111,13 +110,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, he
   }
 
   *img = new heif_image_handle();
-  //(*img)->image_ID = IDs[image_ID];
   (*img)->image = images[image_idx];
-
-  /*
-  Error err = ctx->context->decode_image(image_ID, (*img)->image);
-  return err.error_struct();
-  */
 
   return Error::Ok.error_struct(ctx->context.get());
 }
