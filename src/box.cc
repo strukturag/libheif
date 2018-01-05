@@ -885,6 +885,18 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
         int32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
         bytes_read += 4;
 
+        if (size32 < 0) {
+          // Invalid contents
+          dest->clear();
+
+          std::stringstream sstr;
+          sstr << "Negative NAL size (" << size32 << ") is not allowed";
+
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_End_of_data,
+                       sstr.str());
+        }
+
         int32_t data_bytes_left_to_read = max_size - bytes_read;
         if (data_bytes_left_to_read < size32) {
           // Out-of-bounds
