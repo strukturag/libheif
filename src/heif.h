@@ -147,7 +147,7 @@ enum heif_suberror_code {
   // Tile-images in a grid image are missing
   heif_suberror_Missing_grid_images = 119,
 
-  heif_suberror_Invalid_clean_aperture = 125,
+  heif_suberror_Invalid_clean_aperture = 120,
 
 
   // --- Memory_allocation_error ---
@@ -155,25 +155,25 @@ enum heif_suberror_code {
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.
   // Please check whether the file is valid. If it is, contact us so that we could increase the
   // security limits further.
-  heif_suberror_Security_limit_exceeded = 120,
+  heif_suberror_Security_limit_exceeded = 200,
 
 
   // --- Usage_error ---
 
   // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced = 121, // also used for Invalid_input
+  heif_suberror_Nonexisting_image_referenced = 300, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
-  heif_suberror_Null_pointer_argument = 122,
+  heif_suberror_Null_pointer_argument = 301,
 
 
   // --- Unsupported_feature ---
 
   // Image was coded with an unsupported compression method.
-  heif_suberror_Unsupported_codec = 123,
+  heif_suberror_Unsupported_codec = 400,
 
   // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
-  heif_suberror_Unsupported_image_type = 124
+  heif_suberror_Unsupported_image_type = 401
 };
 
 
