@@ -24,6 +24,9 @@
 #include "heif_context.h"
 #include "error.h"
 
+#if defined(__EMSCRIPTEN__)
+#include "heif-emscripten.h"
+#endif
 
 #include <memory>
 #include <utility>

@@ -22,9 +22,6 @@
 #endif
 
 #include "box.h"
-#if defined(__EMSCRIPTEN__)
-#include "box-emscripten.h"
-#endif
 
 #include <sstream>
 #include <iomanip>

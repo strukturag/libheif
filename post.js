@@ -13,7 +13,7 @@ var HeifDecoder = function() {
 HeifDecoder.prototype.decode = function(buffer) {
     var input = new libheif.HeifFile();
     var error = input.read_from_memory(buffer);
-    if (error.error_code !== libheif.Error.OK.error_code) {
+    if (error.error_code !== libheif.heif_error_Ok) {
         console.log("Could not parse HEIF file", error);
         return [];
     }
@@ -49,6 +49,12 @@ HeifDecoder.prototype.decode = function(buffer) {
 };
 
 var libheif = {
+    // Expose C API.
+    /** @expose */
+    heif_get_version: Module.heif_get_version,
+    /** @expose */
+    heif_get_version_number: Module.heif_get_version_number,
+
     // Expose high-level API.
     /** @expose */
     HeifDecoder: HeifDecoder,
@@ -68,12 +74,26 @@ var libheif = {
     /** @expose */
     Error: Module.Error,
     /** @expose */
-    ErrorCode: Module.ErrorCode,
-    /** @expose */
     HeifFile: Module.HeifFile,
-    /** @expose */
-    SubErrorCode: Module.SubErrorCode
 };
+
+var key;
+for (key in Module.heif_error_code) {
+    if (!Module.heif_error_code.hasOwnProperty(key) ||
+        key === "values") {
+        continue;
+    }
+
+    libheif[key] = Module.heif_error_code[key];
+}
+for (key in Module.heif_suberror_code) {
+    if (!Module.heif_suberror_code.hasOwnProperty(key) ||
+        key === "values") {
+        continue;
+    }
+
+    libheif[key] = Module.heif_suberror_code[key];
+}
 
 // don't pollute the global namespace
 delete this['Module'];

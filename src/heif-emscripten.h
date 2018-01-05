@@ -87,7 +87,16 @@ static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
   return result;
 }
 
+static std::string heif_get_version() {
+  return ::heif_get_version();
+}
+
 EMSCRIPTEN_BINDINGS(libheif) {
+  emscripten::function("heif_get_version", &heif_get_version,
+      emscripten::allow_raw_pointers());
+  emscripten::function("heif_get_version_number", &heif_get_version_number,
+      emscripten::allow_raw_pointers());
+
   emscripten::class_<Error>("Error")
     .constructor<>()
     .class_property("Ok", &Error::Ok)
