@@ -197,8 +197,7 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                              chroma,
                                              nullptr);
   if (err.error_code != heif_error_Ok) {
-    delete *out_img;
-    *out_img = nullptr;
+    return err.error_struct(in_handle->image.get());
   }
 
   *out_img = new heif_image();
@@ -206,7 +205,7 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 
   // TODO: colorspace conversion
 
-  return err.error_struct(in_handle->image.get());
+  return Error::Ok.error_struct(in_handle->image.get());
 }
 
 
