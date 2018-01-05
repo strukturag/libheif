@@ -249,12 +249,12 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image* img)
 
 int heif_image_get_width(const struct heif_image* img,enum heif_channel channel)
 {
-  return img->image->get_width();
+  return img->image->get_width(channel);
 }
 
 int heif_image_get_height(const struct heif_image* img,enum heif_channel channel)
 {
-  return img->image->get_height();
+  return img->image->get_height(channel);
 }
 
 

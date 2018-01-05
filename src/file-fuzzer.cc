@@ -46,14 +46,10 @@ static void TestDecodeImage(struct heif_context* ctx,
   assert(heif_image_get_chroma_format(image) == kFuzzChroma);
   assert(heif_image_get_width(image, heif_channel_Y) == width);
   assert(heif_image_get_height(image, heif_channel_Y) == height);
-
-  // TODO(fancycode): Enable when the API returns the correct values.
-#if 0
   assert(heif_image_get_width(image, heif_channel_Cb) == width / 2);
   assert(heif_image_get_height(image, heif_channel_Cb) == height / 2);
   assert(heif_image_get_width(image, heif_channel_Cr) == width / 2);
   assert(heif_image_get_height(image, heif_channel_Cr) == height / 2);
-#endif
 
   // TODO(fancycode): Should we also check the planes?
 
