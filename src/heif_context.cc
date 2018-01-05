@@ -62,6 +62,11 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
 
 Error HeifContext::interpret_heif_file()
 {
+  m_all_images.clear();
+  m_top_level_images.clear();
+  m_primary_image.reset();
+
+
   // --- reference all non-hidden images
 
   std::vector<uint32_t> image_IDs = m_heif_file->get_image_IDs();
@@ -81,6 +86,13 @@ Error HeifContext::interpret_heif_file()
 
       m_top_level_images.push_back(image);
     }
+  }
+
+
+  if (!m_primary_image) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Nonexisting_image_referenced,
+                 "'pitm' box references a non-existing image");
   }
 
 

@@ -61,7 +61,6 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 // TODO
 //heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-// NOTE: data types will change ! (TODO)
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
   if (!img) {
@@ -69,22 +68,20 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   }
 
   std::shared_ptr<HeifContext::Image> primary_image = ctx->context->get_primary_image();
+
+  // It is a requirement of an HEIF file there is always a primary image.
+  // If there is none, an error is generated when loading the file.
   if (!primary_image) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    Error err(heif_error_Invalid_input,
+              heif_suberror_Nonexisting_image_referenced);
     return err.error_struct(ctx->context.get());
   }
 
-  //uint16_t primary_ID = ctx->context->get_primary_image_ID();
+  assert(primary_image);
+
 
   *img = new heif_image_handle();
   (*img)->image = std::move(primary_image);
-
-  /*
-  Error err = ctx->context->decode_image(primary_ID, (*img)->image);
-  assert((*img)->image);
-
-  return err.error_struct();
-  */
 
   return Error::Ok.error_struct(ctx->context.get());
 }

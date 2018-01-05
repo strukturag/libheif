@@ -137,7 +137,7 @@ enum heif_suberror_code {
   // --- Usage_error ---
 
   // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced,
+  heif_suberror_Nonexisting_image_referenced, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
   heif_suberror_Null_pointer_argument,
