@@ -219,37 +219,31 @@ void heif_image_handle_release(const struct heif_image_handle*);
 
 // Check whether the given image_handle is the primary image of the file.
 LIBHEIF_API
-int heif_image_handle_is_primary_image(const struct heif_context* h,
-                                       const struct heif_image_handle* handle);
+int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
-size_t heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
-                                                  const struct heif_image_handle* handle);
+size_t heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                                  const struct heif_image_handle* main_image_handle,
+struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
                                                   size_t thumbnail_idx,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
 // Get the resolution of an image.
 LIBHEIF_API
-void heif_image_handle_get_resolution(const struct heif_context* h,
-                                      const struct heif_image_handle* handle,
+void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
                                       int* width, int* height);
 
 // TODO
 //LIBHEIF_API
-size_t heif_image_handle_get_exif_data_size(const struct heif_context* h,
-                                            const struct heif_image_handle* handle);
+size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
 //LIBHEIF_API
-struct heif_error heif_image_handle_get_exif_data(const struct heif_context* h,
-                                                  const struct heif_image_handle* handle,
+struct heif_error heif_image_handle_get_exif_data(const struct heif_image_handle* handle,
                                                   void* out_data);
 
 
@@ -300,8 +294,7 @@ enum heif_channel {
 // If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
 LIBHEIF_API
-struct heif_error heif_decode_image(struct heif_context* ctx,
-                                    const struct heif_image_handle* in_handle,
+struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma);

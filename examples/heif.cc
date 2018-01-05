@@ -88,7 +88,7 @@ int main(int argc, char** argv)
   }
 
   struct heif_image* image;
-  err = heif_decode_image(ctx, handle, &image, heif_colorspace_YCbCr,
+  err = heif_decode_image(handle, &image, heif_colorspace_YCbCr,
       heif_chroma_420);
   if (err.code != 0) {
     heif_image_handle_release(handle);
