@@ -1,6 +1,7 @@
 *.la
 *.lo
 *.o
+*.pc
 m4/lt*.m4
 src/*.a
 
