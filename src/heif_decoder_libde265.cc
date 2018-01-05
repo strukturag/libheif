@@ -198,6 +198,7 @@ struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif_image*
 
 static const struct heif_decoder_plugin decoder_libde265
 {
+  .plugin_api_version = 1,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,
   .push_data = libde265_v2_push_data,
@@ -208,6 +209,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 static const struct heif_decoder_plugin decoder_libde265
 {
+  .plugin_api_version = 1,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,
   .push_data = libde265_v1_push_data,

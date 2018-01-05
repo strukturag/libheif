@@ -390,6 +390,12 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
 
 struct heif_decoder_plugin
 {
+  // API version supported by this plugin
+  int plugin_api_version;
+
+
+  // --- version 1 functions ---
+
   // Create a new decoder context for decoding an image
   struct heif_error (*new_decoder)(void** decoder);
 
@@ -401,10 +407,15 @@ struct heif_decoder_plugin
   struct heif_error (*push_data)(void* decoder, const void* data, size_t size);
 
 
-  // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
+  // --- After pushing the data into the decoder, the decode functions may be called only once.
 
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
   struct heif_error (*decode_image)(void* decoder, struct heif_image** out_img);
+
+
+  // --- version 2 functions will follow below ... ---
+
+
 
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
