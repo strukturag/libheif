@@ -156,8 +156,25 @@ Error HeifContext::interpret_heif_file()
     for (const auto& prop : properties) {
       auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
       if (ispe) {
-        image->set_resolution(ispe->get_width(),
-                              ispe->get_height());
+        uint32_t width = ispe->get_width();
+        uint32_t height = ispe->get_height();
+
+
+        // --- check whether the image size is "too large"
+
+        if (width  >= std::numeric_limits<int>::max() ||
+            height >= std::numeric_limits<int>::max()) {
+          std::stringstream sstr;
+          sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+               << std::numeric_limits<int>::max() << "x"
+               << std::numeric_limits<int>::max() << "\n";
+
+          return Error(heif_error_Memory_allocation_error,
+                       heif_suberror_Security_limit_exceeded,
+                       sstr.str());
+        }
+
+        image->set_resolution(width, height);
       }
     }
   }
