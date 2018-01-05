@@ -22,6 +22,7 @@
 #include "config.h"
 #endif
 
+#include "heif.h"
 #include "heif_file.h"
 #include "heif_image.h"
 #include "heif_api_structs.h"
@@ -433,7 +434,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
 }
 
 
-Error HeifFile::decode_image(uint32_t ID,
+Error HeifFile::decode_image(struct heif_context* ctx, uint32_t ID,
                              std::shared_ptr<HeifPixelImage>& img) const
 {
   std::string image_type = get_image_type(ID);
@@ -449,15 +450,28 @@ Error HeifFile::decode_image(uint32_t ID,
   if (image_type == "hvc1") {
     assert(m_decoder_plugin); // TODO
 
-    void* decoder = m_decoder_plugin->new_decoder();
-    m_decoder_plugin->push_data(decoder, data.data(), data.size());
+    void* decoder;
+    struct heif_error err = m_decoder_plugin->new_decoder(ctx, &decoder);
+    if (err.code != heif_error_Ok) {
+      return Error(err.code, err.subcode, err.message);
+    }
+
+    err = m_decoder_plugin->push_data(decoder, data.data(), data.size());
+    if (err.code != heif_error_Ok) {
+      m_decoder_plugin->free_decoder(decoder);
+      return Error(err.code, err.subcode, err.message);
+    }
+
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
     heif_image* decoded_img = nullptr;
+    err = m_decoder_plugin->decode_image(decoder, &decoded_img);
+    if (err.code != heif_error_Ok) {
+      m_decoder_plugin->free_decoder(decoder);
+      return Error(err.code, err.subcode, err.message);
+    }
 
-    m_decoder_plugin->decode_image(decoder, &decoded_img);
     m_decoder_plugin->free_decoder(decoder);
-
     if (!decoded_img) {
       // TODO(farindk): Return dedicated error or better let decoder return the
       // actual error from "decode_image".
@@ -475,7 +489,7 @@ Error HeifFile::decode_image(uint32_t ID,
 #endif
   }
   else if (image_type == "grid") {
-    error = decode_full_grid_image(ID, img, data);
+    error = decode_full_grid_image(ctx, ID, img, data);
     if (error) {
       return error;
     }
@@ -514,7 +528,7 @@ Error HeifFile::decode_image(uint32_t ID,
 
 // TODO: this function only works with YCbCr images, chroma 4:2:0, and 8 bpp at the moment
 // It will crash badly if we get anything else.
-Error HeifFile::decode_full_grid_image(uint16_t ID,
+Error HeifFile::decode_full_grid_image(struct heif_context* ctx, uint16_t ID,
                                        std::shared_ptr<HeifPixelImage>& img,
                                        const std::vector<uint8_t>& grid_data) const
 {
@@ -548,7 +562,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
   int h = grid.get_height();
   int bpp = 8; // TODO: how do we know ?
 
-  img = std::make_shared<HeifPixelImage>();
+  img = std::make_shared<HeifPixelImage>(ctx->context);
   img->create(w,h,
               heif_colorspace_YCbCr, // TODO: how do we know ?
               heif_chroma_420); // TODO: how do we know ?
@@ -568,7 +582,7 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
 
       std::shared_ptr<HeifPixelImage> tile_img;
 
-      Error err = decode_image(image_references[reference_idx],
+      Error err = decode_image(ctx, image_references[reference_idx],
                                tile_img);
       if (err != Error::Ok) {
         return err;

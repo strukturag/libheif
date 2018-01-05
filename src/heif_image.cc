@@ -20,12 +20,17 @@
 
 
 #include "heif_image.h"
+#include "heif_context.h"
 
 #include <assert.h>
 
 
 using namespace heif;
 
+
+HeifPixelImage::HeifPixelImage(std::shared_ptr<HeifContext> context) : m_context(context)
+{
+}
 
 HeifPixelImage::~HeifPixelImage()
 {
@@ -174,7 +179,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
     return nullptr;
   }
 
-  auto outimg = std::make_shared<HeifPixelImage>();
+  auto outimg = std::make_shared<HeifPixelImage>(m_context);
 
   int bpp = 8; // TODO: how do we specify the output BPPs ?
 
@@ -224,7 +229,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
     return nullptr;
   }
 
-  auto outimg = std::make_shared<HeifPixelImage>();
+  auto outimg = std::make_shared<HeifPixelImage>(m_context);
 
   outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
 
@@ -276,7 +281,7 @@ Error HeifPixelImage::rotate(int angle_degrees,
     std::swap(out_width, out_height);
   }
 
-  out_img = std::make_shared<HeifPixelImage>();
+  out_img = std::make_shared<HeifPixelImage>(m_context);
   out_img->create(out_width, out_height, m_colorspace, m_chroma);
 
 

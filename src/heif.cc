@@ -158,12 +158,13 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
 }
 
 
-void heif_image_handle_get_resolution(const struct heif_context* h,
-                                      const struct heif_image_handle* handle,
-                                      int* width, int* height)
+struct heif_error heif_image_handle_get_resolution(const struct heif_context* h,
+                                                   const struct heif_image_handle* handle,
+                                                   int* width, int* height)
 {
   if (width) *width = handle->image->get_width();
   if (height) *height = handle->image->get_height();
+  return Error::Ok.error_struct(h->context.get());
 }
 
 struct heif_error heif_decode_image(struct heif_context* ctx,
@@ -175,7 +176,7 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
   *out_img = new heif_image();
 
   //Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
-  Error err = in_handle->image->decode_image((*out_img)->image,
+  Error err = in_handle->image->decode_image(ctx, (*out_img)->image,
                                              colorspace,
                                              chroma,
                                              nullptr);
@@ -190,16 +191,19 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
 }
 
 
-struct heif_image* heif_image_create(int width, int height,
-                                     heif_colorspace colorspace,
-                                     heif_chroma chroma)
+struct heif_error heif_image_create(struct heif_context* ctx,
+                                    int width, int height,
+                                    heif_colorspace colorspace,
+                                    heif_chroma chroma,
+                                    struct heif_image** image)
 {
-  struct heif_image* image = new heif_image;
-  image->image = std::make_shared<HeifPixelImage>();
+  struct heif_image* img = new heif_image;
+  img->image = std::make_shared<HeifPixelImage>(ctx->context);
 
-  image->image->create(width, height, colorspace, chroma);
+  img->image->create(width, height, colorspace, chroma);
 
-  return image;
+  *image = img;
+  return Error::Ok.error_struct(ctx->context.get());
 }
 
 void heif_image_release(const struct heif_image* img)
@@ -235,10 +239,11 @@ int heif_image_get_height(const struct heif_image* img,enum heif_channel channel
 }
 
 
-void heif_image_add_plane(struct heif_image* image,
-                          heif_channel channel, int width, int height, int bit_depth)
+struct heif_error heif_image_add_plane(struct heif_image* image,
+                                       heif_channel channel, int width, int height, int bit_depth)
 {
   image->image->add_plane(channel, width, height, bit_depth);
+  return Error::Ok.error_struct(image->image->context().get());
 }
 
 
@@ -251,17 +256,18 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
 }
 
 
-uint8_t* heif_image_get_plane_readonly(struct heif_image* image,
-                                       enum heif_channel channel,
-                                       int* out_stride)
+uint8_t* heif_image_get_plane(struct heif_image* image,
+                              enum heif_channel channel,
+                              int* out_stride)
 {
   return image->image->get_plane(channel, out_stride);
 }
 
 
-void heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin* decoder_plugin)
+struct heif_error heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin* decoder_plugin)
 {
   heif->context->register_decoder(type, decoder_plugin);
+  return Error::Ok.error_struct(heif->context.get());
 }
 
 
