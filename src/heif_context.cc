@@ -170,12 +170,13 @@ HeifContext::Image::~Image()
 {
 }
 
-Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
+Error HeifContext::Image::decode_image(struct heif_context* ctx,
+                                       std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
                                        heif_chroma chroma,
                                        HeifColorConversionParams* config) const
 {
-  Error err = m_heif_file->decode_image(m_id, img);
+  Error err = m_heif_file->decode_image(ctx, m_id, img);
   if (err) {
     return err;
   }

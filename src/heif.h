@@ -236,21 +236,21 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
 
 // Get the resolution of an image.
 LIBHEIF_API
-void heif_image_handle_get_resolution(const struct heif_context* h,
-                                      const struct heif_image_handle* handle,
-                                      int* width, int* height);
+struct heif_error heif_image_handle_get_resolution(const struct heif_context* h,
+                                                   const struct heif_image_handle* handle,
+                                                   int* width, int* height);
 
 // TODO
 LIBHEIF_API
 size_t heif_image_handle_get_exif_data_size(const struct heif_context* h,
-                                           const struct heif_image_handle* handle);
+                                            const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
 LIBHEIF_API
-void heif_image_handle_get_exif_data(const struct heif_context* h,
-                                     const struct heif_image_handle* handle,
-                                     void* out_data);
+struct heif_error heif_image_handle_get_exif_data(const struct heif_context* h,
+                                                  const struct heif_image_handle* handle,
+                                                  void* out_data);
 
 
 // --- heif_image
@@ -363,34 +363,36 @@ void heif_image_release(const struct heif_image*);
 // Note: no memory for the actual image data is reserved yet. You have to use
 // heif_image_add_plane() to add the image planes required by your colorspace/chroma.
 LIBHEIF_API
-struct heif_image* heif_image_create(int width, int height,
-                                     enum heif_colorspace colorspace,
-                                     enum heif_chroma chroma);
+struct heif_error heif_image_create(struct heif_context* ctx,
+                                    int width, int height,
+                                    enum heif_colorspace colorspace,
+                                    enum heif_chroma chroma,
+                                    struct heif_image** image);
 
 LIBHEIF_API
-void heif_image_add_plane(struct heif_image* image,
-                          enum heif_channel channel, int width, int height, int bit_depth);
-
+struct heif_error heif_image_add_plane(struct heif_image* image,
+                                       enum heif_channel channel,
+                                       int width, int height, int bit_depth);
 
 
 
 struct heif_decoder_plugin
 {
   // Create a new decoder context for decoding an image
-  void* (*new_decoder)();
+  struct heif_error (*new_decoder)(struct heif_context* ctx, void** decoder);
 
   // Free the decoder context (heif_image can still be used after destruction)
   void (*free_decoder)(void* decoder);
 
   // Push more data into the decoder. This can be called multiple times.
   // This may not be called after any decode_*() function has been called.
-  void (*push_data)(void* decoder, const void* data, size_t size);
+  struct heif_error (*push_data)(void* decoder, const void* data, size_t size);
 
 
   // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
 
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
-  void (*decode_image)(void* decoder, struct heif_image** out_img);
+  struct heif_error (*decode_image)(void* decoder, struct heif_image** out_img);
 
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
@@ -399,7 +401,7 @@ struct heif_decoder_plugin
 
 
 LIBHEIF_API
-void heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
+struct heif_error heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
 
 // TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 
