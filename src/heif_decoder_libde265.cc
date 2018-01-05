@@ -32,7 +32,6 @@
 
 struct libde265_decoder
 {
-  struct heif_context* heif_ctx;
   de265_decoder_context* ctx;
 };
 
@@ -91,12 +90,11 @@ struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* 
 }
 
 
-struct heif_error libde265_new_decoder(struct heif_context* ctx, void** dec)
+struct heif_error libde265_new_decoder(void** dec)
 {
   struct libde265_decoder* decoder = new libde265_decoder();
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
-  decoder->heif_ctx = ctx;
   decoder->ctx = de265_new_decoder();
   de265_start_worker_threads(decoder->ctx,1);
 

@@ -378,7 +378,7 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
 struct heif_decoder_plugin
 {
   // Create a new decoder context for decoding an image
-  struct heif_error (*new_decoder)(struct heif_context* ctx, void** decoder);
+  struct heif_error (*new_decoder)(void** decoder);
 
   // Free the decoder context (heif_image can still be used after destruction)
   void (*free_decoder)(void* decoder);
