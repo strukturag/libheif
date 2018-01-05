@@ -173,7 +173,9 @@ enum heif_suberror_code {
   heif_suberror_Unsupported_codec = 400,
 
   // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
-  heif_suberror_Unsupported_image_type = 401
+  heif_suberror_Unsupported_image_type = 401,
+
+  heif_suberror_Unsupported_data_version = 402
 };
 
 

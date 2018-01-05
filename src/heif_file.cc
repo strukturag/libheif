@@ -40,6 +40,18 @@
 using namespace heif;
 
 
+static int32_t readvec(const std::vector<uint8_t>& data,int& ptr,int len)
+{
+  int32_t val=0;
+  while (len--) {
+    val <<= 8;
+    val |= data[ptr++];
+  }
+
+  return val;
+}
+
+
 class ImageGrid
 {
 public:
@@ -118,6 +130,121 @@ std::string ImageGrid::dump() const
   return sstr.str();
 }
 
+
+
+class ImageOverlay
+{
+public:
+  Error parse(int num_images, const std::vector<uint8_t>& data);
+
+  std::string dump() const;
+
+  void get_background_color(uint16_t col[4]) const;
+
+  uint32_t get_canvas_width() const { return m_width; }
+  uint32_t get_canvas_height() const { return m_height; }
+
+  void get_offset(int image_index, int32_t* x, int32_t* y) const;
+
+private:
+  uint8_t  m_version;
+  uint8_t  m_flags;
+  uint16_t m_background_color[4];
+  uint32_t m_width;
+  uint32_t m_height;
+
+  struct Offset {
+    int32_t x,y;
+  };
+
+  std::vector<Offset> m_offsets;
+};
+
+
+Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
+{
+  Error eofError(heif_error_Invalid_input,
+                 heif_suberror_Invalid_grid_data,
+                 "Overlay image data incomplete");
+
+  if (data.size() < 2 + 4*2) {
+    return eofError;
+  }
+
+  m_version = data[0];
+  m_flags = data[1];
+
+  if (m_version != 0) {
+    std::stringstream sstr;
+    sstr << "Overlay image data version " << m_version << " is not implemented yet";
+
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+
+  int field_len = ((m_flags & 1) ? 4 : 2);
+  int ptr=2 + 4*2;
+
+  if (ptr + 2*field_len + num_images*2*field_len > (int)data.size()) {
+    return eofError;
+  }
+
+  for (int i=0;i<4;i++) {
+    m_background_color[i] = readvec(data,ptr,2);
+  }
+
+  m_width  = readvec(data,ptr,field_len);
+  m_height = readvec(data,ptr,field_len);
+
+  m_offsets.resize(num_images);
+
+  for (int i=0;i<num_images;i++) {
+    m_offsets[i].x = readvec(data,ptr,field_len);
+    m_offsets[i].y = readvec(data,ptr,field_len);
+  }
+
+  return Error::Ok;
+}
+
+
+std::string ImageOverlay::dump() const
+{
+  std::stringstream sstr;
+
+  sstr << "version: " << m_version << "\n"
+       << "flags: " << m_flags << "\n"
+       << "background color: " << m_background_color[0]
+       << ";" << m_background_color[1]
+       << ";" << m_background_color[2]
+       << ";" << m_background_color[3] << "\n"
+       << "canvas size: " << m_width << "x" << m_height << "\n"
+       << "offsets: ";
+
+  for (const Offset& offset : m_offsets) {
+    sstr << offset.x << ";" << offset.y << " ";
+  }
+
+  return sstr.str();
+}
+
+
+void ImageOverlay::get_background_color(uint16_t col[4]) const
+{
+  for (int i=0;i<4;i++) {
+    col[i] = m_background_color[i];
+  }
+}
+
+
+void ImageOverlay::get_offset(int image_index, int32_t* x, int32_t* y) const
+{
+  assert(image_index>=0 && image_index<(int)m_offsets.size());
+  assert(x && y);
+
+  *x = m_offsets[image_index].x;
+  *y = m_offsets[image_index].y;
+}
 
 
 
@@ -428,6 +555,8 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   } else if (item_type == "grid") {
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
+  } else if (item_type == "iovl") {
+    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   }
 
   if (error != Error::Ok) {
@@ -509,6 +638,18 @@ Error HeifFile::decode_image(uint32_t ID,
   }
   else if (image_type == "iden") {
     error = decode_derived_image(ID, img);
+    if (error) {
+      return error;
+    }
+  }
+  else if (image_type == "iovl") {
+    std::vector<uint8_t> data;
+    error = get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+
+    error = decode_overlay_image(ID, img, data);
     if (error) {
       return error;
     }
@@ -718,4 +859,36 @@ Error HeifFile::decode_derived_image(uint16_t ID,
 
   Error error = decode_image(reference_image_id, img);
   return error;
+}
+
+
+Error HeifFile::decode_overlay_image(uint16_t ID,
+                                     std::shared_ptr<HeifPixelImage>& img,
+                                     const std::vector<uint8_t>& overlay_data) const
+{
+  // find the IDs this image is composed of
+
+  if (!m_iref_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box,
+                 "No iref box available, but needed for iovl image");
+  }
+
+  std::vector<uint32_t> image_references = m_iref_box->get_references(ID);
+
+  /* TODO: probably, it is valid that an iovl image has no references ?
+
+  if (image_references.empty()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Missing_grid_images,
+                 "'iovl' image with more than one reference image");
+  }
+  */
+
+
+  ImageOverlay overlay;
+  overlay.parse(image_references.size(), overlay_data);
+  std::cout << overlay.dump();
+
+  return Error::Ok;
 }

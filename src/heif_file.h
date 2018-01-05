@@ -105,6 +105,10 @@ namespace heif {
     Error decode_derived_image(uint16_t ID,
                                std::shared_ptr<HeifPixelImage>& img) const;
 
+    Error decode_overlay_image(uint16_t ID,
+                               std::shared_ptr<HeifPixelImage>& img,
+                               const std::vector<uint8_t>& overlay_data) const;
+
     const Image& get_image_info(uint32_t ID) const;
   };
 
