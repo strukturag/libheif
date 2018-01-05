@@ -190,7 +190,7 @@ struct heif_error
 // Allocate a new context for reading HEIF files.
 // Has to be freed again bei heif_context_free().
 LIBHEIF_API
-struct heif_context* heif_context_alloc();
+struct heif_context* heif_context_alloc(void);
 
 // Free a previously allocated HEIF context. You should not free a context twice.
 LIBHEIF_API
