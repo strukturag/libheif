@@ -43,10 +43,12 @@ libheif_la_SOURCES += \
   heif_decoder_libde265.h
 endif
 
-
 libheif_la_HEADERS = \
   heif.h \
   heif-version.h
+
+noinst_HEADERS = \
+  heif-emscripten.h
 
 if HAVE_VISIBILITY
 libheif_la_CFLAGS += -DHAVE_VISIBILITY
