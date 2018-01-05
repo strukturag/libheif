@@ -72,6 +72,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 
   Error mirror_inplace(bool horizontal);
 
+  Error crop(int left,int right,int top,int bottom,
+             std::shared_ptr<HeifPixelImage>& out_img) const;
+
  private:
   struct ImagePlane {
     int width;

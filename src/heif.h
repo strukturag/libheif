@@ -147,6 +147,8 @@ enum heif_suberror_code {
   // Tile-images in a grid image are missing
   heif_suberror_Missing_grid_images = 119,
 
+  heif_suberror_Invalid_clean_aperture = 125,
+
 
   // --- Memory_allocation_error ---
 

@@ -22,6 +22,7 @@
 #include "heif_image.h"
 
 #include <assert.h>
+#include <string.h>
 
 
 using namespace heif;
@@ -369,6 +370,56 @@ Error HeifPixelImage::mirror_inplace(bool horizontal)
         for (int x=0;x<w;x++)
           std::swap(data[y*stride + x], data[(h-1-y)*stride + x]);
         }
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+Error HeifPixelImage::crop(int left,int right,int top,int bottom,
+                           std::shared_ptr<HeifPixelImage>& out_img) const
+{
+  out_img = std::make_shared<HeifPixelImage>();
+  out_img->create(right-left+1, bottom-top+1, m_colorspace, m_chroma);
+
+
+  // --- crop all channels
+
+  for (const auto& plane_pair : m_planes) {
+    heif_channel channel = plane_pair.first;
+    const ImagePlane& plane = plane_pair.second;
+
+    if (plane.bit_depth != 8) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can currently only rotate images with 8 bits per pixel");
+    }
+
+
+    int w = plane.width;
+    int h = plane.height;
+
+    int plane_left = left * w/m_width;
+    int plane_right = right * w/m_width;
+    int plane_top = top * h/m_height;
+    int plane_bottom = bottom * h/m_height;
+
+    out_img->add_plane(channel,
+                       plane_right - plane_left + 1,
+                       plane_bottom - plane_top + 1,
+                       plane.bit_depth);
+
+    int in_stride = plane.stride;
+    const uint8_t* in_data = plane.mem.data();
+
+    int out_stride;
+    uint8_t* out_data = out_img->get_plane(channel, &out_stride);
+
+    for (int y=plane_top;y<=plane_bottom;y++) {
+      memcpy( &out_data[(y-plane_top)*out_stride],
+              &in_data[y*in_stride + plane_left],
+              plane_right - plane_left + 1 );
     }
   }
 

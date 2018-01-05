@@ -84,6 +84,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Ipma_box_references_nonexisting_property: return "'ipma' box references a non-existing property";
   case heif_suberror_No_properties_assigned_to_item: return "No properties assigned to item";
   case heif_suberror_No_item_data: return "Item has no data";
+  case heif_suberror_Invalid_clean_aperture: return "Invalid clean-aperture specification";
 
     // --- Memory_allocation_error ---
 

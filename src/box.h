@@ -46,6 +46,18 @@ namespace heif {
 
   class Fraction {
   public:
+    Fraction() { }
+  Fraction(int num,int den) : numerator(num), denominator(den) { }
+
+    Fraction operator+(const Fraction&) const;
+    Fraction operator-(const Fraction&) const;
+    Fraction operator-(int) const;
+    Fraction operator/(int) const;
+
+    int round_down() const;
+    int round_up() const;
+    int round() const;
+
     int numerator, denominator;
   };
 
@@ -404,6 +416,11 @@ namespace heif {
   Box_clap(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
+
+    int left_rounded(int image_width) const;  // first column
+    int right_rounded(int image_width) const; // last column that is part of the cropped image
+    int top_rounded(int image_height) const;   // first row
+    int bottom_rounded(int image_height) const; // last row included in the cropped image
 
   protected:
     Error parse(BitstreamRange& range) override;

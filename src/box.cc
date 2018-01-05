@@ -40,6 +40,55 @@ static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 heif::Error heif::Error::Ok(heif_error_Ok);
 
 
+
+Fraction Fraction::operator+(const Fraction& b) const
+{
+  if (denominator == b.denominator) {
+    return Fraction { numerator + b.numerator, denominator };
+  }
+  else {
+    return Fraction { numerator * b.denominator + b.numerator * denominator,
+        denominator * b.denominator };
+  }
+}
+
+Fraction Fraction::operator-(const Fraction& b) const
+{
+  if (denominator == b.denominator) {
+    return Fraction { numerator - b.numerator, denominator };
+  }
+  else {
+    return Fraction { numerator * b.denominator - b.numerator * denominator,
+        denominator * b.denominator };
+  }
+}
+
+Fraction Fraction::operator-(int v) const
+{
+  return Fraction { numerator - v * denominator, denominator };
+}
+
+Fraction Fraction::operator/(int v) const
+{
+  return Fraction { numerator, denominator*v };
+}
+
+int Fraction::round_down() const
+{
+  return numerator / denominator;
+}
+
+int Fraction::round_up() const
+{
+  return (numerator + denominator - 1)/denominator;
+}
+
+int Fraction::round() const
+{
+  return (numerator + denominator/2)/denominator;
+}
+
+
 std::string to_fourcc(uint32_t code)
 {
   std::string str("    ");
@@ -1333,6 +1382,44 @@ std::string Box_clap::dump(Indent& indent) const
        << m_vertical_offset.denominator << "\n";
 
   return sstr.str();
+}
+
+
+int Box_clap::left_rounded(int image_width) const
+{
+  // pcX = horizOff + (width  - 1)/2
+  // pcX ± (cleanApertureWidth - 1)/2
+
+  // left = horizOff + (width-1)/2 - (clapWidth-1)/2
+
+  Fraction pcX  = m_horizontal_offset + Fraction(image_width-1, 2);
+  Fraction left = pcX - (m_clean_aperture_width-1)/2;
+
+  return left.round();
+}
+
+int Box_clap::right_rounded(int image_width) const
+{
+  Fraction pcX  = m_horizontal_offset + Fraction(image_width-1, 2);
+  Fraction right = pcX + (m_clean_aperture_width-1)/2;
+
+  return right.round();
+}
+
+int Box_clap::top_rounded(int image_height) const
+{
+  Fraction pcY  = m_vertical_offset + Fraction(image_height-1, 2);
+  Fraction top = pcY - (m_clean_aperture_height-1)/2;
+
+  return top.round();
+}
+
+int Box_clap::bottom_rounded(int image_height) const
+{
+  Fraction pcY  = m_vertical_offset + Fraction(image_height-1, 2);
+  Fraction top = pcY + (m_clean_aperture_height-1)/2;
+
+  return top.round();
 }
 
 

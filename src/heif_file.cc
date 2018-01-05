@@ -528,11 +528,44 @@ Error HeifFile::decode_image(uint32_t ID,
 
     auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
     if (mirror) {
-      std::shared_ptr<HeifPixelImage> mirrored_img;
       error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
       if (error) {
         return error;
       }
+    }
+
+
+    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+    if (clap) {
+      std::shared_ptr<HeifPixelImage> clap_img;
+
+      int img_width = img->get_width();
+      int img_height = img->get_height();
+
+      int left = clap->left_rounded(img_width);
+      int right = clap->right_rounded(img_width);
+      int top = clap->top_rounded(img_height);
+      int bottom = clap->bottom_rounded(img_height);
+
+      if (left < 0) { left = 0; }
+      if (top  < 0) { top  = 0; }
+
+      if (right >= img_width) { right = img_width-1; }
+      if (bottom >= img_height) { bottom = img_height-1; }
+
+      if (left >= right ||
+          top >= bottom) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Invalid_clean_aperture);
+      }
+
+      std::shared_ptr<HeifPixelImage> cropped_img;
+      error = img->crop(left,right,top,bottom, cropped_img);
+      if (error) {
+        return error;
+      }
+
+      img = cropped_img;
     }
   }
 
