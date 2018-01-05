@@ -52,9 +52,9 @@ heif_error heif_context_read_from_file(heif_context* ctx, const char* filename)
   return err.error_struct(ctx->context.get());
 }
 
-heif_error heif_context_read_from_memory(heif_context* ctx, const uint8_t* mem, uint64_t size)
+heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, size_t size)
 {
-  Error err = ctx->context->read_from_memory(mem,size);
+  Error err = ctx->context->read_from_memory(mem, size);
   return err.error_struct(ctx->context.get());
 }
 

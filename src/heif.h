@@ -25,6 +25,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -182,7 +183,7 @@ struct heif_error heif_context_read_from_file(struct heif_context*, const char* 
 // Read a HEIF file stored completely in memory.
 LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
-                                                const uint8_t* mem, uint64_t size);
+                                                const void* mem, size_t size);
 
 // TODO
 LIBHEIF_API
