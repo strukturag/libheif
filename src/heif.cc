@@ -124,22 +124,19 @@ heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, he
 }
 
 
-int heif_image_handle_is_primary_image(const struct heif_context* h,
-                                       const struct heif_image_handle* handle)
+int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
 {
   return handle->image->is_primary();
 }
 
 
-size_t heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
-                                                  const struct heif_image_handle* handle)
+size_t heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle)
 {
   return handle->image->get_thumbnails().size();
 }
 
 
-heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                           const struct heif_image_handle* handle,
+heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handle,
                                            size_t thumbnail_idx,
                                            struct heif_image_handle** out_thumbnail_handle)
 {
@@ -148,13 +145,13 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
   auto thumbnails = handle->image->get_thumbnails();
   if (thumbnail_idx >= thumbnails.size()) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
-    return err.error_struct(h->context.get());
+    return err.error_struct(handle->image.get());
   }
 
   *out_thumbnail_handle = new heif_image_handle();
   (*out_thumbnail_handle)->image = thumbnails[thumbnail_idx];
 
-  return Error::Ok.error_struct(h->context.get());
+  return Error::Ok.error_struct(handle->image.get());
 }
 
 
@@ -177,8 +174,7 @@ void heif_image_handle_get_resolution(const struct heif_context* ctx,
   if (height) *height = h;
 }
 
-struct heif_error heif_decode_image(struct heif_context* ctx,
-                                    const struct heif_image_handle* in_handle,
+struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma)
@@ -200,7 +196,7 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
 
   // TODO: colorspace conversion
 
-  return err.error_struct(ctx->context.get());
+  return err.error_struct(in_handle->image.get());
 }
 
 
