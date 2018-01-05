@@ -363,8 +363,7 @@ void heif_image_release(const struct heif_image*);
 // Note: no memory for the actual image data is reserved yet. You have to use
 // heif_image_add_plane() to add the image planes required by your colorspace/chroma.
 LIBHEIF_API
-struct heif_error heif_image_create(struct heif_context* ctx,
-                                    int width, int height,
+struct heif_error heif_image_create(int width, int height,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma,
                                     struct heif_image** image);

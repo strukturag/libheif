@@ -33,17 +33,13 @@
 
 namespace heif {
 
-class HeifContext;
-
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 {
  public:
-  explicit HeifPixelImage(std::shared_ptr<HeifContext> context);
+  explicit HeifPixelImage();
   ~HeifPixelImage();
 
   void create(int width,int height, heif_colorspace colorspace, heif_chroma chroma);
-
-  std::shared_ptr<heif::HeifContext> context() const { return m_context; }
 
   void add_plane(heif_channel channel, int width, int height, int bit_depth);
 
@@ -84,7 +80,6 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
     int stride;
   };
 
-  std::shared_ptr<HeifContext> m_context;
   int m_width = 0;
   int m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
