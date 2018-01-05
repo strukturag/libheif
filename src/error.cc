@@ -51,6 +51,7 @@ const char* heif::Error::get_error_string(heif_error_code err)
   case heif_error_Unsupported_feature: return "Unsupported feature";
   case heif_error_Usage_error: return "Usage error";
   case heif_error_Memory_allocation_error: return "Memory allocation error";
+  case heif_error_Decoder_plugin_error: return "Decoder plugin generated an error";
   }
 
   assert(false);

@@ -89,7 +89,10 @@ enum heif_error_code {
   heif_error_Usage_error = 5,
 
   // Could not allocate enough memory.
-  heif_error_Memory_allocation_error = 6
+  heif_error_Memory_allocation_error = 6,
+
+  // The decoder plugin generated an error
+  heif_error_Decoder_plugin_error = 7
 };
 
 

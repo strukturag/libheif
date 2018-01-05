@@ -607,18 +607,14 @@ Error HeifFile::decode_image(uint32_t ID,
       return Error(err.code, err.subcode, err.message);
     }
 
-    m_decoder_plugin->free_decoder(decoder);
-    if (!decoded_img) {
-      // TODO(farindk): Return dedicated error or better let decoder return the
-      // actual error from "decode_image".
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_image_type);
-    }
+    assert(decoded_img);
 
     img = std::move(decoded_img->image);
-    delete decoded_img;
+    delete decoded_img; // TODO use API to free this image
 
-#if 0
+    m_decoder_plugin->free_decoder(decoder);
+
+#if 1
     FILE* fh = fopen("out.bin", "wb");
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);
