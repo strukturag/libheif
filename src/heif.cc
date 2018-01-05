@@ -174,6 +174,11 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
                                              colorspace,
                                              chroma,
                                              nullptr);
+  if (err.error_code != heif_error_Ok) {
+    delete *out_img;
+    *out_img = nullptr;
+  }
+
   // TODO: colorspace conversion
 
   return err.error_struct(ctx->context.get());

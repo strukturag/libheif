@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utility>
 #include <assert.h>
 #include <string.h>
 
@@ -452,12 +453,19 @@ Error HeifFile::decode_image(uint32_t ID,
     m_decoder_plugin->push_data(decoder, data.data(), data.size());
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
-    heif_image* decoded_img = new heif_image;
+    heif_image* decoded_img = nullptr;
 
     m_decoder_plugin->decode_image(decoder, &decoded_img);
     m_decoder_plugin->free_decoder(decoder);
 
-    img = decoded_img->image;
+    if (!decoded_img) {
+      // TODO(farindk): Return dedicated error or better let decoder return the
+      // actual error from "decode_image".
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_image_type);
+    }
+
+    img = std::move(decoded_img->image);
     delete decoded_img;
 
 #if 0
