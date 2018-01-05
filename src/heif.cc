@@ -155,8 +155,7 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
 }
 
 
-void heif_image_handle_get_resolution(const struct heif_context* ctx,
-                                      const struct heif_image_handle* handle,
+void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
                                       int* width, int* height)
 {
   int w, h;
