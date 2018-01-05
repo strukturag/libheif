@@ -183,13 +183,13 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    uint16_t get_item_ID() const { return m_item_ID; }
+    uint32_t get_item_ID() const { return m_item_ID; }
 
   protected:
     Error parse(BitstreamRange& range) override;
 
   private:
-    uint16_t m_item_ID;
+    uint32_t m_item_ID;
   };
 
 

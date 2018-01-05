@@ -671,7 +671,12 @@ Error Box_pitm::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  m_item_ID = read16(range);
+  if (get_version()==0) {
+    m_item_ID = read16(range);
+  }
+  else {
+    m_item_ID = read32(range);
+  }
 
   return range.get_error();
 }
