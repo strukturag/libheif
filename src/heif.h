@@ -236,9 +236,9 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
 
 // Get the resolution of an image.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_resolution(const struct heif_context* h,
-                                                   const struct heif_image_handle* handle,
-                                                   int* width, int* height);
+void heif_image_handle_get_resolution(const struct heif_context* h,
+                                      const struct heif_image_handle* handle,
+                                      int* width, int* height);
 
 // TODO
 //LIBHEIF_API
