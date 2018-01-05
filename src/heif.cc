@@ -64,7 +64,9 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
   if (!img) {
-    // TODO
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
   }
 
   std::shared_ptr<HeifContext::Image> primary_image = ctx->context->get_primary_image();
