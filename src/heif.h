@@ -103,49 +103,49 @@ enum heif_suberror_code {
   heif_suberror_End_of_data = 100,
 
   // Size of box (defined in header) is wrong
-  heif_suberror_Invalid_box_size,
+  heif_suberror_Invalid_box_size = 101,
 
   // Mandatory 'ftyp' box is missing
-  heif_suberror_No_ftyp_box,
+  heif_suberror_No_ftyp_box = 102,
 
-  heif_suberror_No_idat_box,
+  heif_suberror_No_idat_box = 103,
 
-  heif_suberror_No_meta_box,
+  heif_suberror_No_meta_box = 104,
 
-  heif_suberror_No_hdlr_box,
+  heif_suberror_No_hdlr_box = 105,
 
-  heif_suberror_No_hvcC_box,
+  heif_suberror_No_hvcC_box = 106,
 
-  heif_suberror_No_pitm_box,
+  heif_suberror_No_pitm_box = 107,
 
-  heif_suberror_No_ipco_box,
+  heif_suberror_No_ipco_box = 108,
 
-  heif_suberror_No_ipma_box,
+  heif_suberror_No_ipma_box = 109,
 
-  heif_suberror_No_iloc_box,
+  heif_suberror_No_iloc_box = 110,
 
-  heif_suberror_No_iinf_box,
+  heif_suberror_No_iinf_box = 111,
 
-  heif_suberror_No_iprp_box,
+  heif_suberror_No_iprp_box = 112,
 
-  heif_suberror_No_iref_box,
+  heif_suberror_No_iref_box = 113,
 
-  heif_suberror_No_pict_handler,
+  heif_suberror_No_pict_handler = 114,
 
   // An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
-  heif_suberror_Ipma_box_references_nonexisting_property,
+  heif_suberror_Ipma_box_references_nonexisting_property = 115,
 
   // No properties have been assigned to an item.
-  heif_suberror_No_properties_assigned_to_item,
+  heif_suberror_No_properties_assigned_to_item = 116,
 
   // Image has no (compressed) data
-  heif_suberror_No_item_data,
+  heif_suberror_No_item_data = 117,
 
   // Invalid specification of image grid (tiled image)
-  heif_suberror_Invalid_grid_data,
+  heif_suberror_Invalid_grid_data = 118,
 
   // Tile-images in a grid image are missing
-  heif_suberror_Missing_grid_images,
+  heif_suberror_Missing_grid_images = 119,
 
 
   // --- Memory_allocation_error ---
@@ -153,25 +153,25 @@ enum heif_suberror_code {
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.
   // Please check whether the file is valid. If it is, contact us so that we could increase the
   // security limits further.
-  heif_suberror_Security_limit_exceeded,
+  heif_suberror_Security_limit_exceeded = 120,
 
 
   // --- Usage_error ---
 
   // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced, // also used for Invalid_input
+  heif_suberror_Nonexisting_image_referenced = 121, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
-  heif_suberror_Null_pointer_argument,
+  heif_suberror_Null_pointer_argument = 122,
 
 
   // --- Unsupported_feature ---
 
   // Image was coded with an unsupported compression method.
-  heif_suberror_Unsupported_codec,
+  heif_suberror_Unsupported_codec = 123,
 
   // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
-  heif_suberror_Unsupported_image_type
+  heif_suberror_Unsupported_image_type = 124
 };
 
 
