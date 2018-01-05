@@ -19,7 +19,6 @@
  */
 
 #include "heif.h"
-#include "heif_image.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -28,30 +27,30 @@
 #include <memory>
 #include <string.h>
 
-extern "C" {
-
 #include <libde265/de265.h>
 #include <stdio.h>
-
-using namespace heif;
-
 
 struct libde265_decoder
 {
   de265_decoder_context* ctx;
 };
 
+static const char kSuccess[] = "Success";
 
 
-heif_image* convert_libde265_image_to_heif_image(const struct de265_image* de265img)
+struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* decoder,
+    const struct de265_image* de265img, struct heif_image** image)
 {
-  auto out_img = std::make_shared<HeifPixelImage>();
-
-  out_img->create( de265_get_image_width(de265img, 0),
-                   de265_get_image_height(de265img, 0),
-                   heif_colorspace_YCbCr, // TODO
-                   (heif_chroma)de265_get_chroma_format(de265img) );
-
+  struct heif_image* out_img;
+  struct heif_error err = heif_image_create(
+    de265_get_image_width(de265img, 0),
+    de265_get_image_height(de265img, 0),
+    heif_colorspace_YCbCr, // TODO
+    (heif_chroma)de265_get_chroma_format(de265img),
+    &out_img);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
 
   // --- transfer data from de265_image to HeifPixelImage
 
@@ -71,11 +70,13 @@ heif_image* convert_libde265_image_to_heif_image(const struct de265_image* de265
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
 
-
-    out_img->add_plane(channel2plane[c], w,h, bpp);
+    err = heif_image_add_plane(out_img, channel2plane[c], w,h, bpp);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
 
     int dst_stride;
-    uint8_t* dst_mem = out_img->get_plane(channel2plane[c], &dst_stride);
+    uint8_t* dst_mem = heif_image_get_plane(out_img, channel2plane[c], &dst_stride);
 
     int bytes_per_pixel = (bpp+7)/8;
 
@@ -84,21 +85,21 @@ heif_image* convert_libde265_image_to_heif_image(const struct de265_image* de265
     }
   }
 
-
-  heif_image* out_C_img = (heif_image*)(new std::shared_ptr<HeifPixelImage>(out_img));
-
-  return out_C_img;
+  *image = out_img;
+  return err;
 }
 
 
-void* libde265_new_decoder()
+struct heif_error libde265_new_decoder(void** dec)
 {
   struct libde265_decoder* decoder = new libde265_decoder();
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
   decoder->ctx = de265_new_decoder();
   de265_start_worker_threads(decoder->ctx,1);
 
-  return decoder;
+  *dec = decoder;
+  return err;
 }
 
 void libde265_free_decoder(void* decoder_raw)
@@ -114,48 +115,58 @@ void libde265_free_decoder(void* decoder_raw)
 
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
 
-void libde265_v2_push_data(void* decoder_raw, const void* data, size_t size)
+struct heif_error libde265_v2_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
+  // TODO(farindk): Set "err" if data could not be pushed
   de265_push_data(decoder->ctx, data, size, 0, nullptr);
+  return err;
 }
 
 
-void libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
   de265_push_end_of_stream(decoder->ctx);
 
   int action = de265_get_action(decoder->ctx, 1);
 
+  // TODO(farindk): Set "err" if no image was decoded.
   if (action==de265_action_get_image) {
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
-      *out_img = convert_libde265_image_to_heif_image(img);
-
+      err = convert_libde265_image_to_heif_image(decoder, img, out_img);
       de265_release_picture(img);
     }
   }
+  return err;
 }
 
 #else
 
-void libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
+struct heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
+  // TODO(farindk): Set "err" if data could not be pushed
   de265_push_data(decoder->ctx, data, size, 0, nullptr);
+  return err;
 }
 
 
-void libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
   de265_flush_data(decoder->ctx);
 
+  // TODO(farindk): Set "err" if no image was decoded.
   int more;
   de265_error decode_err;
   do {
@@ -168,11 +179,13 @@ void libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
 
     const struct de265_image* image = de265_get_next_picture(decoder->ctx);
     if (image) {
-      *out_img = convert_libde265_image_to_heif_image(image);
+      err = convert_libde265_image_to_heif_image(decoder, image, out_img);
 
       de265_release_next_picture(decoder->ctx);
     }
   } while (more);
+
+  return err;
 }
 
 #endif
@@ -203,6 +216,6 @@ static const struct heif_decoder_plugin decoder_libde265
 
 #endif
 
-const struct heif_decoder_plugin* get_decoder_plugin_libde265() { return &decoder_libde265; }
-
+const struct heif_decoder_plugin* get_decoder_plugin_libde265() {
+  return &decoder_libde265;
 }

@@ -26,7 +26,6 @@
 #include <map>
 #include <assert.h>
 
-
 namespace heif {
 
   class HeifPixelImage;

@@ -26,7 +26,6 @@
 #include <map>
 #include <set>
 
-
 namespace heif {
 
   // This is a higher-level view than HeifFile.
@@ -41,7 +40,7 @@ namespace heif {
     Error read_from_memory(const void* data, size_t size);
 
 
-    class Image {
+    class Image : public ErrorBuffer {
     public:
       Image(std::shared_ptr<HeifFile> file, uint32_t id);
       ~Image();

@@ -27,6 +27,10 @@
 using namespace heif;
 
 
+HeifPixelImage::HeifPixelImage()
+{
+}
+
 HeifPixelImage::~HeifPixelImage()
 {
 }

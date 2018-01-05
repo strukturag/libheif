@@ -36,6 +36,7 @@ namespace heif {
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 {
  public:
+  explicit HeifPixelImage();
   ~HeifPixelImage();
 
   void create(int width,int height, heif_colorspace colorspace, heif_chroma chroma);

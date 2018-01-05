@@ -33,11 +33,11 @@ static void TestDecodeImage(struct heif_context* ctx,
   struct heif_error err;
   int width = 0, height = 0;
 
-  heif_image_handle_is_primary_image(ctx, handle);
-  heif_image_handle_get_resolution(ctx, handle, &width, &height);
+  heif_image_handle_is_primary_image(handle);
+  heif_image_handle_get_resolution(handle, &width, &height);
   assert(width > 0);
   assert(height > 0);
-  err = heif_decode_image(ctx, handle, &image, kFuzzColorSpace, kFuzzChroma);
+  err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma);
   if (err.code != heif_error_Ok) {
     return;
   }
@@ -76,7 +76,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   err = heif_context_get_primary_image_handle(ctx, &handle);
   if (err.code == heif_error_Ok) {
-    assert(heif_image_handle_is_primary_image(ctx, handle));
+    assert(heif_image_handle_is_primary_image(handle));
     TestDecodeImage(ctx, handle);
     heif_image_handle_release(handle);
   }
@@ -96,10 +96,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     TestDecodeImage(ctx, handle);
 
-    int num_thumbnails = heif_image_handle_get_number_of_thumbnails(ctx, handle);
+    int num_thumbnails = heif_image_handle_get_number_of_thumbnails(handle);
     for (int t = 0; t < num_thumbnails; ++t) {
       struct heif_image_handle* thumbnail_handle = nullptr;
-      heif_image_handle_get_thumbnail(ctx, handle, t, &thumbnail_handle);
+      heif_image_handle_get_thumbnail(handle, t, &thumbnail_handle);
       if (thumbnail_handle) {
         TestDecodeImage(ctx, thumbnail_handle);
         heif_image_handle_release(thumbnail_handle);

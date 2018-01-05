@@ -22,6 +22,8 @@
 
 #include <assert.h>
 
+// static
+const char heif::Error::kSuccess[] = "Success";
 
 heif::Error::Error()
   : error_code(heif_error_Ok)

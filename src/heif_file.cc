@@ -449,15 +449,28 @@ Error HeifFile::decode_image(uint32_t ID,
   if (image_type == "hvc1") {
     assert(m_decoder_plugin); // TODO
 
-    void* decoder = m_decoder_plugin->new_decoder();
-    m_decoder_plugin->push_data(decoder, data.data(), data.size());
+    void* decoder;
+    struct heif_error err = m_decoder_plugin->new_decoder(&decoder);
+    if (err.code != heif_error_Ok) {
+      return Error(err.code, err.subcode, err.message);
+    }
+
+    err = m_decoder_plugin->push_data(decoder, data.data(), data.size());
+    if (err.code != heif_error_Ok) {
+      m_decoder_plugin->free_decoder(decoder);
+      return Error(err.code, err.subcode, err.message);
+    }
+
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
     heif_image* decoded_img = nullptr;
+    err = m_decoder_plugin->decode_image(decoder, &decoded_img);
+    if (err.code != heif_error_Ok) {
+      m_decoder_plugin->free_decoder(decoder);
+      return Error(err.code, err.subcode, err.message);
+    }
 
-    m_decoder_plugin->decode_image(decoder, &decoded_img);
     m_decoder_plugin->free_decoder(decoder);
-
     if (!decoded_img) {
       // TODO(farindk): Return dedicated error or better let decoder return the
       // actual error from "decode_image".

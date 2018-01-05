@@ -75,6 +75,8 @@ namespace heif {
 
     static Error Ok;
 
+    static const char kSuccess[];
+
     bool operator==(const Error& other) const { return error_code == other.error_code; }
     bool operator!=(const Error& other) const { return !(*this == other); }
 

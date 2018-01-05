@@ -186,7 +186,7 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size);
 
 // TODO
-LIBHEIF_API
+// LIBHEIF_API
 struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
 
 
@@ -219,38 +219,32 @@ void heif_image_handle_release(const struct heif_image_handle*);
 
 // Check whether the given image_handle is the primary image of the file.
 LIBHEIF_API
-int heif_image_handle_is_primary_image(const struct heif_context* h,
-                                       const struct heif_image_handle* handle);
+int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
-size_t heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
-                                                  const struct heif_image_handle* handle);
+size_t heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
-struct heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                                  const struct heif_image_handle* main_image_handle,
+struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
                                                   size_t thumbnail_idx,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
 // Get the resolution of an image.
 LIBHEIF_API
-void heif_image_handle_get_resolution(const struct heif_context* h,
-                                      const struct heif_image_handle* handle,
+void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
                                       int* width, int* height);
 
 // TODO
-LIBHEIF_API
-size_t heif_image_handle_get_exif_data_size(const struct heif_context* h,
-                                           const struct heif_image_handle* handle);
+//LIBHEIF_API
+size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
-LIBHEIF_API
-void heif_image_handle_get_exif_data(const struct heif_context* h,
-                                     const struct heif_image_handle* handle,
-                                     void* out_data);
+//LIBHEIF_API
+struct heif_error heif_image_handle_get_exif_data(const struct heif_image_handle* handle,
+                                                  void* out_data);
 
 
 // --- heif_image
@@ -300,8 +294,7 @@ enum heif_channel {
 // If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
 LIBHEIF_API
-struct heif_error heif_decode_image(struct heif_context* ctx,
-                                    const struct heif_image_handle* in_handle,
+struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma);
@@ -315,7 +308,7 @@ LIBHEIF_API
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
 // TODO
-LIBHEIF_API
+//LIBHEIF_API
 enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 // Get width of the given image channel in pixels.
@@ -363,34 +356,35 @@ void heif_image_release(const struct heif_image*);
 // Note: no memory for the actual image data is reserved yet. You have to use
 // heif_image_add_plane() to add the image planes required by your colorspace/chroma.
 LIBHEIF_API
-struct heif_image* heif_image_create(int width, int height,
-                                     enum heif_colorspace colorspace,
-                                     enum heif_chroma chroma);
+struct heif_error heif_image_create(int width, int height,
+                                    enum heif_colorspace colorspace,
+                                    enum heif_chroma chroma,
+                                    struct heif_image** image);
 
 LIBHEIF_API
-void heif_image_add_plane(struct heif_image* image,
-                          enum heif_channel channel, int width, int height, int bit_depth);
-
+struct heif_error heif_image_add_plane(struct heif_image* image,
+                                       enum heif_channel channel,
+                                       int width, int height, int bit_depth);
 
 
 
 struct heif_decoder_plugin
 {
   // Create a new decoder context for decoding an image
-  void* (*new_decoder)();
+  struct heif_error (*new_decoder)(void** decoder);
 
   // Free the decoder context (heif_image can still be used after destruction)
   void (*free_decoder)(void* decoder);
 
   // Push more data into the decoder. This can be called multiple times.
   // This may not be called after any decode_*() function has been called.
-  void (*push_data)(void* decoder, const void* data, size_t size);
+  struct heif_error (*push_data)(void* decoder, const void* data, size_t size);
 
 
   // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
 
   // Decode data into a full image. All data has to be pushed into the decoder before calling this.
-  void (*decode_image)(void* decoder, struct heif_image** out_img);
+  struct heif_error (*decode_image)(void* decoder, struct heif_image** out_img);
 
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
@@ -399,7 +393,7 @@ struct heif_decoder_plugin
 
 
 LIBHEIF_API
-void heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
+struct heif_error heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
 
 // TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 
