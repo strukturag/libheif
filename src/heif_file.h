@@ -102,6 +102,9 @@ namespace heif {
                                  std::shared_ptr<HeifPixelImage>& img,
                                  const std::vector<uint8_t>& grid_data) const;
 
+    Error decode_derived_image(uint16_t ID,
+                               std::shared_ptr<HeifPixelImage>& img) const;
+
     const Image& get_image_info(uint32_t ID) const;
   };
 

@@ -443,15 +443,18 @@ Error HeifFile::decode_image(uint32_t ID,
 {
   std::string image_type = get_image_type(ID);
 
-  std::vector<uint8_t> data;
-  Error error = get_compressed_image_data(ID, &data);
-  if (error) {
-    return error;
-  }
+  Error error;
+
 
   // --- decode image, depending on its type
 
   if (image_type == "hvc1") {
+    std::vector<uint8_t> data;
+    error = get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+
     assert(m_decoder_plugin); // TODO
 
     void* decoder;
@@ -493,13 +496,22 @@ Error HeifFile::decode_image(uint32_t ID,
 #endif
   }
   else if (image_type == "grid") {
+    std::vector<uint8_t> data;
+    error = get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+
     error = decode_full_grid_image(ID, img, data);
     if (error) {
       return error;
     }
   }
   else if (image_type == "iden") {
-    //return decode_derived_image(ID, img);
+    error = decode_derived_image(ID, img);
+    if (error) {
+      return error;
+    }
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
@@ -678,4 +690,32 @@ Error HeifFile::decode_full_grid_image(uint16_t ID,
   }
 
   return Error::Ok;
+}
+
+
+Error HeifFile::decode_derived_image(uint16_t ID,
+                                     std::shared_ptr<HeifPixelImage>& img) const
+{
+  // find the ID of the image this image is derived from
+
+  if (!m_iref_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box,
+                 "No iref box available, but needed for iden image");
+  }
+
+  std::vector<uint32_t> image_references = m_iref_box->get_references(ID);
+
+  if ((int)image_references.size() != 1) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Missing_grid_images,
+                 "'iden' image with more than one reference image");
+  }
+
+
+  uint32_t reference_image_id = image_references[0];
+
+
+  Error error = decode_image(reference_image_id, img);
+  return error;
 }
