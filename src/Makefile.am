@@ -59,8 +59,8 @@ if HAVE_LIBDE265
 bin_PROGRAMS += file-fuzzer
 endif
 else
-noinst_LIBRARIES = fuzzers.a
-fuzzers_a_SOURCES = \
+noinst_LIBRARIES = libfuzzers.a
+libfuzzers_a_SOURCES = \
   box-fuzzer.cc \
   file-fuzzer.cc
 endif
