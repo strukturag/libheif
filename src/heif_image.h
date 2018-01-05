@@ -67,6 +67,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
   std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
                                                      heif_chroma chroma) const;
 
+  // TODO: the ISO 23008-12 specifies that the rotation direction should be CCW,
+  // but it seems that the iPhone images are rotated CW. Hence, we also rotate CW
+  // until we are sure who is right.
   Error rotate(int angle_degrees,
                std::shared_ptr<HeifPixelImage>& out_img);
 
