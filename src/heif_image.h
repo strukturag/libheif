@@ -78,6 +78,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
   Error crop(int left,int right,int top,int bottom,
              std::shared_ptr<HeifPixelImage>& out_img) const;
 
+  Error fill(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
+
  private:
   struct ImagePlane {
     int width;

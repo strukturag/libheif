@@ -184,9 +184,9 @@ Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
   }
 
   int field_len = ((m_flags & 1) ? 4 : 2);
-  int ptr=2 + 4*2;
+  int ptr=2;
 
-  if (ptr + 2*field_len + num_images*2*field_len > (int)data.size()) {
+  if (ptr + 4*2 + 2*field_len + num_images*2*field_len > (int)data.size()) {
     return eofError;
   }
 
@@ -212,8 +212,8 @@ std::string ImageOverlay::dump() const
 {
   std::stringstream sstr;
 
-  sstr << "version: " << m_version << "\n"
-       << "flags: " << m_flags << "\n"
+  sstr << "version: " << ((int)m_version) << "\n"
+       << "flags: " << ((int)m_flags) << "\n"
        << "background color: " << m_background_color[0]
        << ";" << m_background_color[1]
        << ";" << m_background_color[2]
@@ -224,6 +224,7 @@ std::string ImageOverlay::dump() const
   for (const Offset& offset : m_offsets) {
     sstr << offset.x << ";" << offset.y << " ";
   }
+  sstr << "\n";
 
   return sstr.str();
 }
@@ -886,5 +887,22 @@ Error HeifFile::decode_overlay_image(uint16_t ID,
   overlay.parse(image_references.size(), overlay_data);
   std::cout << overlay.dump();
 
-  return Error::Ok;
+  int w = overlay.get_canvas_width();
+  int h = overlay.get_canvas_height();
+
+  // TODO: seems we always have to compose this in RGB since the background color is an RGB value
+  img = std::make_shared<HeifPixelImage>();
+  img->create(w,h,
+              heif_colorspace_RGB,
+              heif_chroma_444);
+  img->add_plane(heif_channel_R,w,h,8); // TODO: other bit depths
+  img->add_plane(heif_channel_G,w,h,8); // TODO: other bit depths
+  img->add_plane(heif_channel_B,w,h,8); // TODO: other bit depths
+
+  uint16_t bkg_color[4];
+  overlay.get_background_color(bkg_color);
+
+  Error err = img->fill(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+
+  return err;
 }

@@ -217,6 +217,8 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
     img = img->convert_colorspace(target_colorspace, target_chroma);
     if (!img) {
       // TODO: error: unsupported conversion
+
+      assert(false);
     }
   }
 

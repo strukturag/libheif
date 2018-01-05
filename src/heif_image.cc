@@ -425,3 +425,45 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
 
   return Error::Ok;
 }
+
+
+Error HeifPixelImage::fill(uint16_t r, uint16_t g, uint16_t b, uint16_t a)
+{
+  for (const auto& channel : { heif_channel_R, heif_channel_G, heif_channel_B } ) {
+    const auto plane_iter = m_planes.find(channel);
+    if (plane_iter == m_planes.end()) {
+      return Error(heif_error_Usage_error,
+                   heif_suberror_Nonexisting_image_channel_referenced);
+
+    }
+
+    ImagePlane& plane = plane_iter->second;
+
+    if (plane.bit_depth != 8) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can currently only fill images with 8 bits per pixel");
+    }
+
+    int h = plane.height;
+
+    int stride = plane.stride;
+    uint8_t* data = plane.mem.data();
+
+    uint16_t val16;
+    switch (channel) {
+    case heif_channel_R: val16=r; break;
+    case heif_channel_G: val16=g; break;
+    case heif_channel_B: val16=b; break;
+    case heif_channel_Alpha: val16=a; break;
+    default:
+      assert(false);
+    }
+
+    uint8_t val8 = val16>>8;
+
+    memset(data, val8, stride*h);
+  }
+
+  return Error::Ok;
+}

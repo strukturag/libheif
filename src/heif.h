@@ -169,6 +169,9 @@ enum heif_suberror_code {
   // An API argument was given a NULL pointer, which is not allowed for that function.
   heif_suberror_Null_pointer_argument = 301,
 
+  // Image channel referenced that does not exist in the image
+  heif_suberror_Nonexisting_image_channel_referenced = 302,
+
 
   // --- Unsupported_feature ---
 
