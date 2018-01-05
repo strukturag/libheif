@@ -110,18 +110,24 @@ Error HeifContext::interpret_heif_file()
       if (type==fourcc("thmb")) {
         std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
-          // TODO incorrect thumbnail reference
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Security_limit_exceeded,
+                       "too many thumbnail references");
         }
 
         image->set_is_thumbnail_of(refs[0]);
 
         auto master_iter = m_all_images.find(refs[0]);
         if (master_iter == m_all_images.end()) {
-          // TODO: error: referenced image does not exist
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Nonexisting_image_referenced,
+                       "thumbnail references a non-existing image");
         }
 
         if (master_iter->second->is_thumbnail()) {
-          // TODO: error: thumbnail may not reference another thumbnail
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Nonexisting_image_referenced,
+                       "thumbnail references another thumbnail");
         }
 
         master_iter->second->add_thumbnail(image);
