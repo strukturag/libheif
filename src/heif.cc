@@ -183,10 +183,10 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma)
 {
-  *out_img = new heif_image();
+  std::shared_ptr<HeifPixelImage> img;
 
   //Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
-  Error err = in_handle->image->decode_image((*out_img)->image,
+  Error err = in_handle->image->decode_image(img,
                                              colorspace,
                                              chroma,
                                              nullptr);
@@ -194,6 +194,9 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
     delete *out_img;
     *out_img = nullptr;
   }
+
+  *out_img = new heif_image();
+  (*out_img)->image = std::move(img);
 
   // TODO: colorspace conversion
 
