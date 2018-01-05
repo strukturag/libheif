@@ -2,6 +2,7 @@
 *.lo
 *.o
 m4/lt*.m4
+src/*.a
 
 .deps
 .libs
