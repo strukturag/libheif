@@ -205,12 +205,12 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
 LIBHEIF_API
-size_t heif_context_get_number_of_images(struct heif_context* h);
+int heif_context_get_number_of_images(struct heif_context* h);
 
 // Get the handle for a specific top-level image.
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle(struct heif_context* h,
-                                                size_t image_index,
+                                                int image_index,
                                                 struct heif_image_handle**);
 
 // Release image handle.
@@ -223,12 +223,12 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
-size_t heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
+int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
-                                                  size_t thumbnail_idx,
+                                                  int thumbnail_idx,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
 // Get the resolution of an image.

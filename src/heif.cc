@@ -89,13 +89,13 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-size_t heif_context_get_number_of_images(heif_context* ctx)
+int heif_context_get_number_of_images(heif_context* ctx)
 {
-  return ctx->context->get_top_level_images().size();
+  return (int)ctx->context->get_top_level_images().size();
 }
 
 
-heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, heif_image_handle** img)
+heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_image_handle** img)
 {
   if (!img) {
     Error err(heif_error_Usage_error,
@@ -104,7 +104,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, he
   }
 
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
-  if (image_idx >= images.size()) {
+  if (image_idx<0 || (size_t)image_idx >= images.size()) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
     return err.error_struct(ctx->context.get());
   }
@@ -122,20 +122,20 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
 }
 
 
-size_t heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle)
+int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle)
 {
-  return handle->image->get_thumbnails().size();
+  return (int)handle->image->get_thumbnails().size();
 }
 
 
 heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handle,
-                                           size_t thumbnail_idx,
+                                           int thumbnail_idx,
                                            struct heif_image_handle** out_thumbnail_handle)
 {
   assert(out_thumbnail_handle);
 
   auto thumbnails = handle->image->get_thumbnails();
-  if (thumbnail_idx >= thumbnails.size()) {
+  if (thumbnail_idx<0 || (size_t)thumbnail_idx >= thumbnails.size()) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
     return err.error_struct(handle->image.get());
   }
