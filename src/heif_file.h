@@ -26,8 +26,6 @@
 #include <map>
 #include <assert.h>
 
-struct heif_context;
-
 namespace heif {
 
   class HeifPixelImage;
@@ -54,7 +52,7 @@ namespace heif {
 
     Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
 
-    Error decode_image(struct heif_context* ctx, uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
+    Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
 
 
 
@@ -100,7 +98,7 @@ namespace heif {
     const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
 
     Error parse_heif_file(BitstreamRange& bitstream);
-    Error decode_full_grid_image(struct heif_context* ctx, uint16_t ID,
+    Error decode_full_grid_image(uint16_t ID,
                                  std::shared_ptr<HeifPixelImage>& img,
                                  const std::vector<uint8_t>& grid_data) const;
 
