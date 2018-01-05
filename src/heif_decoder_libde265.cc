@@ -36,6 +36,7 @@ struct libde265_decoder
 };
 
 static const char kSuccess[] = "Success";
+static const char kEmptyString[] = "";
 
 
 struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* decoder,
@@ -129,7 +130,6 @@ struct heif_error libde265_v2_push_data(void* decoder_raw, const void* data, siz
 struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
   de265_push_end_of_stream(decoder->ctx);
 
@@ -139,10 +139,14 @@ struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif_image*
   if (action==de265_action_get_image) {
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
-      err = convert_libde265_image_to_heif_image(decoder, img, out_img);
+      struct heif_error err = convert_libde265_image_to_heif_image(decoder, img, out_img);
       de265_release_picture(img);
+
+      return err;
     }
   }
+
+  struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kEmptyString };
   return err;
 }
 
