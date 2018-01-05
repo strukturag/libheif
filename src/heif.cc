@@ -158,13 +158,23 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
 }
 
 
-struct heif_error heif_image_handle_get_resolution(const struct heif_context* h,
-                                                   const struct heif_image_handle* handle,
-                                                   int* width, int* height)
+void heif_image_handle_get_resolution(const struct heif_context* ctx,
+                                      const struct heif_image_handle* handle,
+                                      int* width, int* height)
 {
-  if (width) *width = handle->image->get_width();
-  if (height) *height = handle->image->get_height();
-  return Error::Ok.error_struct(h->context.get());
+  int w, h;
+
+  if (handle && handle->image) {
+    w = handle->image->get_width();
+    h = handle->image->get_height();
+  }
+  else {
+    w = 0;
+    h = 0;
+  }
+
+  if (width)  *width = w;
+  if (height) *height = h;
 }
 
 struct heif_error heif_decode_image(struct heif_context* ctx,
