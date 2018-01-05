@@ -894,10 +894,6 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                           std::vector<uint8_t>* dest) const
 {
   istr.clear();
-  uint64_t curpos = istr.tellg();
-  istr.seekg(0, std::ios_base::end);
-  uint64_t max_size = istr.tellg();
-  istr.seekg(curpos, std::ios_base::beg);
 
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
@@ -915,56 +911,12 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                      sstr.str());
       }
 
-
-      // TODO: here, we should simply read raw data and the specific codec should handle
-      // startcode insertion
-
-      uint64_t bytes_read = 0;
-
-      for (;;) {
-        dest->push_back(0);
-        dest->push_back(0);
-        dest->push_back(1);
-
-        uint8_t size[4];
-        istr.read((char*)size,4);
-        int32_t size32 = (size[0]<<24) | (size[1]<<16) | (size[2]<<8) | size[3];
-        bytes_read += 4;
-
-        if (size32 < 0) {
-          // Invalid contents
-          dest->clear();
-
-          std::stringstream sstr;
-          sstr << "Negative NAL size (" << size32 << ") is not allowed";
-
+      size_t old_size = dest->size();
+      dest->resize(old_size + extent.length);
+      istr.read((char*)dest->data() + old_size, extent.length);
+      if (istr.eof()) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_End_of_data,
-                       sstr.str());
-        }
-
-        int32_t data_bytes_left_to_read = max_size - bytes_read;
-        if (data_bytes_left_to_read < size32) {
-          // Out-of-bounds
-          dest->clear();
-
-          std::stringstream sstr;
-          sstr << "NAL size (" << size32 << ") exceeds available data in file ("
-               << data_bytes_left_to_read << ")";
-
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_End_of_data,
-                       sstr.str());
-        }
-
-        size_t old_size = dest->size();
-        dest->resize(old_size + size32);
-        istr.read((char*)dest->data() + old_size, size32);
-        bytes_read += size32;
-
-        if (bytes_read >= extent.length) {
-          break;
-        }
+                       heif_suberror_End_of_data);
       }
     }
     else if (item.construction_method==1) {
@@ -984,19 +936,6 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
   return Error::Ok;
 }
 
-/*
-Error Box_iloc::read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const
-{
-  for (const auto& item : m_items) {
-    Error err = read_data(item, istr, dest);
-    if (err != Error::OK) {
-      return err;
-    }
-  }
-
-  return Error::OK;
-}
-*/
 
 Error Box_infe::parse(BitstreamRange& range)
 {
@@ -1661,9 +1600,17 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 {
   for (const auto& array : m_nal_array) {
     for (const auto& unit : array.m_nal_units) {
+
+      dest->push_back( (unit.size()>>24) & 0xFF );
+      dest->push_back( (unit.size()>>16) & 0xFF );
+      dest->push_back( (unit.size()>> 8) & 0xFF );
+      dest->push_back( (unit.size()>> 0) & 0xFF );
+
+      /*
       dest->push_back(0);
       dest->push_back(0);
       dest->push_back(1);
+      */
 
       dest->insert(dest->end(), unit.begin(), unit.end());
     }

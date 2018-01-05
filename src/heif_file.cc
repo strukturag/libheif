@@ -614,7 +614,7 @@ Error HeifFile::decode_image(uint32_t ID,
 
     m_decoder_plugin->free_decoder(decoder);
 
-#if 1
+#if 0
     FILE* fh = fopen("out.bin", "wb");
     fwrite(data.data(), 1, data.size(), fh);
     fclose(fh);

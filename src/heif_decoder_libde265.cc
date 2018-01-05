@@ -119,10 +119,37 @@ void libde265_free_decoder(void* decoder_raw)
 struct heif_error libde265_v2_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
-  // TODO(farindk): Set "err" if data could not be pushed
-  de265_push_data(decoder->ctx, data, size, 0, nullptr);
+  const uint8_t* cdata = (const uint8_t*)data;
+
+  size_t ptr=0;
+  while (ptr < size) {
+    if (ptr+4 > size) {
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_End_of_data,
+                                kEmptyString };
+      return err;
+    }
+
+    uint32_t nal_size = (cdata[ptr]<<24) | (cdata[ptr+1]<<16) | (cdata[ptr+2]<<8) | (cdata[ptr+3]);
+    ptr+=4;
+
+    if (ptr+nal_size > size) {
+      //sstr << "NAL size (" << size32 << ") exceeds available data in file ("
+      //<< data_bytes_left_to_read << ")";
+
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_End_of_data,
+                                kEmptyString };
+      return err;
+    }
+
+    de265_push_NAL(decoder->ctx, cdata+ptr, nal_size, 0, nullptr);
+    ptr += nal_size;
+  }
+
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
 }
 
@@ -155,10 +182,36 @@ struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif_image*
 struct heif_error libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+
+  const uint8_t* cdata = (const uint8_t*)data;
+
+  size_t ptr=0;
+  while (ptr < size) {
+    if (ptr+4 > size) {
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_End_of_data,
+                                kEmptyString };
+      return err;
+    }
+
+    uint32_t nal_size = (cdata[ptr]<<24) | (cdata[ptr+1]<<16) | (cdata[ptr+2]<<8) | (cdata[ptr+3]);
+    ptr+=4;
+
+    if (ptr+nal_size > size) {
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_End_of_data,
+                                kEmptyString };
+      return err;
+    }
+
+    de265_push_NAL(decoder->ctx, cdata+ptr, nal_size, 0, nullptr);
+    ptr += nal_size;
+  }
 
   // TODO(farindk): Set "err" if data could not be pushed
-  de265_push_data(decoder->ctx, data, size, 0, nullptr);
+  //de265_push_data(decoder->ctx, data, size, 0, nullptr);
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
 }
 
