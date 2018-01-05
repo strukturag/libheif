@@ -18,9 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <assert.h>
-#include <sstream>
-
-#include "libde265/de265.h"
 
 #include "heif.h"
 
@@ -37,7 +34,7 @@ static void TestDecodeImage(struct heif_context* ctx,
   heif_image_handle_get_resolution(handle, &width, &height);
   assert(width >= 0);
   assert(height >= 0);
-  err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma);
+  err = heif_decode_image(handle, kFuzzColorSpace, kFuzzChroma, &image);
   if (err.code != heif_error_Ok) {
     return;
   }
