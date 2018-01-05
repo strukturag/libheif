@@ -72,6 +72,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_No_idat_box: return "No 'idat' box";
   case heif_suberror_No_meta_box: return "No 'meta' box";
   case heif_suberror_No_hdlr_box: return "No 'hdlr' box";
+  case heif_suberror_No_hvcC_box: return "No 'hvcC' box";
   case heif_suberror_No_pitm_box: return "No 'pitm' box";
   case heif_suberror_No_ipco_box: return "No 'ipco' box";
   case heif_suberror_No_ipma_box: return "No 'ipma' box";

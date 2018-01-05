@@ -114,6 +114,8 @@ enum heif_suberror_code {
 
   heif_suberror_No_hdlr_box,
 
+  heif_suberror_No_hvcC_box,
+
   heif_suberror_No_pitm_box,
 
   heif_suberror_No_ipco_box,
