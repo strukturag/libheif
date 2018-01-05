@@ -114,7 +114,7 @@ void libde265_free_decoder(void* decoder_raw)
 
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
 
-void libde265_v2_push_data(void* decoder_raw, uint8_t* data,uint32_t size)
+void libde265_v2_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
@@ -142,7 +142,7 @@ void libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
 
 #else
 
-void libde265_v1_push_data(void* decoder_raw, uint8_t* data,uint32_t size)
+void libde265_v1_push_data(void* decoder_raw, const void* data, size_t size)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 

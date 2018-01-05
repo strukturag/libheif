@@ -90,14 +90,14 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-int heif_context_get_number_of_images(heif_context* ctx)
+size_t heif_context_get_number_of_images(heif_context* ctx)
 {
   return ctx->context->get_top_level_images().size();
 }
 
 
 // NOTE: data types will change ! (TODO)
-heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_image_handle** img)
+heif_error heif_context_get_image_handle(heif_context* ctx, size_t image_idx, heif_image_handle** img)
 {
   if (!img) {
     // TODO
@@ -106,7 +106,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
   //const auto& IDs = ctx->context->get_image_IDs();
 
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
-  if (image_idx < 0 || image_idx >= images.size()) {
+  if (image_idx >= images.size()) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
     return err.error_struct(ctx->context.get());
   }
@@ -131,25 +131,30 @@ int heif_image_handle_is_primary_image(const struct heif_context* h,
 }
 
 
-int heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
-                                               const struct heif_image_handle* handle)
+size_t heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
+                                                  const struct heif_image_handle* handle)
 {
   return handle->image->get_thumbnails().size();
 }
 
 
-void heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                     const struct heif_image_handle* handle,
-                                     int thumbnail_idx,
-                                     struct heif_image_handle** out_thumbnail_handle)
+heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
+                                           const struct heif_image_handle* handle,
+                                           size_t thumbnail_idx,
+                                           struct heif_image_handle** out_thumbnail_handle)
 {
   assert(out_thumbnail_handle);
 
   auto thumbnails = handle->image->get_thumbnails();
-  assert((size_t)thumbnail_idx < thumbnails.size());
+  if (thumbnail_idx >= thumbnails.size()) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    return err.error_struct(h->context.get());
+  }
 
   *out_thumbnail_handle = new heif_image_handle();
   (*out_thumbnail_handle)->image = thumbnails[thumbnail_idx];
+
+  return Error::Ok.error_struct(h->context.get());
 }
 
 

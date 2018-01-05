@@ -205,12 +205,12 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
 LIBHEIF_API
-int heif_context_get_number_of_images(struct heif_context* h);
+size_t heif_context_get_number_of_images(struct heif_context* h);
 
 // Get the handle for a specific top-level image.
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle(struct heif_context* h,
-                                                int image_index,
+                                                size_t image_index,
                                                 struct heif_image_handle**);
 
 // Release image handle.
@@ -224,15 +224,15 @@ int heif_image_handle_is_primary_image(const struct heif_context* h,
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
-int heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
-                                               const struct heif_image_handle* handle);
+size_t heif_image_handle_get_number_of_thumbnails(const struct heif_context* h,
+                                                  const struct heif_image_handle* handle);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
-void heif_image_handle_get_thumbnail(const struct heif_context* h,
-                                     const struct heif_image_handle* main_image_handle,
-                                     int thumbnail_idx,
-                                     struct heif_image_handle** out_thumbnail_handle);
+struct heif_error heif_image_handle_get_thumbnail(const struct heif_context* h,
+                                                  const struct heif_image_handle* main_image_handle,
+                                                  size_t thumbnail_idx,
+                                                  struct heif_image_handle** out_thumbnail_handle);
 
 // Get the resolution of an image.
 LIBHEIF_API
@@ -242,15 +242,15 @@ void heif_image_handle_get_resolution(const struct heif_context* h,
 
 // TODO
 LIBHEIF_API
-int  heif_image_handle_get_exif_data_size(const struct heif_context* h,
-                                          const struct heif_image_handle* handle);
+size_t heif_image_handle_get_exif_data_size(const struct heif_context* h,
+                                           const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
 LIBHEIF_API
 void heif_image_handle_get_exif_data(const struct heif_context* h,
                                      const struct heif_image_handle* handle,
-                                     uint8_t* out_data);
+                                     void* out_data);
 
 
 // --- heif_image
@@ -384,7 +384,7 @@ struct heif_decoder_plugin
 
   // Push more data into the decoder. This can be called multiple times.
   // This may not be called after any decode_*() function has been called.
-  void (*push_data)(void* decoder, uint8_t* data,uint32_t size);
+  void (*push_data)(void* decoder, const void* data, size_t size);
 
 
   // --- After pushing the data into the decoder, exactly one of the decode functions may be called once.
