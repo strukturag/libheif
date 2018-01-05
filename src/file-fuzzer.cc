@@ -28,7 +28,7 @@
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   heif::HeifFile file;
   heif::Error error = file.read_from_memory(data, size);
-  if (error != heif::Error::OK) {
+  if (error != heif::Error::Ok) {
     // Not a valid HEIF file passed (which is most likely while fuzzing).
     return 0;
   }
@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   for (int i = 0; i < images_count; ++i) {
     std::shared_ptr<heif::HeifPixelImage> img;
     error = file.decode_image(ids[i], img);
-    if (error != heif::Error::OK) {
+    if (error != heif::Error::Ok) {
       // Ignore, we are only interested in crashes here.
     }
   }

@@ -29,7 +29,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   for (;;) {
     std::shared_ptr<heif::Box> box;
     heif::Error error = heif::Box::read(range, &box);
-    if (error != heif::Error::OK || range.error()) {
+    if (error != heif::Error::Ok || range.error()) {
       break;
     }
   }
