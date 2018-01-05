@@ -420,7 +420,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     if (!hvcC_box) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_hvcC_box);
-    } else if (hvcC_box->get_headers(data)) {
+    } else if (!hvcC_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
