@@ -185,9 +185,9 @@ void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
 }
 
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img,
                                     heif_colorspace colorspace,
-                                    heif_chroma chroma)
+                                    heif_chroma chroma,
+                                    struct heif_image** out_img)
 {
   std::shared_ptr<HeifPixelImage> img;
 
@@ -272,7 +272,11 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
                                              enum heif_channel channel,
                                              int* out_stride)
 {
-  assert(image->image);
+  if (!image || !image->image) {
+    *out_stride = 0;
+    return nullptr;
+  }
+
   return image->image->get_plane(channel, out_stride);
 }
 
@@ -281,6 +285,11 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
                               enum heif_channel channel,
                               int* out_stride)
 {
+  if (!image || !image->image) {
+    *out_stride = 0;
+    return nullptr;
+  }
+
   return image->image->get_plane(channel, out_stride);
 }
 

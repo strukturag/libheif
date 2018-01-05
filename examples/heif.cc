@@ -88,8 +88,7 @@ int main(int argc, char** argv)
   }
 
   struct heif_image* image;
-  err = heif_decode_image(handle, &image, heif_colorspace_YCbCr,
-      heif_chroma_420);
+  err = heif_decode_image(handle, heif_colorspace_undefined, heif_chroma_undefined, &image);
   if (err.code != 0) {
     heif_image_handle_release(handle);
     std::cerr << "Could not decode primage image: " << err.message << "\n";

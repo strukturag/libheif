@@ -190,7 +190,7 @@ struct heif_error
 
 
 // Allocate a new context for reading HEIF files.
-// Has to be freed again bei heif_context_free().
+// Has to be freed again with heif_context_free().
 LIBHEIF_API
 struct heif_context* heif_context_alloc(void);
 
@@ -198,7 +198,7 @@ struct heif_context* heif_context_alloc(void);
 LIBHEIF_API
 void heif_context_free(struct heif_context*);
 
-// Read a HEIF file from a file.
+// Read a HEIF file from a named disk file.
 LIBHEIF_API
 struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename);
 
@@ -209,7 +209,7 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
 
 // TODO
 // LIBHEIF_API
-struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
+//struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
 
 
 // --- heif_image_handle
@@ -260,13 +260,12 @@ void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
 
 // TODO
 //LIBHEIF_API
-size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
+//size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
 //LIBHEIF_API
-struct heif_error heif_image_handle_get_exif_data(const struct heif_image_handle* handle,
-                                                  void* out_data);
+//struct heif_error heif_image_handle_get_exif_data(const struct heif_image_handle* handle, void* out_data);
 
 
 // --- heif_image
@@ -317,9 +316,9 @@ enum heif_channel {
 // respectively, the original colorspace is taken.
 LIBHEIF_API
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
-                                    struct heif_image** out_img,
                                     enum heif_colorspace colorspace,
-                                    enum heif_chroma chroma);
+                                    enum heif_chroma chroma,
+                                    struct heif_image** out_img);
 
 // Get the colorspace format of the image.
 LIBHEIF_API
@@ -331,7 +330,7 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
 // TODO
 //LIBHEIF_API
-enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
+//enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 // Get width of the given image channel in pixels.
 LIBHEIF_API
