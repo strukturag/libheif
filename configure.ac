@@ -3,6 +3,9 @@ AC_INIT([libheif], [0.0.1], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([src/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
+NUMERIC_VERSION=0x00000100 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
+AC_SUBST(NUMERIC_VERSION)
+
 LIBHEIF_CURRENT=1
 LIBHEIF_REVISION=0
 LIBHEIF_AGE=0
@@ -101,5 +104,6 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare"
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([src/heif-version.h])
 AC_CONFIG_FILES([libheif.pc])
 AC_OUTPUT

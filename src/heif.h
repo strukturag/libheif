@@ -28,6 +28,8 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include "heif-version.h"
+
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
   #ifdef LIBHEIF_EXPORTS
   #define LIBHEIF_API __declspec(dllexport)
@@ -43,6 +45,24 @@ extern "C" {
 #else
   #define LIBHEIF_API
 #endif
+
+/* === version numbers === */
+
+// Version string of linked libde265 library.
+LIBHEIF_API const char *heif_get_version(void);
+// Numeric version of linked libde265 library, encoded as 0xHHMMLL00 = HH.MM.LL.
+LIBHEIF_API uint32_t heif_get_version_number(void);
+
+// Numeric part "HH" from above.
+LIBHEIF_API int heif_get_version_number_major(void);
+// Numeric part "MM" from above.
+LIBHEIF_API int heif_get_version_number_minor(void);
+// Numeric part "LL" from above.
+LIBHEIF_API int heif_get_version_number_maintenance(void);
+
+// Helper macros to check for given versions of libde265 at compile time.
+#define LIBHEIF_ENCODED_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
+#define LIBHEIF_CHECK_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_ENCODED_VERSION(h, m, l))
 
 struct heif_context;
 struct heif_image_handle;

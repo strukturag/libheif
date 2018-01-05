@@ -32,6 +32,25 @@
 
 using namespace heif;
 
+const char *heif_get_version(void) {
+  return (LIBHEIF_VERSION);
+}
+
+uint32_t heif_get_version_number(void) {
+  return (LIBHEIF_NUMERIC_VERSION);
+}
+
+int heif_get_version_number_major(void) {
+  return ((LIBHEIF_NUMERIC_VERSION)>>24) & 0xFF;
+}
+
+int heif_get_version_number_minor(void) {
+  return ((LIBHEIF_NUMERIC_VERSION)>>16) & 0xFF;
+}
+
+int heif_get_version_number_maintenance(void) {
+  return ((LIBHEIF_NUMERIC_VERSION)>>8) & 0xFF;
+}
 
 heif_context* heif_context_alloc()
 {

@@ -26,4 +26,5 @@ missing
 out.bin
 src/box-fuzzer
 src/file-fuzzer
+src/heif-version.h
 stamp-h1

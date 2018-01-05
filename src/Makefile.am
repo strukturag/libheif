@@ -45,7 +45,8 @@ endif
 
 
 libheif_la_HEADERS = \
-  heif.h
+  heif.h \
+  heif-version.h
 
 if HAVE_VISIBILITY
 libheif_la_CFLAGS += -DHAVE_VISIBILITY
