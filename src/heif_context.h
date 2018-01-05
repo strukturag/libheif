@@ -26,8 +26,6 @@
 #include <map>
 #include <set>
 
-struct heif_context;
-
 namespace heif {
 
   // This is a higher-level view than HeifFile.
@@ -65,7 +63,7 @@ namespace heif {
 
       std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
 
-      Error decode_image(struct heif_context* ctx, std::shared_ptr<HeifPixelImage>& img,
+      Error decode_image(std::shared_ptr<HeifPixelImage>& img,
                          heif_colorspace colorspace = heif_colorspace_undefined,
                          heif_chroma chroma = heif_chroma_undefined,
                          class HeifColorConversionParams* config = nullptr) const;
