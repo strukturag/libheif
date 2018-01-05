@@ -186,7 +186,7 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size);
 
 // TODO
-LIBHEIF_API
+// LIBHEIF_API
 struct heif_error heif_context_read_from_file_descriptor(struct heif_context*, int fd);
 
 
@@ -241,13 +241,13 @@ struct heif_error heif_image_handle_get_resolution(const struct heif_context* h,
                                                    int* width, int* height);
 
 // TODO
-LIBHEIF_API
+//LIBHEIF_API
 size_t heif_image_handle_get_exif_data_size(const struct heif_context* h,
                                             const struct heif_image_handle* handle);
 
 // TODO
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
-LIBHEIF_API
+//LIBHEIF_API
 struct heif_error heif_image_handle_get_exif_data(const struct heif_context* h,
                                                   const struct heif_image_handle* handle,
                                                   void* out_data);
@@ -315,7 +315,7 @@ LIBHEIF_API
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
 // TODO
-LIBHEIF_API
+//LIBHEIF_API
 enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 // Get width of the given image channel in pixels.
