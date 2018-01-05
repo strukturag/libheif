@@ -22,33 +22,94 @@
 
 #include "libde265/de265.h"
 
-#include "box.h"
-#include "heif_file.h"
+#include "heif.h"
+
+static const enum heif_colorspace kFuzzColorSpace = heif_colorspace_YCbCr;
+static const enum heif_chroma kFuzzChroma = heif_chroma_420;
+
+static void TestDecodeImage(struct heif_context* ctx,
+    const struct heif_image_handle* handle) {
+  struct heif_image* image;
+  struct heif_error err;
+  int width = 0, height = 0;
+
+  heif_image_handle_is_primary_image(ctx, handle);
+  heif_image_handle_get_resolution(ctx, handle, &width, &height);
+  assert(width > 0);
+  assert(height > 0);
+  err = heif_decode_image(ctx, handle, &image, kFuzzColorSpace, kFuzzChroma);
+  if (err.code != heif_error_Ok) {
+    return;
+  }
+
+  assert(heif_image_get_colorspace(image) == kFuzzColorSpace);
+  assert(heif_image_get_chroma_format(image) == kFuzzChroma);
+  assert(heif_image_get_width(image, heif_channel_Y) == width);
+  assert(heif_image_get_height(image, heif_channel_Y) == height);
+
+  // TODO(fancycode): Enable when the API returns the correct values.
+#if 0
+  assert(heif_image_get_width(image, heif_channel_Cb) == width / 2);
+  assert(heif_image_get_height(image, heif_channel_Cb) == height / 2);
+  assert(heif_image_get_width(image, heif_channel_Cr) == width / 2);
+  assert(heif_image_get_height(image, heif_channel_Cr) == height / 2);
+#endif
+
+  // TODO(fancycode): Should we also check the planes?
+
+  heif_image_release(image);
+}
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  heif::HeifFile file;
-  heif::Error error = file.read_from_memory(data, size);
-  if (error != heif::Error::Ok) {
+  struct heif_context* ctx;
+  struct heif_error err;
+  struct heif_image_handle* handle;
+  int images_count;
+
+  ctx = heif_context_alloc();
+  assert(ctx);
+  err = heif_context_read_from_memory(ctx, data, size);
+  if (err.code != heif_error_Ok) {
     // Not a valid HEIF file passed (which is most likely while fuzzing).
-    return 0;
+    goto quit;
   }
 
-  file.get_primary_image_ID();
-  int images_count = file.get_num_images();
-  std::vector<uint32_t> ids = file.get_image_IDs();
-  assert(ids.size() == images_count);
-  if (ids.empty()) {
+  err = heif_context_get_primary_image_handle(ctx, &handle);
+  if (err.code == heif_error_Ok) {
+    assert(heif_image_handle_is_primary_image(ctx, handle));
+    TestDecodeImage(ctx, handle);
+    heif_image_handle_release(handle);
+  }
+
+  images_count = heif_context_get_number_of_images(ctx);
+  if (!images_count) {
     // File doesn't contain any images.
-    return 0;
+    goto quit;
   }
 
-  std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
   for (int i = 0; i < images_count; ++i) {
-    std::shared_ptr<heif::HeifPixelImage> img;
-    error = file.decode_image(ids[i], img);
-    if (error != heif::Error::Ok) {
+    err = heif_context_get_image_handle(ctx, i, &handle);
+    if (err.code != heif_error_Ok) {
       // Ignore, we are only interested in crashes here.
+      continue;
     }
+
+    TestDecodeImage(ctx, handle);
+
+    int num_thumbnails = heif_image_handle_get_number_of_thumbnails(ctx, handle);
+    for (int t = 0; t < num_thumbnails; ++t) {
+      struct heif_image_handle* thumbnail_handle = nullptr;
+      heif_image_handle_get_thumbnail(ctx, handle, t, &thumbnail_handle);
+      if (thumbnail_handle) {
+        TestDecodeImage(ctx, thumbnail_handle);
+        heif_image_handle_release(thumbnail_handle);
+      }
+    }
+
+    heif_image_handle_release(handle);
   }
+
+quit:
+  heif_context_free(ctx);
   return 0;
 }
