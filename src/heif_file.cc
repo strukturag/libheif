@@ -562,7 +562,7 @@ Error HeifFile::decode_full_grid_image(struct heif_context* ctx, uint16_t ID,
   int h = grid.get_height();
   int bpp = 8; // TODO: how do we know ?
 
-  img = std::make_shared<HeifPixelImage>(ctx->context);
+  img = std::make_shared<HeifPixelImage>();
   img->create(w,h,
               heif_colorspace_YCbCr, // TODO: how do we know ?
               heif_chroma_420); // TODO: how do we know ?

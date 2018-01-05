@@ -183,19 +183,20 @@ struct heif_error heif_decode_image(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_image_create(struct heif_context* ctx,
-                                    int width, int height,
+struct heif_error heif_image_create(int width, int height,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma,
                                     struct heif_image** image)
 {
   struct heif_image* img = new heif_image;
-  img->image = std::make_shared<HeifPixelImage>(ctx->context);
+  img->image = std::make_shared<HeifPixelImage>();
 
   img->image->create(width, height, colorspace, chroma);
 
   *image = img;
-  return Error::Ok.error_struct(ctx->context.get());
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
+  return err;
 }
 
 void heif_image_release(const struct heif_image* img)
@@ -235,7 +236,9 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
                                        heif_channel channel, int width, int height, int bit_depth)
 {
   image->image->add_plane(channel, width, height, bit_depth);
-  return Error::Ok.error_struct(image->image->context().get());
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
+  return err;
 }
 
 

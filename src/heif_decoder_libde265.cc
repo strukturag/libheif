@@ -43,7 +43,7 @@ struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* 
     const struct de265_image* de265img, struct heif_image** image)
 {
   struct heif_image* out_img;
-  struct heif_error err = heif_image_create(decoder->heif_ctx,
+  struct heif_error err = heif_image_create(
     de265_get_image_width(de265img, 0),
     de265_get_image_height(de265img, 0),
     heif_colorspace_YCbCr, // TODO
