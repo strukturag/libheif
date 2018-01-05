@@ -398,7 +398,8 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     sstr << "Item with ID " << ID << " has no compressed data";
 
     return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data);
+                 heif_suberror_No_item_data,
+                 sstr.str());
   }
 
   Error error = Error(heif_error_Unsupported_feature,
