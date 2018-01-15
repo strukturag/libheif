@@ -23,6 +23,7 @@
 #endif
 
 #include <string.h>
+#include <iostream>
 
 #include "heif_context.h"
 #include "heif_image.h"
@@ -796,7 +797,7 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
 
   ImageOverlay overlay;
   overlay.parse(image_references.size(), overlay_data);
-  // std::cout << overlay.dump();
+  //std::cout << overlay.dump();
 
   if (image_references.size() != overlay.get_num_offsets()) {
     return Error(heif_error_Invalid_input,
@@ -842,8 +843,15 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
 
     err = img->overlay(overlay_img, dx,dy);
     if (err) {
-      // TODO: should we ignore the error when an overlay image is not visible at all?
-      return err;
+      if (err.error_code == heif_error_Invalid_input &&
+          err.sub_error_code == heif_suberror_Overlay_image_outside_of_canvas) {
+        // NOP, ignore this error
+
+        err = Error::Ok;
+      }
+      else {
+        return err;
+      }
     }
   }
 
