@@ -152,6 +152,10 @@ enum heif_suberror_code {
 
   heif_suberror_Invalid_clean_aperture = 120,
 
+  // Invalid specification of overlay image
+  heif_suberror_Invalid_overlay_data = 121,
+
+
 
   // --- Memory_allocation_error ---
 

@@ -144,6 +144,7 @@ public:
   uint32_t get_canvas_width() const { return m_width; }
   uint32_t get_canvas_height() const { return m_height; }
 
+  size_t get_num_offsets() const { return m_offsets.size(); }
   void get_offset(int image_index, int32_t* x, int32_t* y) const;
 
 private:
@@ -887,6 +888,12 @@ Error HeifFile::decode_overlay_image(uint16_t ID,
   overlay.parse(image_references.size(), overlay_data);
   std::cout << overlay.dump();
 
+  if (image_references.size() != overlay.get_num_offsets()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_overlay_data,
+                 "Number of image offsets does not match the number of image references");
+  }
+
   int w = overlay.get_canvas_width();
   int h = overlay.get_canvas_height();
 
@@ -903,6 +910,28 @@ Error HeifFile::decode_overlay_image(uint16_t ID,
   overlay.get_background_color(bkg_color);
 
   Error err = img->fill(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+  if (err) {
+    return err;
+  }
+
+
+  for (size_t i=0;i<image_references.size();i++) {
+    std::shared_ptr<HeifPixelImage> overlay_img;
+    err = decode_image(image_references[i], overlay_img);
+    if (err != Error::Ok) {
+      return err;
+    }
+
+    overlay_img = overlay_img->convert_colorspace(heif_colorspace_RGB, heif_chroma_444);
+    if (!overlay_img) {
+      assert(false); // TODO: error: no colorspace transformation found
+    }
+
+    int32_t dx,dy;
+    overlay.get_offset(i, &dx,&dy);
+
+    err = img->overlay(overlay_img, dx,dy);
+  }
 
   return err;
 }

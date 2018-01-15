@@ -515,3 +515,57 @@ Error HeifPixelImage::fill(uint16_t r, uint16_t g, uint16_t b, uint16_t a)
 
   return Error::Ok;
 }
+
+
+Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,int dy)
+{
+  std::set<enum heif_channel> channels = overlay->get_channel_set();
+
+  for (heif_channel channel : channels) {
+    int in_stride;
+    const uint8_t* in_p;
+
+    int out_stride;
+    uint8_t* out_p;
+
+    in_p = overlay->get_plane(channel, &in_stride);
+    out_p = get_plane(channel, &out_stride);
+
+    int in_w = overlay->get_width(channel);
+    int in_h = overlay->get_height(channel);
+
+    int out_w = get_width(channel);
+    int out_h = get_height(channel);
+
+    if (dx+in_w > out_w) {
+      in_w = out_w - dx;
+    }
+
+    if (dy+in_h > out_h) {
+      in_h = out_h - dy;
+    }
+
+    if (in_w < 0 || in_h < 0) {
+      continue;
+    }
+
+    int in_x0 = 0;
+    int in_y0 = 0;
+    int out_x0 = dx;
+    int out_y0 = dy;
+    if (dx<0) { in_x0 = -dx; out_x0=0; }
+    if (dy<0) { in_y0 = -dy; out_y0=0; }
+
+    if (in_w <= in_x0) {
+      continue;
+    }
+
+    for (int y=in_y0; y<in_h; y++) {
+      memcpy(out_p + out_x0 + (out_y0 + y-in_y0)*out_stride,
+             in_p + in_x0 + y*in_stride,
+             in_w-in_x0);
+    }
+  }
+
+  return Error::Ok;
+}

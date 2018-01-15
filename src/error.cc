@@ -86,6 +86,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_No_properties_assigned_to_item: return "No properties assigned to item";
   case heif_suberror_No_item_data: return "Item has no data";
   case heif_suberror_Invalid_clean_aperture: return "Invalid clean-aperture specification";
+  case heif_suberror_Invalid_overlay_data: return "Invalid overlay data";
 
     // --- Memory_allocation_error ---
 
