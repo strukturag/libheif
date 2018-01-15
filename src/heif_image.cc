@@ -62,6 +62,12 @@ void HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
 }
 
 
+bool HeifPixelImage::has_channel(heif_channel channel) const
+{
+  return (m_planes.find(channel) != m_planes.end());
+}
+
+
 int HeifPixelImage::get_width(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
@@ -127,6 +133,19 @@ const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_str
 }
 
 
+void HeifPixelImage::transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
+                                                  heif_channel src_channel,
+                                                  heif_channel dst_channel)
+{
+  // TODO: check that dst_channel does not exist yet
+
+  ImagePlane plane = source->m_planes[src_channel];
+  source->m_planes.erase(src_channel);
+
+  m_planes.insert( std::make_pair(dst_channel, plane) );
+}
+
+
 std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspace target_colorspace,
                                                                    heif_chroma target_chroma) const
 {
@@ -151,6 +170,13 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
       if (get_chroma_format() == heif_chroma_420 &&
           target_chroma == heif_chroma_interleaved_24bit) {
         out_img = convert_YCbCr420_to_RGB24();
+      }
+
+      // 4:2:0 input -> RGBA 32bit
+
+      if (get_chroma_format() == heif_chroma_420 &&
+          target_chroma == heif_chroma_interleaved_32bit) {
+        out_img = convert_YCbCr420_to_RGB32();
       }
     }
   }
@@ -267,6 +293,62 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
       out_p[y*out_p_stride + 3*x + 0] = clip(y_val + 1.596 * vv);
       out_p[y*out_p_stride + 3*x + 1] = clip(y_val - 0.813 * vv - 0.391 * uv);
       out_p[y*out_p_stride + 3*x + 2] = clip(y_val + 2.018 * uv);
+    }
+  }
+
+  return outimg;
+}
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB32() const
+{
+  if (get_bits_per_pixel(heif_channel_Y) != 8 ||
+      get_bits_per_pixel(heif_channel_Cb) != 8 ||
+      get_bits_per_pixel(heif_channel_Cr) != 8) {
+    return nullptr;
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_interleaved_32bit);
+
+  outimg->add_plane(heif_channel_interleaved, m_width, m_height, 32);
+
+  const bool with_alpha = has_channel(heif_channel_Alpha);
+
+  const uint8_t *in_y,*in_cb,*in_cr,*in_a = nullptr;
+  int in_y_stride, in_cb_stride, in_cr_stride, in_a_stride;
+
+  uint8_t *out_p;
+  int out_p_stride;
+
+  in_y  = get_plane(heif_channel_Y,  &in_y_stride);
+  in_cb = get_plane(heif_channel_Cb, &in_cb_stride);
+  in_cr = get_plane(heif_channel_Cr, &in_cr_stride);
+  if (with_alpha) {
+    in_a = get_plane(heif_channel_Alpha, &in_a_stride);
+  }
+
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+
+  int x,y;
+  for (y=0;y<m_height;y++) {
+    for (x=0;x<m_width;x++) {
+      int yv = in_y [y  *in_y_stride  + x] - 16;
+      int uv = in_cb[y/2*in_cb_stride + x/2] - 128;
+      int vv = in_cr[y/2*in_cr_stride + x/2] - 128;
+
+      float y_val = 1.164 * yv;
+      out_p[y*out_p_stride + 4*x + 0] = clip(y_val + 1.596 * vv);
+      out_p[y*out_p_stride + 4*x + 1] = clip(y_val - 0.813 * vv - 0.391 * uv);
+      out_p[y*out_p_stride + 4*x + 2] = clip(y_val + 2.018 * uv);
+
+      if (with_alpha) {
+        out_p[y*out_p_stride + 4*x + 3] = in_a[y*in_a_stride + x];
+      }
+      else {
+        out_p[y*out_p_stride + 4*x + 3] = 0xFF;
+      }
     }
   }
 

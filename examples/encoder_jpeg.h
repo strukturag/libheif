@@ -32,11 +32,11 @@ class JpegEncoder : public Encoder {
  public:
   JpegEncoder(int quality);
 
-  heif_colorspace colorspace() const override {
+  heif_colorspace colorspace(bool has_alpha) const override {
     return heif_colorspace_YCbCr;
   }
 
-  heif_chroma chroma() const override {
+  heif_chroma chroma(bool has_alpha) const override {
     return heif_chroma_420;
   }
 

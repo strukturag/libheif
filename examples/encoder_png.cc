@@ -67,10 +67,12 @@ bool PngEncoder::Encode(const struct heif_image* image,
 
   png_init_io(png_ptr, fp);
 
+  bool withAlpha = (heif_image_get_chroma_format(image) == heif_chroma_interleaved_32bit);
+
   int width = heif_image_get_width(image, heif_channel_interleaved);
   int height = heif_image_get_height(image, heif_channel_interleaved);
   static const int kBitDepth = 8;
-  static const int kColorType = PNG_COLOR_TYPE_RGB;
+  static const int kColorType = withAlpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB;
   png_set_IHDR(png_ptr, info_ptr, width, height, kBitDepth, kColorType,
       PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);

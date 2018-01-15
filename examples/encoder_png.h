@@ -26,12 +26,15 @@ class PngEncoder : public Encoder {
  public:
   PngEncoder();
 
-  heif_colorspace colorspace() const override {
+  heif_colorspace colorspace(bool has_alpha) const override {
     return heif_colorspace_RGB;
   }
 
-  heif_chroma chroma() const override {
-    return heif_chroma_interleaved_24bit;
+  heif_chroma chroma(bool has_alpha) const override {
+    if (has_alpha)
+      return heif_chroma_interleaved_32bit;
+    else
+      return heif_chroma_interleaved_24bit;
   }
 
   bool Encode(const struct heif_image* image,

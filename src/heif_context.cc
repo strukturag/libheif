@@ -355,6 +355,8 @@ Error HeifContext::interpret_heif_file()
       uint32_t type = iref_box->get_reference_type(image->get_id());
 
       if (type==fourcc("thmb")) {
+        // --- this is a thumbnail image, attach to the main image
+
         std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
@@ -378,6 +380,49 @@ Error HeifContext::interpret_heif_file()
         }
 
         master_iter->second->add_thumbnail(image);
+      }
+      else if (type==fourcc("auxl")) {
+        // --- this is an auxiliary image
+        //     check whether it is an alpha channel and attach to the main image if yes
+
+        std::vector<Box_ipco::Property> properties;
+        Error err = m_heif_file->get_properties(image->get_id(), properties);
+        if (err) {
+          return err;
+        }
+
+        std::shared_ptr<Box_auxC> auxC_property;
+        for (const auto& property : properties) {
+          auto auxC = std::dynamic_pointer_cast<Box_auxC>(property.property);
+          if (auxC) {
+            auxC_property = auxC;
+          }
+        }
+
+        if (!auxC_property) {
+          std::stringstream sstr;
+          sstr << "No auxC property for image " << image->get_id();
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Auxiliary_image_type_unspecified,
+                       sstr.str());
+        }
+
+        std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
+        if (refs.size() != 1) {
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Unspecified,
+                       "Too many auxiliary image references");
+        }
+
+
+        if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1") {
+          printf("ALPHA\n");
+
+          image->set_is_alpha_channel_of(refs[0]);
+
+          auto master_iter = m_all_images.find(refs[0]);
+          master_iter->second->set_alpha_channel(image);
+        }
       }
       else {
         // 'image' is a normal image, add it as a top-level image
@@ -476,6 +521,8 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 Error HeifContext::decode_image(uint32_t ID,
                                 std::shared_ptr<HeifPixelImage>& img) const
 {
+  const auto imginfo = m_all_images.find(ID)->second;
+
   std::string image_type = m_heif_file->get_image_type(ID);
 
   Error error;
@@ -561,6 +608,25 @@ Error HeifContext::decode_image(uint32_t ID,
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_image_type);
   }
+
+
+
+  // --- add alpha channel, if available
+
+  std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
+  if (alpha_image) {
+    std::shared_ptr<HeifPixelImage> alpha;
+    Error err = alpha_image->decode_image(alpha);
+    if (err) {
+      return err;
+    }
+
+
+    // TODO: check that sizes are the same and the we have an Y channel
+
+    img->transfer_plane_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha);
+  }
+
 
 
   // --- apply image transformations

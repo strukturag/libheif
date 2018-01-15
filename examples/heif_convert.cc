@@ -146,8 +146,13 @@ int main(int argc, char** argv)
       return 1;
     }
 
+    int has_alpha = heif_image_handle_has_alpha_channel(handle);
+
     struct heif_image* image;
-    err = heif_decode_image(handle, encoder->colorspace(), encoder->chroma(), &image);
+    err = heif_decode_image(handle,
+                            encoder->colorspace(has_alpha),
+                            encoder->chroma(has_alpha),
+                            &image);
     if (err.code) {
       heif_image_handle_release(handle);
       std::cerr << "Could not decode HEIF image: " << idx << ": "

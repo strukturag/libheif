@@ -29,8 +29,8 @@ class Encoder {
  public:
   virtual ~Encoder() {}
 
-  virtual heif_colorspace colorspace() const = 0;
-  virtual heif_chroma chroma() const = 0;
+  virtual heif_colorspace colorspace(bool has_alpha) const = 0;
+  virtual heif_chroma chroma(bool has_alpha) const = 0;
 
   virtual bool Encode(const struct heif_image* image,
       const std::string& filename) = 0;

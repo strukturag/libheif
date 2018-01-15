@@ -43,6 +43,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 
   void add_plane(heif_channel channel, int width, int height, int bit_depth);
 
+  bool has_channel(heif_channel channel) const;
+
 
   int get_width() const { return m_width; }
 
@@ -63,6 +65,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
   uint8_t* get_plane(enum heif_channel channel, int* out_stride);
   const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
 
+  void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
+                                    heif_channel src_channel,
+                                    heif_channel dst_channel);
 
   std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
                                                      heif_chroma chroma) const;
@@ -101,6 +106,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 
   std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB() const;
   std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB24() const;
+  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB32() const;
   std::shared_ptr<HeifPixelImage> convert_RGB_to_RGB24() const;
 };
 

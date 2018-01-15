@@ -189,6 +189,13 @@ void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
   if (height) *height = h;
 }
 
+
+int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
+{
+  return handle->image->get_alpha_channel() != nullptr;
+}
+
+
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma,
@@ -271,6 +278,7 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
   return err;
 }
+
 
 
 const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,

@@ -363,6 +363,8 @@ namespace heif {
   public:
   Box_auxC(const BoxHeader& hdr) : Box(hdr) { }
 
+    std::string get_aux_type() const { return m_aux_type; }
+
     std::string dump(Indent&) const override;
 
   protected:

@@ -54,6 +54,12 @@ namespace heif {
 
       bool is_thumbnail() const { return m_is_thumbnail; }
 
+      void set_is_alpha_channel_of(uint32_t id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
+      void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel=img; }
+
+      bool is_alpha_channel() const { return m_is_alpha_channel; }
+      std::shared_ptr<Image> get_alpha_channel() const { return m_alpha_channel; }
+
       uint32_t get_id() const { return m_id; }
 
       int get_width() const { return m_width; }
@@ -79,6 +85,10 @@ namespace heif {
       uint32_t m_thumbnail_ref_id;
 
       std::vector<std::shared_ptr<Image>> m_thumbnails;
+
+      bool m_is_alpha_channel = false;
+      uint32_t m_alpha_channel_ref_id;
+      std::shared_ptr<Image> m_alpha_channel;
     };
 
 

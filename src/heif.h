@@ -158,6 +158,8 @@ enum heif_suberror_code {
   // Overlay image completely outside of visible canvas area
   heif_suberror_Overlay_image_outside_of_canvas = 122,
 
+  heif_suberror_Auxiliary_image_type_unspecified = 123,
+
 
 
   // --- Memory_allocation_error ---
@@ -275,6 +277,10 @@ LIBHEIF_API
 void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
                                       int* width, int* height);
 
+LIBHEIF_API
+int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
+
+
 // TODO
 //LIBHEIF_API
 //size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
@@ -305,7 +311,8 @@ enum heif_chroma {
   heif_chroma_420=1,
   heif_chroma_422=2,
   heif_chroma_444=3,
-  heif_chroma_interleaved_24bit=10
+  heif_chroma_interleaved_24bit=10,
+  heif_chroma_interleaved_32bit=11
 };
 
 enum heif_colorspace {
