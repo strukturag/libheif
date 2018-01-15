@@ -407,6 +407,9 @@ struct heif_decoder_plugin
 
   // --- version 1 functions ---
 
+  // Human-readable name of the plugin
+  const char* (*get_plugin_name)();
+
   // Create a new decoder context for decoding an image
   struct heif_error (*new_decoder)(void** decoder);
 

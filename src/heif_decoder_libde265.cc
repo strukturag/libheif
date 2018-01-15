@@ -39,6 +39,26 @@ static const char kSuccess[] = "Success";
 static const char kEmptyString[] = "";
 
 
+#define MAX_PLUGIN_NAME_LENGTH 80
+
+static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
+
+
+const char* libde265_plugin_name()
+{
+  strcpy(plugin_name, "libde265 HEVC decoder");
+
+  const char* libde265_version = de265_get_version();
+
+  if (strlen(libde265_version) + 10 < MAX_PLUGIN_NAME_LENGTH) {
+    strcat(plugin_name,", version ");
+    strcat(plugin_name,libde265_version);
+  }
+
+  return plugin_name;
+}
+
+
 struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* decoder,
     const struct de265_image* de265img, struct heif_image** image)
 {
@@ -256,6 +276,7 @@ struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif_image*
 static const struct heif_decoder_plugin decoder_libde265
 {
   .plugin_api_version = 1,
+  .get_plugin_name = libde265_plugin_name,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,
   .push_data = libde265_v2_push_data,
@@ -267,6 +288,7 @@ static const struct heif_decoder_plugin decoder_libde265
 static const struct heif_decoder_plugin decoder_libde265
 {
   .plugin_api_version = 1,
+  .get_plugin_name = libde265_plugin_name,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,
   .push_data = libde265_v1_push_data,
