@@ -7,54 +7,152 @@ function StringToArrayBuffer(str) {
     return buf;
 }
 
+var HeifImage = function(handle) {
+    this.handle = handle;
+    this.img = null;
+};
+
+HeifImage.prototype.free = function() {
+    if (this.handle) {
+        libheif.heif_image_handle_release(this.handle);
+        this.handle = null;
+    }
+};
+
+HeifImage.prototype._ensureImage = function() {
+    if (this.img) {
+        return;
+    }
+
+    var img = libheif.heif_js_decode_image(this.handle,
+        libheif.heif_colorspace_YCbCr, libheif.heif_chroma_420);
+    if (!img || img.code) {
+        console.log("Decoding image failed", this.handle, img);
+        return;
+    }
+
+    this.data = new Uint8Array(StringToArrayBuffer(img.data));
+    delete img.data;
+    this.img = img;
+};
+
+HeifImage.prototype.get_width = function() {
+    this._ensureImage();
+    return this.img.width;
+};
+
+HeifImage.prototype.get_height = function() {
+    this._ensureImage();
+    return this.img.height;
+};
+
+HeifImage.prototype.is_primary = function() {
+    this._ensureImage();
+    return !!this.img.is_primary;
+}
+
+HeifImage.prototype.display = function(image_data, callback) {
+    // Defer color conversion.
+    var w = this.get_width();
+    var h = this.get_height();
+
+    setTimeout(function() {
+        this._ensureImage();
+        if (!this.img) {
+            // Decoding failed.
+            callback(null);
+            return;
+        }
+
+        var yval;
+        var uval;
+        var vval;
+        var xpos = 0;
+        var ypos = 0;
+        var w2 = w >> 1;
+        var maxi = w2*h;
+        var yoffset = 0;
+        var uoffset = 0;
+        var voffset = 0;
+        var x2;
+        var i2;
+        var y = this.data;
+        var u = this.data.subarray(w * h, w * h + (w * h / 4));
+        var v = this.data.subarray(w * h + (w * h / 4), w * h + (w * h / 2));
+        var stridey = w;
+        var strideu = w / 2;
+        var stridev = w / 2;
+        var dest = image_data.data;
+        for (var i=0; i<maxi; i++) {
+            i2 = i << 1;
+            x2 = (xpos << 1);
+            yval = 1.164 * (y[yoffset + x2] - 16);
+
+            uval = u[uoffset + xpos] - 128;
+            vval = v[voffset + xpos] - 128;
+            dest[(i2<<2)+0] = yval + 1.596 * vval;
+            dest[(i2<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
+            dest[(i2<<2)+2] = yval + 2.018 * uval;
+            dest[(i2<<2)+3] = 0xff;
+
+            yval = 1.164 * (y[yoffset + x2 + 1] - 16);
+            dest[((i2+1)<<2)+0] = yval + 1.596 * vval;
+            dest[((i2+1)<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
+            dest[((i2+1)<<2)+2] = yval + 2.018 * uval;
+            dest[((i2+1)<<2)+3] = 0xff;
+
+            xpos++;
+            if (xpos === w2) {
+                xpos = 0;
+                ypos++;
+                yoffset += stridey;
+                uoffset = ((ypos >> 1) * strideu);
+                voffset = ((ypos >> 1) * stridev);
+            }
+        }
+        callback(image_data);
+    }.bind(this), 0);
+};
+
 var HeifDecoder = function() {
+    this.decoder = null;
 };
 
 HeifDecoder.prototype.decode = function(buffer) {
-    var input = new libheif.HeifFile();
-    var error = input.read_from_memory(buffer);
-    if (error.error_code !== libheif.heif_error_Ok) {
+    if (this.decoder) {
+        libheif.heif_context_free(this.decoder);
+    }
+    this.decoder = libheif.heif_context_alloc();
+    if (!this.decoder) {
+        console.log("Could not create HEIF context");
+        return [];
+    }
+    var error = libheif.heif_context_read_from_memory(this.decoder, buffer);
+    if (error.code !== libheif.heif_error_Ok) {
         console.log("Could not parse HEIF file", error);
         return [];
     }
 
-    if (!input.get_num_images()) {
+    var count = libheif.heif_context_get_number_of_images(this.decoder);
+    if (!count) {
         console.log("No images found");
         return [];
     }
 
-    var images = input.get_image_IDs();
-    if (!images) {
-        return [];
-    }
-
-    var primary = input.get_primary_image_ID();
     var result = [];
-    var size = images.size();
-    for (var i = 0; i < size; i++) {
-        var idx = images.get(i);
-        var img = input.get_compressed_image_data(idx, buffer);
-        if (!img || img.error_code) {
-            console.log("Could not get image data for id", idx, img);
+    for (var i = 0; i < count; i++) {
+        var handle = libheif.heif_js_context_get_image_handle(this.decoder, i);
+        if (!handle || handle.code) {
+            console.log("Could not get image data for id", i, handle);
             continue;
         }
 
-        result.push({
-            "primary": idx === primary,
-            "type": img.type,
-            "data": new Uint8Array(StringToArrayBuffer(img.data))
-        });
+        result.push(new HeifImage(handle));
     }
     return result;
 };
 
 var libheif = {
-    // Expose C API.
-    /** @expose */
-    heif_get_version: Module.heif_get_version,
-    /** @expose */
-    heif_get_version_number: Module.heif_get_version_number,
-
     // Expose high-level API.
     /** @expose */
     HeifDecoder: HeifDecoder,
@@ -78,21 +176,37 @@ var libheif = {
 };
 
 var key;
-for (key in Module.heif_error_code) {
-    if (!Module.heif_error_code.hasOwnProperty(key) ||
-        key === "values") {
+
+// Expose enum values.
+var enums = {
+    "heif_error_code": true,
+    "heif_suberror_code": true,
+    "heif_compression_format": true,
+    "heif_chroma": true,
+    "heif_colorspace": true,
+    "heif_channel": true
+};
+var e;
+for (e in enums) {
+    if (!enums.hasOwnProperty(e)) {
         continue;
     }
+    for (key in Module[e]) {
+        if (!Module[e].hasOwnProperty(key) ||
+            key === "values") {
+            continue;
+        }
 
-    libheif[key] = Module.heif_error_code[key];
+        libheif[key] = Module[e][key];
+    }
 }
-for (key in Module.heif_suberror_code) {
-    if (!Module.heif_suberror_code.hasOwnProperty(key) ||
-        key === "values") {
+
+// Expose internal C API.
+for (key in Module) {
+    if (enums.hasOwnProperty(key) || key.indexOf("heif_") !== 0) {
         continue;
     }
-
-    libheif[key] = Module.heif_suberror_code[key];
+    libheif[key] = Module[key];
 }
 
 // don't pollute the global namespace
