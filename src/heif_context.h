@@ -87,7 +87,8 @@ namespace heif {
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
     void register_decoder(uint32_t type, const heif_decoder_plugin* decoder_plugin) {
-      // TODO: move plugin registry from HeifFile to HeifContext and decode image in this class
+      // TODO: register a plugin for each 'type'
+      m_decoder_plugin = decoder_plugin;
     }
 
     Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
