@@ -182,7 +182,18 @@ body {
             hevc_decoder.free();
         }.bind(this);
 
-        hevc_decoder.push_data(image_data, 0);
+        var pos = 0;
+        var length = image_data.length;
+        var nal_header = new Uint8Array([0, 0, 1]);
+        while (pos < length) {
+            var size = image_data[pos] << 24 |
+                image_data[pos+1] << 16 |
+                image_data[pos+2] << 8 |
+                image_data[pos+3];
+            hevc_decoder.push_data(nal_header, 0);
+            hevc_decoder.push_data(image_data.slice(pos+4, pos+4+size), 0);
+            pos += 4 + size;
+        }
         hevc_decoder.flush();
 
         var do_decode = function() {
