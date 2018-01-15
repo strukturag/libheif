@@ -1,29 +1,29 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 bin_PROGRAMS = \
-  convert \
-  heif
+  heif-convert \
+  heif-info
 
-convert_DEPENDENCIES = ../src/libheif.la
-convert_CXXFLAGS = -I../src $(libde265_CFLAGS)
-convert_LDFLAGS =
-convert_LDADD = ../src/libheif.la $(libde265_LIBS)
-convert_SOURCES = encoder.h convert.cc
+heif_convert_DEPENDENCIES = ../src/libheif.la
+heif_convert_CXXFLAGS = -I../src $(libde265_CFLAGS)
+heif_convert_LDFLAGS =
+heif_convert_LDADD = ../src/libheif.la $(libde265_LIBS)
+heif_convert_SOURCES = encoder.h heif_convert.cc
 
 if HAVE_LIBJPEG
-convert_CXXFLAGS += $(libjpeg_CFLAGS)
-convert_LDADD += $(libjpeg_LIBS)
-convert_SOURCES += encoder_jpeg.cc encoder_jpeg.h
+heif_convert_CXXFLAGS += $(libjpeg_CFLAGS)
+heif_convert_LDADD += $(libjpeg_LIBS)
+heif_convert_SOURCES += encoder_jpeg.cc encoder_jpeg.h
 endif
 
 if HAVE_LIBPNG
-convert_CXXFLAGS += $(libpng_CFLAGS)
-convert_LDADD += $(libpng_LIBS)
-convert_SOURCES += encoder_png.cc encoder_png.h
+heif_convert_CXXFLAGS += $(libpng_CFLAGS)
+heif_convert_LDADD += $(libpng_LIBS)
+heif_convert_SOURCES += encoder_png.cc encoder_png.h
 endif
 
-heif_DEPENDENCIES = ../src/libheif.la
-heif_CXXFLAGS = -I../src $(libde265_CFLAGS)
-heif_LDFLAGS =
-heif_LDADD = ../src/libheif.la $(libde265_LIBS)
-heif_SOURCES = heif.cc
+heif_info_DEPENDENCIES = ../src/libheif.la
+heif_info_CXXFLAGS = -I../src $(libde265_CFLAGS)
+heif_info_LDFLAGS =
+heif_info_LDADD = ../src/libheif.la $(libde265_LIBS)
+heif_info_SOURCES = heif_info.cc
