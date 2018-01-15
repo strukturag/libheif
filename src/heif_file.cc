@@ -26,7 +26,6 @@
 #include "heif_image.h"
 
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <utility>
 #include <assert.h>

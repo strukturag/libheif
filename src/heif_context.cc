@@ -36,9 +36,33 @@
 using namespace heif;
 
 
-static int32_t readvec(const std::vector<uint8_t>& data,int& ptr,int len)
+static int32_t readvec_signed(const std::vector<uint8_t>& data,int& ptr,int len)
 {
-  int32_t val=0;
+  const uint32_t high_bit = 0x80<<((len-1)*8);
+
+  uint32_t val=0;
+  while (len--) {
+    val <<= 8;
+    val |= data[ptr++];
+  }
+
+  bool negative = val & high_bit;
+  val &= ~high_bit;
+
+  if (negative) {
+    return -(high_bit-val);
+  }
+  else {
+    return val;
+  }
+
+  return val;
+}
+
+
+static uint32_t readvec(const std::vector<uint8_t>& data,int& ptr,int len)
+{
+  uint32_t val=0;
   while (len--) {
     val <<= 8;
     val |= data[ptr++];
@@ -197,8 +221,8 @@ Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
   m_offsets.resize(num_images);
 
   for (int i=0;i<num_images;i++) {
-    m_offsets[i].x = readvec(data,ptr,field_len);
-    m_offsets[i].y = readvec(data,ptr,field_len);
+    m_offsets[i].x = readvec_signed(data,ptr,field_len);
+    m_offsets[i].y = readvec_signed(data,ptr,field_len);
   }
 
   return Error::Ok;
@@ -772,6 +796,7 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
 
   ImageOverlay overlay;
   overlay.parse(image_references.size(), overlay_data);
+  // std::cout << overlay.dump();
 
   if (image_references.size() != overlay.get_num_offsets()) {
     return Error(heif_error_Invalid_input,
