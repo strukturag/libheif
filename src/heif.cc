@@ -106,6 +106,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 
   *img = new heif_image_handle();
   (*img)->image = std::move(primary_image);
+  (*img)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -133,6 +134,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
 
   *img = new heif_image_handle();
   (*img)->image = images[image_idx];
+  (*img)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }

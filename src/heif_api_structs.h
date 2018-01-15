@@ -31,6 +31,7 @@
 struct heif_image_handle
 {
   std::shared_ptr<heif::HeifContext::Image> image;
+  std::shared_ptr<heif::HeifContext> context;
 };
 
 
