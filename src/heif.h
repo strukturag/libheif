@@ -155,6 +155,9 @@ enum heif_suberror_code {
   // Invalid specification of overlay image
   heif_suberror_Invalid_overlay_data = 121,
 
+  // Overlay image completely outside of visible canvas area
+  heif_suberror_Overlay_image_outside_of_canvas = 122,
+
 
 
   // --- Memory_allocation_error ---

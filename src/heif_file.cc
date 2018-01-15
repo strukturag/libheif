@@ -931,6 +931,10 @@ Error HeifFile::decode_overlay_image(uint16_t ID,
     overlay.get_offset(i, &dx,&dy);
 
     err = img->overlay(overlay_img, dx,dy);
+    if (err) {
+      // TODO: should we ignore the error when an overlay image is not visible at all?
+      return err;
+    }
   }
 
   return err;

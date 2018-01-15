@@ -537,27 +537,50 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
     int out_w = get_width(channel);
     int out_h = get_height(channel);
 
+    // overlay image extends past the right border -> cut width for copy
     if (dx+in_w > out_w) {
       in_w = out_w - dx;
     }
 
+    // overlay image extends past the bottom border -> cut height for copy
     if (dy+in_h > out_h) {
       in_h = out_h - dy;
     }
 
+    // overlay image completely outside right or bottom border -> do not copy
     if (in_w < 0 || in_h < 0) {
-      continue;
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Overlay_image_outside_of_canvas,
+                   "Overlay image outside of right or bottom canvas border");
     }
 
+
+    // calculate top-left point where to start copying in source and destination
     int in_x0 = 0;
     int in_y0 = 0;
     int out_x0 = dx;
     int out_y0 = dy;
-    if (dx<0) { in_x0 = -dx; out_x0=0; }
-    if (dy<0) { in_y0 = -dy; out_y0=0; }
 
-    if (in_w <= in_x0) {
-      continue;
+    // overlay image started outside of left border
+    // -> move start into the image and start at left output column
+    if (dx<0) {
+      in_x0 = -dx;
+      out_x0=0;
+    }
+
+    // overlay image started outside of top border
+    // -> move start into the image and start at top output row
+    if (dy<0) {
+      in_y0 = -dy;
+      out_y0=0;
+    }
+
+    // if overlay image is completely outside at left border, do not copy anything.
+    if (in_w <= in_x0 ||
+        in_h <= in_y0) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Overlay_image_outside_of_canvas,
+                   "Overlay image outside of left or top canvas border");
     }
 
     for (int y=in_y0; y<in_h; y++) {

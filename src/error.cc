@@ -87,6 +87,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_No_item_data: return "Item has no data";
   case heif_suberror_Invalid_clean_aperture: return "Invalid clean-aperture specification";
   case heif_suberror_Invalid_overlay_data: return "Invalid overlay data";
+  case heif_suberror_Overlay_image_outside_of_canvas: return "Overlay image outside of canvas area";
 
     // --- Memory_allocation_error ---
 
