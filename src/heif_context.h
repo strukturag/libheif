@@ -42,7 +42,7 @@ namespace heif {
 
     class Image : public ErrorBuffer {
     public:
-      Image(std::shared_ptr<HeifFile> file, uint32_t id);
+      Image(HeifContext* file, uint32_t id);
       ~Image();
 
       void set_resolution(int w,int h) { m_width=w; m_height=h; }
@@ -69,7 +69,7 @@ namespace heif {
                          class HeifColorConversionParams* config = nullptr) const;
 
     private:
-      std::shared_ptr<HeifFile> m_heif_file;
+      HeifContext* m_heif_context;
 
       uint32_t m_id;
       uint32_t m_width=0, m_height=0;
@@ -90,9 +90,13 @@ namespace heif {
       // TODO: move plugin registry from HeifFile to HeifContext and decode image in this class
     }
 
+    Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
+
     std::string debug_dump_boxes() const { return m_heif_file->debug_dump_boxes(); }
 
   private:
+    const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
+
     std::map<uint32_t, std::shared_ptr<Image>> m_all_images;
 
     // We store this in a vector because we need stable indices for the C API.
@@ -103,6 +107,17 @@ namespace heif {
     std::shared_ptr<HeifFile> m_heif_file;
 
     Error interpret_heif_file();
+
+    Error decode_full_grid_image(uint16_t ID,
+                                 std::shared_ptr<HeifPixelImage>& img,
+                                 const std::vector<uint8_t>& grid_data) const;
+
+    Error decode_derived_image(uint16_t ID,
+                               std::shared_ptr<HeifPixelImage>& img) const;
+
+    Error decode_overlay_image(uint16_t ID,
+                               std::shared_ptr<HeifPixelImage>& img,
+                               const std::vector<uint8_t>& overlay_data) const;
   };
 }
 

@@ -52,8 +52,6 @@ namespace heif {
 
     Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
 
-    Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
-
 
 
     std::shared_ptr<Box_infe> get_infe_box(uint32_t imageID) {
@@ -63,6 +61,10 @@ namespace heif {
     }
 
     std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
+
+    std::shared_ptr<Box_ipco> get_ipco_box() { return m_ipco_box; }
+
+    std::shared_ptr<Box_ipma> get_ipma_box() { return m_ipma_box; }
 
     Error get_properties(uint32_t imageID,
                          std::vector<Box_ipco::Property>& properties) const;
@@ -95,19 +97,7 @@ namespace heif {
     uint32_t m_primary_image_ID;
 
 
-    const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
-
     Error parse_heif_file(BitstreamRange& bitstream);
-    Error decode_full_grid_image(uint16_t ID,
-                                 std::shared_ptr<HeifPixelImage>& img,
-                                 const std::vector<uint8_t>& grid_data) const;
-
-    Error decode_derived_image(uint16_t ID,
-                               std::shared_ptr<HeifPixelImage>& img) const;
-
-    Error decode_overlay_image(uint16_t ID,
-                               std::shared_ptr<HeifPixelImage>& img,
-                               const std::vector<uint8_t>& overlay_data) const;
 
     const Image& get_image_info(uint32_t ID) const;
   };
