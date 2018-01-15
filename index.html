@@ -17,7 +17,7 @@ body {
 <body>
 <h1>libheif decoder demo</h1>
 <a href="https://github.com/strukturag/libheif"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
-<div><small>Copyright &copy; 2017 by <a href="http://www.struktur.de">struktur AG</a></small></div>
+<div><small>Copyright &copy; 2017-2018 by <a href="http://www.struktur.de">struktur AG</a></small></div>
 <div id="form" class="hidden">
     <div>
         Select HEIF image file to display:
@@ -75,6 +75,13 @@ body {
         }
 
         image.display(this.image_data, function(display_image_data) {
+            hide("decoding");
+            if (!display_image_data) {
+                show("error-format");
+                return;
+            }
+
+            show("container");
             if (window.requestAnimationFrame) {
                 this.pending_image_data = display_image_data;
                 window.requestAnimationFrame(function() {
@@ -89,16 +96,15 @@ body {
         }.bind(this));
     };
 
-    function HeifDemo(libheif, libde265) {
+    function HeifDemo(libheif) {
         this.libheif = libheif;
-        this.libde265 = libde265;
         this.canvas = document.getElementById("canvas");
         this.image_data = [];
         this.images_select = document.getElementById("images");
         this.images_select.addEventListener("change", function(event) {
             var index = parseInt(event.target.value, 10);
             if (index >= 0 && index < this.image_data.length) {
-                this._decodeImage(this.image_data[index]);
+                this._showImage(this.image_data[index]);
             }
         }.bind(this));
         this.drawer = new CanvasDrawer(canvas);
@@ -136,6 +142,9 @@ body {
     HeifDemo.prototype.loadBuffer = function(buffer) {
         hide("error-format");
         show("loading");
+        for (var i = 0; i < this.image_data.length; i++) {
+            this.image_data[i].free();
+        }
         this.image_data = this.decoder.decode(buffer);
         hide("loading");
         if (!this.image_data || !this.image_data.length) {
@@ -143,7 +152,7 @@ body {
             show("error-format");
             return false;
         }
-        this._decodeImage(this.image_data[0]);
+        this._showImage(this.image_data[0]);
         if (this.image_data.length > 1) {
             show("images");
             while (this.images_select.firstChild) {
@@ -156,73 +165,17 @@ body {
                 option.appendChild(label);
                 this.images_select.appendChild(option);
             }
+        } else {
+            hide("images");
         }
         return true;
     };
 
-    HeifDemo.prototype._decodeImageHEVC = function(image_data) {
-        var hevc_decoder = new libde265.Decoder();
-        hevc_decoder.disable_filters(true);
-        hevc_decoder.set_image_callback(function(image) {
-            show("container");
-            hide("decoding");
-            hide("error-format");
-            console.log("Received image", image.get_width(), image.get_height());
-            this.drawer.draw(image);
-        }.bind(this));
-
-        var finished_callback = function(error) {
-            hide("decoding");
-            if (error !== this.libde265.DE265_OK && !this.decoded_images.length) {
-                hide("container");
-                show("error-format");
-            } else {
-                show("container");
-                hide("error-format");
-            }
-            console.log("Decoding finished with", this.libde265.de265_get_error_text(error), error);
-            hevc_decoder.free();
-        }.bind(this);
-
-        hevc_decoder.push_data(image_data, 0);
-        hevc_decoder.flush();
-
-        var do_decode = function() {
-            console.log("Decoding");
-            hevc_decoder.decode(function(error) {
-                switch (error) {
-                    case libde265.DE265_OK:
-                        if (!hevc_decoder.has_more()) {
-                            finished_callback(error);
-                            return;
-                        }
-                        break;
-                    default:
-                        console.log("Error while decoding", error);
-                        finished_callback(error);
-                        return;
-                }
-                setTimeout(do_decode, 0);
-            });
-        };
-
-        // Start decoding deferred.
-        setTimeout(do_decode, 0);
-    };
-
-    HeifDemo.prototype._decodeImage = function(image) {
+    HeifDemo.prototype._showImage = function(image) {
+        this.reset();
         hide("container");
         show("decoding");
-        this.reset();
-        switch (image.type) {
-            case "hvc1":
-                this._decodeImageHEVC(image.data);
-                break;
-            default:
-                hide("container");
-                show("error-format");
-                break;
-        }
+        this.drawer.draw(image);
     };
 
     window.onload = function() {
@@ -230,14 +183,10 @@ body {
         if (typeof libheif === "undefined") {
             alert("libheif could not be loaded, please check your browser console for details.");
             return;
-        } else if (typeof libde265 === "undefined") {
-            alert("libde265 could not be loaded, please check your browser console for details.");
-            return;
         }
 
-        console.log("Using libheif unreleased");
-        console.log("Using libde265", libde265.de265_get_version());
-        var demo = new HeifDemo(libheif, libde265);
+        console.log("Using libheif", libheif.heif_get_version());
+        var demo = new HeifDemo(libheif);
 
         show("form");
 
@@ -277,6 +226,5 @@ body {
 }).call();
 </script>
 <script src="libheif.js"></script>
-<script src="libde265.min.js"></script>
 </body>
 </html>
