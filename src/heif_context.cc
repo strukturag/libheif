@@ -638,8 +638,8 @@ Error HeifContext::decode_image(uint32_t ID,
       return err;
     }
 
-
-    // TODO: check that sizes are the same and the we have an Y channel
+    // TODO: check that sizes are the same and that we have an Y channel
+    // BUT: is there any indication in the standard that the alpha channel should have the same size?
 
     img->transfer_plane_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha);
   }
