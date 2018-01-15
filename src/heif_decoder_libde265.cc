@@ -117,7 +117,14 @@ struct heif_error libde265_new_decoder(void** dec)
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
   decoder->ctx = de265_new_decoder();
-  de265_start_worker_threads(decoder->ctx,1);
+#if defined(__EMSCRIPTEN__)
+  // Speed up decoding from JavaScript.
+  de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_DEBLOCKING, 1);
+  de265_set_parameter_bool(decoder->ctx, DE265_DECODER_PARAM_DISABLE_SAO, 1);
+#else
+  // Worker threads are not supported when running on Emscripten.
+  de265_start_worker_threads(decoder->ctx, 1);
+#endif
 
   *dec = decoder;
   return err;
