@@ -99,6 +99,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
 
   std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB() const;
   std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB24() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB_to_RGB24() const;
 };
 
 

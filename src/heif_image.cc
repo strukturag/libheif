@@ -155,6 +155,16 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
     }
   }
 
+
+  if (target_colorspace == get_colorspace() &&
+      target_colorspace == heif_colorspace_RGB) {
+    if (get_chroma_format() == heif_chroma_444 &&
+        target_chroma == heif_chroma_interleaved_24bit) {
+      out_img = convert_RGB_to_RGB24();
+    }
+  }
+
+
   if (!out_img) {
     // TODO: unsupported conversion
   }
@@ -257,6 +267,44 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
       out_p[y*out_p_stride + 3*x + 0] = clip(y_val + 1.596 * vv);
       out_p[y*out_p_stride + 3*x + 1] = clip(y_val - 0.813 * vv - 0.391 * uv);
       out_p[y*out_p_stride + 3*x + 2] = clip(y_val + 2.018 * uv);
+    }
+  }
+
+  return outimg;
+}
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24() const
+{
+  if (get_bits_per_pixel(heif_channel_R) != 8 ||
+      get_bits_per_pixel(heif_channel_G) != 8 ||
+      get_bits_per_pixel(heif_channel_B) != 8) {
+    return nullptr;
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
+
+  outimg->add_plane(heif_channel_interleaved, m_width, m_height, 24);
+
+  const uint8_t *in_r,*in_g,*in_b;
+  int in_r_stride, in_g_stride, in_b_stride;
+
+  uint8_t *out_p;
+  int out_p_stride;
+
+  in_r = get_plane(heif_channel_R, &in_r_stride);
+  in_g = get_plane(heif_channel_G, &in_g_stride);
+  in_b = get_plane(heif_channel_B, &in_b_stride);
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+
+  int x,y;
+  for (y=0;y<m_height;y++) {
+    for (x=0;x<m_width;x++) {
+      out_p[y*out_p_stride + 3*x + 0] = in_r[x + y*in_r_stride];
+      out_p[y*out_p_stride + 3*x + 1] = in_g[x + y*in_r_stride];
+      out_p[y*out_p_stride + 3*x + 2] = in_b[x + y*in_r_stride];
     }
   }
 
