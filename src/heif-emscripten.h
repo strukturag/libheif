@@ -186,7 +186,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
             heif_chroma_mono);
         int stride_grey;
         const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
-            heif_channel_Alpha, &stride_grey);
+            heif_channel_Y, &stride_grey);
         data.resize(width * height);
         char* dest = const_cast<char*>(data.data());
         strided_copy(dest, plane_grey, width, height, stride_grey);
