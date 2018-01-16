@@ -9,6 +9,17 @@ set (NUMERIC_VERSION 0x00000100)
 set (PACKAGE_VERSION 0.0.1)
 
 include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
+include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+
+CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
+CHECK_INCLUDE_FILE(stddef.h HAVE_STDDEF_H)
+
+if (HAVE_INTTYPES_H)
+  add_definitions(-DHAVE_INTTYPES_H)
+endif()
+if (HAVE_STDDEF_H)
+  add_definitions(-DHAVE_STDDEF_H)
+endif()
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/src/heif-version.h.in"

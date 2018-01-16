@@ -21,7 +21,16 @@
 #ifndef LIBHEIF_BOX_H
 #define LIBHEIF_BOX_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
+#if defined(HAVE_INTTYPES_H)
 #include <inttypes.h>
+#endif
+#if defined(HAVE_STDDEF_H)
+#include <stddef.h>
+#endif
 #include <vector>
 #include <string>
 #include <memory>
