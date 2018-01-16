@@ -24,7 +24,6 @@
 #include "box.h"
 
 #include <map>
-#include <assert.h>
 
 namespace heif {
 
@@ -56,7 +55,10 @@ namespace heif {
 
     std::shared_ptr<Box_infe> get_infe_box(uint32_t imageID) {
       auto iter = m_images.find(imageID);
-      assert(iter != m_images.end());
+      if (iter == m_images.end()) {
+        return nullptr;
+      }
+
       return iter->second.m_infe_box;
     }
 

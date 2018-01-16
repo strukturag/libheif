@@ -22,6 +22,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <string.h>
 #include <iostream>
 
@@ -340,6 +341,10 @@ Error HeifContext::interpret_heif_file()
 
   for (uint32_t id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
+    if (!infe_box) {
+      // TODO(farindk): Should we return an error instead of skipping the invalid id?
+      continue;
+    }
 
     if (!infe_box->is_hidden_item()) {
       auto image = std::make_shared<Image>(this, id);
