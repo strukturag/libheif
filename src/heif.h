@@ -160,6 +160,8 @@ enum heif_suberror_code {
 
   heif_suberror_Auxiliary_image_type_unspecified = 123,
 
+  heif_suberror_No_or_invalid_primary_image = 124,
+
 
 
   // --- Memory_allocation_error ---
@@ -167,36 +169,33 @@ enum heif_suberror_code {
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.
   // Please check whether the file is valid. If it is, contact us so that we could increase the
   // security limits further.
-  heif_suberror_Security_limit_exceeded = 200,
+  heif_suberror_Security_limit_exceeded = 1000,
 
 
   // --- Usage_error ---
 
   // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced = 300, // also used for Invalid_input
+  heif_suberror_Nonexisting_image_referenced = 2000, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
-  heif_suberror_Null_pointer_argument = 301,
+  heif_suberror_Null_pointer_argument = 2001,
 
   // Image channel referenced that does not exist in the image
-  heif_suberror_Nonexisting_image_channel_referenced = 302,
-
-  heif_suberror_No_or_invalid_primary_image = 303,
+  heif_suberror_Nonexisting_image_channel_referenced = 2002,
 
 
   // --- Unsupported_feature ---
 
   // Image was coded with an unsupported compression method.
-  heif_suberror_Unsupported_codec = 400,
+  heif_suberror_Unsupported_codec = 3000,
 
   // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
-  heif_suberror_Unsupported_image_type = 401,
+  heif_suberror_Unsupported_image_type = 3001,
 
-  heif_suberror_Unsupported_data_version = 402,
+  heif_suberror_Unsupported_data_version = 3002,
 
   // The conversion of the source image to the requested chroma / colorspace is not supported.
-  heif_suberror_Unsupported_color_conversion = 403
-
+  heif_suberror_Unsupported_color_conversion = 3003
 };
 
 
