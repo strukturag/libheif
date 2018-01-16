@@ -251,6 +251,9 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx
 LIBHEIF_API
 struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, uint32_t* id);
 
+LIBHEIF_API
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, uint32_t id);
+
 
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
@@ -261,7 +264,7 @@ int heif_context_get_number_of_images(struct heif_context* ctx);
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_image_IDs(struct heif_context* ctx, uint32_t* ID_array, int size);
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, uint32_t* ID_array, int size);
 
 // Get the handle for a specific top-level image.
 LIBHEIF_API
