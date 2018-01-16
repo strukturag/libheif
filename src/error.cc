@@ -83,6 +83,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_No_iinf_box: return "No 'iinf' box";
   case heif_suberror_No_iprp_box: return "No 'iprp' box";
   case heif_suberror_No_iref_box: return "No 'iref' box";
+  case heif_suberror_No_infe_box: return "No 'infe' box";
   case heif_suberror_No_pict_handler: return "Not a 'pict' handler";
   case heif_suberror_Ipma_box_references_nonexisting_property: return "'ipma' box references a non-existing property";
   case heif_suberror_No_properties_assigned_to_item: return "No properties assigned to item";

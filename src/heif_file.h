@@ -99,7 +99,7 @@ namespace heif {
 
     Error parse_heif_file(BitstreamRange& bitstream);
 
-    const Image& get_image_info(uint32_t ID) const;
+    bool get_image_info(uint32_t ID, const Image** image) const;
   };
 
 }

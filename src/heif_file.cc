@@ -28,7 +28,6 @@
 #include <fstream>
 #include <sstream>
 #include <utility>
-#include <assert.h>
 
 using namespace heif;
 
@@ -221,7 +220,10 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   for (auto& box : infe_boxes) {
     std::shared_ptr<Box_infe> infe_box = std::dynamic_pointer_cast<Box_infe>(box);
-    assert(infe_box);
+    if (!infe_box) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_infe_box);
+    }
 
     Image img;
     img.m_infe_box = infe_box;
@@ -240,21 +242,28 @@ bool HeifFile::image_exists(uint32_t ID) const
 }
 
 
-const HeifFile::Image& HeifFile::get_image_info(uint32_t ID) const
+bool HeifFile::get_image_info(uint32_t ID, const HeifFile::Image** image) const
 {
   // --- get the image from the list of all images
 
   auto image_iter = m_images.find(ID);
-  assert(image_iter != m_images.end());
+  if (image_iter == m_images.end()) {
+    return false;
+  }
 
-  return image_iter->second;
+  *image = &image_iter->second;
+  return true;
 }
 
 
 std::string HeifFile::get_image_type(uint32_t ID) const
 {
-  const Image& img = get_image_info(ID);
-  return img.m_infe_box->get_item_type();
+  const Image* img;
+  if (!get_image_info(ID, &img)) {
+    return "";
+  }
+
+  return img->m_infe_box->get_item_type();
 }
 
 
@@ -279,7 +288,11 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
                  heif_suberror_Nonexisting_image_referenced);
   }
 
-  const Image& image = get_image_info(ID);
+  const Image* image;
+  if (!get_image_info(ID, &image)) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Nonexisting_image_referenced);
+  }
 
 
   // --- get properties for this image
@@ -290,7 +303,7 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     return err;
   }
 
-  std::string item_type = image.m_infe_box->get_item_type();
+  std::string item_type = image->m_infe_box->get_item_type();
 
   // --- get coded image data pointers
 
@@ -322,7 +335,9 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     for (auto& prop : properties) {
       if (prop.property->get_short_type() == fourcc("hvcC")) {
         hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop.property);
-        assert(hvcC_box);
+        if (hvcC_box) {
+          break;
+        }
       }
     }
 

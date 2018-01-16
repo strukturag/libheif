@@ -162,6 +162,7 @@ enum heif_suberror_code {
 
   heif_suberror_No_or_invalid_primary_image = 124,
 
+  heif_suberror_No_infe_box = 125,
 
 
   // --- Memory_allocation_error ---
