@@ -12,6 +12,17 @@ body {
 .hidden {
     display: none;
 }
+#container {
+    position: relative;
+    height: 0;
+}
+#container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
 </style>
 </head>
 <body>
@@ -55,6 +66,7 @@ body {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
         this.image_data = null;
+        this.container = document.getElementById("container");
     };
 
     CanvasDrawer.prototype.draw = function(image) {
@@ -64,6 +76,7 @@ body {
                 !this.image_data) {
             this.canvas.width = w;
             this.canvas.height = h;
+            this.container.style["padding-bottom"] = String(100 * (h / w)) + "%";
             this.image_data = this.ctx.createImageData(w, h);
             var image_data = this.image_data.data;
             // Start with a white image.
