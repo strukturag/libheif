@@ -183,7 +183,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
     case heif_colorspace_monochrome:
       {
         assert(heif_image_get_chroma_format(image) ==
-            heif_chroma_mono);
+            heif_chroma_monochrome);
         int stride_grey;
         const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
             heif_channel_Y, &stride_grey);
@@ -310,7 +310,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     ;
   emscripten::enum_<heif_chroma>("heif_chroma")
     .value("heif_chroma_undefined", heif_chroma_undefined)
-    .value("heif_chroma_mono", heif_chroma_mono)
+    .value("heif_chroma_monochrome", heif_chroma_monochrome)
     .value("heif_chroma_420", heif_chroma_420)
     .value("heif_chroma_422", heif_chroma_422)
     .value("heif_chroma_444", heif_chroma_444)
