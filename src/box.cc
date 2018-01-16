@@ -1367,10 +1367,27 @@ int Box_clap::top_rounded(int image_height) const
 int Box_clap::bottom_rounded(int image_height) const
 {
   Fraction pcY  = m_vertical_offset + Fraction(image_height-1, 2);
-  Fraction top = pcY + (m_clean_aperture_height-1)/2;
+  Fraction bottom = pcY + (m_clean_aperture_height-1)/2;
 
-  return top.round();
+  return bottom.round();
 }
+
+int Box_clap::get_width_rounded() const
+{
+  int left  = (Fraction(0,1)-(m_clean_aperture_width-1)/2).round();
+  int right = (  (m_clean_aperture_width-1)/2).round();
+
+  return right+1-left;
+}
+
+int Box_clap::get_height_rounded() const
+{
+  int top    = (Fraction(0,1)-(m_clean_aperture_height-1)/2).round();
+  int bottom = ( (m_clean_aperture_height-1)/2).round();
+
+  return bottom+1-top;
+}
+
 
 
 Error Box_iref::parse(BitstreamRange& range)

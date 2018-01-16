@@ -424,6 +424,9 @@ namespace heif {
     int top_rounded(int image_height) const;   // first row
     int bottom_rounded(int image_height) const; // last row included in the cropped image
 
+    int get_width_rounded() const;
+    int get_height_rounded() const;
+
   protected:
     Error parse(BitstreamRange& range) override;
 

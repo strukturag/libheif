@@ -473,6 +473,7 @@ Error HeifContext::interpret_heif_file()
       return err;
     }
 
+    bool ispe_read = false;
     for (const auto& prop : properties) {
       auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
       if (ispe) {
@@ -495,6 +496,25 @@ Error HeifContext::interpret_heif_file()
         }
 
         image->set_resolution(width, height);
+        ispe_read = true;
+      }
+
+      if (ispe_read) {
+        auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
+        if (clap) {
+          image->set_resolution( clap->get_width_rounded(),
+                                 clap->get_height_rounded() );
+        }
+
+        auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);
+        if (irot) {
+          if (irot->get_rotation()==90 ||
+              irot->get_rotation()==270) {
+            // swap width and height
+            image->set_resolution( image->get_height(),
+                                   image->get_width() );
+          }
+        }
       }
     }
   }
