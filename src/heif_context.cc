@@ -573,10 +573,14 @@ Error HeifContext::decode_image(uint32_t ID,
       return Error(err.code, err.subcode, err.message);
     }
 
-    assert(decoded_img);
+    if (!decoded_img) {
+      // TODO(farindk): The plugin should return an error in this case.
+      decoder_plugin->free_decoder(decoder);
+      return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
+    }
 
     img = std::move(decoded_img->image);
-    delete decoded_img; // TODO use API to free this image
+    heif_image_release(decoded_img);
 
     decoder_plugin->free_decoder(decoder);
 
