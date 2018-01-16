@@ -24,6 +24,8 @@
 
 // static
 const char heif::Error::kSuccess[] = "Success";
+const char* cUnknownError = "Unknown error";
+
 
 heif::Error::Error()
   : error_code(heif_error_Ok)
@@ -111,29 +113,36 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   }
 
   assert(false);
-  return "Unknown error";
+  return cUnknownError;
 }
 
 
 heif_error heif::Error::error_struct(ErrorBuffer* error_buffer) const
 {
-  if (error_code == heif_error_Ok) {
-    error_buffer->set_success();
-  }
-  else {
-    std::stringstream sstr;
-    sstr << get_error_string(error_code) << ": "
-         << get_error_string(sub_error_code);
-    if (!message.empty()) {
-      sstr << ": " << message;
+  if (error_buffer) {
+    if (error_code == heif_error_Ok) {
+      error_buffer->set_success();
     }
+    else {
+      std::stringstream sstr;
+      sstr << get_error_string(error_code) << ": "
+           << get_error_string(sub_error_code);
+      if (!message.empty()) {
+        sstr << ": " << message;
+      }
 
-    error_buffer->set_error(sstr.str());
+      error_buffer->set_error(sstr.str());
+    }
   }
 
   heif_error err;
   err.code = error_code;
   err.subcode = sub_error_code;
-  err.message = error_buffer->get_error();
+  if (error_buffer) {
+    err.message = error_buffer->get_error();
+  }
+  else {
+    err.message = cUnknownError;
+  }
   return err;
 }

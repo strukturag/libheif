@@ -112,9 +112,9 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_index(struct heif_context* ctx, int* index)
+struct heif_error heif_context_get_primary_image_id(struct heif_context* ctx, int* id)
 {
-  if (!index) {
+  if (!id) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
@@ -125,7 +125,7 @@ struct heif_error heif_context_get_primary_image_index(struct heif_context* ctx,
                  heif_suberror_No_or_invalid_primary_image).error_struct(ctx->context.get());
   }
 
-  *index = primary->get_id();
+  *id = primary->get_id();
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -134,6 +134,25 @@ struct heif_error heif_context_get_primary_image_index(struct heif_context* ctx,
 int heif_context_get_number_of_images(heif_context* ctx)
 {
   return (int)ctx->context->get_top_level_images().size();
+}
+
+
+int heif_context_get_list_of_image_IDs(struct heif_context* ctx, int* ID_array, int size)
+{
+  if (ID_array == nullptr || size==0 || ctx==nullptr) {
+    return 0;
+  }
+
+
+  // fill in ID values into output array
+
+  const std::vector<std::shared_ptr<HeifContext::Image>> imgs = ctx->context->get_top_level_images();
+  int n = std::min(size,(int)imgs.size());
+  for (int i=0;i<n;i++) {
+    ID_array[i] = imgs[i]->get_id();
+  }
+
+  return n;
 }
 
 
@@ -146,6 +165,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
   }
 
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
+
   if (image_idx<0 || (size_t)image_idx >= images.size()) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
     return err.error_struct(ctx->context.get());
@@ -157,6 +177,42 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
 
   return Error::Ok.error_struct(ctx->context.get());
 }
+
+
+struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
+                                                       uint32_t id,
+                                                       struct heif_image_handle** img)
+{
+  if (!img) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
+  }
+
+  const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
+
+  std::shared_ptr<HeifContext::Image> image;
+  for (auto& img : images) {
+    if (img->get_id() == id) {
+      image = img;
+      break;
+    }
+  }
+
+  if (!image) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
+  *img = new heif_image_handle();
+  (*img)->image = image;
+  (*img)->context = ctx->context;
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+
 
 
 int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
