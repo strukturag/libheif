@@ -181,6 +181,8 @@ enum heif_suberror_code {
   // Image channel referenced that does not exist in the image
   heif_suberror_Nonexisting_image_channel_referenced = 302,
 
+  heif_suberror_No_or_invalid_primary_image = 303,
+
 
   // --- Unsupported_feature ---
 
@@ -243,8 +245,12 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
 // Get a handle to the primary image of the HEIF file.
 // This is the image that should be displayed primarily when there are several images in the file.
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_handle(struct heif_context* h,
+struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx,
                                                         struct heif_image_handle**);
+
+LIBHEIF_API
+struct heif_error heif_context_get_primary_image_index(struct heif_context* ctx, int* index);
+
 
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via

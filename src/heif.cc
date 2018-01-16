@@ -112,6 +112,25 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
+struct heif_error heif_context_get_primary_image_index(struct heif_context* ctx, int* index)
+{
+  if (!index) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<HeifContext::Image> primary = ctx->context->get_primary_image();
+  if (!primary) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_or_invalid_primary_image).error_struct(ctx->context.get());
+  }
+
+  *index = primary->get_id();
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
 int heif_context_get_number_of_images(heif_context* ctx)
 {
   return (int)ctx->context->get_top_level_images().size();
