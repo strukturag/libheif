@@ -190,7 +190,11 @@ enum heif_suberror_code {
   // Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
   heif_suberror_Unsupported_image_type = 401,
 
-  heif_suberror_Unsupported_data_version = 402
+  heif_suberror_Unsupported_data_version = 402,
+
+  // The conversion of the source image to the requested chroma / colorspace is not supported.
+  heif_suberror_Unsupported_color_conversion = 403
+
 };
 
 

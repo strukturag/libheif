@@ -106,6 +106,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Unsupported_codec: return "Unsupported codec";
   case heif_suberror_Unsupported_image_type: return "Unsupported image type";
   case heif_suberror_Unsupported_data_version: return "Unsupported data version";
+  case heif_suberror_Unsupported_color_conversion: return "Unsupported color conversion";
   }
 
   assert(false);

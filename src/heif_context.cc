@@ -520,9 +520,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
   if (different_chroma || different_colorspace) {
     img = img->convert_colorspace(target_colorspace, target_chroma);
     if (!img) {
-      // TODO: error: unsupported conversion
-
-      assert(false);
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
   }
 
