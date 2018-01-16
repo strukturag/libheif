@@ -68,7 +68,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     heif_image_handle_release(handle);
   }
 
-  images_count = heif_context_get_number_of_images(ctx);
+  images_count = heif_context_get_number_of_top_level_images(ctx);
   if (!images_count) {
     // File doesn't contain any images.
     goto quit;

@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
   std::cout << "----------------------------------------------------------\n";
 
-  std::cout << "num images: " << heif_context_get_number_of_images(ctx) << "\n";
+  std::cout << "num images: " << heif_context_get_number_of_top_level_images(ctx) << "\n";
 
   struct heif_image_handle* handle;
   err = heif_context_get_primary_image_handle(ctx, &handle);

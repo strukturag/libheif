@@ -141,7 +141,7 @@ int heif_context_is_top_level_image_ID(struct heif_context* ctx, uint32_t id)
 }
 
 
-int heif_context_get_number_of_images(heif_context* ctx)
+int heif_context_get_number_of_top_level_images(heif_context* ctx)
 {
   return (int)ctx->context->get_top_level_images().size();
 }

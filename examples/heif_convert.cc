@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  int num_images = heif_context_get_number_of_images(ctx);
+  int num_images = heif_context_get_number_of_top_level_images(ctx);
   if (num_images == 0) {
     fprintf(stderr, "File doesn't contain any images\n");
     return 1;
