@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Assume running from ".git/hooks" folder.
+CPPLINT="$ROOT/../../scripts/cpplint.py"
+if [ ! -x "$CPPLINT" ]; then
+    # Running from "scripts" folder.
+    CPPLINT="$ROOT/cpplint.py"
+fi
+
+# Run cpplint against changed C/C++ files.
+for file in `git diff-index --cached --name-only HEAD --diff-filter=ACMR| grep -E "\.cc$|\.h$|\.c$"` ; do
+    "$CPPLINT" "$file"
+done

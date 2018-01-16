@@ -8,6 +8,7 @@ cache: ccache
 sudo: required
 env:
   - CHECK_LICENSES=1
+  - CPPLINT=1
   - WITH_LIBDE265= WITH_GRAPHICS=
   - WITH_LIBDE265= WITH_GRAPHICS=1
   - WITH_LIBDE265=1 WITH_GRAPHICS=1
@@ -19,6 +20,8 @@ matrix:
   exclude:
     - compiler: clang
       env: CHECK_LICENSES=1
+    - compiler: clang
+      env: CPPLINT=1
     - compiler: clang
       env: EMSCRIPTEN_VERSION=1.37.26
     - compiler: clang

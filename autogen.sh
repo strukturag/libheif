@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 #
 # HEIF codec.
@@ -19,6 +19,13 @@ set -eu
 # You should have received a copy of the GNU General Public License
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ -d "$ROOT/.git/hooks" ]; then
+    echo "Installing pre-commit hook ..."
+    ln -sf "$ROOT/scripts/pre-commit.hook" "$ROOT/.git/hooks/pre-commit"
+fi
+
 if [ -x "`which autoreconf 2>/dev/null`" ] ; then
    exec autoreconf -ivf
 fi

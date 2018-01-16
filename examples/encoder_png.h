@@ -20,6 +20,8 @@
 #ifndef EXAMPLE_ENCODER_PNG_H
 #define EXAMPLE_ENCODER_PNG_H
 
+#include <string>
+
 #include "encoder.h"
 
 class PngEncoder : public Encoder {

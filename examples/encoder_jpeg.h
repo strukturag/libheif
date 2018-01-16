@@ -26,6 +26,8 @@
 
 #include <jpeglib.h>
 
+#include <string>
+
 #include "encoder.h"
 
 class JpegEncoder : public Encoder {
