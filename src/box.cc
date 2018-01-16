@@ -912,6 +912,17 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
       }
 
       size_t old_size = dest->size();
+      if (MAX_MEMORY_BLOCK_SIZE - old_size < extent.length) {
+        std::stringstream sstr;
+        sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
+             << (old_size + extent.length) << " bytes, exceeding the security limit of "
+             << MAX_MEMORY_BLOCK_SIZE << " bytes";
+
+        return Error(heif_error_Memory_allocation_error,
+                     heif_suberror_Security_limit_exceeded,
+                     sstr.str());
+      }
+
       dest->resize(old_size + extent.length);
       istr.read((char*)dest->data() + old_size, extent.length);
       if (istr.eof()) {
@@ -1650,7 +1661,7 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
   // reserve space for the data in the output array
   auto curr_size = out_data.size();
 
-  if (curr_size + length > MAX_MEMORY_BLOCK_SIZE) {
+  if (MAX_MEMORY_BLOCK_SIZE - curr_size < length) {
     std::stringstream sstr;
     sstr << "idat box contained " << length << " bytes, total memory size would be "
          << (curr_size + length) << " bytes, exceeding the security limit of "
