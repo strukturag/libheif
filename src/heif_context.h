@@ -96,17 +96,16 @@ namespace heif {
 
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
-    void register_decoder(uint32_t type, const heif_decoder_plugin* decoder_plugin) {
-      // TODO: register a plugin for each 'type'
-      m_decoder_plugin = decoder_plugin;
-    }
+    void register_decoder(uint32_t type, const heif_decoder_plugin* decoder_plugin);
 
     Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
 
     std::string debug_dump_boxes() const { return m_heif_file->debug_dump_boxes(); }
 
   private:
-    const struct heif_decoder_plugin* m_decoder_plugin = nullptr;
+    const struct heif_decoder_plugin* get_decoder(uint32_t type) const;
+
+    std::map<uint32_t, const struct heif_decoder_plugin*> m_decoder_plugins;
 
     std::map<uint32_t, std::shared_ptr<Image>> m_all_images;
 

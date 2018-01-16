@@ -276,7 +276,7 @@ void ImageOverlay::get_offset(int image_index, int32_t* x, int32_t* y) const
 HeifContext::HeifContext()
 {
 #if HAVE_LIBDE265
-  m_decoder_plugin = get_decoder_plugin_libde265();
+  register_decoder(heif_compression_HEVC, get_decoder_plugin_libde265());
 #endif
 }
 
@@ -306,6 +306,18 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
   return interpret_heif_file();
 }
 
+void HeifContext::register_decoder(uint32_t type, const heif_decoder_plugin* decoder_plugin) {
+  if (decoder_plugin) {
+    m_decoder_plugins[type] = decoder_plugin;
+  } else {
+    m_decoder_plugins.erase(type);
+  }
+}
+
+const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const {
+  const auto& pos = m_decoder_plugins.find(type);
+  return pos != m_decoder_plugins.end() ? pos->second : nullptr;
+}
 
 Error HeifContext::interpret_heif_file()
 {
@@ -531,32 +543,35 @@ Error HeifContext::decode_image(uint32_t ID,
   // --- decode image, depending on its type
 
   if (image_type == "hvc1") {
+    const struct heif_decoder_plugin* decoder_plugin = get_decoder(heif_compression_HEVC);
+    if (!decoder_plugin) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
+    }
+
     std::vector<uint8_t> data;
     error = m_heif_file->get_compressed_image_data(ID, &data);
     if (error) {
       return error;
     }
 
-    assert(m_decoder_plugin); // TODO
-
     void* decoder;
-    struct heif_error err = m_decoder_plugin->new_decoder(&decoder);
+    struct heif_error err = decoder_plugin->new_decoder(&decoder);
     if (err.code != heif_error_Ok) {
       return Error(err.code, err.subcode, err.message);
     }
 
-    err = m_decoder_plugin->push_data(decoder, data.data(), data.size());
+    err = decoder_plugin->push_data(decoder, data.data(), data.size());
     if (err.code != heif_error_Ok) {
-      m_decoder_plugin->free_decoder(decoder);
+      decoder_plugin->free_decoder(decoder);
       return Error(err.code, err.subcode, err.message);
     }
 
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
     heif_image* decoded_img = nullptr;
-    err = m_decoder_plugin->decode_image(decoder, &decoded_img);
+    err = decoder_plugin->decode_image(decoder, &decoded_img);
     if (err.code != heif_error_Ok) {
-      m_decoder_plugin->free_decoder(decoder);
+      decoder_plugin->free_decoder(decoder);
       return Error(err.code, err.subcode, err.message);
     }
 
@@ -565,7 +580,7 @@ Error HeifContext::decode_image(uint32_t ID,
     img = std::move(decoded_img->image);
     delete decoded_img; // TODO use API to free this image
 
-    m_decoder_plugin->free_decoder(decoder);
+    decoder_plugin->free_decoder(decoder);
 
 #if 0
     FILE* fh = fopen("out.bin", "wb");
