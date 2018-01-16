@@ -33,13 +33,14 @@ if [ ! -e "Makefile" ]; then
 fi
 emmake make -j${CORES}
 
-export TOTAL_MEMORY=67108864
+export TOTAL_MEMORY=16777216
 
 echo "Running Emscripten..."
 emcc src/.libs/libheif.so \
     --bind \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
+    -s ALLOW_MEMORY_GROWTH=1 \
     -s ASSERTIONS=0 \
     -s INVOKE_RUN=0 \
     -s DOUBLE_MODE=0 \
