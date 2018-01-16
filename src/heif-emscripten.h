@@ -213,7 +213,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
   EXPORT_HEIF_FUNCTION(heif_context_free);
   emscripten::function("heif_context_read_from_memory",
       &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
-  EXPORT_HEIF_FUNCTION(heif_context_get_number_of_images);
+  EXPORT_HEIF_FUNCTION(heif_context_get_number_of_top_level_images);
   emscripten::function("heif_js_context_get_image_handle",
       &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_decode_image",

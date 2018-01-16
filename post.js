@@ -133,7 +133,7 @@ HeifDecoder.prototype.decode = function(buffer) {
         return [];
     }
 
-    var count = libheif.heif_context_get_number_of_images(this.decoder);
+    var count = libheif.heif_context_get_number_of_top_level_images(this.decoder);
     if (!count) {
         console.log("No images found");
         return [];
