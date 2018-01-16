@@ -918,7 +918,7 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
 
     overlay_img = overlay_img->convert_colorspace(heif_colorspace_RGB, heif_chroma_444);
     if (!overlay_img) {
-      assert(false); // TODO: error: no colorspace transformation found
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
 
     int32_t dx,dy;
