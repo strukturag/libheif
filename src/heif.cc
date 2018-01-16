@@ -31,7 +31,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include <assert.h>
 
 using namespace heif;
 
@@ -228,7 +227,10 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
                                            int thumbnail_idx,
                                            struct heif_image_handle** out_thumbnail_handle)
 {
-  assert(out_thumbnail_handle);
+  if (!out_thumbnail_handle) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(handle->image.get());
+  }
 
   auto thumbnails = handle->image->get_thumbnails();
   if (thumbnail_idx<0 || (size_t)thumbnail_idx >= thumbnails.size()) {
