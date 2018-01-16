@@ -112,7 +112,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_id(struct heif_context* ctx, int* id)
+struct heif_error heif_context_get_primary_image_id(struct heif_context* ctx, uint32_t* id)
 {
   if (!id) {
     return Error(heif_error_Usage_error,
@@ -137,7 +137,7 @@ int heif_context_get_number_of_images(heif_context* ctx)
 }
 
 
-int heif_context_get_list_of_image_IDs(struct heif_context* ctx, int* ID_array, int size)
+int heif_context_get_list_of_image_IDs(struct heif_context* ctx, uint32_t* ID_array, int size)
 {
   if (ID_array == nullptr || size==0 || ctx==nullptr) {
     return 0;
