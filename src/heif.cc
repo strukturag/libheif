@@ -97,12 +97,9 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   // If there is none, an error is generated when loading the file.
   if (!primary_image) {
     Error err(heif_error_Invalid_input,
-              heif_suberror_Nonexisting_image_referenced);
+              heif_suberror_No_or_invalid_primary_image);
     return err.error_struct(ctx->context.get());
   }
-
-  assert(primary_image);
-
 
   *img = new heif_image_handle();
   (*img)->image = std::move(primary_image);
