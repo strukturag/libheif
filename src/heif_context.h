@@ -24,7 +24,10 @@
 #include "heif_file.h"
 
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace heif {
 

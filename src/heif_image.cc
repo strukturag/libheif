@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include <utility>
 
 using namespace heif;
 

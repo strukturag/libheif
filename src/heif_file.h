@@ -24,6 +24,10 @@
 #include "box.h"
 
 #include <map>
+#include <memory>
+#include <string>
+#include <map>
+#include <vector>
 
 namespace heif {
 

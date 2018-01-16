@@ -24,7 +24,10 @@
 
 #include <assert.h>
 #include <string.h>
+#include <algorithm>
 #include <iostream>
+#include <limits>
+#include <utility>
 
 #include "heif_context.h"
 #include "heif_image.h"
