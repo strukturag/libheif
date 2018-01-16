@@ -17,11 +17,11 @@ a {
 .hidden {
     display: none;
 }
-#container {
+.flexible-size {
     position: relative;
     height: 0;
 }
-#container canvas {
+.flexible-size canvas {
     position: absolute;
     top: 0;
     left: 0;
@@ -69,6 +69,30 @@ a {
         document.getElementById(id).style.display = "none";
     }
 
+    function addClass(elem, classname) {
+        if (elem.classList) {
+            elem.classList.add(classname);
+        } else {
+            var arr = elem.className.split(" ");
+            if (arr.indexOf(classname) === -1) {
+                elem.className += " " + classname;
+            }
+        }
+    }
+
+    function removeClass(elem, classname) {
+        if (elem.classList) {
+            elem.classList.remove(classname);
+        } else {
+            var arr = elem.className.split(" ");
+            var i = arr.indexOf(classname);
+            if (i >= 0) {
+                arr.splice(i, 1);
+                elem.className = arr.join(" ");
+            }
+        }
+    }
+
     var CanvasDrawer = function(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
@@ -83,7 +107,12 @@ a {
                 !this.image_data) {
             this.canvas.width = w;
             this.canvas.height = h;
-            this.container.style["padding-bottom"] = String(100 * (h / w)) + "%";
+            if (w > document.body.clientWidth) {
+                addClass(this.container, "flexible-size");
+                this.container.style["padding-bottom"] = String(100 * (h / w)) + "%";
+            } else {
+                removeClass(this.container, "flexible-size");
+            }
             this.image_data = this.ctx.createImageData(w, h);
             var image_data = this.image_data.data;
             // Start with a white image.
