@@ -112,7 +112,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_id(struct heif_context* ctx, uint32_t* id)
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, uint32_t* id)
 {
   if (!id) {
     return Error(heif_error_Usage_error,
