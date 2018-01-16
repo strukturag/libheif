@@ -25,6 +25,12 @@ if [ ! -z "$CHECK_LICENSES" ]; then
     ./scripts/check-licenses.sh
 fi
 
+if [ ! -z "$CPPLINT" ]; then
+    echo "Running cpplint ..."
+    find -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py
+    exit 0
+fi
+
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make

@@ -55,7 +55,7 @@ if [ ! -z "$CHECK_LICENSES" ]; then
         "
 fi
 
-if [ -z "$WITH_GRAPHICS" ] && [ -z "$CHECK_LICENSES" ]; then
+if [ -z "$WITH_GRAPHICS" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ]; then
     REMOVE_PACKAGES="$REMOVE_PACKAGES \
         libjpeg.*-dev \
         libpng.*-dev \
