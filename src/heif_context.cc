@@ -911,7 +911,7 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
   uint16_t bkg_color[4];
   overlay.get_background_color(bkg_color);
 
-  Error err = img->fill(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+  Error err = img->fill_RGB_16bit(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
   if (err) {
     return err;
   }

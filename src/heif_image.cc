@@ -557,11 +557,18 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
 }
 
 
-Error HeifPixelImage::fill(uint16_t r, uint16_t g, uint16_t b, uint16_t a)
+Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a)
 {
-  for (const auto& channel : { heif_channel_R, heif_channel_G, heif_channel_B } ) {
+  for (const auto& channel : { heif_channel_R, heif_channel_G, heif_channel_B, heif_channel_Alpha } ) {
+
     const auto plane_iter = m_planes.find(channel);
     if (plane_iter == m_planes.end()) {
+
+      // alpha channel is optional, R,G,B is required
+      if (channel == heif_channel_Alpha) {
+        continue;
+      }
+
       return Error(heif_error_Usage_error,
                    heif_suberror_Nonexisting_image_channel_referenced);
 
