@@ -276,7 +276,7 @@ void ImageOverlay::get_offset(int image_index, int32_t* x, int32_t* y) const
 HeifContext::HeifContext()
 {
 #if HAVE_LIBDE265
-  register_decoder(heif_compression_HEVC, get_decoder_plugin_libde265());
+  register_decoder(get_decoder_plugin_libde265());
 #endif
 }
 
@@ -306,17 +306,25 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
   return interpret_heif_file();
 }
 
-void HeifContext::register_decoder(uint32_t type, const heif_decoder_plugin* decoder_plugin) {
-  if (decoder_plugin) {
-    m_decoder_plugins[type] = decoder_plugin;
-  } else {
-    m_decoder_plugins.erase(type);
-  }
+void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
+{
+  m_decoder_plugins.insert(decoder_plugin);
 }
 
-const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const {
-  const auto& pos = m_decoder_plugins.find(type);
-  return pos != m_decoder_plugins.end() ? pos->second : nullptr;
+const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const
+{
+  int highest_priority = 0;
+  const struct heif_decoder_plugin* best_plugin = nullptr;
+
+  for (const auto* plugin : m_decoder_plugins) {
+    int priority = plugin->does_support_format(type);
+    if (priority > highest_priority) {
+      highest_priority = priority;
+      best_plugin = plugin;
+    }
+  }
+
+  return best_plugin;
 }
 
 Error HeifContext::interpret_heif_file()

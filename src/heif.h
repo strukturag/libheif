@@ -428,6 +428,11 @@ struct heif_decoder_plugin
   // Human-readable name of the plugin
   const char* (*get_plugin_name)();
 
+  // Query whether the plugin supports decoding of the given format
+  // Result is a priority value. The plugin with the largest value wins.
+  // Default priority is 100.
+  int (*does_support_format)(uint32_t format);
+
   // Create a new decoder context for decoding an image
   struct heif_error (*new_decoder)(void** decoder);
 
@@ -456,7 +461,7 @@ struct heif_decoder_plugin
 
 
 LIBHEIF_API
-struct heif_error heif_register_decoder(struct heif_context* heif, uint32_t type, const struct heif_decoder_plugin*);
+struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
 
 // TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 

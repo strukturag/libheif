@@ -307,9 +307,9 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
 }
 
 
-struct heif_error heif_register_decoder(heif_context* heif, uint32_t type, const heif_decoder_plugin* decoder_plugin)
+struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
-  heif->context->register_decoder(type, decoder_plugin);
+  heif->context->register_decoder(decoder_plugin);
   return Error::Ok.error_struct(heif->context.get());
 }
 
