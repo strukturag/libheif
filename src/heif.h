@@ -311,7 +311,7 @@ enum heif_compression_format {
 
 enum heif_chroma {
   heif_chroma_undefined=99,
-  heif_chroma_mono=0,
+  heif_chroma_monochrome=0,
   heif_chroma_420=1,
   heif_chroma_422=2,
   heif_chroma_444=3,
