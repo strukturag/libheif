@@ -21,12 +21,10 @@
 #ifndef HEIF_API_STRUCTS_H
 #define HEIF_API_STRUCTS_H
 
-#include "heif.h"
 #include "heif_image.h"
 #include "heif_context.h"
 
 #include <memory>
-
 
 struct heif_image_handle
 {

@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "heif_context.h"
+#include "heif_file.h"
 #include "heif_image.h"
 #include "heif_api_structs.h"
 
@@ -308,6 +309,11 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
   }
 
   return interpret_heif_file();
+}
+
+std::string HeifContext::debug_dump_boxes() const
+{
+  return m_heif_file->debug_dump_boxes();
 }
 
 void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)

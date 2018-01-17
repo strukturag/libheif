@@ -21,15 +21,18 @@
 #ifndef LIBHEIF_HEIF_CONTEXT_H
 #define LIBHEIF_HEIF_CONTEXT_H
 
-#include "heif_file.h"
-
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "error.h"
+
 namespace heif {
+
+  class HeifFile;
+  class HeifPixelImage;
 
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
@@ -103,7 +106,7 @@ namespace heif {
 
     Error decode_image(uint32_t ID, std::shared_ptr<HeifPixelImage>& img) const;
 
-    std::string debug_dump_boxes() const { return m_heif_file->debug_dump_boxes(); }
+    std::string debug_dump_boxes() const;
 
   private:
     const struct heif_decoder_plugin* get_decoder(uint32_t type) const;
