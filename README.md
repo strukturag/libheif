@@ -12,6 +12,18 @@ the actual image decoding. Alternative codecs for, e.g., AVC and JPEG can be
 provided as plugins.
 
 
+## Supported features
+
+libheif has support for
+* tiled images
+* alpha channels
+* thumbnails
+* multiple images in a HEIF file
+* image transformations (crop, mirror, rotate)
+* overlay images
+* plugin interface to add decoders for additional formats (AVC, JPEG)
+
+
 ## API
 
 The library has a C API for easy integration and wide language support.
