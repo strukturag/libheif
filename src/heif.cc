@@ -415,6 +415,11 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
+  if (decoder_plugin && decoder_plugin->plugin_api_version != 1) {
+    Error err(heif_error_Usage_error, heif_suberror_Unsupported_plugin_version);
+    return err.error_struct(heif->context.get());
+  }
+
   heif->context->register_decoder(decoder_plugin);
   return Error::Ok.error_struct(heif->context.get());
 }

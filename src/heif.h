@@ -184,6 +184,8 @@ enum heif_suberror_code {
   // Image channel referenced that does not exist in the image
   heif_suberror_Nonexisting_image_channel_referenced = 2002,
 
+  // The version of the passed plugin is not supported.
+  heif_suberror_Unsupported_plugin_version = 2003,
 
   // --- Unsupported_feature ---
 
