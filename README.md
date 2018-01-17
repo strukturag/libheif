@@ -1,6 +1,6 @@
 # libheif
 
-[![Build Status](https://travis-ci.org/strukturag/libheif.svg?branch=master)](https://travis-ci.org/strukturag/libheif)
+[![Build Status](https://travis-ci.org/strukturag/libheif.svg?branch=master)](https://travis-ci.org/strukturag/libheif) [![Build Status](https://ci.appveyor.com/api/projects/status/github/strukturag/libheif?svg=true)](https://ci.appveyor.com/project/strukturag/libheif)
 
 libheif is an ISO/IEC 23008-12:2017 HEIF file format decoder (encoder to come).
 
