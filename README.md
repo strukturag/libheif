@@ -68,7 +68,7 @@ Two example programs are provided in the `examples` directory.
 The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
-There is also a GIMP plugin using libHEIF [here](https://github.com/strukturag/heif-gimp-plugin).
+There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
 
 
 ## License
