@@ -93,6 +93,8 @@ namespace heif {
         m_metadata.push_back(metadata);
       }
 
+      std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const { return m_metadata; }
+
     private:
       HeifContext* m_heif_context;
 

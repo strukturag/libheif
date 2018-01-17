@@ -187,6 +187,9 @@ enum heif_suberror_code {
   // The version of the passed plugin is not supported.
   heif_suberror_Unsupported_plugin_version = 2003,
 
+  heif_suberror_Index_out_of_range = 2004,
+
+
   // --- Unsupported_feature ---
 
   // Image was coded with an unsupported compression method.
@@ -307,14 +310,21 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
                                                   int thumbnail_idx,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
-// TODO
-//LIBHEIF_API
-//size_t heif_image_handle_get_exif_data_size(const struct heif_image_handle* handle);
 
-// TODO
+LIBHEIF_API
+int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+void heif_image_handle_query_metadata(const struct heif_image_handle* handle,
+                                      int metadata_index,
+                                      int* out_data_size,
+                                      const char** out_data_type);
+
 // out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
-//LIBHEIF_API
-//struct heif_error heif_image_handle_get_exif_data(const struct heif_image_handle* handle, void* out_data);
+LIBHEIF_API
+struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
+                                                 int metadata_index,
+                                                 void* out_data);
 
 
 // ========================= heif_image =========================

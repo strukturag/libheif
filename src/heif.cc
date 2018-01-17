@@ -32,6 +32,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <string.h>
 
 using namespace heif;
 
@@ -409,6 +410,60 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
   (*output)->image = out_img;
 
   return Error::Ok.error_struct(input->image.get());
+}
+
+
+int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle)
+{
+  return (int)handle->image->get_metadata().size();
+}
+
+
+void heif_image_handle_query_metadata(const struct heif_image_handle* handle,
+                                      int metadata_index,
+                                      int* out_data_size,
+                                      const char** out_data_type)
+{
+  auto metadata = handle->image->get_metadata();
+
+  if (metadata_index >= (int)metadata.size() ||
+      metadata_index < 0) {
+    if (out_data_size) *out_data_size = 0;
+    if (out_data_type) *out_data_type = nullptr;
+    return;
+  }
+
+  if (out_data_size) {
+    *out_data_size = metadata[metadata_index]->m_data.size();
+    *out_data_type = metadata[metadata_index]->item_type.c_str();
+  }
+}
+
+
+struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
+                                                 int metadata_index,
+                                                 void* out_data)
+{
+  if (out_data==nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto metadata = handle->image->get_metadata();
+
+  if (metadata_index >= (int)metadata.size() ||
+      metadata_index < 0) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Index_out_of_range);
+    return err.error_struct(handle->image.get());
+  }
+
+  memcpy(out_data,
+         metadata[metadata_index]->m_data.data(),
+         metadata[metadata_index]->m_data.size());
+
+  return Error::Ok.error_struct(handle->image.get());
 }
 
 
