@@ -82,7 +82,7 @@ static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
     return emscripten::val(err);
   }
 
-  result.set("type", file->get_image_type(ID));
+  result.set("type", file->get_item_type(ID));
   result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
       image_data.size()));
   return result;
@@ -262,7 +262,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
         emscripten::allow_raw_pointers())
     .function("get_num_images", &HeifFile::get_num_images)
     .function("get_primary_image_ID", &HeifFile::get_primary_image_ID)
-    .function("get_image_IDs", &HeifFile::get_image_IDs)
+    .function("get_item_IDs", &HeifFile::get_item_IDs)
     .function("get_compressed_image_data", &HeifFile_get_compressed_image_data,
         emscripten::allow_raw_pointers())
     ;
