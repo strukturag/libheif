@@ -52,7 +52,7 @@ static int32_t readvec_signed(const std::vector<uint8_t>& data,int& ptr,int len)
     val |= data[ptr++];
   }
 
-  bool negative = val & high_bit;
+  bool negative = (val & high_bit) != 0;
   val &= ~high_bit;
 
   if (negative) {
@@ -490,8 +490,8 @@ Error HeifContext::interpret_heif_file()
 
         // --- check whether the image size is "too large"
 
-        if (width  >= std::numeric_limits<int>::max() ||
-            height >= std::numeric_limits<int>::max()) {
+        if (width  >= static_cast<uint32_t>(std::numeric_limits<int>::max()) ||
+            height >= static_cast<uint32_t>(std::numeric_limits<int>::max())) {
           std::stringstream sstr;
           sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
                << std::numeric_limits<int>::max() << "x"
