@@ -45,19 +45,19 @@ namespace heif {
 
     int get_num_images() const { return m_images.size(); }
 
-    uint16_t get_primary_image_ID() const { return m_primary_image_ID; }
+    heif_image_id get_primary_image_ID() const { return m_primary_image_ID; }
 
-    std::vector<uint32_t> get_item_IDs() const;
+    std::vector<heif_image_id> get_item_IDs() const;
 
-    bool image_exists(uint32_t ID) const;
+    bool image_exists(heif_image_id ID) const;
 
-    std::string get_item_type(uint32_t ID) const;
+    std::string get_item_type(heif_image_id ID) const;
 
-    Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
+    Error get_compressed_image_data(heif_image_id ID, std::vector<uint8_t>* out_data) const;
 
 
 
-    std::shared_ptr<Box_infe> get_infe_box(uint32_t imageID) {
+    std::shared_ptr<Box_infe> get_infe_box(heif_image_id imageID) {
       auto iter = m_images.find(imageID);
       if (iter == m_images.end()) {
         return nullptr;
@@ -72,7 +72,7 @@ namespace heif {
 
     std::shared_ptr<Box_ipma> get_ipma_box() { return m_ipma_box; }
 
-    Error get_properties(uint32_t imageID,
+    Error get_properties(heif_image_id imageID,
                          std::vector<Box_ipco::Property>& properties) const;
 
     std::string debug_dump_boxes() const;
@@ -95,17 +95,17 @@ namespace heif {
       std::shared_ptr<Box_infe> m_infe_box;
     };
 
-    std::map<uint32_t, Image> m_images;  // map from image ID to info structure
+    std::map<heif_image_id, Image> m_images;  // map from image ID to info structure
 
     // list of image items (does not include hidden images or Exif data)
-    std::vector<uint32_t> m_valid_image_IDs;
+    std::vector<heif_image_id> m_valid_image_IDs;
 
-    uint32_t m_primary_image_ID;
+    heif_image_id m_primary_image_ID;
 
 
     Error parse_heif_file(BitstreamRange& bitstream);
 
-    bool get_image_info(uint32_t ID, const Image** image) const;
+    bool get_image_info(heif_image_id ID, const Image** image) const;
   };
 
 }

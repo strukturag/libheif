@@ -346,9 +346,9 @@ Error HeifContext::interpret_heif_file()
 
   // --- reference all non-hidden images
 
-  std::vector<uint32_t> image_IDs = m_heif_file->get_item_IDs();
+  std::vector<heif_image_id> image_IDs = m_heif_file->get_item_IDs();
 
-  for (uint32_t id : image_IDs) {
+  for (heif_image_id id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
       // TODO(farindk): Should we return an error instead of skipping the invalid id?
@@ -391,7 +391,7 @@ Error HeifContext::interpret_heif_file()
       if (type==fourcc("thmb")) {
         // --- this is a thumbnail image, attach to the main image
 
-        std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
+        std::vector<heif_image_id> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
@@ -441,7 +441,7 @@ Error HeifContext::interpret_heif_file()
                        sstr.str());
         }
 
-        std::vector<uint32_t> refs = iref_box->get_references(image->get_id());
+        std::vector<heif_image_id> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
@@ -573,7 +573,7 @@ Error HeifContext::interpret_heif_file()
 }
 
 
-HeifContext::Image::Image(HeifContext* context, uint32_t id)
+HeifContext::Image::Image(HeifContext* context, heif_image_id id)
   : m_heif_context(context),
     m_id(id)
 {
@@ -614,7 +614,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 }
 
 
-Error HeifContext::decode_image(uint32_t ID,
+Error HeifContext::decode_image(heif_image_id ID,
                                 std::shared_ptr<HeifPixelImage>& img) const
 {
   const auto imginfo = m_all_images.find(ID)->second;
@@ -801,7 +801,7 @@ Error HeifContext::decode_image(uint32_t ID,
 
 // TODO: this function only works with YCbCr images, chroma 4:2:0, and 8 bpp at the moment
 // It will crash badly if we get anything else.
-Error HeifContext::decode_full_grid_image(uint16_t ID,
+Error HeifContext::decode_full_grid_image(heif_image_id ID,
                                           std::shared_ptr<HeifPixelImage>& img,
                                           const std::vector<uint8_t>& grid_data) const
 {
@@ -818,7 +818,7 @@ Error HeifContext::decode_full_grid_image(uint16_t ID,
                  "No iref box available, but needed for grid image");
   }
 
-  std::vector<uint32_t> image_references = iref_box->get_references(ID);
+  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
 
   if ((int)image_references.size() != grid.get_rows() * grid.get_columns()) {
     std::stringstream sstr;
@@ -908,7 +908,7 @@ Error HeifContext::decode_full_grid_image(uint16_t ID,
 }
 
 
-Error HeifContext::decode_derived_image(uint16_t ID,
+Error HeifContext::decode_derived_image(heif_image_id ID,
                                         std::shared_ptr<HeifPixelImage>& img) const
 {
   // find the ID of the image this image is derived from
@@ -921,7 +921,7 @@ Error HeifContext::decode_derived_image(uint16_t ID,
                  "No iref box available, but needed for iden image");
   }
 
-  std::vector<uint32_t> image_references = iref_box->get_references(ID);
+  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
 
   if ((int)image_references.size() != 1) {
     return Error(heif_error_Invalid_input,
@@ -930,7 +930,7 @@ Error HeifContext::decode_derived_image(uint16_t ID,
   }
 
 
-  uint32_t reference_image_id = image_references[0];
+  heif_image_id reference_image_id = image_references[0];
 
 
   Error error = decode_image(reference_image_id, img);
@@ -938,7 +938,7 @@ Error HeifContext::decode_derived_image(uint16_t ID,
 }
 
 
-Error HeifContext::decode_overlay_image(uint16_t ID,
+Error HeifContext::decode_overlay_image(heif_image_id ID,
                                         std::shared_ptr<HeifPixelImage>& img,
                                         const std::vector<uint8_t>& overlay_data) const
 {
@@ -952,7 +952,7 @@ Error HeifContext::decode_overlay_image(uint16_t ID,
                  "No iref box available, but needed for iovl image");
   }
 
-  std::vector<uint32_t> image_references = iref_box->get_references(ID);
+  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
 
   /* TODO: probably, it is valid that an iovl image has no references ?
 

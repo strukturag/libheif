@@ -215,6 +215,7 @@ struct heif_error
   const char* message;
 };
 
+typedef uint32_t heif_image_id;
 
 // ========================= heif_context =========================
 
@@ -236,7 +237,6 @@ LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size);
 
-
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
@@ -244,12 +244,12 @@ LIBHEIF_API
 int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
 
 LIBHEIF_API
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, uint32_t id);
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_image_id id);
 
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, uint32_t* ID_array, int size);
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size);
 
 // Get the handle for a specific top-level image.
 LIBHEIF_API
@@ -259,7 +259,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 
 
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, uint32_t* id);
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_image_id* id);
 
 // Get a handle to the primary image of the HEIF file.
 // This is the image that should be displayed primarily when there are several images in the file.
@@ -270,7 +270,7 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx
 // Get the handle for a specific top-level image from an image ID.
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       uint32_t id,
+                                                       heif_image_id id,
                                                        struct heif_image_handle**);
 
 

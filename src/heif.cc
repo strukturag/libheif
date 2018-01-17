@@ -109,7 +109,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, uint32_t* id)
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_image_id* id)
 {
   if (!id) {
     return Error(heif_error_Usage_error,
@@ -128,7 +128,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, ui
 }
 
 
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, uint32_t id)
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_image_id id)
 {
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
 
@@ -148,7 +148,7 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 }
 
 
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, uint32_t* ID_array, int size)
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size)
 {
   if (ID_array == nullptr || size==0 || ctx==nullptr) {
     return 0;
@@ -191,7 +191,7 @@ heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_
 
 
 struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       uint32_t id,
+                                                       heif_image_id id,
                                                        struct heif_image_handle** img)
 {
   if (!img) {
