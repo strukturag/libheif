@@ -419,24 +419,32 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 }
 
 
-void heif_image_handle_query_metadata(const struct heif_image_handle* handle,
-                                      int metadata_index,
-                                      size_t* out_data_size,
-                                      const char** out_data_type)
+const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
+                                                int metadata_index)
 {
   auto metadata = handle->image->get_metadata();
 
   if (metadata_index >= (int)metadata.size() ||
       metadata_index < 0) {
-    if (out_data_size) *out_data_size = 0;
-    if (out_data_type) *out_data_type = nullptr;
-    return;
+    return NULL;
   }
 
-  if (out_data_size) {
-    *out_data_size = metadata[metadata_index]->m_data.size();
-    *out_data_type = metadata[metadata_index]->item_type.c_str();
+  return metadata[metadata_index]->item_type.c_str();
+}
+
+
+size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
+                                           int metadata_index)
+{
+  auto metadata = handle->image->get_metadata();
+
+  if (metadata_index >= (int)metadata.size() ||
+      metadata_index < 0) {
+    return 0;
   }
+
+
+  return metadata[metadata_index]->m_data.size();
 }
 
 

@@ -314,13 +314,20 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
 LIBHEIF_API
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle);
 
+// Get the size of type of the raw metadata, as stored in the HEIF file.
 LIBHEIF_API
-void heif_image_handle_query_metadata(const struct heif_image_handle* handle,
-                                      int metadata_index,
-                                      size_t* out_data_size,
-                                      const char** out_data_type);
+size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
+                                           int metadata_index);
 
-// out_data must point to a memory area of size heif_image_handle_get_exif_data_size().
+// Return a string indicating the type of the metadata, as specified in the HEIF file.
+// Exif data will have the type string "Exif".
+// This string will be valid until the next call to a libheif function.
+// You do not have to free this string.
+LIBHEIF_API
+const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
+                                                int metadata_index);
+
+// out_data must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
 LIBHEIF_API
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
                                                  int metadata_index,
