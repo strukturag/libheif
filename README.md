@@ -25,7 +25,7 @@ heif_context_read_from_file(ctx, input_filename);
 
 // get a handle to the primary image
 heif_image_handle* handle;
-heif_context_get_primary_image(ctx, &handle);
+heif_context_get_primary_image_handle(ctx, &handle);
 
 // decode the image and convert colorspace to RGB, saved as 24bit interleaved
 heif_image* img;
@@ -36,13 +36,6 @@ const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_inte
 ```
 
 See the header file `heif.h` for the complete C API.
-
-
-## Example programs
-
-Two example programs are provided in the `examples` directory.
-The program `convert` converts all images stored in an HEIF file to JPEG or PNG.
-The program `heif` is a simple, minimal decoder that dumps the file structure to the console.
 
 
 ## Compiling
@@ -67,6 +60,15 @@ See the `build-emscripten.sh` for further information.
 
 Check out this [online demo](https://strukturag.github.io/libheif/).
 This is `libheif` running in JavaScript in your browser.
+
+
+## Example programs
+
+Two example programs are provided in the `examples` directory.
+The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
+The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
+
+There is also a GIMP plugin using libHEIF [here](https://github.com/strukturag/heif-gimp-plugin).
 
 
 ## License
