@@ -21,7 +21,16 @@
 #ifndef LIBHEIF_BOX_H
 #define LIBHEIF_BOX_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
+#if defined(HAVE_INTTYPES_H)
 #include <inttypes.h>
+#endif
+#if defined(HAVE_STDDEF_H)
+#include <stddef.h>
+#endif
 #include <vector>
 #include <string>
 #include <memory>
@@ -32,6 +41,10 @@
 #include "logging.h"
 #include "bitstream.h"
 
+#if !defined(__EMSCRIPTEN__) && !defined(_MSC_VER)
+// std::array<bool> is not supported on some older compilers.
+#define HAS_BOOL_ARRAY 1
+#endif
 
 namespace heif {
 
@@ -466,7 +479,7 @@ namespace heif {
   class Box_hvcC : public Box {
   public:
     Box_hvcC(const BoxHeader& hdr) : Box(hdr) {
-#if defined(__EMSCRIPTEN__)
+#if !defined(HAS_BOOL_ARRAY)
       m_general_constraint_indicator_flags.resize(NUM_CONSTRAINT_INDICATOR_FLAGS);
 #endif
     }
@@ -485,7 +498,7 @@ namespace heif {
     bool     m_general_tier_flag;
     uint8_t  m_general_profile_idc;
     uint32_t m_general_profile_compatibility_flags;
-#if !defined(__EMSCRIPTEN__)
+#if defined(HAS_BOOL_ARRAY)
     std::array<bool,NUM_CONSTRAINT_INDICATOR_FLAGS> m_general_constraint_indicator_flags;
 #else
     std::vector<bool> m_general_constraint_indicator_flags;

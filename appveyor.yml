@@ -1,0 +1,28 @@
+# stats available at
+# https://ci.appveyor.com/project/strukturag/libheif
+version: #{build}
+
+os:
+  - Windows Server 2012 R2
+
+environment:
+  matrix:
+    - GENERATOR: "Visual Studio 14 2015"
+
+platform:
+  - x86
+  - x64
+
+configuration:
+  - Debug
+
+build:
+  verbosity: normal
+
+build_script:
+  - ps: if($env:PLATFORM -eq "x64") { $env:CMAKE_GEN_SUFFIX=" Win64" }
+  - cmake "-G%GENERATOR%%CMAKE_GEN_SUFFIX%" -H. -Bbuild
+  - cmake --build build --config %CONFIGURATION%
+
+artifacts:
+  - path: build
