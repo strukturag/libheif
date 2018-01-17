@@ -43,7 +43,7 @@ namespace heif {
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 
-    int get_num_images() const { return m_images.size(); }
+    int get_num_images() const { return static_cast<int>(m_images.size()); }
 
     heif_image_id get_primary_image_ID() const { return m_primary_image_ID; }
 

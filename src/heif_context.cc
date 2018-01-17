@@ -112,8 +112,8 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   uint8_t flags = data[1];
   int field_size = ((flags & 1) ? 32 : 16);
 
-  m_rows    = data[2] +1;
-  m_columns = data[3] +1;
+  m_rows    = static_cast<uint16_t>(data[2] +1);
+  m_columns = static_cast<uint16_t>(data[3] +1);
 
   if (field_size == 32) {
     if (data.size() < 12) {
@@ -161,7 +161,7 @@ std::string ImageGrid::dump() const
 class ImageOverlay
 {
 public:
-  Error parse(int num_images, const std::vector<uint8_t>& data);
+  Error parse(size_t num_images, const std::vector<uint8_t>& data);
 
   std::string dump() const;
 
@@ -171,7 +171,7 @@ public:
   uint32_t get_canvas_height() const { return m_height; }
 
   size_t get_num_offsets() const { return m_offsets.size(); }
-  void get_offset(int image_index, int32_t* x, int32_t* y) const;
+  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
 
 private:
   uint8_t  m_version;
@@ -188,7 +188,7 @@ private:
 };
 
 
-Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
+Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 {
   Error eofError(heif_error_Invalid_input,
                  heif_suberror_Invalid_grid_data,
@@ -213,12 +213,13 @@ Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
   int field_len = ((m_flags & 1) ? 4 : 2);
   int ptr=2;
 
-  if (ptr + 4*2 + 2*field_len + num_images*2*field_len > (int)data.size()) {
+  if (ptr + 4*2 + 2*field_len + num_images*2*field_len > data.size()) {
     return eofError;
   }
 
   for (int i=0;i<4;i++) {
-    m_background_color[i] = readvec(data,ptr,2);
+    uint16_t color = static_cast<uint16_t>(readvec(data,ptr,2));
+    m_background_color[i] = color;
   }
 
   m_width  = readvec(data,ptr,field_len);
@@ -226,7 +227,7 @@ Error ImageOverlay::parse(int num_images, const std::vector<uint8_t>& data)
 
   m_offsets.resize(num_images);
 
-  for (int i=0;i<num_images;i++) {
+  for (size_t i=0;i<num_images;i++) {
     m_offsets[i].x = readvec_signed(data,ptr,field_len);
     m_offsets[i].y = readvec_signed(data,ptr,field_len);
   }
@@ -265,9 +266,9 @@ void ImageOverlay::get_background_color(uint16_t col[4]) const
 }
 
 
-void ImageOverlay::get_offset(int image_index, int32_t* x, int32_t* y) const
+void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 {
-  assert(image_index>=0 && image_index<(int)m_offsets.size());
+  assert(image_index>=0 && image_index<m_offsets.size());
   assert(x && y);
 
   *x = m_offsets[image_index].x;

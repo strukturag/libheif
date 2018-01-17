@@ -92,10 +92,10 @@ int Fraction::round() const
 static std::string to_fourcc(uint32_t code)
 {
   std::string str("    ");
-  str[0] = (code>>24) & 0xFF;
-  str[1] = (code>>16) & 0xFF;
-  str[2] = (code>> 8) & 0xFF;
-  str[3] = (code>> 0) & 0xFF;
+  str[0] = static_cast<char>((code>>24) & 0xFF);
+  str[1] = static_cast<char>((code>>16) & 0xFF);
+  str[2] = static_cast<char>((code>> 8) & 0xFF);
+  str[3] = static_cast<char>((code>> 0) & 0xFF);
 
   return str;
 }
@@ -106,7 +106,7 @@ heif::BoxHeader::BoxHeader()
 }
 
 
-static uint16_t read8(BitstreamRange& range)
+static uint8_t read8(BitstreamRange& range)
 {
   if (!range.read(1)) {
     return 0;
@@ -142,7 +142,7 @@ static uint16_t read16(BitstreamRange& range)
     return 0;
   }
 
-  return ((buf[0]<<8) | (buf[1]));
+  return static_cast<uint16_t>((buf[0]<<8) | (buf[1]));
 }
 
 
@@ -209,10 +209,10 @@ std::vector<uint8_t> heif::BoxHeader::get_type() const
   }
   else {
     std::vector<uint8_t> type(4);
-    type[0] = (m_type>>24) & 0xFF;
-    type[1] = (m_type>>16) & 0xFF;
-    type[2] = (m_type>> 8) & 0xFF;
-    type[3] = (m_type>> 0) & 0xFF;
+    type[0] = static_cast<uint8_t>((m_type>>24) & 0xFF);
+    type[1] = static_cast<uint8_t>((m_type>>16) & 0xFF);
+    type[2] = static_cast<uint8_t>((m_type>> 8) & 0xFF);
+    type[3] = static_cast<uint8_t>((m_type>> 0) & 0xFF);
     return type;
   }
 }
@@ -317,7 +317,7 @@ Error Box::parse(BitstreamRange& range)
 Error BoxHeader::parse_full_box_header(BitstreamRange& range)
 {
   uint32_t data = read32(range);
-  m_version = data >> 24;
+  m_version = static_cast<uint8_t>(data >> 24);
   m_flags = data & 0x00FFFFFF;
   m_is_full_box = true;
 
@@ -565,9 +565,9 @@ Error Box_ftyp::parse(BitstreamRange& range)
                  "ftyp box too small (less than 8 bytes)");
   }
 
-  int n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
+  uint64_t n_minor_brands = (get_box_size() - get_header_size() - 8) / 4;
 
-  for (int i=0;i<n_minor_brands && !range.error();i++) {
+  for (uint64_t i=0;i<n_minor_brands && !range.error();i++) {
     m_compatible_brands.push_back( read32(range) );
   }
 
@@ -923,8 +923,8 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                      sstr.str());
       }
 
-      dest->resize(old_size + extent.length);
-      istr.read((char*)dest->data() + old_size, extent.length);
+      dest->resize(static_cast<size_t>(old_size + extent.length));
+      istr.read((char*)dest->data() + old_size, static_cast<size_t>(extent.length));
       if (istr.eof()) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_End_of_data);
@@ -1512,15 +1512,15 @@ Error Box_hvcC::parse(BitstreamRange& range)
   m_min_spatial_segmentation_idc = read16(range) & 0x0FFF;
   m_parallelism_type = read8(range) & 0x03;
   m_chroma_format = read8(range) & 0x03;
-  m_bit_depth_luma = (read8(range) & 0x07) + 8;
-  m_bit_depth_chroma = (read8(range) & 0x07) + 8;
+  m_bit_depth_luma = static_cast<uint8_t>((read8(range) & 0x07) + 8);
+  m_bit_depth_chroma = static_cast<uint8_t>((read8(range) & 0x07) + 8);
   m_avg_frame_rate = read16(range);
 
   byte = read8(range);
   m_constant_frame_rate = (byte >> 6) & 0x03;
   m_num_temporal_layers = (byte >> 3) & 0x07;
   m_temporal_id_nested = (byte >> 2) & 1;
-  m_length_size = (byte & 0x03) + 1;
+  m_length_size = static_cast<uint8_t>((byte & 0x03) + 1);
 
   int nArrays = read8(range);
 
@@ -1689,10 +1689,10 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
                  sstr.str());
   }
 
-  out_data.resize(curr_size + length);
+  out_data.resize(static_cast<size_t>(curr_size + length));
   uint8_t* data = &out_data[curr_size];
 
-  istr.read((char*)data, length);
+  istr.read((char*)data, static_cast<size_t>(length));
 
   return Error::Ok;
 }
