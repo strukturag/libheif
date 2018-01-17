@@ -99,8 +99,8 @@ fi
 AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" = "xyes"])
 AC_SUBST(ENABLE_LIBFUZZER)
 
-CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare"
-CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare"
+CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion"
+CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion"
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
