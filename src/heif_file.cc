@@ -43,7 +43,7 @@ HeifFile::~HeifFile()
 }
 
 
-std::vector<uint32_t> HeifFile::get_image_IDs() const
+std::vector<uint32_t> HeifFile::get_item_IDs() const
 {
   std::vector<uint32_t> IDs;
 
@@ -257,7 +257,7 @@ bool HeifFile::get_image_info(uint32_t ID, const HeifFile::Image** image) const
 }
 
 
-std::string HeifFile::get_image_type(uint32_t ID) const
+std::string HeifFile::get_item_type(uint32_t ID) const
 {
   const Image* img;
   if (!get_image_info(ID, &img)) {
@@ -296,14 +296,6 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
   }
 
 
-  // --- get properties for this image
-
-  std::vector<Box_ipco::Property> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err) {
-    return err;
-  }
-
   std::string item_type = image->m_infe_box->get_item_type();
 
   // --- get coded image data pointers
@@ -330,6 +322,14 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
   if (item_type == "hvc1") {
     // --- --- --- HEVC
 
+    // --- get properties for this image
+
+    std::vector<Box_ipco::Property> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
     // --- get codec configuration
 
     std::shared_ptr<Box_hvcC> hvcC_box;
@@ -351,9 +351,9 @@ Error HeifFile::get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* dat
     }
 
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
-  } else if (item_type == "grid") {
-    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
-  } else if (item_type == "iovl") {
+  } else if (item_type == "grid" ||
+             item_type == "iovl" ||
+             item_type == "Exif") {
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   }
 

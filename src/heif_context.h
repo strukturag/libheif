@@ -34,6 +34,15 @@ namespace heif {
   class HeifFile;
   class HeifPixelImage;
 
+
+  class ImageMetadata
+  {
+  public:
+    std::string item_type;  // e.g. "Exif"
+    std::vector<uint8_t> m_data;
+  };
+
+
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
   // The class also handles automatic color-space conversion.
@@ -80,6 +89,10 @@ namespace heif {
                          heif_chroma chroma = heif_chroma_undefined,
                          class HeifColorConversionParams* config = nullptr) const;
 
+      void add_metadata(std::shared_ptr<ImageMetadata> metadata) {
+        m_metadata.push_back(metadata);
+      }
+
     private:
       HeifContext* m_heif_context;
 
@@ -95,6 +108,8 @@ namespace heif {
       bool m_is_alpha_channel = false;
       uint32_t m_alpha_channel_ref_id;
       std::shared_ptr<Image> m_alpha_channel;
+
+      std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
     };
 
 

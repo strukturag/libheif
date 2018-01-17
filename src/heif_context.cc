@@ -346,7 +346,7 @@ Error HeifContext::interpret_heif_file()
 
   // --- reference all non-hidden images
 
-  std::vector<uint32_t> image_IDs = m_heif_file->get_image_IDs();
+  std::vector<uint32_t> image_IDs = m_heif_file->get_item_IDs();
 
   for (uint32_t id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
@@ -525,6 +525,50 @@ Error HeifContext::interpret_heif_file()
     }
   }
 
+
+
+  // --- read metadata and assign to image
+
+  for (uint32_t id : image_IDs) {
+    std::string item_type = m_heif_file->get_item_type(id);
+    if (item_type == "Exif") {
+      std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
+      metadata->item_type = item_type;
+
+      Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
+      if (err) {
+        return err;
+      }
+
+      //std::cerr.write((const char*)data.data(), data.size());
+
+
+      // --- assign metadata to the image
+
+      if (iref_box) {
+        uint32_t type = iref_box->get_reference_type(id);
+        if (type == fourcc("cdsc")) {
+          std::vector<uint32_t> refs = iref_box->get_references(id);
+          if (refs.size() != 1) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Unspecified,
+                         "Exif data not correctly assigned to image");
+          }
+
+          uint32_t exif_image_id = refs[0];
+          auto img_iter = m_all_images.find(exif_image_id);
+          if (img_iter == m_all_images.end()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_image_referenced,
+                         "Exif data assigned to non-existing image");
+          }
+
+          img_iter->second->add_metadata(metadata);
+        }
+      }
+    }
+  }
+
   return Error::Ok;
 }
 
@@ -575,7 +619,7 @@ Error HeifContext::decode_image(uint32_t ID,
 {
   const auto imginfo = m_all_images.find(ID)->second;
 
-  std::string image_type = m_heif_file->get_image_type(ID);
+  std::string image_type = m_heif_file->get_item_type(ID);
 
   Error error;
 

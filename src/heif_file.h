@@ -47,11 +47,11 @@ namespace heif {
 
     uint16_t get_primary_image_ID() const { return m_primary_image_ID; }
 
-    std::vector<uint32_t> get_image_IDs() const;
+    std::vector<uint32_t> get_item_IDs() const;
 
     bool image_exists(uint32_t ID) const;
 
-    std::string get_image_type(uint32_t ID) const;
+    std::string get_item_type(uint32_t ID) const;
 
     Error get_compressed_image_data(uint16_t ID, std::vector<uint8_t>* out_data) const;
 
