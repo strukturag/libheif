@@ -53,7 +53,11 @@ namespace heif {
       if (n<0) {
         return false;
       }
-      if (m_remaining >= static_cast<uint64_t>(n)) {
+      return read(static_cast<uint64_t>(n));
+    }
+
+    bool read(uint64_t n) {
+      if (m_remaining >= n) {
         if (m_parent_range) {
           m_parent_range->read(n);
         }
