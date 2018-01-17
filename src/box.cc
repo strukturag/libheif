@@ -89,7 +89,7 @@ int Fraction::round() const
 }
 
 
-std::string to_fourcc(uint32_t code)
+static std::string to_fourcc(uint32_t code)
 {
   std::string str("    ");
   str[0] = (code>>24) & 0xFF;
@@ -106,7 +106,7 @@ heif::BoxHeader::BoxHeader()
 }
 
 
-uint16_t read8(BitstreamRange& range)
+static uint16_t read8(BitstreamRange& range)
 {
   if (!range.read(1)) {
     return 0;
@@ -126,7 +126,7 @@ uint16_t read8(BitstreamRange& range)
 }
 
 
-uint16_t read16(BitstreamRange& range)
+static uint16_t read16(BitstreamRange& range)
 {
   if (!range.read(2)) {
     return 0;
@@ -146,7 +146,7 @@ uint16_t read16(BitstreamRange& range)
 }
 
 
-uint32_t read32(BitstreamRange& range)
+static uint32_t read32(BitstreamRange& range)
 {
   if (!range.read(4)) {
     return 0;
@@ -169,7 +169,7 @@ uint32_t read32(BitstreamRange& range)
 }
 
 
-std::string read_string(BitstreamRange& range)
+static std::string read_string(BitstreamRange& range)
 {
   std::string str;
 
