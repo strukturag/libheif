@@ -698,16 +698,6 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    printf("bit depth: %d\n",plane.bit_depth);
-
-    /*
-    if (plane.bit_depth != 8) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unspecified,
-                   "Can currently only rotate images with 8 bits per pixel");
-    }
-    */
-
     const int bpp = (plane.bit_depth + 7)/8;
 
     int in_w = plane.width;
@@ -727,8 +717,6 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     int out_stride;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
-
-    printf("scale with bpp=%d to %d %d\n",bpp,out_w,out_h);
 
     for (int y=0;y<out_h;y++) {
       int iy = y * m_height / height;
