@@ -271,14 +271,15 @@ std::string HeifFile::get_item_type(heif_image_id ID) const
 Error HeifFile::get_properties(heif_image_id imageID,
                                std::vector<Box_ipco::Property>& properties) const
 {
-  Error err;
-  if (!m_ipco_box || !m_ipma_box) {
-    // TODO: error
+  if (!m_ipco_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_ipco_box);
+  } else if (!m_ipma_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_ipma_box);
   }
 
-  err = m_ipco_box->get_properties_for_item_ID(imageID, m_ipma_box, properties);
-
-  return err;
+  return m_ipco_box->get_properties_for_item_ID(imageID, m_ipma_box, properties);
 }
 
 
