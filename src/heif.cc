@@ -421,7 +421,7 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 
 void heif_image_handle_query_metadata(const struct heif_image_handle* handle,
                                       int metadata_index,
-                                      int* out_data_size,
+                                      size_t* out_data_size,
                                       const char** out_data_type)
 {
   auto metadata = handle->image->get_metadata();
