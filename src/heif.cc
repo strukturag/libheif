@@ -393,6 +393,26 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
 }
 
 
+struct heif_error heif_image_scale_image(const struct heif_image* input,
+                                         struct heif_image** output,
+                                         int width, int height,
+                                         const struct heif_scaling_options* options)
+{
+  std::shared_ptr<HeifPixelImage> out_img;
+
+  Error err = input->image->scale_nearest_neighbor(out_img, width, height);
+  if (err) {
+    return err.error_struct(input->image.get());
+  }
+
+  *output = new heif_image;
+  (*output)->image = out_img;
+
+  return Error::Ok.error_struct(input->image.get());
+}
+
+
+
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
   heif->context->register_decoder(decoder_plugin);

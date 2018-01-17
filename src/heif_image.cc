@@ -683,3 +683,74 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
 
   return Error::Ok;
 }
+
+
+Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& out_img,
+                                             int width,int height) const
+{
+  out_img = std::make_shared<HeifPixelImage>();
+  out_img->create(width, height, m_colorspace, m_chroma);
+
+
+  // --- scale all channels
+
+  for (const auto& plane_pair : m_planes) {
+    heif_channel channel = plane_pair.first;
+    const ImagePlane& plane = plane_pair.second;
+
+    printf("bit depth: %d\n",plane.bit_depth);
+
+    /*
+    if (plane.bit_depth != 8) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can currently only rotate images with 8 bits per pixel");
+    }
+    */
+
+    const int bpp = (plane.bit_depth + 7)/8;
+
+    int in_w = plane.width;
+    int in_h = plane.height;
+
+    int out_w = in_w * width/m_width;
+    int out_h = in_h * height/m_height;
+
+    out_img->add_plane(channel,
+                       out_w,
+                       out_h,
+                       plane.bit_depth);
+
+    int in_stride = plane.stride;
+    const uint8_t* in_data = plane.mem.data();
+
+    int out_stride;
+    uint8_t* out_data = out_img->get_plane(channel, &out_stride);
+
+
+    printf("scale with bpp=%d to %d %d\n",bpp,out_w,out_h);
+
+    for (int y=0;y<out_h;y++) {
+      int iy = y * m_height / height;
+
+      if (bpp==1) {
+        for (int x=0;x<out_w;x++) {
+          int ix = x * m_width / width;
+
+          out_data[y*out_stride + x] = in_data[iy*in_stride + ix];
+        }
+      }
+      else {
+        for (int x=0;x<out_w;x++) {
+          int ix = x * m_width / width;
+
+          for (int b=0;b<bpp;b++) {
+            out_data[y*out_stride + bpp*x + b] = in_data[iy*in_stride + bpp*ix + b];
+          }
+        }
+      }
+    }
+  }
+
+  return Error::Ok;
+}

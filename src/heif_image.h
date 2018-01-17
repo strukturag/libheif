@@ -33,7 +33,8 @@
 
 namespace heif {
 
-class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
+class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
+                       public ErrorBuffer
 {
  public:
   explicit HeifPixelImage();
@@ -86,6 +87,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>
   Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
 
   Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,int dy);
+
+  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
 
  private:
   struct ImagePlane {

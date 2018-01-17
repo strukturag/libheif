@@ -405,6 +405,16 @@ uint8_t* heif_image_get_plane(struct heif_image*,
                               enum heif_channel channel,
                               int* out_stride);
 
+
+struct heif_scaling_options;
+
+// Currently, heif_scaling_options is not defined yet. Pass a NULL pointer.
+LIBHEIF_API
+struct heif_error heif_image_scale_image(const struct heif_image* input,
+                                         struct heif_image** output,
+                                         int width, int height,
+                                         const struct heif_scaling_options* options);
+
 // Release heif_image.
 LIBHEIF_API
 void heif_image_release(const struct heif_image*);
