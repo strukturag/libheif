@@ -55,4 +55,5 @@ else()
   set(LIBHEIF_LIBRARY_NAME libheif)
 endif()
 
+add_subdirectory (examples)
 add_subdirectory (src)
