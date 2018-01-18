@@ -43,6 +43,11 @@
 #include <unistd.h>
 #endif
 
+#if defined(_MSC_VER)
+#include <io.h>
+#define write _write
+#endif
+
 using namespace heif;
 
 const char *heif_get_version(void) {
