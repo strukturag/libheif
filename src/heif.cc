@@ -276,22 +276,25 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
 }
 
 
-void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
-                                      int* width, int* height)
+int heif_image_handle_get_width(const struct heif_image_handle* handle)
 {
-  int w, h;
-
   if (handle && handle->image) {
-    w = handle->image->get_width();
-    h = handle->image->get_height();
+    return handle->image->get_width();
   }
   else {
-    w = 0;
-    h = 0;
+    return 0;
   }
+}
 
-  if (width)  *width = w;
-  if (height) *height = h;
+
+int heif_image_handle_get_height(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_height();
+  }
+  else {
+    return 0;
+  }
 }
 
 

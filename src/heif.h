@@ -218,9 +218,15 @@ struct heif_error
   const char* message;
 };
 
+
 typedef uint32_t heif_image_id;
 
+
 // ========================= heif_context =========================
+// A heif_context represents a HEIF file that has been read.
+// In the future, you will also be able to add pictures to a heif_context
+// and write it into a file again.
+
 
 // Allocate a new context for reading HEIF files.
 // Has to be freed again with heif_context_free().
@@ -240,10 +246,6 @@ LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size);
 
-// Print information about the boxes of a HEIF file to file descriptor.
-LIBHEIF_API
-void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd);
-
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
@@ -259,6 +261,7 @@ LIBHEIF_API
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size);
 
 // Get the handle for a specific top-level image.
+// 'idx' has to be within [0; number_of_top_level_images-1]
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 int idx,
@@ -280,12 +283,22 @@ struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
                                                        heif_image_id id,
                                                        struct heif_image_handle**);
 
+// Print information about the boxes of a HEIF file to file descriptor.
+// This is for debugging and informational purposes only. You should not rely on
+// the output having a specific format. At best, you should not use this at all.
+LIBHEIF_API
+void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd);
+
 
 // ========================= heif_image_handle =========================
 
 // An heif_image_handle is a handle to a logical image in the HEIF file.
 // To get the actual pixel data, you have to decode the handle to an heif_image.
+// An heif_image_handle also gives you access to the thumbnails and Exif data
+// associated with an image.
 
+// Once you obtained an heif_image_handle, you can already release the heif_context,
+// since it is internally ref-counted.
 
 // Release image handle.
 LIBHEIF_API
@@ -297,8 +310,8 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 
 // Get the resolution of an image.
 LIBHEIF_API
-void heif_image_handle_get_resolution(const struct heif_image_handle* handle,
-                                      int* width, int* height);
+int heif_image_handle_get_width(const struct heif_image_handle* handle);
+int heif_image_handle_get_height(const struct heif_image_handle* handle);
 
 LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
@@ -314,14 +327,10 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
                                                   int thumbnail_idx,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
-
+// How many metadata blocks are attached to an image. Usually, the only metadata is
+// an "Exif" block.
 LIBHEIF_API
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle);
-
-// Get the size of type of the raw metadata, as stored in the HEIF file.
-LIBHEIF_API
-size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
-                                           int metadata_index);
 
 // Return a string indicating the type of the metadata, as specified in the HEIF file.
 // Exif data will have the type string "Exif".
@@ -331,7 +340,15 @@ LIBHEIF_API
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
                                                 int metadata_index);
 
-// out_data must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
+// Get the size of the raw metadata, as stored in the HEIF file.
+LIBHEIF_API
+size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
+                                           int metadata_index);
+
+// 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
+// The data is returned exactly as stored in the HEIF file.
+// For Exif data, you probably have to skip the first four bytes of the data, since they
+// indicate the offset to the start of the TIFF header of the Exif data.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
                                                  int metadata_index,
@@ -339,6 +356,9 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 
 
 // ========================= heif_image =========================
+
+// An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
+// and bit depths.
 
 // Note: when converting images to colorspace_RGB/chroma_interleaved_24bit, the resulting
 // image contains only a single channel of type channel_interleaved with 3 bytes per pixel,
@@ -386,7 +406,6 @@ struct heif_decoding_options
   uint8_t ignore_transformations;
 };
 
-
 // Allocate decoding options and fill with default values.
 // Note: you should always get the decoding options through this function since the
 // option structure may grow in size in future versions.
@@ -396,7 +415,10 @@ struct heif_decoding_options* heif_decoding_options_alloc();
 LIBHEIF_API
 void heif_decoding_options_free(struct heif_decoding_options*);
 
-// If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
+// Decode an heif_image_handle into the actual pixel image and also carry out
+// all geometric transformations specified in the HEIF file (rotation, cropping, mirroring).
+//
+// If colorspace or chroma is set to heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
 // Decoding options may be NULL. If you want to supply options, always use
 // heif_decoding_options_alloc() to get the structure.
@@ -435,6 +457,7 @@ int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
 
+// Get a pointer to the actual pixel data.
 // The 'out_stride' is returned as "bytes per line".
 // When out_stride is NULL, no value will be written.
 // Returns NULL if a non-existing channel was given.

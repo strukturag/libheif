@@ -28,10 +28,10 @@ static void TestDecodeImage(struct heif_context* ctx,
     const struct heif_image_handle* handle) {
   struct heif_image* image;
   struct heif_error err;
-  int width = 0, height = 0;
 
   heif_image_handle_is_primary_image(handle);
-  heif_image_handle_get_resolution(handle, &width, &height);
+  int width = heif_image_handle_get_width(handle);
+  int height = heif_image_handle_get_height(handle);
   assert(width >= 0);
   assert(height >= 0);
   err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma, nullptr);
