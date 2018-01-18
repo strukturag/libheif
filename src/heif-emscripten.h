@@ -134,7 +134,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   }
 
   struct heif_image* image;
-  struct heif_error err = heif_decode_image(handle, colorspace, chroma, &image);
+  struct heif_error err = heif_decode_image(handle, &image, colorspace, chroma, nullptr);
   if (err.code != heif_error_Ok) {
     return emscripten::val(err);
   }
