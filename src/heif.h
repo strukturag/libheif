@@ -240,9 +240,9 @@ LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size);
 
-// Print information about the boxes of a HEIF file to stdout.
+// Print information about the boxes of a HEIF file to file descriptor.
 LIBHEIF_API
-void heif_context_debug_dump_boxes(struct heif_context* ctx);
+void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd);
 
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via

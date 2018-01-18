@@ -34,6 +34,7 @@
 #include <utility>
 #include <vector>
 #include <string.h>
+#include <unistd.h>
 
 using namespace heif;
 
@@ -85,12 +86,13 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 // TODO
 //heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-void heif_context_debug_dump_boxes(struct heif_context* ctx) {
+void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
   if (!ctx) {
     return;
   }
 
-  std::cout << ctx->context->debug_dump_boxes();
+  std::string dump = ctx->context->debug_dump_boxes();
+  write(fd, dump.c_str(), dump.size());
 }
 
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
