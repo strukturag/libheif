@@ -311,6 +311,8 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 // Get the resolution of an image.
 LIBHEIF_API
 int heif_image_handle_get_width(const struct heif_image_handle* handle);
+
+LIBHEIF_API
 int heif_image_handle_get_height(const struct heif_image_handle* handle);
 
 LIBHEIF_API
