@@ -84,9 +84,6 @@ PKG_CHECK_MODULES([libpng], [libpng], [
 ], [have_libpng="no"])
 AM_CONDITIONAL([HAVE_LIBPNG], [test "x$have_libpng" = "xyes"])
 
-AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$have_libde265" != "xno"])
-AC_MSG_NOTICE([Building examples: $have_libde265])
-
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
     [Enable fuzzing with libFuzzer.]))
 if eval "test x$enable_libfuzzer = xyes"; then
