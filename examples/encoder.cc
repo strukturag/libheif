@@ -17,7 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with convert.  If not, see <http://www.gnu.org/licenses/>.
  */
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
+#if defined(HAVE_STRINGS_H)
 #include <strings.h>
+#endif
 
 #include "encoder.h"
 
