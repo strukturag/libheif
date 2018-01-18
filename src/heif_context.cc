@@ -749,7 +749,7 @@ Error HeifContext::decode_image(heif_image_id ID,
       auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
       if (rot) {
         std::shared_ptr<HeifPixelImage> rotated_img;
-        error = img->rotate(rot->get_rotation(), rotated_img);
+        error = img->rotate_ccw(rot->get_rotation(), rotated_img);
         if (error) {
           return error;
         }

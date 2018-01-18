@@ -406,8 +406,8 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24() const
 }
 
 
-Error HeifPixelImage::rotate(int angle_degrees,
-                             std::shared_ptr<HeifPixelImage>& out_img)
+Error HeifPixelImage::rotate_ccw(int angle_degrees,
+                                 std::shared_ptr<HeifPixelImage>& out_img)
 {
   // --- create output image (or simply reuse existing image)
 
@@ -460,9 +460,9 @@ Error HeifPixelImage::rotate(int angle_degrees,
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
     if (angle_degrees==90) {
-      for (int x=0;x<w;x++)
-        for (int y=0;y<h;y++) {
-          out_data[x*out_stride + y] = in_data[(h-1-y)*in_stride + (w-1-x)];
+      for (int x=0;x<h;x++)
+        for (int y=0;y<w;y++) {
+          out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
         }
     }
     else if (angle_degrees==180) {
@@ -472,9 +472,9 @@ Error HeifPixelImage::rotate(int angle_degrees,
         }
     }
     else if (angle_degrees==270) {
-      for (int x=0;x<w;x++)
-        for (int y=0;y<h;y++) {
-          out_data[x*out_stride + y] = in_data[y*in_stride + x];
+      for (int x=0;x<h;x++)
+        for (int y=0;y<w;y++) {
+          out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
         }
     }
   }
