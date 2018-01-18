@@ -90,8 +90,7 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
   return err.error_struct(ctx->context.get());
 }
 
-// TODO
-//heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
+// TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
 void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
   if (!ctx) {
@@ -338,8 +337,6 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 
   *out_img = new heif_image();
   (*out_img)->image = std::move(img);
-
-  // TODO: colorspace conversion
 
   return Error::Ok.error_struct(in_handle->image.get());
 }
