@@ -451,8 +451,6 @@ Error HeifContext::interpret_heif_file()
 
 
         if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1") {
-          printf("ALPHA\n");
-
           image->set_is_alpha_channel_of(refs[0]);
 
           auto master_iter = m_all_images.find(refs[0]);
@@ -618,8 +616,6 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 Error HeifContext::decode_image(heif_image_id ID,
                                 std::shared_ptr<HeifPixelImage>& img) const
 {
-  const auto imginfo = m_all_images.find(ID)->second;
-
   std::string image_type = m_heif_file->get_item_type(ID);
 
   Error error;
@@ -717,20 +713,27 @@ Error HeifContext::decode_image(heif_image_id ID,
 
   // --- add alpha channel, if available
 
-  std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
-  if (alpha_image) {
-    std::shared_ptr<HeifPixelImage> alpha;
-    Error err = alpha_image->decode_image(alpha);
-    if (err) {
-      return err;
+  // TODO: this if statement is probably wrong. When we have a tiled image with alpha
+  // channel, then the alpha images should be associated with their respective tiles.
+  // However, the tile images are not part of the m_all_images list.
+  // Fix this, when we have a test image available.
+  if (m_all_images.find(ID) != m_all_images.end()) {
+    const auto imginfo = m_all_images.find(ID)->second;
+
+    std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
+    if (alpha_image) {
+      std::shared_ptr<HeifPixelImage> alpha;
+      Error err = alpha_image->decode_image(alpha);
+      if (err) {
+        return err;
+      }
+
+      // TODO: check that sizes are the same and that we have an Y channel
+      // BUT: is there any indication in the standard that the alpha channel should have the same size?
+
+      img->transfer_plane_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha);
     }
-
-    // TODO: check that sizes are the same and that we have an Y channel
-    // BUT: is there any indication in the standard that the alpha channel should have the same size?
-
-    img->transfer_plane_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha);
   }
-
 
 
   // --- apply image transformations
