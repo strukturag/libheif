@@ -98,7 +98,9 @@ void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
   }
 
   std::string dump = ctx->context->debug_dump_boxes();
-  write(fd, dump.c_str(), dump.size());
+  // TODO(fancycode): Should we return an if writing fails?
+  auto written = write(fd, dump.c_str(), dump.size());
+  (void) written;
 }
 
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
