@@ -17,13 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with heif.  If not, see <http://www.gnu.org/licenses/>.
  */
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
 
 #include <errno.h>
 #include <string.h>
 
-#include "config.h"
 #include "heif.h"
-#include "heif_api_structs.h"
 
 #include <fstream>
 #include <iostream>
@@ -71,9 +72,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-#ifndef HAVE_VISIBILITY
-  std::cout << ctx->context->debug_dump_boxes();
-#endif
+  heif_context_debug_dump_boxes(ctx);
 
   std::cout << "----------------------------------------------------------\n";
 
