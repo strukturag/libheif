@@ -50,6 +50,11 @@ a {
 <div id="container" class="hidden">
     <canvas id="canvas"></canvas>
 </div>
+<div id="save-container" class="hidden">
+    <button id="save">Save image...</button>
+    <div id="downloads" class="hidden">
+    </div>
+</div>
 <div id="error-format" class="hidden">
     The selected file is not a valid HEIF file or the specific format is not
     supported yet.<br>
@@ -60,6 +65,29 @@ a {
 </div>
 <script>
 (function() {
+
+    var saveSupported = false;
+
+    // IE polyfill for Canvas.toBlob
+    if (!HTMLCanvasElement.prototype.toBlob) {
+      Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+        value: function (callback, type, quality) {
+          var canvas = this;
+          setTimeout(function() {
+
+            var binStr = atob(canvas.toDataURL(type, quality).split(',')[1]),
+                len = binStr.length,
+                arr = new Uint8Array(len);
+
+            for (var i = 0; i < len; i++ ) {
+              arr[i] = binStr.charCodeAt(i);
+            }
+
+            callback(new Blob([arr], {type: type || 'image/png'}));
+          });
+        }
+      });
+    }
 
     function show(id) {
         document.getElementById(id).style.display = "block";
@@ -112,6 +140,7 @@ a {
                 this.container.style["padding-bottom"] = String(100 * (h / w)) + "%";
             } else {
                 removeClass(this.container, "flexible-size");
+                this.container.style["padding-bottom"] = "";
             }
             this.image_data = this.ctx.createImageData(w, h);
             var image_data = this.image_data.data;
@@ -129,6 +158,11 @@ a {
             }
 
             show("container");
+            if (saveSupported) {
+                show("save-container");
+            } else {
+                hide("save-container");
+            }
             if (window.requestAnimationFrame) {
                 this.pending_image_data = display_image_data;
                 window.requestAnimationFrame(function() {
@@ -146,6 +180,7 @@ a {
     function HeifDemo(libheif) {
         this.libheif = libheif;
         this.canvas = document.getElementById("canvas");
+        this.downloads = document.getElementById("downloads");
         this.image_data = [];
         this.images_select = document.getElementById("images");
         this.images_select.addEventListener("change", function(event) {
@@ -156,6 +191,13 @@ a {
         }.bind(this));
         this.drawer = new CanvasDrawer(canvas);
         this.decoder = new libheif.HeifDecoder();
+        saveSupported = this.canvas.toBlob &&
+            ((URL && URL.createObjectURL) || navigator.msSaveOrOpenBlob);
+        if (saveSupported) {
+            console.log("Saving images is supported in this browser.");
+        } else {
+            console.warn("Saving images is not supported in this browser.");
+        }
     }
 
     HeifDemo.prototype.reset = function() {
@@ -181,13 +223,17 @@ a {
             var remaining = data.byteLength;
             console.log("Received", remaining, "bytes");
             var buffer = new Uint8Array(data, 0, remaining);
-            this.loadBuffer(buffer);
+            var filename = url.substring(url.lastIndexOf('/')+1);
+            this.loadBuffer(buffer, filename);
         }.bind(this);
         request.send();
     };
 
-    HeifDemo.prototype.loadBuffer = function(buffer) {
+    HeifDemo.prototype.loadBuffer = function(buffer, filename) {
+        this.filename = filename;
         hide("error-format");
+        hide("container");
+        hide("save-container");
         show("loading");
         for (var i = 0; i < this.image_data.length; i++) {
             this.image_data[i].free();
@@ -195,7 +241,6 @@ a {
         this.image_data = this.decoder.decode(buffer);
         hide("loading");
         if (!this.image_data || !this.image_data.length) {
-            hide("container");
             show("error-format");
             return false;
         }
@@ -225,6 +270,41 @@ a {
         this.drawer.draw(image);
     };
 
+    HeifDemo.prototype.saveImage = function(format) {
+        if (!saveSupported) {
+            alert("Saving images is not supported with your browser.");
+            return;
+        }
+
+        if (!format) {
+            format = "image/jpeg";
+        }
+        while (this.downloads.firstChild) {
+            this.downloads.removeChild(this.downloads.firstChild);
+        }
+
+        var FILE_EXTENSIONS = {
+            "image/jpeg": ".jpeg",
+            "image/png": ".png"
+        };
+        this.canvas.toBlob(function(blob) {
+            var extension = FILE_EXTENSIONS[blob.type] || ".bin";
+            var basename = this.filename.replace(/\.[^/.]+$/, "");
+            if (navigator.msSaveOrOpenBlob) {
+                navigator.msSaveOrOpenBlob(blob, basename + extension);
+                return;
+            }
+
+            var url = URL.createObjectURL(blob);
+            var dlink = document.createElement("a");
+            dlink.download = basename + extension;
+            dlink.href = url;
+            this.downloads.appendChild(dlink);
+            dlink.click();
+            URL.revokeObjectURL(url);
+        }.bind(this), format);
+    };
+
     window.onload = function() {
         hide("loading");
         if (typeof libheif === "undefined") {
@@ -252,10 +332,11 @@ a {
             var reader = new FileReader();
             reader.onload = (function(theFile) {
                 return function(e) {
+                    hide("container");
+                    hide("save-container");
                     setTimeout(function() {
-                        show("container");
                         var buffer = e.target.result;
-                        if (!demo.loadBuffer(buffer)) {
+                        if (!demo.loadBuffer(buffer, theFile.name)) {
                             hide("container");
                             show("error-format");
                         }
@@ -263,6 +344,10 @@ a {
                 };
             })(file);
             reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById("save").addEventListener("click", function(event) {
+            demo.saveImage();
         });
 
         // Start with example image.
