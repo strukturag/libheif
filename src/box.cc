@@ -638,52 +638,6 @@ std::string Box_meta::dump(Indent& indent) const
 }
 
 
-#if 0
-bool Box_meta::get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const {
-  std::shared_ptr<Box> iprp_box = get_child_box(fourcc("iprp"));
-  if (!iprp_box) {
-    return false;
-  }
-
-  std::shared_ptr<Box> ipco_box = iprp_box->get_child_box(fourcc("ipco"));
-  if (!ipco_box) {
-    return false;
-  }
-
-  // HEVC image headers.
-  std::vector<std::shared_ptr<Box>> hvcC_boxes = ipco_box->get_child_boxes(fourcc("hvcC"));
-  if (hvcC_boxes.empty()) {
-    // No images in the file.
-    images->clear();
-    return true;
-  }
-
-  // HEVC image data.
-  std::shared_ptr<Box_iloc> iloc = std::dynamic_pointer_cast<Box_iloc>(get_child_box(fourcc("iloc")));
-  if (!iloc || iloc->get_items().size() != hvcC_boxes.size()) {
-    // TODO(jojo): Can images share a header?
-    return false;
-  }
-
-  const std::vector<Box_iloc::Item>& iloc_items = iloc->get_items();
-  for (size_t i = 0; i < hvcC_boxes.size(); i++) {
-    Box_hvcC* hvcC = static_cast<Box_hvcC*>(hvcC_boxes[i].get());
-    std::vector<uint8_t> data;
-    if (!hvcC->get_headers(&data)) {
-      return false;
-    }
-    if (!iloc->read_data(iloc_items[i], istr, &data)) {
-      return false;
-    }
-
-    images->push_back(std::move(data));
-  }
-
-  return true;
-}
-#endif
-
-
 Error Box_hdlr::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
