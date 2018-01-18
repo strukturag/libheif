@@ -39,8 +39,8 @@ class PngEncoder : public Encoder {
       return heif_chroma_interleaved_24bit;
   }
 
-  bool Encode(const struct heif_image* image,
-      const std::string& filename) override;
+  bool Encode(const struct heif_image_handle* handle,
+      const struct heif_image* image, const std::string& filename) override;
 
  private:
 };

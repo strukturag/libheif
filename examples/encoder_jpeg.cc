@@ -37,8 +37,8 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
   longjmp(handler->setjmp_buffer, 1);
 }
 
-bool JpegEncoder::Encode(const struct heif_image* image,
-    const std::string& filename) {
+bool JpegEncoder::Encode(const struct heif_image_handle* handle,
+    const struct heif_image* image, const std::string& filename) {
   FILE* fp = fopen(filename.c_str(), "wb");
   if (!fp) {
     fprintf(stderr, "Can't open %s: %s\n", filename.c_str(), strerror(errno));
@@ -68,6 +68,15 @@ bool JpegEncoder::Encode(const struct heif_image* image,
   jpeg_set_quality(&cinfo, quality_, kForceBaseline);
   static const bool kWriteAllTables = true;
   jpeg_start_compress(&cinfo, kWriteAllTables);
+
+  size_t exifsize = 0;
+  uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
+  if (exifdata && exifsize > 4) {
+    static const uint8_t kExifMarker = JPEG_APP0 + 1;
+    jpeg_write_marker(&cinfo, kExifMarker, exifdata + 4,
+        static_cast<unsigned int>(exifsize - 4));
+    free(exifdata);
+  }
 
   int stride_y;
   const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,

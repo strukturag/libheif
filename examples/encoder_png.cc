@@ -35,8 +35,8 @@ inline uint8_t clip(float value) {
   }
 }
 
-bool PngEncoder::Encode(const struct heif_image* image,
-    const std::string& filename) {
+bool PngEncoder::Encode(const struct heif_image_handle* handle,
+    const struct heif_image* image, const std::string& filename) {
   png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr,
       nullptr, nullptr);
   if (!png_ptr) {

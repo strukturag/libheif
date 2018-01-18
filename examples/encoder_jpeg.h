@@ -42,8 +42,8 @@ class JpegEncoder : public Encoder {
     return heif_chroma_420;
   }
 
-  bool Encode(const struct heif_image* image,
-      const std::string& filename) override;
+  bool Encode(const struct heif_image_handle* handle,
+      const struct heif_image* image, const std::string& filename) override;
 
  private:
   static const int kDefaultQuality = 90;

@@ -8,7 +8,7 @@ heif_convert_DEPENDENCIES = ../src/libheif.la
 heif_convert_CXXFLAGS = -I../src
 heif_convert_LDFLAGS =
 heif_convert_LDADD = ../src/libheif.la
-heif_convert_SOURCES = encoder.h heif_convert.cc
+heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc
 
 if HAVE_LIBJPEG
 heif_convert_CXXFLAGS += $(libjpeg_CFLAGS)

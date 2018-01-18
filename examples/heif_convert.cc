@@ -160,7 +160,7 @@ int main(int argc, char** argv)
     }
 
     if (image) {
-      bool written = encoder->Encode(image, filename.c_str());
+      bool written = encoder->Encode(handle, image, filename.c_str());
       if (!written) {
         fprintf(stderr,"could not write image\n");
       } else {
