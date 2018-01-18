@@ -48,8 +48,8 @@ info -d // dump
  */
 
 static struct option long_options[] = {
-  {"write-raw", required_argument, 0, 'w' },
-  {"output",    required_argument, 0, 'o' },
+  //{"write-raw", required_argument, 0, 'w' },
+  //{"output",    required_argument, 0, 'o' },
   {"dump-boxes", no_argument,      0, 'd' },
   {"help",       no_argument,      0, 'h' },
   {0,         0,                 0,  0 }
@@ -62,8 +62,8 @@ void show_help(const char* argv0)
     fprintf(stderr,"usage: heif-info [options] image.heic\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"options:\n");
-    fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
-    fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
+    //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
+    //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
     fprintf(stderr,"  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
     fprintf(stderr,"  -h, --help           show help\n");
 }
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "w:o:dh", long_options, &option_index);
+    int c = getopt_long(argc, argv, "dh", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
   (void)raw_image_id;
   (void)write_raw_image;
 
-  const char* input_filename = argv[1];
+  const char* input_filename = argv[optind];
 
   // ==============================================================================
 
@@ -128,16 +128,56 @@ int main(int argc, char** argv)
 
   if (dump_boxes) {
     heif_context_debug_dump_boxes(ctx.get());
-    std::cout << "----------------------------------------------------------\n";
+    return 0;
   }
 
 
   // ==============================================================================
 
 
+  int numImages = heif_context_get_number_of_top_level_images(ctx.get());
+  heif_image_id* IDs = (heif_image_id*)alloca(numImages*sizeof(heif_image_id));
+  heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs, numImages);
 
+  for (int i=0;i<numImages;i++) {
+    struct heif_image_handle* handle;
+    struct heif_error err = heif_context_get_image_handle_for_ID(ctx.get(), IDs[i], &handle);
+    if (err.code) {
+      std::cerr << err.message << "\n";
+      return 10;
+    }
 
+    int width,height;
+    heif_image_handle_get_resolution(handle, &width, &height);
 
+    int primary = heif_image_handle_is_primary_image(handle);
+
+    printf("image: %dx%d (id=%d)%s\n",width,height,IDs[i], primary ? ", primary" : "");
+
+    int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
+    heif_image_handle* thumbnail_handle;
+
+    for (int thumbnailIdx=0 ; thumbnailIdx<nThumbnails ; thumbnailIdx++) {
+      err = heif_image_handle_get_thumbnail(handle, thumbnailIdx, &thumbnail_handle);
+      if (err.code) {
+        std::cerr << err.message << "\n";
+        return 10;
+      }
+
+      int th_width,th_height;
+      heif_image_handle_get_resolution(handle, &th_width, &th_height);
+
+      printf("  thumbnail: %dx%d\n",th_width,th_height);
+
+      heif_image_handle_release(thumbnail_handle);
+    }
+
+    printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
+
+    heif_image_handle_release(handle);
+  }
+
+#if 0
   std::cout << "num images: " << heif_context_get_number_of_top_level_images(ctx.get()) << "\n";
 
   struct heif_image_handle* handle;
@@ -157,5 +197,7 @@ int main(int argc, char** argv)
 
   heif_image_release(image);
   heif_image_handle_release(handle);
+#endif
+
   return 0;
 }
