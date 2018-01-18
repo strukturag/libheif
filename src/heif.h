@@ -388,10 +388,10 @@ struct heif_decoding_options
 
 
 LIBHEIF_API
-heif_decoding_options* heif_decoding_options_alloc();
+struct heif_decoding_options* heif_decoding_options_alloc();
 
 LIBHEIF_API
-void heif_decoding_options_free(heif_decoding_options*);
+void heif_decoding_options_free(struct heif_decoding_options*);
 
 // If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
