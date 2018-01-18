@@ -40,6 +40,10 @@
 #include "encoder_png.h"
 #endif
 
+#if defined(_MSC_VER)
+#include "getopt.h"
+#endif
+
 #define UNUSED(x) (void)x
 
 static int usage(const char* command) {
