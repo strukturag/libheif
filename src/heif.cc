@@ -29,6 +29,7 @@
 #endif
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -83,6 +84,14 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 
 // TODO
 //heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
+
+void heif_context_debug_dump_boxes(struct heif_context* ctx) {
+  if (!ctx) {
+    return;
+  }
+
+  std::cout << ctx->context->debug_dump_boxes();
+}
 
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
