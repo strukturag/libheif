@@ -28,17 +28,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 
-class ContextReleaser {
- public:
-  ContextReleaser(struct heif_context* ctx) : ctx_(ctx) {}
-  ~ContextReleaser() {
-    heif_context_free(ctx_);
-  }
-
- private:
-  struct heif_context* ctx_;
-};
 
 int main(int argc, char** argv)
 {
@@ -58,28 +49,28 @@ int main(int argc, char** argv)
 
   // ==============================================================================
 
-  struct heif_context* ctx = heif_context_alloc();
+  std::shared_ptr<heif_context> ctx(heif_context_alloc(),
+                                    [] (heif_context* c) { heif_context_free(c); });
   if (!ctx) {
     fprintf(stderr, "Could not create HEIF context\n");
     return 1;
   }
 
-  ContextReleaser cr(ctx);
   struct heif_error err;
-  err = heif_context_read_from_file(ctx, input_filename);
+  err = heif_context_read_from_file(ctx.get(), input_filename);
   if (err.code != 0) {
     std::cerr << "Could not read HEIF file: " << err.message << "\n";
     return 1;
   }
 
-  heif_context_debug_dump_boxes(ctx);
+  heif_context_debug_dump_boxes(ctx.get());
 
   std::cout << "----------------------------------------------------------\n";
 
-  std::cout << "num images: " << heif_context_get_number_of_top_level_images(ctx) << "\n";
+  std::cout << "num images: " << heif_context_get_number_of_top_level_images(ctx.get()) << "\n";
 
   struct heif_image_handle* handle;
-  err = heif_context_get_primary_image_handle(ctx, &handle);
+  err = heif_context_get_primary_image_handle(ctx.get(), &handle);
   if (err.code != 0) {
     std::cerr << "Could not get primage image handle: " << err.message << "\n";
     return 1;
