@@ -27,7 +27,6 @@
 #include <sstream>
 
 #include "heif.h"
-#include "libde265/de265.h"
 
 #include "encoder.h"
 #if HAVE_LIBJPEG

@@ -24,7 +24,6 @@
 #include "config.h"
 #include "heif.h"
 #include "heif_api_structs.h"
-#include "libde265/de265.h"
 
 #include <fstream>
 #include <iostream>
