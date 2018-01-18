@@ -34,6 +34,16 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make
+    echo "Dumping information of sample file ..."
+    ./examples/heif-info --dump-boxes examples/example.heic
+    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_LIBDE265" ]; then
+        echo "Converting sample file to JPEG ..."
+        ./examples/heif-convert examples/example.heic example.jpg
+        [ -s "example.jpg" ] || exit 1
+        echo "Converting sample file to PNG ..."
+        ./examples/heif-convert examples/example.heic example.png
+        [ -s "example.png" ] || exit 1
+    fi
 fi
 
 if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
