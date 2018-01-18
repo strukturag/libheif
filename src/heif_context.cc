@@ -585,7 +585,7 @@ HeifContext::Image::~Image()
 Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
                                        heif_chroma chroma,
-                                       struct heif_decoding_options* options) const
+                                       const struct heif_decoding_options* options) const
 {
   Error err = m_heif_context->decode_image(m_id, img, options);
   if (err) {
@@ -615,7 +615,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 
 Error HeifContext::decode_image(heif_image_id ID,
                                 std::shared_ptr<HeifPixelImage>& img,
-                                struct heif_decoding_options* options) const
+                                const struct heif_decoding_options* options) const
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 

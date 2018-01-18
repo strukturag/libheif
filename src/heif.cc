@@ -319,7 +319,7 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
   Error err = in_handle->image->decode_image(img,
                                              colorspace,
                                              chroma,
-                                             nullptr);
+                                             options);
   if (err.error_code != heif_error_Ok) {
     return err.error_struct(in_handle->image.get());
   }

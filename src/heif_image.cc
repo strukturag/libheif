@@ -459,7 +459,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     int out_stride;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
-    if (angle_degrees==90) {
+    if (angle_degrees==270) {
       for (int x=0;x<h;x++)
         for (int y=0;y<w;y++) {
           out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
@@ -471,7 +471,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
           out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
         }
     }
-    else if (angle_degrees==270) {
+    else if (angle_degrees==90) {
       for (int x=0;x<h;x++)
         for (int y=0;y<w;y++) {
           out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
