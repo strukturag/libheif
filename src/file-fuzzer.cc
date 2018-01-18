@@ -34,7 +34,7 @@ static void TestDecodeImage(struct heif_context* ctx,
   heif_image_handle_get_resolution(handle, &width, &height);
   assert(width >= 0);
   assert(height >= 0);
-  err = heif_decode_image(handle, kFuzzColorSpace, kFuzzChroma, &image);
+  err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma, nullptr);
   if (err.code != heif_error_Ok) {
     return;
   }

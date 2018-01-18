@@ -381,13 +381,27 @@ enum heif_channel {
 };
 
 
+struct heif_decoding_options
+{
+  uint8_t ignore_transformations;
+};
+
+
+LIBHEIF_API
+heif_decoding_options* heif_decoding_options_alloc();
+
+LIBHEIF_API
+void heif_decoding_options_free(heif_decoding_options*);
+
 // If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
+// Decoding options may be NULL.
 LIBHEIF_API
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
+                                    struct heif_image** out_img,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma,
-                                    struct heif_image** out_img);
+                                    const struct heif_decoding_options* options);
 
 // Get the colorspace format of the image.
 LIBHEIF_API

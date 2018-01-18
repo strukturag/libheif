@@ -585,9 +585,9 @@ HeifContext::Image::~Image()
 Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
                                        heif_chroma chroma,
-                                       HeifColorConversionParams* config) const
+                                       struct heif_decoding_options* options) const
 {
-  Error err = m_heif_context->decode_image(m_id, img);
+  Error err = m_heif_context->decode_image(m_id, img, options);
   if (err) {
     return err;
   }
@@ -614,7 +614,8 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 
 
 Error HeifContext::decode_image(heif_image_id ID,
-                                std::shared_ptr<HeifPixelImage>& img) const
+                                std::shared_ptr<HeifPixelImage>& img,
+                                struct heif_decoding_options* options) const
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
@@ -738,66 +739,68 @@ Error HeifContext::decode_image(heif_image_id ID,
 
   // --- apply image transformations
 
-  std::vector<Box_ipco::Property> properties;
-  auto ipco_box = m_heif_file->get_ipco_box();
-  auto ipma_box = m_heif_file->get_ipma_box();
-  error = ipco_box->get_properties_for_item_ID(ID, ipma_box, properties);
+  if (!options || options->ignore_transformations == false) {
+    std::vector<Box_ipco::Property> properties;
+    auto ipco_box = m_heif_file->get_ipco_box();
+    auto ipma_box = m_heif_file->get_ipma_box();
+    error = ipco_box->get_properties_for_item_ID(ID, ipma_box, properties);
 
-  for (const auto& property : properties) {
-    auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
-    if (rot) {
-      std::shared_ptr<HeifPixelImage> rotated_img;
-      error = img->rotate(rot->get_rotation(), rotated_img);
-      if (error) {
-        return error;
+    for (const auto& property : properties) {
+      auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
+      if (rot) {
+        std::shared_ptr<HeifPixelImage> rotated_img;
+        error = img->rotate(rot->get_rotation(), rotated_img);
+        if (error) {
+          return error;
+        }
+
+        img = rotated_img;
       }
 
-      img = rotated_img;
-    }
 
-
-    auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
-    if (mirror) {
-      error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
-      if (error) {
-        return error;
-      }
-    }
-
-
-    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
-    if (clap) {
-      std::shared_ptr<HeifPixelImage> clap_img;
-
-      int img_width = img->get_width();
-      int img_height = img->get_height();
-      assert(img_width >= 0);
-      assert(img_height >= 0);
-
-      int left = clap->left_rounded(img_width);
-      int right = clap->right_rounded(img_width);
-      int top = clap->top_rounded(img_height);
-      int bottom = clap->bottom_rounded(img_height);
-
-      if (left < 0) { left = 0; }
-      if (top  < 0) { top  = 0; }
-
-      if (right >= img_width) { right = img_width-1; }
-      if (bottom >= img_height) { bottom = img_height-1; }
-
-      if (left >= right ||
-          top >= bottom) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_clean_aperture);
+      auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
+      if (mirror) {
+        error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
+        if (error) {
+          return error;
+        }
       }
 
-      std::shared_ptr<HeifPixelImage> cropped_img;
-      error = img->crop(left,right,top,bottom, cropped_img);
-      if (error) {
-        return error;
-      }
 
-      img = cropped_img;
+      auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+      if (clap) {
+        std::shared_ptr<HeifPixelImage> clap_img;
+
+        int img_width = img->get_width();
+        int img_height = img->get_height();
+        assert(img_width >= 0);
+        assert(img_height >= 0);
+
+        int left = clap->left_rounded(img_width);
+        int right = clap->right_rounded(img_width);
+        int top = clap->top_rounded(img_height);
+        int bottom = clap->bottom_rounded(img_height);
+
+        if (left < 0) { left = 0; }
+        if (top  < 0) { top  = 0; }
+
+        if (right >= img_width) { right = img_width-1; }
+        if (bottom >= img_height) { bottom = img_height-1; }
+
+        if (left >= right ||
+            top >= bottom) {
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Invalid_clean_aperture);
+        }
+
+        std::shared_ptr<HeifPixelImage> cropped_img;
+        error = img->crop(left,right,top,bottom, cropped_img);
+        if (error) {
+          return error;
+        }
+
+        img = cropped_img;
+      }
     }
   }
 

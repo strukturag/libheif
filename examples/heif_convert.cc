@@ -149,9 +149,10 @@ int main(int argc, char** argv)
 
     struct heif_image* image;
     err = heif_decode_image(handle,
+                            &image,
                             encoder->colorspace(has_alpha),
                             encoder->chroma(has_alpha),
-                            &image);
+                            NULL);
     if (err.code) {
       heif_image_handle_release(handle);
       std::cerr << "Could not decode HEIF image: " << idx << ": "

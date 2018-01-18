@@ -292,14 +292,30 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 }
 
 
+heif_decoding_options* heif_decoding_options_alloc()
+{
+  auto options = new heif_decoding_options;
+
+  options->ignore_transformations = false;
+
+  return options;
+}
+
+
+void heif_decoding_options_free(heif_decoding_options* options)
+{
+  delete options;
+}
+
+
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
+                                    struct heif_image** out_img,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma,
-                                    struct heif_image** out_img)
+                                    const struct heif_decoding_options* options)
 {
   std::shared_ptr<HeifPixelImage> img;
 
-  //Error err = ctx->context->decode_image(in_handle->image_ID, (*out_img)->image);
   Error err = in_handle->image->decode_image(img,
                                              colorspace,
                                              chroma,

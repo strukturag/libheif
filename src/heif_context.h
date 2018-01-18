@@ -87,7 +87,7 @@ namespace heif {
       Error decode_image(std::shared_ptr<HeifPixelImage>& img,
                          heif_colorspace colorspace = heif_colorspace_undefined,
                          heif_chroma chroma = heif_chroma_undefined,
-                         class HeifColorConversionParams* config = nullptr) const;
+                         struct heif_decoding_options* options = nullptr) const;
 
       void add_metadata(std::shared_ptr<ImageMetadata> metadata) {
         m_metadata.push_back(metadata);
@@ -121,7 +121,8 @@ namespace heif {
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
-    Error decode_image(heif_image_id ID, std::shared_ptr<HeifPixelImage>& img) const;
+    Error decode_image(heif_image_id ID, std::shared_ptr<HeifPixelImage>& img,
+                       struct heif_decoding_options* options = nullptr) const;
 
     std::string debug_dump_boxes() const;
 
