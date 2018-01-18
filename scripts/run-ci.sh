@@ -39,10 +39,16 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
     if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_LIBDE265" ]; then
         echo "Converting sample file to JPEG ..."
         ./examples/heif-convert examples/example.heic example.jpg
-        [ -s "example.jpg" ] || exit 1
+        echo "Checking first generated file ..."
+        [ -s "example-1.jpg" ] || exit 1
+        echo "Checking second generated file ..."
+        [ -s "example-2.jpg" ] || exit 1
         echo "Converting sample file to PNG ..."
         ./examples/heif-convert examples/example.heic example.png
-        [ -s "example.png" ] || exit 1
+        echo "Checking first generated file ..."
+        [ -s "example-1.png" ] || exit 1
+        echo "Checking second generated file ..."
+        [ -s "example-2.png" ] || exit 1
     fi
 fi
 
