@@ -98,7 +98,7 @@ void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
   }
 
   std::string dump = ctx->context->debug_dump_boxes();
-  // TODO(fancycode): Should we return an if writing fails?
+  // TODO(fancycode): Should we return an error if writing fails?
   auto written = write(fd, dump.c_str(), dump.size());
   (void) written;
 }
