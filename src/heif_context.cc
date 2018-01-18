@@ -768,6 +768,8 @@ Error HeifContext::decode_image(heif_image_id ID,
 
       int img_width = img->get_width();
       int img_height = img->get_height();
+      assert(img_width >= 0);
+      assert(img_height >= 0);
 
       int left = clap->left_rounded(img_width);
       int right = clap->right_rounded(img_width);
@@ -868,6 +870,8 @@ Error HeifContext::decode_full_grid_image(heif_image_id ID,
 
       int src_width  = tile_img->get_width();
       int src_height = tile_img->get_height();
+      assert(src_width >= 0);
+      assert(src_height >= 0);
 
       tile_height = src_height;
 

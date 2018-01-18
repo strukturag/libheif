@@ -72,7 +72,9 @@ bool HeifPixelImage::has_channel(heif_channel channel) const
 int HeifPixelImage::get_width(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
-  assert(iter != m_planes.end());
+  if (iter == m_planes.end()) {
+    return -1;
+  }
 
   return iter->second.width;
 }
@@ -81,7 +83,9 @@ int HeifPixelImage::get_width(enum heif_channel channel) const
 int HeifPixelImage::get_height(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
-  assert(iter != m_planes.end());
+  if (iter == m_planes.end()) {
+    return -1;
+  }
 
   return iter->second.height;
 }
@@ -102,7 +106,9 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
 int HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
-  assert(iter != m_planes.end());
+  if (iter == m_planes.end()) {
+    return -1;
+  }
 
   return iter->second.bit_depth;
 }
@@ -111,7 +117,9 @@ int HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
 {
   auto iter = m_planes.find(channel);
-  assert(iter != m_planes.end());
+  if (iter == m_planes.end()) {
+    return nullptr;
+  }
 
   if (out_stride) {
     *out_stride = iter->second.stride;
@@ -124,7 +132,9 @@ uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
 const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride) const
 {
   auto iter = m_planes.find(channel);
-  assert(iter != m_planes.end());
+  if (iter == m_planes.end()) {
+    return nullptr;
+  }
 
   if (out_stride) {
     *out_stride = iter->second.stride;
@@ -625,9 +635,13 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
 
     int in_w = overlay->get_width(channel);
     int in_h = overlay->get_height(channel);
+    assert(in_w >= 0);
+    assert(in_h >= 0);
 
     int out_w = get_width(channel);
     int out_h = get_height(channel);
+    assert(out_w >= 0);
+    assert(out_h >= 0);
 
     // overlay image extends past the right border -> cut width for copy
     if (dx+in_w > out_w) {

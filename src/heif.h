@@ -401,21 +401,25 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 //LIBHEIF_API
 //enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
-// Get width of the given image channel in pixels.
+// Get width of the given image channel in pixels. Returns -1 if a non-existing
+// channel was given.
 LIBHEIF_API
 int heif_image_get_width(const struct heif_image*,enum heif_channel channel);
 
-// Get height of the given image channel in pixels.
+// Get height of the given image channel in pixels. Returns -1 if a non-existing
+// channel was given.
 LIBHEIF_API
 int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 
-// Get the number of bits per pixel in the given image channel.
+// Get the number of bits per pixel in the given image channel. Returns -1 if
+// a non-existing channel was given.
 // Note that the number of bits per pixel may be different for each color channel.
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
 
-/* The 'out_stride' is returned as "bytes per line".
-   When out_stride is NULL, no value will be written. */
+// The 'out_stride' is returned as "bytes per line".
+// When out_stride is NULL, no value will be written.
+// Returns NULL if a non-existing channel was given.
 LIBHEIF_API
 const uint8_t* heif_image_get_plane_readonly(const struct heif_image*,
                                              enum heif_channel channel,
