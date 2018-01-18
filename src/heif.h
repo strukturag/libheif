@@ -387,6 +387,9 @@ struct heif_decoding_options
 };
 
 
+// Allocate decoding options and fill with default values.
+// Note: you should always get the decoding options through this function since the
+// option structure may grow in size in future versions.
 LIBHEIF_API
 struct heif_decoding_options* heif_decoding_options_alloc();
 
@@ -395,7 +398,8 @@ void heif_decoding_options_free(struct heif_decoding_options*);
 
 // If colorspace or chroma is set up heif_colorspace_undefined or heif_chroma_undefined,
 // respectively, the original colorspace is taken.
-// Decoding options may be NULL.
+// Decoding options may be NULL. If you want to supply options, always use
+// heif_decoding_options_alloc() to get the structure.
 LIBHEIF_API
 struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img,
