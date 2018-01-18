@@ -11,7 +11,7 @@ body {
 a {
     color: #00c1c3;
 }
-#form, select {
+#form, #save-container, select {
     margin: 1em 0;
 }
 .hidden {
@@ -47,13 +47,13 @@ a {
 <div id="decoding" class="hidden">
     Decoding, please wait...
 </div>
-<div id="container" class="hidden">
-    <canvas id="canvas"></canvas>
-</div>
 <div id="save-container" class="hidden">
     <button id="save">Save image...</button>
     <div id="downloads" class="hidden">
     </div>
+</div>
+<div id="container" class="hidden">
+    <canvas id="canvas"></canvas>
 </div>
 <div id="error-format" class="hidden">
     The selected file is not a valid HEIF file or the specific format is not
@@ -266,6 +266,7 @@ a {
     HeifDemo.prototype._showImage = function(image) {
         this.reset();
         hide("container");
+        hide("save-container");
         show("decoding");
         this.drawer.draw(image);
     };
