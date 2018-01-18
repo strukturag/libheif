@@ -21,6 +21,8 @@
 #include "config.h"
 #endif
 
+#include "string.h"
+
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
@@ -146,13 +148,16 @@ int main(int argc, char** argv)
     }
 
     int has_alpha = heif_image_handle_has_alpha_channel(handle);
+    struct heif_decoding_options decode_options;
+    memset(&decode_options, 0, sizeof(decode_options));
+    encoder->UpdateDecodingOptions(handle, &decode_options);
 
     struct heif_image* image;
     err = heif_decode_image(handle,
                             &image,
                             encoder->colorspace(has_alpha),
                             encoder->chroma(has_alpha),
-                            NULL);
+                            &decode_options);
     if (err.code) {
       heif_image_handle_release(handle);
       std::cerr << "Could not decode HEIF image: " << idx << ": "

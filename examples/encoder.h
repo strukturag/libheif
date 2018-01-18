@@ -32,10 +32,16 @@ class Encoder {
   virtual heif_colorspace colorspace(bool has_alpha) const = 0;
   virtual heif_chroma chroma(bool has_alpha) const = 0;
 
+  virtual void UpdateDecodingOptions(const struct heif_image_handle* handle,
+      struct heif_decoding_options *options) const {
+    // Override if necessary.
+  }
+
   virtual bool Encode(const struct heif_image_handle* handle,
       const struct heif_image* image, const std::string& filename) = 0;
 
  protected:
+  static bool HasExifMetaData(const struct heif_image_handle* handle);
   static uint8_t* GetExifMetaData(const struct heif_image_handle* handle, size_t* size);
 };
 

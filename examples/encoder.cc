@@ -25,12 +25,32 @@
 #define strcasecmp _stricmp
 #endif
 
+static const char kMetadataTypeExif[] = "Exif";
+
+// static
+bool Encoder::HasExifMetaData(const struct heif_image_handle* handle) {
+  int count = heif_image_handle_get_number_of_metadata_blocks(handle);
+  for (int i = 0; i < count; i++) {
+    const char* datatype = heif_image_handle_get_metadata_type(handle, i);
+    if (strcasecmp(datatype, kMetadataTypeExif)) {
+      continue;
+    }
+
+    size_t datasize = heif_image_handle_get_metadata_size(handle, i);
+    if (datasize > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // static
 uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t* size) {
   int count = heif_image_handle_get_number_of_metadata_blocks(handle);
   for (int i = 0; i < count; i++) {
     const char* datatype = heif_image_handle_get_metadata_type(handle, i);
-    if (strcasecmp(datatype, "Exif")) {
+    if (strcasecmp(datatype, kMetadataTypeExif)) {
       continue;
     }
 
