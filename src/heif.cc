@@ -18,6 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
 #include "heif.h"
 #include "heif_image.h"
 #include "heif_api_structs.h"
@@ -31,10 +35,13 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 #include <string.h>
+#if defined(HAVE_UNISTD_H)
 #include <unistd.h>
+#endif
 
 using namespace heif;
 

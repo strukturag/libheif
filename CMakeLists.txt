@@ -13,12 +13,16 @@ include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
 CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
 CHECK_INCLUDE_FILE(stddef.h HAVE_STDDEF_H)
+CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
 
 if (HAVE_INTTYPES_H)
   add_definitions(-DHAVE_INTTYPES_H)
 endif()
 if (HAVE_STDDEF_H)
   add_definitions(-DHAVE_STDDEF_H)
+endif()
+if (HAVE_UNISTD_H)
+  add_definitions(-DHAVE_UNISTD_H)
 endif()
 
 configure_file (
