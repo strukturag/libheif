@@ -31,6 +31,11 @@ if [ ! -z "$CPPLINT" ]; then
     exit 0
 fi
 
+if [ ! -z "$CMAKE" ]; then
+    echo "Preparing cmake build files ..."
+    cmake .
+fi
+
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make

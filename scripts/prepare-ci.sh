@@ -26,7 +26,7 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     export PKG_CONFIG_PATH=$BUILD_ROOT/libde265/dist/lib/pkgconfig/
 fi
 
-if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ]; then
+if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     ./autogen.sh
     ./configure
 fi

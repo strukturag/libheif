@@ -15,6 +15,7 @@ env:
   - WITH_LIBDE265=2 WITH_GRAPHICS=1
   - EMSCRIPTEN_VERSION=1.37.26
   - WITH_LIBDE265=1 WITH_GRAPHICS=1 TARBALL=1
+  - WITH_LIBDE265=1 WITH_GRAPHICS=1 CMAKE=1
 
 matrix:
   exclude:
@@ -26,6 +27,8 @@ matrix:
       env: EMSCRIPTEN_VERSION=1.37.26
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_GRAPHICS=1 TARBALL=1
+    - compiler: clang
+      env: WITH_LIBDE265=1 WITH_GRAPHICS=1 TARBALL=1 CMAKE=1
 
 before_install:
   - ./scripts/install-ci.sh
