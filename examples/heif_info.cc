@@ -172,8 +172,49 @@ int main(int argc, char** argv)
       heif_image_handle_release(thumbnail_handle);
     }
 
+    bool has_depth = heif_image_handle_has_depth_channel(handle);
+
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
-    printf("  depth channel: %s\n", heif_image_handle_has_depth_channel(handle) ? "yes":"no");
+    printf("  depth channel: %s\n", has_depth ? "yes":"no");
+
+    if (has_depth) {
+      struct heif_image_handle* depth_handle;
+      err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+      if (err.code) {
+        fprintf(stderr,"cannot get depth image: %s\n",err.message);
+        return 1;
+      }
+
+      const struct heif_depth_representation_info* depth_info;
+      if (heif_image_handle_get_depth_channel_representation_info(depth_handle, 0, &depth_info)) {
+
+        printf("    z-near: ");
+        if (depth_info->has_z_near) printf("%f\n",depth_info->z_near); else printf("undefined\n");
+        printf("    z-far:  ");
+        if (depth_info->has_z_far) printf("%f\n",depth_info->z_far); else printf("undefined\n");
+        printf("    d-min:  ");
+        if (depth_info->has_d_min) printf("%f\n",depth_info->d_min); else printf("undefined\n");
+        printf("    d-max:  ");
+        if (depth_info->has_d_max) printf("%f\n",depth_info->d_max); else printf("undefined\n");
+
+        printf("    representation: ");
+        switch (depth_info->depth_representation_type) {
+        case heif_depth_representation_type_uniform_inverse_Z: printf("inverse Z\n"); break;
+        case heif_depth_representation_type_uniform_disparity: printf("uniform disparity\n"); break;
+        case heif_depth_representation_type_uniform_Z: printf("uniform Z\n"); break;
+        case heif_depth_representation_type_nonuniform_disparity: printf("non-uniform disparity\n"); break;
+        default: printf("unknown\n");
+        }
+
+        if (depth_info->has_d_min || depth_info->has_d_max) {
+          printf("    disparity_reference_view: %d\n", depth_info->disparity_reference_view);
+        }
+
+        heif_depth_representation_info_free(depth_info);
+      }
+
+      heif_image_handle_release(depth_handle);
+    }
 
     heif_image_handle_release(handle);
   }
