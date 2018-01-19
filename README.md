@@ -7,7 +7,7 @@ libheif is an ISO/IEC 23008-12:2017 HEIF file format decoder (encoder to come).
 HEIF is a new image file format employing HEVC (h.265) image coding for the
 best compression ratios currently possible.
 
-Libheif makes use of [libde265](https://github.com/strukturag/libde265) for
+libheif makes use of [libde265](https://github.com/strukturag/libde265) for
 the actual image decoding. Alternative codecs for, e.g., AVC and JPEG can be
 provided as plugins.
 
