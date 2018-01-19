@@ -28,7 +28,8 @@ const char* cUnknownError = "Unknown error";
 
 
 heif::Error::Error()
-  : error_code(heif_error_Ok)
+  : error_code(heif_error_Ok),
+    sub_error_code(heif_suberror_Unspecified)
 {
 }
 
