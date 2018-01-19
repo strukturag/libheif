@@ -28,7 +28,7 @@ matrix:
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_GRAPHICS=1 TARBALL=1
     - compiler: clang
-      env: WITH_LIBDE265=1 WITH_GRAPHICS=1 TARBALL=1 CMAKE=1
+      env: WITH_LIBDE265=1 WITH_GRAPHICS=1 CMAKE=1
 
 before_install:
   - ./scripts/install-ci.sh
