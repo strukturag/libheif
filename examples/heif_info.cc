@@ -164,8 +164,8 @@ int main(int argc, char** argv)
         return 10;
       }
 
-      int th_width = heif_image_handle_get_width(handle);
-      int th_height = heif_image_handle_get_height(handle);
+      int th_width = heif_image_handle_get_width(thumbnail_handle);
+      int th_height = heif_image_handle_get_height(thumbnail_handle);
 
       printf("  thumbnail: %dx%d\n",th_width,th_height);
 
