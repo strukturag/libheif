@@ -28,6 +28,7 @@
 #include <iostream>
 #include <limits>
 #include <utility>
+#include <math.h>
 
 #include "heif_context.h"
 #include "heif_file.h"
