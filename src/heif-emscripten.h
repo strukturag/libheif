@@ -94,7 +94,7 @@ static std::string heif_get_version() {
 
 static struct heif_error _heif_context_read_from_memory(
     struct heif_context* context, const std::string& data) {
-  return heif_context_read_from_memory(context, data.data(), data.size());
+  return heif_context_read_from_memory(context, data.data(), data.size(), nullptr);
 }
 
 static void strided_copy(void* dest, const void* src, int width, int height,
