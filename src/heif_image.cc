@@ -190,10 +190,15 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
         out_img = convert_YCbCr420_to_RGB32();
       }
 
+
+      // greyscale -> RGB 24bit
+
       if (get_chroma_format() == heif_chroma_monochrome &&
           target_chroma == heif_chroma_interleaved_24bit) {
         out_img = convert_mono_to_RGB(3);
       }
+
+      // greyscale -> RGB 32bit
 
       if (get_chroma_format() == heif_chroma_monochrome &&
           target_chroma == heif_chroma_interleaved_32bit) {
