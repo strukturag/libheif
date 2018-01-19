@@ -495,6 +495,9 @@ Error HeifContext::interpret_heif_file()
 
           auto master_iter = m_all_images.find(refs[0]);
           master_iter->second->set_depth_channel(image);
+
+          auto subtypes = auxC_property->get_subtypes();
+          (void)subtypes;
         }
 
         remove_top_level_image(image);

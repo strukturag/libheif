@@ -379,6 +379,8 @@ namespace heif {
 
     std::string get_aux_type() const { return m_aux_type; }
 
+    std::vector<uint8_t> get_subtypes() const { return m_aux_subtypes; }
+
     std::string dump(Indent&) const override;
 
   protected:
