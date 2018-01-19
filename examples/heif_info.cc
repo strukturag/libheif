@@ -173,6 +173,7 @@ int main(int argc, char** argv)
     }
 
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
+    printf("  depth channel: %s\n", heif_image_handle_has_depth_channel(handle) ? "yes":"no");
 
     heif_image_handle_release(handle);
   }

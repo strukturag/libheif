@@ -64,17 +64,6 @@ namespace heif {
 
       void set_primary(bool flag=true) { m_is_primary=flag; }
 
-      void set_is_thumbnail_of(heif_image_id id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
-      void add_thumbnail(std::shared_ptr<Image> img) { m_thumbnails.push_back(img); }
-
-      bool is_thumbnail() const { return m_is_thumbnail; }
-
-      void set_is_alpha_channel_of(heif_image_id id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
-      void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel=img; }
-
-      bool is_alpha_channel() const { return m_is_alpha_channel; }
-      std::shared_ptr<Image> get_alpha_channel() const { return m_alpha_channel; }
-
       heif_image_id get_id() const { return m_id; }
 
       int get_width() const { return m_width; }
@@ -82,12 +71,40 @@ namespace heif {
 
       bool is_primary() const { return m_is_primary; }
 
-      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
-
       Error decode_image(std::shared_ptr<HeifPixelImage>& img,
                          heif_colorspace colorspace = heif_colorspace_undefined,
                          heif_chroma chroma = heif_chroma_undefined,
                          const struct heif_decoding_options* options = nullptr) const;
+
+
+      // -- thumbnails
+
+      void set_is_thumbnail_of(heif_image_id id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
+      void add_thumbnail(std::shared_ptr<Image> img) { m_thumbnails.push_back(img); }
+
+      bool is_thumbnail() const { return m_is_thumbnail; }
+      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
+
+
+      // --- alpha channel
+
+      void set_is_alpha_channel_of(heif_image_id id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
+      void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel=img; }
+
+      bool is_alpha_channel() const { return m_is_alpha_channel; }
+      std::shared_ptr<Image> get_alpha_channel() const { return m_alpha_channel; }
+
+
+      // --- depth channel
+
+      void set_is_depth_channel_of(heif_image_id id) { m_is_depth_channel=true; m_depth_channel_ref_id=id; }
+      void set_depth_channel(std::shared_ptr<Image> img) { m_depth_channel=img; }
+
+      bool is_depth_channel() const { return m_is_depth_channel; }
+      std::shared_ptr<Image> get_depth_channel() const { return m_depth_channel; }
+
+
+      // --- metadata
 
       void add_metadata(std::shared_ptr<ImageMetadata> metadata) {
         m_metadata.push_back(metadata);
@@ -110,6 +127,10 @@ namespace heif {
       bool m_is_alpha_channel = false;
       heif_image_id m_alpha_channel_ref_id;
       std::shared_ptr<Image> m_alpha_channel;
+
+      bool m_is_depth_channel = false;
+      heif_image_id m_depth_channel_ref_id;
+      std::shared_ptr<Image> m_depth_channel;
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
     };
@@ -141,6 +162,8 @@ namespace heif {
     std::shared_ptr<HeifFile> m_heif_file;
 
     Error interpret_heif_file();
+
+    void remove_top_level_image(std::shared_ptr<Image> image);
 
     Error decode_full_grid_image(heif_image_id ID,
                                  std::shared_ptr<HeifPixelImage>& img,

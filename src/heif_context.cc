@@ -338,6 +338,30 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const
   return best_plugin;
 }
 
+
+static bool item_type_is_image(const std::string& item_type)
+{
+  return (item_type=="hvc1" ||
+          item_type=="grid" ||
+          item_type=="iden" ||
+          item_type=="iovl");
+}
+
+
+void HeifContext::remove_top_level_image(std::shared_ptr<Image> image)
+{
+  std::vector<std::shared_ptr<Image>> new_list;
+
+  for (auto img : m_top_level_images) {
+    if (img != image) {
+      new_list.push_back(img);
+    }
+  }
+
+  m_top_level_images = new_list;
+}
+
+
 Error HeifContext::interpret_heif_file()
 {
   m_all_images.clear();
@@ -356,17 +380,18 @@ Error HeifContext::interpret_heif_file()
       continue;
     }
 
-    if (!infe_box->is_hidden_item()) {
+    if (item_type_is_image(infe_box->get_item_type())) {
       auto image = std::make_shared<Image>(this, id);
-
-      if (id==m_heif_file->get_primary_image_ID()) {
-        image->set_primary(true);
-        m_primary_image = image;
-      }
-
       m_all_images.insert(std::make_pair(id, image));
 
-      m_top_level_images.push_back(image);
+      if (!infe_box->is_hidden_item()) {
+        if (id==m_heif_file->get_primary_image_ID()) {
+          image->set_primary(true);
+          m_primary_image = image;
+        }
+
+        m_top_level_images.push_back(image);
+      }
     }
   }
 
@@ -382,7 +407,7 @@ Error HeifContext::interpret_heif_file()
 
   auto iref_box = m_heif_file->get_iref_box();
   if (iref_box) {
-    m_top_level_images.clear();
+    // m_top_level_images.clear();
 
     for (auto& pair : m_all_images) {
       auto& image = pair.second;
@@ -415,8 +440,11 @@ Error HeifContext::interpret_heif_file()
         }
 
         master_iter->second->add_thumbnail(image);
+
+        remove_top_level_image(image);
       }
       else if (type==fourcc("auxl")) {
+
         // --- this is an auxiliary image
         //     check whether it is an alpha channel and attach to the main image if yes
 
@@ -450,17 +478,29 @@ Error HeifContext::interpret_heif_file()
         }
 
 
+        // alpha channel
+
         if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1") {
           image->set_is_alpha_channel_of(refs[0]);
 
           auto master_iter = m_all_images.find(refs[0]);
           master_iter->second->set_alpha_channel(image);
         }
+
+
+        // depth channel
+
+        if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2") {
+          image->set_is_depth_channel_of(refs[0]);
+
+          auto master_iter = m_all_images.find(refs[0]);
+          master_iter->second->set_depth_channel(image);
+        }
+
+        remove_top_level_image(image);
       }
       else {
-        // 'image' is a normal image, add it as a top-level image
-
-        m_top_level_images.push_back(image);
+        // 'image' is a normal image, keep it as a top-level image
       }
     }
   }

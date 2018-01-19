@@ -310,6 +310,31 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 }
 
 
+int heif_image_handle_has_depth_channel(const struct heif_image_handle* handle)
+{
+  return handle->image->get_depth_channel() != nullptr;
+}
+
+LIBHEIF_API
+void heif_image_handle_get_depth_channel_subtype(const struct heif_image_handle* handle,
+                                                 int depth_channel_idx,
+                                                 const uint8_t** out_subtype_data,
+                                                 int* out_subtype_data_length)
+{
+}
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
+                                                             int depth_channel_idx,
+                                                             struct heif_image_handle** out_depth_handle)
+{
+  *out_depth_handle = new heif_image_handle();
+  (*out_depth_handle)->image = handle->image->get_depth_channel();
+
+  return Error::Ok.error_struct(handle->image.get());
+}
+
+
 heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
