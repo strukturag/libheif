@@ -19,7 +19,7 @@ libheif has support for
 * alpha channels
 * thumbnails
 * reading EXIF data
-* reads the depth channel
+* reading the depth channel
 * multiple images in a HEIF file
 * image transformations (crop, mirror, rotate)
 * overlay images
