@@ -253,10 +253,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
   outimg->add_plane(heif_channel_B, m_width, m_height, bpp);
 
   const uint8_t *in_y,*in_cb,*in_cr;
-  int in_y_stride, in_cb_stride, in_cr_stride;
+  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0;
 
   uint8_t *out_r,*out_g,*out_b;
-  int out_r_stride, out_g_stride, out_b_stride;
+  int out_r_stride=0, out_g_stride=0, out_b_stride=0;
 
   in_y  = get_plane(heif_channel_Y,  &in_y_stride);
   in_cb = get_plane(heif_channel_Cb, &in_cb_stride);
@@ -299,10 +299,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
   outimg->add_plane(heif_channel_interleaved, m_width, m_height, 24);
 
   const uint8_t *in_y,*in_cb,*in_cr;
-  int in_y_stride, in_cb_stride, in_cr_stride;
+  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0;
 
   uint8_t *out_p;
-  int out_p_stride;
+  int out_p_stride=0;
 
   in_y  = get_plane(heif_channel_Y,  &in_y_stride);
   in_cb = get_plane(heif_channel_Cb, &in_cb_stride);
@@ -344,10 +344,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB32() cons
   const bool with_alpha = has_channel(heif_channel_Alpha);
 
   const uint8_t *in_y,*in_cb,*in_cr,*in_a = nullptr;
-  int in_y_stride, in_cb_stride, in_cr_stride, in_a_stride;
+  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0, in_a_stride=0;
 
   uint8_t *out_p;
-  int out_p_stride;
+  int out_p_stride=0;
 
   in_y  = get_plane(heif_channel_Y,  &in_y_stride);
   in_cb = get_plane(heif_channel_Cb, &in_cb_stride);
@@ -398,10 +398,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24() const
   outimg->add_plane(heif_channel_interleaved, m_width, m_height, 24);
 
   const uint8_t *in_r,*in_g,*in_b;
-  int in_r_stride, in_g_stride, in_b_stride;
+  int in_r_stride=0, in_g_stride=0, in_b_stride=0;
 
   uint8_t *out_p;
-  int out_p_stride;
+  int out_p_stride=0;
 
   in_r = get_plane(heif_channel_R, &in_r_stride);
   in_g = get_plane(heif_channel_G, &in_g_stride);
@@ -438,10 +438,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_mono_to_RGB(int bpp) con
   outimg->add_plane(heif_channel_interleaved, m_width, m_height, bpp*8);
 
   const uint8_t *in_y;
-  int in_y_stride;
+  int in_y_stride=0;
 
   uint8_t *out_p;
-  int out_p_stride;
+  int out_p_stride=0;
 
   in_y = get_plane(heif_channel_Y, &in_y_stride);
   out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
@@ -523,7 +523,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     int in_stride = plane.stride;
     const uint8_t* in_data = plane.mem.data();
 
-    int out_stride;
+    int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
     if (angle_degrees==270) {
@@ -622,7 +622,7 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
     int in_stride = plane.stride;
     const uint8_t* in_data = plane.mem.data();
 
-    int out_stride;
+    int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
     for (int y=plane_top;y<=plane_bottom;y++) {
@@ -691,10 +691,10 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
   std::set<enum heif_channel> channels = overlay->get_channel_set();
 
   for (heif_channel channel : channels) {
-    int in_stride;
+    int in_stride=0;
     const uint8_t* in_p;
 
-    int out_stride;
+    int out_stride=0;
     uint8_t* out_p;
 
     in_p = overlay->get_plane(channel, &in_stride);
@@ -796,7 +796,7 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     int in_stride = plane.stride;
     const uint8_t* in_data = plane.mem.data();
 
-    int out_stride;
+    int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
 
