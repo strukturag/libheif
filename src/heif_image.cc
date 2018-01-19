@@ -461,10 +461,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_mono_to_RGB(int bpp) con
 
       for (x=0;x<m_width;x++) {
         uint8_t v = in_y[x + y*in_y_stride];
-        out_p[y*out_p_stride + 3*x + 0] = v;
-        out_p[y*out_p_stride + 3*x + 1] = v;
-        out_p[y*out_p_stride + 3*x + 2] = v;
-        out_p[y*out_p_stride + 3*x + 3] = 0xFF;
+        out_p[y*out_p_stride + 4*x + 0] = v;
+        out_p[y*out_p_stride + 4*x + 1] = v;
+        out_p[y*out_p_stride + 4*x + 2] = v;
+        out_p[y*out_p_stride + 4*x + 3] = 0xFF;
       }
     }
   }
