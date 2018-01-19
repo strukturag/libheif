@@ -189,6 +189,16 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
           target_chroma == heif_chroma_interleaved_32bit) {
         out_img = convert_YCbCr420_to_RGB32();
       }
+
+      if (get_chroma_format() == heif_chroma_monochrome &&
+          target_chroma == heif_chroma_interleaved_24bit) {
+        out_img = convert_mono_to_RGB(3);
+      }
+
+      if (get_chroma_format() == heif_chroma_monochrome &&
+          target_chroma == heif_chroma_interleaved_32bit) {
+        out_img = convert_mono_to_RGB(4);
+      }
     }
   }
 
@@ -399,6 +409,58 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24() const
       out_p[y*out_p_stride + 3*x + 0] = in_r[x + y*in_r_stride];
       out_p[y*out_p_stride + 3*x + 1] = in_g[x + y*in_r_stride];
       out_p[y*out_p_stride + 3*x + 2] = in_b[x + y*in_r_stride];
+    }
+  }
+
+  return outimg;
+}
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_mono_to_RGB(int bpp) const
+{
+  if (get_bits_per_pixel(heif_channel_Y) != 8) {
+    return nullptr;
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  if (bpp==3) {
+    outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
+  } else {
+    outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_interleaved_32bit);
+  }
+
+  outimg->add_plane(heif_channel_interleaved, m_width, m_height, bpp*8);
+
+  const uint8_t *in_y;
+  int in_y_stride;
+
+  uint8_t *out_p;
+  int out_p_stride;
+
+  in_y = get_plane(heif_channel_Y, &in_y_stride);
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+
+  int x,y;
+  for (y=0;y<m_height;y++) {
+    if (bpp==3) {
+      for (x=0;x<m_width;x++) {
+        uint8_t v = in_y[x + y*in_y_stride];
+        out_p[y*out_p_stride + 3*x + 0] = v;
+        out_p[y*out_p_stride + 3*x + 1] = v;
+        out_p[y*out_p_stride + 3*x + 2] = v;
+      }
+    }
+    else {
+      // TODO: monochrome with alpha channel
+
+      for (x=0;x<m_width;x++) {
+        uint8_t v = in_y[x + y*in_y_stride];
+        out_p[y*out_p_stride + 3*x + 0] = v;
+        out_p[y*out_p_stride + 3*x + 1] = v;
+        out_p[y*out_p_stride + 3*x + 2] = v;
+        out_p[y*out_p_stride + 3*x + 3] = 0xFF;
+      }
     }
   }
 
