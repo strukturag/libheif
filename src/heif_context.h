@@ -104,6 +104,20 @@ namespace heif {
       std::shared_ptr<Image> get_depth_channel() const { return m_depth_channel; }
 
 
+      void set_depth_representation_info(struct heif_depth_representation_info& info) {
+        m_has_depth_representation_info = true;
+        m_depth_representation_info = info;
+      }
+
+      bool has_depth_representation_info() const {
+        return m_has_depth_representation_info;
+      }
+
+      const struct heif_depth_representation_info& get_depth_representation_info() const {
+        return m_depth_representation_info;
+      }
+
+
       // --- metadata
 
       void add_metadata(std::shared_ptr<ImageMetadata> metadata) {
@@ -131,6 +145,9 @@ namespace heif {
       bool m_is_depth_channel = false;
       heif_image_id m_depth_channel_ref_id;
       std::shared_ptr<Image> m_depth_channel;
+
+      bool m_has_depth_representation_info = false;
+      struct heif_depth_representation_info m_depth_representation_info;
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
     };

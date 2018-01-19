@@ -155,6 +155,37 @@ namespace heif {
     bool m_end_reached = false;
     bool m_error = false;
   };
+
+
+
+  class BitReader
+  {
+  public:
+    BitReader(const uint8_t* buffer, int len);
+
+    int get_bits(int n);
+    int get_bits_fast(int n);
+    int peek_bits(int n);
+    void skip_bits(int n);
+    void skip_bits_fast(int n);
+    void skip_to_byte_boundary();
+    bool get_uvlc(int* value);
+    bool get_svlc(int* value);
+
+    int get_current_byte_index() const {
+      return data_length - bytes_remaining - nextbits_cnt/8;
+    }
+
+  private:
+    const uint8_t* data;
+    int data_length;
+    int bytes_remaining;
+
+    uint64_t nextbits; // left-aligned bits
+    int nextbits_cnt;
+
+    void refill(); // refill to at least 56+1 bits
+  };
 }
 
 #endif

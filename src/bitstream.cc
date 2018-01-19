@@ -20,6 +20,10 @@
 
 #include "bitstream.h"
 
+#include <assert.h>
+
+#define MAX_UVLC_LEADING_ZEROS 20
+
 using namespace heif;
 
 
@@ -116,4 +120,148 @@ std::string BitstreamRange::read_string()
   }
 
   return str;
+}
+
+
+
+
+BitReader::BitReader(const uint8_t* buffer, int len)
+{
+  data = buffer;
+  data_length = len;
+  bytes_remaining = len;
+
+  nextbits=0;
+  nextbits_cnt=0;
+
+  refill();
+}
+
+int BitReader::get_bits(int n)
+{
+  if (nextbits_cnt < n) {
+    refill();
+  }
+
+  uint64_t val = nextbits;
+  val >>= 64-n;
+
+  nextbits <<= n;
+  nextbits_cnt -= n;
+
+  return (int)val;
+}
+
+int  BitReader::get_bits_fast(int n)
+{
+  assert(nextbits_cnt >= n);
+
+  uint64_t val = nextbits;
+  val >>= 64-n;
+
+  nextbits <<= n;
+  nextbits_cnt -= n;
+
+  return (int)val;
+}
+
+int  BitReader::peek_bits(int n)
+{
+  if (nextbits_cnt < n) {
+    refill();
+  }
+
+  uint64_t val = nextbits;
+  val >>= 64-n;
+
+  return (int)val;
+}
+
+void BitReader::skip_bits(int n)
+{
+  if (nextbits_cnt < n) {
+    refill();
+  }
+
+  nextbits <<= n;
+  nextbits_cnt -= n;
+}
+
+void BitReader::skip_bits_fast(int n)
+{
+  nextbits <<= n;
+  nextbits_cnt -= n;
+}
+
+void BitReader::skip_to_byte_boundary()
+{
+  int nskip = (nextbits_cnt & 7);
+
+  nextbits <<= nskip;
+  nextbits_cnt -= nskip;
+}
+
+bool BitReader::get_uvlc(int* value)
+{
+  int num_zeros=0;
+
+  while (get_bits(1)==0) {
+    num_zeros++;
+
+    if (num_zeros > MAX_UVLC_LEADING_ZEROS) { return false; }
+  }
+
+  int offset = 0;
+  if (num_zeros != 0) {
+    offset = (int)get_bits(num_zeros);
+    *value = offset + (1<<num_zeros)-1;
+    assert(*value>0);
+    return true;
+  } else {
+    *value = 0;
+    return true;
+  }
+}
+
+bool BitReader::get_svlc(int* value)
+{
+  int v;
+  if (!get_uvlc(&v)) {
+    return false;
+  } else if (v == 0) {
+    *value = v;
+    return true;
+  }
+
+  bool negative = ((v&1)==0);
+  *value = negative ? -v/2 : (v+1)/2;
+  return true;
+}
+
+void BitReader::refill()
+{
+#if 0
+  // TODO: activate me one I'm sure this works
+  while (nextbits_cnt <= 64-8 && bytes_remaining) {
+    uint64_t newval = *data++;
+    bytes_remaining--;
+
+    nextbits_cnt += 8;
+    newval <<= 64-nextbits_cnt;
+    nextbits |= newval;
+  }
+#else
+  int shift = 64 - nextbits_cnt;
+
+  while (shift >= 8 && bytes_remaining) {
+    uint64_t newval = *data++;
+    bytes_remaining--;
+
+    shift -= 8;
+    newval <<= shift;
+    nextbits |= newval;
+  }
+
+  nextbits_cnt = 64-shift;
+#endif
 }

@@ -354,8 +354,8 @@ struct heif_depth_representation_info {
 
   double z_near;
   double z_far;
-  double z_d_min;
-  double z_d_max;
+  double d_min;
+  double d_max;
 
   enum heif_depth_representation_type depth_representation_type;
   uint32_t disparity_reference_view;
@@ -370,10 +370,11 @@ struct heif_depth_representation_info {
 LIBHEIF_API
 void heif_depth_representation_info_free(const struct heif_depth_representation_info* info);
 
+// Returns true when there is depth_representation_info available
 LIBHEIF_API
-void heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                             int depth_channel_idx,
-                                                             const struct heif_depth_representation_info** out);
+int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
+                                                            int depth_channel_idx,
+                                                            const struct heif_depth_representation_info** out);
 
 
 
