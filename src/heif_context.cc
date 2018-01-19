@@ -639,7 +639,8 @@ Error HeifContext::interpret_heif_file()
 
         // alpha channel
 
-        if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1") {
+        if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||
+            auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1") {
           image->set_is_alpha_channel_of(refs[0]);
 
           auto master_iter = m_all_images.find(refs[0]);
