@@ -35,6 +35,7 @@ endif()
 
 # set(CMAKE_VERBOSE_MAKEFILE on)
 
+add_definitions(-DHAVE_VISIBILITY)
 add_definitions(-DLIBHEIF_EXPORTS)
 
 add_library(${LIBHEIF_LIBRARY_NAME} SHARED ${libheif_sources})
