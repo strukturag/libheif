@@ -179,6 +179,44 @@ int main(int argc, char** argv)
         printf("Written to %s\n", filename.c_str());
       }
       heif_image_release(image);
+
+
+
+      int has_depth = heif_image_handle_has_depth_channel(handle);
+      if (has_depth) {
+        struct heif_image_handle* depth_handle;
+        err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+        if (err.code) {
+          heif_image_handle_release(handle);
+          std::cerr << "Could not read depth channel\n";
+          return 1;
+        }
+
+        struct heif_image* depth_image;
+        err = heif_decode_image(depth_handle,
+                                &depth_image,
+                                encoder->colorspace(false),
+                                encoder->chroma(false),
+                                nullptr);
+        if (err.code) {
+          heif_image_handle_release(depth_handle);
+          heif_image_handle_release(handle);
+          std::cerr << "Could not decode depth image: " << err.message << "\n";
+          return 1;
+        }
+
+        std::ostringstream s;
+        s << output_filename.substr(0, output_filename.find('.'));
+        s << "-depth";
+        s << output_filename.substr(output_filename.find('.'));
+
+        written = encoder->Encode(depth_handle, depth_image, s.str());
+        if (!written) {
+          fprintf(stderr,"could not write depth image\n");
+        } else {
+          printf("Depth image written to %s\n", s.str().c_str());
+        }
+      }
     }
 
     image_index++;
