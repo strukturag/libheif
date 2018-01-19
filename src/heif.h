@@ -399,6 +399,7 @@ enum heif_channel {
   heif_channel_G = 4,
   heif_channel_B = 5,
   heif_channel_Alpha = 6,
+  heif_channel_Depth = 7,
   heif_channel_interleaved = 10
 };
 
