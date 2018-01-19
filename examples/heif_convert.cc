@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 
   ContextReleaser cr(ctx);
   struct heif_error err;
-  err = heif_context_read_from_file(ctx, input_filename.c_str());
+  err = heif_context_read_from_file(ctx, input_filename.c_str(), nullptr);
   if (err.code != 0) {
     std::cerr << "Could not read HEIF file: " << err.message << "\n";
     return 1;

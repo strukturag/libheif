@@ -120,7 +120,7 @@ int main(int argc, char** argv)
   }
 
   struct heif_error err;
-  err = heif_context_read_from_file(ctx.get(), input_filename);
+  err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
   if (err.code != 0) {
     std::cerr << "Could not read HEIF file: " << err.message << "\n";
     return 1;

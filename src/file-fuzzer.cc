@@ -55,7 +55,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   ctx = heif_context_alloc();
   assert(ctx);
-  err = heif_context_read_from_memory(ctx, data, size);
+  err = heif_context_read_from_memory(ctx, data, size, nullptr);
   if (err.code != heif_error_Ok) {
     // Not a valid HEIF file passed (which is most likely while fuzzing).
     goto quit;

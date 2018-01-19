@@ -83,13 +83,15 @@ void heif_context_free(heif_context* ctx)
   delete ctx;
 }
 
-heif_error heif_context_read_from_file(heif_context* ctx, const char* filename)
+heif_error heif_context_read_from_file(heif_context* ctx, const char* filename,
+                                       const struct heif_reading_options*)
 {
   Error err = ctx->context->read_from_file(filename);
   return err.error_struct(ctx->context.get());
 }
 
-heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, size_t size)
+heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, size_t size,
+                                         const struct heif_reading_options*)
 {
   Error err = ctx->context->read_from_memory(mem, size);
   return err.error_struct(ctx->context.get());

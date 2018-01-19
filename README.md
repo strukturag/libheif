@@ -35,7 +35,7 @@ Loading the primary image in a HEIF file is as easy as this:
 
 ```C
 heif_context* ctx = heif_context_alloc();
-heif_context_read_from_file(ctx, input_filename);
+heif_context_read_from_file(ctx, input_filename, nullptr);
 
 // get a handle to the primary image
 heif_image_handle* handle;

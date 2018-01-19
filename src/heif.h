@@ -237,14 +237,21 @@ struct heif_context* heif_context_alloc(void);
 LIBHEIF_API
 void heif_context_free(struct heif_context*);
 
+
+struct heif_reading_options;
+
 // Read a HEIF file from a named disk file.
+// The heif_reading_options should currently be set to NULL.
 LIBHEIF_API
-struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename);
+struct heif_error heif_context_read_from_file(struct heif_context*, const char* filename,
+                                              const struct heif_reading_options*);
 
 // Read a HEIF file stored completely in memory.
+// The heif_reading_options should currently be set to NULL.
 LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
-                                                const void* mem, size_t size);
+                                                const void* mem, size_t size,
+                                                const struct heif_reading_options*);
 
 // Number of top-level image in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
@@ -323,15 +330,51 @@ LIBHEIF_API
 int heif_image_handle_has_depth_channel(const struct heif_image_handle*);
 
 LIBHEIF_API
-void heif_image_handle_get_depth_channel_subtype(const struct heif_image_handle* handle,
-                                                 int depth_channel_idx,
-                                                 const uint8_t** out_subtype_data,
-                                                 int* out_subtype_data_length);
-
-LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
                                                              int depth_channel_idx,
                                                              struct heif_image_handle** out_depth_handle);
+
+
+enum heif_depth_representation_type {
+  heif_depth_representation_type_uniform_inverse_Z = 0,
+  heif_depth_representation_type_uniform_disparity = 1,
+  heif_depth_representation_type_uniform_Z = 2,
+  heif_depth_representation_type_nonuniform_disparity = 3
+};
+
+struct heif_depth_representation_info {
+  uint8_t version;
+
+  // version 1 fields
+
+  uint8_t has_z_near;
+  uint8_t has_z_far;
+  uint8_t has_d_min;
+  uint8_t has_d_max;
+
+  double z_near;
+  double z_far;
+  double z_d_min;
+  double z_d_max;
+
+  enum heif_depth_representation_type depth_representation_type;
+  uint32_t disparity_reference_view;
+
+  uint32_t depth_nonlinear_representation_model_size;
+  uint8_t* depth_nonlinear_representation_model;
+
+  // version 2 fields below
+};
+
+
+LIBHEIF_API
+void heif_depth_representation_info_free(const struct heif_depth_representation_info* info);
+
+LIBHEIF_API
+void heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
+                                                             int depth_channel_idx,
+                                                             const struct heif_depth_representation_info** out);
+
 
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
