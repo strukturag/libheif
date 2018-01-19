@@ -33,7 +33,7 @@ Note that the API is still work in progress and may still change.
 
 Loading the primary image in a HEIF file is as easy as this:
 
-```
+```C
 heif_context* ctx = heif_context_alloc();
 heif_context_read_from_file(ctx, input_filename);
 
