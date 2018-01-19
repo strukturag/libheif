@@ -11,6 +11,8 @@ pkgconfig_DATA = libheif.pc
 EXTRA_DIST = \
     .travis.yml \
     autogen.sh \
+    CMakeLists.txt \
     */CMakeLists.txt \
+    CPPLINT.cfg \
     README.md \
     */COPYING
