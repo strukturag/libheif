@@ -1,5 +1,6 @@
 set (libheif_sources
 bitstream.h
+bitstream.cc
 box.cc
 box.h
 error.cc

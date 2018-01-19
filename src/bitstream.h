@@ -36,6 +36,7 @@
 #include <memory>
 #include <limits>
 #include <istream>
+#include <string>
 
 #include "error.h"
 
@@ -48,6 +49,11 @@ namespace heif {
     BitstreamRange(std::istream* istr, uint64_t length, BitstreamRange* parent = nullptr) {
       construct(istr, length, parent);
     }
+
+    uint8_t read8();
+    uint16_t read16();
+    uint32_t read32();
+    std::string read_string();
 
     bool read(int n) {
       if (n<0) {
