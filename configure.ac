@@ -101,6 +101,7 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion"
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
+AC_CONFIG_FILES([extra/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/heif-version.h])
 AC_CONFIG_FILES([libheif.pc])
