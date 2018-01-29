@@ -325,10 +325,10 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle);
 LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
 
-// returns the number of depth channels (usually one)
 LIBHEIF_API
 int heif_image_handle_has_depth_channel(const struct heif_image_handle*);
 
+// depth_channel_idx should always be 0 for now
 LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
                                                              int depth_channel_idx,
