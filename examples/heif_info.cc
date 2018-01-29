@@ -175,7 +175,7 @@ int main(int argc, char** argv)
     bool has_depth = heif_image_handle_has_depth_channel(handle);
 
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
-    printf("  depth channel: %s\n", has_depth ? "yes":"no");
+    printf("  depth channel: %s", has_depth ? "yes":"no\n");
 
     if (has_depth) {
       struct heif_image_handle* depth_handle;
@@ -184,6 +184,10 @@ int main(int argc, char** argv)
         fprintf(stderr,"cannot get depth image: %s\n",err.message);
         return 1;
       }
+
+      printf(" (%dx%d)\n",
+             heif_image_handle_get_width(depth_handle),
+             heif_image_handle_get_height(depth_handle));
 
       const struct heif_depth_representation_info* depth_info;
       if (heif_image_handle_get_depth_channel_representation_info(depth_handle, 0, &depth_info)) {
