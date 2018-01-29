@@ -252,11 +252,16 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
   outimg->add_plane(heif_channel_G, m_width, m_height, bpp);
   outimg->add_plane(heif_channel_B, m_width, m_height, bpp);
 
-  const uint8_t *in_y,*in_cb,*in_cr;
-  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0;
+  bool has_alpha = has_channel(heif_channel_Alpha);
+  if (has_alpha) {
+    outimg->add_plane(heif_channel_Alpha, m_width, m_height, bpp);
+  }
 
-  uint8_t *out_r,*out_g,*out_b;
-  int out_r_stride=0, out_g_stride=0, out_b_stride=0;
+  const uint8_t *in_y,*in_cb,*in_cr,*in_a;
+  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0, in_a_stride=0;
+
+  uint8_t *out_r,*out_g,*out_b,*out_a;
+  int out_r_stride=0, out_g_stride=0, out_b_stride=0, out_a_stride=0;
 
   in_y  = get_plane(heif_channel_Y,  &in_y_stride);
   in_cb = get_plane(heif_channel_Cb, &in_cb_stride);
@@ -264,6 +269,11 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
   out_r = outimg->get_plane(heif_channel_R, &out_r_stride);
   out_g = outimg->get_plane(heif_channel_G, &out_g_stride);
   out_b = outimg->get_plane(heif_channel_B, &out_b_stride);
+
+  if (has_alpha) {
+    in_a = get_plane(heif_channel_Alpha, &in_a_stride);
+    out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+  }
 
   int x,y;
   for (y=0;y<m_height;y++) {
@@ -276,6 +286,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
       out_r[y*out_r_stride + x] = clip(y_val + 1.596f * vv);
       out_g[y*out_g_stride + x] = clip(y_val - 0.813f * vv - 0.391f * uv);
       out_b[y*out_b_stride + x] = clip(y_val + 2.018f * uv);
+    }
+
+    if (has_alpha) {
+      memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], m_width);
     }
   }
 
@@ -690,7 +704,18 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
 {
   std::set<enum heif_channel> channels = overlay->get_channel_set();
 
+  bool has_alpha = overlay->has_channel(heif_channel_Alpha);
+  bool has_alpha_me = has_channel(heif_channel_Alpha);
+
+  int alpha_stride=0;
+  uint8_t* alpha_p;
+  alpha_p = overlay->get_plane(heif_channel_Alpha, &alpha_stride);
+
   for (heif_channel channel : channels) {
+    if (!has_channel(channel)) {
+      continue;
+    }
+
     int in_stride=0;
     const uint8_t* in_p;
 
@@ -757,9 +782,20 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
     }
 
     for (int y=in_y0; y<in_h; y++) {
-      memcpy(out_p + out_x0 + (out_y0 + y-in_y0)*out_stride,
-             in_p + in_x0 + y*in_stride,
-             in_w-in_x0);
+      if (!has_alpha) {
+        memcpy(out_p + out_x0 + (out_y0 + y-in_y0)*out_stride,
+               in_p + in_x0 + y*in_stride,
+               in_w-in_x0);
+      }
+      else {
+        for (int x=in_x0; x<in_w; x++) {
+          uint8_t* outptr = &out_p[out_x0 + (out_y0 + y-in_y0)*out_stride +x];
+          uint8_t in_val = in_p[in_x0 + y*in_stride +x];
+          uint8_t alpha_val = alpha_p[in_x0 + y*in_stride +x];
+
+          *outptr = (uint8_t)((in_val * alpha_val + *outptr * (255-alpha_val)) / 255);
+        }
+      }
     }
   }
 
