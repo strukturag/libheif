@@ -18,10 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include "heif_file.h"
 #include "heif_image.h"
 
@@ -283,7 +279,12 @@ Error HeifFile::get_properties(heif_image_id imageID,
 }
 
 
-Error HeifFile::get_compressed_image_data(heif_image_id ID, std::vector<uint8_t>* data) const {
+
+Error HeifFile::get_compressed_image_data(heif_image_id ID, std::vector<uint8_t>* data) const
+{
+#if ENABLE_PARALLEL_TILE_DECODING
+  std::lock_guard<std::mutex> guard(m_read_mutex);
+#endif
 
   if (!image_exists(ID)) {
     return Error(heif_error_Usage_error,

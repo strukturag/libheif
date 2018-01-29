@@ -30,6 +30,10 @@
 #include <utility>
 #include <math.h>
 
+#if ENABLE_PARALLEL_TILE_DECODING
+#include <future>
+#endif
+
 #include "heif_context.h"
 #include "heif_file.h"
 #include "heif_image.h"
@@ -1071,61 +1075,105 @@ Error HeifContext::decode_full_grid_image(heif_image_id ID,
   int y0=0;
   int reference_idx = 0;
 
+#if ENABLE_PARALLEL_TILE_DECODING
+  std::vector<std::future<Error> > errs;
+  errs.resize(grid.get_rows() * grid.get_columns() );
+#endif
+
   for (int y=0;y<grid.get_rows();y++) {
     int x0=0;
     int tile_height=0;
 
     for (int x=0;x<grid.get_columns();x++) {
 
-      std::shared_ptr<HeifPixelImage> tile_img;
+      heif_image_id tileID = image_references[reference_idx];
 
-      Error err = decode_image(image_references[reference_idx], tile_img);
-      if (err != Error::Ok) {
+      const std::shared_ptr<Image> tileImg = m_all_images.find(tileID)->second;
+      int src_width = tileImg->get_width();
+      int src_height = tileImg->get_height();
+
+#if ENABLE_PARALLEL_TILE_DECODING
+      errs[x+y*grid.get_columns()] = std::async(std::launch::async,
+                                                &HeifContext::decode_and_paste_tile_image, this,
+                                                tileID, img, x0,y0);
+#else
+      Error err = decode_and_paste_tile_image(tileID, img, x0,y0);
+      if (err) {
         return err;
       }
-
-
-      // --- copy tile into output image
-
-      int src_width  = tile_img->get_width();
-      int src_height = tile_img->get_height();
-      assert(src_width >= 0);
-      assert(src_height >= 0);
-
-      tile_height = src_height;
-
-      for (heif_channel channel : { heif_channel_Y, heif_channel_Cb, heif_channel_Cr }) {
-        int tile_stride;
-        uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
-
-        int out_stride;
-        uint8_t* out_data = img->get_plane(channel, &out_stride);
-
-        int copy_width  = std::min(src_width, w - x0);
-        int copy_height = std::min(src_height, h - y0);
-
-        int xs=x0, ys=y0;
-
-        if (channel != heif_channel_Y) {
-          copy_width /= 2;
-          copy_height /= 2;
-          xs /= 2;
-          ys /= 2;
-        }
-
-        for (int py=0;py<copy_height;py++) {
-          memcpy(out_data + xs + (ys+py)*out_stride,
-                 tile_data + py*tile_stride,
-                 copy_width);
-        }
-      }
+#endif
 
       x0 += src_width;
+      tile_height = src_height; // TODO: check that all tiles have the same height
 
       reference_idx++;
     }
 
     y0 += tile_height;
+  }
+
+#if ENABLE_PARALLEL_TILE_DECODING
+  // check for decoding errors in all decoded tiles
+
+  for (int i=0;i<grid.get_rows() * grid.get_columns();i++) {
+    Error e = errs[i].get();
+    if (e) {
+      return e;
+    }
+  }
+#endif
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::decode_and_paste_tile_image(heif_image_id tileID,
+                                               std::shared_ptr<HeifPixelImage> img,
+                                               int x0,int y0) const
+{
+  std::shared_ptr<HeifPixelImage> tile_img;
+
+  Error err = decode_image(tileID, tile_img);
+  if (err != Error::Ok) {
+    return err;
+  }
+
+
+  const int w = img->get_width();
+  const int h = img->get_height();
+
+
+  // --- copy tile into output image
+
+  int src_width  = tile_img->get_width();
+  int src_height = tile_img->get_height();
+  assert(src_width >= 0);
+  assert(src_height >= 0);
+
+  for (heif_channel channel : { heif_channel_Y, heif_channel_Cb, heif_channel_Cr }) {
+    int tile_stride;
+    uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
+
+    int out_stride;
+    uint8_t* out_data = img->get_plane(channel, &out_stride);
+
+    int copy_width  = std::min(src_width, w - x0);
+    int copy_height = std::min(src_height, h - y0);
+
+    int xs=x0, ys=y0;
+
+    if (channel != heif_channel_Y) {
+      copy_width /= 2;
+      copy_height /= 2;
+      xs /= 2;
+      ys /= 2;
+    }
+
+    for (int py=0;py<copy_height;py++) {
+      memcpy(out_data + xs + (ys+py)*out_stride,
+             tile_data + py*tile_stride,
+             copy_width);
+    }
   }
 
   return Error::Ok;

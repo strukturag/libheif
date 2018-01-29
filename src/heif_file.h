@@ -21,6 +21,10 @@
 #ifndef LIBHEIF_HEIF_FILE_H
 #define LIBHEIF_HEIF_FILE_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
 #include "box.h"
 
 #include <map>
@@ -28,6 +32,11 @@
 #include <string>
 #include <map>
 #include <vector>
+
+#if ENABLE_PARALLEL_TILE_DECODING
+#include <mutex>
+#endif
+
 
 namespace heif {
 
@@ -78,6 +87,10 @@ namespace heif {
     std::string debug_dump_boxes() const;
 
   private:
+#if ENABLE_PARALLEL_TILE_DECODING
+    mutable std::mutex m_read_mutex;
+#endif
+
     std::unique_ptr<std::istream> m_input_stream;
 
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;

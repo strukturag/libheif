@@ -186,6 +186,10 @@ namespace heif {
                                  std::shared_ptr<HeifPixelImage>& img,
                                  const std::vector<uint8_t>& grid_data) const;
 
+    Error decode_and_paste_tile_image(heif_image_id tileID,
+                                      std::shared_ptr<HeifPixelImage> out_image,
+                                      int x0,int y0) const;
+
     Error decode_derived_image(heif_image_id ID,
                                std::shared_ptr<HeifPixelImage>& img) const;
 

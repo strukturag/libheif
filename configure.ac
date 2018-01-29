@@ -96,8 +96,21 @@ fi
 AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" = "xyes"])
 AC_SUBST(ENABLE_LIBFUZZER)
 
+AC_ARG_ENABLE([multithreading], AS_HELP_STRING([--disable-multithreading],
+    [Disable multithreaded decoding.]))
+if eval "test x$enable_multithreading = x" ; then enable_multithreading=yes ; fi
+if eval "test x$enable_multithreading != xno"; then
+    AC_MSG_NOTICE([Enable multithreading])
+    AC_DEFINE([ENABLE_PARALLEL_TILE_DECODING], [1], [Whether we enable multithreaded decoding.])
+fi
+AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
+
 CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion"
 CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion"
+
+AC_MSG_NOTICE([---------------------------------------])
+AC_MSG_NOTICE([Multithreading: $enable_multithreading])
+AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
