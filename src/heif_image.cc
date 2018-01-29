@@ -274,6 +274,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
     in_a = get_plane(heif_channel_Alpha, &in_a_stride);
     out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
+  else {
+    in_a = nullptr;
+    out_a = nullptr;
+  }
 
   int x,y;
   for (y=0;y<m_height;y++) {
