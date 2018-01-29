@@ -705,7 +705,7 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,i
   std::set<enum heif_channel> channels = overlay->get_channel_set();
 
   bool has_alpha = overlay->has_channel(heif_channel_Alpha);
-  bool has_alpha_me = has_channel(heif_channel_Alpha);
+  //bool has_alpha_me = has_channel(heif_channel_Alpha);
 
   int alpha_stride=0;
   uint8_t* alpha_p;
