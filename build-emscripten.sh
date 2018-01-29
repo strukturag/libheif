@@ -19,7 +19,7 @@ if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
     cd ..
 fi
 
-emconfigure ./configure \
+emconfigure ./configure --disable-multithreading \
     PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
     libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
     libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
