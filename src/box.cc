@@ -216,12 +216,8 @@ heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_head
 
   writer.write32( m_type );
 
-  // Note: the 'sizeof(size_t)>32' is added because the emscripten compiler does not support
-  // 64bit integers and complains about the shift being >= the integer size. Since we will never
-  // write 64bit length with emscripten anyways, we can ignore this case.
-  if (large_size && sizeof(size_t)>32) {
-    writer.write32( uint32_t((writer.data_size() >> 32) & 0xFFFFFFFF) );
-    writer.write32( uint32_t((writer.data_size()      ) & 0xFFFFFFFF) );
+  if (large_size) {
+    writer.write64( writer.data_size() );
   }
 
   if (m_type==fourcc("uuid")) {

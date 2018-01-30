@@ -308,6 +308,25 @@ void StreamWriter::write32(uint32_t v)
 }
 
 
+void StreamWriter::write64(uint64_t v)
+{
+  size_t required_size = m_position+8;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  m_data[m_position++] = uint8_t((v>>56) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>48) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>40) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>32) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>24) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>16) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t(v & 0xFF);
+}
+
+
 void StreamWriter::write(const std::string& str)
 {
   size_t required_size = m_position + str.size();

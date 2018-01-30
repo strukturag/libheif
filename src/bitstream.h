@@ -195,6 +195,7 @@ namespace heif {
     void write8(uint8_t);
     void write16(uint16_t);
     void write32(uint32_t);
+    void write64(uint64_t);
     void write(const std::string&);
     void write(const std::vector<uint8_t>&);
 
