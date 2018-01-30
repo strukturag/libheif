@@ -463,10 +463,22 @@ enum heif_channel {
 };
 
 
+enum heif_progress_step {
+  heif_progress_step_total = 0,
+  heif_progress_step_load_tile = 1
+};
+
+
 struct heif_decoding_options
 {
   uint8_t ignore_transformations;
+
+  void (*start_progress)(enum heif_progress_step step, void* progress_user_data);
+  void (*on_progress)(enum heif_progress_step step, int progress, void* progress_user_data);
+  void (*end_progress)(enum heif_progress_step step, void* progress_user_data);
+  void* progress_user_data;
 };
+
 
 // Allocate decoding options and fill with default values.
 // Note: you should always get the decoding options through this function since the
