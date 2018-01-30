@@ -46,6 +46,7 @@ AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
     [HAVE_VISIBILITY=0],
     [gl_VISIBILITY])
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
+if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
 PKG_CHECK_MODULES([libde265], [libde265], [
     AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
@@ -110,6 +111,7 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -
 
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
+AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
