@@ -93,6 +93,9 @@ namespace heif {
 
     std::string get_type_string() const;
 
+    void set_short_type(uint32_t type) { m_type = type; }
+
+
     Error parse(BitstreamRange& range);
 
     virtual std::string dump(Indent&) const;
@@ -106,6 +109,7 @@ namespace heif {
 
     uint32_t get_flags() const { return m_flags; }
 
+    void set_flags(uint32_t flags) { m_flags = flags; }
 
 
     // --- writing

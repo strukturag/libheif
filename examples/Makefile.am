@@ -2,7 +2,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 bin_PROGRAMS = \
   heif-convert \
-  heif-info
+  heif-info \
+  heif-writer
 
 heif_convert_DEPENDENCIES = ../src/libheif.la
 heif_convert_CXXFLAGS = -I../src
@@ -27,6 +28,12 @@ heif_info_CXXFLAGS = -I../src
 heif_info_LDFLAGS =
 heif_info_LDADD = ../src/libheif.la
 heif_info_SOURCES = heif_info.cc
+
+heif_writer_DEPENDENCIES = ../src/libheif.la
+heif_writer_CXXFLAGS = -I../src
+heif_writer_LDFLAGS =
+heif_writer_LDADD = ../src/libheif.la
+heif_writer_SOURCES = heif_writer.cc
 
 EXTRA_DIST = \
     example.heic
