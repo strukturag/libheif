@@ -26,8 +26,8 @@
 #include <sstream>
 #include <iomanip>
 #include <utility>
-
 #include <iostream>
+#include <assert.h>
 
 
 using namespace heif;
@@ -176,8 +176,64 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 }
 
 
-heif::Error heif::BoxHeader::write(std::ostream& ostr) const
+heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_header) const
 {
+  // determine header size
+
+  int header_size = 0;
+
+  header_size += 8; // normal header size
+
+  if (full_header) {
+    header_size += 4;
+  }
+
+  if (m_type==fourcc("uuid")) {
+    header_size += 16;
+  }
+
+  bool large_size = false;
+
+  if (writer.data_size() + header_size > 0xFFFFFFFF) {
+    header_size += 8;
+    large_size = true;
+  }
+
+
+  // --- write header
+
+  writer.set_position(0);
+  writer.insert(header_size);
+
+  if (large_size) {
+    writer.write32(1);
+  }
+  else {
+    size_t size = writer.data_size();
+    assert(size <= 0xFFFFFFFF);
+    writer.write32( (uint32_t)size );
+  }
+
+  writer.write32( m_type );
+
+  if (large_size) {
+    writer.write32( uint32_t((writer.data_size() >> 32) & 0xFFFFFFFF) );
+    writer.write32( uint32_t((writer.data_size()      ) & 0xFFFFFFFF) );
+  }
+
+  if (m_type==fourcc("uuid")) {
+    assert(m_uuid_type.size()==16);
+    writer.write(m_uuid_type);
+  }
+
+  if (full_header) {
+    assert((m_flags & ~0x00FFFFFF) == 0);
+
+    writer.write32( (m_version << 24) | m_flags );
+  }
+
+  // writer.set_position_to_end();  // Note: should we move to the end of the box after writing the header?
+
   return Error::Ok;
 }
 

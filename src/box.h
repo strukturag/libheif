@@ -95,8 +95,6 @@ namespace heif {
 
     Error parse(BitstreamRange& range);
 
-    Error write(std::ostream& ostr) const;
-
     virtual std::string dump(Indent&) const;
 
 
@@ -107,6 +105,12 @@ namespace heif {
     uint8_t get_version() const { return m_version; }
 
     uint32_t get_flags() const { return m_flags; }
+
+
+
+    // --- writing
+
+    Error prepend_header(StreamWriter&, bool full_header) const;
 
   private:
     uint64_t m_size = 0;

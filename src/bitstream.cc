@@ -20,6 +20,7 @@
 
 #include "bitstream.h"
 
+#include <string.h>
 #include <assert.h>
 
 #define MAX_UVLC_LEADING_ZEROS 20
@@ -264,4 +265,99 @@ void BitReader::refill()
 
   nextbits_cnt = 64-shift;
 #endif
+}
+
+
+void StreamWriter::write8(uint8_t v)
+{
+  if (m_position == m_data.size()) {
+    m_data.push_back(v);
+    m_position++;
+  }
+  else {
+    m_data[m_position++] = v;
+  }
+}
+
+
+void StreamWriter::write16(uint16_t v)
+{
+  size_t required_size = m_position+2;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t(v & 0xFF);
+}
+
+
+void StreamWriter::write32(uint32_t v)
+{
+  size_t required_size = m_position+4;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  m_data[m_position++] = uint8_t((v>>24) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>16) & 0xFF);
+  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t(v & 0xFF);
+}
+
+
+void StreamWriter::write(const std::string& str)
+{
+  size_t required_size = m_position + str.size();
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  for (size_t i=0;i<str.size();i++) {
+    m_data[m_position++] = str[i];
+  }
+}
+
+
+void StreamWriter::write(const std::vector<uint8_t>& vec)
+{
+  size_t required_size = m_position + vec.size();
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  memcpy(m_data.data() + m_position, vec.data(), vec.size());
+  m_position += vec.size();
+}
+
+
+void StreamWriter::write(const StreamWriter& writer)
+{
+  size_t required_size = m_position + writer.get_data().size();
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  const auto& data = writer.get_data();
+
+  memcpy(m_data.data() + m_position, data.data(), data.size());
+
+  m_position += data.size();
+}
+
+
+void StreamWriter::insert(int nBytes)
+{
+  m_data.resize( m_data.size() + nBytes );
+
+  if (m_position < m_data.size() - nBytes) {
+    memmove(m_data.data() + m_position + nBytes,
+            m_data.data() + m_position,
+            m_data.size() - nBytes - m_position);
+  }
 }

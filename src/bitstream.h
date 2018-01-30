@@ -186,6 +186,34 @@ namespace heif {
 
     void refill(); // refill to at least 56+1 bits
   };
+
+
+
+  class StreamWriter
+  {
+  public:
+    void write8(uint8_t);
+    void write16(uint16_t);
+    void write32(uint32_t);
+    void write(const std::string&);
+    void write(const std::vector<uint8_t>&);
+
+    void write(const StreamWriter&);
+
+    void insert(int nBytes);
+
+    size_t data_size() const { return m_data.size(); }
+
+    size_t get_position() const { return m_position; }
+    void set_position(size_t pos) { m_position=pos; }
+    void set_position_to_end() { m_position=m_data.size(); }
+
+    const std::vector<uint8_t> get_data() const { return m_data; }
+
+  private:
+    std::vector<uint8_t> m_data;
+    size_t m_position = 0;
+  };
 }
 
 #endif
