@@ -370,8 +370,22 @@ void StreamWriter::write(const StreamWriter& writer)
 }
 
 
+void StreamWriter::skip(int n)
+{
+  assert(m_position == m_data.size());
+  m_data.resize( m_data.size() + n );
+  m_position += n;
+}
+
+
 void StreamWriter::insert(int nBytes)
 {
+  assert(nBytes>=0);
+
+  if (nBytes==0) {
+    return;
+  }
+
   m_data.resize( m_data.size() + nBytes );
 
   if (m_position < m_data.size() - nBytes) {

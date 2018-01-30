@@ -198,8 +198,9 @@ namespace heif {
     void write64(uint64_t);
     void write(const std::string&);
     void write(const std::vector<uint8_t>&);
-
     void write(const StreamWriter&);
+
+    void skip(int n);
 
     void insert(int nBytes);
 

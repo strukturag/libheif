@@ -38,11 +38,23 @@ using namespace heif;
 int main(int argc, char** argv)
 {
   StreamWriter writer;
-  writer.write32(0x12345678);
+
+  writer.write32(0xffffffff);
 
   BoxHeader hdr;
+  size_t startpos = hdr.reserve_box_header_space(writer, true);
+  writer.write32(0x12345678);
   hdr.set_short_type( fourcc("abcd") );
-  hdr.prepend_header(writer, true);
+  hdr.prepend_header(writer, true, startpos);
+
+
+  Box_ftyp ftyp;
+  ftyp.set_major_brand(fourcc("heic"));
+  ftyp.set_minor_version(0);
+  ftyp.add_compatible_brand(fourcc("mif1"));
+  ftyp.add_compatible_brand(fourcc("heic"));
+  ftyp.write(writer);
+
 
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();

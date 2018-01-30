@@ -176,8 +176,23 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 }
 
 
-heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_header) const
+size_t heif::BoxHeader::reserve_box_header_space(StreamWriter& writer, bool full_header) const
 {
+  size_t start_pos = writer.get_position();
+
+  int header_size = full_header ? (8+4) : 8;
+
+  writer.skip(header_size);
+
+  return start_pos;
+}
+
+
+heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_header, size_t box_start) const
+{
+  const int reserved_header_size = full_header ? (8+4) : 8;
+
+
   // determine header size
 
   int header_size = 0;
@@ -194,30 +209,34 @@ heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_head
 
   bool large_size = false;
 
-  if (writer.data_size() + header_size > 0xFFFFFFFF) {
+  size_t data_size = writer.data_size() - box_start - reserved_header_size;
+
+  if (data_size + header_size > 0xFFFFFFFF) {
     header_size += 8;
     large_size = true;
   }
 
+  size_t box_size = data_size + header_size;
+
 
   // --- write header
 
-  writer.set_position(0);
-  writer.insert(header_size);
+  writer.set_position(box_start);
+  assert(header_size >= reserved_header_size);
+  writer.insert(header_size - reserved_header_size);
 
   if (large_size) {
     writer.write32(1);
   }
   else {
-    size_t size = writer.data_size();
-    assert(size <= 0xFFFFFFFF);
-    writer.write32( (uint32_t)size );
+    assert(box_size <= 0xFFFFFFFF);
+    writer.write32( (uint32_t)box_size );
   }
 
   writer.write32( m_type );
 
   if (large_size) {
-    writer.write64( writer.data_size() );
+    writer.write64( box_size );
   }
 
   if (m_type==fourcc("uuid")) {
@@ -231,7 +250,7 @@ heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_head
     writer.write32( (m_version << 24) | m_flags );
   }
 
-  // writer.set_position_to_end();  // Note: should we move to the end of the box after writing the header?
+  writer.set_position_to_end();  // Note: should we move to the end of the box after writing the header?
 
   return Error::Ok;
 }
@@ -566,6 +585,31 @@ std::string Box_ftyp::dump(Indent& indent) const
   sstr << "\n";
 
   return sstr.str();
+}
+
+
+void Box_ftyp::add_compatible_brand(uint32_t brand)
+{
+  // TODO: check whether brand already exists in the list
+
+  m_compatible_brands.push_back(brand);
+}
+
+
+Error Box_ftyp::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer, false);
+
+  writer.write32(m_major_brand);
+  writer.write32(m_minor_version);
+
+  for (uint32_t b : m_compatible_brands) {
+    writer.write32(b);
+  }
+
+  prepend_header(writer, false, box_start);
+
+  return Error::Ok;
 }
 
 
