@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <utility>
 #include <iostream>
+#include <algorithm>
 #include <assert.h>
 
 
