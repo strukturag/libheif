@@ -62,6 +62,14 @@ int main(int argc, char** argv)
   iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5 });
   meta.append_child_box(iloc);
 
+  auto infe = std::make_shared<Box_infe>();
+  infe->set_hidden_item(true);
+  infe->set_item_ID(4712);
+  infe->set_item_type("hvc1");
+  infe->set_item_name("Nice image");
+  meta.append_child_box(infe);
+
+
   meta.derive_box_version_recursive();
   meta.write(writer);
 

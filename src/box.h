@@ -341,15 +341,28 @@ namespace heif {
 
   class Box_infe : public Box {
   public:
+    Box_infe() { set_short_type(fourcc("infe")); set_is_full_box(true); }
   Box_infe(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
     bool is_hidden_item() const { return m_hidden_item; }
 
+    void set_hidden_item(bool hidden);
+
     heif_image_id get_item_ID() const { return m_item_ID; }
 
+    void set_item_ID(heif_image_id id) { m_item_ID = id; }
+
     std::string get_item_type() const { return m_item_type; }
+
+    void set_item_type(std::string type) { m_item_type = type; }
+
+    void set_item_name(std::string name) { m_item_name = name; }
+
+    void derive_box_version();
+
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;
