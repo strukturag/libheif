@@ -10,7 +10,7 @@ if [ -z "$VERSION" ] || [ -z "$TARGET" ]; then
 fi
 
 LIBSTDC_BASE=http://de.archive.ubuntu.com/ubuntu/pool/main/g/gcc-5
-LIBSTDC_VERSION=5.4.0-6ubuntu1~16.04.5
+LIBSTDC_VERSION=5.4.0-6ubuntu1~16.04.6
 EMSDK_DOWNLOAD=https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
 CODENAME=$(/usr/bin/lsb_release --codename --short)
