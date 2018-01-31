@@ -66,8 +66,25 @@ int main(int argc, char** argv)
   pitm->set_item_ID(4711);
   meta.append_child_box(pitm);
 
+  auto iloc = std::make_shared<Box_iloc>();
+  iloc->append_data(4711, std::vector<uint8_t> { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 });
+  iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5,6,7,8,9,10 });
+  iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5 });
+  meta.append_child_box(iloc);
+
   meta.derive_box_version_recursive();
   meta.write(writer);
+
+  iloc->write_mdat_after_iloc(writer);
+
+  /*
+    DataRange range1 = mdat.append_data()
+    DataRange range2 = mdat.append_data()
+
+    mdat.write(writer);
+
+    iloc.patch_data_location(item_ID, range1);
+   */
 
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();

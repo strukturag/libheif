@@ -271,20 +271,23 @@ namespace heif {
 
   class Box_iloc : public Box {
   public:
-  Box_iloc(const BoxHeader& hdr) : Box(hdr) { }
+    Box_iloc() { set_short_type(fourcc("iloc")); set_is_full_box(true); }
+    Box_iloc(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
     struct Extent {
       uint64_t index = 0;
-      uint64_t offset;
-      uint64_t length;
+      uint64_t offset = 0;
+      uint64_t length = 0;
+
+      std::vector<uint8_t> data; // only used when writing data
     };
 
     struct Item {
       heif_image_id item_ID;
-      uint8_t  construction_method = 0; // >= V1
-      uint16_t data_reference_index;
+      uint8_t  construction_method = 0; // >= version 1
+      uint16_t data_reference_index = 0;
       uint64_t base_offset = 0;
 
       std::vector<Extent> extents;
@@ -295,13 +298,44 @@ namespace heif {
     Error read_data(const Item& item, std::istream& istr,
                     const std::shared_ptr<class Box_idat>&,
                     std::vector<uint8_t>* dest) const;
-    //Error read_all_data(std::istream& istr, std::vector<uint8_t>* dest) const;
+
+    void set_min_version(uint8_t min_version) { m_user_defined_min_version=min_version; }
+
+    // append bitstream data that will be written later (after iloc box)
+    Error append_data(heif_image_id item_ID,
+                      const std::vector<uint8_t>& data,
+                      uint8_t construction_method=0);
+
+    // append bitstream data that already has been written (before iloc box)
+    // Error write_mdat_before_iloc(heif_image_id item_ID,
+    //                              std::vector<uint8_t>& data)
+
+    // reserve data entry that will be written later
+    // Error reserve_mdat_item(heif_image_id item_ID,
+    //                         uint8_t construction_method,
+    //                         uint32_t* slot_ID);
+    // void patch_mdat_slot(uint32_t slot_ID, size_t start, size_t length);
+
+    void derive_box_version() override;
+
+    Error write(StreamWriter& writer) const override;
+
+    Error write_mdat_after_iloc(StreamWriter& writer);
 
   protected:
     Error parse(BitstreamRange& range) override;
 
   private:
     std::vector<Item> m_items;
+
+    mutable size_t m_iloc_box_start = 0;
+    uint8_t m_user_defined_min_version = 0;
+    uint8_t m_offset_size = 0;
+    uint8_t m_length_size = 0;
+    uint8_t m_base_offset_size = 0;
+    uint8_t m_index_size = 0;
+
+    void patch_iloc_header(StreamWriter& writer) const;
   };
 
 
@@ -637,6 +671,7 @@ namespace heif {
   protected:
     Error parse(BitstreamRange& range) override;
   };
+
 
   class Box_url : public Box {
   public:

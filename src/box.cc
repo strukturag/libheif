@@ -996,6 +996,237 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
 }
 
 
+Error Box_iloc::append_data(heif_image_id item_ID,
+                            const std::vector<uint8_t>& data,
+                            uint8_t construction_method)
+{
+  // check whether this item ID already exists
+
+  size_t idx;
+  for (idx=0;idx<m_items.size();idx++) {
+    if (m_items[idx].item_ID == item_ID) {
+      break;
+    }
+  }
+
+  // item does not exist -> add a new one to the end
+
+  if (idx == m_items.size()) {
+    Item item;
+    item.item_ID = item_ID;
+    item.construction_method = construction_method;
+
+    m_items.push_back(item);
+  }
+
+  if (m_items[idx].construction_method != construction_method) {
+    // TODO: return error: construction methods do not match
+  }
+
+  Extent extent;
+  extent.data = data;
+  m_items[idx].extents.push_back( std::move(extent) );
+
+  return Error::Ok;
+}
+
+
+void Box_iloc::derive_box_version()
+{
+  int min_version = m_user_defined_min_version;
+
+  if (m_items.size() > 0xFFFF) {
+    min_version = std::max(min_version, 2);
+  }
+
+  m_offset_size = 0;
+  m_length_size = 0;
+  m_base_offset_size = 0;
+  m_index_size = 0;
+
+  for (const auto& item : m_items) {
+    // check item_ID size
+    if (item.item_ID > 0xFFFF) {
+      min_version = std::max(min_version, 2);
+    }
+
+    // check construction method
+    if (item.construction_method != 0) {
+      min_version = std::max(min_version, 1);
+    }
+
+    // base offset size
+    /*
+    if (item.base_offset > 0xFFFFFFFF) {
+      m_base_offset_size = 8;
+    }
+    else if (item.base_offset > 0) {
+      m_base_offset_size = 4;
+    }
+    */
+
+    /*
+    for (const auto& extent : item.extents) {
+      // extent index size
+
+      if (extent.index != 0) {
+        min_version = std::max(min_version, 1);
+        m_index_size = 4;
+      }
+
+      if (extent.index > 0xFFFFFFFF) {
+        m_index_size = 8;
+      }
+
+      // extent offset size
+      if (extent.offset > 0xFFFFFFFF) {
+        m_offset_size = 8;
+      }
+      else {
+        m_offset_size = 4;
+      }
+
+      // extent length size
+      if (extent.length > 0xFFFFFFFF) {
+        m_length_size = 8;
+      }
+      else {
+        m_length_size = 4;
+      }
+    }
+      */
+  }
+
+  m_offset_size = 4;
+  m_length_size = 4;
+  m_base_offset_size = 4; // TODO: or could be 8 if we write >4GB files
+  m_index_size = 0;
+
+  set_version((uint8_t)min_version);
+}
+
+
+Error Box_iloc::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  m_iloc_box_start = writer.get_position();
+
+  int nSkip = 0;
+
+  nSkip += 2;
+  nSkip += (get_version()<2) ? 2 : 4; // item_count
+
+  for (const auto& item : m_items) {
+    nSkip += (get_version()<2) ? 2 : 4; // item_ID
+    nSkip += (get_version()>=1) ? 2 : 0; // construction method
+    nSkip += 4 + m_base_offset_size;
+
+    for (const auto& extent : item.extents) {
+      (void)extent;
+
+      if (get_version()>=1) {
+        nSkip += m_index_size;
+      }
+
+      nSkip += m_offset_size + m_length_size;
+    }
+  }
+
+  writer.skip(nSkip);
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
+{
+  // --- compute sum of all mdat data
+
+  size_t sum_mdat_size = 0;
+
+  for (const auto& item : m_items) {
+    if (item.construction_method == 0) {
+      for (const auto& extent : item.extents) {
+        sum_mdat_size += extent.data.size();
+      }
+    }
+  }
+
+  if (sum_mdat_size > 0xFFFFFFFF) {
+    // TODO: box size > 4 GB
+  }
+
+
+  // --- write mdat box
+
+  writer.write32((uint32_t)(sum_mdat_size + 8));
+  writer.write32(fourcc("mdat"));
+
+  for (auto& item : m_items) {
+    item.base_offset = writer.get_position();
+
+    for (auto& extent : item.extents) {
+      extent.offset = writer.get_position() - item.base_offset;
+      extent.length = extent.data.size();
+
+      writer.write(extent.data);
+    }
+  }
+
+
+  // --- patch iloc box
+
+  patch_iloc_header(writer);
+
+  return Error::Ok;
+}
+
+
+void Box_iloc::patch_iloc_header(StreamWriter& writer) const
+{
+  size_t old_pos = writer.get_position();
+  writer.set_position(m_iloc_box_start);
+
+  writer.write8((uint8_t)((m_offset_size<<4) | (m_length_size)));
+  writer.write8((uint8_t)((m_base_offset_size<<4) | (m_index_size)));
+
+  if (get_version() < 2) {
+    writer.write16((uint16_t)m_items.size());
+  } else {
+    writer.write32((uint32_t)m_items.size());
+  }
+
+  for (const auto& item : m_items) {
+    if (get_version() < 2) {
+      writer.write16((uint16_t)item.item_ID);
+    } else {
+      writer.write32((uint32_t)item.item_ID);
+    }
+
+    if (get_version() >= 1) {
+      writer.write16(item.construction_method);
+    }
+
+    writer.write16(item.data_reference_index);
+    writer.write(m_base_offset_size, item.base_offset);
+    writer.write16((uint16_t)item.extents.size());
+
+    for (const auto& extent : item.extents) {
+      if (get_version()>=1 && m_index_size > 0) {
+        writer.write(m_index_size, extent.index);
+      }
+
+      writer.write(m_offset_size, extent.offset);
+      writer.write(m_length_size, extent.length);
+    }
+  }
+
+  writer.set_position(old_pos);
+}
+
+
 Error Box_infe::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);

@@ -327,6 +327,29 @@ void StreamWriter::write64(uint64_t v)
 }
 
 
+void StreamWriter::write(int size, uint64_t value)
+{
+  if (size==1) {
+    assert(value <= 0xFF);
+    write8((uint8_t)value);
+  }
+  else if (size==2) {
+    assert(value <= 0xFFFF);
+    write16((uint16_t)value);
+  }
+  else if (size==4) {
+    assert(value <= 0xFFFFFFFF);
+    write32((uint32_t)value);
+  }
+  else if (size==8) {
+    write64((uint64_t)value);
+  }
+  else {
+    assert(false); // unimplemented size
+  }
+}
+
+
 void StreamWriter::write(const std::string& str)
 {
   size_t required_size = m_position + str.size();
