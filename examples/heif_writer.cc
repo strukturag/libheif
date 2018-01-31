@@ -39,6 +39,7 @@ int main(int argc, char** argv)
 {
   StreamWriter writer;
 
+  /*
   writer.write32(0xffffffff);
 
   BoxHeader hdr;
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
   writer.write32(0x12345678);
   hdr.set_short_type( fourcc("abcd") );
   hdr.prepend_header(writer, true, startpos);
-
+  */
 
   Box_ftyp ftyp;
   ftyp.set_major_brand(fourcc("heic"));
@@ -55,6 +56,17 @@ int main(int argc, char** argv)
   ftyp.add_compatible_brand(fourcc("heic"));
   ftyp.write(writer);
 
+
+  Box_meta meta;
+
+  auto ftyp2 = std::make_shared<Box_ftyp>();
+  ftyp2->set_major_brand(fourcc("hei2"));
+  ftyp2->set_minor_version(0);
+  ftyp2->add_compatible_brand(fourcc("mif2"));
+  ftyp2->add_compatible_brand(fourcc("hei2"));
+
+  meta.append_child_box(ftyp2);
+  meta.write(writer);
 
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();

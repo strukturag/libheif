@@ -176,11 +176,11 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 }
 
 
-size_t heif::BoxHeader::reserve_box_header_space(StreamWriter& writer, bool full_header) const
+size_t heif::BoxHeader::reserve_box_header_space(StreamWriter& writer) const
 {
   size_t start_pos = writer.get_position();
 
-  int header_size = full_header ? (8+4) : 8;
+  int header_size = is_full_box_header() ? (8+4) : 8;
 
   writer.skip(header_size);
 
@@ -188,9 +188,9 @@ size_t heif::BoxHeader::reserve_box_header_space(StreamWriter& writer, bool full
 }
 
 
-heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_header, size_t box_start) const
+heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, size_t box_start) const
 {
-  const int reserved_header_size = full_header ? (8+4) : 8;
+  const int reserved_header_size = is_full_box_header() ? (8+4) : 8;
 
 
   // determine header size
@@ -199,7 +199,7 @@ heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_head
 
   header_size += 8; // normal header size
 
-  if (full_header) {
+  if (is_full_box_header()) {
     header_size += 4;
   }
 
@@ -244,7 +244,7 @@ heif::Error heif::BoxHeader::prepend_header(StreamWriter& writer, bool full_head
     writer.write(m_uuid_type);
   }
 
-  if (full_header) {
+  if (is_full_box_header()) {
     assert((m_flags & ~0x00FFFFFF) == 0);
 
     writer.write32( (m_version << 24) | m_flags );
@@ -508,6 +508,19 @@ Error Box::read_children(BitstreamRange& range, int max_number)
 }
 
 
+Error Box::write_children(StreamWriter& writer) const
+{
+  for (const auto& child : m_children) {
+    Error err = child->write(writer);
+    if (err) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 std::string Box::dump_children(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -598,7 +611,7 @@ void Box_ftyp::add_compatible_brand(uint32_t brand)
 
 Error Box_ftyp::write(StreamWriter& writer) const
 {
-  size_t box_start = reserve_box_header_space(writer, false);
+  size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(m_major_brand);
   writer.write32(m_minor_version);
@@ -607,7 +620,7 @@ Error Box_ftyp::write(StreamWriter& writer) const
     writer.write32(b);
   }
 
-  prepend_header(writer, false, box_start);
+  prepend_header(writer, box_start);
 
   return Error::Ok;
 }
@@ -638,6 +651,18 @@ std::string Box_meta::dump(Indent& indent) const
   sstr << dump_children(indent);
 
   return sstr.str();
+}
+
+
+Error Box_meta::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  Error err = write_children(writer);
+
+  prepend_header(writer, box_start);
+
+  return err;
 }
 
 

@@ -113,11 +113,13 @@ namespace heif {
 
     void set_is_full_box(bool flag=true) { m_is_full_box=flag; }
 
+    bool is_full_box_header() const { return m_is_full_box; }
+
 
     // --- writing
 
-    size_t reserve_box_header_space(StreamWriter& writer, bool full_header) const;
-    Error prepend_header(StreamWriter&, bool full_header, size_t box_start) const;
+    size_t reserve_box_header_space(StreamWriter& writer) const;
+    Error prepend_header(StreamWriter&, size_t box_start) const;
 
   private:
     uint64_t m_size = 0;
@@ -152,6 +154,8 @@ namespace heif {
 
     const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const { return m_children; }
 
+    void append_child_box(std::shared_ptr<Box> box) { m_children.push_back(box); }
+
   protected:
     virtual Error parse(BitstreamRange& range);
 
@@ -160,6 +164,8 @@ namespace heif {
     const static int READ_CHILDREN_ALL = -1;
 
     Error read_children(BitstreamRange& range, int number = READ_CHILDREN_ALL);
+
+    Error write_children(StreamWriter& writer) const;
 
     std::string dump_children(Indent&) const;
   };
@@ -195,11 +201,14 @@ namespace heif {
 
   class Box_meta : public Box {
   public:
+  Box_meta() { set_short_type(fourcc("meta")); set_is_full_box(true); }
   Box_meta(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
     //bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
+
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;
