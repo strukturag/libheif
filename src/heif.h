@@ -201,7 +201,9 @@ enum heif_suberror_code {
   heif_suberror_Unsupported_data_version = 3002,
 
   // The conversion of the source image to the requested chroma / colorspace is not supported.
-  heif_suberror_Unsupported_color_conversion = 3003
+  heif_suberror_Unsupported_color_conversion = 3003,
+
+  heif_suberror_Unsupported_item_construction_method = 3004
 };
 
 

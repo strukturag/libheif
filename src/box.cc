@@ -983,6 +983,13 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                       extent.length,
                       *dest);
     }
+    else {
+      std::stringstream sstr;
+      sstr << "Item construction method " << item.construction_method << " not implemented");
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_No_idat_box,
+                   sstr.str());
+    }
   }
 
   return Error::Ok;
