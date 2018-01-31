@@ -107,6 +107,8 @@ namespace heif {
 
     uint8_t get_version() const { return m_version; }
 
+    void set_version(uint8_t version) { m_version=version; }
+
     uint32_t get_flags() const { return m_flags; }
 
     void set_flags(uint32_t flags) { m_flags = flags; }
@@ -146,6 +148,11 @@ namespace heif {
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
     virtual Error write(StreamWriter& writer) const { return Error::Ok; }
+
+    // check, which box version is required and set this in the (full) box header
+    virtual void derive_box_version() { set_version(0); }
+
+    void derive_box_version_recursive();
 
     virtual std::string dump(Indent&) const;
 
@@ -241,11 +248,18 @@ namespace heif {
 
   class Box_pitm : public Box {
   public:
-  Box_pitm(const BoxHeader& hdr) : Box(hdr) { }
+    Box_pitm() { set_short_type(fourcc("pitm")); set_is_full_box(true); }
+    Box_pitm(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
     heif_image_id get_item_ID() const { return m_item_ID; }
+
+    void set_item_ID(heif_image_id id) { m_item_ID = id; }
+
+    void derive_box_version() override;
+
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;

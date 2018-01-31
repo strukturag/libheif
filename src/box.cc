@@ -544,6 +544,16 @@ std::string Box::dump_children(Indent& indent) const
 }
 
 
+void Box::derive_box_version_recursive()
+{
+  derive_box_version();
+
+  for (auto& child : m_children) {
+    child->derive_box_version_recursive();
+  }
+}
+
+
 Error Box_ftyp::parse(BitstreamRange& range)
 {
   m_major_brand = range.read32();
@@ -737,6 +747,35 @@ std::string Box_pitm::dump(Indent& indent) const
   sstr << indent << "item_ID: " << m_item_ID << "\n";
 
   return sstr.str();
+}
+
+
+void Box_pitm::derive_box_version()
+{
+  if (m_item_ID <= 0xFFFF) {
+    set_version(0);
+  }
+  else {
+    set_version(1);
+  }
+}
+
+
+Error Box_pitm::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (get_version()==0) {
+    assert(m_item_ID <= 0xFFFF);
+    writer.write16((uint16_t)m_item_ID);
+  }
+  else {
+    writer.write32(m_item_ID);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
 }
 
 

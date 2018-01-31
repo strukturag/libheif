@@ -61,6 +61,12 @@ int main(int argc, char** argv)
 
   auto hdlr = std::make_shared<Box_hdlr>();
   meta.append_child_box(hdlr);
+
+  auto pitm = std::make_shared<Box_pitm>();
+  pitm->set_item_ID(4711);
+  meta.append_child_box(pitm);
+
+  meta.derive_box_version_recursive();
   meta.write(writer);
 
   std::ofstream ostr("out.heic");
