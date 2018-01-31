@@ -360,7 +360,7 @@ namespace heif {
 
     void set_item_name(std::string name) { m_item_name = name; }
 
-    void derive_box_version();
+    void derive_box_version() override;
 
     Error write(StreamWriter& writer) const override;
 
