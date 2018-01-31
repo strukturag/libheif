@@ -352,7 +352,7 @@ void StreamWriter::write(int size, uint64_t value)
 
 void StreamWriter::write(const std::string& str)
 {
-  size_t required_size = m_position + str.size();
+  size_t required_size = m_position + str.size() +1;
 
   if (required_size > m_data.size()) {
     m_data.resize(required_size);
@@ -361,6 +361,8 @@ void StreamWriter::write(const std::string& str)
   for (size_t i=0;i<str.size();i++) {
     m_data[m_position++] = str[i];
   }
+
+  m_data[m_position++] = 0;
 }
 
 
