@@ -39,16 +39,6 @@ int main(int argc, char** argv)
 {
   StreamWriter writer;
 
-  /*
-  writer.write32(0xffffffff);
-
-  BoxHeader hdr;
-  size_t startpos = hdr.reserve_box_header_space(writer, true);
-  writer.write32(0x12345678);
-  hdr.set_short_type( fourcc("abcd") );
-  hdr.prepend_header(writer, true, startpos);
-  */
-
   Box_ftyp ftyp;
   ftyp.set_major_brand(fourcc("heic"));
   ftyp.set_minor_version(0);
@@ -76,15 +66,6 @@ int main(int argc, char** argv)
   meta.write(writer);
 
   iloc->write_mdat_after_iloc(writer);
-
-  /*
-    DataRange range1 = mdat.append_data()
-    DataRange range2 = mdat.append_data()
-
-    mdat.write(writer);
-
-    iloc.patch_data_location(item_ID, range1);
-   */
 
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();
