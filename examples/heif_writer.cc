@@ -59,13 +59,8 @@ int main(int argc, char** argv)
 
   Box_meta meta;
 
-  auto ftyp2 = std::make_shared<Box_ftyp>();
-  ftyp2->set_major_brand(fourcc("hei2"));
-  ftyp2->set_minor_version(0);
-  ftyp2->add_compatible_brand(fourcc("mif2"));
-  ftyp2->add_compatible_brand(fourcc("hei2"));
-
-  meta.append_child_box(ftyp2);
+  auto hdlr = std::make_shared<Box_hdlr>();
+  meta.append_child_box(hdlr);
   meta.write(writer);
 
   std::ofstream ostr("out.heic");

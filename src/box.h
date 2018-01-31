@@ -217,18 +217,23 @@ namespace heif {
 
   class Box_hdlr : public Box {
   public:
-  Box_hdlr(const BoxHeader& hdr) : Box(hdr) { }
+    Box_hdlr() { set_short_type(fourcc("hdlr")); set_is_full_box(true); }
+    Box_hdlr(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
     uint32_t get_handler_type() const { return m_handler_type; }
 
+    void set_handler_type(uint32_t handler) { m_handler_type = handler; }
+
+    Error write(StreamWriter& writer) const override;
+
   protected:
     Error parse(BitstreamRange& range) override;
 
   private:
-    uint32_t m_pre_defined;
-    uint32_t m_handler_type;
+    uint32_t m_pre_defined = 0;
+    uint32_t m_handler_type = fourcc("pict");
     uint32_t m_reserved[3];
     std::string m_name;
   };
