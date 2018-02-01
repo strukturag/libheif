@@ -589,8 +589,32 @@ namespace heif {
 
   class Box_hvcC : public Box {
   public:
-    Box_hvcC(const BoxHeader& hdr) : Box(hdr) {
-    }
+    Box_hvcC(const BoxHeader& hdr) : Box(hdr) { }
+
+    struct configuration {
+      uint8_t  configuration_version;
+      uint8_t  general_profile_space;
+      bool     general_tier_flag;
+      uint8_t  general_profile_idc;
+      uint32_t general_profile_compatibility_flags;
+
+      static const int NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
+      std::bitset<NUM_CONSTRAINT_INDICATOR_FLAGS> general_constraint_indicator_flags;
+
+      uint8_t  general_level_idc;
+
+      uint16_t min_spatial_segmentation_idc;
+      uint8_t  parallelism_type;
+      uint8_t  chroma_format;
+      uint8_t  bit_depth_luma;
+      uint8_t  bit_depth_chroma;
+      uint16_t avg_frame_rate;
+
+      uint8_t  constant_frame_rate;
+      uint8_t  num_temporal_layers;
+      uint8_t  temporal_id_nested;
+    };
+
 
     std::string dump(Indent&) const override;
 
@@ -600,34 +624,15 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    static const int NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
-    uint8_t  m_configuration_version;
-    uint8_t  m_general_profile_space;
-    bool     m_general_tier_flag;
-    uint8_t  m_general_profile_idc;
-    uint32_t m_general_profile_compatibility_flags;
-    std::bitset<NUM_CONSTRAINT_INDICATOR_FLAGS> m_general_constraint_indicator_flags;
-
-    uint8_t  m_general_level_idc;
-
-    uint16_t m_min_spatial_segmentation_idc;
-    uint8_t  m_parallelism_type;
-    uint8_t  m_chroma_format;
-    uint8_t  m_bit_depth_luma;
-    uint8_t  m_bit_depth_chroma;
-    uint16_t m_avg_frame_rate;
-
-    uint8_t  m_constant_frame_rate;
-    uint8_t  m_num_temporal_layers;
-    uint8_t  m_temporal_id_nested;
-    uint8_t  m_length_size;
-
     struct NalArray {
       uint8_t m_array_completeness;
       uint8_t m_NAL_unit_type;
 
       std::vector< std::vector<uint8_t> > m_nal_units;
     };
+
+    configuration m_configuration;
+    uint8_t  m_length_size;
 
     std::vector<NalArray> m_nal_array;
   };

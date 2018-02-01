@@ -1899,35 +1899,38 @@ Error Box_hvcC::parse(BitstreamRange& range)
 
   uint8_t byte;
 
-  m_configuration_version = range.read8();
-  byte = range.read8();
-  m_general_profile_space = (byte>>6) & 3;
-  m_general_tier_flag = (byte>>5) & 1;
-  m_general_profile_idc = (byte & 0x1F);
+  auto& c = m_configuration; // abbreviation
 
-  m_general_profile_compatibility_flags = range.read32();
+  c.configuration_version = range.read8();
+  byte = range.read8();
+  c.general_profile_space = (byte>>6) & 3;
+  c.general_tier_flag = (byte>>5) & 1;
+  c.general_profile_idc = (byte & 0x1F);
+
+  c.general_profile_compatibility_flags = range.read32();
 
   for (int i=0; i<6; i++)
     {
       byte = range.read8();
 
       for (int b=0;b<8;b++) {
-        m_general_constraint_indicator_flags[i*8+b] = (byte >> (7-b)) & 1;
+        c.general_constraint_indicator_flags[i*8+b] = (byte >> (7-b)) & 1;
       }
     }
 
-  m_general_level_idc = range.read8();
-  m_min_spatial_segmentation_idc = range.read16() & 0x0FFF;
-  m_parallelism_type = range.read8() & 0x03;
-  m_chroma_format = range.read8() & 0x03;
-  m_bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  m_bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  m_avg_frame_rate = range.read16();
+  c.general_level_idc = range.read8();
+  c.min_spatial_segmentation_idc = range.read16() & 0x0FFF;
+  c.parallelism_type = range.read8() & 0x03;
+  c.chroma_format = range.read8() & 0x03;
+  c.bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  c.bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  c.avg_frame_rate = range.read16();
 
   byte = range.read8();
-  m_constant_frame_rate = (byte >> 6) & 0x03;
-  m_num_temporal_layers = (byte >> 3) & 0x07;
-  m_temporal_id_nested = (byte >> 2) & 1;
+  c.constant_frame_rate = (byte >> 6) & 0x03;
+  c.num_temporal_layers = (byte >> 3) & 0x07;
+  c.temporal_id_nested = (byte >> 2) & 1;
+
   m_length_size = static_cast<uint8_t>((byte & 0x03) + 1);
 
   int nArrays = range.read8();
@@ -1973,14 +1976,16 @@ std::string Box_hvcC::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "configuration_version: " << ((int)m_configuration_version) << "\n"
-       << indent << "general_profile_space: " << ((int)m_general_profile_space) << "\n"
-       << indent << "general_tier_flag: " << m_general_tier_flag << "\n"
-       << indent << "general_profile_idc: " << ((int)m_general_profile_idc) << "\n";
+  const auto& c = m_configuration; // abbreviation
+
+  sstr << indent << "configuration_version: " << ((int)c.configuration_version) << "\n"
+       << indent << "general_profile_space: " << ((int)c.general_profile_space) << "\n"
+       << indent << "general_tier_flag: " << c.general_tier_flag << "\n"
+       << indent << "general_profile_idc: " << ((int)c.general_profile_idc) << "\n";
 
   sstr << indent << "general_profile_compatibility_flags: ";
   for (int i=0;i<32;i++) {
-    sstr << ((m_general_profile_compatibility_flags>>(31-i))&1);
+    sstr << ((c.general_profile_compatibility_flags>>(31-i))&1);
     if ((i%8)==7) sstr << ' ';
     else if ((i%4)==3) sstr << '.';
   }
@@ -1988,8 +1993,8 @@ std::string Box_hvcC::dump(Indent& indent) const
 
   sstr << indent << "general_constraint_indicator_flags: ";
   int cnt=0;
-  for (int i=0; i<NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
-    bool b = m_general_constraint_indicator_flags[i];
+  for (int i=0; i<configuration::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+    bool b = c.general_constraint_indicator_flags[i];
 
     sstr << (b ? 1:0);
     cnt++;
@@ -1998,16 +2003,16 @@ std::string Box_hvcC::dump(Indent& indent) const
   }
   sstr << "\n";
 
-  sstr << indent << "general_level_idc: " << ((int)m_general_level_idc) << "\n"
-       << indent << "min_spatial_segmentation_idc: " << m_min_spatial_segmentation_idc << "\n"
-       << indent << "parallelism_type: " << ((int)m_parallelism_type) << "\n"
-       << indent << "chroma_format: " << ((int)m_chroma_format) << "\n"
-       << indent << "bit_depth_luma: " << ((int)m_bit_depth_luma) << "\n"
-       << indent << "bit_depth_chroma: " << ((int)m_bit_depth_chroma) << "\n"
-       << indent << "avg_frame_rate: " << m_avg_frame_rate << "\n"
-       << indent << "constant_frame_rate: " << ((int)m_constant_frame_rate) << "\n"
-       << indent << "num_temporal_layers: " << ((int)m_num_temporal_layers) << "\n"
-       << indent << "temporal_id_nested: " << ((int)m_temporal_id_nested) << "\n"
+  sstr << indent << "general_level_idc: " << ((int)c.general_level_idc) << "\n"
+       << indent << "min_spatial_segmentation_idc: " << c.min_spatial_segmentation_idc << "\n"
+       << indent << "parallelism_type: " << ((int)c.parallelism_type) << "\n"
+       << indent << "chroma_format: " << ((int)c.chroma_format) << "\n"
+       << indent << "bit_depth_luma: " << ((int)c.bit_depth_luma) << "\n"
+       << indent << "bit_depth_chroma: " << ((int)c.bit_depth_chroma) << "\n"
+       << indent << "avg_frame_rate: " << c.avg_frame_rate << "\n"
+       << indent << "constant_frame_rate: " << ((int)c.constant_frame_rate) << "\n"
+       << indent << "num_temporal_layers: " << ((int)c.num_temporal_layers) << "\n"
+       << indent << "temporal_id_nested: " << ((int)c.temporal_id_nested) << "\n"
        << indent << "length_size: " << ((int)m_length_size) << "\n";
 
   for (const auto& array : m_nal_array) {
