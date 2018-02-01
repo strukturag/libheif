@@ -184,7 +184,7 @@ void test2(const char* h265_file)
       // NOP
     }
     else if (c==1 && state==2) {
-      start_code_start = istr.tellg() - (std::streampos)4;
+      start_code_start = istr.tellg() - (std::streampos)3;
       dump_nal = true;
       state=3;
     }
@@ -210,7 +210,7 @@ void test2(const char* h265_file)
       }
       else {
         std::vector<uint8_t> nal_data;
-        size_t length = start_code_start - (prev_start_code_start+(std::streampos)4);
+        size_t length = start_code_start - (prev_start_code_start+(std::streampos)3);
 
         printf("found start code at position: %08x (prev: %08x)\n",
                (uint32_t)start_code_start,
@@ -218,12 +218,26 @@ void test2(const char* h265_file)
 
         nal_data.resize(length);
 
-        istr.seekg(prev_start_code_start+(std::streampos)4);
+        istr.seekg(prev_start_code_start+(std::streampos)3);
         istr.read((char*)nal_data.data(), length);
 
-        istr.seekg(start_code_start+(std::streampos)4);
+        istr.seekg(start_code_start+(std::streampos)3);
 
         printf("read nal %02x with length %08x\n",nal_data[0], (uint32_t)length);
+
+        int nal_type = (nal_data[0]>>1);
+
+        switch (nal_type) {
+        case 0x20:
+        case 0x21:
+        case 0x22:
+          hvcC->append_nal_data(nal_data);
+          break;
+
+        default:
+          iloc->append_data(1, nal_data);
+          break;
+        }
       }
 
       prev_start_code_start = start_code_start;
