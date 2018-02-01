@@ -454,6 +454,18 @@ std::string Box::dump(Indent& indent ) const
 }
 
 
+Error Box::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  Error err = write_children(writer);
+
+  prepend_header(writer, box_start);
+
+  return err;
+}
+
+
 std::shared_ptr<Box> Box::get_child_box(uint32_t short_type) const
 {
   for (auto& box : m_children) {
@@ -670,18 +682,6 @@ std::string Box_meta::dump(Indent& indent) const
   sstr << dump_children(indent);
 
   return sstr.str();
-}
-
-
-Error Box_meta::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  Error err = write_children(writer);
-
-  prepend_header(writer, box_start);
-
-  return err;
 }
 
 
@@ -1415,6 +1415,34 @@ Error Box_iprp::parse(BitstreamRange& range)
   //parse_full_box_header(range);
 
   return read_children(range);
+}
+
+
+void Box_iinf::derive_box_version()
+{
+  if (m_children.size() > 0xFFFF) {
+    set_version(1);
+  }
+  else {
+    set_version(0);
+  }
+}
+
+
+Error Box_iinf::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  int nEntries_size = (get_version() > 0) ? 4 : 2;
+
+  writer.write(nEntries_size, m_children.size());
+
+
+  Error err = write_children(writer);
+
+  prepend_header(writer, box_start);
+
+  return err;
 }
 
 

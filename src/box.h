@@ -147,7 +147,7 @@ namespace heif {
 
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
-    virtual Error write(StreamWriter& writer) const { return Error::Ok; }
+    virtual Error write(StreamWriter& writer) const;
 
     // check, which box version is required and set this in the (full) box header
     virtual void derive_box_version() { set_version(0); }
@@ -212,10 +212,6 @@ namespace heif {
   Box_meta(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
-
-    //bool get_images(std::istream& istr, std::vector<std::vector<uint8_t>>* images) const;
-
-    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;
@@ -384,9 +380,13 @@ namespace heif {
 
   class Box_iinf : public Box {
   public:
+  Box_iinf() { set_short_type(fourcc("iinf")); set_is_full_box(true); }
   Box_iinf(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
+
+    void derive_box_version() override;
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;

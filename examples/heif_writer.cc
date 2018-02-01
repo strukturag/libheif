@@ -67,7 +67,10 @@ int main(int argc, char** argv)
   infe->set_item_ID(4712);
   infe->set_item_type("hvc1");
   infe->set_item_name("Nice image");
-  meta.append_child_box(infe);
+
+  auto iinf = std::make_shared<Box_iinf>();
+  iinf->append_child_box(infe);
+  meta.append_child_box(iinf);
 
 
   meta.derive_box_version_recursive();
