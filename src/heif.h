@@ -586,6 +586,12 @@ struct heif_decoder_plugin
   // Human-readable name of the plugin
   const char* (*get_plugin_name)();
 
+  // Global plugin initialization (may be NULL)
+  void (*init_plugin)();
+
+  // Global plugin deinitialization (may be NULL)
+  void (*deinit_plugin)();
+
   // Query whether the plugin supports decoding of the given format
   // Result is a priority value. The plugin with the largest value wins.
   // Default priority is 100.
