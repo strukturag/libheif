@@ -36,6 +36,7 @@
 #include <memory>
 #include <limits>
 #include <istream>
+#include <bitset>
 
 #include "error.h"
 #include "heif.h"
@@ -589,9 +590,6 @@ namespace heif {
   class Box_hvcC : public Box {
   public:
     Box_hvcC(const BoxHeader& hdr) : Box(hdr) {
-#if !defined(HAS_BOOL_ARRAY)
-      m_general_constraint_indicator_flags.resize(NUM_CONSTRAINT_INDICATOR_FLAGS);
-#endif
     }
 
     std::string dump(Indent&) const override;
@@ -602,17 +600,14 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    static const size_t NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
+    static const int NUM_CONSTRAINT_INDICATOR_FLAGS = 48;
     uint8_t  m_configuration_version;
     uint8_t  m_general_profile_space;
     bool     m_general_tier_flag;
     uint8_t  m_general_profile_idc;
     uint32_t m_general_profile_compatibility_flags;
-#if defined(HAS_BOOL_ARRAY)
-    std::array<bool,NUM_CONSTRAINT_INDICATOR_FLAGS> m_general_constraint_indicator_flags;
-#else
-    std::vector<bool> m_general_constraint_indicator_flags;
-#endif
+    std::bitset<NUM_CONSTRAINT_INDICATOR_FLAGS> m_general_constraint_indicator_flags;
+
     uint8_t  m_general_level_idc;
 
     uint16_t m_min_spatial_segmentation_idc;

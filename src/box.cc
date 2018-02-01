@@ -1988,7 +1988,9 @@ std::string Box_hvcC::dump(Indent& indent) const
 
   sstr << indent << "general_constraint_indicator_flags: ";
   int cnt=0;
-  for (bool b : m_general_constraint_indicator_flags) {
+  for (int i=0; i<NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+    bool b = m_general_constraint_indicator_flags[i];
+
     sstr << (b ? 1:0);
     cnt++;
     if ((cnt%8)==0)
