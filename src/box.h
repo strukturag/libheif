@@ -398,6 +398,7 @@ namespace heif {
 
   class Box_iprp : public Box {
   public:
+  Box_iprp() { set_short_type(fourcc("iprp")); set_is_full_box(false); }
   Box_iprp(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
@@ -409,6 +410,7 @@ namespace heif {
 
   class Box_ipco : public Box {
   public:
+  Box_ipco() { set_short_type(fourcc("ipco")); set_is_full_box(false); }
   Box_ipco(const BoxHeader& hdr) : Box(hdr) { }
 
     struct Property {
@@ -429,12 +431,20 @@ namespace heif {
 
   class Box_ispe : public Box {
   public:
+  Box_ispe() { set_short_type(fourcc("ispe")); set_is_full_box(true); }
   Box_ispe(const BoxHeader& hdr) : Box(hdr) { }
 
     uint32_t get_width() const { return m_image_width; }
     uint32_t get_height() const { return m_image_height; }
 
+    void set_size(uint32_t width, uint32_t height) {
+      m_image_width = width;
+      m_image_height = height;
+    }
+
     std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;

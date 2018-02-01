@@ -72,6 +72,14 @@ int main(int argc, char** argv)
   iinf->append_child_box(infe);
   meta.append_child_box(iinf);
 
+  auto iprp = std::make_shared<Box_iprp>();
+  auto ipco = std::make_shared<Box_ipco>();
+  iprp->append_child_box(ipco);
+
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(1920,1080);
+  ipco->append_child_box(ispe);
+  meta.append_child_box(iprp);
 
   meta.derive_box_version_recursive();
   meta.write(writer);
