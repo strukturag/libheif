@@ -35,7 +35,7 @@
 using namespace heif;
 
 
-int main(int argc, char** argv)
+void test1()
 {
   StreamWriter writer;
 
@@ -99,6 +99,157 @@ int main(int argc, char** argv)
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();
   ostr.write( (const char*)data.data(), data.size() );
+}
+
+
+
+
+void test2(const char* h265_file)
+{
+  StreamWriter writer;
+
+  Box_ftyp ftyp;
+  ftyp.set_major_brand(fourcc("heic"));
+  ftyp.set_minor_version(0);
+  ftyp.add_compatible_brand(fourcc("mif1"));
+  ftyp.add_compatible_brand(fourcc("heic"));
+  ftyp.write(writer);
+
+
+  Box_meta meta;
+
+  auto hdlr = std::make_shared<Box_hdlr>();
+  meta.append_child_box(hdlr);
+
+  auto pitm = std::make_shared<Box_pitm>();
+  pitm->set_item_ID(1);
+  meta.append_child_box(pitm);
+
+  auto iloc = std::make_shared<Box_iloc>();
+  //iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5 });
+  meta.append_child_box(iloc);
+
+  auto infe = std::make_shared<Box_infe>();
+  infe->set_hidden_item(true);
+  infe->set_item_ID(1);
+  infe->set_item_type("hvc1");
+  infe->set_item_name("Nice image");
+
+  auto iinf = std::make_shared<Box_iinf>();
+  iinf->append_child_box(infe);
+  meta.append_child_box(iinf);
+
+  auto iprp = std::make_shared<Box_iprp>();
+  auto ipco = std::make_shared<Box_ipco>();
+  auto ipma = std::make_shared<Box_ipma>();
+  iprp->append_child_box(ipco);
+  iprp->append_child_box(ipma);
+
+  ipma->add_property_for_item_ID(1, Box_ipma::PropertyAssociation { true, 0 });
+
+  auto hvcC = std::make_shared<Box_hvcC>();
+  //hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
+  ipco->append_child_box(hvcC);
+
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(1920,1080);
+  ipco->append_child_box(ispe);
+  meta.append_child_box(iprp);
+
+
+  std::ifstream istr(h265_file);
+  int state=0;
+
+  bool first=true;
+  bool eof=false;
+  std::streampos prev_start_code_start;
+  std::streampos start_code_start;
+  //uint8_t nal_type;
+
+  for (;;) {
+    bool dump_nal = false;
+
+    int c = istr.get();
+
+    if (state==3) {
+      state=0;
+    }
+
+    //printf("read c=%02x\n",c);
+
+    if (c==0 && state<=1) {
+      state++;
+    }
+    else if (c==0) {
+      // NOP
+    }
+    else if (c==1 && state==2) {
+      start_code_start = istr.tellg() - (std::streampos)4;
+      dump_nal = true;
+      state=3;
+    }
+    else {
+      state=0;
+    }
+
+    //printf("-> state= %d\n",state);
+
+    if (istr.eof()) {
+      printf("to end of file\n");
+      istr.clear();
+      istr.seekg(0, std::ios::end);
+      start_code_start = istr.tellg();
+      printf("end of file pos: %04x\n",(uint32_t)start_code_start);
+      dump_nal = true;
+      eof = true;
+    }
+
+    if (dump_nal) {
+      if (first) {
+        first = false;
+      }
+      else {
+        std::vector<uint8_t> nal_data;
+        size_t length = start_code_start - (prev_start_code_start+(std::streampos)4);
+
+        printf("found start code at position: %08x (prev: %08x)\n",
+               (uint32_t)start_code_start,
+               (uint32_t)prev_start_code_start);
+
+        nal_data.resize(length);
+
+        istr.seekg(prev_start_code_start+(std::streampos)4);
+        istr.read((char*)nal_data.data(), length);
+
+        istr.seekg(start_code_start+(std::streampos)4);
+
+        printf("read nal %02x with length %08x\n",nal_data[0], (uint32_t)length);
+      }
+
+      prev_start_code_start = start_code_start;
+    }
+
+    if (eof) {
+      break;
+    }
+  }
+
+
+  meta.derive_box_version_recursive();
+  meta.write(writer);
+
+  iloc->write_mdat_after_iloc(writer);
+
+  std::ofstream ostr("out.heic");
+  const auto& data = writer.get_data();
+  ostr.write( (const char*)data.data(), data.size() );
+}
+
+
+int main(int argc, char** argv)
+{
+  //test1();
+  test2(argv[1]);
 
   return 0;
 }
