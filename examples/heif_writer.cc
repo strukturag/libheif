@@ -130,7 +130,7 @@ void test2(const char* h265_file)
   meta.append_child_box(iloc);
 
   auto infe = std::make_shared<Box_infe>();
-  infe->set_hidden_item(true);
+  infe->set_hidden_item(false);
   infe->set_item_ID(1);
   infe->set_item_type("hvc1");
   infe->set_item_name("Nice image");
@@ -145,7 +145,7 @@ void test2(const char* h265_file)
   iprp->append_child_box(ipco);
   iprp->append_child_box(ipma);
 
-  ipma->add_property_for_item_ID(1, Box_ipma::PropertyAssociation { true, 0 });
+  ipma->add_property_for_item_ID(1, Box_ipma::PropertyAssociation { true, 1 });
 
   auto hvcC = std::make_shared<Box_hvcC>();
   //hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
@@ -234,8 +234,18 @@ void test2(const char* h265_file)
           hvcC->append_nal_data(nal_data);
           break;
 
-        default:
-          iloc->append_data(1, nal_data);
+        default: {
+          std::vector<uint8_t> nal_data_with_size;
+          nal_data_with_size.resize(nal_data.size() + 4);
+
+          memcpy(nal_data_with_size.data()+4, nal_data.data(), nal_data.size());
+          nal_data_with_size[0] = ((nal_data.size()>>24) & 0xFF);
+          nal_data_with_size[1] = ((nal_data.size()>>16) & 0xFF);
+          nal_data_with_size[2] = ((nal_data.size()>> 8) & 0xFF);
+          nal_data_with_size[3] = ((nal_data.size()>> 0) & 0xFF);
+
+          iloc->append_data(1, nal_data_with_size);
+        }
           break;
         }
       }

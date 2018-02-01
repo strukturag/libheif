@@ -1302,7 +1302,7 @@ void Box_infe::derive_box_version()
 
 void Box_infe::set_hidden_item(bool hidden)
 {
-  m_hidden_item = true;
+  m_hidden_item = hidden;
 
   if (m_hidden_item) {
     set_flags( get_flags() | 1);
