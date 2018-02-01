@@ -458,6 +458,7 @@ namespace heif {
 
   class Box_ipma : public Box {
   public:
+  Box_ipma() { set_short_type(fourcc("ipma")); set_is_full_box(true); }
   Box_ipma(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
@@ -468,6 +469,13 @@ namespace heif {
     };
 
     const std::vector<PropertyAssociation>* get_properties_for_item_ID(heif_image_id itemID) const;
+
+    void add_property_for_item_ID(heif_image_id itemID,
+                                  PropertyAssociation assoc);
+
+    void derive_box_version() override;
+
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;

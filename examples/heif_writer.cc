@@ -74,7 +74,13 @@ int main(int argc, char** argv)
 
   auto iprp = std::make_shared<Box_iprp>();
   auto ipco = std::make_shared<Box_ipco>();
+  auto ipma = std::make_shared<Box_ipma>();
   iprp->append_child_box(ipco);
+  iprp->append_child_box(ipma);
+
+  ipma->add_property_for_item_ID(4711, Box_ipma::PropertyAssociation { true, 1 });
+  ipma->add_property_for_item_ID(4711, Box_ipma::PropertyAssociation { false, 0 });
+  ipma->add_property_for_item_ID(4712, Box_ipma::PropertyAssociation { false, 2 });
 
   auto hvcC = std::make_shared<Box_hvcC>();
   hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
