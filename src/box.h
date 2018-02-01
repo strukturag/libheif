@@ -589,6 +589,7 @@ namespace heif {
 
   class Box_hvcC : public Box {
   public:
+    Box_hvcC() { set_short_type(fourcc("hvcC")); set_is_full_box(false); }
     Box_hvcC(const BoxHeader& hdr) : Box(hdr) { }
 
     struct configuration {
@@ -620,6 +621,12 @@ namespace heif {
 
     bool get_headers(std::vector<uint8_t>* dest) const;
 
+    void set_configuration(const configuration& config) { m_configuration=config; }
+
+    void append_nal_data(const std::vector<uint8_t>& nal);
+
+    Error write(StreamWriter& writer) const override;
+
   protected:
     Error parse(BitstreamRange& range) override;
 
@@ -632,7 +639,7 @@ namespace heif {
     };
 
     configuration m_configuration;
-    uint8_t  m_length_size;
+    uint8_t  m_length_size = 4; // default: 4 bytes for NAL unit lengths
 
     std::vector<NalArray> m_nal_array;
   };

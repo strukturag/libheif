@@ -76,6 +76,10 @@ int main(int argc, char** argv)
   auto ipco = std::make_shared<Box_ipco>();
   iprp->append_child_box(ipco);
 
+  auto hvcC = std::make_shared<Box_hvcC>();
+  hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
+  ipco->append_child_box(hvcC);
+
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(1920,1080);
   ipco->append_child_box(ispe);
