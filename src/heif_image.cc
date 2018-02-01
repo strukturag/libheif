@@ -217,6 +217,14 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
   }
 
 
+  if (target_colorspace == get_colorspace() &&
+      target_colorspace == heif_colorspace_YCbCr) {
+    if (get_chroma_format() == heif_chroma_monochrome &&
+        target_chroma == heif_chroma_420) {
+      out_img = convert_mono_to_YCbCr420();
+    }
+  }
+
   if (!out_img) {
     // TODO: unsupported conversion
   }
@@ -433,6 +441,45 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24() const
       out_p[y*out_p_stride + 3*x + 1] = in_g[x + y*in_r_stride];
       out_p[y*out_p_stride + 3*x + 2] = in_b[x + y*in_r_stride];
     }
+  }
+
+  return outimg;
+}
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_mono_to_YCbCr420() const
+{
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(m_width, m_height, heif_colorspace_YCbCr, heif_chroma_420);
+
+  int chroma_width  = (m_width+1)/2;
+  int chroma_height = (m_height+1)/2;
+
+  outimg->add_plane(heif_channel_Y,  m_width, m_height, 8);
+  outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8);
+  outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, 8);
+  //outimg->transfer_plane_from_image_as(shared_from_this(), heif_channel_Y, heif_channel_Y);
+
+  uint8_t *out_cb,*out_cr,*out_y;
+  int out_cb_stride=0, out_cr_stride=0, out_y_stride=0;
+
+  const uint8_t *in_y;
+  int in_y_stride=0;
+
+  in_y  = get_plane(heif_channel_Y,  &in_y_stride);
+
+  out_y  = outimg->get_plane(heif_channel_Y,  &out_y_stride);
+  out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
+  out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
+
+  memset(out_cb, 128, out_cb_stride*chroma_height);
+  memset(out_cr, 128, out_cr_stride*chroma_height);
+
+  for (int y=0;y<m_height;y++) {
+    memcpy(out_y + y*out_y_stride,
+           in_y + y*in_y_stride,
+           m_width);
   }
 
   return outimg;
