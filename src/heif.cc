@@ -99,7 +99,7 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 
 // TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
+void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd) {
   if (!ctx) {
     return;
   }

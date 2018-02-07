@@ -294,7 +294,7 @@ struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
 // This is for debugging and informational purposes only. You should not rely on
 // the output having a specific format. At best, you should not use this at all.
 LIBHEIF_API
-void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd);
+void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 
 
 // ========================= heif_image_handle =========================

@@ -127,7 +127,7 @@ int main(int argc, char** argv)
   }
 
   if (dump_boxes) {
-    heif_context_debug_dump_boxes(ctx.get(), 1); // dump to stdout
+    heif_context_debug_dump_boxes_to_file(ctx.get(), 1); // dump to stdout
     return 0;
   }
 
