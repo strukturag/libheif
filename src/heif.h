@@ -471,9 +471,13 @@ enum heif_progress_step {
 
 struct heif_decoding_options
 {
+  uint8_t version;
+
+  // version 1 options
+
   uint8_t ignore_transformations;
 
-  void (*start_progress)(enum heif_progress_step step, void* progress_user_data);
+  void (*start_progress)(enum heif_progress_step step, int max_progress, void* progress_user_data);
   void (*on_progress)(enum heif_progress_step step, int progress, void* progress_user_data);
   void (*end_progress)(enum heif_progress_step step, void* progress_user_data);
   void* progress_user_data;

@@ -357,7 +357,14 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
+  options->version = 1;
+
   options->ignore_transformations = false;
+
+  options->start_progress = NULL;
+  options->on_progress = NULL;
+  options->end_progress = NULL;
+  options->progress_user_data = NULL;
 
   return options;
 }
