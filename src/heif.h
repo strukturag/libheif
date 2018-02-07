@@ -253,7 +253,7 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size,
                                                 const struct heif_reading_options*);
 
-// Number of top-level image in the HEIF file. This does not include the thumbnails or the
+// Number of top-level images in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
 LIBHEIF_API
