@@ -331,7 +331,7 @@ void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
   m_decoder_plugins.insert(decoder_plugin);
 }
 
-const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const
+const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
 {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;

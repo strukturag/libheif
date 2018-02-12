@@ -443,7 +443,6 @@ enum heif_compression_format {
   heif_compression_JPEG = 3
 };
 
-
 enum heif_chroma {
   heif_chroma_undefined=99,
   heif_chroma_monochrome=0,
@@ -622,7 +621,7 @@ struct heif_decoder_plugin
   // Query whether the plugin supports decoding of the given format
   // Result is a priority value. The plugin with the largest value wins.
   // Default priority is 100.
-  int (*does_support_format)(uint32_t format);
+  int (*does_support_format)(enum heif_compression_format format);
 
   // Create a new decoder context for decoding an image
   struct heif_error (*new_decoder)(void** decoder);

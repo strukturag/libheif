@@ -166,7 +166,7 @@ namespace heif {
     std::string debug_dump_boxes() const;
 
   private:
-    const struct heif_decoder_plugin* get_decoder(uint32_t type) const;
+    const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
 
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
 

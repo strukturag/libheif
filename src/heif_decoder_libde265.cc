@@ -72,7 +72,7 @@ void libde265_deinit_plugin()
 }
 
 
-static int libde265_does_support_format(uint32_t format)
+static int libde265_does_support_format(enum heif_compression_format format)
 {
   if (format == heif_compression_HEVC) {
     return LIBDE265_PLUGIN_PRIORITY;
