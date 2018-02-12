@@ -333,7 +333,7 @@ int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle
 
 LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
-                                                           heif_item_id depth_id,
+                                                           heif_item_id depth_image_id,
                                                            struct heif_image_handle** out_depth_handle);
 
 
@@ -374,9 +374,9 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 
 // Returns true when there is depth_representation_info available
 LIBHEIF_API
-int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                            heif_item_id depth_image_id,
-                                                            const struct heif_depth_representation_info** out);
+int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
+                                                          heif_item_id depth_image_id,
+                                                          const struct heif_depth_representation_info** out);
 
 
 
