@@ -10,6 +10,19 @@ if [ ! -x "$CPPLINT" ]; then
 fi
 
 # Run cpplint against changed C/C++ files.
+check_enums=
 for file in `git diff-index --cached --name-only HEAD --diff-filter=ACMR| grep -E "\.cc$|\.h$|\.c$"` ; do
     "$CPPLINT" "$file"
+    if [ "$file" = "src/heif.h" ] || [ "$file" = "src/heif-emscripten.h" ] ; then
+        check_enums=1
+    fi
 done
+
+if [ "$check_enums" = "1" ]; then
+    CHECK_EMSCRIPTEN="$ROOT/../../scripts/check-emscripten-enums.sh"
+    if [ ! -x "$CHECK_EMSCRIPTEN" ]; then
+        # Running from "scripts" folder.
+        CHECK_EMSCRIPTEN="$ROOT/check-emscripten-enums.sh"
+    fi
+    "$CHECK_EMSCRIPTEN"
+fi
