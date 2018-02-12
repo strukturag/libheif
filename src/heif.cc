@@ -124,7 +124,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   // If there is none, an error is generated when loading the file.
   if (!primary_image) {
     Error err(heif_error_Invalid_input,
-              heif_suberror_No_or_invalid_primary_image);
+              heif_suberror_No_or_invalid_primary_item);
     return err.error_struct(ctx->context.get());
   }
 
@@ -146,7 +146,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
   std::shared_ptr<HeifContext::Image> primary = ctx->context->get_primary_image();
   if (!primary) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_No_or_invalid_primary_image).error_struct(ctx->context.get());
+                 heif_suberror_No_or_invalid_primary_item).error_struct(ctx->context.get());
   }
 
   *id = primary->get_id();
