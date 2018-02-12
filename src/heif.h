@@ -266,7 +266,7 @@ int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id
 LIBHEIF_API
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
                                                  heif_item_id* ID_array,
-                                                 size_t count);
+                                                 int count);
 
 LIBHEIF_API
 struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
@@ -326,7 +326,7 @@ int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle*
 
 LIBHEIF_API
 int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
-                                                  heif_item_id* ids, size_t count);
+                                                  heif_item_id* ids, int count);
 
 LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
@@ -383,7 +383,7 @@ int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* h
 
 LIBHEIF_API
 int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
-                                                heif_item_id* ids, size_t count);
+                                                heif_item_id* ids, int count);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
@@ -402,7 +402,7 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 LIBHEIF_API
 int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
                                                      const char* type_filter,
-                                                     heif_item_id* ids, size_t count);
+                                                     heif_item_id* ids, int count);
 
 // Return a string indicating the type of the metadata, as specified in the HEIF file.
 // Exif data will have the type string "Exif".

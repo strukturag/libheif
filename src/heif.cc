@@ -177,9 +177,9 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
                                                  heif_item_id* ID_array,
-                                                 size_t size)
+                                                 int count)
 {
-  if (ID_array == nullptr || size==0 || ctx==nullptr) {
+  if (ID_array == nullptr || count==0 || ctx==nullptr) {
     return 0;
   }
 
@@ -187,7 +187,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
   // fill in ID values into output array
 
   const std::vector<std::shared_ptr<HeifContext::Image>> imgs = ctx->context->get_top_level_images();
-  int n = (int)std::min(size,imgs.size());
+  int n = (int)std::min(count,(int)imgs.size());
   for (int i=0;i<n;i++) {
     ID_array[i] = imgs[i]->get_id();
   }
@@ -242,14 +242,14 @@ int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* h
 
 
 int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
-                                                heif_item_id* ids, size_t size)
+                                                heif_item_id* ids, int count)
 {
   if (ids==nullptr) {
     return 0;
   }
 
   auto thumbnails = handle->image->get_thumbnails();
-  int n = (int)std::min(size, thumbnails.size());
+  int n = (int)std::min(count, (int)thumbnails.size());
 
   for (int i=0;i<n;i++) {
     ids[i] = thumbnails[i]->get_id();
@@ -355,11 +355,11 @@ int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle*
 
 
 int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
-                                                  heif_item_id* ids, size_t size)
+                                                  heif_item_id* ids, int count)
 {
   auto depth_image = handle->image->get_depth_channel();
 
-  if (size==0) {
+  if (count==0) {
     return 0;
   }
 
@@ -567,11 +567,11 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 
 int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
                                                      const char* type_filter,
-                                                     heif_item_id* ids, size_t count)
+                                                     heif_item_id* ids, int count)
 {
   auto metadata_list = handle->image->get_metadata();
 
-  size_t cnt=0;
+  int cnt=0;
   for (const auto& metadata : metadata_list) {
     if (type_filter==nullptr ||
         metadata->item_type == type_filter) {
@@ -585,7 +585,7 @@ int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_han
     }
   }
 
-  return (int)cnt;
+  return cnt;
 }
 
 
