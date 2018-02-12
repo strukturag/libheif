@@ -3,7 +3,8 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = \
     src \
     examples \
-    extra
+    extra \
+    scripts
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libheif.pc
