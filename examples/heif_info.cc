@@ -205,7 +205,7 @@ int main(int argc, char** argv)
              heif_image_handle_get_height(depth_handle));
 
       const struct heif_depth_representation_info* depth_info;
-      if (heif_image_handle_get_depth_channel_representation_info(depth_handle, depth_id, &depth_info)) {
+      if (heif_image_handle_get_depth_image_representation_info(depth_handle, depth_id, &depth_info)) {
 
         printf("    z-near: ");
         if (depth_info->has_z_near) printf("%f\n",depth_info->z_near); else printf("undefined\n");

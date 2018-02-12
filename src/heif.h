@@ -335,7 +335,7 @@ int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle
 
 LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
-                                                           heif_item_id depth_id,
+                                                           heif_item_id depth_image_id,
                                                            struct heif_image_handle** out_depth_handle);
 
 
@@ -376,9 +376,9 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 
 // Returns true when there is depth_representation_info available
 LIBHEIF_API
-int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                            heif_item_id depth_image_id,
-                                                            const struct heif_depth_representation_info** out);
+int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
+                                                          heif_item_id depth_image_id,
+                                                          const struct heif_depth_representation_info** out);
 
 
 
@@ -478,7 +478,6 @@ enum heif_channel {
   heif_channel_G = 4,
   heif_channel_B = 5,
   heif_channel_Alpha = 6,
-  heif_channel_Depth = 7,
   heif_channel_interleaved = 10
 };
 
@@ -534,10 +533,6 @@ enum heif_colorspace heif_image_get_colorspace(const struct heif_image*);
 // Get the chroma format of the image.
 LIBHEIF_API
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
-
-// TODO
-//LIBHEIF_API
-//enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
 
 // Get width of the given image channel in pixels. Returns -1 if a non-existing
 // channel was given.
@@ -662,8 +657,6 @@ struct heif_decoder_plugin
 
 LIBHEIF_API
 struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
-
-// TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
 
 #ifdef __cplusplus
 }
