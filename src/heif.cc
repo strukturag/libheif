@@ -322,7 +322,7 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 }
 
 int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                            int depth_channel_idx,
+                                                            heif_item_id depth_image_id,
                                                             const struct heif_depth_representation_info** out)
 {
   if (out) {
