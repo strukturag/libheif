@@ -23,6 +23,11 @@
 
 #include <errno.h>
 #include <string.h>
+#if defined(HAVE_UNISTD_H)
+#include <unistd.h>
+#else
+#define STDOUT_FILENO 1
+#endif
 
 #include "heif.h"
 
@@ -127,7 +132,7 @@ int main(int argc, char** argv)
   }
 
   if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), 1); // dump to stdout
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
     return 0;
   }
 
