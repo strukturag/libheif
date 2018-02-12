@@ -61,8 +61,8 @@ LIBHEIF_API int heif_get_version_number_minor(void);
 LIBHEIF_API int heif_get_version_number_maintenance(void);
 
 // Helper macros to check for given versions of libheif at compile time.
-#define LIBHEIF_ENCODED_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
-#define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_ENCODED_VERSION(h, m, l))
+#define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
+#define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
 struct heif_context;
 struct heif_image_handle;
