@@ -320,13 +320,19 @@ LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
 
 LIBHEIF_API
-int heif_image_handle_has_depth_channel(const struct heif_image_handle*);
+int heif_image_handle_has_depth_image(const struct heif_image_handle*);
 
-// depth_channel_idx should always be 0 for now
 LIBHEIF_API
-struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
-                                                             int depth_channel_idx,
-                                                             struct heif_image_handle** out_depth_handle);
+int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
+                                                  heif_item_id* ids, size_t size);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
+                                                           heif_item_id depth_id,
+                                                           struct heif_image_handle** out_depth_handle);
 
 
 enum heif_depth_representation_type {

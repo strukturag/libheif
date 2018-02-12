@@ -35,6 +35,7 @@
 #include <iostream>
 #include <memory>
 #include <getopt.h>
+#include <assert.h>
 
 
 /*
@@ -180,14 +181,19 @@ int main(int argc, char** argv)
       heif_image_handle_release(thumbnail_handle);
     }
 
-    bool has_depth = heif_image_handle_has_depth_channel(handle);
+    bool has_depth = heif_image_handle_has_depth_image(handle);
 
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
     printf("  depth channel: %s", has_depth ? "yes":"no\n");
 
+    heif_item_id depth_id;
+    int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+    if (has_depth) { assert(nDepthImages==1); }
+    else { assert(nDepthImages==0); }
+
     if (has_depth) {
       struct heif_image_handle* depth_handle;
-      err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+      err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
       if (err.code) {
         fprintf(stderr,"cannot get depth image: %s\n",err.message);
         return 1;

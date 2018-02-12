@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <assert.h>
 
 #include "heif.h"
 
@@ -185,11 +186,14 @@ int main(int argc, char** argv)
       heif_image_release(image);
 
 
-
-      int has_depth = heif_image_handle_has_depth_channel(handle);
+      int has_depth = heif_image_handle_has_depth_image(handle);
       if (has_depth) {
+        heif_item_id depth_id;
+        int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+        assert(nDepthImages==1);
+
         struct heif_image_handle* depth_handle;
-        err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+        err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
         if (err.code) {
           heif_image_handle_release(handle);
           std::cerr << "Could not read depth channel\n";

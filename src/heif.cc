@@ -311,7 +311,7 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_has_depth_channel(const struct heif_image_handle* handle)
+int heif_image_handle_has_depth_image(const struct heif_image_handle* handle)
 {
   return handle->image->get_depth_channel() != nullptr;
 }
@@ -341,12 +341,51 @@ int heif_image_handle_get_depth_channel_representation_info(const struct heif_im
 }
 
 
-struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
-                                                             int depth_channel_idx,
-                                                             struct heif_image_handle** out_depth_handle)
+int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle)
 {
+  auto depth_image = handle->image->get_depth_channel();
+
+  if (depth_image) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+
+int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
+                                                  heif_item_id* ids, size_t size)
+{
+  auto depth_image = handle->image->get_depth_channel();
+
+  if (size==0) {
+    return 0;
+  }
+
+  if (depth_image) {
+    ids[0] = depth_image->get_id();
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+
+struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
+                                                           heif_item_id depth_id,
+                                                           struct heif_image_handle** out_depth_handle)
+{
+  auto depth_image = handle->image->get_depth_channel();
+
   *out_depth_handle = new heif_image_handle();
-  (*out_depth_handle)->image = handle->image->get_depth_channel();
+  (*out_depth_handle)->image = depth_image;
+
+  if (depth_image->get_id() != depth_id) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    return err.error_struct(handle->image.get());
+  }
 
   return Error::Ok.error_struct(handle->image.get());
 }
