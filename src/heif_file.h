@@ -52,9 +52,13 @@ namespace heif {
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 
+    void new_empty_file();
+
+    void write(StreamWriter& writer);
+
     int get_num_images() const { return static_cast<int>(m_images.size()); }
 
-    heif_item_id get_primary_image_ID() const { return m_primary_image_ID; }
+    heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
 
     std::vector<heif_item_id> get_item_IDs() const;
 
@@ -96,6 +100,7 @@ namespace heif {
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
 
     std::shared_ptr<Box_ftyp> m_ftyp_box;
+    std::shared_ptr<Box_hdlr> m_hdlr_box;
     std::shared_ptr<Box_meta> m_meta_box;
 
     std::shared_ptr<Box_ipco> m_ipco_box;
@@ -103,6 +108,10 @@ namespace heif {
     std::shared_ptr<Box_iloc> m_iloc_box;
     std::shared_ptr<Box_idat> m_idat_box;
     std::shared_ptr<Box_iref> m_iref_box;
+    std::shared_ptr<Box_pitm> m_pitm_box;
+    std::shared_ptr<Box_iinf> m_iinf_box;
+
+    std::shared_ptr<Box_iprp> m_iprp_box;
 
     struct Image {
       std::shared_ptr<Box_infe> m_infe_box;
@@ -111,9 +120,7 @@ namespace heif {
     std::map<heif_item_id, Image> m_images;  // map from image ID to info structure
 
     // list of image items (does not include hidden images or Exif data)
-    std::vector<heif_item_id> m_valid_image_IDs;
-
-    heif_item_id m_primary_image_ID;
+    //std::vector<heif_item_id> m_valid_image_IDs;
 
 
     Error parse_heif_file(BitstreamRange& bitstream);

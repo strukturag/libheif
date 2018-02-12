@@ -80,6 +80,53 @@ Error HeifFile::read_from_memory(const void* data, size_t size)
 }
 
 
+void HeifFile::new_empty_file()
+{
+  m_input_stream.reset();
+  m_top_level_boxes.clear();
+
+  m_ftyp_box = std::make_shared<Box_ftyp>();
+  m_hdlr_box = std::make_shared<Box_hdlr>();
+  m_meta_box = std::make_shared<Box_meta>();
+  m_ipco_box = std::make_shared<Box_ipco>();
+  m_ipma_box = std::make_shared<Box_ipma>();
+  m_iloc_box = std::make_shared<Box_iloc>();
+  m_iinf_box = std::make_shared<Box_iinf>();
+  m_iprp_box = std::make_shared<Box_iprp>();
+  m_pitm_box = std::make_shared<Box_pitm>();
+
+  m_meta_box->append_child_box(m_hdlr_box);
+  m_meta_box->append_child_box(m_pitm_box);
+  m_meta_box->append_child_box(m_iloc_box);
+  m_meta_box->append_child_box(m_iinf_box);
+  m_meta_box->append_child_box(m_iprp_box);
+
+  m_iprp_box->append_child_box(m_ipco_box);
+  m_iprp_box->append_child_box(m_ipma_box);
+
+  m_images.clear();
+
+  m_top_level_boxes.push_back(m_ftyp_box);
+  m_top_level_boxes.push_back(m_meta_box);
+
+
+
+  m_ftyp_box->set_major_brand(fourcc("heic"));
+  m_ftyp_box->set_minor_version(0);
+  m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+  m_ftyp_box->add_compatible_brand(fourcc("heic"));
+}
+
+
+void HeifFile::write(StreamWriter& writer)
+{
+  for (auto& box : m_top_level_boxes) {
+    box->derive_box_version_recursive();
+    box->write(writer);
+  }
+}
+
+
 std::string HeifFile::debug_dump_boxes() const
 {
   std::stringstream sstr;
@@ -153,13 +200,13 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   }
 
 
-  auto hdlr_box = std::dynamic_pointer_cast<Box_hdlr>(m_meta_box->get_child_box(fourcc("hdlr")));
-  if (!hdlr_box) {
+  m_hdlr_box = std::dynamic_pointer_cast<Box_hdlr>(m_meta_box->get_child_box(fourcc("hdlr")));
+  if (!m_hdlr_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_hdlr_box);
   }
 
-  if (hdlr_box->get_handler_type() != fourcc("pict")) {
+  if (m_hdlr_box->get_handler_type() != fourcc("pict")) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_pict_handler);
   }
@@ -167,25 +214,25 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   // --- find mandatory boxes needed for image decoding
 
-  auto pitm_box = std::dynamic_pointer_cast<Box_pitm>(m_meta_box->get_child_box(fourcc("pitm")));
-  if (!pitm_box) {
+  m_pitm_box = std::dynamic_pointer_cast<Box_pitm>(m_meta_box->get_child_box(fourcc("pitm")));
+  if (!m_pitm_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_pitm_box);
   }
 
-  std::shared_ptr<Box> iprp_box = m_meta_box->get_child_box(fourcc("iprp"));
-  if (!iprp_box) {
+  m_iprp_box = std::dynamic_pointer_cast<Box_iprp>(m_meta_box->get_child_box(fourcc("iprp")));
+  if (!m_iprp_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_iprp_box);
   }
 
-  m_ipco_box = std::dynamic_pointer_cast<Box_ipco>(iprp_box->get_child_box(fourcc("ipco")));
+  m_ipco_box = std::dynamic_pointer_cast<Box_ipco>(m_iprp_box->get_child_box(fourcc("ipco")));
   if (!m_ipco_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipco_box);
   }
 
-  m_ipma_box = std::dynamic_pointer_cast<Box_ipma>(iprp_box->get_child_box(fourcc("ipma")));
+  m_ipma_box = std::dynamic_pointer_cast<Box_ipma>(m_iprp_box->get_child_box(fourcc("ipma")));
   if (!m_ipma_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipma_box);
@@ -201,8 +248,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   m_iref_box = std::dynamic_pointer_cast<Box_iref>(m_meta_box->get_child_box(fourcc("iref")));
 
-  std::shared_ptr<Box> iinf_box = m_meta_box->get_child_box(fourcc("iinf"));
-  if (!iinf_box) {
+  m_iinf_box = std::dynamic_pointer_cast<Box_iinf>(m_meta_box->get_child_box(fourcc("iinf")));
+  if (!m_iinf_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_iinf_box);
   }
@@ -211,9 +258,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   // --- build list of images
 
-  m_primary_image_ID = pitm_box->get_item_ID();
-
-  std::vector<std::shared_ptr<Box>> infe_boxes = iinf_box->get_child_boxes(fourcc("infe"));
+  std::vector<std::shared_ptr<Box>> infe_boxes = m_iinf_box->get_child_boxes(fourcc("infe"));
 
   for (auto& box : infe_boxes) {
     std::shared_ptr<Box_infe> infe_box = std::dynamic_pointer_cast<Box_infe>(box);

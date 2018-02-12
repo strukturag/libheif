@@ -33,6 +33,7 @@ namespace heif {
 
   class HeifFile;
   class HeifPixelImage;
+  class StreamWriter;
 
 
   class ImageMetadata
@@ -54,6 +55,13 @@ namespace heif {
 
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
+
+    // Create all boxes necessary for an empty HEIF file.
+    // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but
+    // contain no valid data yet.
+    void new_empty_heif();
+
+    void write(StreamWriter& writer);
 
 
     class Image : public ErrorBuffer {
@@ -173,6 +181,7 @@ namespace heif {
     std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 
     // We store this in a vector because we need stable indices for the C API.
+    // TODO: stable indices are obsolet now...
     std::vector<std::shared_ptr<Image>> m_top_level_images;
 
     std::shared_ptr<Image> m_primary_image; // shortcut to primary image

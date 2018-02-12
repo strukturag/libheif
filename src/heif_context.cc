@@ -317,6 +317,21 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
   return interpret_heif_file();
 }
 
+void HeifContext::new_empty_heif()
+{
+  m_heif_file = std::make_shared<HeifFile>();
+  m_heif_file->new_empty_file();
+
+  m_all_images.clear();
+  m_top_level_images.clear();
+  m_primary_image.reset();
+}
+
+void HeifContext::write(StreamWriter& writer)
+{
+  m_heif_file->write(writer);
+}
+
 std::string HeifContext::debug_dump_boxes() const
 {
   return m_heif_file->debug_dump_boxes();

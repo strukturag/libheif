@@ -26,6 +26,7 @@
 
 #include "bitstream.h"
 #include "box.h"
+#include "heif_context.h"
 
 #include <fstream>
 #include <iostream>
@@ -270,10 +271,26 @@ void test2(const char* h265_file)
 }
 
 
+void test3(const char* h265_file)
+{
+  StreamWriter writer;
+
+  HeifContext ctx;
+  ctx.new_empty_heif();
+
+  ctx.write(writer);
+
+  std::ofstream ostr("out.heic");
+  const auto& data = writer.get_data();
+  ostr.write( (const char*)data.data(), data.size() );
+};
+
+
 int main(int argc, char** argv)
 {
   //test1();
-  test2(argv[1]);
+  //test2(argv[1]);
+  test3(argv[1]);
 
   return 0;
 }
