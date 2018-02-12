@@ -261,12 +261,12 @@ int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
 LIBHEIF_API
 int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id);
 
-// Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
+// Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'count' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
                                                  heif_item_id* ID_array,
-                                                 size_t size);
+                                                 size_t count);
 
 LIBHEIF_API
 struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
@@ -326,7 +326,7 @@ int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle*
 
 LIBHEIF_API
 int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
-                                                  heif_item_id* ids, size_t size);
+                                                  heif_item_id* ids, size_t count);
 
 LIBHEIF_API
 struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
@@ -383,7 +383,7 @@ int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* h
 
 LIBHEIF_API
 int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
-                                                heif_item_id* ids, size_t size);
+                                                heif_item_id* ids, size_t count);
 
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
