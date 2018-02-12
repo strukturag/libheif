@@ -1005,7 +1005,7 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
 }
 
 
-Error Box_iloc::append_data(heif_image_id item_ID,
+Error Box_iloc::append_data(heif_item_id item_ID,
                             const std::vector<uint8_t>& data,
                             uint8_t construction_method)
 {
@@ -1603,7 +1603,7 @@ const std::vector<Box_ipma::PropertyAssociation>* Box_ipma::get_properties_for_i
 }
 
 
-void Box_ipma::add_property_for_item_ID(heif_image_id itemID,
+void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
                                         PropertyAssociation assoc)
 {
   size_t idx;

@@ -252,7 +252,7 @@ namespace heif {
 
     heif_item_id get_item_ID() const { return m_item_ID; }
 
-    void set_item_ID(heif_image_id id) { m_item_ID = id; }
+    void set_item_ID(heif_item_id id) { m_item_ID = id; }
 
     void derive_box_version() override;
 
@@ -299,7 +299,7 @@ namespace heif {
     void set_min_version(uint8_t min_version) { m_user_defined_min_version=min_version; }
 
     // append bitstream data that will be written later (after iloc box)
-    Error append_data(heif_image_id item_ID,
+    Error append_data(heif_item_id item_ID,
                       const std::vector<uint8_t>& data,
                       uint8_t construction_method=0);
 
@@ -349,7 +349,7 @@ namespace heif {
 
     heif_item_id get_item_ID() const { return m_item_ID; }
 
-    void set_item_ID(heif_image_id id) { m_item_ID = id; }
+    void set_item_ID(heif_item_id id) { m_item_ID = id; }
 
     std::string get_item_type() const { return m_item_type; }
 
@@ -470,7 +470,7 @@ namespace heif {
 
     const std::vector<PropertyAssociation>* get_properties_for_item_ID(heif_item_id itemID) const;
 
-    void add_property_for_item_ID(heif_image_id itemID,
+    void add_property_for_item_ID(heif_item_id itemID,
                                   PropertyAssociation assoc);
 
     void derive_box_version() override;
