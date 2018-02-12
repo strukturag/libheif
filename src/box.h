@@ -250,7 +250,7 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    heif_image_id get_item_ID() const { return m_item_ID; }
+    heif_item_id get_item_ID() const { return m_item_ID; }
 
     void set_item_ID(heif_image_id id) { m_item_ID = id; }
 
@@ -262,7 +262,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    heif_image_id m_item_ID;
+    heif_item_id m_item_ID;
   };
 
 
@@ -282,7 +282,7 @@ namespace heif {
     };
 
     struct Item {
-      heif_image_id item_ID;
+      heif_item_id item_ID;
       uint8_t  construction_method = 0; // >= version 1
       uint16_t data_reference_index = 0;
       uint64_t base_offset = 0;
@@ -347,7 +347,7 @@ namespace heif {
 
     void set_hidden_item(bool hidden);
 
-    heif_image_id get_item_ID() const { return m_item_ID; }
+    heif_item_id get_item_ID() const { return m_item_ID; }
 
     void set_item_ID(heif_image_id id) { m_item_ID = id; }
 
@@ -365,7 +365,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-      heif_image_id m_item_ID;
+      heif_item_id m_item_ID;
       uint16_t m_item_protection_index;
 
       std::string m_item_type;
@@ -419,7 +419,7 @@ namespace heif {
       std::shared_ptr<Box> property;
     };
 
-    Error get_properties_for_item_ID(heif_image_id itemID,
+    Error get_properties_for_item_ID(heif_item_id itemID,
                                      const std::shared_ptr<class Box_ipma>&,
                                      std::vector<Property>& out_properties) const;
 
@@ -468,7 +468,7 @@ namespace heif {
       uint16_t property_index;
     };
 
-    const std::vector<PropertyAssociation>* get_properties_for_item_ID(heif_image_id itemID) const;
+    const std::vector<PropertyAssociation>* get_properties_for_item_ID(heif_item_id itemID) const;
 
     void add_property_for_item_ID(heif_image_id itemID,
                                   PropertyAssociation assoc);
@@ -481,7 +481,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
     struct Entry {
-      heif_image_id item_ID;
+      heif_item_id item_ID;
       std::vector<PropertyAssociation> associations;
     };
 
@@ -576,9 +576,9 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    bool has_references(heif_image_id itemID) const;
-    uint32_t get_reference_type(heif_image_id itemID) const;
-    std::vector<heif_image_id> get_references(heif_image_id itemID) const;
+    bool has_references(heif_item_id itemID) const;
+    uint32_t get_reference_type(heif_item_id itemID) const;
+    std::vector<heif_item_id> get_references(heif_item_id itemID) const;
 
   protected:
     Error parse(BitstreamRange& range) override;
@@ -587,8 +587,8 @@ namespace heif {
     struct Reference {
       BoxHeader header;
 
-      heif_image_id from_item_ID;
-      std::vector<heif_image_id> to_item_ID;
+      heif_item_id from_item_ID;
+      std::vector<heif_item_id> to_item_ID;
     };
 
     std::vector<Reference> m_references;
@@ -682,7 +682,7 @@ namespace heif {
       BoxHeader header;
       uint32_t group_id;
 
-      std::vector<heif_image_id> entity_ids;
+      std::vector<heif_item_id> entity_ids;
     };
 
     std::vector<EntityGroup> m_entity_groups;

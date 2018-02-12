@@ -111,19 +111,51 @@ static void strided_copy(void* dest, const void* src, int width, int height,
 }
 
 static emscripten::val heif_js_context_get_image_handle(
-    struct heif_context* context, int idx) {
+    struct heif_context* context, heif_item_id id) {
   emscripten::val result = emscripten::val::object();
   if (!context) {
     return result;
   }
 
   struct heif_image_handle* handle;
-  struct heif_error err = heif_context_get_image_handle(context, idx, &handle);
+  struct heif_error err = heif_context_get_image_handle(context, id, &handle);
   if (err.code != heif_error_Ok) {
     return emscripten::val(err);
   }
 
   return emscripten::val(handle);
+}
+
+static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
+    struct heif_context* context) {
+  emscripten::val result = emscripten::val::array();
+  if (!context) {
+    return result;
+  }
+
+  int count = heif_context_get_number_of_top_level_images(context);
+  if (count <= 0) {
+    return result;
+  }
+
+  heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
+  if (!ids) {
+    Error err = Error(heif_error_Memory_allocation_error,
+                      heif_suberror_Security_limit_exceeded);
+    return emscripten::val(err);
+  }
+
+  int received = heif_context_get_list_of_top_level_image_IDs(context, ids, count);
+  if (!received) {
+    free(ids);
+    return result;
+  }
+
+  for (int i = 0; i < received; i++) {
+    result.set(i, ids[i]);
+  }
+  free(ids);
+  return result;
 }
 
 static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
@@ -214,6 +246,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
   emscripten::function("heif_context_read_from_memory",
       &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
   EXPORT_HEIF_FUNCTION(heif_context_get_number_of_top_level_images);
+  emscripten::function("heif_js_context_get_list_of_top_level_image_IDs",
+      &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_context_get_image_handle",
       &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_decode_image",
@@ -302,14 +336,13 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Invalid_overlay_data",heif_suberror_Invalid_overlay_data)
     .value("heif_suberror_Overlay_image_outside_of_canvas",heif_suberror_Overlay_image_outside_of_canvas)
     .value("heif_suberror_Auxiliary_image_type_unspecified",heif_suberror_Auxiliary_image_type_unspecified)
-    .value("heif_suberror_No_or_invalid_primary_image",heif_suberror_No_or_invalid_primary_image)
+    .value("heif_suberror_No_or_invalid_primary_item",heif_suberror_No_or_invalid_primary_item)
     .value("heif_suberror_No_infe_box",heif_suberror_No_infe_box)
     .value("heif_suberror_Security_limit_exceeded",heif_suberror_Security_limit_exceeded)
-    .value("heif_suberror_Nonexisting_image_referenced",heif_suberror_Nonexisting_image_referenced)
+    .value("heif_suberror_Nonexisting_item_referenced",heif_suberror_Nonexisting_item_referenced)
     .value("heif_suberror_Null_pointer_argument",heif_suberror_Null_pointer_argument)
     .value("heif_suberror_Nonexisting_image_channel_referenced",heif_suberror_Nonexisting_image_channel_referenced)
     .value("heif_suberror_Unsupported_plugin_version",heif_suberror_Unsupported_plugin_version)
-    .value("heif_suberror_Index_out_of_range",heif_suberror_Index_out_of_range)
     .value("heif_suberror_Unsupported_codec",heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type",heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version",heif_suberror_Unsupported_data_version)

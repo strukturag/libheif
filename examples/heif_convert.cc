@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <assert.h>
 
 #include "heif.h"
 
@@ -130,6 +131,10 @@ int main(int argc, char** argv)
 
   printf("File contains %d images\n", num_images);
 
+  heif_item_id* image_IDs = (heif_item_id*)alloca(num_images * sizeof(heif_item_id));
+  num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, num_images);
+
+
   std::string filename;
   size_t image_index = 1;  // Image filenames are "1" based.
 
@@ -146,7 +151,7 @@ int main(int argc, char** argv)
     }
 
     struct heif_image_handle* handle;
-    err = heif_context_get_image_handle(ctx, idx, &handle);
+    err = heif_context_get_image_handle(ctx, image_IDs[idx], &handle);
     if (err.code) {
       std::cerr << "Could not read HEIF image " << idx << ": "
           << err.message << "\n";
@@ -181,11 +186,14 @@ int main(int argc, char** argv)
       heif_image_release(image);
 
 
-
-      int has_depth = heif_image_handle_has_depth_channel(handle);
+      int has_depth = heif_image_handle_has_depth_image(handle);
       if (has_depth) {
+        heif_item_id depth_id;
+        int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+        assert(nDepthImages==1);
+
         struct heif_image_handle* depth_handle;
-        err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+        err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
         if (err.code) {
           heif_image_handle_release(handle);
           std::cerr << "Could not read depth channel\n";

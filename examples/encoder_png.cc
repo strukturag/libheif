@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <math.h>
 #include <png.h>
+#include <string.h>
 
 #include "encoder_png.h"
 

@@ -41,6 +41,8 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
+AC_CHECK_LIB([pthread], [pthread_create])
+
 AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
     [Disable visibility definitions.]),
     [HAVE_VISIBILITY=0],

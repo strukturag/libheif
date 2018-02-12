@@ -60,7 +60,19 @@ const char* libde265_plugin_name()
 }
 
 
-static int libde265_does_support_format(uint32_t format)
+void libde265_init_plugin()
+{
+  de265_init();
+}
+
+
+void libde265_deinit_plugin()
+{
+  de265_free();
+}
+
+
+static int libde265_does_support_format(enum heif_compression_format format)
 {
   if (format == heif_compression_HEVC) {
     return LIBDE265_PLUGIN_PRIORITY;
@@ -298,6 +310,8 @@ static const struct heif_decoder_plugin decoder_libde265
 {
   .plugin_api_version = 1,
   .get_plugin_name = libde265_plugin_name,
+  .init_plugin = libde265_init_plugin,
+  .deinit_plugin = libde265_deinit_plugin,
   .does_support_format = libde265_does_support_format,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,
@@ -311,6 +325,8 @@ static const struct heif_decoder_plugin decoder_libde265
 {
   .plugin_api_version = 1,
   .get_plugin_name = libde265_plugin_name,
+  .init_plugin = libde265_init_plugin,
+  .deinit_plugin = libde265_deinit_plugin,
   .does_support_format = libde265_does_support_format,
   .new_decoder = libde265_new_decoder,
   .free_decoder = libde265_free_decoder,

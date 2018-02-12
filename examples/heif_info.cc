@@ -23,6 +23,11 @@
 
 #include <errno.h>
 #include <string.h>
+#if defined(HAVE_UNISTD_H)
+#include <unistd.h>
+#else
+#define STDOUT_FILENO 1
+#endif
 
 #include "heif.h"
 
@@ -30,6 +35,7 @@
 #include <iostream>
 #include <memory>
 #include <getopt.h>
+#include <assert.h>
 
 
 /*
@@ -73,7 +79,7 @@ int main(int argc, char** argv)
   bool dump_boxes = false;
 
   bool write_raw_image = false;
-  heif_image_id raw_image_id;
+  heif_item_id raw_image_id;
   std::string output_filename = "output.265";
 
   while (true) {
@@ -123,7 +129,7 @@ int main(int argc, char** argv)
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
   if (dump_boxes) {
-    heif_context_debug_dump_boxes(ctx.get(), 1); // dump to stdout
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
     return 0;
   }
 
@@ -137,12 +143,12 @@ int main(int argc, char** argv)
 
 
   int numImages = heif_context_get_number_of_top_level_images(ctx.get());
-  heif_image_id* IDs = (heif_image_id*)alloca(numImages*sizeof(heif_image_id));
+  heif_item_id* IDs = (heif_item_id*)alloca(numImages*sizeof(heif_item_id));
   heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs, numImages);
 
   for (int i=0;i<numImages;i++) {
     struct heif_image_handle* handle;
-    struct heif_error err = heif_context_get_image_handle_for_ID(ctx.get(), IDs[i], &handle);
+    struct heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
     if (err.code) {
       std::cerr << err.message << "\n";
       return 10;
@@ -156,10 +162,13 @@ int main(int argc, char** argv)
     printf("image: %dx%d (id=%d)%s\n",width,height,IDs[i], primary ? ", primary" : "");
 
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
+    heif_item_id* thumbnailIDs = (heif_item_id*)alloca(nThumbnails*sizeof(heif_item_id));
+
     heif_image_handle* thumbnail_handle;
+    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle,thumbnailIDs, nThumbnails);
 
     for (int thumbnailIdx=0 ; thumbnailIdx<nThumbnails ; thumbnailIdx++) {
-      err = heif_image_handle_get_thumbnail(handle, thumbnailIdx, &thumbnail_handle);
+      err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx], &thumbnail_handle);
       if (err.code) {
         std::cerr << err.message << "\n";
         return 10;
@@ -173,14 +182,19 @@ int main(int argc, char** argv)
       heif_image_handle_release(thumbnail_handle);
     }
 
-    bool has_depth = heif_image_handle_has_depth_channel(handle);
+    bool has_depth = heif_image_handle_has_depth_image(handle);
 
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
     printf("  depth channel: %s", has_depth ? "yes":"no\n");
 
+    heif_item_id depth_id;
+    int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+    if (has_depth) { assert(nDepthImages==1); }
+    else { assert(nDepthImages==0); }
+
     if (has_depth) {
       struct heif_image_handle* depth_handle;
-      err = heif_image_handle_get_depth_channel_handle(handle, 0, &depth_handle);
+      err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
       if (err.code) {
         fprintf(stderr,"cannot get depth image: %s\n",err.message);
         return 1;
@@ -191,7 +205,7 @@ int main(int argc, char** argv)
              heif_image_handle_get_height(depth_handle));
 
       const struct heif_depth_representation_info* depth_info;
-      if (heif_image_handle_get_depth_channel_representation_info(depth_handle, 0, &depth_info)) {
+      if (heif_image_handle_get_depth_channel_representation_info(depth_handle, depth_id, &depth_info)) {
 
         printf("    z-near: ");
         if (depth_info->has_z_near) printf("%f\n",depth_info->z_near); else printf("undefined\n");

@@ -99,7 +99,7 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
 
 // TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
-void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd) {
+void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd) {
   if (!ctx) {
     return;
   }
@@ -124,7 +124,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
   // If there is none, an error is generated when loading the file.
   if (!primary_image) {
     Error err(heif_error_Invalid_input,
-              heif_suberror_No_or_invalid_primary_image);
+              heif_suberror_No_or_invalid_primary_item);
     return err.error_struct(ctx->context.get());
   }
 
@@ -136,7 +136,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 }
 
 
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_image_id* id)
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id)
 {
   if (!id) {
     return Error(heif_error_Usage_error,
@@ -146,7 +146,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
   std::shared_ptr<HeifContext::Image> primary = ctx->context->get_primary_image();
   if (!primary) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_No_or_invalid_primary_image).error_struct(ctx->context.get());
+                 heif_suberror_No_or_invalid_primary_item).error_struct(ctx->context.get());
   }
 
   *id = primary->get_id();
@@ -155,7 +155,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
 }
 
 
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_image_id id)
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
 {
   const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
 
@@ -175,9 +175,11 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 }
 
 
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size)
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+                                                 heif_item_id* ID_array,
+                                                 int count)
 {
-  if (ID_array == nullptr || size==0 || ctx==nullptr) {
+  if (ID_array == nullptr || count==0 || ctx==nullptr) {
     return 0;
   }
 
@@ -185,7 +187,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_
   // fill in ID values into output array
 
   const std::vector<std::shared_ptr<HeifContext::Image>> imgs = ctx->context->get_top_level_images();
-  int n = std::min(size,(int)imgs.size());
+  int n = (int)std::min(count,(int)imgs.size());
   for (int i=0;i<n;i++) {
     ID_array[i] = imgs[i]->get_id();
   }
@@ -194,32 +196,9 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_
 }
 
 
-heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_image_handle** img)
-{
-  if (!img) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Null_pointer_argument);
-    return err.error_struct(ctx->context.get());
-  }
-
-  const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
-
-  if (image_idx<0 || (size_t)image_idx >= images.size()) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
-    return err.error_struct(ctx->context.get());
-  }
-
-  *img = new heif_image_handle();
-  (*img)->image = images[image_idx];
-  (*img)->context = ctx->context;
-
-  return Error::Ok.error_struct(ctx->context.get());
-}
-
-
-struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       heif_image_id id,
-                                                       struct heif_image_handle** img)
+struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle** img)
 {
   if (!img) {
     Error err(heif_error_Usage_error,
@@ -238,7 +217,7 @@ struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
   }
 
   if (!image) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
     return err.error_struct(ctx->context.get());
   }
 
@@ -262,8 +241,26 @@ int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* h
 }
 
 
+int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
+                                                heif_item_id* ids, int count)
+{
+  if (ids==nullptr) {
+    return 0;
+  }
+
+  auto thumbnails = handle->image->get_thumbnails();
+  int n = (int)std::min(count, (int)thumbnails.size());
+
+  for (int i=0;i<n;i++) {
+    ids[i] = thumbnails[i]->get_id();
+  }
+
+  return n;
+}
+
+
 heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handle,
-                                           int thumbnail_idx,
+                                           heif_item_id thumbnail_id,
                                            struct heif_image_handle** out_thumbnail_handle)
 {
   if (!out_thumbnail_handle) {
@@ -272,15 +269,17 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
   }
 
   auto thumbnails = handle->image->get_thumbnails();
-  if (thumbnail_idx<0 || (size_t)thumbnail_idx >= thumbnails.size()) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
-    return err.error_struct(handle->image.get());
+  for (auto thumb : thumbnails) {
+    if (thumb->get_id() == thumbnail_id) {
+      *out_thumbnail_handle = new heif_image_handle();
+      (*out_thumbnail_handle)->image = thumb;
+
+      return Error::Ok.error_struct(handle->image.get());
+    }
   }
 
-  *out_thumbnail_handle = new heif_image_handle();
-  (*out_thumbnail_handle)->image = thumbnails[thumbnail_idx];
-
-  return Error::Ok.error_struct(handle->image.get());
+  Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+  return err.error_struct(handle->image.get());
 }
 
 
@@ -312,7 +311,7 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 }
 
 
-int heif_image_handle_has_depth_channel(const struct heif_image_handle* handle)
+int heif_image_handle_has_depth_image(const struct heif_image_handle* handle)
 {
   return handle->image->get_depth_channel() != nullptr;
 }
@@ -323,7 +322,7 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 }
 
 int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                            int depth_channel_idx,
+                                                            heif_item_id depth_image_id,
                                                             const struct heif_depth_representation_info** out)
 {
   if (out) {
@@ -342,12 +341,51 @@ int heif_image_handle_get_depth_channel_representation_info(const struct heif_im
 }
 
 
-struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
-                                                             int depth_channel_idx,
-                                                             struct heif_image_handle** out_depth_handle)
+int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle)
 {
+  auto depth_image = handle->image->get_depth_channel();
+
+  if (depth_image) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+
+int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
+                                                  heif_item_id* ids, int count)
+{
+  auto depth_image = handle->image->get_depth_channel();
+
+  if (count==0) {
+    return 0;
+  }
+
+  if (depth_image) {
+    ids[0] = depth_image->get_id();
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+
+struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
+                                                           heif_item_id depth_id,
+                                                           struct heif_image_handle** out_depth_handle)
+{
+  auto depth_image = handle->image->get_depth_channel();
+
   *out_depth_handle = new heif_image_handle();
-  (*out_depth_handle)->image = handle->image->get_depth_channel();
+  (*out_depth_handle)->image = depth_image;
+
+  if (depth_image->get_id() != depth_id) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(handle->image.get());
+  }
 
   return Error::Ok.error_struct(handle->image.get());
 }
@@ -357,7 +395,14 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
+  options->version = 1;
+
   options->ignore_transformations = false;
+
+  options->start_progress = NULL;
+  options->on_progress = NULL;
+  options->end_progress = NULL;
+  options->progress_user_data = NULL;
 
   return options;
 }
@@ -503,43 +548,79 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 }
 
 
-int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle)
+int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
+                                                    const char* type_filter)
 {
-  return (int)handle->image->get_metadata().size();
+  auto metadata_list = handle->image->get_metadata();
+
+  int cnt=0;
+  for (const auto& metadata : metadata_list) {
+    if (type_filter==nullptr ||
+        metadata->item_type == type_filter) {
+      cnt++;
+    }
+  }
+
+  return cnt;
+}
+
+
+int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
+                                                     const char* type_filter,
+                                                     heif_item_id* ids, int count)
+{
+  auto metadata_list = handle->image->get_metadata();
+
+  int cnt=0;
+  for (const auto& metadata : metadata_list) {
+    if (type_filter==nullptr ||
+        metadata->item_type == type_filter) {
+      if (cnt < count) {
+        ids[cnt] = metadata->item_id;
+        cnt++;
+      }
+      else {
+        break;
+      }
+    }
+  }
+
+  return cnt;
 }
 
 
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
-                                                int metadata_index)
+                                                heif_item_id metadata_id)
 {
-  auto metadata = handle->image->get_metadata();
+  auto metadata_list = handle->image->get_metadata();
 
-  if (metadata_index >= (int)metadata.size() ||
-      metadata_index < 0) {
-    return NULL;
+  for (auto metadata : metadata_list) {
+    if (metadata->item_id == metadata_id) {
+      return metadata->item_type.c_str();
+    }
   }
 
-  return metadata[metadata_index]->item_type.c_str();
+  return NULL;
 }
 
 
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
-                                           int metadata_index)
+                                           heif_item_id metadata_id)
 {
-  auto metadata = handle->image->get_metadata();
+  auto metadata_list = handle->image->get_metadata();
 
-  if (metadata_index >= (int)metadata.size() ||
-      metadata_index < 0) {
-    return 0;
+  for (auto metadata : metadata_list) {
+    if (metadata->item_id == metadata_id) {
+      return metadata->m_data.size();
+    }
   }
 
-
-  return metadata[metadata_index]->m_data.size();
+  return 0;
 }
 
 
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
-                                                 int metadata_index,
+                                                 heif_item_id metadata_id,
                                                  void* out_data)
 {
   if (out_data==nullptr) {
@@ -548,20 +629,21 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
     return err.error_struct(handle->image.get());
   }
 
-  auto metadata = handle->image->get_metadata();
+  auto metadata_list = handle->image->get_metadata();
 
-  if (metadata_index >= (int)metadata.size() ||
-      metadata_index < 0) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Index_out_of_range);
-    return err.error_struct(handle->image.get());
+  for (auto metadata : metadata_list) {
+    if (metadata->item_id == metadata_id) {
+      memcpy(out_data,
+             metadata->m_data.data(),
+             metadata->m_data.size());
+
+      return Error::Ok.error_struct(handle->image.get());
+    }
   }
 
-  memcpy(out_data,
-         metadata[metadata_index]->m_data.data(),
-         metadata[metadata_index]->m_data.size());
-
-  return Error::Ok.error_struct(handle->image.get());
+  Error err(heif_error_Usage_error,
+            heif_suberror_Nonexisting_item_referenced);
+  return err.error_struct(handle->image.get());
 }
 
 

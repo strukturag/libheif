@@ -48,9 +48,9 @@ extern "C" {
 
 /* === version numbers === */
 
-// Version string of linked libde265 library.
+// Version string of linked libheif library.
 LIBHEIF_API const char *heif_get_version(void);
-// Numeric version of linked libde265 library, encoded as 0xHHMMLL00 = HH.MM.LL.
+// Numeric version of linked libheif library, encoded as 0xHHMMLL00 = HH.MM.LL.
 LIBHEIF_API uint32_t heif_get_version_number(void);
 
 // Numeric part "HH" from above.
@@ -60,9 +60,9 @@ LIBHEIF_API int heif_get_version_number_minor(void);
 // Numeric part "LL" from above.
 LIBHEIF_API int heif_get_version_number_maintenance(void);
 
-// Helper macros to check for given versions of libde265 at compile time.
-#define LIBHEIF_ENCODED_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
-#define LIBHEIF_CHECK_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_ENCODED_VERSION(h, m, l))
+// Helper macros to check for given versions of libheif at compile time.
+#define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
+#define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
 struct heif_context;
 struct heif_image_handle;
@@ -160,7 +160,7 @@ enum heif_suberror_code {
 
   heif_suberror_Auxiliary_image_type_unspecified = 123,
 
-  heif_suberror_No_or_invalid_primary_image = 124,
+  heif_suberror_No_or_invalid_primary_item = 124,
 
   heif_suberror_No_infe_box = 125,
 
@@ -175,8 +175,8 @@ enum heif_suberror_code {
 
   // --- Usage_error ---
 
-  // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced = 2000, // also used for Invalid_input
+  // An item ID was used that is not present in the file.
+  heif_suberror_Nonexisting_item_referenced = 2000, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
   heif_suberror_Null_pointer_argument = 2001,
@@ -187,7 +187,6 @@ enum heif_suberror_code {
   // The version of the passed plugin is not supported.
   heif_suberror_Unsupported_plugin_version = 2003,
 
-  heif_suberror_Index_out_of_range = 2004,
 
 
   // --- Unsupported_feature ---
@@ -221,7 +220,7 @@ struct heif_error
 };
 
 
-typedef uint32_t heif_image_id;
+typedef uint32_t heif_item_id;
 
 
 // ========================= heif_context =========================
@@ -255,30 +254,24 @@ struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size,
                                                 const struct heif_reading_options*);
 
-// Number of top-level image in the HEIF file. This does not include the thumbnails or the
+// Number of top-level images in the HEIF file. This does not include the thumbnails or the
 // tile images that are composed to an image grid. You can get access to the thumbnails via
 // the main image handle.
 LIBHEIF_API
 int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
 
 LIBHEIF_API
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_image_id id);
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id);
 
-// Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
+// Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'count' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size);
-
-// Get the handle for a specific top-level image.
-// 'idx' has to be within [0; number_of_top_level_images-1]
-LIBHEIF_API
-struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
-                                                int idx,
-                                                struct heif_image_handle**);
-
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+                                                 heif_item_id* ID_array,
+                                                 int count);
 
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_image_id* id);
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
 
 // Get a handle to the primary image of the HEIF file.
 // This is the image that should be displayed primarily when there are several images in the file.
@@ -288,15 +281,15 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx
 
 // Get the handle for a specific top-level image from an image ID.
 LIBHEIF_API
-struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       heif_image_id id,
-                                                       struct heif_image_handle**);
+struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle**);
 
 // Print information about the boxes of a HEIF file to file descriptor.
 // This is for debugging and informational purposes only. You should not rely on
 // the output having a specific format. At best, you should not use this at all.
 LIBHEIF_API
-void heif_context_debug_dump_boxes(struct heif_context* ctx, int fd);
+void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 
 
 // ========================= heif_image_handle =========================
@@ -327,14 +320,23 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle);
 LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
 
-LIBHEIF_API
-int heif_image_handle_has_depth_channel(const struct heif_image_handle*);
 
-// depth_channel_idx should always be 0 for now
+// ------------------------- depth images -------------------------
+
 LIBHEIF_API
-struct heif_error heif_image_handle_get_depth_channel_handle(const struct heif_image_handle* handle,
-                                                             int depth_channel_idx,
-                                                             struct heif_image_handle** out_depth_handle);
+int heif_image_handle_has_depth_image(const struct heif_image_handle*);
+
+LIBHEIF_API
+int heif_image_handle_get_number_of_depth_images(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+int heif_image_handle_get_list_of_depth_image_IDs(const struct heif_image_handle* handle,
+                                                  heif_item_id* ids, int count);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_image_handle* handle,
+                                                           heif_item_id depth_id,
+                                                           struct heif_image_handle** out_depth_handle);
 
 
 enum heif_depth_representation_type {
@@ -375,25 +377,42 @@ void heif_depth_representation_info_free(const struct heif_depth_representation_
 // Returns true when there is depth_representation_info available
 LIBHEIF_API
 int heif_image_handle_get_depth_channel_representation_info(const struct heif_image_handle* handle,
-                                                            int depth_channel_idx,
+                                                            heif_item_id depth_image_id,
                                                             const struct heif_depth_representation_info** out);
 
 
+
+// ------------------------- thumbnails -------------------------
 
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
 int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
 
+LIBHEIF_API
+int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
+                                                heif_item_id* ids, int count);
+
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
-                                                  int thumbnail_idx,
+                                                  heif_item_id thumbnail_id,
                                                   struct heif_image_handle** out_thumbnail_handle);
+
+
+// ------------------------- metadata (Exif / XMP) -------------------------
 
 // How many metadata blocks are attached to an image. Usually, the only metadata is
 // an "Exif" block.
 LIBHEIF_API
-int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle);
+int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
+                                                    const char* type_filter);
+
+// 'type_filter' can be used to get only metadata of specific types, like "Exif".
+// If 'type_filter' is NULL, it will return all types of metadata IDs.
+LIBHEIF_API
+int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
+                                                     const char* type_filter,
+                                                     heif_item_id* ids, int count);
 
 // Return a string indicating the type of the metadata, as specified in the HEIF file.
 // Exif data will have the type string "Exif".
@@ -401,12 +420,12 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 // You do not have to free this string.
 LIBHEIF_API
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
-                                                int metadata_index);
+                                                heif_item_id metadata_id);
 
 // Get the size of the raw metadata, as stored in the HEIF file.
 LIBHEIF_API
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
-                                           int metadata_index);
+                                           heif_item_id metadata_id);
 
 // 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
 // The data is returned exactly as stored in the HEIF file.
@@ -414,7 +433,7 @@ size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handl
 // indicate the offset to the start of the TIFF header of the Exif data.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
-                                                 int metadata_index,
+                                                 heif_item_id metadata_id,
                                                  void* out_data);
 
 
@@ -433,7 +452,6 @@ enum heif_compression_format {
   heif_compression_AVC = 2,
   heif_compression_JPEG = 3
 };
-
 
 enum heif_chroma {
   heif_chroma_undefined=99,
@@ -465,10 +483,26 @@ enum heif_channel {
 };
 
 
+enum heif_progress_step {
+  heif_progress_step_total = 0,
+  heif_progress_step_load_tile = 1
+};
+
+
 struct heif_decoding_options
 {
+  uint8_t version;
+
+  // version 1 options
+
   uint8_t ignore_transformations;
+
+  void (*start_progress)(enum heif_progress_step step, int max_progress, void* progress_user_data);
+  void (*on_progress)(enum heif_progress_step step, int progress, void* progress_user_data);
+  void (*end_progress)(enum heif_progress_step step, void* progress_user_data);
+  void* progress_user_data;
 };
+
 
 // Allocate decoding options and fill with default values.
 // Note: you should always get the decoding options through this function since the
@@ -588,10 +622,16 @@ struct heif_decoder_plugin
   // Human-readable name of the plugin
   const char* (*get_plugin_name)();
 
+  // Global plugin initialization (may be NULL)
+  void (*init_plugin)();
+
+  // Global plugin deinitialization (may be NULL)
+  void (*deinit_plugin)();
+
   // Query whether the plugin supports decoding of the given format
   // Result is a priority value. The plugin with the largest value wins.
   // Default priority is 100.
-  int (*does_support_format)(uint32_t format);
+  int (*does_support_format)(enum heif_compression_format format);
 
   // Create a new decoder context for decoding an image
   struct heif_error (*new_decoder)(void** decoder);

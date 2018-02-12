@@ -324,10 +324,14 @@ std::string HeifContext::debug_dump_boxes() const
 
 void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
 {
+  if (decoder_plugin->init_plugin) {
+    (*decoder_plugin->init_plugin)();
+  }
+
   m_decoder_plugins.insert(decoder_plugin);
 }
 
-const struct heif_decoder_plugin* HeifContext::get_decoder(uint32_t type) const
+const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
 {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
@@ -535,9 +539,9 @@ Error HeifContext::interpret_heif_file()
 
   // --- reference all non-hidden images
 
-  std::vector<heif_image_id> image_IDs = m_heif_file->get_item_IDs();
+  std::vector<heif_item_id> image_IDs = m_heif_file->get_item_IDs();
 
-  for (heif_image_id id : image_IDs) {
+  for (heif_item_id id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
       // TODO(farindk): Should we return an error instead of skipping the invalid id?
@@ -562,7 +566,7 @@ Error HeifContext::interpret_heif_file()
 
   if (!m_primary_image) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_Nonexisting_image_referenced,
+                 heif_suberror_Nonexisting_item_referenced,
                  "'pitm' box references a non-existing image");
   }
 
@@ -581,7 +585,7 @@ Error HeifContext::interpret_heif_file()
       if (type==fourcc("thmb")) {
         // --- this is a thumbnail image, attach to the main image
 
-        std::vector<heif_image_id> refs = iref_box->get_references(image->get_id());
+        std::vector<heif_item_id> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
@@ -593,13 +597,13 @@ Error HeifContext::interpret_heif_file()
         auto master_iter = m_all_images.find(refs[0]);
         if (master_iter == m_all_images.end()) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_image_referenced,
+                       heif_suberror_Nonexisting_item_referenced,
                        "Thumbnail references a non-existing image");
         }
 
         if (master_iter->second->is_thumbnail()) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_image_referenced,
+                       heif_suberror_Nonexisting_item_referenced,
                        "Thumbnail references another thumbnail");
         }
 
@@ -634,7 +638,7 @@ Error HeifContext::interpret_heif_file()
                        sstr.str());
         }
 
-        std::vector<heif_image_id> refs = iref_box->get_references(image->get_id());
+        std::vector<heif_item_id> refs = iref_box->get_references(image->get_id());
         if (refs.size() != 1) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
@@ -745,10 +749,11 @@ Error HeifContext::interpret_heif_file()
 
   // --- read metadata and assign to image
 
-  for (uint32_t id : image_IDs) {
+  for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
     if (item_type == "Exif") {
       std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
+      metadata->item_id = id;
       metadata->item_type = item_type;
 
       Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
@@ -775,7 +780,7 @@ Error HeifContext::interpret_heif_file()
           auto img_iter = m_all_images.find(exif_image_id);
           if (img_iter == m_all_images.end()) {
             return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_image_referenced,
+                         heif_suberror_Nonexisting_item_referenced,
                          "Exif data assigned to non-existing image");
           }
 
@@ -789,7 +794,7 @@ Error HeifContext::interpret_heif_file()
 }
 
 
-HeifContext::Image::Image(HeifContext* context, heif_image_id id)
+HeifContext::Image::Image(HeifContext* context, heif_item_id id)
   : m_heif_context(context),
     m_id(id)
 {
@@ -830,7 +835,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
 }
 
 
-Error HeifContext::decode_image(heif_image_id ID,
+Error HeifContext::decode_image(heif_item_id ID,
                                 std::shared_ptr<HeifPixelImage>& img,
                                 const struct heif_decoding_options* options) const
 {
@@ -1027,7 +1032,7 @@ Error HeifContext::decode_image(heif_image_id ID,
 
 // TODO: this function only works with YCbCr images, chroma 4:2:0, and 8 bpp at the moment
 // It will crash badly if we get anything else.
-Error HeifContext::decode_full_grid_image(heif_image_id ID,
+Error HeifContext::decode_full_grid_image(heif_item_id ID,
                                           std::shared_ptr<HeifPixelImage>& img,
                                           const std::vector<uint8_t>& grid_data) const
 {
@@ -1044,7 +1049,7 @@ Error HeifContext::decode_full_grid_image(heif_image_id ID,
                  "No iref box available, but needed for grid image");
   }
 
-  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID);
 
   if ((int)image_references.size() != grid.get_rows() * grid.get_columns()) {
     std::stringstream sstr;
@@ -1086,7 +1091,7 @@ Error HeifContext::decode_full_grid_image(heif_image_id ID,
 
     for (int x=0;x<grid.get_columns();x++) {
 
-      heif_image_id tileID = image_references[reference_idx];
+      heif_item_id tileID = image_references[reference_idx];
 
       const std::shared_ptr<Image> tileImg = m_all_images.find(tileID)->second;
       int src_width = tileImg->get_width();
@@ -1127,7 +1132,7 @@ Error HeifContext::decode_full_grid_image(heif_image_id ID,
 }
 
 
-Error HeifContext::decode_and_paste_tile_image(heif_image_id tileID,
+Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
                                                std::shared_ptr<HeifPixelImage> img,
                                                int x0,int y0) const
 {
@@ -1180,7 +1185,7 @@ Error HeifContext::decode_and_paste_tile_image(heif_image_id tileID,
 }
 
 
-Error HeifContext::decode_derived_image(heif_image_id ID,
+Error HeifContext::decode_derived_image(heif_item_id ID,
                                         std::shared_ptr<HeifPixelImage>& img) const
 {
   // find the ID of the image this image is derived from
@@ -1193,7 +1198,7 @@ Error HeifContext::decode_derived_image(heif_image_id ID,
                  "No iref box available, but needed for iden image");
   }
 
-  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID);
 
   if ((int)image_references.size() != 1) {
     return Error(heif_error_Invalid_input,
@@ -1202,7 +1207,7 @@ Error HeifContext::decode_derived_image(heif_image_id ID,
   }
 
 
-  heif_image_id reference_image_id = image_references[0];
+  heif_item_id reference_image_id = image_references[0];
 
 
   Error error = decode_image(reference_image_id, img);
@@ -1210,7 +1215,7 @@ Error HeifContext::decode_derived_image(heif_image_id ID,
 }
 
 
-Error HeifContext::decode_overlay_image(heif_image_id ID,
+Error HeifContext::decode_overlay_image(heif_item_id ID,
                                         std::shared_ptr<HeifPixelImage>& img,
                                         const std::vector<uint8_t>& overlay_data) const
 {
@@ -1224,7 +1229,7 @@ Error HeifContext::decode_overlay_image(heif_image_id ID,
                  "No iref box available, but needed for iovl image");
   }
 
-  std::vector<heif_image_id> image_references = iref_box->get_references(ID);
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID);
 
   /* TODO: probably, it is valid that an iovl image has no references ?
 

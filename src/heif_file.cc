@@ -39,9 +39,9 @@ HeifFile::~HeifFile()
 }
 
 
-std::vector<heif_image_id> HeifFile::get_item_IDs() const
+std::vector<heif_item_id> HeifFile::get_item_IDs() const
 {
-  std::vector<heif_image_id> IDs;
+  std::vector<heif_item_id> IDs;
 
   for (const auto& image : m_images) {
     IDs.push_back(image.second.m_infe_box->get_item_ID());
@@ -232,14 +232,14 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 }
 
 
-bool HeifFile::image_exists(heif_image_id ID) const
+bool HeifFile::image_exists(heif_item_id ID) const
 {
   auto image_iter = m_images.find(ID);
   return image_iter != m_images.end();
 }
 
 
-bool HeifFile::get_image_info(heif_image_id ID, const HeifFile::Image** image) const
+bool HeifFile::get_image_info(heif_item_id ID, const HeifFile::Image** image) const
 {
   // --- get the image from the list of all images
 
@@ -253,7 +253,7 @@ bool HeifFile::get_image_info(heif_image_id ID, const HeifFile::Image** image) c
 }
 
 
-std::string HeifFile::get_item_type(heif_image_id ID) const
+std::string HeifFile::get_item_type(heif_item_id ID) const
 {
   const Image* img;
   if (!get_image_info(ID, &img)) {
@@ -264,7 +264,7 @@ std::string HeifFile::get_item_type(heif_image_id ID) const
 }
 
 
-Error HeifFile::get_properties(heif_image_id imageID,
+Error HeifFile::get_properties(heif_item_id imageID,
                                std::vector<Box_ipco::Property>& properties) const
 {
   if (!m_ipco_box) {
@@ -280,7 +280,7 @@ Error HeifFile::get_properties(heif_image_id imageID,
 
 
 
-Error HeifFile::get_compressed_image_data(heif_image_id ID, std::vector<uint8_t>* data) const
+Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
 #if ENABLE_PARALLEL_TILE_DECODING
   std::lock_guard<std::mutex> guard(m_read_mutex);
@@ -288,13 +288,13 @@ Error HeifFile::get_compressed_image_data(heif_image_id ID, std::vector<uint8_t>
 
   if (!image_exists(ID)) {
     return Error(heif_error_Usage_error,
-                 heif_suberror_Nonexisting_image_referenced);
+                 heif_suberror_Nonexisting_item_referenced);
   }
 
   const Image* image;
   if (!get_image_info(ID, &image)) {
     return Error(heif_error_Usage_error,
-                 heif_suberror_Nonexisting_image_referenced);
+                 heif_suberror_Nonexisting_item_referenced);
   }
 
 
