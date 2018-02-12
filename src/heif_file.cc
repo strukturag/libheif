@@ -43,8 +43,8 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 {
   std::vector<heif_item_id> IDs;
 
-  for (const auto& image : m_images) {
-    IDs.push_back(image.second.m_infe_box->get_item_ID());
+  for (const auto& infe : m_infe_boxes) {
+    IDs.push_back(infe.second->get_item_ID());
   }
 
   return IDs;
@@ -104,7 +104,7 @@ void HeifFile::new_empty_file()
   m_iprp_box->append_child_box(m_ipco_box);
   m_iprp_box->append_child_box(m_ipma_box);
 
-  m_images.clear();
+  m_infe_boxes.clear();
 
   m_top_level_boxes.push_back(m_ftyp_box);
   m_top_level_boxes.push_back(m_meta_box);
@@ -267,10 +267,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                    heif_suberror_No_infe_box);
     }
 
-    Image img;
-    img.m_infe_box = infe_box;
-
-    m_images.insert( std::make_pair(infe_box->get_item_ID(), img) );
+    m_infe_boxes.insert( std::make_pair(infe_box->get_item_ID(), infe_box) );
   }
 
   return Error::Ok;
@@ -279,33 +276,32 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 bool HeifFile::image_exists(heif_item_id ID) const
 {
-  auto image_iter = m_images.find(ID);
-  return image_iter != m_images.end();
+  auto image_iter = m_infe_boxes.find(ID);
+  return image_iter != m_infe_boxes.end();
 }
 
 
-bool HeifFile::get_image_info(heif_item_id ID, const HeifFile::Image** image) const
+std::shared_ptr<Box_infe> HeifFile::get_infe(heif_item_id ID) const
 {
   // --- get the image from the list of all images
 
-  auto image_iter = m_images.find(ID);
-  if (image_iter == m_images.end()) {
-    return false;
+  auto image_iter = m_infe_boxes.find(ID);
+  if (image_iter == m_infe_boxes.end()) {
+    return nullptr;
   }
 
-  *image = &image_iter->second;
-  return true;
+  return image_iter->second;
 }
 
 
 std::string HeifFile::get_item_type(heif_item_id ID) const
 {
-  const Image* img;
-  if (!get_image_info(ID, &img)) {
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
     return "";
   }
 
-  return img->m_infe_box->get_item_type();
+  return infe_box->get_item_type();
 }
 
 
@@ -336,14 +332,14 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                  heif_suberror_Nonexisting_item_referenced);
   }
 
-  const Image* image;
-  if (!get_image_info(ID, &image)) {
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Nonexisting_item_referenced);
   }
 
 
-  std::string item_type = image->m_infe_box->get_item_type();
+  std::string item_type = infe_box->get_item_type();
 
   // --- get coded image data pointers
 

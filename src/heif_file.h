@@ -56,7 +56,7 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
-    int get_num_images() const { return static_cast<int>(m_images.size()); }
+    int get_num_images() const { return static_cast<int>(m_infe_boxes.size()); }
 
     heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
 
@@ -71,12 +71,12 @@ namespace heif {
 
 
     std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID) {
-      auto iter = m_images.find(imageID);
-      if (iter == m_images.end()) {
+      auto iter = m_infe_boxes.find(imageID);
+      if (iter == m_infe_boxes.end()) {
         return nullptr;
       }
 
-      return iter->second.m_infe_box;
+      return iter->second;
     }
 
     std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
@@ -113,11 +113,7 @@ namespace heif {
 
     std::shared_ptr<Box_iprp> m_iprp_box;
 
-    struct Image {
-      std::shared_ptr<Box_infe> m_infe_box;
-    };
-
-    std::map<heif_item_id, Image> m_images;  // map from image ID to info structure
+    std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
 
     // list of image items (does not include hidden images or Exif data)
     //std::vector<heif_item_id> m_valid_image_IDs;
@@ -125,7 +121,7 @@ namespace heif {
 
     Error parse_heif_file(BitstreamRange& bitstream);
 
-    bool get_image_info(heif_item_id ID, const Image** image) const;
+    std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
   };
 
 }
