@@ -133,8 +133,8 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     return result;
   }
 
-  size_t count = heif_context_get_number_of_top_level_images(context);
-  if (!count) {
+  int count = heif_context_get_number_of_top_level_images(context);
+  if (count <= 0) {
     return result;
   }
 
