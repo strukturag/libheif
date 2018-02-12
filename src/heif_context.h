@@ -38,6 +38,7 @@ namespace heif {
   class ImageMetadata
   {
   public:
+    heif_item_id item_id;
     std::string item_type;  // e.g. "Exif"
     std::vector<uint8_t> m_data;
   };

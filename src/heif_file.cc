@@ -288,13 +288,13 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   if (!image_exists(ID)) {
     return Error(heif_error_Usage_error,
-                 heif_suberror_Nonexisting_image_referenced);
+                 heif_suberror_Nonexisting_item_referenced);
   }
 
   const Image* image;
   if (!get_image_info(ID, &image)) {
     return Error(heif_error_Usage_error,
-                 heif_suberror_Nonexisting_image_referenced);
+                 heif_suberror_Nonexisting_item_referenced);
   }
 
 

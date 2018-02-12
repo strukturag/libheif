@@ -566,7 +566,7 @@ Error HeifContext::interpret_heif_file()
 
   if (!m_primary_image) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_Nonexisting_image_referenced,
+                 heif_suberror_Nonexisting_item_referenced,
                  "'pitm' box references a non-existing image");
   }
 
@@ -597,13 +597,13 @@ Error HeifContext::interpret_heif_file()
         auto master_iter = m_all_images.find(refs[0]);
         if (master_iter == m_all_images.end()) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_image_referenced,
+                       heif_suberror_Nonexisting_item_referenced,
                        "Thumbnail references a non-existing image");
         }
 
         if (master_iter->second->is_thumbnail()) {
           return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_image_referenced,
+                       heif_suberror_Nonexisting_item_referenced,
                        "Thumbnail references another thumbnail");
         }
 
@@ -749,10 +749,11 @@ Error HeifContext::interpret_heif_file()
 
   // --- read metadata and assign to image
 
-  for (uint32_t id : image_IDs) {
+  for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
     if (item_type == "Exif") {
       std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
+      metadata->item_id = id;
       metadata->item_type = item_type;
 
       Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
@@ -779,7 +780,7 @@ Error HeifContext::interpret_heif_file()
           auto img_iter = m_all_images.find(exif_image_id);
           if (img_iter == m_all_images.end()) {
             return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_image_referenced,
+                         heif_suberror_Nonexisting_item_referenced,
                          "Exif data assigned to non-existing image");
           }
 

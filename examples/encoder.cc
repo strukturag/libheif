@@ -35,38 +35,27 @@ static const char kMetadataTypeExif[] = "Exif";
 
 // static
 bool Encoder::HasExifMetaData(const struct heif_image_handle* handle) {
-  int count = heif_image_handle_get_number_of_metadata_blocks(handle);
-  for (int i = 0; i < count; i++) {
-    const char* datatype = heif_image_handle_get_metadata_type(handle, i);
-    if (strcasecmp(datatype, kMetadataTypeExif)) {
-      continue;
-    }
 
-    size_t datasize = heif_image_handle_get_metadata_size(handle, i);
-    if (datasize > 0) {
-      return true;
-    }
-  }
-
-  return false;
+  heif_item_id metadata_id;
+  int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
+                                                               &metadata_id, 1);
+  return count > 0;
 }
 
 // static
 uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t* size) {
-  int count = heif_image_handle_get_number_of_metadata_blocks(handle);
-  for (int i = 0; i < count; i++) {
-    const char* datatype = heif_image_handle_get_metadata_type(handle, i);
-    if (strcasecmp(datatype, kMetadataTypeExif)) {
-      continue;
-    }
+  heif_item_id metadata_id;
+  int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
+                                                               &metadata_id, 1);
 
-    size_t datasize = heif_image_handle_get_metadata_size(handle, i);
+  for (int i = 0; i < count; i++) {
+    size_t datasize = heif_image_handle_get_metadata_size(handle, metadata_id);
     uint8_t* data = static_cast<uint8_t*>(malloc(datasize));
     if (!data) {
       continue;
     }
 
-    heif_error error = heif_image_handle_get_metadata(handle, i, data);
+    heif_error error = heif_image_handle_get_metadata(handle, metadata_id, data);
     if (error.code != heif_error_Ok) {
       free(data);
       continue;

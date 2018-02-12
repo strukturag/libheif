@@ -175,8 +175,8 @@ enum heif_suberror_code {
 
   // --- Usage_error ---
 
-  // An image ID was used that is not present in the file.
-  heif_suberror_Nonexisting_image_referenced = 2000, // also used for Invalid_input
+  // An item ID was used that is not present in the file.
+  heif_suberror_Nonexisting_item_referenced = 2000, // also used for Invalid_input
 
   // An API argument was given a NULL pointer, which is not allowed for that function.
   heif_suberror_Null_pointer_argument = 2001,
@@ -187,7 +187,6 @@ enum heif_suberror_code {
   // The version of the passed plugin is not supported.
   heif_suberror_Unsupported_plugin_version = 2003,
 
-  heif_suberror_Index_out_of_range = 2004,
 
 
   // --- Unsupported_feature ---
@@ -395,7 +394,15 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
 // How many metadata blocks are attached to an image. Usually, the only metadata is
 // an "Exif" block.
 LIBHEIF_API
-int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle);
+int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
+                                                    const char* type_filter);
+
+// 'type_filter' can be used to get only metadata of specific types, like "Exif".
+// If 'type_filter' is NULL, it will return all types of metadata IDs.
+LIBHEIF_API
+int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_handle* handle,
+                                                     const char* type_filter,
+                                                     heif_item_id* ids, size_t count);
 
 // Return a string indicating the type of the metadata, as specified in the HEIF file.
 // Exif data will have the type string "Exif".
@@ -403,12 +410,12 @@ int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_hand
 // You do not have to free this string.
 LIBHEIF_API
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
-                                                int metadata_index);
+                                                heif_item_id metadata_id);
 
 // Get the size of the raw metadata, as stored in the HEIF file.
 LIBHEIF_API
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
-                                           int metadata_index);
+                                           heif_item_id metadata_id);
 
 // 'out_data' must point to a memory area of the size reported by heif_image_handle_get_metadata_size().
 // The data is returned exactly as stored in the HEIF file.
@@ -416,7 +423,7 @@ size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handl
 // indicate the offset to the start of the TIFF header of the Exif data.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
-                                                 int metadata_index,
+                                                 heif_item_id metadata_id,
                                                  void* out_data);
 
 
