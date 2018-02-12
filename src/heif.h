@@ -318,6 +318,9 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle);
 LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
 
+
+// ------------------------- depth images -------------------------
+
 LIBHEIF_API
 int heif_image_handle_has_depth_image(const struct heif_image_handle*);
 
@@ -377,6 +380,8 @@ int heif_image_handle_get_depth_channel_representation_info(const struct heif_im
 
 
 
+// ------------------------- thumbnails -------------------------
+
 // List the number of thumbnails assigned to this image handle. Usually 0 or 1.
 LIBHEIF_API
 int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
@@ -390,6 +395,9 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
                                                   heif_item_id thumbnail_id,
                                                   struct heif_image_handle** out_thumbnail_handle);
+
+
+// ------------------------- metadata (Exif / XMP) -------------------------
 
 // How many metadata blocks are attached to an image. Usually, the only metadata is
 // an "Exif" block.
