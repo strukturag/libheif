@@ -17,7 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <assert.h>
+#include <alloca.h>
 
 #include "heif.h"
 
@@ -52,6 +54,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   struct heif_error err;
   struct heif_image_handle* handle;
   int images_count;
+  heif_item_id* image_IDs = NULL;
 
   ctx = heif_context_alloc();
   assert(ctx);
@@ -74,8 +77,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     goto quit;
   }
 
+  image_IDs = (heif_item_id*)alloca(images_count * sizeof(heif_item_id));
+
   for (int i = 0; i < images_count; ++i) {
-    err = heif_context_get_image_handle(ctx, i, &handle);
+    err = heif_context_get_image_handle(ctx, image_IDs[i], &handle);
     if (err.code != heif_error_Ok) {
       // Ignore, we are only interested in crashes here.
       continue;

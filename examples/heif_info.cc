@@ -146,7 +146,7 @@ int main(int argc, char** argv)
 
   for (int i=0;i<numImages;i++) {
     struct heif_image_handle* handle;
-    struct heif_error err = heif_context_get_image_handle_for_ID(ctx.get(), IDs[i], &handle);
+    struct heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
     if (err.code) {
       std::cerr << err.message << "\n";
       return 10;
@@ -160,10 +160,13 @@ int main(int argc, char** argv)
     printf("image: %dx%d (id=%d)%s\n",width,height,IDs[i], primary ? ", primary" : "");
 
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
+    heif_item_id* thumbnailIDs = (heif_item_id*)alloca(nThumbnails*sizeof(heif_item_id));
+
     heif_image_handle* thumbnail_handle;
+    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle,thumbnailIDs, nThumbnails);
 
     for (int thumbnailIdx=0 ; thumbnailIdx<nThumbnails ; thumbnailIdx++) {
-      err = heif_image_handle_get_thumbnail(handle, thumbnailIdx, &thumbnail_handle);
+      err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx], &thumbnail_handle);
       if (err.code) {
         std::cerr << err.message << "\n";
         return 10;

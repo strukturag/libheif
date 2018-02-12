@@ -175,7 +175,9 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 }
 
 
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_item_id* ID_array, int size)
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+                                                 heif_item_id* ID_array,
+                                                 size_t size)
 {
   if (ID_array == nullptr || size==0 || ctx==nullptr) {
     return 0;
@@ -185,7 +187,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_
   // fill in ID values into output array
 
   const std::vector<std::shared_ptr<HeifContext::Image>> imgs = ctx->context->get_top_level_images();
-  int n = std::min(size,(int)imgs.size());
+  int n = (int)std::min(size,imgs.size());
   for (int i=0;i<n;i++) {
     ID_array[i] = imgs[i]->get_id();
   }
@@ -194,32 +196,9 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_
 }
 
 
-heif_error heif_context_get_image_handle(heif_context* ctx, int image_idx, heif_image_handle** img)
-{
-  if (!img) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Null_pointer_argument);
-    return err.error_struct(ctx->context.get());
-  }
-
-  const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
-
-  if (image_idx<0 || (size_t)image_idx >= images.size()) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
-    return err.error_struct(ctx->context.get());
-  }
-
-  *img = new heif_image_handle();
-  (*img)->image = images[image_idx];
-  (*img)->context = ctx->context;
-
-  return Error::Ok.error_struct(ctx->context.get());
-}
-
-
-struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       heif_item_id id,
-                                                       struct heif_image_handle** img)
+struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle** img)
 {
   if (!img) {
     Error err(heif_error_Usage_error,
@@ -262,8 +241,26 @@ int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* h
 }
 
 
+int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
+                                                heif_item_id* ids, size_t size)
+{
+  if (ids==nullptr) {
+    return 0;
+  }
+
+  auto thumbnails = handle->image->get_thumbnails();
+  int n = (int)std::min(size, thumbnails.size());
+
+  for (int i=0;i<n;i++) {
+    ids[i] = thumbnails[i]->get_id();
+  }
+
+  return n;
+}
+
+
 heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handle,
-                                           int thumbnail_idx,
+                                           heif_item_id thumbnail_id,
                                            struct heif_image_handle** out_thumbnail_handle)
 {
   if (!out_thumbnail_handle) {
@@ -272,15 +269,17 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
   }
 
   auto thumbnails = handle->image->get_thumbnails();
-  if (thumbnail_idx<0 || (size_t)thumbnail_idx >= thumbnails.size()) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
-    return err.error_struct(handle->image.get());
+  for (auto thumb : thumbnails) {
+    if (thumb->get_id() == thumbnail_id) {
+      *out_thumbnail_handle = new heif_image_handle();
+      (*out_thumbnail_handle)->image = thumb;
+
+      return Error::Ok.error_struct(handle->image.get());
+    }
   }
 
-  *out_thumbnail_handle = new heif_image_handle();
-  (*out_thumbnail_handle)->image = thumbnails[thumbnail_idx];
-
-  return Error::Ok.error_struct(handle->image.get());
+  Error err(heif_error_Usage_error, heif_suberror_Nonexisting_image_referenced);
+  return err.error_struct(handle->image.get());
 }
 
 

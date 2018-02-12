@@ -130,6 +130,10 @@ int main(int argc, char** argv)
 
   printf("File contains %d images\n", num_images);
 
+  heif_item_id* image_IDs = (heif_item_id*)alloca(num_images * sizeof(heif_item_id));
+  num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, num_images);
+
+
   std::string filename;
   size_t image_index = 1;  // Image filenames are "1" based.
 
@@ -146,7 +150,7 @@ int main(int argc, char** argv)
     }
 
     struct heif_image_handle* handle;
-    err = heif_context_get_image_handle(ctx, idx, &handle);
+    err = heif_context_get_image_handle(ctx, image_IDs[idx], &handle);
     if (err.code) {
       std::cerr << "Could not read HEIF image " << idx << ": "
           << err.message << "\n";

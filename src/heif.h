@@ -265,15 +265,9 @@ int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_item_id* ID_array, int size);
-
-// Get the handle for a specific top-level image.
-// 'idx' has to be within [0; number_of_top_level_images-1]
-LIBHEIF_API
-struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
-                                                int idx,
-                                                struct heif_image_handle**);
-
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
+                                                 heif_item_id* ID_array,
+                                                 size_t size);
 
 LIBHEIF_API
 struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
@@ -286,9 +280,9 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx
 
 // Get the handle for a specific top-level image from an image ID.
 LIBHEIF_API
-struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       heif_item_id id,
-                                                       struct heif_image_handle**);
+struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle**);
 
 // Print information about the boxes of a HEIF file to file descriptor.
 // This is for debugging and informational purposes only. You should not rely on
@@ -382,10 +376,14 @@ int heif_image_handle_get_depth_channel_representation_info(const struct heif_im
 LIBHEIF_API
 int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle);
 
+LIBHEIF_API
+int heif_image_handle_get_list_of_thumbnail_IDs(const struct heif_image_handle* handle,
+                                                heif_item_id* ids, size_t size);
+
 // Get the image handle of a thumbnail image.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* main_image_handle,
-                                                  int thumbnail_idx,
+                                                  heif_item_id thumbnail_id,
                                                   struct heif_image_handle** out_thumbnail_handle);
 
 // How many metadata blocks are attached to an image. Usually, the only metadata is
