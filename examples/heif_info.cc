@@ -78,7 +78,7 @@ int main(int argc, char** argv)
   bool dump_boxes = false;
 
   bool write_raw_image = false;
-  heif_image_id raw_image_id;
+  heif_item_id raw_image_id;
   std::string output_filename = "output.265";
 
   while (true) {
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
 
 
   int numImages = heif_context_get_number_of_top_level_images(ctx.get());
-  heif_image_id* IDs = (heif_image_id*)alloca(numImages*sizeof(heif_image_id));
+  heif_item_id* IDs = (heif_item_id*)alloca(numImages*sizeof(heif_item_id));
   heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs, numImages);
 
   for (int i=0;i<numImages;i++) {

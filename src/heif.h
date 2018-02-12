@@ -219,7 +219,7 @@ struct heif_error
 };
 
 
-typedef uint32_t heif_image_id;
+typedef uint32_t heif_item_id;
 
 
 // ========================= heif_context =========================
@@ -260,12 +260,12 @@ LIBHEIF_API
 int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
 
 LIBHEIF_API
-int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_image_id id);
+int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id);
 
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'size' entries.
 // Function returns the total number of IDs filled into the array.
 LIBHEIF_API
-int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_image_id* ID_array, int size);
+int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx, heif_item_id* ID_array, int size);
 
 // Get the handle for a specific top-level image.
 // 'idx' has to be within [0; number_of_top_level_images-1]
@@ -276,7 +276,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 
 
 LIBHEIF_API
-struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_image_id* id);
+struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
 
 // Get a handle to the primary image of the HEIF file.
 // This is the image that should be displayed primarily when there are several images in the file.
@@ -287,7 +287,7 @@ struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx
 // Get the handle for a specific top-level image from an image ID.
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle_for_ID(struct heif_context* ctx,
-                                                       heif_image_id id,
+                                                       heif_item_id id,
                                                        struct heif_image_handle**);
 
 // Print information about the boxes of a HEIF file to file descriptor.

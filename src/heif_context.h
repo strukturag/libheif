@@ -57,14 +57,14 @@ namespace heif {
 
     class Image : public ErrorBuffer {
     public:
-      Image(HeifContext* file, heif_image_id id);
+      Image(HeifContext* file, heif_item_id id);
       ~Image();
 
       void set_resolution(int w,int h) { m_width=w; m_height=h; }
 
       void set_primary(bool flag=true) { m_is_primary=flag; }
 
-      heif_image_id get_id() const { return m_id; }
+      heif_item_id get_id() const { return m_id; }
 
       int get_width() const { return m_width; }
       int get_height() const { return m_height; }
@@ -79,7 +79,7 @@ namespace heif {
 
       // -- thumbnails
 
-      void set_is_thumbnail_of(heif_image_id id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
+      void set_is_thumbnail_of(heif_item_id id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
       void add_thumbnail(std::shared_ptr<Image> img) { m_thumbnails.push_back(img); }
 
       bool is_thumbnail() const { return m_is_thumbnail; }
@@ -88,7 +88,7 @@ namespace heif {
 
       // --- alpha channel
 
-      void set_is_alpha_channel_of(heif_image_id id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
+      void set_is_alpha_channel_of(heif_item_id id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
       void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel=img; }
 
       bool is_alpha_channel() const { return m_is_alpha_channel; }
@@ -97,7 +97,7 @@ namespace heif {
 
       // --- depth channel
 
-      void set_is_depth_channel_of(heif_image_id id) { m_is_depth_channel=true; m_depth_channel_ref_id=id; }
+      void set_is_depth_channel_of(heif_item_id id) { m_is_depth_channel=true; m_depth_channel_ref_id=id; }
       void set_depth_channel(std::shared_ptr<Image> img) { m_depth_channel=img; }
 
       bool is_depth_channel() const { return m_is_depth_channel; }
@@ -129,21 +129,21 @@ namespace heif {
     private:
       HeifContext* m_heif_context;
 
-      heif_image_id m_id;
+      heif_item_id m_id;
       uint32_t m_width=0, m_height=0;
       bool     m_is_primary = false;
 
       bool     m_is_thumbnail = false;
-      heif_image_id m_thumbnail_ref_id;
+      heif_item_id m_thumbnail_ref_id;
 
       std::vector<std::shared_ptr<Image>> m_thumbnails;
 
       bool m_is_alpha_channel = false;
-      heif_image_id m_alpha_channel_ref_id;
+      heif_item_id m_alpha_channel_ref_id;
       std::shared_ptr<Image> m_alpha_channel;
 
       bool m_is_depth_channel = false;
-      heif_image_id m_depth_channel_ref_id;
+      heif_item_id m_depth_channel_ref_id;
       std::shared_ptr<Image> m_depth_channel;
 
       bool m_has_depth_representation_info = false;
@@ -159,7 +159,7 @@ namespace heif {
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
-    Error decode_image(heif_image_id ID, std::shared_ptr<HeifPixelImage>& img,
+    Error decode_image(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                        const struct heif_decoding_options* options = nullptr) const;
 
     std::string debug_dump_boxes() const;
@@ -169,7 +169,7 @@ namespace heif {
 
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
 
-    std::map<heif_image_id, std::shared_ptr<Image>> m_all_images;
+    std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 
     // We store this in a vector because we need stable indices for the C API.
     std::vector<std::shared_ptr<Image>> m_top_level_images;
@@ -182,18 +182,18 @@ namespace heif {
 
     void remove_top_level_image(std::shared_ptr<Image> image);
 
-    Error decode_full_grid_image(heif_image_id ID,
+    Error decode_full_grid_image(heif_item_id ID,
                                  std::shared_ptr<HeifPixelImage>& img,
                                  const std::vector<uint8_t>& grid_data) const;
 
-    Error decode_and_paste_tile_image(heif_image_id tileID,
+    Error decode_and_paste_tile_image(heif_item_id tileID,
                                       std::shared_ptr<HeifPixelImage> out_image,
                                       int x0,int y0) const;
 
-    Error decode_derived_image(heif_image_id ID,
+    Error decode_derived_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img) const;
 
-    Error decode_overlay_image(heif_image_id ID,
+    Error decode_overlay_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img,
                                const std::vector<uint8_t>& overlay_data) const;
   };
