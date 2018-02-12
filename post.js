@@ -133,17 +133,21 @@ HeifDecoder.prototype.decode = function(buffer) {
         return [];
     }
 
-    var count = libheif.heif_context_get_number_of_top_level_images(this.decoder);
-    if (!count) {
+    var ids = libheif.heif_js_context_get_list_of_top_level_image_IDs(this.decoder);
+    if (!ids || ids.code) {
+        console.log("Error loading image ids", ids);
+        return [];
+    }
+    else if (!ids.length) {
         console.log("No images found");
         return [];
     }
 
     var result = [];
-    for (var i = 0; i < count; i++) {
-        var handle = libheif.heif_js_context_get_image_handle(this.decoder, i);
+    for (var i = 0; i < ids.length; i++) {
+        var handle = libheif.heif_js_context_get_image_handle(this.decoder, ids[i]);
         if (!handle || handle.code) {
-            console.log("Could not get image data for id", i, handle);
+            console.log("Could not get image data for id", ids[i], handle);
             continue;
         }
 
