@@ -533,10 +533,6 @@ enum heif_colorspace heif_image_get_colorspace(const struct heif_image*);
 LIBHEIF_API
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
-// TODO
-//LIBHEIF_API
-//enum heif_compression_format heif_image_get_compression_format(struct heif_image*);
-
 // Get width of the given image channel in pixels. Returns -1 if a non-existing
 // channel was given.
 LIBHEIF_API
