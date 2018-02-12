@@ -661,8 +661,6 @@ struct heif_decoder_plugin
 LIBHEIF_API
 struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
 
-// TODO void heif_register_encoder(heif_file* heif, uint32_t type, const heif_encoder_plugin*);
-
 #ifdef __cplusplus
 }
 #endif
