@@ -1318,3 +1318,15 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 
   return err;
 }
+
+
+std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
+{
+  heif_item_id image_id = m_heif_file->add_new_hvc1_image();
+
+  auto image = std::make_shared<Image>(this, image_id);
+
+  m_top_level_images.push_back(image);
+
+  return image;
+}

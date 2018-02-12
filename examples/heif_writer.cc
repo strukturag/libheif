@@ -278,6 +278,10 @@ void test3(const char* h265_file)
   HeifContext ctx;
   ctx.new_empty_heif();
 
+  auto image = ctx.add_new_hvc1_image();
+
+  std::cout << "new image ID: " << image->get_id() << "\n";
+
   ctx.write(writer);
 
   std::ofstream ostr("out.heic");

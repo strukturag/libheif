@@ -75,6 +75,8 @@ namespace heif {
 
       heif_item_id get_id() const { return m_id; }
 
+      //void set_id(heif_item_id id) { m_id=id; }  (already set in constructor)
+
       int get_width() const { return m_width; }
       int get_height() const { return m_height; }
 
@@ -135,6 +137,7 @@ namespace heif {
 
       std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const { return m_metadata; }
 
+
     private:
       HeifContext* m_heif_context;
 
@@ -172,6 +175,12 @@ namespace heif {
                        const struct heif_decoding_options* options = nullptr) const;
 
     std::string debug_dump_boxes() const;
+
+
+    // === writing ===
+
+    std::shared_ptr<Image> add_new_hvc1_image();
+
 
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;

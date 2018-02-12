@@ -26,6 +26,8 @@
 #include <sstream>
 #include <utility>
 
+#include <assert.h>
+
 using namespace heif;
 
 
@@ -405,4 +407,46 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   }
 
   return Error::Ok;
+}
+
+
+heif_item_id HeifFile::get_unused_item_id() const
+{
+  for (heif_item_id id = 1;
+       ;
+       id++) {
+
+    bool id_exists = false;
+
+    for (const auto& infe : m_infe_boxes) {
+      if (infe.second->get_item_ID() == id) {
+        id_exists = true;
+        break;
+      }
+    }
+
+    if (!id_exists) {
+      return id;
+    }
+  }
+
+  assert(false); // should never be reached
+  return 0;
+}
+
+
+heif_item_id HeifFile::add_new_hvc1_image()
+{
+  heif_item_id id = get_unused_item_id();
+
+  auto infe = std::make_shared<Box_infe>();
+  infe->set_item_ID(id);
+  infe->set_hidden_item(false);
+  infe->set_item_type("hvc1");
+  //infe->set_item_name("Nice image");
+
+  m_infe_boxes[id] = infe;
+  m_iinf_box->append_child_box(infe);
+
+  return id;
 }

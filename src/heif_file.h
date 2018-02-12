@@ -90,6 +90,13 @@ namespace heif {
 
     std::string debug_dump_boxes() const;
 
+
+    // --- writing ---
+
+    heif_item_id get_unused_item_id() const;
+
+    heif_item_id add_new_hvc1_image();
+
   private:
 #if ENABLE_PARALLEL_TILE_DECODING
     mutable std::mutex m_read_mutex;
