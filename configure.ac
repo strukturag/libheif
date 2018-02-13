@@ -58,6 +58,14 @@ PKG_CHECK_MODULES([libde265], [libde265], [
 ], [have_libde265="no"])
 AM_CONDITIONAL([HAVE_LIBDE265], [test "x$have_libde265" = "xyes"])
 
+PKG_CHECK_MODULES([x265], [x265], [
+    AC_DEFINE([HAVE_X265], [1], [Whether x265 was found.])
+    AC_SUBST(x265_CFLAGS)
+    AC_SUBST(x265_LIBS)
+    have_x265="yes"
+], [have_x265="no"])
+AM_CONDITIONAL([HAVE_X265], [test "x$have_x265" = "xyes"])
+
 AC_CHECK_HEADERS([jpeglib.h])
 AC_CHECK_LIB([jpeg], [jpeg_CreateCompress], [
     AC_DEFINE([HAVE_LIBJPEG], [1], [Whether libjpeg was found.])
@@ -115,6 +123,7 @@ AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
+AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([---------------------------------------])
