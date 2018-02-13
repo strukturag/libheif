@@ -16,4 +16,7 @@ EXTRA_DIST = \
     */CMakeLists.txt \
     CPPLINT.cfg \
     README.md \
+    pre.js \
+    post.js \
+    build-emscripten.sh \
     */COPYING
