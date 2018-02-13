@@ -38,15 +38,12 @@
 #include "heif_file.h"
 #include "heif_image.h"
 #include "heif_api_structs.h"
+#include "heif_limits.h"
 
 #if HAVE_LIBDE265
 #include "heif_decoder_libde265.h"
 #endif
 
-
-// Artificial limit to avoid allocating too much memory.
-static const int MAX_IMAGE_WIDTH = 16384;
-static const int MAX_IMAGE_HEIGHT = 16384;
 
 using namespace heif;
 

@@ -32,6 +32,7 @@ libheif_la_SOURCES = \
   heif_file.cc \
   heif_image.h \
   heif_image.cc \
+  heif_limits.h \
   heif.h \
   heif.cc \
   heif_context.h \
