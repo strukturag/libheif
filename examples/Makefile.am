@@ -29,4 +29,5 @@ heif_info_LDADD = ../src/libheif.la
 heif_info_SOURCES = heif_info.cc
 
 EXTRA_DIST = \
+    demo.html \
     example.heic
