@@ -14,6 +14,7 @@ heif_file.h
 heif.h
 heif_image.cc
 heif_image.h
+heif_limits.h
 heif-version.h
 logging.h
 )

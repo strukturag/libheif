@@ -494,6 +494,8 @@ struct heif_decoding_options
 
   // version 1 options
 
+  // Ignore geometric transformations like cropping, rotation, mirroring.
+  // Default: false (do not ignore).
   uint8_t ignore_transformations;
 
   void (*start_progress)(enum heif_progress_step step, int max_progress, void* progress_user_data);

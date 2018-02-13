@@ -1,9 +1,9 @@
 AC_PREREQ([2.68])
-AC_INIT([libheif], [0.0.1], [opensource@struktur.de])
+AC_INIT([libheif], [1.0.0], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([src/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
-NUMERIC_VERSION=0x00000100 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
+NUMERIC_VERSION=0x01000000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
 AC_SUBST(NUMERIC_VERSION)
 
 LIBHEIF_CURRENT=1
@@ -114,6 +114,9 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
+AC_MSG_NOTICE([libde265 decoder: $have_libde265])
+AC_MSG_NOTICE([JPEG output: $have_libjpeg])
+AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])

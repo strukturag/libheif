@@ -379,7 +379,6 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_channel_G", heif_channel_G)
     .value("heif_channel_B", heif_channel_B)
     .value("heif_channel_Alpha", heif_channel_Alpha)
-    .value("heif_channel_Depth", heif_channel_Depth)
     .value("heif_channel_interleaved", heif_channel_interleaved)
     ;
 

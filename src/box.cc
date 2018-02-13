@@ -22,6 +22,7 @@
 #endif
 
 #include "box.h"
+#include "heif_limits.h"
 
 #include <sstream>
 #include <iomanip>
@@ -33,10 +34,6 @@
 
 using namespace heif;
 
-static const size_t MAX_CHILDREN_PER_BOX = 1024;
-static const int MAX_ILOC_ITEMS = 1024;
-static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
-static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 
 heif::Error heif::Error::Ok(heif_error_Ok);
 
