@@ -162,7 +162,10 @@ namespace heif {
 
     const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const { return m_children; }
 
-    void append_child_box(std::shared_ptr<Box> box) { m_children.push_back(box); }
+    int append_child_box(std::shared_ptr<Box> box) {
+      m_children.push_back(box);
+      return (int)m_children.size()-1;
+    }
 
   protected:
     virtual Error parse(BitstreamRange& range);
@@ -422,6 +425,10 @@ namespace heif {
     Error get_properties_for_item_ID(heif_item_id itemID,
                                      const std::shared_ptr<class Box_ipma>&,
                                      std::vector<Property>& out_properties) const;
+
+    std::shared_ptr<Box> get_property_for_item_ID(heif_item_id itemID,
+                                                  const std::shared_ptr<class Box_ipma>&,
+                                                  uint32_t property_box_type) const;
 
     std::string dump(Indent&) const override;
 

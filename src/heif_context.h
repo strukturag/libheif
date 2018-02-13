@@ -56,14 +56,6 @@ namespace heif {
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 
-    // Create all boxes necessary for an empty HEIF file.
-    // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but
-    // contain no valid data yet.
-    void new_empty_heif();
-
-    void write(StreamWriter& writer);
-
-
     class Image : public ErrorBuffer {
     public:
       Image(HeifContext* file, heif_item_id id);
@@ -138,6 +130,10 @@ namespace heif {
       std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const { return m_metadata; }
 
 
+      // === writing ===
+
+      void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
+
     private:
       HeifContext* m_heif_context;
 
@@ -179,8 +175,16 @@ namespace heif {
 
     // === writing ===
 
+    // Create all boxes necessary for an empty HEIF file.
+    // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but
+    // contain no valid data yet.
+    void new_empty_heif();
+
     std::shared_ptr<Image> add_new_hvc1_image();
 
+    void set_primary_image(std::shared_ptr<Image> image);
+
+    void write(StreamWriter& writer);
 
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;

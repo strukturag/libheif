@@ -273,15 +273,31 @@ void test2(const char* h265_file)
 
 void test3(const char* h265_file)
 {
-  StreamWriter writer;
+  // read h265 file
+
+  std::ifstream istr(h265_file);
+  istr.seekg(0, std::ios::end);
+  size_t len = istr.tellg();
+  istr.seekg(0, std::ios::beg);
+
+  std::vector<uint8_t> h265data;
+  h265data.resize(len);
+  istr.read((char*)h265data.data(), len);
+
+
+  // build HEIF file
 
   HeifContext ctx;
   ctx.new_empty_heif();
 
   auto image = ctx.add_new_hvc1_image();
+  image->set_preencoded_hevc_image(h265data);
+  ctx.set_primary_image(image);
 
-  std::cout << "new image ID: " << image->get_id() << "\n";
 
+  // write output
+
+  StreamWriter writer;
   ctx.write(writer);
 
   std::ofstream ostr("out.heic");

@@ -97,6 +97,12 @@ namespace heif {
 
     heif_item_id add_new_hvc1_image();
 
+    void add_hvcC_property(heif_item_id id);
+    Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+    void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets);
+
+    void set_primary_item_id(heif_item_id id);
+
   private:
 #if ENABLE_PARALLEL_TILE_DECODING
     mutable std::mutex m_read_mutex;

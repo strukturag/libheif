@@ -126,6 +126,8 @@ void HeifFile::write(StreamWriter& writer)
     box->derive_box_version_recursive();
     box->write(writer);
   }
+
+  m_iloc_box->write_mdat_after_iloc(writer);
 }
 
 
@@ -449,4 +451,41 @@ heif_item_id HeifFile::add_new_hvc1_image()
   m_iinf_box->append_child_box(infe);
 
   return id;
+}
+
+
+void HeifFile::add_hvcC_property(heif_item_id id)
+{
+  auto hvcC = std::make_shared<Box_hvcC>();
+  int index = m_ipco_box->append_child_box(hvcC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+}
+
+Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
+{
+  std::vector<Box_ipco::Property> properties;
+
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->append_nal_data(nal_data);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
+}
+
+void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets)
+{
+  m_iloc_box->append_data(id, nal_packets);
+}
+
+void HeifFile::set_primary_item_id(heif_item_id id)
+{
+  m_pitm_box->set_item_ID(id);
 }
