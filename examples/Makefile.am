@@ -35,7 +35,7 @@ bin_PROGRAMS += heif-writer
 heif_writer_DEPENDENCIES = ../src/libheif.la
 heif_writer_CXXFLAGS = -I../src
 heif_writer_LDFLAGS =
-heif_writer_LDADD = ../src/libheif.la
+heif_writer_LDADD = ../src/libheif.la $(x265_LIBS)
 heif_writer_SOURCES = heif_writer.cc
 endif
 

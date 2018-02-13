@@ -33,6 +33,11 @@
 #include <memory>
 #include <getopt.h>
 
+extern "C" {
+#include "x265.h"
+}
+
+
 using namespace heif;
 
 
@@ -305,12 +310,84 @@ void test3(const char* h265_file)
   ostr.write( (const char*)data.data(), data.size() );
 };
 
+void test4()
+{
+  int w = 256;
+  int h = 256;
+
+  x265_param* param = x265_param_alloc();
+  x265_param_default_preset(param, "slow", "ssim");
+  x265_param_apply_profile(param, "mainstillpicture");
+
+  param->sourceWidth = w;
+  param->sourceHeight = h;
+  param->fpsNum = 1;
+  param->fpsDenom = 1;
+
+  x265_encoder* enc = x265_encoder_open(param);
+
+  x265_picture* pic = x265_picture_alloc();
+  x265_picture_init(param, pic);
+
+  uint8_t* ydata = (uint8_t*)malloc(w*h);
+  uint8_t* cbdata = (uint8_t*)malloc(w*h/2/2);
+  uint8_t* crdata = (uint8_t*)malloc(w*h/2/2);
+
+  for (int y=0;y<h;y++)
+    for (int x=0;x<w;x++) {
+      ydata[y*w+x] = x;
+      cbdata[y/2*(w/2) + x/2] = y;
+      crdata[y/2*(w/2) + x/2] = 128;
+    }
+
+  pic->planes[0] = ydata;
+  pic->planes[1] = cbdata;
+  pic->planes[2] = crdata;
+  pic->stride[0] = w;
+  pic->stride[1] = w/2;
+  pic->stride[2] = w/2;
+  pic->bitDepth = 8;
+
+  // int x265_encoder_headers(x265_encoder *, x265_nal **pp_nal, uint32_t *pi_nal);
+
+  x265_nal* nals;
+  uint32_t num_nals;
+  bool first = true;
+
+  for (;;) {
+    int result = x265_encoder_encode(enc, &nals, &num_nals, first ? pic : NULL, NULL);
+
+    printf("received %d NALs -> %d\n", num_nals, result);
+
+    for (uint32_t i=0;i<num_nals;i++) {
+      printf("%x (size=%d) %x %x %x %x %x\n",nals[i].type, nals[i].sizeBytes,
+             nals[i].payload[0],
+             nals[i].payload[1],
+             nals[i].payload[2],
+             nals[i].payload[3],
+             nals[i].payload[4]);
+
+      //std::cerr.write((const char*)nals[i].payload, nals[i].sizeBytes);
+    }
+
+    if (!first && result <= 0) {
+      break;
+    }
+
+    first=false;
+  }
+
+  x265_picture_free(pic);
+  x265_param_free(param);
+}
 
 int main(int argc, char** argv)
 {
   //test1();
   //test2(argv[1]);
-  test3(argv[1]);
+  //test3(argv[1]);
+
+  test4();
 
   return 0;
 }
