@@ -44,6 +44,10 @@
 #endif
 
 
+// Artificial limit to avoid allocating too much memory.
+static const int MAX_IMAGE_WIDTH = 16384;
+static const int MAX_IMAGE_HEIGHT = 16384;
+
 using namespace heif;
 
 
@@ -709,12 +713,11 @@ Error HeifContext::interpret_heif_file()
 
         // --- check whether the image size is "too large"
 
-        if (width  >= static_cast<uint32_t>(std::numeric_limits<int>::max()) ||
-            height >= static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+        if (width  >= static_cast<uint32_t>(MAX_IMAGE_WIDTH) ||
+            height >= static_cast<uint32_t>(MAX_IMAGE_HEIGHT)) {
           std::stringstream sstr;
           sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-               << std::numeric_limits<int>::max() << "x"
-               << std::numeric_limits<int>::max() << "\n";
+               << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
 
           return Error(heif_error_Memory_allocation_error,
                        heif_suberror_Security_limit_exceeded,
@@ -1068,6 +1071,16 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   int h = grid.get_height();
   int bpp = 8; // TODO: how do we know ?
 
+  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+    std::stringstream sstr;
+    sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
+         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
+  }
+
   img = std::make_shared<HeifPixelImage>();
   img->create(w,h,
               heif_colorspace_YCbCr, // TODO: how do we know ?
@@ -1253,6 +1266,16 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 
   int w = overlay.get_canvas_width();
   int h = overlay.get_canvas_height();
+
+  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+    std::stringstream sstr;
+    sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
+         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
+  }
 
   // TODO: seems we always have to compose this in RGB since the background color is an RGB value
   img = std::make_shared<HeifPixelImage>();
