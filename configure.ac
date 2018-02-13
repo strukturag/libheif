@@ -114,6 +114,9 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
+AC_MSG_NOTICE([libde265 decoder: $have_libde265])
+AC_MSG_NOTICE([JPEG output: $have_libjpeg])
+AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
