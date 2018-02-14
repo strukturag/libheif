@@ -92,7 +92,10 @@ enum heif_error_code {
   heif_error_Memory_allocation_error = 6,
 
   // The decoder plugin generated an error
-  heif_error_Decoder_plugin_error = 7
+  heif_error_Decoder_plugin_error = 7,
+
+  // The decoder plugin generated an error
+  heif_error_Encoder_plugin_error = 8
 };
 
 

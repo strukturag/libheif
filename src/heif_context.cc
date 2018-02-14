@@ -294,6 +294,10 @@ HeifContext::HeifContext()
 #if HAVE_LIBDE265
   register_decoder(get_decoder_plugin_libde265());
 #endif
+
+#if HAVE_X265
+  register_encoder(get_encoder_plugin_x265());
+#endif
 }
 
 HeifContext::~HeifContext()
@@ -351,6 +355,15 @@ void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
   m_decoder_plugins.insert(decoder_plugin);
 }
 
+void HeifContext::register_encoder(const heif_encoder_plugin* encoder_plugin)
+{
+  if (encoder_plugin->init_plugin) {
+    (*encoder_plugin->init_plugin)();
+  }
+
+  m_encoder_plugins.insert(encoder_plugin);
+}
+
 const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
 {
   int highest_priority = 0;
@@ -361,6 +374,25 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
     if (priority > highest_priority) {
       highest_priority = priority;
       best_plugin = plugin;
+    }
+  }
+
+  return best_plugin;
+}
+
+
+const struct heif_encoder_plugin* HeifContext::get_encoder(enum heif_compression_format type) const
+{
+  int highest_priority = 0;
+  const struct heif_encoder_plugin* best_plugin = nullptr;
+
+  for (const auto* plugin : m_encoder_plugins) {
+    if (plugin->compression_format == type) {
+      int priority = plugin->priority;
+      if (priority > highest_priority) {
+        highest_priority = priority;
+        best_plugin = plugin;
+      }
     }
   }
 
@@ -1464,12 +1496,21 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 }
 
 
-void HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image)
+Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image)
 {
+  const struct heif_encoder_plugin* encoder_plugin = nullptr;
+
+  encoder_plugin = m_heif_context->get_encoder(heif_compression_HEVC);
+
+  if (encoder_plugin == nullptr) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_codec);
+  }
+
+
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
 
-  // TODO: use registered plugin instead of hardcoded x265 plugin
-  const struct heif_encoder_plugin* encoder_plugin = get_encoder_plugin_x265();
+
   void* encoder;
   encoder_plugin->new_encoder(&encoder);
 
@@ -1502,6 +1543,9 @@ void HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIma
     printf("size=%d: %x %x %x %x %x\n", size,
            data[0], data[1], data[2], data[3], data[4]);
   }
+
+
+  return Error::Ok;
 }
 
 

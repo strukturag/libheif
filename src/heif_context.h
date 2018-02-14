@@ -134,7 +134,7 @@ namespace heif {
 
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
-      void encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image);
+      Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image);
 
     private:
       HeifContext* m_heif_context;
@@ -168,6 +168,7 @@ namespace heif {
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
+    void register_encoder(const heif_encoder_plugin* encoder_plugin);
 
     Error decode_image(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                        const struct heif_decoding_options* options = nullptr) const;
@@ -190,8 +191,10 @@ namespace heif {
 
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
+    const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type) const;
 
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
+    std::set<const struct heif_encoder_plugin*> m_encoder_plugins;
 
     std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 

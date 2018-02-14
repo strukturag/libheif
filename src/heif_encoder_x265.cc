@@ -179,7 +179,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       *size = encoder->nals[encoder->nal_output_counter].sizeBytes;
       encoder->nal_output_counter++;
 
-      // skip start code
+      // --- skip start code ---
 
       // skip '0' bytes
       while (**data==0 && *size>0) {
@@ -192,7 +192,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       (*size)--;
 
 
-      // skip some NALs
+      // --- skip NALs with irrelevant data ---
 
       if (*size >= 3 && (*data)[0]==0x4e && (*data)[2]==5) {
         // skip "unregistered user data SEI"

@@ -660,6 +660,18 @@ struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_p
 }
 
 
+struct heif_error heif_register_encoder(heif_context* heif, const heif_encoder_plugin* encoder_plugin)
+{
+  if (encoder_plugin && encoder_plugin->plugin_api_version != 1) {
+    Error err(heif_error_Usage_error, heif_suberror_Unsupported_plugin_version);
+    return err.error_struct(heif->context.get());
+  }
+
+  heif->context->register_encoder(encoder_plugin);
+  return Error::Ok.error_struct(heif->context.get());
+}
+
+
 
 
 /*
