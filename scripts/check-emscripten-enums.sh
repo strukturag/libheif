@@ -35,7 +35,8 @@ for type in $DEFINE_TYPES; do
     if [ -z "$API_DEFINES" ]; then
         API_DEFINES="$DEFINES"
     else
-        API_DEFINES="$API_DEFINES $DEFINES"
+        API_DEFINES="$API_DEFINES
+$DEFINES"
     fi
 done
 API_DEFINES=$(echo "$API_DEFINES" | sort)
@@ -46,7 +47,8 @@ for type in $DEFINE_TYPES; do
     if [ -z "$EMSCRIPTEN_DEFINES" ]; then
         EMSCRIPTEN_DEFINES="$DEFINES"
     else
-        EMSCRIPTEN_DEFINES="$EMSCRIPTEN_DEFINES $DEFINES"
+        EMSCRIPTEN_DEFINES="$EMSCRIPTEN_DEFINES
+$DEFINES"
     fi
 done
 EMSCRIPTEN_DEFINES=$(echo "$EMSCRIPTEN_DEFINES" | sort)
