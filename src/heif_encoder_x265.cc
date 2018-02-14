@@ -87,9 +87,12 @@ struct heif_error x265_new_encoder(void** enc)
   x265_param_apply_profile(param, "mainstillpicture");
   param->fpsNum = 1;
   param->fpsDenom = 1;
+  param->sourceWidth = 0;
+  param->sourceHeight = 0;
   encoder->params = param;
 
-  encoder->encoder = x265_encoder_open(param);
+  // encoder has to be allocated in x265_encode_image, because it needs to know the image size
+  encoder->encoder = nullptr;
 
   encoder->nals = nullptr;
   encoder->num_nals = 0;
@@ -105,7 +108,10 @@ void x265_free_encoder(void* encoder_raw)
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   x265_param_free(encoder->params);
-  x265_encoder_close(encoder->encoder);
+
+  if (encoder->encoder) {
+    x265_encoder_close(encoder->encoder);
+  }
 
   delete encoder;
 }
@@ -123,6 +129,18 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
   pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
   pic->bitDepth = 8;
+
+  encoder->params->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
+  encoder->params->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
+
+
+  // close encoder after all data has been extracted
+
+  if (encoder->encoder) {
+    x265_encoder_close(encoder->encoder);
+  }
+
+  encoder->encoder = x265_encoder_open(encoder->params);
 
   int result = x265_encoder_encode(encoder->encoder,
                                    &encoder->nals,
@@ -145,29 +163,61 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
+
+  if (encoder->encoder == nullptr) {
+    *data = nullptr;
+    *size = 0;
+
+    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+    return err;
+  }
+
+
   for (;;) {
-    if (encoder->nal_output_counter < encoder->num_nals) {
+    while (encoder->nal_output_counter < encoder->num_nals) {
       *data = encoder->nals[encoder->nal_output_counter].payload;
       *size = encoder->nals[encoder->nal_output_counter].sizeBytes;
       encoder->nal_output_counter++;
 
-      struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-      return err;
-    }
-    else {
-      int result = x265_encoder_encode(encoder->encoder,
-                                       &encoder->nals,
-                                       &encoder->num_nals,
-                                       NULL,
-                                       NULL);
+      // skip start code
 
-      if (result <= 0) {
-        *data = nullptr;
-        *size = 0;
+      // skip '0' bytes
+      while (**data==0 && *size>0) {
+        (*data)++;
+        (*size)--;
+      }
+
+      // skip '1' byte
+      (*data)++;
+      (*size)--;
+
+
+      // skip some NALs
+
+      if (*size >= 3 && (*data)[0]==0x4e && (*data)[2]==5) {
+        // skip "unregistered user data SEI"
+
+      }
+      else {
+        // output NAL
 
         struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
         return err;
       }
+    }
+
+
+    int result = x265_encoder_encode(encoder->encoder,
+                                     &encoder->nals,
+                                     &encoder->num_nals,
+                                     NULL,
+                                     NULL);
+    if (result <= 0) {
+      *data = nullptr;
+      *size = 0;
+
+      struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+      return err;
     }
   }
 }
