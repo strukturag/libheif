@@ -339,71 +339,73 @@ std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
       }
 
     }
- else
-   {
-     cinfo.out_color_space = JCS_YCbCr;
+  else
+    {
+      cinfo.out_color_space = JCS_YCbCr;
 
-     jpeg_start_decompress(&cinfo);
+      jpeg_start_decompress(&cinfo);
 
-     JSAMPARRAY buffer;
-     buffer = (*cinfo.mem->alloc_sarray)
-       ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
-
-
-     // create destination image
-
-     image->create(cinfo.output_width, cinfo.output_height,
-                   heif_colorspace_YCbCr,
-                   heif_chroma_420);
-     image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-     image->add_plane(heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
-     image->add_plane(heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
-
-     int y_stride;
-     int cb_stride;
-     int cr_stride;
-     uint8_t* py  = image->get_plane(heif_channel_Y, &y_stride);
-     uint8_t* pcb = image->get_plane(heif_channel_Cb, &cb_stride);
-     uint8_t* pcr = image->get_plane(heif_channel_Cr, &cr_stride);
-
-     // read the image
-
-     printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
-
-     while (cinfo.output_scanline < cinfo.output_height) {
-       JOCTET* bufp;
-
-       (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-       bufp = buffer[0];
-
-       int y = cinfo.output_scanline-1;
-
-       for (unsigned int x=0;x<cinfo.output_width;x+=2) {
-         py[y*y_stride + x] = *bufp++;
-         pcb[y/2*cb_stride + x/2] = *bufp++;
-         pcr[y/2*cr_stride + x/2] = *bufp++;
-
-         if (x+1 < cinfo.output_width) {
-           py[y*y_stride + x+1] = *bufp++;
-         }
-
-         bufp+=2;
-       }
+      JSAMPARRAY buffer;
+      buffer = (*cinfo.mem->alloc_sarray)
+        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
 
 
-       (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+      // create destination image
 
-       bufp = buffer[0];
+      image->create(cinfo.output_width, cinfo.output_height,
+                    heif_colorspace_YCbCr,
+                    heif_chroma_420);
+      image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+      image->add_plane(heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+      image->add_plane(heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
 
-       y = cinfo.output_scanline-1;
+      int y_stride;
+      int cb_stride;
+      int cr_stride;
+      uint8_t* py  = image->get_plane(heif_channel_Y, &y_stride);
+      uint8_t* pcb = image->get_plane(heif_channel_Cb, &cb_stride);
+      uint8_t* pcr = image->get_plane(heif_channel_Cr, &cr_stride);
 
-       for (unsigned int x=0;x<cinfo.output_width;x++) {
-         py[y*y_stride + x] = *bufp++;
-         bufp+=2;
-       }
-     }
-   }
+      // read the image
+
+      printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
+
+      while (cinfo.output_scanline < cinfo.output_height) {
+        JOCTET* bufp;
+
+        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+        bufp = buffer[0];
+
+        int y = cinfo.output_scanline-1;
+
+        for (unsigned int x=0;x<cinfo.output_width;x+=2) {
+          py[y*y_stride + x] = *bufp++;
+          pcb[y/2*cb_stride + x/2] = *bufp++;
+          pcr[y/2*cr_stride + x/2] = *bufp++;
+
+          if (x+1 < cinfo.output_width) {
+            py[y*y_stride + x+1] = *bufp++;
+          }
+
+          bufp+=2;
+        }
+
+
+        if (cinfo.output_scanline < cinfo.output_height) {
+          (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+          bufp = buffer[0];
+
+          y = cinfo.output_scanline-1;
+
+          for (unsigned int x=0;x<cinfo.output_width;x++) {
+            py[y*y_stride + x] = *bufp++;
+            bufp+=2;
+          }
+        }
+      }
+    }
 
 
   // cleanup
