@@ -38,6 +38,8 @@ libheif_la_SOURCES = \
   heif.cc \
   heif_context.h \
   heif_context.cc \
+  heif_hevc.h \
+  heif_hevc.cc \
   logging.h
 
 if HAVE_LIBDE265
