@@ -186,7 +186,7 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   int nMaxSubLayersMinus1 = reader.get_bits(3);
 
-  config->temporal_id_nested = reader.get_bits(1);
+  config->temporal_id_nested = (uint8_t)reader.get_bits(1);
 
   // --- profile_tier_level ---
 
