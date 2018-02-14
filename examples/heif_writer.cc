@@ -27,6 +27,7 @@
 #include "bitstream.h"
 #include "box.h"
 #include "heif_context.h"
+#include "heif_image.h"
 
 #include <fstream>
 #include <iostream>
@@ -35,6 +36,7 @@
 
 extern "C" {
 #include "x265.h"
+#include <jpeglib.h>
 }
 
 
@@ -276,6 +278,143 @@ void test2(const char* h265_file)
 }
 
 
+std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
+{
+  auto image = std::make_shared<HeifPixelImage>();
+
+
+  // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
+
+  struct jpeg_decompress_struct cinfo;
+  struct jpeg_error_mgr jerr;
+
+  // open input file
+
+  FILE * infile;
+  if ((infile = fopen(filename, "rb")) == NULL) {
+    fprintf(stderr, "can't open %s\n", filename);
+    exit(1);
+  }
+
+
+  // initialize decompressor
+
+  jpeg_create_decompress(&cinfo);
+
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_stdio_src(&cinfo, infile);
+
+  jpeg_read_header(&cinfo, TRUE);
+
+  if (cinfo.jpeg_color_space == JCS_GRAYSCALE)
+    {
+      cinfo.out_color_space = JCS_GRAYSCALE;
+
+      jpeg_start_decompress(&cinfo);
+
+      JSAMPARRAY buffer;
+      buffer = (*cinfo.mem->alloc_sarray)
+        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
+
+
+      // create destination image
+
+      image->create(cinfo.output_width, cinfo.output_height,
+                    heif_colorspace_YCbCr,
+                    heif_chroma_monochrome);
+      image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+
+      int y_stride;
+      uint8_t* py = image->get_plane(heif_channel_Y, &y_stride);
+
+
+      // read the image
+
+      while (cinfo.output_scanline < cinfo.output_height) {
+        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+        memcpy(py + (cinfo.output_scanline-1)*y_stride, buffer, cinfo.output_width);
+      }
+
+    }
+ else
+   {
+     cinfo.out_color_space = JCS_YCbCr;
+
+     jpeg_start_decompress(&cinfo);
+
+     JSAMPARRAY buffer;
+     buffer = (*cinfo.mem->alloc_sarray)
+       ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
+
+
+     // create destination image
+
+     image->create(cinfo.output_width, cinfo.output_height,
+                   heif_colorspace_YCbCr,
+                   heif_chroma_420);
+     image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+     image->add_plane(heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+     image->add_plane(heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+
+     int y_stride;
+     int cb_stride;
+     int cr_stride;
+     uint8_t* py  = image->get_plane(heif_channel_Y, &y_stride);
+     uint8_t* pcb = image->get_plane(heif_channel_Cb, &cb_stride);
+     uint8_t* pcr = image->get_plane(heif_channel_Cr, &cr_stride);
+
+     // read the image
+
+     printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
+
+     while (cinfo.output_scanline < cinfo.output_height) {
+       JOCTET* bufp;
+
+       (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+       bufp = buffer[0];
+
+       int y = cinfo.output_scanline-1;
+
+       for (unsigned int x=0;x<cinfo.output_width;x+=2) {
+         py[y*y_stride + x] = *bufp++;
+         pcb[y/2*cb_stride + x/2] = *bufp++;
+         pcr[y/2*cr_stride + x/2] = *bufp++;
+
+         if (x+1 < cinfo.output_width) {
+           py[y*y_stride + x+1] = *bufp++;
+         }
+
+         bufp+=2;
+       }
+
+
+       (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+       bufp = buffer[0];
+
+       y = cinfo.output_scanline-1;
+
+       for (unsigned int x=0;x<cinfo.output_width;x++) {
+         py[y*y_stride + x] = *bufp++;
+         bufp+=2;
+       }
+     }
+   }
+
+
+  // cleanup
+
+  jpeg_finish_decompress(&cinfo);
+  jpeg_destroy_decompress(&cinfo);
+
+  fclose(infile);
+
+  return image;
+}
+
+
 void test3(const char* h265_file)
 {
   // read h265 file
@@ -310,10 +449,12 @@ void test3(const char* h265_file)
   ostr.write( (const char*)data.data(), data.size() );
 };
 
-void test4()
+void test4(const std::shared_ptr<HeifPixelImage>& img)
 {
-  int w = 256;
-  int h = 256;
+  int w = img->get_width() & ~1;
+  int h = img->get_height() & ~1;
+
+  printf("image size: %d %d\n",w,h);
 
   x265_param* param = x265_param_alloc();
   x265_param_default_preset(param, "slow", "ssim");
@@ -329,23 +470,10 @@ void test4()
   x265_picture* pic = x265_picture_alloc();
   x265_picture_init(param, pic);
 
-  uint8_t* ydata = (uint8_t*)malloc(w*h);
-  uint8_t* cbdata = (uint8_t*)malloc(w*h/2/2);
-  uint8_t* crdata = (uint8_t*)malloc(w*h/2/2);
+  pic->planes[0] = img->get_plane(heif_channel_Y, &pic->stride[0]);
+  pic->planes[1] = img->get_plane(heif_channel_Cb, &pic->stride[1]);
+  pic->planes[2] = img->get_plane(heif_channel_Cr, &pic->stride[2]);
 
-  for (int y=0;y<h;y++)
-    for (int x=0;x<w;x++) {
-      ydata[y*w+x] = x;
-      cbdata[y/2*(w/2) + x/2] = y;
-      crdata[y/2*(w/2) + x/2] = 128;
-    }
-
-  pic->planes[0] = ydata;
-  pic->planes[1] = cbdata;
-  pic->planes[2] = crdata;
-  pic->stride[0] = w;
-  pic->stride[1] = w/2;
-  pic->stride[2] = w/2;
   pic->bitDepth = 8;
 
   // int x265_encoder_headers(x265_encoder *, x265_nal **pp_nal, uint32_t *pi_nal);
@@ -367,7 +495,7 @@ void test4()
              nals[i].payload[3],
              nals[i].payload[4]);
 
-      //std::cerr.write((const char*)nals[i].payload, nals[i].sizeBytes);
+      // std::cerr.write((const char*)nals[i].payload, nals[i].sizeBytes);
     }
 
     if (!first && result <= 0) {
@@ -387,7 +515,9 @@ int main(int argc, char** argv)
   //test2(argv[1]);
   //test3(argv[1]);
 
-  test4();
+  std::shared_ptr<HeifPixelImage> image = loadJPEG(argv[1]);
+
+  test4(image);
 
   return 0;
 }

@@ -33,9 +33,9 @@ if ! HAVE_VISIBILITY
 bin_PROGRAMS += heif-writer
 
 heif_writer_DEPENDENCIES = ../src/libheif.la
-heif_writer_CXXFLAGS = -I../src
+heif_writer_CXXFLAGS = -I../src $(libjpeg_CFLAGS)
 heif_writer_LDFLAGS =
-heif_writer_LDADD = ../src/libheif.la $(x265_LIBS)
+heif_writer_LDADD = ../src/libheif.la $(x265_LIBS) $(libjpeg_LIBS)
 heif_writer_SOURCES = heif_writer.cc
 endif
 
