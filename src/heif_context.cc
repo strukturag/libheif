@@ -1371,6 +1371,18 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
       break;
     }
 
+
+    if ((data[0] >> 1) == 33) {
+      int width,height;
+      Box_hvcC::configuration config;
+
+      parse_sps_for_hvcC_configuration(data, size, &config, &width, &height);
+
+      printf("SPS resolution %d %d\n",width,height);
+
+      m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
+    }
+
     switch (data[0] >> 1) {
     case 0x20:
     case 0x21:

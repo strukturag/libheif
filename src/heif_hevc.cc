@@ -170,3 +170,98 @@ Error heif::decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 
   return Error::Ok;
 }
+
+
+Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
+                                             Box_hvcC::configuration* config,
+                                             int* width, int* height)
+{
+  BitReader reader(sps, (int)size);
+
+  // skip NAL header
+  reader.skip_bits(2*8);
+
+  // skip VPS ID
+  reader.skip_bits(4);
+
+  int nMaxSubLayersMinus1 = reader.get_bits(3);
+
+  config->temporal_id_nested = reader.get_bits(1);
+
+  // --- profile_tier_level ---
+
+  config->general_profile_space = (uint8_t)reader.get_bits(2);
+  config->general_tier_flag = (uint8_t)reader.get_bits(1);
+  config->general_profile_idc = (uint8_t)reader.get_bits(5);
+  config->general_profile_compatibility_flags = reader.get_bits(32);
+
+  reader.skip_bits(16); // skip reserved bits
+  reader.skip_bits(16); // skip reserved bits
+  reader.skip_bits(16); // skip reserved bits
+
+  config->general_level_idc = (uint8_t)reader.get_bits(8);
+
+  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
+    bool layer_profile_present = reader.get_bits(1);
+    bool layer_level_present = reader.get_bits(1);
+
+    if (layer_profile_present) {
+      reader.skip_bits(2+1+5);
+      reader.skip_bits(32);
+      reader.skip_bits(16);
+    }
+
+    if (layer_level_present) {
+      reader.skip_bits(8);
+    }
+  }
+
+
+  // --- SPS continued ---
+
+  int dummy, value;
+  reader.get_uvlc(&dummy); // skip seq_parameter_seq_id
+
+  reader.get_uvlc(&value);
+  config->chroma_format = (uint8_t)value;
+
+  if (config->chroma_format==3) {
+    reader.skip_bits(1);
+  }
+
+  reader.get_uvlc(width);
+  reader.get_uvlc(height);
+
+  bool conformance_window = reader.get_bits(1);
+  if (conformance_window) {
+    int left,right,top,bottom;
+    reader.get_uvlc(&left);
+    reader.get_uvlc(&right);
+    reader.get_uvlc(&top);
+    reader.get_uvlc(&bottom);
+
+    printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
+
+    *width -= 2*(left+right);
+    *height -= 2*(top+bottom);
+  }
+
+  reader.get_uvlc(&value);
+  config->bit_depth_luma = (uint8_t)(value + 8);
+
+  reader.get_uvlc(&value);
+  config->bit_depth_chroma = (uint8_t)(value + 8);
+
+
+
+  // --- init static configuration fields ---
+
+  config->configuration_version = 1;
+  config->min_spatial_segmentation_idc = 0; // TODO: get this value from the VUI, 0 should be safe
+  config->parallelism_type = 0; // TODO, 0 should be safe
+  config->avg_frame_rate = 0; // makes no sense for HEIF
+  config->constant_frame_rate = 0; // makes no sense for HEIF
+  config->num_temporal_layers = 1; // makes no sense for HEIF
+
+  return Error::Ok;
+}

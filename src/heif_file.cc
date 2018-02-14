@@ -463,10 +463,9 @@ void HeifFile::add_hvcC_property(heif_item_id id)
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
 }
 
+
 Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
 {
-  std::vector<Box_ipco::Property> properties;
-
   auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
                                                                                        m_ipma_box,
                                                                                        fourcc("hvcC")));
@@ -480,6 +479,25 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>
                  heif_suberror_No_hvcC_box);
   }
 }
+
+
+Error HeifFile::set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config)
+{
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->set_configuration(config);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
+}
+
+
 
 Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
 {

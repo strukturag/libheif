@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "heif.h"
+#include "box.h"
 #include "error.h"
 
 
@@ -49,6 +50,11 @@ public:
 
 Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
                                    std::vector<std::shared_ptr<SEIMessage>>& msgs);
+
+
+Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_hvcC::configuration* inout_config,
+                                       int* width, int* height);
 
 }
 
