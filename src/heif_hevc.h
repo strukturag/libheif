@@ -24,6 +24,9 @@
 #include <assert.h>
 #include <math.h>
 
+#include <memory>
+#include <vector>
+
 #include "heif.h"
 #include "error.h"
 
