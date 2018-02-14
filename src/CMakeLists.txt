@@ -22,6 +22,7 @@ logging.h
 if(UNIX)
   include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
   pkg_check_modules (LIBDE265 libde265)
+  pkg_check_modules (X265 x265)
 endif()
 
 if(LIBDE265_FOUND)
@@ -35,6 +36,17 @@ if(LIBDE265_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBDE265_CFLAGS}")
 endif()
 
+if(X265_FOUND)
+  add_definitions(-DHAVE_X265=1)
+  set (libheif_sources
+    ${libheif_sources}
+    heif_encoder_x265.cc
+    heif_encoder_x265.h
+  )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${X265_CFLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${X265_CFLAGS}")
+endif()
+
 # set(CMAKE_VERBOSE_MAKEFILE on)
 
 add_definitions(-DHAVE_VISIBILITY)
@@ -43,6 +55,9 @@ add_definitions(-DLIBHEIF_EXPORTS)
 add_library(${LIBHEIF_LIBRARY_NAME} SHARED ${libheif_sources})
 if(LIBDE265_FOUND)
   target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${LIBDE265_LIBRARIES})
+endif()
+if(X265_FOUND)
+  target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${X265_LIBRARIES})
 endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
   set_target_properties(${LIBHEIF_LIBRARY_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
