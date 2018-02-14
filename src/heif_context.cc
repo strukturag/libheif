@@ -1381,6 +1381,7 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
       printf("SPS resolution %d %d\n",width,height);
 
       m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
+      m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
     }
 
     switch (data[0] >> 1) {

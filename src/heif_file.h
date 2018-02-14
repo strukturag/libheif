@@ -102,6 +102,8 @@ namespace heif {
     Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
     Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
 
+    void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height);
+
     void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets);
     void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 
