@@ -310,6 +310,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_error_Usage_error", heif_error_Usage_error)
     .value("heif_error_Memory_allocation_error", heif_error_Memory_allocation_error)
     .value("heif_error_Decoder_plugin_error", heif_error_Decoder_plugin_error)
+    .value("heif_error_Encoder_plugin_error", heif_error_Encoder_plugin_error)
     ;
   emscripten::enum_<heif_suberror_code>("heif_suberror_code")
     .value("heif_suberror_Unspecified", heif_suberror_Unspecified)
