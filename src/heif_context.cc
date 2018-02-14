@@ -1372,7 +1372,9 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
     }
 
 
-    if ((data[0] >> 1) == 33) {
+    const uint8_t NAL_SPS = 33;
+
+    if ((data[0] >> 1) == NAL_SPS) {
       int width,height;
       Box_hvcC::configuration config;
 
