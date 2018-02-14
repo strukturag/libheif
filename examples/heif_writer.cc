@@ -28,6 +28,8 @@
 #include "box.h"
 #include "heif_context.h"
 #include "heif_image.h"
+#include "heif_api_structs.h"
+#include "heif_encoder_x265.h"
 
 #include <fstream>
 #include <iostream>
@@ -509,6 +511,58 @@ void test4(const std::shared_ptr<HeifPixelImage>& img)
   x265_param_free(param);
 }
 
+void test5(std::shared_ptr<HeifPixelImage> image)
+{
+  heif_image img;
+  img.image = image;
+
+  const struct heif_encoder_plugin* encoder_plugin = get_encoder_plugin_x265();
+  void* encoder;
+  encoder_plugin->new_encoder(&encoder);
+
+  encoder_plugin->encode_image(encoder, &img);
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    printf("get data\n");
+
+    encoder_plugin->get_compressed_data(encoder, &data, &size, NULL);
+
+    if (data==NULL) {
+      break;
+    }
+
+    printf("size=%d: %x %x %x %x %x\n", size,
+           data[0], data[1], data[2], data[3], data[4]);
+  }
+}
+
+void test6(std::shared_ptr<HeifPixelImage> pixel_image)
+{
+  // build HEIF file
+
+  HeifContext ctx;
+  ctx.new_empty_heif();
+
+  auto image = ctx.add_new_hvc1_image();
+  //image->set_preencoded_hevc_image(h265data);
+  image->encode_image_as_hevc(pixel_image);
+  ctx.set_primary_image(image);
+
+
+  // write output
+
+  StreamWriter writer;
+  ctx.write(writer);
+
+  std::ofstream ostr("out.heic");
+  const auto& data = writer.get_data();
+  ostr.write( (const char*)data.data(), data.size() );
+};
+
+
 int main(int argc, char** argv)
 {
   //test1();
@@ -517,7 +571,7 @@ int main(int argc, char** argv)
 
   std::shared_ptr<HeifPixelImage> image = loadJPEG(argv[1]);
 
-  test4(image);
+  test6(image);
 
   return 0;
 }

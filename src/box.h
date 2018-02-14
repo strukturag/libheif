@@ -639,6 +639,7 @@ namespace heif {
     void set_configuration(const configuration& config) { m_configuration=config; }
 
     void append_nal_data(const std::vector<uint8_t>& nal);
+    void append_nal_data(const uint8_t* data, size_t size);
 
     Error write(StreamWriter& writer) const override;
 

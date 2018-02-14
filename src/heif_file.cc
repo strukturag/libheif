@@ -25,6 +25,7 @@
 #include <limits>
 #include <sstream>
 #include <utility>
+#include <string.h>
 
 #include <assert.h>
 
@@ -480,9 +481,44 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>
   }
 }
 
+Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<Box_ipco::Property> properties;
+
+  printf("append_hvcC_nal_data %d\n",(int)size);
+
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->append_nal_data(data,size);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
+}
+
 void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets)
 {
   m_iloc_box->append_data(id, nal_packets);
+}
+
+void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> nal;
+  nal.resize(size + 4);
+
+  nal[0] = (size>>24) & 0xFF;
+  nal[1] = (size>>16) & 0xFF;
+  nal[2] = (size>> 8) & 0xFF;
+  nal[3] = (size>> 0) & 0xFF;
+
+  memcpy(nal.data()+4, data, size);
+
+  append_iloc_data(id, nal);
 }
 
 void HeifFile::set_primary_item_id(heif_item_id id)

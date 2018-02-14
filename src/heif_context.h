@@ -134,6 +134,8 @@ namespace heif {
 
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
+      void encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image);
+
     private:
       HeifContext* m_heif_context;
 

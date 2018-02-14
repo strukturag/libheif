@@ -44,6 +44,10 @@
 #include "heif_decoder_libde265.h"
 #endif
 
+#if HAVE_X265
+#include "heif_encoder_x265.h"
+#endif
+
 
 using namespace heif;
 
@@ -1456,6 +1460,47 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
     if (eof) {
       break;
     }
+  }
+}
+
+
+void HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image)
+{
+  m_heif_context->m_heif_file->add_hvcC_property(m_id);
+
+  // TODO: use registered plugin instead of hardcoded x265 plugin
+  const struct heif_encoder_plugin* encoder_plugin = get_encoder_plugin_x265();
+  void* encoder;
+  encoder_plugin->new_encoder(&encoder);
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  encoder_plugin->encode_image(encoder, &c_api_image);
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder_plugin->get_compressed_data(encoder, &data, &size, NULL);
+
+    if (data==NULL) {
+      break;
+    }
+
+    switch (data[0] >> 1) {
+    case 0x20:
+    case 0x21:
+    case 0x22:
+      m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, data, size);
+      break;
+
+    default:
+      m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
+    }
+
+    printf("size=%d: %x %x %x %x %x\n", size,
+           data[0], data[1], data[2], data[3], data[4]);
   }
 }
 
