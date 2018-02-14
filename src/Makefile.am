@@ -46,6 +46,13 @@ libheif_la_SOURCES += \
   heif_decoder_libde265.h
 endif
 
+
+if HAVE_X265
+libheif_la_SOURCES += \
+  heif_encoder_x265.cc \
+  heif_encoder_x265.h
+endif
+
 libheif_la_HEADERS = \
   heif.h \
   heif-version.h
