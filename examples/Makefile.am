@@ -40,4 +40,5 @@ heif_writer_SOURCES = heif_writer.cc
 endif
 
 EXTRA_DIST = \
+    demo.html \
     example.heic
