@@ -116,6 +116,16 @@ void x265_free_encoder(void* encoder_raw)
   delete encoder;
 }
 
+struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+  (void)encoder;
+
+  printf("x265 set quality to %d\n",quality);
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
 
 struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image)
 {
@@ -227,12 +237,14 @@ static const struct heif_encoder_plugin encoder_plugin_x265
 {
   .plugin_api_version = 1,
   .compression_format = heif_compression_HEVC,
+  .id_name = "x265",
   .priority = X265_PLUGIN_PRIORITY,
   .get_plugin_name = x265_plugin_name,
   .init_plugin = x265_init_plugin,
   .deinit_plugin = x265_deinit_plugin,
   .new_encoder = x265_new_encoder,
   .free_encoder = x265_free_encoder,
+  .set_param_quality = x265_set_param_quality,
   .encode_image = x265_encode_image,
   .get_compressed_data = x265_get_compressed_data
 };

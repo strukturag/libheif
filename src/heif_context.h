@@ -29,6 +29,15 @@
 
 #include "error.h"
 
+
+struct heif_encoder
+{
+  const struct heif_encoder_plugin* plugin;
+  void* encoder;
+};
+
+
+
 namespace heif {
 
   class HeifFile;
@@ -189,12 +198,23 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
+    std::vector<struct heif_encoder*> get_filtered_encoders(enum heif_compression_format,
+                                                            const char* name) const;
+
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
     const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type) const;
 
+    struct encoder_priority_order
+    {
+      bool operator() (const std::unique_ptr<struct heif_encoder>& a,
+                       const std::unique_ptr<struct heif_encoder>& b) {
+        return a->plugin->priority > b->plugin->priority;  // highest priority first
+      }
+    };
+
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
-    std::set<const struct heif_encoder_plugin*> m_encoder_plugins;
+    std::set<std::unique_ptr<struct heif_encoder>, encoder_priority_order> m_encoders;
 
     std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 

@@ -362,7 +362,11 @@ void HeifContext::register_encoder(const heif_encoder_plugin* encoder_plugin)
     (*encoder_plugin->init_plugin)();
   }
 
-  m_encoder_plugins.insert(encoder_plugin);
+  auto encoder = std::unique_ptr<struct heif_encoder>(new heif_encoder);
+  encoder->plugin = encoder_plugin;
+  encoder->encoder = nullptr;
+
+  m_encoders.insert(std::move(encoder));
 }
 
 const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
@@ -384,20 +388,7 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
 const struct heif_encoder_plugin* HeifContext::get_encoder(enum heif_compression_format type) const
 {
-  int highest_priority = 0;
-  const struct heif_encoder_plugin* best_plugin = nullptr;
-
-  for (const auto* plugin : m_encoder_plugins) {
-    if (plugin->compression_format == type) {
-      int priority = plugin->priority;
-      if (priority > highest_priority) {
-        highest_priority = priority;
-        best_plugin = plugin;
-      }
-    }
-  }
-
-  return best_plugin;
+  return get_filtered_encoders(type, nullptr)[0]->plugin;
 }
 
 
@@ -1421,4 +1412,27 @@ void HeifContext::set_primary_image(std::shared_ptr<Image> image)
   // update pitm box in HeifFile
 
   m_heif_file->set_primary_item_id(image->get_id());
+}
+
+
+std::vector<struct heif_encoder*>
+HeifContext::get_filtered_encoders(enum heif_compression_format format,
+                                   const char* name) const
+{
+  std::vector<struct heif_encoder*> filtered_encoders;
+
+  for (const auto& enc : m_encoders) {
+    const struct heif_encoder_plugin* plugin = enc->plugin;
+
+    if (plugin->compression_format == format || format==heif_compression_undefined) {
+      if (name == nullptr || strcmp(name, plugin->id_name)==0) {
+        filtered_encoders.push_back(enc.get());
+      }
+    }
+  }
+
+
+  // Note: since our std::set<> is ordered by priority, we do not have to sort our output
+
+  return filtered_encoders;
 }

@@ -42,6 +42,11 @@
 
 #include "heif.h"
 
+
+
+static constexpr char kSuccess[] = "Success";
+
+
 namespace heif {
 
   class ErrorBuffer

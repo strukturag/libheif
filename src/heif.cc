@@ -27,6 +27,7 @@
 #include "heif_api_structs.h"
 #include "heif_context.h"
 #include "error.h"
+#include "bitstream.h"
 
 #if defined(__EMSCRIPTEN__)
 #include "heif-emscripten.h"
@@ -34,6 +35,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -683,3 +685,120 @@ void heif_image_get_data_chunk(heif_image* img, int chunk_index,
 
 void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 */
+
+
+
+void heif_context_new_heic(struct heif_context* ctx)
+{
+  ctx->context->new_empty_heif();
+}
+
+
+struct heif_error heif_context_write_to_file(struct heif_context* ctx,
+                                             const char* filename)
+{
+  StreamWriter writer;
+  ctx->context->write(writer);
+
+  std::ofstream ostr(filename);
+  const auto& data = writer.get_data();
+  ostr.write( (const char*)data.data(), data.size() );
+
+  // TODO: handle write errors
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+int heif_context_get_encoders(struct heif_context* ctx,
+                              enum heif_compression_format format,
+                              const char* name,
+                              struct heif_encoder** out_encoders,
+                              int count)
+{
+  if (out_encoders == nullptr) {
+    return 0;
+  }
+
+  std::vector<struct heif_encoder*> plugins;
+  plugins = ctx->context->get_filtered_encoders(format, name);
+
+  int i;
+  for (i=0 ; i<count && i<(int)plugins.size() ; i++) {
+    out_encoders[i] = plugins[i];
+  }
+
+  return i;
+}
+
+
+const char* heif_encoder_get_name(struct heif_encoder* encoder)
+{
+  return encoder->plugin->get_plugin_name();
+}
+
+struct heif_error heif_encoder_init(struct heif_encoder* encoder)
+{
+  if (encoder->encoder == nullptr) {
+    struct heif_error error = encoder->plugin->new_encoder(&encoder->encoder);
+    // TODO: error handling
+    return error;
+  }
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
+void heif_encoder_deinit(struct heif_encoder* encoder)
+{
+  if (encoder->encoder) {
+    encoder->plugin->free_encoder(encoder->encoder);
+    encoder->encoder = nullptr;
+  }
+}
+
+
+struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder* encoder)
+{
+  return nullptr;
+}
+
+void heif_encoder_release_param(struct heif_encoder_param* param)
+{
+}
+
+// Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
+// encoder dependent.
+struct heif_error heif_encode_set_lossy_quality(struct heif_encoder* encoder,
+                                                int quality)
+{
+  if (encoder->encoder==nullptr) {
+    // TODO: error: encoder not initialized
+  }
+
+  encoder->plugin->set_param_quality(encoder->encoder, quality);
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
+struct heif_error heif_context_encode_image(struct heif_context* ctx,
+                                            struct heif_image_handle** out_image_handle,
+                                            const struct heif_image* input_image,
+                                            struct heif_encoder* encoder)
+{
+  auto image = ctx->context->add_new_hvc1_image();
+
+  image->encode_image_as_hevc(input_image->image);
+  ctx->context->set_primary_image(image);
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = image;
+  }
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}

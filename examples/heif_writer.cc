@@ -565,6 +565,48 @@ void test6(std::shared_ptr<HeifPixelImage> pixel_image)
 };
 
 
+void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
+{
+  heif_image pixel_image_c_wrapper;
+  pixel_image_c_wrapper.image = pixel_image;
+
+
+  heif_context* context = heif_context_alloc();
+
+  heif_context_new_heic(context);
+
+#define MAX_ENCODERS 5
+  heif_encoder* encoders[MAX_ENCODERS];
+  int count = heif_context_get_encoders(context, heif_compression_HEVC, nullptr,
+                                        encoders, MAX_ENCODERS);
+
+  if (count>0) {
+    printf("used encoder: %s\n", heif_encoder_get_name(encoders[0]));
+
+    heif_encoder_init(encoders[0]);
+
+    heif_encode_set_lossy_quality(encoders[0], 50);
+
+    struct heif_image_handle* handle;
+    heif_error error = heif_context_encode_image(context,
+                                                 &handle,
+                                                 &pixel_image_c_wrapper,
+                                                 encoders[0]);
+
+    heif_image_handle_release(handle);
+
+    heif_encoder_deinit(encoders[0]);
+
+    error = heif_context_write_to_file(context, "out.heic");
+  }
+  else {
+    fprintf(stderr,"no HEVC encoder available.\n");
+  }
+
+  heif_context_free(context);
+}
+
+
 int main(int argc, char** argv)
 {
   //test1();
@@ -573,7 +615,9 @@ int main(int argc, char** argv)
 
   std::shared_ptr<HeifPixelImage> image = loadJPEG(argv[1]);
 
-  test6(image);
+  //test6(image);
+
+  test_c_api(image);
 
   return 0;
 }
