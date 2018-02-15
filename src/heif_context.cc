@@ -1329,8 +1329,10 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 }
 
 
-Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image)
+Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
+                                               struct heif_encoder* encoder)
 {
+  /*
   const struct heif_encoder_plugin* encoder_plugin = nullptr;
 
   encoder_plugin = m_heif_context->get_encoder(heif_compression_HEVC);
@@ -1339,24 +1341,24 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_codec);
   }
-
+  */
 
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
 
 
-  void* encoder;
-  encoder_plugin->new_encoder(&encoder);
+  //void* encoder;
+  //encoder_plugin->new_encoder(&encoder);
 
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder_plugin->encode_image(encoder, &c_api_image);
+  encoder->plugin->encode_image(encoder->encoder, &c_api_image);
 
   for (;;) {
     uint8_t* data;
     int size;
 
-    encoder_plugin->get_compressed_data(encoder, &data, &size, NULL);
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
 
     if (data==NULL) {
       break;

@@ -613,8 +613,10 @@ void heif_encoder_release_param(struct heif_encoder_param*);
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
-struct heif_error heif_encode_set_lossy_quality(struct heif_encoder*,
-                                                int quality);
+struct heif_error heif_encode_set_lossy_quality(struct heif_encoder*, int quality);
+
+struct heif_error heif_encode_set_lossless(struct heif_encoder*, int enable);
+
 
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
 struct heif_error heif_context_encode_image(struct heif_context*,
@@ -740,6 +742,8 @@ struct heif_encoder_plugin
   void (*free_encoder)(void* encoder);
 
   struct heif_error (*set_param_quality)(void* encoder, int quality);
+
+  struct heif_error (*set_param_lossless)(void* encoder, int lossless);
 
   struct heif_error (*encode_image)(void* encoder, const struct heif_image* image);
 

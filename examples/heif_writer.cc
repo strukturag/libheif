@@ -543,6 +543,7 @@ void test5(std::shared_ptr<HeifPixelImage> image)
 
 void test6(std::shared_ptr<HeifPixelImage> pixel_image)
 {
+#if 0
   // build HEIF file
 
   HeifContext ctx;
@@ -562,7 +563,8 @@ void test6(std::shared_ptr<HeifPixelImage> pixel_image)
   std::ofstream ostr("out.heic");
   const auto& data = writer.get_data();
   ostr.write( (const char*)data.data(), data.size() );
-};
+#endif
+}
 
 
 void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
@@ -585,7 +587,8 @@ void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
 
     heif_encoder_init(encoders[0]);
 
-    heif_encode_set_lossy_quality(encoders[0], 50);
+    heif_encode_set_lossy_quality(encoders[0], 44);
+    heif_encode_set_lossless(encoders[0], 0);
 
     struct heif_image_handle* handle;
     heif_error error = heif_context_encode_image(context,

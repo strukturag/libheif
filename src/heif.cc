@@ -788,6 +788,19 @@ struct heif_error heif_encode_set_lossy_quality(struct heif_encoder* encoder,
 }
 
 
+struct heif_error heif_encode_set_lossless(struct heif_encoder* encoder, int enable)
+{
+  if (encoder->encoder==nullptr) {
+    // TODO: error: encoder not initialized
+  }
+
+  encoder->plugin->set_param_lossless(encoder->encoder, enable);
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             struct heif_image_handle** out_image_handle,
                                             const struct heif_image* input_image,
@@ -795,7 +808,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 {
   auto image = ctx->context->add_new_hvc1_image();
 
-  image->encode_image_as_hevc(input_image->image);
+  image->encode_image_as_hevc(input_image->image, encoder);
   ctx->context->set_primary_image(image);
 
   if (out_image_handle) {

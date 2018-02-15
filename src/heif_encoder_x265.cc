@@ -119,9 +119,25 @@ void x265_free_encoder(void* encoder_raw)
 struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
-  (void)encoder;
 
-  printf("x265 set quality to %d\n",quality);
+  printf("%p x265 set quality to %d\n",encoder, quality);
+
+  encoder->params->bLossless = 1; //rc.rfConstant = 48;
+
+  // quality=0   -> crf=50
+  // quality=50  -> crf=25
+  // quality=100 -> crf=0
+  encoder->params->rc.rfConstant = (100-quality)/2;
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+struct heif_error x265_set_param_lossless(void* encoder_raw, int enable)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  encoder->params->bLossless = enable;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -149,6 +165,8 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   if (encoder->encoder) {
     x265_encoder_close(encoder->encoder);
   }
+
+  printf("%p rfConstant= %f\n", encoder, encoder->params->rc.rfConstant);
 
   encoder->encoder = x265_encoder_open(encoder->params);
 
@@ -245,6 +263,7 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .new_encoder = x265_new_encoder,
   .free_encoder = x265_free_encoder,
   .set_param_quality = x265_set_param_quality,
+  .set_param_lossless = x265_set_param_lossless,
   .encode_image = x265_encode_image,
   .get_compressed_data = x265_get_compressed_data
 };
