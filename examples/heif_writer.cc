@@ -587,8 +587,8 @@ void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
 
     heif_encoder_init(encoders[0]);
 
-    heif_encode_set_lossy_quality(encoders[0], 44);
-    heif_encode_set_lossless(encoders[0], 0);
+    heif_encoder_set_lossy_quality(encoders[0], 44);
+    heif_encoder_set_lossless(encoders[0], 0);
 
     struct heif_image_handle* handle;
     heif_error error = heif_context_encode_image(context,

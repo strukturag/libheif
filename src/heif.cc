@@ -774,7 +774,7 @@ void heif_encoder_release_param(struct heif_encoder_param* param)
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
-struct heif_error heif_encode_set_lossy_quality(struct heif_encoder* encoder,
+struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
                                                 int quality)
 {
   if (encoder->encoder==nullptr) {
@@ -788,7 +788,7 @@ struct heif_error heif_encode_set_lossy_quality(struct heif_encoder* encoder,
 }
 
 
-struct heif_error heif_encode_set_lossless(struct heif_encoder* encoder, int enable)
+struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int enable)
 {
   if (encoder->encoder==nullptr) {
     // TODO: error: encoder not initialized
