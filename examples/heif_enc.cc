@@ -31,9 +31,11 @@
 
 #include "heif.h"
 
+#if HAVE_LIBJPEG
 extern "C" {
 #include <jpeglib.h>
 }
+#endif
 
 
 static struct option long_options[] = {
@@ -61,6 +63,7 @@ void show_help(const char* argv0)
 
 
 
+#if HAVE_LIBJPEG
 std::shared_ptr<heif_image> loadJPEG(const char* filename)
 {
   struct heif_image* image = nullptr;
@@ -208,6 +211,15 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
                                     [] (heif_image* img) { heif_image_release(img); });
 
 }
+#else
+std::shared_ptr<heif_image> loadJPEG(const char* filename)
+{
+  std::cerr << "Cannot load JPEG because libjpeg support was not compiled.\n";
+  exit(1);
+
+  return nullptr;
+}
+#endif
 
 
 int main(int argc, char** argv)
