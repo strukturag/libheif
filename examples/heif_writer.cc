@@ -23,266 +23,45 @@
 
 #include <errno.h>
 #include <string.h>
-
-#include "bitstream.h"
-#include "box.h"
-#include "heif_context.h"
-#include "heif_image.h"
-#include "heif_api_structs.h"
-#include "heif_encoder_x265.h"
+#include <getopt.h>
 
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <getopt.h>
+
+#include "heif.h"
 
 extern "C" {
-#include "x265.h"
 #include <jpeglib.h>
 }
 
 
-using namespace heif;
+static struct option long_options[] = {
+  {"help",       no_argument,       0, 'h' },
+  {"quality",    required_argument, 0, 'q' },
+  {"output",     required_argument, 0, 'o' },
+  {"lossless",   no_argument,       0, 'L' },
+  {0,         0,                 0,  0 }
+};
 
-
-void test1()
+void show_help(const char* argv0)
 {
-  StreamWriter writer;
-
-  Box_ftyp ftyp;
-  ftyp.set_major_brand(fourcc("heic"));
-  ftyp.set_minor_version(0);
-  ftyp.add_compatible_brand(fourcc("mif1"));
-  ftyp.add_compatible_brand(fourcc("heic"));
-  ftyp.write(writer);
-
-
-  Box_meta meta;
-
-  auto hdlr = std::make_shared<Box_hdlr>();
-  meta.append_child_box(hdlr);
-
-  auto pitm = std::make_shared<Box_pitm>();
-  pitm->set_item_ID(4711);
-  meta.append_child_box(pitm);
-
-  auto iloc = std::make_shared<Box_iloc>();
-  iloc->append_data(4711, std::vector<uint8_t> { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 });
-  iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5,6,7,8,9,10 });
-  iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5 });
-  meta.append_child_box(iloc);
-
-  auto infe = std::make_shared<Box_infe>();
-  infe->set_hidden_item(true);
-  infe->set_item_ID(4712);
-  infe->set_item_type("hvc1");
-  infe->set_item_name("Nice image");
-
-  auto iinf = std::make_shared<Box_iinf>();
-  iinf->append_child_box(infe);
-  meta.append_child_box(iinf);
-
-  auto iprp = std::make_shared<Box_iprp>();
-  auto ipco = std::make_shared<Box_ipco>();
-  auto ipma = std::make_shared<Box_ipma>();
-  iprp->append_child_box(ipco);
-  iprp->append_child_box(ipma);
-
-  ipma->add_property_for_item_ID(4711, Box_ipma::PropertyAssociation { true, 1 });
-  ipma->add_property_for_item_ID(4711, Box_ipma::PropertyAssociation { false, 0 });
-  ipma->add_property_for_item_ID(4712, Box_ipma::PropertyAssociation { false, 2 });
-
-  auto hvcC = std::make_shared<Box_hvcC>();
-  hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
-  ipco->append_child_box(hvcC);
-
-  auto ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(1920,1080);
-  ipco->append_child_box(ispe);
-  meta.append_child_box(iprp);
-
-  meta.derive_box_version_recursive();
-  meta.write(writer);
-
-  iloc->write_mdat_after_iloc(writer);
-
-  std::ofstream ostr("out.heic");
-  const auto& data = writer.get_data();
-  ostr.write( (const char*)data.data(), data.size() );
+    fprintf(stderr," heif-enc  libheif version: %s\n",heif_get_version());
+    fprintf(stderr,"------------------------------------\n");
+    fprintf(stderr,"usage: heif-enc [options] image.jpeg\n");
+    fprintf(stderr,"\n");
+    fprintf(stderr,"options:\n");
+    fprintf(stderr,"  -h, --help      show help\n");
+    fprintf(stderr,"  -q, --quality   set output quality (0-100) for lossy compression\n");
+    fprintf(stderr,"  -L, --lossless  generate lossless output (-q has no effect)\n");
+    fprintf(stderr,"  -o, --output    output filename (optional)\n");
 }
 
 
 
-
-void test2(const char* h265_file)
+std::shared_ptr<heif_image> loadJPEG(const char* filename)
 {
-  StreamWriter writer;
-
-  Box_ftyp ftyp;
-  ftyp.set_major_brand(fourcc("heic"));
-  ftyp.set_minor_version(0);
-  ftyp.add_compatible_brand(fourcc("mif1"));
-  ftyp.add_compatible_brand(fourcc("heic"));
-  ftyp.write(writer);
-
-
-  Box_meta meta;
-
-  auto hdlr = std::make_shared<Box_hdlr>();
-  meta.append_child_box(hdlr);
-
-  auto pitm = std::make_shared<Box_pitm>();
-  pitm->set_item_ID(1);
-  meta.append_child_box(pitm);
-
-  auto iloc = std::make_shared<Box_iloc>();
-  //iloc->append_data(4712, std::vector<uint8_t> { 1,2,3,4,5 });
-  meta.append_child_box(iloc);
-
-  auto infe = std::make_shared<Box_infe>();
-  infe->set_hidden_item(false);
-  infe->set_item_ID(1);
-  infe->set_item_type("hvc1");
-  infe->set_item_name("Nice image");
-
-  auto iinf = std::make_shared<Box_iinf>();
-  iinf->append_child_box(infe);
-  meta.append_child_box(iinf);
-
-  auto iprp = std::make_shared<Box_iprp>();
-  auto ipco = std::make_shared<Box_ipco>();
-  auto ipma = std::make_shared<Box_ipma>();
-  iprp->append_child_box(ipco);
-  iprp->append_child_box(ipma);
-
-  ipma->add_property_for_item_ID(1, Box_ipma::PropertyAssociation { true, 1 });
-
-  auto hvcC = std::make_shared<Box_hvcC>();
-  //hvcC->append_nal_data( std::vector<uint8_t> { 10,9,8,7,6,5,4,3,2,1 } );
-  ipco->append_child_box(hvcC);
-
-  auto ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(1920,1080);
-  ipco->append_child_box(ispe);
-  meta.append_child_box(iprp);
-
-
-  std::ifstream istr(h265_file);
-  int state=0;
-
-  bool first=true;
-  bool eof=false;
-  std::streampos prev_start_code_start;
-  std::streampos start_code_start;
-  //uint8_t nal_type;
-
-  for (;;) {
-    bool dump_nal = false;
-
-    int c = istr.get();
-
-    if (state==3) {
-      state=0;
-    }
-
-    //printf("read c=%02x\n",c);
-
-    if (c==0 && state<=1) {
-      state++;
-    }
-    else if (c==0) {
-      // NOP
-    }
-    else if (c==1 && state==2) {
-      start_code_start = istr.tellg() - (std::streampos)3;
-      dump_nal = true;
-      state=3;
-    }
-    else {
-      state=0;
-    }
-
-    //printf("-> state= %d\n",state);
-
-    if (istr.eof()) {
-      printf("to end of file\n");
-      istr.clear();
-      istr.seekg(0, std::ios::end);
-      start_code_start = istr.tellg();
-      printf("end of file pos: %04x\n",(uint32_t)start_code_start);
-      dump_nal = true;
-      eof = true;
-    }
-
-    if (dump_nal) {
-      if (first) {
-        first = false;
-      }
-      else {
-        std::vector<uint8_t> nal_data;
-        size_t length = start_code_start - (prev_start_code_start+(std::streampos)3);
-
-        printf("found start code at position: %08x (prev: %08x)\n",
-               (uint32_t)start_code_start,
-               (uint32_t)prev_start_code_start);
-
-        nal_data.resize(length);
-
-        istr.seekg(prev_start_code_start+(std::streampos)3);
-        istr.read((char*)nal_data.data(), length);
-
-        istr.seekg(start_code_start+(std::streampos)3);
-
-        printf("read nal %02x with length %08x\n",nal_data[0], (uint32_t)length);
-
-        int nal_type = (nal_data[0]>>1);
-
-        switch (nal_type) {
-        case 0x20:
-        case 0x21:
-        case 0x22:
-          hvcC->append_nal_data(nal_data);
-          break;
-
-        default: {
-          std::vector<uint8_t> nal_data_with_size;
-          nal_data_with_size.resize(nal_data.size() + 4);
-
-          memcpy(nal_data_with_size.data()+4, nal_data.data(), nal_data.size());
-          nal_data_with_size[0] = ((nal_data.size()>>24) & 0xFF);
-          nal_data_with_size[1] = ((nal_data.size()>>16) & 0xFF);
-          nal_data_with_size[2] = ((nal_data.size()>> 8) & 0xFF);
-          nal_data_with_size[3] = ((nal_data.size()>> 0) & 0xFF);
-
-          iloc->append_data(1, nal_data_with_size);
-        }
-          break;
-        }
-      }
-
-      prev_start_code_start = start_code_start;
-    }
-
-    if (eof) {
-      break;
-    }
-  }
-
-
-  meta.derive_box_version_recursive();
-  meta.write(writer);
-
-  iloc->write_mdat_after_iloc(writer);
-
-  std::ofstream ostr("out.heic");
-  const auto& data = writer.get_data();
-  ostr.write( (const char*)data.data(), data.size() );
-}
-
-
-std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
-{
-  auto image = std::make_shared<HeifPixelImage>();
+  struct heif_image* image = nullptr;
 
 
   // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
@@ -321,13 +100,17 @@ std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
 
       // create destination image
 
-      image->create(cinfo.output_width, cinfo.output_height,
-                    heif_colorspace_YCbCr,
-                    heif_chroma_monochrome);
-      image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+      struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                                heif_colorspace_YCbCr,
+                                                heif_chroma_monochrome,
+                                                &image);
+      (void)err;
+      // TODO: handle error
+
+      heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
 
       int y_stride;
-      uint8_t* py = image->get_plane(heif_channel_Y, &y_stride);
+      uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
 
 
       // read the image
@@ -352,19 +135,22 @@ std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
 
       // create destination image
 
-      image->create(cinfo.output_width, cinfo.output_height,
-                    heif_colorspace_YCbCr,
-                    heif_chroma_420);
-      image->add_plane(heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-      image->add_plane(heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
-      image->add_plane(heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+      struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                                heif_colorspace_YCbCr,
+                                                heif_chroma_420,
+                                                &image);
+      (void)err;
+
+      heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+      heif_image_add_plane(image, heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+      heif_image_add_plane(image, heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
 
       int y_stride;
       int cb_stride;
       int cr_stride;
-      uint8_t* py  = image->get_plane(heif_channel_Y, &y_stride);
-      uint8_t* pcb = image->get_plane(heif_channel_Cb, &cb_stride);
-      uint8_t* pcr = image->get_plane(heif_channel_Cr, &cr_stride);
+      uint8_t* py  = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+      uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+      uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
       // read the image
 
@@ -415,171 +201,87 @@ std::shared_ptr<HeifPixelImage> loadJPEG(const char* filename)
 
   fclose(infile);
 
-  return image;
+
+  return std::shared_ptr<heif_image>(image,
+                                    [] (heif_image* img) { heif_image_release(img); });
+
 }
 
 
-void test3(const char* h265_file)
+int main(int argc, char** argv)
 {
-  // read h265 file
+  int quality = 50;
+  bool lossless = false;
+  std::string output_filename;
 
-  std::ifstream istr(h265_file);
-  istr.seekg(0, std::ios::end);
-  size_t len = istr.tellg();
-  istr.seekg(0, std::ios::beg);
+  while (true) {
+    int option_index = 0;
+    int c = getopt_long(argc, argv, "hq:Lo:", long_options, &option_index);
+    if (c == -1)
+      break;
 
-  std::vector<uint8_t> h265data;
-  h265data.resize(len);
-  istr.read((char*)h265data.data(), len);
-
-
-  // build HEIF file
-
-  HeifContext ctx;
-  ctx.new_empty_heif();
-
-  auto image = ctx.add_new_hvc1_image();
-  image->set_preencoded_hevc_image(h265data);
-  ctx.set_primary_image(image);
-
-
-  // write output
-
-  StreamWriter writer;
-  ctx.write(writer);
-
-  std::ofstream ostr("out.heic");
-  const auto& data = writer.get_data();
-  ostr.write( (const char*)data.data(), data.size() );
-};
-
-void test4(const std::shared_ptr<HeifPixelImage>& img)
-{
-  int w = img->get_width() & ~1;
-  int h = img->get_height() & ~1;
-
-  printf("image size: %d %d\n",w,h);
-
-  x265_param* param = x265_param_alloc();
-  x265_param_default_preset(param, "slow", "ssim");
-  x265_param_apply_profile(param, "mainstillpicture");
-
-  param->sourceWidth = w;
-  param->sourceHeight = h;
-  param->fpsNum = 1;
-  param->fpsDenom = 1;
-
-  x265_encoder* enc = x265_encoder_open(param);
-
-  x265_picture* pic = x265_picture_alloc();
-  x265_picture_init(param, pic);
-
-  pic->planes[0] = img->get_plane(heif_channel_Y, &pic->stride[0]);
-  pic->planes[1] = img->get_plane(heif_channel_Cb, &pic->stride[1]);
-  pic->planes[2] = img->get_plane(heif_channel_Cr, &pic->stride[2]);
-
-  pic->bitDepth = 8;
-
-  // int x265_encoder_headers(x265_encoder *, x265_nal **pp_nal, uint32_t *pi_nal);
-
-  x265_nal* nals;
-  uint32_t num_nals;
-  bool first = true;
-
-  for (;;) {
-    int result = x265_encoder_encode(enc, &nals, &num_nals, first ? pic : NULL, NULL);
-
-    printf("received %d NALs -> %d\n", num_nals, result);
-
-    for (uint32_t i=0;i<num_nals;i++) {
-      printf("%x (size=%d) %x %x %x %x %x\n",nals[i].type, nals[i].sizeBytes,
-             nals[i].payload[0],
-             nals[i].payload[1],
-             nals[i].payload[2],
-             nals[i].payload[3],
-             nals[i].payload[4]);
-
-      // std::cerr.write((const char*)nals[i].payload, nals[i].sizeBytes);
-    }
-
-    if (!first && result <= 0) {
+    switch (c) {
+    case 'h':
+      show_help(argv[0]);
+      return 0;
+    case 'q':
+      quality = atoi(optarg);
+      break;
+    case 'L':
+      lossless = true;
+      break;
+    case 'o':
+      output_filename = optarg;
       break;
     }
-
-    first=false;
   }
 
-  x265_picture_free(pic);
-  x265_param_free(param);
-}
+  if (optind != argc-1) {
+    show_help(argv[0]);
+    return 0;
+  }
 
-void test5(std::shared_ptr<HeifPixelImage> image)
-{
-  heif_image img;
-  img.image = image;
 
-  const struct heif_encoder_plugin* encoder_plugin = get_encoder_plugin_x265();
-  void* encoder;
-  encoder_plugin->new_encoder(&encoder);
+  if (quality<0 || quality>100) {
+    fprintf(stderr,"Invalid quality factor. Must be between 0 and 100.\n");
+    return 5;
+  }
 
-  encoder_plugin->encode_image(encoder, &img);
+  std::string input_filename = argv[optind];
 
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    printf("get data\n");
-
-    encoder_plugin->get_compressed_data(encoder, &data, &size, NULL);
-
-    if (data==NULL) {
-      break;
+  if (output_filename.empty()) {
+    std::string filename_without_suffix;
+    std::string::size_type dot_position = input_filename.find_last_of('.');
+    if (dot_position != std::string::npos) {
+      filename_without_suffix = input_filename.substr(0 , dot_position);
+    }
+    else {
+      filename_without_suffix = input_filename;
     }
 
-    printf("size=%d: %x %x %x %x %x\n", size,
-           data[0], data[1], data[2], data[3], data[4]);
+    output_filename = filename_without_suffix + ".heic";
   }
-}
-
-void test6(std::shared_ptr<HeifPixelImage> pixel_image)
-{
-#if 0
-  // build HEIF file
-
-  HeifContext ctx;
-  ctx.new_empty_heif();
-
-  auto image = ctx.add_new_hvc1_image();
-  //image->set_preencoded_hevc_image(h265data);
-  image->encode_image_as_hevc(pixel_image);
-  ctx.set_primary_image(image);
 
 
-  // write output
+  // ==============================================================================
 
-  StreamWriter writer;
-  ctx.write(writer);
-
-  std::ofstream ostr("out.heic");
-  const auto& data = writer.get_data();
-  ostr.write( (const char*)data.data(), data.size() );
-#endif
-}
+  std::shared_ptr<heif_context> context(heif_context_alloc(),
+                                        [] (heif_context* c) { heif_context_free(c); });
+  if (!context) {
+    fprintf(stderr, "Could not create HEIF context\n");
+    return 1;
+  }
 
 
-void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
-{
-  heif_image pixel_image_c_wrapper;
-  pixel_image_c_wrapper.image = pixel_image;
+  std::shared_ptr<heif_image> image = loadJPEG(input_filename.c_str());
 
 
-  heif_context* context = heif_context_alloc();
 
-  heif_context_new_heic(context);
+  heif_context_new_heic(context.get());
 
 #define MAX_ENCODERS 5
   heif_encoder* encoders[MAX_ENCODERS];
-  int count = heif_context_get_encoders(context, heif_compression_HEVC, nullptr,
+  int count = heif_context_get_encoders(context.get(), heif_compression_HEVC, nullptr,
                                         encoders, MAX_ENCODERS);
 
   if (count>0) {
@@ -587,40 +289,44 @@ void test_c_api(std::shared_ptr<HeifPixelImage> pixel_image)
 
     heif_encoder_init(encoders[0]);
 
-    heif_encoder_set_lossy_quality(encoders[0], 44);
-    heif_encoder_set_lossless(encoders[0], 0);
+    heif_encoder_set_lossy_quality(encoders[0], quality);
+    heif_encoder_set_lossless(encoders[0], lossless);
 
     struct heif_image_handle* handle;
-    heif_error error = heif_context_encode_image(context,
+    heif_error error = heif_context_encode_image(context.get(),
                                                  &handle,
-                                                 &pixel_image_c_wrapper,
+                                                 image.get(),
                                                  encoders[0]);
+    if (error.code != 0) {
+      std::cerr << "Could not read HEIF file: " << error.message << "\n";
+      return 1;
+    }
 
     heif_image_handle_release(handle);
 
     heif_encoder_deinit(encoders[0]);
 
-    error = heif_context_write_to_file(context, "out.heic");
+    error = heif_context_write_to_file(context.get(), output_filename.c_str());
   }
   else {
     fprintf(stderr,"no HEVC encoder available.\n");
   }
 
-  heif_context_free(context);
-}
 
+  /*
+  struct heif_error err;
+  err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
-int main(int argc, char** argv)
-{
-  //test1();
-  //test2(argv[1]);
-  //test3(argv[1]);
+  if (dump_boxes) {
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+    return 0;
+  }
 
-  std::shared_ptr<HeifPixelImage> image = loadJPEG(argv[1]);
-
-  //test6(image);
-
-  test_c_api(image);
+  if (err.code != 0) {
+    std::cerr << "Could not read HEIF file: " << err.message << "\n";
+    return 1;
+  }
+  */
 
   return 0;
 }
