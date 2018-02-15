@@ -8,13 +8,13 @@ HEIF is a new image file format employing HEVC (h.265) image coding for the
 best compression ratios currently possible.
 
 libheif makes use of [libde265](https://github.com/strukturag/libde265) for
-the actual image decoding. Alternative codecs for, e.g., AVC and JPEG can be
+the actual image decoding and x265 for encoding. Alternative codecs for, e.g., AVC and JPEG can be
 provided as plugins.
 
 
 ## Supported features
 
-libheif has support for
+libheif has support for decoding
 * tiled images
 * alpha channels
 * thumbnails
@@ -25,6 +25,9 @@ libheif has support for
 * overlay images
 * plugin interface to add decoders for additional formats (AVC, JPEG)
 
+The encoder supports:
+* lossy compression with adjustable quality
+* lossless compression
 
 ## API
 
@@ -84,6 +87,7 @@ Make sure that you compile and install [libde265](https://github.com/strukturag/
 first, so that the configuration script will find this.
 Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than version in the `master` branch.
+Also install x265 and its development files if you want to use HEIF encoding.
 
 
 ## Compiling to JavaScript
@@ -103,6 +107,7 @@ This is `libheif` running in JavaScript in your browser.
 
 Two example programs are provided in the `examples` directory.
 The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
+`heif-enc` lets you convert JPEG files to HEIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
