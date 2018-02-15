@@ -47,16 +47,16 @@ static struct option long_options[] = {
 
 void show_help(const char* argv0)
 {
-    fprintf(stderr," heif-enc  libheif version: %s\n",heif_get_version());
-    fprintf(stderr,"------------------------------------\n");
-    fprintf(stderr,"usage: heif-enc [options] image.jpeg\n");
-    fprintf(stderr,"\n");
-    fprintf(stderr,"options:\n");
-    fprintf(stderr,"  -h, --help      show help\n");
-    fprintf(stderr,"  -q, --quality   set output quality (0-100) for lossy compression\n");
-    fprintf(stderr,"  -L, --lossless  generate lossless output (-q has no effect)\n");
-    fprintf(stderr,"  -o, --output    output filename (optional)\n");
-    fprintf(stderr,"  -v, --verbose   enable logging output (more -v will increase logging level)\n");
+  std::cerr << " heif-enc  libheif version: " << heif_get_version() << "\n"
+            << "------------------------------------\n"
+            << "usage: heif-enc [options] image.jpeg\n"
+            << "\n"
+            << "options:\n"
+            << "  -h, --help      show help\n"
+            << "  -q, --quality   set output quality (0-100) for lossy compression\n"
+            << "  -L, --lossless  generate lossless output (-q has no effect)\n"
+            << "  -o, --output    output filename (optional)\n"
+            << "  -v, --verbose   enable logging output (more -v will increase logging level)\n";
 }
 
 
@@ -75,7 +75,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   FILE * infile;
   if ((infile = fopen(filename, "rb")) == NULL) {
-    fprintf(stderr, "can't open %s\n", filename);
+    std::cerr << "Can't open " << filename << "\n";
     exit(1);
   }
 
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
 
 
   if (quality<0 || quality>100) {
-    fprintf(stderr,"Invalid quality factor. Must be between 0 and 100.\n");
+    std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
     return 5;
   }
 
@@ -282,7 +282,7 @@ int main(int argc, char** argv)
   std::shared_ptr<heif_context> context(heif_context_alloc(),
                                         [] (heif_context* c) { heif_context_free(c); });
   if (!context) {
-    fprintf(stderr, "Could not create HEIF context\n");
+    std::cerr << "Could not create HEIF context\n";
     return 1;
   }
 
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
 
   if (count>0) {
     if (logging_level>0) {
-      printf("Encoder: %s\n", heif_encoder_get_name(encoders[0]));
+      std::cerr << "Encoder: " << heif_encoder_get_name(encoders[0]) << "\n";
     }
 
     heif_encoder_init(encoders[0]);
@@ -326,24 +326,9 @@ int main(int argc, char** argv)
     error = heif_context_write_to_file(context.get(), output_filename.c_str());
   }
   else {
-    fprintf(stderr,"no HEVC encoder available.\n");
+    std::cerr << "No HEVC encoder available.\n";
   }
 
-
-  /*
-  struct heif_error err;
-  err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
-
-  if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
-    return 0;
-  }
-
-  if (err.code != 0) {
-    std::cerr << "Could not read HEIF file: " << err.message << "\n";
-    return 1;
-  }
-  */
 
   return 0;
 }
