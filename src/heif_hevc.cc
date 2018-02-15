@@ -240,7 +240,7 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
     reader.get_uvlc(&top);
     reader.get_uvlc(&bottom);
 
-    printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
+    //printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
 
     *width -= 2*(left+right);
     *height -= 2*(top+bottom);

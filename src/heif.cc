@@ -801,6 +801,21 @@ struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int en
 }
 
 
+struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, int level)
+{
+  if (encoder->encoder==nullptr) {
+    // TODO: error: encoder not initialized
+  }
+
+  if (encoder->plugin->set_param_logging_level) {
+    encoder->plugin->set_param_logging_level(encoder->encoder, level);
+  }
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             struct heif_image_handle** out_image_handle,
                                             const struct heif_image* input_image,

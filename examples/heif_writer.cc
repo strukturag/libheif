@@ -41,6 +41,7 @@ static struct option long_options[] = {
   {"quality",    required_argument, 0, 'q' },
   {"output",     required_argument, 0, 'o' },
   {"lossless",   no_argument,       0, 'L' },
+  {"verbose",    no_argument,       0, 'v' },
   {0,         0,                 0,  0 }
 };
 
@@ -55,6 +56,7 @@ void show_help(const char* argv0)
     fprintf(stderr,"  -q, --quality   set output quality (0-100) for lossy compression\n");
     fprintf(stderr,"  -L, --lossless  generate lossless output (-q has no effect)\n");
     fprintf(stderr,"  -o, --output    output filename (optional)\n");
+    fprintf(stderr,"  -v, --verbose   enable logging output (more -v will increase logging level)\n");
 }
 
 
@@ -154,7 +156,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
       // read the image
 
-      printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
+      //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
 
       while (cinfo.output_scanline < cinfo.output_height) {
         JOCTET* bufp;
@@ -213,10 +215,11 @@ int main(int argc, char** argv)
   int quality = 50;
   bool lossless = false;
   std::string output_filename;
+  int logging_level = 0;
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:v", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -233,6 +236,9 @@ int main(int argc, char** argv)
     case 'o':
       output_filename = optarg;
       break;
+    case 'v':
+      logging_level++;
+      break;
     }
   }
 
@@ -245,6 +251,14 @@ int main(int argc, char** argv)
   if (quality<0 || quality>100) {
     fprintf(stderr,"Invalid quality factor. Must be between 0 and 100.\n");
     return 5;
+  }
+
+  if (logging_level>0) {
+    logging_level += 2;
+
+    if (logging_level > 4) {
+      logging_level = 4;
+    }
   }
 
   std::string input_filename = argv[optind];
@@ -285,12 +299,15 @@ int main(int argc, char** argv)
                                         encoders, MAX_ENCODERS);
 
   if (count>0) {
-    printf("used encoder: %s\n", heif_encoder_get_name(encoders[0]));
+    if (logging_level>0) {
+      printf("Encoder: %s\n", heif_encoder_get_name(encoders[0]));
+    }
 
     heif_encoder_init(encoders[0]);
 
     heif_encoder_set_lossy_quality(encoders[0], quality);
     heif_encoder_set_lossless(encoders[0], lossless);
+    heif_encoder_set_logging_level(encoders[0], logging_level);
 
     struct heif_image_handle* handle;
     heif_error error = heif_context_encode_image(context.get(),

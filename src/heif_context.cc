@@ -1373,7 +1373,7 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
 
       parse_sps_for_hvcC_configuration(data, size, &config, &width, &height);
 
-      printf("SPS resolution %d %d\n",width,height);
+      //printf("SPS resolution %d %d\n",width,height);
 
       m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
       m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
@@ -1390,8 +1390,7 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
       m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
     }
 
-    printf("size=%d: %x %x %x %x %x\n", size,
-           data[0], data[1], data[2], data[3], data[4]);
+    //printf("size=%d: %x %x %x %x %x\n", size, data[0], data[1], data[2], data[3], data[4]);
   }
 
 

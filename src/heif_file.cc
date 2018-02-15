@@ -513,8 +513,6 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_
 {
   std::vector<Box_ipco::Property> properties;
 
-  printf("append_hvcC_nal_data %d\n",(int)size);
-
   auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
                                                                                        m_ipma_box,
                                                                                        fourcc("hvcC")));

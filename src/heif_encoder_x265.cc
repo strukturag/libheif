@@ -89,6 +89,7 @@ struct heif_error x265_new_encoder(void** enc)
   param->fpsDenom = 1;
   param->sourceWidth = 0;
   param->sourceHeight = 0;
+  param->logLevel = X265_LOG_NONE;
   encoder->params = param;
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
@@ -120,8 +121,6 @@ struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  printf("%p x265 set quality to %d\n",encoder, quality);
-
   encoder->params->bLossless = 1; //rc.rfConstant = 48;
 
   // quality=0   -> crf=50
@@ -138,6 +137,19 @@ struct heif_error x265_set_param_lossless(void* encoder_raw, int enable)
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   encoder->params->bLossless = enable;
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  if (logging<0) logging=0;
+  if (logging>4) logging=4;
+
+  encoder->params->logLevel = logging;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -165,8 +177,6 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   if (encoder->encoder) {
     x265_encoder_close(encoder->encoder);
   }
-
-  printf("%p rfConstant= %f\n", encoder, encoder->params->rc.rfConstant);
 
   encoder->encoder = x265_encoder_open(encoder->params);
 
@@ -264,6 +274,7 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .free_encoder = x265_free_encoder,
   .set_param_quality = x265_set_param_quality,
   .set_param_lossless = x265_set_param_lossless,
+  .set_param_logging_level = x265_set_param_logging_level,
   .encode_image = x265_encode_image,
   .get_compressed_data = x265_get_compressed_data
 };

@@ -617,6 +617,9 @@ struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder*, int quali
 
 struct heif_error heif_encoder_set_lossless(struct heif_encoder*, int enable);
 
+// level should be between 0 (= none) to 4 (= full)
+struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level);
+
 
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
 struct heif_error heif_context_encode_image(struct heif_context*,
@@ -744,6 +747,8 @@ struct heif_encoder_plugin
   struct heif_error (*set_param_quality)(void* encoder, int quality);
 
   struct heif_error (*set_param_lossless)(void* encoder, int lossless);
+
+  struct heif_error (*set_param_logging_level)(void* encoder, int logging);
 
   struct heif_error (*encode_image)(void* encoder, const struct heif_image* image);
 
