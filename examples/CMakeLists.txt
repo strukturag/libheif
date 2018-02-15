@@ -32,6 +32,10 @@ set (heif_info_sources
   heif_info.cc
 )
 
+set (heif_enc_sources
+  heif_enc.cc
+)
+
 if(MSVC)
   set (heif_convert_sources
     ${heif_convert_sources}
@@ -45,6 +49,12 @@ if(MSVC)
     ../extra/getopt.h
     ../extra/getopt_long.c
   )
+  set (heif_enc_sources
+    ${heif_enc_sources}
+    ../extra/getopt.c
+    ../extra/getopt.h
+    ../extra/getopt_long.c
+  )
   include_directories ("../extra")
 endif()
 
@@ -53,3 +63,6 @@ target_link_libraries (heif-convert ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES} ${
 
 add_executable (heif-info ${heif_info_sources})
 target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
+
+add_executable (heif-enc ${heif_enc_sources})
+target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES})
