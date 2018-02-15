@@ -49,6 +49,29 @@ int stride;
 const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 ```
 
+Writing an HEIF file can be done like this:
+
+```C
+heif_context* ctx = heif_context_alloc();
+heif_context_new_heic(ctx);
+
+// get the default encoder
+heif_encoder* encoder;
+heif_context_get_encoders(ctx, heif_compression_HEVC, nullptr, &encoder, 1);
+
+// set the encoder parameters
+heif_encoder_init(encoder);
+heif_encoder_set_lossy_quality(encoder, 50);
+
+// encode the image
+heif_image* image; // code to fill in the image omitted in this example
+heif_context_encode_image(ctx, nullptr, image, encoder);
+
+heif_encoder_deinit(encoder);
+
+heif_context_write_to_file(context, "output.heic");
+```
+
 See the header file `heif.h` for the complete C API.
 
 
