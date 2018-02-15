@@ -30,13 +30,13 @@ heif_info_SOURCES = heif_info.cc
 
 
 if ! HAVE_VISIBILITY
-bin_PROGRAMS += heif-writer
+bin_PROGRAMS += heif-enc
 
-heif_writer_DEPENDENCIES = ../src/libheif.la
-heif_writer_CXXFLAGS = -I../src $(libjpeg_CFLAGS)
-heif_writer_LDFLAGS =
-heif_writer_LDADD = ../src/libheif.la $(x265_LIBS) $(libjpeg_LIBS)
-heif_writer_SOURCES = heif_writer.cc
+heif_enc_DEPENDENCIES = ../src/libheif.la
+heif_enc_CXXFLAGS = -I../src $(libjpeg_CFLAGS)
+heif_enc_LDFLAGS =
+heif_enc_LDADD = ../src/libheif.la $(libjpeg_LIBS)
+heif_enc_SOURCES = heif_enc.cc
 endif
 
 EXTRA_DIST = \
