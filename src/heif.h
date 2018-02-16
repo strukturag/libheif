@@ -587,41 +587,53 @@ void heif_image_release(const struct heif_image*);
 // ====================================================================================================
 //  Encoding API
 
+LIBHEIF_API
 void heif_context_new_heic(struct heif_context*);
 
+LIBHEIF_API
 struct heif_error heif_context_write_to_file(struct heif_context*,
                                              const char* filename);
 
 struct heif_encoder;
 struct heif_encoder_param;
 
+LIBHEIF_API
 int heif_context_get_encoders(struct heif_context*,
                               enum heif_compression_format format,
                               const char* name,
                               struct heif_encoder** out_encoders,
                               int count);
 
+LIBHEIF_API
 const char* heif_encoder_get_name(struct heif_encoder*);
 
+LIBHEIF_API
 struct heif_error heif_encoder_init(struct heif_encoder*);
 
+LIBHEIF_API
 void heif_encoder_deinit(struct heif_encoder*);
 
+LIBHEIF_API
 struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder*);
 
+LIBHEIF_API
 void heif_encoder_release_param(struct heif_encoder_param*);
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
+LIBHEIF_API
 struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder*, int quality);
 
+LIBHEIF_API
 struct heif_error heif_encoder_set_lossless(struct heif_encoder*, int enable);
 
 // level should be between 0 (= none) to 4 (= full)
+LIBHEIF_API
 struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level);
 
 
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
+LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_image_handle** out_image_handle,
                                             const struct heif_image* image,
