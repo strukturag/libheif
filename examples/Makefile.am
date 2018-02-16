@@ -2,6 +2,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 bin_PROGRAMS = \
   heif-convert \
+  heif-enc \
   heif-info
 
 heif_convert_DEPENDENCIES = ../src/libheif.la
@@ -28,15 +29,15 @@ heif_info_LDFLAGS =
 heif_info_LDADD = ../src/libheif.la
 heif_info_SOURCES = heif_info.cc
 
-
-if ! HAVE_VISIBILITY
-bin_PROGRAMS += heif-enc
-
 heif_enc_DEPENDENCIES = ../src/libheif.la
-heif_enc_CXXFLAGS = -I../src $(libjpeg_CFLAGS)
+heif_enc_CXXFLAGS = -I../src
 heif_enc_LDFLAGS =
-heif_enc_LDADD = ../src/libheif.la $(libjpeg_LIBS)
+heif_enc_LDADD = ../src/libheif.la
 heif_enc_SOURCES = heif_enc.cc
+
+if HAVE_LIBJPEG
+heif_enc_CXXFLAGS += $(libjpeg_CFLAGS)
+heif_enc_LDADD += $(libjpeg_LIBS)
 endif
 
 EXTRA_DIST = \
