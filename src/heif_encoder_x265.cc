@@ -121,8 +121,6 @@ struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  encoder->params->bLossless = 1; //rc.rfConstant = 48;
-
   // quality=0   -> crf=50
   // quality=50  -> crf=25
   // quality=100 -> crf=0
