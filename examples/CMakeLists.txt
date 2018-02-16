@@ -65,4 +65,4 @@ add_executable (heif-info ${heif_info_sources})
 target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
 
 add_executable (heif-enc ${heif_enc_sources})
-target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES})
+target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES})
