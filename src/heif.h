@@ -597,15 +597,17 @@ struct heif_error heif_context_write_to_file(struct heif_context*,
 struct heif_encoder;
 struct heif_encoder_param;
 
+// Get a list of encoders. You can filter the encoders by compression format and name.
+// Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 LIBHEIF_API
 int heif_context_get_encoders(struct heif_context*,
-                              enum heif_compression_format format,
-                              const char* name,
+                              enum heif_compression_format format_filter,
+                              const char* name_filter,
                               struct heif_encoder** out_encoders,
                               int count);
 
 LIBHEIF_API
-const char* heif_encoder_get_name(struct heif_encoder*);
+const char* heif_encoder_get_name(const struct heif_encoder*);
 
 LIBHEIF_API
 struct heif_error heif_encoder_init(struct heif_encoder*);

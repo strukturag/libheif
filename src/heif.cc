@@ -737,30 +737,20 @@ int heif_context_get_encoders(struct heif_context* ctx,
 }
 
 
-const char* heif_encoder_get_name(struct heif_encoder* encoder)
+const char* heif_encoder_get_name(const struct heif_encoder* encoder)
 {
   return encoder->plugin->get_plugin_name();
 }
 
 struct heif_error heif_encoder_init(struct heif_encoder* encoder)
 {
-  if (encoder->encoder == nullptr) {
-    struct heif_error error = encoder->plugin->new_encoder(&encoder->encoder);
-    // TODO: error handling
-    return error;
-  }
-
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return encoder->alloc();
 }
 
 
 void heif_encoder_deinit(struct heif_encoder* encoder)
 {
-  if (encoder->encoder) {
-    encoder->plugin->free_encoder(encoder->encoder);
-    encoder->encoder = nullptr;
-  }
+  encoder->release();
 }
 
 

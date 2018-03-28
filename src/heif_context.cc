@@ -53,6 +53,33 @@
 using namespace heif;
 
 
+heif_encoder::~heif_encoder()
+{
+  release();
+}
+
+void heif_encoder::release()
+{
+  if (encoder) {
+    plugin->free_encoder(encoder);
+    encoder = nullptr;
+  }
+}
+
+
+struct heif_error heif_encoder::alloc()
+{
+  if (encoder == nullptr) {
+    struct heif_error error = plugin->new_encoder(&encoder);
+    // TODO: error handling
+    return error;
+  }
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
 static int32_t readvec_signed(const std::vector<uint8_t>& data,int& ptr,int len)
 {
   const uint32_t high_bit = 0x80<<((len-1)*8);

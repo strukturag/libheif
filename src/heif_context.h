@@ -32,6 +32,11 @@
 
 struct heif_encoder
 {
+  ~heif_encoder();
+
+  struct heif_error alloc();
+  void release();
+
   const struct heif_encoder_plugin* plugin;
   void* encoder;
 };
