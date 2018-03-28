@@ -299,14 +299,13 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
   int x,y;
   for (y=0;y<m_height;y++) {
     for (x=0;x<m_width;x++) {
-      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] - 16);
-      float uv = static_cast<float>(in_cb[y/2*in_cb_stride + x/2] - 128);
-      float vv = static_cast<float>(in_cr[y/2*in_cr_stride + x/2] - 128);
+      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] );
+      float cb = static_cast<float>(in_cb[y/2*in_cb_stride + x/2]-128);
+      float cr = static_cast<float>(in_cr[y/2*in_cr_stride + x/2]-128);
 
-      float y_val = 1.164f * yv;
-      out_r[y*out_r_stride + x] = clip(y_val + 1.596f * vv);
-      out_g[y*out_g_stride + x] = clip(y_val - 0.813f * vv - 0.391f * uv);
-      out_b[y*out_b_stride + x] = clip(y_val + 2.018f * uv);
+      out_r[y*out_r_stride + x] = clip(yv + 1.402f*cr);
+      out_g[y*out_g_stride + x] = clip(yv - 0.344136f*cb - 0.714136f*cr);
+      out_b[y*out_b_stride + x] = clip(yv + 1.772f*cb);
     }
 
     if (has_alpha) {
@@ -347,14 +346,13 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB24() cons
   int x,y;
   for (y=0;y<m_height;y++) {
     for (x=0;x<m_width;x++) {
-      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] - 16);
-      float uv = static_cast<float>(in_cb[y/2*in_cb_stride + x/2] - 128);
-      float vv = static_cast<float>(in_cr[y/2*in_cr_stride + x/2] - 128);
+      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] );
+      float cb = static_cast<float>(in_cb[y/2*in_cb_stride + x/2]-128);
+      float cr = static_cast<float>(in_cr[y/2*in_cr_stride + x/2]-128);
 
-      float y_val = 1.164f * yv;
-      out_p[y*out_p_stride + 3*x + 0] = clip(y_val + 1.596f * vv);
-      out_p[y*out_p_stride + 3*x + 1] = clip(y_val - 0.813f * vv - 0.391f * uv);
-      out_p[y*out_p_stride + 3*x + 2] = clip(y_val + 2.018f * uv);
+      out_p[y*out_p_stride + 3*x + 0] = clip(yv + 1.402f*cr);
+      out_p[y*out_p_stride + 3*x + 1] = clip(yv - 0.344136f*cb - 0.714136f*cr);
+      out_p[y*out_p_stride + 3*x + 2] = clip(yv + 1.772f*cb);
     }
   }
 
@@ -396,14 +394,13 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB32() cons
   int x,y;
   for (y=0;y<m_height;y++) {
     for (x=0;x<m_width;x++) {
-      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] - 16);
-      float uv = static_cast<float>(in_cb[y/2*in_cb_stride + x/2] - 128);
-      float vv = static_cast<float>(in_cr[y/2*in_cr_stride + x/2] - 128);
+      float yv = static_cast<float>(in_y [y  *in_y_stride  + x]);
+      float cb = static_cast<float>(in_cb[y/2*in_cb_stride + x/2]-128);
+      float cr = static_cast<float>(in_cr[y/2*in_cr_stride + x/2]-128);
 
-      float y_val = 1.164f * yv;
-      out_p[y*out_p_stride + 4*x + 0] = clip(y_val + 1.596f * vv);
-      out_p[y*out_p_stride + 4*x + 1] = clip(y_val - 0.813f * vv - 0.391f * uv);
-      out_p[y*out_p_stride + 4*x + 2] = clip(y_val + 2.018f * uv);
+      out_p[y*out_p_stride + 4*x + 0] = clip(yv + 1.402f*cr);
+      out_p[y*out_p_stride + 4*x + 1] = clip(yv - 0.344136f*cb - 0.714136f*cr);
+      out_p[y*out_p_stride + 4*x + 2] = clip(yv + 1.772f*cb);
 
       if (with_alpha) {
         out_p[y*out_p_stride + 4*x + 3] = in_a[y*in_a_stride + x];
@@ -587,7 +584,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB24_to_YCbCr420() cons
       uint8_t g = in_p[y*in_stride + x*3 +1];
       uint8_t b = in_p[y*in_stride + x*3 +2];
       out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 - r*0.168736f - g*0.331264f + b*0.5f);
-      out_cr[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*0.5f - g*0.418688f + b*0.081312f);
+      out_cr[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*0.5f - g*0.418688f - b*0.081312f);
     }
   }
 
