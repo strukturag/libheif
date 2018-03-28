@@ -162,9 +162,10 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
 {
   std::shared_ptr<HeifPixelImage> out_img;
 
+
   if (target_colorspace != get_colorspace()) {
 
-    // YCbCr -> RGB
+    // --- YCbCr -> RGB
 
     if (get_colorspace() == heif_colorspace_YCbCr &&
         target_colorspace == heif_colorspace_RGB) {
@@ -205,25 +206,33 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
         out_img = convert_mono_to_RGB(4);
       }
     }
-  }
 
 
-  if (target_colorspace == get_colorspace() &&
-      target_colorspace == heif_colorspace_RGB) {
-    if (get_chroma_format() == heif_chroma_444 &&
-        target_chroma == heif_chroma_interleaved_24bit) {
-      out_img = convert_RGB_to_RGB24();
-    }
-  }
+    // --- RGB -> YCbCr
 
-
-  if (target_colorspace == get_colorspace() &&
-      target_colorspace == heif_colorspace_YCbCr) {
-    if (get_chroma_format() == heif_chroma_monochrome &&
+    if (get_chroma_format() == heif_chroma_interleaved_24bit &&
         target_chroma == heif_chroma_420) {
-      out_img = convert_mono_to_YCbCr420();
+      out_img = convert_RGB24_to_YCbCr420();
     }
   }
+  else { // same colorspace
+
+    if (target_colorspace == heif_colorspace_RGB) {
+      if (get_chroma_format() == heif_chroma_444 &&
+          target_chroma == heif_chroma_interleaved_24bit) {
+        out_img = convert_RGB_to_RGB24();
+      }
+    }
+
+
+    if (target_colorspace == heif_colorspace_YCbCr) {
+      if (get_chroma_format() == heif_chroma_monochrome &&
+          target_chroma == heif_chroma_420) {
+        out_img = convert_mono_to_YCbCr420();
+      }
+    }
+  }
+
 
   if (!out_img) {
     // TODO: unsupported conversion
@@ -531,6 +540,54 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_mono_to_RGB(int bpp) con
         out_p[y*out_p_stride + 4*x + 2] = v;
         out_p[y*out_p_stride + 4*x + 3] = 0xFF;
       }
+    }
+  }
+
+  return outimg;
+}
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB24_to_YCbCr420() const
+{
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(m_width, m_height, heif_colorspace_YCbCr, heif_chroma_420);
+
+  int chroma_width  = (m_width+1)/2;
+  int chroma_height = (m_height+1)/2;
+
+  outimg->add_plane(heif_channel_Y,  m_width, m_height, 8);
+  outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8);
+  outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, 8);
+
+  uint8_t *out_cb,*out_cr,*out_y;
+  int out_cb_stride=0, out_cr_stride=0, out_y_stride=0;
+
+  const uint8_t *in_p;
+  int in_stride=0;
+
+  in_p  = get_plane(heif_channel_interleaved,  &in_stride);
+
+  out_y  = outimg->get_plane(heif_channel_Y,  &out_y_stride);
+  out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
+  out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
+
+  for (int y=0;y<m_height;y++) {
+    for (int x=0;x<m_width;x++) {
+      uint8_t r = in_p[y*in_stride + x*3 +0];
+      uint8_t g = in_p[y*in_stride + x*3 +1];
+      uint8_t b = in_p[y*in_stride + x*3 +2];
+      out_y[y*out_y_stride + x] = clip(r*0.299f + g*0.587f + b*0.114f);
+    }
+  }
+
+  for (int y=0;y<m_height;y+=2) {
+    for (int x=0;x<m_width;x+=2) {
+      uint8_t r = in_p[y*in_stride + x*3 +0];
+      uint8_t g = in_p[y*in_stride + x*3 +1];
+      uint8_t b = in_p[y*in_stride + x*3 +2];
+      out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 - r*0.168736f - g*0.331264f + b*0.5f);
+      out_cr[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*0.5f - g*0.418688f + b*0.081312f);
     }
   }
 

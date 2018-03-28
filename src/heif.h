@@ -762,6 +762,8 @@ struct heif_encoder_plugin
 
   struct heif_error (*set_param_logging_level)(void* encoder, int logging);
 
+  void (*query_input_colorspace)(enum heif_colorspace* colorspace, enum heif_chroma* chroma);
+
   struct heif_error (*encode_image)(void* encoder, const struct heif_image* image);
 
 
