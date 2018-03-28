@@ -313,7 +313,7 @@ int main(int argc, char** argv)
       std::cerr << "Encoder: " << heif_encoder_get_name(encoders[0]) << "\n";
     }
 
-    heif_encoder_init(encoders[0]);
+    heif_encoder_start(encoders[0]);
 
     heif_encoder_set_lossy_quality(encoders[0], quality);
     heif_encoder_set_lossless(encoders[0], lossless);
@@ -321,17 +321,15 @@ int main(int argc, char** argv)
 
     struct heif_image_handle* handle;
     heif_error error = heif_context_encode_image(context.get(),
-                                                 &handle,
                                                  image.get(),
-                                                 encoders[0]);
+                                                 encoders[0],
+                                                 &handle);
     if (error.code != 0) {
       std::cerr << "Could not read HEIF file: " << error.message << "\n";
       return 1;
     }
 
     heif_image_handle_release(handle);
-
-    heif_encoder_deinit(encoders[0]);
 
     error = heif_context_write_to_file(context.get(), output_filename.c_str());
   }

@@ -609,17 +609,21 @@ int heif_context_get_encoders(struct heif_context*,
 LIBHEIF_API
 const char* heif_encoder_get_name(const struct heif_encoder*);
 
+// Start using a specific encoder. You have to call this before setting any
+// parameters and before encoding an image.
 LIBHEIF_API
-struct heif_error heif_encoder_init(struct heif_encoder*);
+struct heif_error heif_encoder_start(struct heif_encoder*);
 
+// Stop using the encoder. Settings may be reset.
+// The encoder will also be stopped automatically when the encoder's context is released.
 LIBHEIF_API
-void heif_encoder_deinit(struct heif_encoder*);
+void heif_encoder_stop(struct heif_encoder*);
 
-LIBHEIF_API
-struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder*);
+//LIBHEIF_API
+//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder*);
 
-LIBHEIF_API
-void heif_encoder_release_param(struct heif_encoder_param*);
+//LIBHEIF_API
+//void heif_encoder_release_param(struct heif_encoder_param*);
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
@@ -637,9 +641,9 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
-                                            struct heif_image_handle** out_image_handle,
                                             const struct heif_image* image,
-                                            struct heif_encoder* encoder);
+                                            struct heif_encoder* encoder,
+                                            struct heif_image_handle** out_image_handle);
 
 
 // ====================================================================================================
@@ -658,7 +662,7 @@ LIBHEIF_API
 struct heif_error heif_image_create(int width, int height,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma,
-                                    struct heif_image** image);
+                                    struct heif_image** out_image);
 
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,

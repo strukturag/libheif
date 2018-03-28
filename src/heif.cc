@@ -742,26 +742,28 @@ const char* heif_encoder_get_name(const struct heif_encoder* encoder)
   return encoder->plugin->get_plugin_name();
 }
 
-struct heif_error heif_encoder_init(struct heif_encoder* encoder)
+struct heif_error heif_encoder_start(struct heif_encoder* encoder)
 {
   return encoder->alloc();
 }
 
 
-void heif_encoder_deinit(struct heif_encoder* encoder)
+void heif_encoder_stop(struct heif_encoder* encoder)
 {
   encoder->release();
 }
 
 
-struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder* encoder)
-{
-  return nullptr;
-}
+//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder* encoder)
+//{
+//  return nullptr;
+//}
 
-void heif_encoder_release_param(struct heif_encoder_param* param)
-{
-}
+
+//void heif_encoder_release_param(struct heif_encoder_param* param)
+//{
+//}
+
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
@@ -808,9 +810,9 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, i
 
 
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
-                                            struct heif_image_handle** out_image_handle,
                                             const struct heif_image* input_image,
-                                            struct heif_encoder* encoder)
+                                            struct heif_encoder* encoder,
+                                            struct heif_image_handle** out_image_handle)
 {
   auto image = ctx->context->add_new_hvc1_image();
 
