@@ -653,7 +653,7 @@ struct heif_error heif_context_encode_image(struct heif_context*,
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
 
 
-// --- heif_image allocation (you probably only need these functions if you are writing a plugin)
+// --- heif_image allocation
 
 // Create a new image of the specified resolution and colorspace.
 // Note: no memory for the actual image data is reserved yet. You have to use
