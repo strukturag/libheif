@@ -620,6 +620,8 @@ struct heif_error heif_encoder_start(struct heif_encoder*);
 
 // Stop using the encoder. Settings may be reset.
 // The encoder will also be stopped automatically when the encoder's context is released.
+// You might want to use this, for example, when the heif_context stays alive, but you
+// want to change the encoder and release all memory allocated by the old encoder.
 LIBHEIF_API
 void heif_encoder_stop(struct heif_encoder*);
 
