@@ -10,13 +10,14 @@ if [ -z "$VERSION" ] || [ -z "$TARGET" ]; then
 fi
 
 LIBSTDC_BASE=http://de.archive.ubuntu.com/ubuntu/pool/main/g/gcc-5
-LIBSTDC_VERSION=5.4.0-6ubuntu1~16.04.6
 EMSDK_DOWNLOAD=https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
 CODENAME=$(/usr/bin/lsb_release --codename --short)
-if [ "$CODENAME" = "trusty" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21" ]; then
+if [ "$CODENAME" = "trusty" ] && [ -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21" ]; then
+    CONTENTS=$(curl --location $LIBSTDC_BASE)
+    LIBSTDC_VERSION=$(echo $CONTENTS | sed 's|.*libstdc++6_\([^_]*\)_amd64\.deb.*|\1|g')
     TMPDIR=$(mktemp --directory)
-    echo "Installing newer version of libstdc++6 to fix Emscripten ..."
+    echo "Installing libstdc++6 $LIBSTDC_VERSION to fix Emscripten ..."
     echo "Extracting in $TMPDIR ..."
     curl "${LIBSTDC_BASE}/libstdc++6_${LIBSTDC_VERSION}_amd64.deb" > "$TMPDIR/libstdc++6_${LIBSTDC_VERSION}_amd64.deb"
     dpkg -x "$TMPDIR/libstdc++6_${LIBSTDC_VERSION}_amd64.deb" "$TMPDIR"
