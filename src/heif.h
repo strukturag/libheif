@@ -462,9 +462,13 @@ enum heif_chroma {
   heif_chroma_420=1,
   heif_chroma_422=2,
   heif_chroma_444=3,
-  heif_chroma_interleaved_24bit=10,
-  heif_chroma_interleaved_32bit=11
+  heif_chroma_interleaved_RGB =10,
+  heif_chroma_interleaved_RGBA=11
 };
+
+#define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
+#define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
+
 
 enum heif_colorspace {
   heif_colorspace_undefined=99,
