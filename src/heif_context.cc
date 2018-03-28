@@ -417,7 +417,13 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
 const struct heif_encoder_plugin* HeifContext::get_encoder(enum heif_compression_format type) const
 {
-  return get_filtered_encoders(type, nullptr)[0]->plugin;
+  auto filtered_encoders = get_filtered_encoders(type, nullptr);
+  if (filtered_encoders.size()>0) {
+    return filtered_encoders[0]->plugin;
+  }
+  else {
+    return nullptr;
+  }
 }
 
 
