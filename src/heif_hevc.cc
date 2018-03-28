@@ -172,10 +172,40 @@ Error heif::decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 }
 
 
+static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
+{
+  std::vector<uint8_t> out_data;
+
+  for (size_t i=0;i<size;i++) {
+    if (i+2<size &&
+        sps[i  ] == 0 &&
+        sps[i+1] == 0 &&
+        sps[i+2] == 3) {
+      out_data.push_back(0);
+      out_data.push_back(0);
+      i+=2;
+    }
+    else {
+      out_data.push_back(sps[i]);
+    }
+  }
+
+  return out_data;
+}
+
+
 Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
                                              Box_hvcC::configuration* config,
                                              int* width, int* height)
 {
+  // remove start-code emulation bytes from SPS header stream
+
+  std::vector<uint8_t> sps_no_emul = remove_start_code_emulation(sps, size);
+
+  sps = sps_no_emul.data();
+  size = sps_no_emul.size();
+
+
   BitReader reader(sps, (int)size);
 
   // skip NAL header
@@ -201,17 +231,22 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   config->general_level_idc = (uint8_t)reader.get_bits(8);
 
-  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
-    bool layer_profile_present = reader.get_bits(1);
-    bool layer_level_present = reader.get_bits(1);
+  std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
+  std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
 
-    if (layer_profile_present) {
+  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
+    layer_profile_present[i] = reader.get_bits(1);
+    layer_level_present[i] = reader.get_bits(1);
+  }
+
+  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
+    if (layer_profile_present[i]) {
       reader.skip_bits(2+1+5);
       reader.skip_bits(32);
       reader.skip_bits(16);
     }
 
-    if (layer_level_present) {
+    if (layer_level_present[i]) {
       reader.skip_bits(8);
     }
   }

@@ -1329,7 +1329,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 }
 
 
-Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
+Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                                struct heif_encoder* encoder)
 {
   /*
@@ -1346,8 +1346,19 @@ Error HeifContext::Image::encode_image_as_hevc(const std::shared_ptr<HeifPixelIm
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
 
 
-  //void* encoder;
-  //encoder_plugin->new_encoder(&encoder);
+  // --- check whether we have to convert the image color space
+
+  heif_colorspace colorspace = image->get_colorspace();
+  heif_chroma chroma = image->get_chroma_format();
+  encoder->plugin->query_input_colorspace(&colorspace, &chroma);
+
+  if (colorspace != image->get_colorspace() ||
+      chroma != image->get_chroma_format()) {
+
+    image = image->convert_colorspace(colorspace, chroma);
+  }
+
+
 
   heif_image c_api_image;
   c_api_image.image = image;
