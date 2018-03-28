@@ -153,6 +153,14 @@ struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
   return err;
 }
 
+
+void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
+{
+  *colorspace = heif_colorspace_YCbCr;
+  *chroma = heif_chroma_420;
+}
+
+
 struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
@@ -273,6 +281,7 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .set_param_quality = x265_set_param_quality,
   .set_param_lossless = x265_set_param_lossless,
   .set_param_logging_level = x265_set_param_logging_level,
+  .query_input_colorspace = x265_query_input_colorspace,
   .encode_image = x265_encode_image,
   .get_compressed_data = x265_get_compressed_data
 };
