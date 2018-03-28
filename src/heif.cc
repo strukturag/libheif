@@ -691,11 +691,12 @@ void heif_image_free_data_chunk(heif_image* img, int chunk_index);
 */
 
 
-
-void heif_context_new_heic(struct heif_context* ctx)
+/*
+void heif_context_reset(struct heif_context* ctx)
 {
-  ctx->context->new_empty_heif();
+  ctx->context->reset_to_empty_heif();
 }
+*/
 
 
 struct heif_error heif_context_write_to_file(struct heif_context* ctx,

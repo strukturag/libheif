@@ -299,6 +299,8 @@ HeifContext::HeifContext()
 #if HAVE_X265
   register_encoder(get_encoder_plugin_x265());
 #endif
+
+  reset_to_empty_heif();
 }
 
 HeifContext::~HeifContext()
@@ -327,7 +329,7 @@ Error HeifContext::read_from_memory(const void* data, size_t size)
   return interpret_heif_file();
 }
 
-void HeifContext::new_empty_heif()
+void HeifContext::reset_to_empty_heif()
 {
   m_heif_file = std::make_shared<HeifFile>();
   m_heif_file->new_empty_file();

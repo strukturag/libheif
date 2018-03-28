@@ -303,8 +303,6 @@ int main(int argc, char** argv)
 
 
 
-  heif_context_new_heic(context.get());
-
 #define MAX_ENCODERS 5
   heif_encoder* encoders[MAX_ENCODERS];
   int count = heif_context_get_encoders(context.get(), heif_compression_HEVC, nullptr,

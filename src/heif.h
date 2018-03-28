@@ -587,8 +587,8 @@ void heif_image_release(const struct heif_image*);
 // ====================================================================================================
 //  Encoding API
 
-LIBHEIF_API
-void heif_context_new_heic(struct heif_context*);
+//LIBHEIF_API
+//void heif_context_reset(struct heif_context*);
 
 LIBHEIF_API
 struct heif_error heif_context_write_to_file(struct heif_context*,

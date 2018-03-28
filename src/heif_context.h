@@ -191,7 +191,7 @@ namespace heif {
     // Create all boxes necessary for an empty HEIF file.
     // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but
     // contain no valid data yet.
-    void new_empty_heif();
+    void reset_to_empty_heif();
 
     std::shared_ptr<Image> add_new_hvc1_image();
 
