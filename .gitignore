@@ -27,6 +27,7 @@ m4/libtool.m4
 missing
 out.bin
 src/box-fuzzer
+src/encoder-fuzzer
 src/file-fuzzer
 src/heif-version.h
 stamp-h1

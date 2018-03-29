@@ -81,10 +81,14 @@ bin_PROGRAMS += box-fuzzer
 if HAVE_LIBDE265
 bin_PROGRAMS += file-fuzzer
 endif
+if HAVE_X265
+bin_PROGRAMS += encoder-fuzzer
+endif
 else
 noinst_LIBRARIES = libfuzzers.a
 libfuzzers_a_SOURCES = \
   box-fuzzer.cc \
+  encoder-fuzzer \
   file-fuzzer.cc
 endif
 
@@ -93,6 +97,12 @@ box_fuzzer_CXXFLAGS =
 box_fuzzer_LDFLAGS = -fsanitize=fuzzer
 box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 box_fuzzer_SOURCES = $(libheif_la_SOURCES) box-fuzzer.cc
+
+encoder_fuzzer_DEPENDENCIES =
+encoder_fuzzer_CXXFLAGS =
+encoder_fuzzer_LDFLAGS = -fsanitize=fuzzer
+encoder_fuzzer_LDADD = $(ADDITIONAL_LIBS)
+encoder_fuzzer_SOURCES = $(libheif_la_SOURCES) encoder-fuzzer.cc
 
 file_fuzzer_DEPENDENCIES =
 file_fuzzer_CXXFLAGS =
