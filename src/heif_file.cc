@@ -562,3 +562,13 @@ void HeifFile::add_iref_reference(uint32_t type, heif_item_id from,
 
   m_iref_box->add_reference(type,from,to);
 }
+
+void HeifFile::set_auxC_property(heif_item_id id, std::string type)
+{
+  auto auxC = std::make_shared<Box_auxC>();
+  auxC->set_aux_type(type);
+
+  int index = m_ipco_box->append_child_box(auxC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+}

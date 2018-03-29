@@ -109,8 +109,10 @@ namespace heif {
 
     void set_primary_item_id(heif_item_id id);
 
-    void add_iref_reference(uint32_t type, heif_item_id from,
+    void add_iref_reference(heif_item_id from, uint32_t type,
                             std::vector<heif_item_id> to);
+
+    void set_auxC_property(heif_item_id id, std::string type);
 
   private:
 #if ENABLE_PARALLEL_TILE_DECODING

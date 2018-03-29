@@ -498,6 +498,7 @@ namespace heif {
 
   class Box_auxC : public Box {
   public:
+  Box_auxC() { set_short_type(fourcc("auxC")); set_is_full_box(true); }
   Box_auxC(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string get_aux_type() const { return m_aux_type; }
@@ -590,7 +591,7 @@ namespace heif {
     uint32_t get_reference_type(heif_item_id itemID) const;
     std::vector<heif_item_id> get_references(heif_item_id itemID) const;
 
-    void add_reference(uint32_t type, heif_item_id from_id, std::vector<heif_item_id> to_ids);
+    void add_reference(heif_item_id from_id, uint32_t type, std::vector<heif_item_id> to_ids);
 
   protected:
     Error parse(BitstreamRange& range) override;

@@ -1400,14 +1400,17 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   // --- if there is an alpha channel, add it as an additional image
 
-  if (consider_alpha && image->has_channel(heif_channel_Alpha)) {
+  bool fake_alpha = true; // TODO: HACK for testing alpha channel encoding
+
+  if (consider_alpha && fake_alpha) { // && image->has_channel(heif_channel_Alpha)) {
     heif_item_id alpha_image_id;
     Error err = m_heif_context->add_alpha_image(image, &alpha_image_id, encoder);
     if (err) {
       return err;
     }
 
-    m_heif_context->m_heif_file->add_iref_reference(fourcc("auxl"), alpha_image_id, { m_id });
+    m_heif_context->m_heif_file->add_iref_reference(alpha_image_id, fourcc("auxl"), { m_id });
+    m_heif_context->m_heif_file->set_auxC_property(alpha_image_id, "urn:mpeg:hevc:2015:auxid:1");
   }
 
 
