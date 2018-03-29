@@ -363,6 +363,9 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_chroma_420", heif_chroma_420)
     .value("heif_chroma_422", heif_chroma_422)
     .value("heif_chroma_444", heif_chroma_444)
+    .value("heif_chroma_interleaved_RGB", heif_chroma_interleaved_RGB)
+    .value("heif_chroma_interleaved_RGBA", heif_chroma_interleaved_RGBA)
+    // Aliases
     .value("heif_chroma_interleaved_24bit", heif_chroma_interleaved_24bit)
     .value("heif_chroma_interleaved_32bit", heif_chroma_interleaved_32bit)
     ;
