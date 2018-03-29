@@ -8,6 +8,15 @@ lib_LTLIBRARIES += libheif.la
 libheif_ladir = \
         $(includedir)/libheif
 
+ADDITIONAL_LIBS =
+if HAVE_LIBDE265
+ADDITIONAL_LIBS += $(libde265_LIBS)
+endif
+
+if HAVE_X265
+ADDITIONAL_LIBS += $(x265_LIBS)
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -17,7 +26,7 @@ libheif_la_CXXFLAGS = \
   $(libde265_CFLAGS) \
   $(x265_CFLAGS) \
   -DLIBHEIF_EXPORTS
-libheif_la_LIBADD = $(libde265_LIBS) $(x265_LIBS)
+libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
 
@@ -82,19 +91,11 @@ endif
 box_fuzzer_DEPENDENCIES =
 box_fuzzer_CXXFLAGS =
 box_fuzzer_LDFLAGS = -fsanitize=fuzzer
-box_fuzzer_LDADD =
+box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 box_fuzzer_SOURCES = $(libheif_la_SOURCES) box-fuzzer.cc
-
-if HAVE_LIBDE265
-box_fuzzer_LDADD += $(libde265_LIBS)
-endif
 
 file_fuzzer_DEPENDENCIES =
 file_fuzzer_CXXFLAGS =
 file_fuzzer_LDFLAGS = -fsanitize=fuzzer
-file_fuzzer_LDADD =
+file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 file_fuzzer_SOURCES = $(libheif_la_SOURCES) file-fuzzer.cc
-
-if HAVE_LIBDE265
-file_fuzzer_LDADD += $(libde265_LIBS)
-endif
