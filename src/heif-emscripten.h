@@ -345,6 +345,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Null_pointer_argument",heif_suberror_Null_pointer_argument)
     .value("heif_suberror_Nonexisting_image_channel_referenced",heif_suberror_Nonexisting_image_channel_referenced)
     .value("heif_suberror_Unsupported_plugin_version",heif_suberror_Unsupported_plugin_version)
+    .value("heif_suberror_Unsupported_writer_version",heif_suberror_Unsupported_writer_version)
     .value("heif_suberror_Unsupported_codec",heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type",heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version",heif_suberror_Unsupported_data_version)

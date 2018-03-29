@@ -190,6 +190,8 @@ enum heif_suberror_code {
   // The version of the passed plugin is not supported.
   heif_suberror_Unsupported_plugin_version = 2003,
 
+  // The version of the passed writer is not supported.
+  heif_suberror_Unsupported_writer_version = 2004,
 
 
   // --- Unsupported_feature ---
@@ -602,6 +604,22 @@ void heif_image_release(const struct heif_image*);
 LIBHEIF_API
 struct heif_error heif_context_write_to_file(struct heif_context*,
                                              const char* filename);
+
+struct heif_writer {
+  // API version supported by this writer
+  int writer_api_version;
+
+  // --- version 1 functions ---
+  struct heif_error (*write)(struct heif_context* ctx,
+                             const void* data,
+                             size_t size,
+                             void* userdata);
+};
+
+LIBHEIF_API
+struct heif_error heif_context_write(struct heif_context*,
+                                     struct heif_writer* writer,
+                                     void* userdata);
 
 struct heif_encoder;
 struct heif_encoder_param;

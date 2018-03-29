@@ -698,20 +698,44 @@ void heif_context_reset(struct heif_context* ctx)
 }
 */
 
+static struct heif_error heif_file_writer_write(struct heif_context* ctx,
+    const void* data, size_t size, void* userdata) {
+  const char* filename = static_cast<const char*>(userdata);
+
+  std::ofstream ostr(filename);
+  ostr.write(static_cast<const char*>(data), size);
+  // TODO: handle write errors
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
 
 struct heif_error heif_context_write_to_file(struct heif_context* ctx,
                                              const char* filename)
 {
-  StreamWriter writer;
-  ctx->context->write(writer);
+  heif_writer writer;
+  writer.writer_api_version = 1;
+  writer.write = heif_file_writer_write;
+  return heif_context_write(ctx, &writer, (void*)filename);
+}
 
-  std::ofstream ostr(filename);
-  const auto& data = writer.get_data();
-  ostr.write( (const char*)data.data(), data.size() );
 
-  // TODO: handle write errors
+struct heif_error heif_context_write(struct heif_context* ctx,
+                                     struct heif_writer* writer,
+                                     void* userdata)
+{
+  if (!writer) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  } else if (writer->writer_api_version != 1) {
+    Error err(heif_error_Usage_error, heif_suberror_Unsupported_writer_version);
+    return err.error_struct(ctx->context.get());
+  }
 
-  return Error::Ok.error_struct(ctx->context.get());
+  StreamWriter swriter;
+  ctx->context->write(swriter);
+
+  const auto& data = swriter.get_data();
+  return writer->write(ctx, data.data(), data.size(), userdata);
 }
 
 
