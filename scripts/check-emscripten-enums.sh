@@ -38,6 +38,11 @@ for type in $DEFINE_TYPES; do
         API_DEFINES="$API_DEFINES
 $DEFINES"
     fi
+    ALIASES=$(grep "^[ \t]*#define $type" src/heif.h | sed 's|[[:space:]]*#define \([^ \t]*\)[[:space:]]*.*|\1|g')
+    if [ ! -z "$ALIASES" ]; then
+        API_DEFINES="$API_DEFINES
+$ALIASES"
+    fi
 done
 API_DEFINES=$(echo "$API_DEFINES" | sort)
 
