@@ -155,7 +155,8 @@ namespace heif {
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
       Error encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
-                                 struct heif_encoder* encoder);
+                                 struct heif_encoder* encoder,
+                                 struct heif_encoder_options* options);
 
     private:
       HeifContext* m_heif_context;

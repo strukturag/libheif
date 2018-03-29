@@ -52,6 +52,11 @@
 
 using namespace heif;
 
+struct heif_encoder_options {
+  struct heif_encoder* encoder;
+  struct heif_encoder_options* options;
+};
+
 const char *heif_get_version(void) {
   return (LIBHEIF_VERSION);
 }
@@ -766,108 +771,64 @@ const char* heif_encoder_get_name(const struct heif_encoder* encoder)
   return encoder->plugin->get_plugin_name();
 }
 
-struct heif_error heif_encoder_start(struct heif_encoder* encoder)
-{
-  if (!encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+
+struct heif_encoder_options* heif_encoder_options_alloc(struct heif_encoder* encoder) {
+  struct heif_encoder_options* options = new heif_encoder_options();
+  options->encoder = encoder;
+  options->options = encoder->plugin->alloc_options(encoder->encoder);
+  if (!options->options) {
+    delete(options);
+    return nullptr;
   }
 
-  return encoder->alloc();
+  return options;
 }
 
 
-void heif_encoder_stop(struct heif_encoder* encoder)
-{
-  if (encoder) {
-    encoder->release();
-  }
+void heif_encoder_options_free(struct heif_encoder_options* options) {
+  options->encoder->plugin->free_options(options->encoder->encoder,
+      options->options);
+  delete options;
 }
 
 
-//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder* encoder)
-//{
-//  return nullptr;
-//}
-
-
-//void heif_encoder_release_param(struct heif_encoder_param* param)
-//{
-//}
-
-
-// Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
-// encoder dependent.
-struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
-                                                int quality)
-{
-  if (!encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
-  } else if (!encoder->encoder) {
-    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
-  }
-
-  encoder->plugin->set_param_quality(encoder->encoder, quality);
-
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
-}
-
-
-struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int enable)
-{
-  if (!encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
-  } else if (!encoder->encoder) {
-    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
-  }
-
-  encoder->plugin->set_param_lossless(encoder->encoder, enable);
-
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
-}
-
-
-struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, int level)
-{
-  if (!encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
-  } else if (!encoder->encoder) {
-    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
-  }
-
-  if (encoder->plugin->set_param_logging_level) {
-    encoder->plugin->set_param_logging_level(encoder->encoder, level);
-  }
-
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+struct heif_error heif_encoder_options_set_int(struct heif_encoder_options* options,
+                                               const char* name,
+                                               int value) {
+  return options->encoder->plugin->set_option_int(options->encoder->encoder,
+      options->options, name, value);
 }
 
 
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             const struct heif_image* input_image,
                                             struct heif_encoder* encoder,
+                                            struct heif_encoder_options* options,
                                             struct heif_image_handle** out_image_handle)
 {
-  if (!encoder) {
+  if (!encoder || !options) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
+  if (options->encoder != encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Options_for_other_encoder).error_struct(ctx->context.get());
+  }
+
   std::shared_ptr<HeifContext::Image> image;
   Error error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+  struct heif_error err;
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
+      err = encoder->alloc();
+      if (err.code != heif_error_Ok) {
+        return err;
+      }
+
       image = ctx->context->add_new_hvc1_image();
-      error = image->encode_image_as_hevc(input_image->image, encoder);
+      error = image->encode_image_as_hevc(input_image->image, encoder, options->options);
+      encoder->release();
       break;
 
     default:
@@ -884,6 +845,6 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     (*out_image_handle)->image = image;
   }
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
 }

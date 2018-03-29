@@ -212,7 +212,7 @@ enum heif_suberror_code {
 
   // --- Encoder_plugin_error --
 
-  heif_suberror_Encoder_not_started = 4000
+  heif_suberror_Options_for_other_encoder = 4000
 };
 
 
@@ -622,7 +622,7 @@ struct heif_error heif_context_write(struct heif_context*,
                                      void* userdata);
 
 struct heif_encoder;
-struct heif_encoder_param;
+struct heif_encoder_options;
 
 // Get a list of encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
@@ -636,42 +636,30 @@ int heif_context_get_encoders(struct heif_context*,
 LIBHEIF_API
 const char* heif_encoder_get_name(const struct heif_encoder*);
 
-// Start using a specific encoder. You have to call this before setting any
-// parameters and before encoding an image.
 LIBHEIF_API
-struct heif_error heif_encoder_start(struct heif_encoder*);
-
-// Stop using the encoder. Settings may be reset.
-// The encoder will also be stopped automatically when the encoder's context is released.
-// You might want to use this, for example, when the heif_context stays alive, but you
-// want to change the encoder and release all memory allocated by the old encoder.
-LIBHEIF_API
-void heif_encoder_stop(struct heif_encoder*);
-
-//LIBHEIF_API
-//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder*);
-
-//LIBHEIF_API
-//void heif_encoder_release_param(struct heif_encoder_param*);
-
-// Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
-// encoder dependent.
-LIBHEIF_API
-struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder*, int quality);
+struct heif_encoder_options* heif_encoder_options_alloc(struct heif_encoder*);
 
 LIBHEIF_API
-struct heif_error heif_encoder_set_lossless(struct heif_encoder*, int enable);
+void heif_encoder_options_free(struct heif_encoder_options*);
 
+// Set a 'quality' factor (0-100).
+static const char HEIF_OPTION_QUALITY[] = "quality";
+// Value is either 1 for lossless or 0 for lossy.
+static const char HEIF_OPTION_LOSSLESS[] = "lossless";
 // level should be between 0 (= none) to 4 (= full)
-LIBHEIF_API
-struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level);
+static const char HEIF_OPTION_LOGLEVEL[] = "loglevel";
 
+LIBHEIF_API
+struct heif_error heif_encoder_options_set_int(struct heif_encoder_options* options,
+                                               const char* name,
+                                               int value);
 
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_image* image,
                                             struct heif_encoder* encoder,
+                                            struct heif_encoder_options* options,
                                             struct heif_image_handle** out_image_handle);
 
 
@@ -791,15 +779,15 @@ struct heif_encoder_plugin
   // Free the decoder context (heif_image can still be used after destruction)
   void (*free_encoder)(void* encoder);
 
-  struct heif_error (*set_param_quality)(void* encoder, int quality);
+  struct heif_encoder_options* (*alloc_options)(void* encoder);
 
-  struct heif_error (*set_param_lossless)(void* encoder, int lossless);
+  void (*free_options)(void* encoder, struct heif_encoder_options*);
 
-  struct heif_error (*set_param_logging_level)(void* encoder, int logging);
+  struct heif_error (*set_option_int)(void* encoder, struct heif_encoder_options*, const char*, int);
 
   void (*query_input_colorspace)(enum heif_colorspace* colorspace, enum heif_chroma* chroma);
 
-  struct heif_error (*encode_image)(void* encoder, const struct heif_image* image);
+  struct heif_error (*encode_image)(void* encoder, struct heif_encoder_options* options, const struct heif_image* image);
 
 
   // --- After pushing an image into the decoder, you should call get_compressed_data() until
