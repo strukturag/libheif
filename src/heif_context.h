@@ -30,6 +30,11 @@
 #include "error.h"
 
 
+namespace heif {
+class HeifContext;
+}
+
+
 struct heif_encoder
 {
   ~heif_encoder();
@@ -37,6 +42,7 @@ struct heif_encoder
   struct heif_error alloc();
   void release();
 
+  heif::HeifContext* context;
   const struct heif_encoder_plugin* plugin;
   void* encoder;
 };

@@ -392,6 +392,7 @@ void HeifContext::register_encoder(const heif_encoder_plugin* encoder_plugin)
   }
 
   auto encoder = std::unique_ptr<struct heif_encoder>(new heif_encoder);
+  encoder->context = this;
   encoder->plugin = encoder_plugin;
   encoder->encoder = nullptr;
 

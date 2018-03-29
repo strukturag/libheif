@@ -744,13 +744,20 @@ const char* heif_encoder_get_name(const struct heif_encoder* encoder)
 
 struct heif_error heif_encoder_start(struct heif_encoder* encoder)
 {
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+  }
+
   return encoder->alloc();
 }
 
 
 void heif_encoder_stop(struct heif_encoder* encoder)
 {
-  encoder->release();
+  if (encoder) {
+    encoder->release();
+  }
 }
 
 
@@ -770,8 +777,12 @@ void heif_encoder_stop(struct heif_encoder* encoder)
 struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
                                                 int quality)
 {
-  if (encoder->encoder==nullptr) {
-    // TODO: error: encoder not initialized
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+  } else if (!encoder->encoder) {
+    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
+    return err.error_struct(encoder->context);
   }
 
   encoder->plugin->set_param_quality(encoder->encoder, quality);
@@ -783,8 +794,12 @@ struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
 
 struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int enable)
 {
-  if (encoder->encoder==nullptr) {
-    // TODO: error: encoder not initialized
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+  } else if (!encoder->encoder) {
+    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
+    return err.error_struct(encoder->context);
   }
 
   encoder->plugin->set_param_lossless(encoder->encoder, enable);
@@ -796,8 +811,12 @@ struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int en
 
 struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, int level)
 {
-  if (encoder->encoder==nullptr) {
-    // TODO: error: encoder not initialized
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+  } else if (!encoder->encoder) {
+    Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
+    return err.error_struct(encoder->context);
   }
 
   if (encoder->plugin->set_param_logging_level) {
@@ -814,6 +833,11 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             struct heif_encoder* encoder,
                                             struct heif_image_handle** out_image_handle)
 {
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
   auto image = ctx->context->add_new_hvc1_image();
 
   image->encode_image_as_hevc(input_image->image, encoder);

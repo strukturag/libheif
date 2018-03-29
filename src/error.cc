@@ -114,6 +114,10 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Unsupported_data_version: return "Unsupported data version";
   case heif_suberror_Unsupported_color_conversion: return "Unsupported color conversion";
   case heif_suberror_Unsupported_item_construction_method: return "Unsupported item construction method";
+
+    // --- Encoder_plugin_error --
+
+  case heif_suberror_Encoder_not_started: return "Encoder has not been started";
   }
 
   assert(false);
