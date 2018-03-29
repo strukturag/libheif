@@ -579,7 +579,8 @@ namespace heif {
 
   class Box_iref : public Box {
   public:
-  Box_iref(const BoxHeader& hdr) : Box(hdr) { }
+    Box_iref() { set_short_type(fourcc("iref")); set_is_full_box(true); }
+    Box_iref(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
@@ -587,8 +588,13 @@ namespace heif {
     uint32_t get_reference_type(heif_item_id itemID) const;
     std::vector<heif_item_id> get_references(heif_item_id itemID) const;
 
+    void add_reference(uint32_t type, heif_item_id from_id, std::vector<heif_item_id> to_ids);
+
   protected:
     Error parse(BitstreamRange& range) override;
+    Error write(StreamWriter& writer) const override;
+
+    void derive_box_version();
 
   private:
     struct Reference {
