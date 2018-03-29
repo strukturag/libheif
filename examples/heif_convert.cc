@@ -225,6 +225,7 @@ int main(int argc, char** argv)
           printf("Depth image written to %s\n", s.str().c_str());
         }
       }
+      heif_image_handle_release(handle);
     }
 
     image_index++;
