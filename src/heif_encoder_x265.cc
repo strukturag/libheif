@@ -44,7 +44,6 @@ struct x265_encoder_struct
 };
 
 static const char kSuccess[] = "Success";
-static const char kEmptyString[] = "";
 
 static const int X265_PLUGIN_PRIORITY = 100;
 
