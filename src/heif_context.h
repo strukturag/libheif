@@ -155,7 +155,8 @@ namespace heif {
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
       Error encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
-                                 struct heif_encoder* encoder);
+                                 struct heif_encoder* encoder,
+                                 bool consider_alpha);
 
     private:
       HeifContext* m_heif_context;
@@ -205,6 +206,10 @@ namespace heif {
     void reset_to_empty_heif();
 
     std::shared_ptr<Image> add_new_hvc1_image();
+
+    Error add_alpha_image(std::shared_ptr<HeifPixelImage> image,
+                          heif_item_id* out_item_id,
+                          struct heif_encoder* encoder);
 
     void set_primary_image(std::shared_ptr<Image> image);
 

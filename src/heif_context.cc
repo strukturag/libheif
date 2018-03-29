@@ -1247,7 +1247,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 
 std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
 {
-  heif_item_id image_id = m_heif_file->add_new_hvc1_image();
+  heif_item_id image_id = m_heif_file->add_new_image("hvc1");
 
   auto image = std::make_shared<Image>(this, image_id);
 
@@ -1256,6 +1256,22 @@ std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
   return image;
 }
 
+
+Error HeifContext::add_alpha_image(std::shared_ptr<HeifPixelImage> image, heif_item_id* out_item_id,
+                                   struct heif_encoder* encoder)
+{
+  std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+  heif_alpha_image = add_new_hvc1_image();
+
+  assert(out_item_id);
+  *out_item_id = heif_alpha_image->get_id();
+
+  auto alpha_image = image;
+
+  Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder, false);
+  return error;
+}
 
 
 
@@ -1366,7 +1382,8 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 
 
 Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
-                                               struct heif_encoder* encoder)
+                                               struct heif_encoder* encoder,
+                                               bool consider_alpha)
 {
   /*
   const struct heif_encoder_plugin* encoder_plugin = nullptr;
@@ -1378,6 +1395,22 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
                  heif_suberror_Unsupported_codec);
   }
   */
+
+
+
+  // --- if there is an alpha channel, add it as an additional image
+
+  if (consider_alpha && image->has_channel(heif_channel_Alpha)) {
+    heif_item_id alpha_image_id;
+    Error err = m_heif_context->add_alpha_image(image, &alpha_image_id, encoder);
+    if (err) {
+      return err;
+    }
+
+    m_heif_context->m_heif_file->add_iref_reference(fourcc("auxl"), alpha_image_id, { m_id });
+  }
+
+
 
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
 
@@ -1399,7 +1432,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image);
+  encoder->plugin->encode_image(encoder->encoder, &c_api_image, heif_image_input_class_normal);
 
   for (;;) {
     uint8_t* data;
@@ -1420,8 +1453,6 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
       parse_sps_for_hvcC_configuration(data, size, &config, &width, &height);
 
-      //printf("SPS resolution %d %d\n",width,height);
-
       m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
       m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
     }
@@ -1436,8 +1467,6 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
     default:
       m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
     }
-
-    //printf("size=%d: %x %x %x %x %x\n", size, data[0], data[1], data[2], data[3], data[4]);
   }
 
 

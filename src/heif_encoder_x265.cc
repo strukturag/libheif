@@ -160,7 +160,8 @@ void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chrom
 }
 
 
-struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image)
+struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image,
+                                    heif_image_input_class input_class)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 

@@ -95,7 +95,7 @@ namespace heif {
 
     heif_item_id get_unused_item_id() const;
 
-    heif_item_id add_new_hvc1_image();
+    heif_item_id add_new_image(const char* item_type);
 
     void add_hvcC_property(heif_item_id id);
     Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
@@ -108,6 +108,9 @@ namespace heif {
     void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 
     void set_primary_item_id(heif_item_id id);
+
+    void add_iref_reference(uint32_t type, heif_item_id from,
+                            std::vector<heif_item_id> to);
 
   private:
 #if ENABLE_PARALLEL_TILE_DECODING

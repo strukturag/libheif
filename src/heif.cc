@@ -867,7 +867,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
       image = ctx->context->add_new_hvc1_image();
-      error = image->encode_image_as_hevc(input_image->image, encoder);
+      error = image->encode_image_as_hevc(input_image->image, encoder, true);
       break;
 
     default:

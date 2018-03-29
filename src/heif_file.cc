@@ -438,14 +438,14 @@ heif_item_id HeifFile::get_unused_item_id() const
 }
 
 
-heif_item_id HeifFile::add_new_hvc1_image()
+heif_item_id HeifFile::add_new_image(const char* item_type)
 {
   heif_item_id id = get_unused_item_id();
 
   auto infe = std::make_shared<Box_infe>();
   infe->set_item_ID(id);
   infe->set_hidden_item(false);
-  infe->set_item_type("hvc1");
+  infe->set_item_type(item_type);
   //infe->set_item_name("Nice image");
 
   m_infe_boxes[id] = infe;
@@ -550,4 +550,15 @@ void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* 
 void HeifFile::set_primary_item_id(heif_item_id id)
 {
   m_pitm_box->set_item_ID(id);
+}
+
+void HeifFile::add_iref_reference(uint32_t type, heif_item_id from,
+                                  std::vector<heif_item_id> to)
+{
+  if (!m_iref_box) {
+    m_iref_box = std::make_shared<Box_iref>();
+    m_meta_box->append_child_box(m_iref_box);
+  }
+
+  m_iref_box->add_reference(type,from,to);
 }

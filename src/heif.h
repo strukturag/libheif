@@ -757,6 +757,17 @@ enum heif_encoded_data_type
 };
 
 
+// Specifies the class of the input image content.
+// The encoder may want to encode different classes with different parameters
+// (e.g. always encode alpha lossless)
+enum heif_image_input_class
+{
+  heif_image_input_class_normal = 1,
+  heif_image_input_class_alpha = 2,
+  heif_image_input_class_depth = 3
+};
+
+
 struct heif_encoder_plugin
 {
   // API version supported by this plugin
@@ -799,7 +810,8 @@ struct heif_encoder_plugin
 
   void (*query_input_colorspace)(enum heif_colorspace* colorspace, enum heif_chroma* chroma);
 
-  struct heif_error (*encode_image)(void* encoder, const struct heif_image* image);
+  struct heif_error (*encode_image)(void* encoder, const struct heif_image* image,
+                                    enum heif_image_input_class image_class);
 
 
   // --- After pushing an image into the decoder, you should call get_compressed_data() until
