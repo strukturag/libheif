@@ -721,7 +721,7 @@ int heif_context_get_encoders(struct heif_context* ctx,
                               struct heif_encoder** out_encoders,
                               int count)
 {
-  if (out_encoders == nullptr) {
+  if (out_encoders == nullptr || count <= 0) {
     return 0;
   }
 
@@ -729,7 +729,7 @@ int heif_context_get_encoders(struct heif_context* ctx,
   plugins = ctx->context->get_filtered_encoders(format, name);
 
   int i;
-  for (i=0 ; i<count && i<(int)plugins.size() ; i++) {
+  for (i=0 ; i < count && static_cast<size_t>(i) < plugins.size() ; i++) {
     out_encoders[i] = plugins[i];
   }
 
