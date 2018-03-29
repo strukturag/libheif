@@ -501,6 +501,7 @@ namespace heif {
   Box_auxC(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string get_aux_type() const { return m_aux_type; }
+    void set_aux_type(std::string type) { m_aux_type = type; }
 
     std::vector<uint8_t> get_subtypes() const { return m_aux_subtypes; }
 
@@ -508,6 +509,7 @@ namespace heif {
 
   protected:
     Error parse(BitstreamRange& range) override;
+    Error write(StreamWriter& writer) const;
 
   private:
     std::string m_aux_type;

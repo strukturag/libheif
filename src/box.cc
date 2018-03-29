@@ -1746,6 +1746,22 @@ Error Box_auxC::parse(BitstreamRange& range)
 }
 
 
+Error Box_auxC::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_aux_type);
+
+  for (uint8_t subtype : m_aux_subtypes) {
+    writer.write8(subtype);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_auxC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
