@@ -128,22 +128,24 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   assert(count > 0);
 
   heif_encoder* encoder = encoders[0];
-  heif_encoder_start(encoder);
-
   if (size < 2) {
     return 0;
   }
+  heif_encoder_options* options = heif_encoder_options_alloc(encoder);
+  assert(options);
+
   int quality = data[0] % 101;;
   int lossless = (data[1] > 0x80);
   data += 2;
   size -= 2;
-  heif_encoder_set_lossy_quality(encoder, quality);
-  heif_encoder_set_lossless(encoder, lossless);
+  heif_encoder_options_set_int(options, HEIF_OPTION_QUALITY, quality);
+  heif_encoder_options_set_int(options, HEIF_OPTION_LOSSLESS, lossless);
 
   struct heif_image* image;
   size_t read = create_image(data, size, &image);
   assert(read <= size);
   if (!read) {
+    heif_encoder_options_free(options);
     return 0;
   }
 
@@ -151,7 +153,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size -= read;
 
   struct heif_image_handle* img;
-  err = heif_context_encode_image(context.get(), image, encoder, &img);
+  err = heif_context_encode_image(context.get(), image, encoder, options, &img);
+  heif_encoder_options_free(options);
   heif_image_release(image);
   if (err.code != heif_error_Ok) {
     return 0;

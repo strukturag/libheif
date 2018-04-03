@@ -1366,7 +1366,8 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 
 
 Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
-                                               struct heif_encoder* encoder)
+                                               struct heif_encoder* encoder,
+                                               struct heif_encoder_options* options)
 {
   /*
   const struct heif_encoder_plugin* encoder_plugin = nullptr;
@@ -1399,7 +1400,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image);
+  encoder->plugin->encode_image(encoder->encoder, options, &c_api_image);
 
   for (;;) {
     uint8_t* data;

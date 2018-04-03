@@ -118,7 +118,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     // --- Encoder_plugin_error --
 
-  case heif_suberror_Encoder_not_started: return "Encoder has not been started";
+  case heif_suberror_Options_for_other_encoder: return "Passed options are for another encoder";
   }
 
   assert(false);

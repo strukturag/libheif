@@ -313,17 +313,19 @@ int main(int argc, char** argv)
       std::cerr << "Encoder: " << heif_encoder_get_name(encoders[0]) << "\n";
     }
 
-    heif_encoder_start(encoders[0]);
+    struct heif_encoder_options* options = heif_encoder_options_alloc(encoders[0]);
 
-    heif_encoder_set_lossy_quality(encoders[0], quality);
-    heif_encoder_set_lossless(encoders[0], lossless);
-    heif_encoder_set_logging_level(encoders[0], logging_level);
+    heif_encoder_options_set_int(options, HEIF_OPTION_QUALITY, quality);
+    heif_encoder_options_set_int(options, HEIF_OPTION_LOSSLESS, lossless);
+    heif_encoder_options_set_int(options, HEIF_OPTION_LOGLEVEL, logging_level);
 
     struct heif_image_handle* handle;
     heif_error error = heif_context_encode_image(context.get(),
                                                  image.get(),
                                                  encoders[0],
+                                                 options,
                                                  &handle);
+    heif_encoder_options_free(options);
     if (error.code != 0) {
       std::cerr << "Could not read HEIF file: " << error.message << "\n";
       return 1;

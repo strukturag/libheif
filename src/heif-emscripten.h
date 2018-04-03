@@ -351,7 +351,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_data_version",heif_suberror_Unsupported_data_version)
     .value("heif_suberror_Unsupported_color_conversion",heif_suberror_Unsupported_color_conversion)
     .value("heif_suberror_Unsupported_item_construction_method",heif_suberror_Unsupported_item_construction_method)
-    .value("heif_suberror_Encoder_not_started",heif_suberror_Encoder_not_started)
+    .value("heif_suberror_Options_for_other_encoder",heif_suberror_Options_for_other_encoder)
     ;
   emscripten::enum_<heif_compression_format>("heif_compression_format")
     .value("heif_compression_undefined", heif_compression_undefined)
