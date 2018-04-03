@@ -88,7 +88,7 @@ else
 noinst_LIBRARIES = libfuzzers.a
 libfuzzers_a_SOURCES = \
   box-fuzzer.cc \
-  encoder-fuzzer \
+  encoder-fuzzer.cc \
   file-fuzzer.cc
 endif
 
