@@ -40,6 +40,11 @@ heif_enc_CXXFLAGS += $(libjpeg_CFLAGS)
 heif_enc_LDADD += $(libjpeg_LIBS)
 endif
 
+if HAVE_LIBPNG
+heif_enc_CXXFLAGS += $(libpng_CFLAGS)
+heif_enc_LDADD += $(libpng_LIBS)
+endif
+
 EXTRA_DIST = \
     demo.html \
     example.heic
