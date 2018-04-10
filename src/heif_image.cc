@@ -171,8 +171,6 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<HeifPixelImage> s
 
   int bpl = width * ((src_image->get_bits_per_pixel(src_channel)+7)/8);
 
-  printf("bpl:%d src:%d dst:%d\n",bpl,src_stride, dst_stride);
-
   for (int y=0;y<height;y++) {
     memcpy(dst+y*dst_stride, src+y*src_stride, bpl);
   }
@@ -660,12 +658,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB24_32_to_YCbCr420() c
 
         // alpha
         out_a[y*out_a_stride + x] = a;
-
-        if ((x%8)==0 && (y%8)==0) {
-          printf("%c",a ? 'X':'.');
-        }
       }
-      if ((y%8)==0) printf("\n");
     }
 
     for (int y=0;y<m_height;y+=2) {
