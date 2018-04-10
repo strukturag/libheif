@@ -44,4 +44,25 @@ struct heif_context
   std::shared_ptr<heif::HeifContext> context;
 };
 
+
+struct heif_encoder
+{
+  ~heif_encoder();
+
+  struct heif_error alloc();
+  void release();
+
+
+  std::shared_ptr<heif::HeifContext> context;
+  const struct heif_encoder_plugin* plugin;
+  void* encoder;
+};
+
+
+struct heif_encoder_parameter
+{
+  const char* name;
+  enum heif_encoder_parameter_type type;
+};
+
 #endif

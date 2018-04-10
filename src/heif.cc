@@ -739,41 +739,88 @@ struct heif_error heif_context_write(struct heif_context* ctx,
 }
 
 
-int heif_context_get_encoders(struct heif_context* ctx,
-                              enum heif_compression_format format,
-                              const char* name,
-                              struct heif_encoder** out_encoders,
-                              int count)
+int heif_context_get_encoder_descriptors(struct heif_context* ctx,
+                                         enum heif_compression_format format,
+                                         const char* name,
+                                         const struct heif_encoder_descriptor** out_encoder_descriptors,
+                                         int count)
 {
-  if (out_encoders == nullptr || count <= 0) {
+  if (out_encoder_descriptors == nullptr || count <= 0) {
     return 0;
   }
 
-  std::vector<struct heif_encoder*> plugins;
-  plugins = ctx->context->get_filtered_encoders(format, name);
+  std::vector<const struct heif_encoder_descriptor*> descriptors;
+  descriptors = ctx->context->get_filtered_encoder_descriptors(format, name);
 
   int i;
-  for (i=0 ; i < count && static_cast<size_t>(i) < plugins.size() ; i++) {
-    out_encoders[i] = plugins[i];
+  for (i=0 ; i < count && static_cast<size_t>(i) < descriptors.size() ; i++) {
+    out_encoder_descriptors[i] = descriptors[i];
   }
 
   return i;
 }
 
 
-const char* heif_encoder_get_name(const struct heif_encoder* encoder)
+const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descriptor* descriptor)
 {
-  return encoder->plugin->get_plugin_name();
+  return descriptor->plugin->get_plugin_name();
 }
 
-struct heif_error heif_encoder_start(struct heif_encoder* encoder)
+
+struct heif_error heif_get_encoder(struct heif_context* context,
+                                   const struct heif_encoder_descriptor* descriptor,
+                                   struct heif_encoder** encoder)
+{
+  if (!descriptor || !encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+  }
+
+  *encoder = new struct heif_encoder;
+  (*encoder)->context = context->context;
+  (*encoder)->plugin = descriptor->plugin;
+  (*encoder)->alloc();
+
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+  return err;
+}
+
+
+struct heif_error heif_get_encoder_for_format(struct heif_context* context,
+                                              enum heif_compression_format format,
+                                              struct heif_encoder** encoder)
 {
   if (!encoder) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  return encoder->alloc();
+  std::vector<const struct heif_encoder_descriptor*> descriptors;
+  descriptors = context->context->get_filtered_encoder_descriptors(format, nullptr);
+
+  if (descriptors.size()>0) {
+    *encoder = new struct heif_encoder;
+    (*encoder)->context = context->context;
+    (*encoder)->plugin = descriptors[0]->plugin;
+    (*encoder)->alloc();
+
+    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+    return err;
+  }
+  else {
+    struct heif_error err = { heif_error_Unsupported_filetype, // TODO: is this the right error code?
+                              heif_suberror_Unspecified, kSuccess };
+    return err;
+  }
+}
+
+
+void heif_encoder_release(struct heif_encoder* encoder)
+{
+  if (encoder) {
+    encoder->release();
+    delete encoder;
+  }
 }
 
 
@@ -806,7 +853,7 @@ struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   } else if (!encoder->encoder) {
     Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
+    return err.error_struct(encoder->context.get());
   }
 
   encoder->plugin->set_param_quality(encoder->encoder, quality);
@@ -823,7 +870,7 @@ struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int en
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   } else if (!encoder->encoder) {
     Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
+    return err.error_struct(encoder->context.get());
   }
 
   encoder->plugin->set_param_lossless(encoder->encoder, enable);
@@ -840,7 +887,7 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, i
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   } else if (!encoder->encoder) {
     Error err(heif_error_Encoder_plugin_error, heif_suberror_Encoder_not_started);
-    return err.error_struct(encoder->context);
+    return err.error_struct(encoder->context.get());
   }
 
   if (encoder->plugin->set_param_logging_level) {

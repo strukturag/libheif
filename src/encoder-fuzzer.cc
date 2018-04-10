@@ -122,13 +122,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                                         [] (heif_context* c) { heif_context_free(c); });
   assert(context);
   static const size_t kMaxEncoders = 5;
-  heif_encoder* encoders[kMaxEncoders];
-  int count = heif_context_get_encoders(context.get(), heif_compression_HEVC, nullptr,
-                                        encoders, kMaxEncoders);
+  const heif_encoder_descriptor* encoder_descriptors[kMaxEncoders];
+  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_HEVC, nullptr,
+                                                   encoder_descriptors, kMaxEncoders);
   assert(count > 0);
 
-  heif_encoder* encoder = encoders[0];
-  heif_encoder_start(encoder);
+
+  heif_encoder* encoder;
+  heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
 
   if (size < 2) {
     return 0;

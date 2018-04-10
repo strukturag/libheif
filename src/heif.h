@@ -622,37 +622,49 @@ struct heif_error heif_context_write(struct heif_context*,
                                      void* userdata);
 
 struct heif_encoder;
-struct heif_encoder_param;
+struct heif_encoder_descriptor;
+struct heif_encoder_parameter;
+
+enum heif_encoder_parameter_type {
+  heif_encoder_parameter_type_integer,
+  heif_encoder_parameter_type_string
+};
 
 // Get a list of encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 LIBHEIF_API
-int heif_context_get_encoders(struct heif_context*,
-                              enum heif_compression_format format_filter,
-                              const char* name_filter,
-                              struct heif_encoder** out_encoders,
-                              int count);
+int heif_context_get_encoder_descriptors(struct heif_context*,
+                                         enum heif_compression_format format_filter,
+                                         const char* name_filter,
+                                         const struct heif_encoder_descriptor** out_encoders,
+                                         int count);
 
 LIBHEIF_API
-const char* heif_encoder_get_name(const struct heif_encoder*);
+const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descriptor*);
+
+LIBHEIF_API
+enum heif_compression_format
+heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor*);
 
 // Start using a specific encoder. You have to call this before setting any
 // parameters and before encoding an image.
 LIBHEIF_API
-struct heif_error heif_encoder_start(struct heif_encoder*);
+struct heif_error heif_get_encoder(struct heif_context* context,
+                                   const struct heif_encoder_descriptor*,
+                                   struct heif_encoder** out_encoder);
+
+LIBHEIF_API
+struct heif_error heif_get_encoder_for_format(struct heif_context* context,
+                                              enum heif_compression_format format,
+                                              struct heif_encoder**);
 
 // Stop using the encoder. Settings may be reset.
 // The encoder will also be stopped automatically when the encoder's context is released.
 // You might want to use this, for example, when the heif_context stays alive, but you
 // want to change the encoder and release all memory allocated by the old encoder.
 LIBHEIF_API
-void heif_encoder_stop(struct heif_encoder*);
+void heif_encoder_release(struct heif_encoder*);
 
-//LIBHEIF_API
-//struct heif_encoder_param* heif_encoder_get_param(struct heif_encoder*);
-
-//LIBHEIF_API
-//void heif_encoder_release_param(struct heif_encoder_param*);
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
@@ -667,6 +679,23 @@ LIBHEIF_API
 struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level);
 
 
+LIBHEIF_API
+int heif_encoder_list_parameters(struct heif_encoder*,
+                                 struct heif_encoder_parameter**,
+                                 int size);
+
+LIBHEIF_API
+const char* heif_encoder_parameter_get_name(const struct heif_encoder_parameter*);
+
+LIBHEIF_API
+enum heif_encoder_parameter_type heif_encoder_parameter_get_type(const struct heif_encoder_parameter*);
+
+LIBHEIF_API
+struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder*,
+                                                     const char* parameter_name,
+                                                     int value);
+
+
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
@@ -677,7 +706,7 @@ struct heif_error heif_context_encode_image(struct heif_context*,
 
 // ====================================================================================================
 //  Decoder plugin API
-//  In order to code images in other formats than HEVC, additional compression codecs can be
+//  In order to decode images in other formats than HEVC, additional compression codecs can be
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
 

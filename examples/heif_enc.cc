@@ -582,30 +582,33 @@ int main(int argc, char** argv)
 
 
 #define MAX_ENCODERS 5
-  heif_encoder* encoders[MAX_ENCODERS];
-  int count = heif_context_get_encoders(context.get(), heif_compression_HEVC, nullptr,
-                                        encoders, MAX_ENCODERS);
+  const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
+  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_HEVC, nullptr,
+                                                   encoder_descriptors, MAX_ENCODERS);
 
   if (count>0) {
     if (logging_level>0) {
-      std::cerr << "Encoder: " << heif_encoder_get_name(encoders[0]) << "\n";
+      std::cerr << "Encoder: " << heif_encoder_descriptor_get_name(encoder_descriptors[0]) << "\n";
     }
 
-    heif_encoder_start(encoders[0]);
+    struct heif_encoder* encoder = nullptr;
+    heif_error error = heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
 
-    heif_encoder_set_lossy_quality(encoders[0], quality);
-    heif_encoder_set_lossless(encoders[0], lossless);
-    heif_encoder_set_logging_level(encoders[0], logging_level);
+    heif_encoder_set_lossy_quality(encoder, quality);
+    heif_encoder_set_lossless(encoder, lossless);
+    heif_encoder_set_logging_level(encoder, logging_level);
 
     struct heif_image_handle* handle;
-    heif_error error = heif_context_encode_image(context.get(),
-                                                 image.get(),
-                                                 encoders[0],
-                                                 &handle);
+    error = heif_context_encode_image(context.get(),
+                                      image.get(),
+                                      encoder,
+                                      &handle);
     if (error.code != 0) {
       std::cerr << "Could not read HEIF file: " << error.message << "\n";
       return 1;
     }
+
+    heif_encoder_release(encoder);
 
     heif_image_handle_release(handle);
 

@@ -391,12 +391,10 @@ void HeifContext::register_encoder(const heif_encoder_plugin* encoder_plugin)
     (*encoder_plugin->init_plugin)();
   }
 
-  auto encoder = std::unique_ptr<struct heif_encoder>(new heif_encoder);
-  encoder->context = this;
-  encoder->plugin = encoder_plugin;
-  encoder->encoder = nullptr;
+  auto descriptor = std::unique_ptr<struct heif_encoder_descriptor>(new heif_encoder_descriptor);
+  descriptor->plugin = encoder_plugin;
 
-  m_encoders.insert(std::move(encoder));
+  m_encoder_descriptors.insert(std::move(descriptor));
 }
 
 const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
@@ -418,9 +416,9 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
 const struct heif_encoder_plugin* HeifContext::get_encoder(enum heif_compression_format type) const
 {
-  auto filtered_encoders = get_filtered_encoders(type, nullptr);
-  if (filtered_encoders.size()>0) {
-    return filtered_encoders[0]->plugin;
+  auto filtered_encoder_descriptors = get_filtered_encoder_descriptors(type, nullptr);
+  if (filtered_encoder_descriptors.size()>0) {
+    return filtered_encoder_descriptors[0]->plugin;
   }
   else {
     return nullptr;
@@ -1508,18 +1506,18 @@ void HeifContext::set_primary_image(std::shared_ptr<Image> image)
 }
 
 
-std::vector<struct heif_encoder*>
-HeifContext::get_filtered_encoders(enum heif_compression_format format,
-                                   const char* name) const
+std::vector<const struct heif_encoder_descriptor*>
+HeifContext::get_filtered_encoder_descriptors(enum heif_compression_format format,
+                                              const char* name) const
 {
-  std::vector<struct heif_encoder*> filtered_encoders;
+  std::vector<const struct heif_encoder_descriptor*> filtered_descriptors;
 
-  for (const auto& enc : m_encoders) {
-    const struct heif_encoder_plugin* plugin = enc->plugin;
+  for (const auto& descr : m_encoder_descriptors) {
+    const struct heif_encoder_plugin* plugin = descr->plugin;
 
     if (plugin->compression_format == format || format==heif_compression_undefined) {
       if (name == nullptr || strcmp(name, plugin->id_name)==0) {
-        filtered_encoders.push_back(enc.get());
+        filtered_descriptors.push_back(descr.get());
       }
     }
   }
@@ -1527,5 +1525,5 @@ HeifContext::get_filtered_encoders(enum heif_compression_format format,
 
   // Note: since our std::set<> is ordered by priority, we do not have to sort our output
 
-  return filtered_encoders;
+  return filtered_descriptors;
 }
