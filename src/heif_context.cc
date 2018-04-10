@@ -1267,7 +1267,22 @@ Error HeifContext::add_alpha_image(std::shared_ptr<HeifPixelImage> image, heif_i
   assert(out_item_id);
   *out_item_id = heif_alpha_image->get_id();
 
-  auto alpha_image = image;
+
+  // --- generate alpha image
+  // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+  int chroma_width  = (image->get_width() +1)/2;
+  int chroma_height = (image->get_height()+1)/2;
+
+  std::shared_ptr<HeifPixelImage> alpha_image = std::make_shared<HeifPixelImage>();
+  alpha_image->create(image->get_width(), image->get_height(),
+                      heif_colorspace_YCbCr, heif_chroma_420);
+  alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
+  alpha_image->fill_new_plane(heif_channel_Cb, 128, chroma_width, chroma_height);
+  alpha_image->fill_new_plane(heif_channel_Cr, 128, chroma_width, chroma_height);
+
+
+  // --- encode the alpha image
 
   Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder, false);
   return error;
@@ -1398,11 +1413,23 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
 
 
+  // --- check whether we have to convert the image color space
+
+  heif_colorspace colorspace = image->get_colorspace();
+  heif_chroma chroma = image->get_chroma_format();
+  encoder->plugin->query_input_colorspace(&colorspace, &chroma);
+
+  if (colorspace != image->get_colorspace() ||
+      chroma != image->get_chroma_format()) {
+
+    image = image->convert_colorspace(colorspace, chroma);
+  }
+
+
+
   // --- if there is an alpha channel, add it as an additional image
 
-  bool fake_alpha = true; // TODO: HACK for testing alpha channel encoding
-
-  if (consider_alpha && fake_alpha) { // && image->has_channel(heif_channel_Alpha)) {
+  if (consider_alpha && image->has_channel(heif_channel_Alpha)) {
     heif_item_id alpha_image_id;
     Error err = m_heif_context->add_alpha_image(image, &alpha_image_id, encoder);
     if (err) {
@@ -1416,20 +1443,6 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
 
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
-
-
-  // --- check whether we have to convert the image color space
-
-  heif_colorspace colorspace = image->get_colorspace();
-  heif_chroma chroma = image->get_chroma_format();
-  encoder->plugin->query_input_colorspace(&colorspace, &chroma);
-
-  if (colorspace != image->get_colorspace() ||
-      chroma != image->get_chroma_format()) {
-
-    image = image->convert_colorspace(colorspace, chroma);
-  }
-
 
 
   heif_image c_api_image;

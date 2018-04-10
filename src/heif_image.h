@@ -46,6 +46,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   bool has_channel(heif_channel channel) const;
 
+  // Has alpha information either as a separate channel or in the interleaved format.
+  bool has_alpha() const;
 
   int get_width() const { return m_width; }
 
@@ -65,6 +67,11 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   uint8_t* get_plane(enum heif_channel channel, int* out_stride);
   const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
+
+  void copy_new_plane_from(const std::shared_ptr<HeifPixelImage> src_image,
+                           heif_channel src_channel,
+                           heif_channel dst_channel);
+  void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
 
   void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
                                     heif_channel src_channel,
@@ -110,7 +117,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<HeifPixelImage> convert_RGB_to_RGB24() const;
   std::shared_ptr<HeifPixelImage> convert_mono_to_RGB(int bpp) const;
   std::shared_ptr<HeifPixelImage> convert_mono_to_YCbCr420() const;
-  std::shared_ptr<HeifPixelImage> convert_RGB24_to_YCbCr420() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB24_32_to_YCbCr420() const;
 };
 
 
