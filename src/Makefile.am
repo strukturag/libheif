@@ -66,6 +66,7 @@ endif
 
 libheif_la_HEADERS = \
   heif.h \
+  heif-plugin.h \
   heif-version.h
 
 noinst_HEADERS = \

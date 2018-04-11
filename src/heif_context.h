@@ -29,6 +29,8 @@
 
 #include "error.h"
 
+#include "heif.h"
+#include "heif-plugin.h"
 
 namespace heif {
 class HeifContext;

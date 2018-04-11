@@ -19,6 +19,7 @@
  */
 
 #include "heif.h"
+#include "heif-plugin.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
