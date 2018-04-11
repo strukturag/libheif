@@ -27,6 +27,20 @@ extern "C" {
 
 #include <heif.h>
 
+
+// ====================================================================================================
+//  This file is for codec plugin developers only.
+// ====================================================================================================
+
+// API versions table
+//
+// release    decoder   encoder   enc.params
+// -----------------------------------------
+//  1.0          1        N/A        N/A
+//  1.1          1         1          1
+
+
+
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
@@ -36,7 +50,7 @@ extern "C" {
 struct heif_decoder_plugin
 {
   // API version supported by this plugin
-  int plugin_api_version;
+  int plugin_api_version; // current version: 1
 
 
   // --- version 1 functions ---
@@ -104,7 +118,7 @@ enum heif_image_input_class
 struct heif_encoder_plugin
 {
   // API version supported by this plugin
-  int plugin_api_version;
+  int plugin_api_version; // current version: 1
 
 
   // --- version 1 functions ---
@@ -192,7 +206,7 @@ struct heif_encoder_parameter
 {
   int version; // current version: 1
 
-  // version 1 fields
+  // --- version 1 fields ---
 
   const char* name;
   enum heif_encoder_parameter_type type;
