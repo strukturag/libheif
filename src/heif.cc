@@ -776,9 +776,7 @@ struct heif_error heif_get_encoder(struct heif_context* context,
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  *encoder = new struct heif_encoder;
-  (*encoder)->context = context->context;
-  (*encoder)->plugin = descriptor->plugin;
+  *encoder = new struct heif_encoder(context->context, descriptor->plugin);
   (*encoder)->alloc();
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
@@ -799,9 +797,7 @@ struct heif_error heif_get_encoder_for_format(struct heif_context* context,
   descriptors = context->context->get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size()>0) {
-    *encoder = new struct heif_encoder;
-    (*encoder)->context = context->context;
-    (*encoder)->plugin = descriptors[0]->plugin;
+    *encoder = new struct heif_encoder(context->context, descriptors[0]->plugin);
     (*encoder)->alloc();
 
     struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
