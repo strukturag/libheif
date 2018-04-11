@@ -70,7 +70,8 @@ void show_help(const char* argv0)
             << "  -L, --lossless  generate lossless output (-q has no effect)\n"
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
-            << "  -P, --params    show all encoder parameters\n";
+            << "  -P, --params    show all encoder parameters\n"
+            << "  -p              set encoder parameter (NAME=VALUE)\n";
 }
 
 
