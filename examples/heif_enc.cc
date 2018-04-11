@@ -53,6 +53,7 @@ static struct option long_options[] = {
   {"output",     required_argument, 0, 'o' },
   {"lossless",   no_argument,       0, 'L' },
   {"verbose",    no_argument,       0, 'v' },
+  {"params",     no_argument,       0, 'P' },
   {0,         0,                 0,  0 }
 };
 
@@ -67,7 +68,8 @@ void show_help(const char* argv0)
             << "  -q, --quality   set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless  generate lossless output (-q has no effect)\n"
             << "  -o, --output    output filename (optional)\n"
-            << "  -v, --verbose   enable logging output (more -v will increase logging level)\n";
+            << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
+            << "  -P, --params    show all encoder parameters\n";
 }
 
 
@@ -479,6 +481,63 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
 #endif
 
 
+void list_encoder_parameters(heif_encoder* encoder)
+{
+  std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
+
+  const struct heif_encoder_parameter** params = heif_encoder_list_parameters(encoder);
+  for (int i=0;params[i];i++) {
+    const char* name = heif_encoder_parameter_get_name(params[i]);
+
+    switch (heif_encoder_parameter_get_type(params[i])) {
+    case heif_encoder_parameter_type_integer:
+      {
+        int value;
+        heif_error error = heif_encoder_get_parameter_integer(encoder, name, &value);
+        (void)error;
+
+        std::cerr << "  " << name << ", default=" << value << "\n";
+      }
+      break;
+
+    case heif_encoder_parameter_type_boolean:
+      {
+        int value;
+        heif_error error = heif_encoder_get_parameter_boolean(encoder, name, &value);
+        (void)error;
+
+        std::cerr << "  " << name << ", default=" << (value ? "true":"false") << "\n";
+      }
+      break;
+
+    case heif_encoder_parameter_type_string:
+      // TODO
+      break;
+    }
+  }
+}
+
+
+void set_params(struct heif_encoder* encoder, std::vector<std::string> params)
+{
+  for (std::string p : params) {
+    auto pos = p.find_first_of('=');
+    if (pos == std::string::npos || pos==0 || pos==p.size()-1) {
+      std::cerr << "Encoder parameter must be in the format 'name=value'\n";
+      exit(5);
+    }
+
+    std::string name = p.substr(0,pos);
+    std::string value = p.substr(pos+1);
+
+    struct heif_error error = heif_encoder_set_parameter(encoder, name.c_str(), value.c_str());
+    if (error.code) {
+      std::cerr << "Error: " << error.message << "\n";
+      exit(5);
+    }
+  }
+}
+
 
 int main(int argc, char** argv)
 {
@@ -486,10 +545,13 @@ int main(int argc, char** argv)
   bool lossless = false;
   std::string output_filename;
   int logging_level = 0;
+  bool option_show_parameters = false;
+
+  std::vector<std::string> raw_params;
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:v", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -508,6 +570,12 @@ int main(int argc, char** argv)
       break;
     case 'v':
       logging_level++;
+      break;
+    case 'P':
+      option_show_parameters = true;
+      break;
+    case 'p':
+      raw_params.push_back(optarg);
       break;
     }
   }
@@ -531,6 +599,50 @@ int main(int argc, char** argv)
     }
   }
 
+
+
+  // ==============================================================================
+
+  std::shared_ptr<heif_context> context(heif_context_alloc(),
+                                        [] (heif_context* c) { heif_context_free(c); });
+  if (!context) {
+    std::cerr << "Could not create HEIF context\n";
+    return 1;
+  }
+
+
+  struct heif_encoder* encoder = nullptr;
+
+#define MAX_ENCODERS 5
+  const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
+  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_HEVC, nullptr,
+                                                   encoder_descriptors, MAX_ENCODERS);
+
+  if (count>0) {
+    if (logging_level>0) {
+      std::cerr << "Encoder: " << heif_encoder_descriptor_get_name(encoder_descriptors[0]) << "\n";
+    }
+
+    heif_error error = heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+    if (error.code) {
+      std::cerr << error.message << "\n";
+      return 5;
+    }
+  }
+  else {
+    std::cerr << "No HEVC encoder available.\n";
+    return 5;
+  }
+
+
+  if (option_show_parameters) {
+    list_encoder_parameters(encoder);
+    return 0;
+  }
+
+
+
+
   std::string input_filename = argv[optind];
 
   if (output_filename.empty()) {
@@ -548,14 +660,6 @@ int main(int argc, char** argv)
 
 
   // ==============================================================================
-
-  std::shared_ptr<heif_context> context(heif_context_alloc(),
-                                        [] (heif_context* c) { heif_context_free(c); });
-  if (!context) {
-    std::cerr << "Could not create HEIF context\n";
-    return 1;
-  }
-
 
   // get file type from file name
 
@@ -581,43 +685,31 @@ int main(int argc, char** argv)
 
 
 
-#define MAX_ENCODERS 5
-  const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
-  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_HEVC, nullptr,
-                                                   encoder_descriptors, MAX_ENCODERS);
+  heif_encoder_set_lossy_quality(encoder, quality);
+  heif_encoder_set_lossless(encoder, lossless);
+  heif_encoder_set_logging_level(encoder, logging_level);
 
-  if (count>0) {
-    if (logging_level>0) {
-      std::cerr << "Encoder: " << heif_encoder_descriptor_get_name(encoder_descriptors[0]) << "\n";
-    }
+  set_params(encoder, raw_params);
 
-    struct heif_encoder* encoder = nullptr;
-    heif_error error = heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
-
-    heif_encoder_set_lossy_quality(encoder, quality);
-    heif_encoder_set_lossless(encoder, lossless);
-    heif_encoder_set_logging_level(encoder, logging_level);
-
-    struct heif_image_handle* handle;
-    error = heif_context_encode_image(context.get(),
-                                      image.get(),
-                                      encoder,
-                                      &handle);
-    if (error.code != 0) {
-      std::cerr << "Could not read HEIF file: " << error.message << "\n";
-      return 1;
-    }
-
-    heif_encoder_release(encoder);
-
-    heif_image_handle_release(handle);
-
-    error = heif_context_write_to_file(context.get(), output_filename.c_str());
-  }
-  else {
-    std::cerr << "No HEVC encoder available.\n";
+  struct heif_image_handle* handle;
+  struct heif_error error = heif_context_encode_image(context.get(),
+                                                      image.get(),
+                                                      encoder,
+                                                      &handle);
+  if (error.code != 0) {
+    std::cerr << "Could not read HEIF file: " << error.message << "\n";
+    return 1;
   }
 
+  heif_encoder_release(encoder);
+
+  heif_image_handle_release(handle);
+
+  error = heif_context_write_to_file(context.get(), output_filename.c_str());
+  if (error.code) {
+    std::cerr << error.message << "\n";
+    return 5;
+  }
 
   return 0;
 }

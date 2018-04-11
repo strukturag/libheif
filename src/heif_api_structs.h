@@ -61,10 +61,4 @@ struct heif_encoder
 };
 
 
-struct heif_encoder_parameter
-{
-  const char* name;
-  enum heif_encoder_parameter_type type;
-};
-
 #endif

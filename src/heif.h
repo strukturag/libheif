@@ -193,6 +193,8 @@ enum heif_suberror_code {
   // The version of the passed writer is not supported.
   heif_suberror_Unsupported_writer_version = 2004,
 
+  heif_suberror_Unsupported_encoder_parameter = 2005,
+
 
   // --- Unsupported_feature ---
 
@@ -212,7 +214,6 @@ enum heif_suberror_code {
 
   // --- Encoder_plugin_error --
 
-  heif_suberror_Encoder_not_started = 4000
 };
 
 
@@ -626,8 +627,9 @@ struct heif_encoder_descriptor;
 struct heif_encoder_parameter;
 
 enum heif_encoder_parameter_type {
-  heif_encoder_parameter_type_integer,
-  heif_encoder_parameter_type_string
+  heif_encoder_parameter_type_integer = 1,
+  heif_encoder_parameter_type_boolean = 2,
+  heif_encoder_parameter_type_string = 3
 };
 
 // Get a list of encoders. You can filter the encoders by compression format and name.
@@ -666,6 +668,10 @@ LIBHEIF_API
 void heif_encoder_release(struct heif_encoder*);
 
 
+LIBHEIF_API
+const char* heif_encoder_get_name(const struct heif_encoder*);
+
+
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
 LIBHEIF_API
@@ -680,10 +686,9 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level
 
 
 LIBHEIF_API
-int heif_encoder_list_parameters(struct heif_encoder*,
-                                 struct heif_encoder_parameter**,
-                                 int size);
+const struct heif_encoder_parameter** heif_encoder_list_parameters(struct heif_encoder*);
 
+// return a NULL terminaled list of encoder parameters
 LIBHEIF_API
 const char* heif_encoder_parameter_get_name(const struct heif_encoder_parameter*);
 
@@ -694,6 +699,31 @@ LIBHEIF_API
 struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder*,
+                                                     const char* parameter_name,
+                                                     int* value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_set_parameter_boolean(struct heif_encoder*,
+                                                     const char* parameter_name,
+                                                     int value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_get_parameter_boolean(struct heif_encoder*,
+                                                     const char* parameter_name,
+                                                     int* value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_set_parameter(struct heif_encoder*,
+                                             const char* parameter_name,
+                                             const char* value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
+                                             const char* parameter_name,
+                                             char* value_ptr, int value_size);
 
 
 // Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
@@ -816,6 +846,11 @@ struct heif_encoder_plugin
   int priority;
 
 
+  // Feature support
+  int has_lossless_support;
+  int has_lossy_support;
+
+
   // Human-readable name of the plugin
   const char* (*get_plugin_name)();
 
@@ -832,10 +867,19 @@ struct heif_encoder_plugin
   void (*free_encoder)(void* encoder);
 
   struct heif_error (*set_param_quality)(void* encoder, int quality);
+  struct heif_error (*get_param_quality)(void* encoder, int* quality);
 
   struct heif_error (*set_param_lossless)(void* encoder, int lossless);
+  struct heif_error (*get_param_lossless)(void* encoder, int* lossless);
 
   struct heif_error (*set_param_logging_level)(void* encoder, int logging);
+
+  const struct heif_encoder_parameter** (*list_parameters)(void* encoder);
+
+  struct heif_error (*set_parameter_integer)(void* encoder, const char* name, int value);
+  struct heif_error (*get_parameter_integer)(void* encoder, const char* name, int* value);
+  struct heif_error (*set_parameter_boolean)(void* encoder, const char* name, int value);
+  struct heif_error (*get_parameter_boolean)(void* encoder, const char* name, int* value);
 
   void (*query_input_colorspace)(enum heif_colorspace* colorspace, enum heif_chroma* chroma);
 
@@ -858,6 +902,41 @@ struct heif_encoder_plugin
 
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
+};
+
+
+#define heif_encoder_parameter_name_quality  "quality"
+#define heif_encoder_parameter_name_lossless "lossless"
+
+struct heif_encoder_parameter
+{
+  int version; // current version: 1
+
+  // version 1 fields
+
+  const char* name;
+  enum heif_encoder_parameter_type type;
+
+  union {
+    struct {
+      int default_value;
+      int minimum;
+      int maximum;
+      int* valid_values;
+      int num_valid_values;
+    } integer;
+
+    struct {
+      const char* default_value;
+
+      const char** valid_values;
+      int num_valid_values;
+    } string;
+
+    struct {
+      int default_value;
+    } boolean;
+  };
 };
 
 

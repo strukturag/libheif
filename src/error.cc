@@ -107,6 +107,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Nonexisting_image_channel_referenced: return "Non-existing image channel referenced";
   case heif_suberror_Unsupported_plugin_version: return "The version of the passed plugin is not supported";
   case heif_suberror_Unsupported_writer_version: return "The version of the passed writer is not supported";
+  case heif_suberror_Unsupported_encoder_parameter: return "Unsupported encoder parameter";
 
     // --- Unsupported_feature ---
 
@@ -118,7 +119,6 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     // --- Encoder_plugin_error --
 
-  case heif_suberror_Encoder_not_started: return "Encoder has not been started";
   }
 
   assert(false);
