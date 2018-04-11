@@ -131,8 +131,9 @@ struct heif_encoder_plugin
   // Global plugin initialization (may be NULL)
   void (*init_plugin)();
 
-  // Global plugin deinitialization (may be NULL)
-  void (*deinit_plugin)();
+  // Global plugin cleanup (may be NULL).
+  // Free data that was allocated in init_plugin()
+  void (*cleanup_plugin)();
 
   // Create a new decoder context for decoding an image
   struct heif_error (*new_encoder)(void** encoder);
@@ -155,14 +156,16 @@ struct heif_encoder_plugin
   struct heif_error (*set_parameter_boolean)(void* encoder, const char* name, int value);
   struct heif_error (*get_parameter_boolean)(void* encoder, const char* name, int* value);
 
-  void (*query_input_colorspace)(enum heif_colorspace* colorspace, enum heif_chroma* chroma);
+  // Replace the input colorspace/chroma with the one that is supported by the encoder and that
+  // comes as close to the input colorspace/chroma as possible.
+  void (*query_input_colorspace)(enum heif_colorspace* inout_colorspace,
+                                 enum heif_chroma* inout_chroma);
 
+  // Encode an image.
+  // After pushing an image into the encoder, you should call get_compressed_data() to
+  // get compressed data until it returns a NULL data pointer.
   struct heif_error (*encode_image)(void* encoder, const struct heif_image* image,
                                     enum heif_image_input_class image_class);
-
-
-  // --- After pushing an image into the decoder, you should call get_compressed_data() until
-  // it returns a NULL data pointer.
 
   // Get a packet of decoded data. The data format depends on the codec.
   // For HEVC, each packet shall contain exactly one NAL, starting with the NAL header without startcode.

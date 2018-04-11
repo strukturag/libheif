@@ -126,7 +126,7 @@ void x265_init_plugin()
 }
 
 
-void x265_deinit_plugin()
+void x265_cleanup_plugin()
 {
 }
 
@@ -421,7 +421,7 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .has_lossy_support = true,
   .get_plugin_name = x265_plugin_name,
   .init_plugin = x265_init_plugin,
-  .deinit_plugin = x265_deinit_plugin,
+  .cleanup_plugin = x265_cleanup_plugin,
   .new_encoder = x265_new_encoder,
   .free_encoder = x265_free_encoder,
   .set_param_quality = x265_set_param_quality,
