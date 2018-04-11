@@ -346,12 +346,12 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Nonexisting_image_channel_referenced",heif_suberror_Nonexisting_image_channel_referenced)
     .value("heif_suberror_Unsupported_plugin_version",heif_suberror_Unsupported_plugin_version)
     .value("heif_suberror_Unsupported_writer_version",heif_suberror_Unsupported_writer_version)
+    .value("heif_suberror_Unsupported_encoder_parameter",heif_suberror_Unsupported_encoder_parameter)
     .value("heif_suberror_Unsupported_codec",heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type",heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version",heif_suberror_Unsupported_data_version)
     .value("heif_suberror_Unsupported_color_conversion",heif_suberror_Unsupported_color_conversion)
     .value("heif_suberror_Unsupported_item_construction_method",heif_suberror_Unsupported_item_construction_method)
-    .value("heif_suberror_Encoder_not_started",heif_suberror_Encoder_not_started)
     ;
   emscripten::enum_<heif_compression_format>("heif_compression_format")
     .value("heif_compression_undefined", heif_compression_undefined)
