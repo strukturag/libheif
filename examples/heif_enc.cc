@@ -240,7 +240,7 @@ static void
 user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 {
   FILE* fh = (FILE*)png_get_io_ptr(png_ptr);
-  int n = fread((char*)data,length,1,fh);
+  size_t n = fread((char*)data,length,1,fh);
   (void)n;
 } // user_read_data
 
@@ -403,13 +403,13 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
   bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
 
   if (band==1) {
-    err = heif_image_create(width, height,
+    err = heif_image_create((int)width, (int)height,
                             heif_colorspace_YCbCr,
                             heif_chroma_monochrome,
                             &image);
     (void)err;
 
-    heif_image_add_plane(image, heif_channel_Y, width, height, 8);
+    heif_image_add_plane(image, heif_channel_Y, (int)width, (int)height, 8);
 
     int y_stride;
     int a_stride;
@@ -417,7 +417,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
     uint8_t* pa  = nullptr;
 
     if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, width, height, 8);
+      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, 8);
 
       pa = heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
     }
@@ -440,13 +440,13 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
     }
   }
   else {
-    err = heif_image_create(width, height,
+    err = heif_image_create((int)width, (int)height,
                             heif_colorspace_RGB,
                             has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
                             &image);
     (void)err;
 
-    heif_image_add_plane(image, heif_channel_interleaved, width, height,
+    heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height,
                          has_alpha ? 32 : 24);
 
     int stride;
