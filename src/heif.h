@@ -660,16 +660,16 @@ heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descrip
 
 // Get an encoder instance that can be used to actually encode images from a descriptor.
 LIBHEIF_API
-struct heif_error heif_get_encoder(struct heif_context* context,
-                                   const struct heif_encoder_descriptor*,
-                                   struct heif_encoder** out_encoder);
+struct heif_error heif_context_get_encoder(struct heif_context* context,
+                                           const struct heif_encoder_descriptor*,
+                                           struct heif_encoder** out_encoder);
 
 // Get an encoder for the given compression format. If there are several encoder plugins
 // for this format, the encoder with the highest plugin priority will be returned.
 LIBHEIF_API
-struct heif_error heif_get_encoder_for_format(struct heif_context* context,
-                                              enum heif_compression_format format,
-                                              struct heif_encoder**);
+struct heif_error heif_context_get_encoder_for_format(struct heif_context* context,
+                                                      enum heif_compression_format format,
+                                                      struct heif_encoder**);
 
 // You have to release the encoder after use.
 LIBHEIF_API

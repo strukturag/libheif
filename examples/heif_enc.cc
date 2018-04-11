@@ -624,7 +624,7 @@ int main(int argc, char** argv)
       std::cerr << "Encoder: " << heif_encoder_descriptor_get_name(encoder_descriptors[0]) << "\n";
     }
 
-    heif_error error = heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+    heif_error error = heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
     if (error.code) {
       std::cerr << error.message << "\n";
       return 5;

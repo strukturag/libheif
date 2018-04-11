@@ -129,7 +129,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 
   heif_encoder* encoder;
-  heif_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+  heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
 
   if (size < 2) {
     return 0;

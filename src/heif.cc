@@ -778,9 +778,9 @@ const char* heif_encoder_get_name(const struct heif_encoder* encoder)
 }
 
 
-struct heif_error heif_get_encoder(struct heif_context* context,
-                                   const struct heif_encoder_descriptor* descriptor,
-                                   struct heif_encoder** encoder)
+struct heif_error heif_context_get_encoder(struct heif_context* context,
+                                           const struct heif_encoder_descriptor* descriptor,
+                                           struct heif_encoder** encoder)
 {
   if (!descriptor || !encoder) {
     return Error(heif_error_Usage_error,
@@ -795,9 +795,9 @@ struct heif_error heif_get_encoder(struct heif_context* context,
 }
 
 
-struct heif_error heif_get_encoder_for_format(struct heif_context* context,
-                                              enum heif_compression_format format,
-                                              struct heif_encoder** encoder)
+struct heif_error heif_context_get_encoder_for_format(struct heif_context* context,
+                                                      enum heif_compression_format format,
+                                                      struct heif_encoder** encoder)
 {
   if (!encoder) {
     return Error(heif_error_Usage_error,
