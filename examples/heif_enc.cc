@@ -29,6 +29,7 @@
 #include <iostream>
 #include <memory>
 #include <algorithm>
+#include <vector>
 
 #include "heif.h"
 
