@@ -622,18 +622,17 @@ struct heif_error heif_context_write(struct heif_context*,
                                      struct heif_writer* writer,
                                      void* userdata);
 
+
+// ----- encoder -----
+
 struct heif_encoder;
 struct heif_encoder_descriptor;
 struct heif_encoder_parameter;
 
-enum heif_encoder_parameter_type {
-  heif_encoder_parameter_type_integer = 1,
-  heif_encoder_parameter_type_boolean = 2,
-  heif_encoder_parameter_type_string = 3
-};
 
-// Get a list of encoders. You can filter the encoders by compression format and name.
+// Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
+// The returned list of encoders is sorted by their priority (which is a plugin property).
 LIBHEIF_API
 int heif_context_get_encoder_descriptors(struct heif_context*,
                                          enum heif_compression_format format_filter,
@@ -648,29 +647,30 @@ LIBHEIF_API
 enum heif_compression_format
 heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor*);
 
-// Start using a specific encoder. You have to call this before setting any
-// parameters and before encoding an image.
+
+// Get an encoder instance that can be used to actually encode images from a descriptor.
 LIBHEIF_API
 struct heif_error heif_get_encoder(struct heif_context* context,
                                    const struct heif_encoder_descriptor*,
                                    struct heif_encoder** out_encoder);
 
+// Get an encoder for the given compression format. If there are several encoder plugins
+// for this format, the encoder with the highest plugin priority will be returned.
 LIBHEIF_API
 struct heif_error heif_get_encoder_for_format(struct heif_context* context,
                                               enum heif_compression_format format,
                                               struct heif_encoder**);
 
-// Stop using the encoder. Settings may be reset.
-// The encoder will also be stopped automatically when the encoder's context is released.
-// You might want to use this, for example, when the heif_context stays alive, but you
-// want to change the encoder and release all memory allocated by the old encoder.
+// You have to release the encoder after use.
 LIBHEIF_API
 void heif_encoder_release(struct heif_encoder*);
 
-
+// Get the encoder name from the encoder itself.
 LIBHEIF_API
 const char* heif_encoder_get_name(const struct heif_encoder*);
 
+
+// --- Encoder Parameters ---
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.
@@ -684,14 +684,23 @@ struct heif_error heif_encoder_set_lossless(struct heif_encoder*, int enable);
 LIBHEIF_API
 struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level);
 
-
+// Get a generic list of encoder parameters.
+// Each encoder may define its own, additional set of parameters.
 LIBHEIF_API
 const struct heif_encoder_parameter** heif_encoder_list_parameters(struct heif_encoder*);
 
-// return a NULL terminaled list of encoder parameters
+// Return the parameter name.
 LIBHEIF_API
 const char* heif_encoder_parameter_get_name(const struct heif_encoder_parameter*);
 
+
+enum heif_encoder_parameter_type {
+  heif_encoder_parameter_type_integer = 1,
+  heif_encoder_parameter_type_boolean = 2,
+  heif_encoder_parameter_type_string = 3
+};
+
+// Return the parameter type.
 LIBHEIF_API
 enum heif_encoder_parameter_type heif_encoder_parameter_get_type(const struct heif_encoder_parameter*);
 
@@ -715,11 +724,15 @@ struct heif_error heif_encoder_get_parameter_boolean(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int* value);
 
+// Set a parameter of any type to the string value.
+// Integer values are parsed from the string.
+// Boolean values can be "true"/"false"/"1"/"0"
 LIBHEIF_API
 struct heif_error heif_encoder_set_parameter(struct heif_encoder*,
                                              const char* parameter_name,
                                              const char* value);
 
+// Get the current value of a parameter of any type.
 LIBHEIF_API
 struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              const char* parameter_name,
