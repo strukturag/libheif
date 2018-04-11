@@ -57,7 +57,7 @@ struct heif_encoder
 
   std::shared_ptr<heif::HeifContext> context;
   const struct heif_encoder_plugin* plugin;
-  void* encoder;
+  void* encoder = nullptr;
 };
 
 
