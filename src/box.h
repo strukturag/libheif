@@ -510,7 +510,7 @@ namespace heif {
 
   protected:
     Error parse(BitstreamRange& range) override;
-    Error write(StreamWriter& writer) const;
+    Error write(StreamWriter& writer) const override;
 
   private:
     std::string m_aux_type;
@@ -597,7 +597,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
     Error write(StreamWriter& writer) const override;
 
-    void derive_box_version();
+    void derive_box_version() override;
 
   private:
     struct Reference {
