@@ -37,15 +37,6 @@ class HeifContext;
 }
 
 
-struct heif_encoder_descriptor
-{
-  const struct heif_encoder_plugin* plugin;
-
-  const char* get_name() const { return plugin->get_plugin_name(); }
-  enum heif_compression_format get_compression_format() const { return plugin->compression_format; }
-};
-
-
 namespace heif {
 
   class HeifFile;
@@ -187,7 +178,6 @@ namespace heif {
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
-    void register_encoder(const heif_encoder_plugin* encoder_plugin);
 
     Error decode_image(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                        const struct heif_decoding_options* options = nullptr) const;
@@ -212,24 +202,10 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
-    std::vector<const struct heif_encoder_descriptor*>
-      get_filtered_encoder_descriptors(enum heif_compression_format,
-                                       const char* name) const;
-
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
-    const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type) const;
-
-    struct encoder_descriptor_priority_order
-    {
-      bool operator() (const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                       const std::unique_ptr<struct heif_encoder_descriptor>& b) {
-        return a->plugin->priority > b->plugin->priority;  // highest priority first
-      }
-    };
 
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
-    std::set<std::unique_ptr<struct heif_encoder_descriptor>, encoder_descriptor_priority_order> m_encoder_descriptors;
 
     std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 

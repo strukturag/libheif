@@ -49,6 +49,8 @@ libheif_la_SOURCES = \
   heif_context.cc \
   heif_hevc.h \
   heif_hevc.cc \
+  heif_plugin_registry.h \
+  heif_plugin_registry.cc \
   logging.h
 
 if HAVE_LIBDE265

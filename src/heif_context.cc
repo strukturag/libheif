@@ -40,6 +40,7 @@
 #include "heif_api_structs.h"
 #include "heif_limits.h"
 #include "heif_hevc.h"
+#include "heif_plugin_registry.h"
 
 #if HAVE_LIBDE265
 #include "heif_decoder_libde265.h"
@@ -51,6 +52,7 @@
 
 
 using namespace heif;
+
 
 
 heif_encoder::heif_encoder(std::shared_ptr<heif::HeifContext> _context,
@@ -328,11 +330,11 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 HeifContext::HeifContext()
 {
 #if HAVE_LIBDE265
-  register_decoder(get_decoder_plugin_libde265());
+  heif::register_decoder(get_decoder_plugin_libde265());
 #endif
 
 #if HAVE_X265
-  register_encoder(get_encoder_plugin_x265());
+  heif::register_encoder(get_encoder_plugin_x265());
 #endif
 
   reset_to_empty_heif();
@@ -393,22 +395,25 @@ void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
   m_decoder_plugins.insert(decoder_plugin);
 }
 
-void HeifContext::register_encoder(const heif_encoder_plugin* encoder_plugin)
-{
-  if (encoder_plugin->init_plugin) {
-    (*encoder_plugin->init_plugin)();
-  }
-
-  auto descriptor = std::unique_ptr<struct heif_encoder_descriptor>(new heif_encoder_descriptor);
-  descriptor->plugin = encoder_plugin;
-
-  m_encoder_descriptors.insert(std::move(descriptor));
-}
 
 const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
 {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
+
+
+  // search global plugins
+
+  for (const auto* plugin : s_decoder_plugins) {
+    int priority = plugin->does_support_format(type);
+    if (priority > highest_priority) {
+      highest_priority = priority;
+      best_plugin = plugin;
+    }
+  }
+
+
+  // search context-local plugins (DEPRECATED)
 
   for (const auto* plugin : m_decoder_plugins) {
     int priority = plugin->does_support_format(type);
@@ -419,18 +424,6 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
   }
 
   return best_plugin;
-}
-
-
-const struct heif_encoder_plugin* HeifContext::get_encoder(enum heif_compression_format type) const
-{
-  auto filtered_encoder_descriptors = get_filtered_encoder_descriptors(type, nullptr);
-  if (filtered_encoder_descriptors.size()>0) {
-    return filtered_encoder_descriptors[0]->plugin;
-  }
-  else {
-    return nullptr;
-  }
 }
 
 
@@ -1511,27 +1504,4 @@ void HeifContext::set_primary_image(std::shared_ptr<Image> image)
   // update pitm box in HeifFile
 
   m_heif_file->set_primary_item_id(image->get_id());
-}
-
-
-std::vector<const struct heif_encoder_descriptor*>
-HeifContext::get_filtered_encoder_descriptors(enum heif_compression_format format,
-                                              const char* name) const
-{
-  std::vector<const struct heif_encoder_descriptor*> filtered_descriptors;
-
-  for (const auto& descr : m_encoder_descriptors) {
-    const struct heif_encoder_plugin* plugin = descr->plugin;
-
-    if (plugin->compression_format == format || format==heif_compression_undefined) {
-      if (name == nullptr || strcmp(name, plugin->id_name)==0) {
-        filtered_descriptors.push_back(descr.get());
-      }
-    }
-  }
-
-
-  // Note: since our std::set<> is ordered by priority, we do not have to sort our output
-
-  return filtered_descriptors;
 }

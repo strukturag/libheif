@@ -26,6 +26,7 @@
 #include "heif_image.h"
 #include "heif_api_structs.h"
 #include "heif_context.h"
+#include "heif_plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
 
@@ -56,6 +57,9 @@ static struct heif_error error_Ok = { heif_error_Ok, heif_suberror_Unspecified, 
 static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
                                                          heif_suberror_Unsupported_encoder_parameter,
                                                          "Unsupported encoder parameter" };
+static struct heif_error error_unsupported_plugin_version = { heif_error_Usage_error,
+                                                              heif_suberror_Unsupported_plugin_version,
+                                                              "Unsupported plugin version" };
 
 const char *heif_get_version(void) {
   return (LIBHEIF_VERSION);
@@ -658,12 +662,11 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 }
 
 
-
+// DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
   if (decoder_plugin && decoder_plugin->plugin_api_version != 1) {
-    Error err(heif_error_Usage_error, heif_suberror_Unsupported_plugin_version);
-    return err.error_struct(heif->context.get());
+    return error_unsupported_plugin_version;
   }
 
   heif->context->register_decoder(decoder_plugin);
@@ -671,15 +674,25 @@ struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_p
 }
 
 
-struct heif_error heif_register_encoder(heif_context* heif, const heif_encoder_plugin* encoder_plugin)
+struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
 {
-  if (encoder_plugin && encoder_plugin->plugin_api_version != 1) {
-    Error err(heif_error_Usage_error, heif_suberror_Unsupported_plugin_version);
-    return err.error_struct(heif->context.get());
+  if (decoder_plugin && decoder_plugin->plugin_api_version != 1) {
+    return error_unsupported_plugin_version;
   }
 
-  heif->context->register_encoder(encoder_plugin);
-  return Error::Ok.error_struct(heif->context.get());
+  register_decoder(decoder_plugin);
+  return error_Ok;
+}
+
+
+struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encoder_plugin)
+{
+  if (encoder_plugin && encoder_plugin->plugin_api_version != 1) {
+    return error_unsupported_plugin_version;
+  }
+
+  register_encoder(encoder_plugin);
+  return error_Ok;
 }
 
 
@@ -755,7 +768,7 @@ int heif_context_get_encoder_descriptors(struct heif_context* ctx,
   }
 
   std::vector<const struct heif_encoder_descriptor*> descriptors;
-  descriptors = ctx->context->get_filtered_encoder_descriptors(format, name);
+  descriptors = get_filtered_encoder_descriptors(format, name);
 
   int i;
   for (i=0 ; i < count && static_cast<size_t>(i) < descriptors.size() ; i++) {
@@ -805,7 +818,7 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
   }
 
   std::vector<const struct heif_encoder_descriptor*> descriptors;
-  descriptors = context->context->get_filtered_encoder_descriptors(format, nullptr);
+  descriptors = get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size()>0) {
     *encoder = new struct heif_encoder(context->context, descriptors[0]->plugin);

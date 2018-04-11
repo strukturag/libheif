@@ -781,11 +781,15 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
 struct heif_decoder_plugin;
 struct heif_encoder_plugin;
 
+// DEPRECATED. Use heif_register_decoder_plugin(const struct heif_decoder_plugin*) instead.
 LIBHEIF_API
 struct heif_error heif_register_decoder(struct heif_context* heif, const struct heif_decoder_plugin*);
 
 LIBHEIF_API
-struct heif_error heif_register_encoder(struct heif_context* heif, const struct heif_encoder_plugin*);
+struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*);
+
+LIBHEIF_API
+struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
 
 #ifdef __cplusplus
 }

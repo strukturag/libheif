@@ -16,6 +16,8 @@ heif_image.cc
 heif_image.h
 heif_hevc.h
 heif_hevc.cc
+heif_plugin_registry.h
+heif_plugin_registry.cc
 heif_limits.h
 heif-version.h
 logging.h
