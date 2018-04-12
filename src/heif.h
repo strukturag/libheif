@@ -745,6 +745,16 @@ struct heif_error heif_encoder_get_parameter_boolean(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int* value);
 
+LIBHEIF_API
+struct heif_error heif_encoder_set_parameter_string(struct heif_encoder*,
+                                                    const char* parameter_name,
+                                                    const char* value);
+
+LIBHEIF_API
+struct heif_error heif_encoder_get_parameter_string(struct heif_encoder*,
+                                                    const char* parameter_name,
+                                                    char* value, int value_size);
+
 // Set a parameter of any type to the string value.
 // Integer values are parsed from the string.
 // Boolean values can be "true"/"false"/"1"/"0"

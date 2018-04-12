@@ -946,6 +946,22 @@ struct heif_error heif_encoder_get_parameter_boolean(struct heif_encoder* encode
   return encoder->plugin->get_parameter_boolean(encoder->encoder, parameter_name, value_ptr);
 }
 
+struct heif_error heif_encoder_set_parameter_string(struct heif_encoder* encoder,
+                                                    const char* parameter_name,
+                                                    const char* value)
+{
+  return encoder->plugin->set_parameter_string(encoder->encoder, parameter_name, value);
+}
+
+struct heif_error heif_encoder_get_parameter_string(struct heif_encoder* encoder,
+                                                    const char* parameter_name,
+                                                    char* value_ptr, int value_size)
+{
+  return encoder->plugin->get_parameter_string(encoder->encoder, parameter_name,
+                                               value_ptr, value_size);
+}
+
+
 
 bool parse_boolean(const char* value)
 {
@@ -982,7 +998,7 @@ struct heif_error heif_encoder_set_parameter(struct heif_encoder* encoder,
         return heif_encoder_set_parameter_boolean(encoder, parameter_name, parse_boolean(value));
 
       case heif_encoder_parameter_type_string:
-        // TODO
+        return heif_encoder_set_parameter_string(encoder, parameter_name, value);
         break;
       }
 
@@ -1030,7 +1046,13 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
         break;
 
       case heif_encoder_parameter_type_string:
-        // TODO
+        {
+          struct heif_error error = heif_encoder_get_parameter_string(encoder, parameter_name,
+                                                                      value_ptr, value_size);
+          if (error.code) {
+            return error;
+          }
+        }
         break;
       }
 

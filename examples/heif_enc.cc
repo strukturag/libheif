@@ -513,7 +513,14 @@ void list_encoder_parameters(heif_encoder* encoder)
       break;
 
     case heif_encoder_parameter_type_string:
-      // TODO
+      {
+        const int value_size = 50;
+        char value[value_size];
+        heif_error error = heif_encoder_get_parameter_string(encoder, name, value, value_size);
+        (void)error;
+
+        std::cerr << "  " << name << ", default=" << value << "\n";
+      }
       break;
     }
   }

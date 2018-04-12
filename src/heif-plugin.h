@@ -169,6 +169,8 @@ struct heif_encoder_plugin
   struct heif_error (*get_parameter_integer)(void* encoder, const char* name, int* value);
   struct heif_error (*set_parameter_boolean)(void* encoder, const char* name, int value);
   struct heif_error (*get_parameter_boolean)(void* encoder, const char* name, int* value);
+  struct heif_error (*set_parameter_string)(void* encoder, const char* name, const char* value);
+  struct heif_error (*get_parameter_string)(void* encoder, const char* name, char* value, int value_size);
 
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.

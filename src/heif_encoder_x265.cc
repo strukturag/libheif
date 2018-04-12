@@ -37,16 +37,19 @@ extern "C" {
 
 struct x265_encoder_struct
 {
-  x265_param* params;
   x265_encoder* encoder;
 
   x265_nal* nals;
   uint32_t num_nals;
   uint32_t nal_output_counter;
 
-  // --- original parameters (if needed)
+  // --- parameters
 
-  int param_quality;
+  int quality;
+  bool lossless;
+  std::string preset;
+  std::string tune;
+  int logLevel;
 };
 
 static const char kSuccess[] = "Success";
@@ -59,6 +62,10 @@ static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
 static struct heif_error error_invalid_parameter_value = { heif_error_Usage_error,
                                                            heif_suberror_Invalid_parameter_value,
                                                            "Invalid parameter value" };
+
+
+static const char* kParam_preset = "preset";
+static const char* kParam_tune = "tune";
 
 static const int X265_PLUGIN_PRIORITY = 100;
 
@@ -113,6 +120,20 @@ static void x265_init_parameters()
   p->boolean.default_value = false;
   d[i++] = p++;
 
+  assert(i < MAX_NPARAMETERS);
+  p->version = 1;
+  p->name = kParam_preset;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "slow";
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 1;
+  p->name = kParam_tune;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "ssim";
+  d[i++] = p++;
+
   d[i++] = nullptr;
 }
 
@@ -139,15 +160,6 @@ struct heif_error x265_new_encoder(void** enc)
   struct x265_encoder_struct* encoder = new x265_encoder_struct();
   struct heif_error err = error_Ok;
 
-  x265_param* param = x265_param_alloc();
-  x265_param_default_preset(param, "slow", "ssim");
-  x265_param_apply_profile(param, "mainstillpicture");
-  param->fpsNum = 1;
-  param->fpsDenom = 1;
-  param->sourceWidth = 0;
-  param->sourceHeight = 0;
-  param->logLevel = X265_LOG_NONE;
-  encoder->params = param;
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
@@ -170,8 +182,6 @@ void x265_free_encoder(void* encoder_raw)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  x265_param_free(encoder->params);
-
   if (encoder->encoder) {
     x265_encoder_close(encoder->encoder);
   }
@@ -190,8 +200,7 @@ struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
   // quality=0   -> crf=50
   // quality=50  -> crf=25
   // quality=100 -> crf=0
-  encoder->param_quality = quality;
-  encoder->params->rc.rfConstant = (100-quality)/2;
+  encoder->quality = quality;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -201,7 +210,7 @@ struct heif_error x265_get_param_quality(void* encoder_raw, int* quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  *quality = encoder->param_quality;
+  *quality = encoder->quality;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -211,7 +220,7 @@ struct heif_error x265_set_param_lossless(void* encoder_raw, int enable)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  encoder->params->bLossless = enable;
+  encoder->lossless = enable;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -221,7 +230,7 @@ struct heif_error x265_get_param_lossless(void* encoder_raw, int* enable)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  *enable = encoder->params->bLossless;
+  *enable = encoder->lossless;
 
   return error_Ok;
 }
@@ -230,10 +239,11 @@ struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
-  if (logging<0) logging=0;
-  if (logging>4) logging=4;
+  if (logging<0 || logging>4) {
+    return error_invalid_parameter_value;
+  }
 
-  encoder->params->logLevel = logging;
+  encoder->logLevel = logging;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -284,6 +294,46 @@ struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, in
 }
 
 
+struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  if (strcmp(name, kParam_preset)==0) {
+    encoder->preset = value;
+    return error_Ok;
+  }
+  else if (strcmp(name, kParam_tune)==0) {
+    encoder->tune = value;
+    return error_Ok;
+  }
+
+  return error_unsupported_parameter;
+}
+
+void save_strcpy(char* dst, int dst_size, const char* src)
+{
+  strncpy(dst, src, dst_size-1);
+  dst[dst_size-1] = 0;
+}
+
+struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
+                                            char* value, int value_size)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  if (strcmp(name, kParam_preset)==0) {
+    save_strcpy(value, value_size, encoder->preset.c_str());
+    return error_Ok;
+  }
+  else if (strcmp(name, kParam_tune)==0) {
+    save_strcpy(value, value_size, encoder->tune.c_str());
+    return error_Ok;
+  }
+
+  return error_unsupported_parameter;
+}
+
+
 static void x265_set_default_parameters(void* encoder)
 {
   for (const struct heif_encoder_parameter** p = x265_encoder_parameter_ptrs; *p; p++) {
@@ -297,7 +347,7 @@ static void x265_set_default_parameters(void* encoder)
       x265_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
       break;
     case heif_encoder_parameter_type_string:
-      // TODO: no string parameters yet
+      x265_set_parameter_string(encoder, param->name, param->string.default_value);
       break;
     }
   }
@@ -317,16 +367,31 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
 
+  x265_param* param = x265_param_alloc();
+  x265_param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
+  printf("%s %s\n",encoder->preset.c_str(), encoder->tune.c_str());
+
+  x265_param_apply_profile(param, "mainstillpicture");
+  param->fpsNum = 1;
+  param->fpsDenom = 1;
+  param->sourceWidth = 0;
+  param->sourceHeight = 0;
+  param->logLevel = X265_LOG_NONE;
+
+  param->rc.rfConstant = (100 - encoder->quality)/2;
+  param->bLossless = encoder->lossless;
+  param->logLevel = encoder->logLevel;
+
+  param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
+  param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
+
   x265_picture* pic = x265_picture_alloc();
-  x265_picture_init(encoder->params, pic);
+  x265_picture_init(param, pic);
 
   pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
   pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
   pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
   pic->bitDepth = 8;
-
-  encoder->params->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
-  encoder->params->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
 
 
   // close encoder after all data has been extracted
@@ -335,7 +400,7 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
     x265_encoder_close(encoder->encoder);
   }
 
-  encoder->encoder = x265_encoder_open(encoder->params);
+  encoder->encoder = x265_encoder_open(param);
 
   int result = x265_encoder_encode(encoder->encoder,
                                    &encoder->nals,
@@ -345,6 +410,7 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   (void)result;
 
   x265_picture_free(pic);
+  x265_param_free(param);
 
   encoder->nal_output_counter = 0;
 
@@ -441,6 +507,8 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .get_parameter_integer = x265_get_parameter_integer,
   .set_parameter_boolean = x265_set_parameter_integer, // boolean also maps to integer function
   .get_parameter_boolean = x265_get_parameter_integer, // boolean also maps to integer function
+  .set_parameter_string = x265_set_parameter_string,
+  .get_parameter_string = x265_get_parameter_string,
   .query_input_colorspace = x265_query_input_colorspace,
   .encode_image = x265_encode_image,
   .get_compressed_data = x265_get_compressed_data
