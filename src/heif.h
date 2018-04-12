@@ -203,7 +203,11 @@ enum heif_suberror_code {
   // The version of the passed writer is not supported.
   heif_suberror_Unsupported_writer_version = 2004,
 
-  heif_suberror_Unsupported_encoder_parameter = 2005,
+  // The given (encoder) parameter name does not exist.
+  heif_suberror_Unsupported_parameter = 2005,
+
+  // The value for the given parameter is not in the valid range.
+  heif_suberror_Invalid_parameter_value = 2006,
 
 
   // --- Unsupported_feature ---
@@ -222,7 +226,7 @@ enum heif_suberror_code {
   heif_suberror_Unsupported_item_construction_method = 3004,
 
 
-  // --- Encoder_plugin_error --
+  // --- Encoder_plugin_error ---
 
 };
 
@@ -749,7 +753,8 @@ struct heif_error heif_encoder_set_parameter(struct heif_encoder*,
                                              const char* parameter_name,
                                              const char* value);
 
-// Get the current value of a parameter of any type.
+// Get the current value of a parameter of any type as a human readable string.
+// The returned string is compatible with heif_encoder_set_parameter().
 LIBHEIF_API
 struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              const char* parameter_name,

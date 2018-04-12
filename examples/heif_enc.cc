@@ -487,7 +487,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
 
-  const struct heif_encoder_parameter** params = heif_encoder_list_parameters(encoder);
+  const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
   for (int i=0;params[i];i++) {
     const char* name = heif_encoder_parameter_get_name(params[i]);
 

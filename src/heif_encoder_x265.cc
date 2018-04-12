@@ -54,8 +54,11 @@ static const char kEmptyString[] = "";
 
 static struct heif_error error_Ok = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
-                                                         heif_suberror_Unsupported_encoder_parameter,
+                                                         heif_suberror_Unsupported_parameter,
                                                          "Unsupported encoder parameter" };
+static struct heif_error error_invalid_parameter_value = { heif_error_Usage_error,
+                                                           heif_suberror_Invalid_parameter_value,
+                                                           "Invalid parameter value" };
 
 static const int X265_PLUGIN_PRIORITY = 100;
 
@@ -179,6 +182,10 @@ void x265_free_encoder(void* encoder_raw)
 struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  if (quality<0 || quality>100) {
+    return error_invalid_parameter_value;
+  }
 
   // quality=0   -> crf=50
   // quality=50  -> crf=25

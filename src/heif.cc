@@ -55,7 +55,7 @@ using namespace heif;
 
 static struct heif_error error_Ok = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
-                                                         heif_suberror_Unsupported_encoder_parameter,
+                                                         heif_suberror_Unsupported_parameter,
                                                          "Unsupported encoder parameter" };
 static struct heif_error error_unsupported_plugin_version = { heif_error_Usage_error,
                                                               heif_suberror_Unsupported_plugin_version,
