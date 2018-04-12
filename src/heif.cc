@@ -785,6 +785,12 @@ const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descripto
 }
 
 
+const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->id_name;
+}
+
+
 const char* heif_encoder_get_name(const struct heif_encoder* encoder)
 {
   return encoder->plugin->get_plugin_name();

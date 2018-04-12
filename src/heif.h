@@ -664,6 +664,9 @@ LIBHEIF_API
 const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descriptor*);
 
 LIBHEIF_API
+const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descriptor*);
+
+LIBHEIF_API
 enum heif_compression_format
 heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor*);
 

@@ -653,7 +653,11 @@ int main(int argc, char** argv)
 
   if (count>0) {
     if (logging_level>0) {
-      std::cerr << "Encoder: " << heif_encoder_descriptor_get_name(encoder_descriptors[0]) << "\n";
+      std::cerr << "Encoder: "
+                << heif_encoder_descriptor_get_id_name(encoder_descriptors[0])
+                << " = "
+                << heif_encoder_descriptor_get_name(encoder_descriptors[0])
+                << "\n";
     }
 
     heif_error error = heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
