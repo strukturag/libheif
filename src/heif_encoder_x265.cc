@@ -49,6 +49,7 @@ struct x265_encoder_struct
   bool lossless;
   std::string preset;
   std::string tune;
+  int tu_intra_depth;
   int logLevel = X265_LOG_NONE;
 };
 
@@ -66,6 +67,7 @@ static struct heif_error error_invalid_parameter_value = { heif_error_Usage_erro
 
 static const char* kParam_preset = "preset";
 static const char* kParam_tune = "tune";
+static const char* kParam_TU_intra_depth = "tu-intra-depth";
 
 static const char*const kParam_preset_valid_values[] = {
   "ultrafast", "superfast", "veryfast", "faster", "fast", "medium",
@@ -146,6 +148,18 @@ static void x265_init_parameters()
   p->type = heif_encoder_parameter_type_string;
   p->string.default_value = "ssim";
   p->string.valid_values = kParam_tune_valid_values;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 1;
+  p->name = kParam_TU_intra_depth;
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 2;
+  p->integer.have_minimum_maximum = true;
+  p->integer.minimum = 1;
+  p->integer.maximum = 4;
+  p->integer.valid_values = NULL;
+  p->integer.num_valid_values = 0;
   d[i++] = p++;
 
   d[i++] = nullptr;
@@ -264,25 +278,41 @@ struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
 }
 
 
-struct heif_error x265_set_parameter_integer(void* encoder, const char* name, int value)
+struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
     return x265_set_param_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return x265_set_param_lossless(encoder,value);
   }
+  else if (strcmp(name, kParam_TU_intra_depth)==0) {
+    if (value < 1 || value > 4) {
+      return error_invalid_parameter_value;
+    }
+
+    encoder->tu_intra_depth = value;
+    return error_Ok;
+  }
 
   return error_unsupported_parameter;
 }
 
-struct heif_error x265_get_parameter_integer(void* encoder, const char* name, int* value)
+struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
     return x265_get_param_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return x265_get_param_lossless(encoder,value);
+  }
+  else if (strcmp(name, kParam_TU_intra_depth)==0) {
+    *value = encoder->tu_intra_depth;
+    return error_Ok;
   }
 
   return error_unsupported_parameter;
@@ -413,6 +443,10 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   param->rc.rfConstant = (100 - encoder->quality)/2;
   param->bLossless = encoder->lossless;
   param->logLevel = encoder->logLevel;
+
+  char buf[100];
+  sprintf(buf, "%d", encoder->tu_intra_depth);
+  x265_param_parse(param, "tu-intra-depth", buf);
 
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
