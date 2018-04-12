@@ -543,6 +543,8 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
     }
 
 
+    encoder->nal_output_counter = 0;
+
     int result = x265_encoder_encode(encoder->encoder,
                                      &encoder->nals,
                                      &encoder->num_nals,
