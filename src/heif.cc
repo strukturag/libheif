@@ -932,6 +932,40 @@ struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder* encode
   return encoder->plugin->get_parameter_integer(encoder->encoder, parameter_name, value_ptr);
 }
 
+struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder* encoder,
+                                                             const char* parameter_name,
+                                                             int* have_minimum_maximum,
+                                                             int* minimum, int* maximum)
+{
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name)==0) {
+      if ((*params)->type != heif_encoder_parameter_type_integer) {
+        return error_unsupported_parameter; // TODO: correct error ?
+      }
+
+      if ((*params)->integer.have_minimum_maximum) {
+        if (minimum) {
+          *minimum = (*params)->integer.minimum;
+        }
+
+        if (maximum) {
+          *maximum = (*params)->integer.maximum;
+        }
+      }
+
+      if (have_minimum_maximum) {
+        *have_minimum_maximum = (*params)->integer.have_minimum_maximum;
+      }
+
+      return error_Ok;
+    }
+  }
+
+  return error_unsupported_parameter;
+}
+
 struct heif_error heif_encoder_set_parameter_boolean(struct heif_encoder* encoder,
                                                      const char* parameter_name,
                                                      int value)
@@ -959,6 +993,29 @@ struct heif_error heif_encoder_get_parameter_string(struct heif_encoder* encoder
 {
   return encoder->plugin->get_parameter_string(encoder->encoder, parameter_name,
                                                value_ptr, value_size);
+}
+
+struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder* encoder,
+                                                             const char* parameter_name,
+                                                             const char*const** out_stringarray)
+{
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name)==0) {
+      if ((*params)->type != heif_encoder_parameter_type_string) {
+        return error_unsupported_parameter; // TODO: correct error ?
+      }
+
+      if (out_stringarray) {
+        *out_stringarray = (*params)->string.valid_values;
+      }
+
+      return error_Ok;
+    }
+  }
+
+  return error_unsupported_parameter;
 }
 
 

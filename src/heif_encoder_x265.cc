@@ -67,6 +67,17 @@ static struct heif_error error_invalid_parameter_value = { heif_error_Usage_erro
 static const char* kParam_preset = "preset";
 static const char* kParam_tune = "tune";
 
+static const char*const kParam_preset_valid_values[] = {
+  "ultrafast", "superfast", "veryfast", "faster", "fast", "medium",
+  "slow", "slower", "veryslow", "placebo", nullptr
+};
+
+static const char*const kParam_tune_valid_values[] = {
+  "psnr", "ssim", "grain", "fastdecode", nullptr
+  // note: zerolatency is missing, because we do not need it for single images
+};
+
+
 static const int X265_PLUGIN_PRIORITY = 100;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -107,6 +118,7 @@ static void x265_init_parameters()
   p->name = heif_encoder_parameter_name_quality;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 50;
+  p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
   p->integer.maximum = 100;
   p->integer.valid_values = NULL;
@@ -125,6 +137,7 @@ static void x265_init_parameters()
   p->name = kParam_preset;
   p->type = heif_encoder_parameter_type_string;
   p->string.default_value = "slow";
+  p->string.valid_values = kParam_preset_valid_values;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
@@ -132,6 +145,7 @@ static void x265_init_parameters()
   p->name = kParam_tune;
   p->type = heif_encoder_parameter_type_string;
   p->string.default_value = "ssim";
+  p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
 
   d[i++] = nullptr;
@@ -294,15 +308,35 @@ struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, in
 }
 
 
+bool string_list_contains(const char*const* values_list, const char* value)
+{
+  for (int i=0; values_list[i]; i++) {
+    if (strcmp(values_list[i], value)==0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (strcmp(name, kParam_preset)==0) {
+    if (!string_list_contains(kParam_preset_valid_values, value)) {
+      return error_invalid_parameter_value;
+    }
+
     encoder->preset = value;
     return error_Ok;
   }
   else if (strcmp(name, kParam_tune)==0) {
+    if (!string_list_contains(kParam_tune_valid_values, value)) {
+      return error_invalid_parameter_value;
+    }
+
     encoder->tune = value;
     return error_Ok;
   }
@@ -369,7 +403,6 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
 
   x265_param* param = x265_param_alloc();
   x265_param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
-  printf("%s %s\n",encoder->preset.c_str(), encoder->tune.c_str());
 
   x265_param_apply_profile(param, "mainstillpicture");
   param->fpsNum = 1;

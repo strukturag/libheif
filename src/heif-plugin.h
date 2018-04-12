@@ -216,8 +216,11 @@ struct heif_encoder_parameter
   union {
     struct {
       int default_value;
+
+      bool have_minimum_maximum;
       int minimum;
       int maximum;
+
       int* valid_values;
       int num_valid_values;
     } integer;
@@ -225,8 +228,7 @@ struct heif_encoder_parameter
     struct {
       const char* default_value;
 
-      const char** valid_values;
-      int num_valid_values;
+      const char*const* valid_values;
     } string;
 
     struct {

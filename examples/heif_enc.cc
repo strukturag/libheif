@@ -498,7 +498,17 @@ void list_encoder_parameters(heif_encoder* encoder)
         heif_error error = heif_encoder_get_parameter_integer(encoder, name, &value);
         (void)error;
 
-        std::cerr << "  " << name << ", default=" << value << "\n";
+        std::cerr << "  " << name << ", default=" << value;
+
+        int have_minmax, minimum, maximum;
+        error = heif_encoder_parameter_integer_valid_range(encoder, name,
+                                                           &have_minmax, &minimum, &maximum);
+
+        if (have_minmax) {
+          std::cerr << ", [" << minimum << ";" << maximum << "]";
+        }
+
+        std::cerr << "\n";
       }
       break;
 
@@ -519,7 +529,21 @@ void list_encoder_parameters(heif_encoder* encoder)
         heif_error error = heif_encoder_get_parameter_string(encoder, name, value, value_size);
         (void)error;
 
-        std::cerr << "  " << name << ", default=" << value << "\n";
+        std::cerr << "  " << name << ", default=" << value;
+
+        const char*const* valid_options;
+        error = heif_encoder_parameter_string_valid_values(encoder, name, &valid_options);
+
+        if (valid_options) {
+          std::cerr << ", { ";
+          for (int i=0;valid_options[i];i++) {
+            if (i>0) { std::cerr << ","; }
+            std::cerr << valid_options[i];
+          }
+          std::cerr << " }";
+        }
+
+        std::cerr << "\n";
       }
       break;
     }

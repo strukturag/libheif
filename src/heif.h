@@ -736,6 +736,12 @@ struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder*,
                                                      int* value);
 
 LIBHEIF_API
+struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder*,
+                                                             const char* parameter_name,
+                                                             int* have_minimum_maximum,
+                                                             int* minimum, int* maximum);
+
+LIBHEIF_API
 struct heif_error heif_encoder_set_parameter_boolean(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int value);
@@ -754,6 +760,12 @@ LIBHEIF_API
 struct heif_error heif_encoder_get_parameter_string(struct heif_encoder*,
                                                     const char* parameter_name,
                                                     char* value, int value_size);
+
+// returns a NULL-terminated list of valid strings or NULL if all values are allowed
+LIBHEIF_API
+struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder*,
+                                                             const char* parameter_name,
+                                                             const char*const** out_stringarray);
 
 // Set a parameter of any type to the string value.
 // Integer values are parsed from the string.
