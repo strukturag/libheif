@@ -49,7 +49,7 @@ struct x265_encoder_struct
   bool lossless;
   std::string preset;
   std::string tune;
-  int logLevel;
+  int logLevel = X265_LOG_NONE;
 };
 
 static const char kSuccess[] = "Success";
@@ -409,7 +409,6 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   param->fpsDenom = 1;
   param->sourceWidth = 0;
   param->sourceHeight = 0;
-  param->logLevel = X265_LOG_NONE;
 
   param->rc.rfConstant = (100 - encoder->quality)/2;
   param->bLossless = encoder->lossless;
