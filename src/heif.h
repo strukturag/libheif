@@ -673,6 +673,12 @@ LIBHEIF_API
 enum heif_compression_format
 heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor*);
 
+LIBHEIF_API
+int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor*);
+
+LIBHEIF_API
+int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
+
 
 // Get an encoder instance that can be used to actually encode images from a descriptor.
 LIBHEIF_API
@@ -697,6 +703,14 @@ const char* heif_encoder_get_name(const struct heif_encoder*);
 
 
 // --- Encoder Parameters ---
+
+// Libheif supports settings parameters through specialized functions and through
+// generic functions by parameter name. Sometimes, the same parameter can be set
+// in both ways.
+// We consider it best practice to use the generic parameter functions only in
+// dynamically generated user interfaces, as no guarantees are made that some specific
+// parameter names are supported by all plugins.
+
 
 // Set a 'quality' factor (0-100). How this is mapped to actual encoding parameters is
 // encoder dependent.

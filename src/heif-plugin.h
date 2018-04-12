@@ -135,8 +135,8 @@ struct heif_encoder_plugin
 
 
   // Feature support
-  int has_lossless_support;
-  int has_lossy_support;
+  int supports_lossy_compression;
+  int supports_lossless_compression;
 
 
   // Human-readable name of the plugin

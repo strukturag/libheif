@@ -791,6 +791,19 @@ const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descri
 }
 
 
+int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossy_compression;
+}
+
+
+int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossless_compression;
+}
+
+
+
 const char* heif_encoder_get_name(const struct heif_encoder* encoder)
 {
   return encoder->plugin->get_plugin_name();
@@ -923,6 +936,7 @@ heif_encoder_parameter_get_type(const struct heif_encoder_parameter* param)
 {
   return param->type;
 }
+
 
 struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder* encoder,
                                                      const char* parameter_name,
