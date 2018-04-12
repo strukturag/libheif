@@ -217,7 +217,7 @@ void x265_free_encoder(void* encoder_raw)
   delete encoder;
 }
 
-struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
+struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
@@ -234,7 +234,7 @@ struct heif_error x265_set_param_quality(void* encoder_raw, int quality)
   return err;
 }
 
-struct heif_error x265_get_param_quality(void* encoder_raw, int* quality)
+struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
@@ -244,7 +244,7 @@ struct heif_error x265_get_param_quality(void* encoder_raw, int* quality)
   return err;
 }
 
-struct heif_error x265_set_param_lossless(void* encoder_raw, int enable)
+struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
@@ -254,7 +254,7 @@ struct heif_error x265_set_param_lossless(void* encoder_raw, int enable)
   return err;
 }
 
-struct heif_error x265_get_param_lossless(void* encoder_raw, int* enable)
+struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
@@ -263,7 +263,7 @@ struct heif_error x265_get_param_lossless(void* encoder_raw, int* enable)
   return error_Ok;
 }
 
-struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
+struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
@@ -277,16 +277,25 @@ struct heif_error x265_set_param_logging_level(void* encoder_raw, int logging)
   return err;
 }
 
+struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+{
+  struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
+
+  *loglevel = encoder->logLevel;
+
+  return error_Ok;
+}
+
 
 struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
-    return x265_set_param_quality(encoder,value);
+    return x265_set_parameter_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_set_param_lossless(encoder,value);
+    return x265_set_parameter_lossless(encoder,value);
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     if (value < 1 || value > 4) {
@@ -305,10 +314,10 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
-    return x265_get_param_quality(encoder,value);
+    return x265_get_parameter_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_get_param_lossless(encoder,value);
+    return x265_get_parameter_lossless(encoder,value);
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     *value = encoder->tu_intra_depth;
@@ -322,7 +331,7 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
 struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_set_param_lossless(encoder,value);
+    return x265_set_parameter_lossless(encoder,value);
   }
 
   return error_unsupported_parameter;
@@ -331,7 +340,7 @@ struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, in
 struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, int* value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_get_param_lossless(encoder,value);
+    return x265_get_parameter_lossless(encoder,value);
   }
 
   return error_unsupported_parameter;
@@ -563,11 +572,12 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   .cleanup_plugin = x265_cleanup_plugin,
   .new_encoder = x265_new_encoder,
   .free_encoder = x265_free_encoder,
-  .set_param_quality = x265_set_param_quality,
-  .get_param_quality = x265_get_param_quality,
-  .set_param_lossless = x265_set_param_lossless,
-  .get_param_lossless = x265_get_param_lossless,
-  .set_param_logging_level = x265_set_param_logging_level,
+  .set_parameter_quality = x265_set_parameter_quality,
+  .get_parameter_quality = x265_get_parameter_quality,
+  .set_parameter_lossless = x265_set_parameter_lossless,
+  .get_parameter_lossless = x265_get_parameter_lossless,
+  .set_parameter_logging_level = x265_set_parameter_logging_level,
+  .get_parameter_logging_level = x265_get_parameter_logging_level,
   .list_parameters = x265_list_parameters,
   .set_parameter_integer = x265_set_parameter_integer,
   .get_parameter_integer = x265_get_parameter_integer,

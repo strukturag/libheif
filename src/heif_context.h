@@ -144,7 +144,7 @@ namespace heif {
 
       Error encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                  struct heif_encoder* encoder,
-                                 bool consider_alpha);
+                                 enum heif_image_input_class input_class);
 
     private:
       HeifContext* m_heif_context;

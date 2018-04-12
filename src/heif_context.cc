@@ -1283,7 +1283,8 @@ Error HeifContext::add_alpha_image(std::shared_ptr<HeifPixelImage> image, heif_i
 
   // --- encode the alpha image
 
-  Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder, false);
+  Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder,
+                                                       heif_image_input_class_alpha);
   return error;
 }
 
@@ -1397,7 +1398,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 
 Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                                struct heif_encoder* encoder,
-                                               bool consider_alpha)
+                                               enum heif_image_input_class input_class)
 {
   /*
   const struct heif_encoder_plugin* encoder_plugin = nullptr;
@@ -1428,7 +1429,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   // --- if there is an alpha channel, add it as an additional image
 
-  if (consider_alpha && image->has_channel(heif_channel_Alpha)) {
+  if (image->has_channel(heif_channel_Alpha)) {
     heif_item_id alpha_image_id;
     Error err = m_heif_context->add_alpha_image(image, &alpha_image_id, encoder);
     if (err) {
@@ -1447,7 +1448,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image, heif_image_input_class_normal);
+  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
 
   for (;;) {
     uint8_t* data;

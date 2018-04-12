@@ -155,13 +155,14 @@ struct heif_encoder_plugin
   // Free the decoder context (heif_image can still be used after destruction)
   void (*free_encoder)(void* encoder);
 
-  struct heif_error (*set_param_quality)(void* encoder, int quality);
-  struct heif_error (*get_param_quality)(void* encoder, int* quality);
+  struct heif_error (*set_parameter_quality)(void* encoder, int quality);
+  struct heif_error (*get_parameter_quality)(void* encoder, int* quality);
 
-  struct heif_error (*set_param_lossless)(void* encoder, int lossless);
-  struct heif_error (*get_param_lossless)(void* encoder, int* lossless);
+  struct heif_error (*set_parameter_lossless)(void* encoder, int lossless);
+  struct heif_error (*get_parameter_lossless)(void* encoder, int* lossless);
 
-  struct heif_error (*set_param_logging_level)(void* encoder, int logging);
+  struct heif_error (*set_parameter_logging_level)(void* encoder, int logging);
+  struct heif_error (*get_parameter_logging_level)(void* encoder, int* logging);
 
   const struct heif_encoder_parameter** (*list_parameters)(void* encoder);
 

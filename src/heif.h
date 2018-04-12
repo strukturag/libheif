@@ -660,9 +660,12 @@ int heif_context_get_encoder_descriptors(struct heif_context*,
                                          const struct heif_encoder_descriptor** out_encoders,
                                          int count);
 
+// Return a long, descriptive name of the encoder (including version information).
 LIBHEIF_API
 const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descriptor*);
 
+// Return a short, symbolic name for identifying the encoder.
+// This name should stay constant over different encoder versions.
 LIBHEIF_API
 const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descriptor*);
 
@@ -786,7 +789,8 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              char* value_ptr, int value_size);
 
 
-// Returns a handle to the new image in 'out_image_handle' unless out_image_handle = NULL.
+// Compress the input image.
+// Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_image* image,

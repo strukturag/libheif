@@ -870,7 +870,7 @@ struct heif_error heif_encoder_set_lossy_quality(struct heif_encoder* encoder,
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  encoder->plugin->set_param_quality(encoder->encoder, quality);
+  encoder->plugin->set_parameter_quality(encoder->encoder, quality);
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -884,7 +884,7 @@ struct heif_error heif_encoder_set_lossless(struct heif_encoder* encoder, int en
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  encoder->plugin->set_param_lossless(encoder->encoder, enable);
+  encoder->plugin->set_parameter_lossless(encoder->encoder, enable);
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -898,8 +898,8 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, i
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  if (encoder->plugin->set_param_logging_level) {
-    encoder->plugin->set_param_logging_level(encoder->encoder, level);
+  if (encoder->plugin->set_parameter_logging_level) {
+    encoder->plugin->set_parameter_logging_level(encoder->encoder, level);
   }
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
@@ -1142,7 +1142,8 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
       image = ctx->context->add_new_hvc1_image();
-      error = image->encode_image_as_hevc(input_image->image, encoder, true);
+      error = image->encode_image_as_hevc(input_image->image, encoder,
+                                          heif_image_input_class_normal);
       break;
 
     default:
