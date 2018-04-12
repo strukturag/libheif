@@ -901,7 +901,7 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder* encoder, i
 }
 
 
-const struct heif_encoder_parameter** heif_encoder_list_parameters(struct heif_encoder* encoder)
+const struct heif_encoder_parameter*const* heif_encoder_list_parameters(struct heif_encoder* encoder)
 {
   return encoder->plugin->list_parameters(encoder->encoder);
 }
@@ -970,7 +970,7 @@ struct heif_error heif_encoder_set_parameter(struct heif_encoder* encoder,
                                              const char* parameter_name,
                                              const char* value)
 {
-  for (const struct heif_encoder_parameter** params = heif_encoder_list_parameters(encoder);
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
        *params;
        params++) {
     if (strcmp((*params)->name, parameter_name)==0) {
@@ -998,7 +998,7 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
                                              const char* parameter_name,
                                              char* value_ptr, int value_size)
 {
-  for (const struct heif_encoder_parameter** params = heif_encoder_list_parameters(encoder);
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
        *params;
        params++) {
     if (strcmp((*params)->name, parameter_name)==0) {

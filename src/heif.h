@@ -484,6 +484,7 @@ enum heif_chroma {
   heif_chroma_interleaved_RGBA=11
 };
 
+// DEPRECTATED ENUM NAMES
 #define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
 #define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
 
@@ -609,9 +610,6 @@ void heif_image_release(const struct heif_image*);
 // ====================================================================================================
 //  Encoding API
 
-//LIBHEIF_API
-//void heif_context_reset(struct heif_context*);
-
 LIBHEIF_API
 struct heif_error heif_context_write_to_file(struct heif_context*,
                                              const char* filename);
@@ -635,14 +633,22 @@ struct heif_error heif_context_write(struct heif_context*,
 
 // ----- encoder -----
 
+// The encoder used for actually encoding an image.
 struct heif_encoder;
+
+// A description of the encoder's capabilities and name.
 struct heif_encoder_descriptor;
+
+// A configuration parameter of the encoder. Each encoder implementation may have a different
+// set of parameters. For the most common settings (e.q. quality), special functions to set
+// the parameters are provided.
 struct heif_encoder_parameter;
 
 
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 // The returned list of encoders is sorted by their priority (which is a plugin property).
+// Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
 LIBHEIF_API
 int heif_context_get_encoder_descriptors(struct heif_context*,
                                          enum heif_compression_format format_filter,
@@ -696,8 +702,9 @@ struct heif_error heif_encoder_set_logging_level(struct heif_encoder*, int level
 
 // Get a generic list of encoder parameters.
 // Each encoder may define its own, additional set of parameters.
+// You do not have to free the returned list.
 LIBHEIF_API
-const struct heif_encoder_parameter** heif_encoder_list_parameters(struct heif_encoder*);
+const struct heif_encoder_parameter*const* heif_encoder_list_parameters(struct heif_encoder*);
 
 // Return the parameter name.
 LIBHEIF_API
