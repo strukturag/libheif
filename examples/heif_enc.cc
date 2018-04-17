@@ -732,6 +732,7 @@ int main(int argc, char** argv)
   struct heif_error error = heif_context_encode_image(context.get(),
                                                       image.get(),
                                                       encoder,
+                                                      nullptr,
                                                       &handle);
   if (error.code != 0) {
     std::cerr << "Could not read HEIF file: " << error.message << "\n";

@@ -803,12 +803,16 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              char* value_ptr, int value_size);
 
 
+struct heif_encoding_options;
+
 // Compress the input image.
 // Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
+// 'options' should be NULL for now.
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_image* image,
                                             struct heif_encoder* encoder,
+                                            const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
 
 

@@ -1144,6 +1144,7 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             const struct heif_image* input_image,
                                             struct heif_encoder* encoder,
+                                            const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle)
 {
   if (!encoder) {
