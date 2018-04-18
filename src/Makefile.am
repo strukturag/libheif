@@ -51,6 +51,8 @@ libheif_la_SOURCES = \
   heif_hevc.cc \
   heif_plugin_registry.h \
   heif_plugin_registry.cc \
+  heif_plugin.h \
+  heif_plugin.cc \
   logging.h
 
 if HAVE_LIBDE265
@@ -68,7 +70,7 @@ endif
 
 libheif_la_HEADERS = \
   heif.h \
-  heif-plugin.h \
+  heif_plugin.h \
   heif-version.h
 
 noinst_HEADERS = \

@@ -19,7 +19,7 @@
  */
 
 #include "heif.h"
-#include "heif-plugin.h"
+#include "heif_plugin.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -52,17 +52,6 @@ struct x265_encoder_struct
   int tu_intra_depth;
   int logLevel = X265_LOG_NONE;
 };
-
-static const char kSuccess[] = "Success";
-static const char kEmptyString[] = "";
-
-static struct heif_error error_Ok = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
-                                                         heif_suberror_Unsupported_parameter,
-                                                         "Unsupported encoder parameter" };
-static struct heif_error error_invalid_parameter_value = { heif_error_Usage_error,
-                                                           heif_suberror_Invalid_parameter_value,
-                                                           "Invalid parameter value" };
 
 
 static const char* kParam_preset = "preset";
@@ -186,7 +175,7 @@ void x265_cleanup_plugin()
 struct heif_error x265_new_encoder(void** enc)
 {
   struct x265_encoder_struct* encoder = new x265_encoder_struct();
-  struct heif_error err = error_Ok;
+  struct heif_error err = heif_error_ok;
 
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
@@ -222,7 +211,7 @@ struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (quality<0 || quality>100) {
-    return error_invalid_parameter_value;
+    return heif_error_invalid_parameter_value;
   }
 
   // quality=0   -> crf=50
@@ -230,8 +219,7 @@ struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
   // quality=100 -> crf=0
   encoder->quality = quality;
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return heif_error_ok;
 }
 
 struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
@@ -240,8 +228,7 @@ struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
 
   *quality = encoder->quality;
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return heif_error_ok;
 }
 
 struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
@@ -250,8 +237,7 @@ struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 
   encoder->lossless = enable;
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return heif_error_ok;
 }
 
 struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
@@ -260,7 +246,7 @@ struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
 
   *enable = encoder->lossless;
 
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
@@ -268,13 +254,12 @@ struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int loggin
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (logging<0 || logging>4) {
-    return error_invalid_parameter_value;
+    return heif_error_invalid_parameter_value;
   }
 
   encoder->logLevel = logging;
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return heif_error_ok;
 }
 
 struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
@@ -283,7 +268,7 @@ struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* logle
 
   *loglevel = encoder->logLevel;
 
-  return error_Ok;
+  return heif_error_ok;
 }
 
 
@@ -299,14 +284,14 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     if (value < 1 || value > 4) {
-      return error_invalid_parameter_value;
+      return heif_error_invalid_parameter_value;
     }
 
     encoder->tu_intra_depth = value;
-    return error_Ok;
+    return heif_error_ok;
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
@@ -321,10 +306,10 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     *value = encoder->tu_intra_depth;
-    return error_Ok;
+    return heif_error_ok;
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 
@@ -334,7 +319,7 @@ struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, in
     return x265_set_parameter_lossless(encoder,value);
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, int* value)
@@ -343,7 +328,7 @@ struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, in
     return x265_get_parameter_lossless(encoder,value);
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 
@@ -365,22 +350,22 @@ struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name,
 
   if (strcmp(name, kParam_preset)==0) {
     if (!string_list_contains(kParam_preset_valid_values, value)) {
-      return error_invalid_parameter_value;
+      return heif_error_invalid_parameter_value;
     }
 
     encoder->preset = value;
-    return error_Ok;
+    return heif_error_ok;
   }
   else if (strcmp(name, kParam_tune)==0) {
     if (!string_list_contains(kParam_tune_valid_values, value)) {
-      return error_invalid_parameter_value;
+      return heif_error_invalid_parameter_value;
     }
 
     encoder->tune = value;
-    return error_Ok;
+    return heif_error_ok;
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 void save_strcpy(char* dst, int dst_size, const char* src)
@@ -396,14 +381,14 @@ struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
 
   if (strcmp(name, kParam_preset)==0) {
     save_strcpy(value, value_size, encoder->preset.c_str());
-    return error_Ok;
+    return heif_error_ok;
   }
   else if (strcmp(name, kParam_tune)==0) {
     save_strcpy(value, value_size, encoder->tune.c_str());
-    return error_Ok;
+    return heif_error_ok;
   }
 
-  return error_unsupported_parameter;
+  return heif_error_unsupported_parameter;
 }
 
 
@@ -489,8 +474,7 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
 
   encoder->nal_output_counter = 0;
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return heif_error_ok;
 }
 
 
@@ -504,8 +488,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
     *data = nullptr;
     *size = 0;
 
-    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-    return err;
+    return heif_error_ok;
   }
 
 
@@ -537,8 +520,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       else {
         // output NAL
 
-        struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-        return err;
+        return heif_error_ok;
       }
     }
 
@@ -554,8 +536,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       *data = nullptr;
       *size = 0;
 
-      struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-      return err;
+      return heif_error_ok;
     }
   }
 }

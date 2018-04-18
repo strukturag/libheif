@@ -30,7 +30,7 @@
 #include "error.h"
 
 #include "heif.h"
-#include "heif-plugin.h"
+#include "heif_plugin.h"
 
 
 struct heif_encoder_descriptor

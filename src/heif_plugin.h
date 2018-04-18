@@ -240,6 +240,10 @@ struct heif_encoder_parameter
 
 
 
+extern struct heif_error heif_error_ok;
+extern struct heif_error heif_error_unsupported_parameter;
+extern struct heif_error heif_error_invalid_parameter_value;
+
 #ifdef __cplusplus
 }
 #endif
