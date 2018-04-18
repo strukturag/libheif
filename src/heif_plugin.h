@@ -194,8 +194,6 @@ struct heif_encoder_plugin
 
 
 
-  // Reset decoder, such that we can feed in new data for another image.
-  // void (*reset_image)(void* decoder);
 };
 
 
@@ -230,7 +228,7 @@ struct heif_encoder_parameter
       const char* default_value;
 
       const char*const* valid_values;
-    } string;
+    } string; // NOLINT
 
     struct {
       int default_value;
