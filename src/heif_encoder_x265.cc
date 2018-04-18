@@ -26,6 +26,7 @@
 #endif
 
 #include <memory>
+#include <string>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>

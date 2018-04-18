@@ -22,6 +22,8 @@
 #include "config.h"
 #endif
 
+#include <utility>
+
 #include <string.h>
 
 #include "heif_plugin_registry.h"
