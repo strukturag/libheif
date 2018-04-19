@@ -1302,7 +1302,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
   bool first=true;
   bool eof=false;
 
-  int prev_start_code_start;
+  int prev_start_code_start = -1; // init to an invalid value, will always be overwritten before use
   int start_code_start;
   int ptr = 0;
 
@@ -1335,9 +1335,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
     //printf("-> state= %d\n",state);
 
     if (ptr == (int)data.size()) {
-      printf("to end of file\n");
       start_code_start = (int)data.size();
-      printf("end of file pos: %04x\n",(uint32_t)start_code_start);
       dump_nal = true;
       eof = true;
     }
@@ -1350,15 +1348,10 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
         std::vector<uint8_t> nal_data;
         size_t length = start_code_start - (prev_start_code_start+3);
 
-        printf("found start code at position: %08x (prev: %08x)\n",
-               (uint32_t)start_code_start,
-               (uint32_t)prev_start_code_start);
-
         nal_data.resize(length);
 
+        assert(prev_start_code_start>=0);
         memcpy(nal_data.data(), data.data() + prev_start_code_start+3, length);
-
-        printf("read nal %02x with length %08x\n",nal_data[0], (uint32_t)length);
 
         int nal_type = (nal_data[0]>>1);
 
