@@ -127,11 +127,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                                                    encoder_descriptors, kMaxEncoders);
   assert(count > 0);
 
-
   heif_encoder* encoder;
-  heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+  err = heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+  if (err.code != heif_error_Ok) {
+    return 0;
+  }
 
   if (size < 2) {
+    heif_encoder_release(encoder);
     return 0;
   }
   int quality = data[0] % 101;;
@@ -145,6 +148,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size_t read = create_image(data, size, &image);
   assert(read <= size);
   if (!read) {
+    heif_encoder_release(encoder);
     return 0;
   }
 
@@ -154,6 +158,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   struct heif_image_handle* img;
   err = heif_context_encode_image(context.get(), image, encoder, nullptr, &img);
   heif_image_release(image);
+  heif_encoder_release(encoder);
   if (err.code != heif_error_Ok) {
     return 0;
   }
