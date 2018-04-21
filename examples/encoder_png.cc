@@ -18,6 +18,7 @@
  * along with convert.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <assert.h>
+#include <errno.h>
 #include <math.h>
 #include <png.h>
 #include <string.h>
