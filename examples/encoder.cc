@@ -21,6 +21,8 @@
 #include "config.h"
 #endif
 
+#include <stdlib.h>
+
 #if defined(HAVE_STRINGS_H)
 #include <strings.h>
 #endif
