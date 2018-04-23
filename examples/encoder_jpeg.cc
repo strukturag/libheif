@@ -71,9 +71,9 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   cinfo.input_components = 3;
   cinfo.in_color_space = JCS_YCbCr;
   jpeg_set_defaults(&cinfo);
-  static const bool kForceBaseline = true;
+  static const boolean kForceBaseline = TRUE;
   jpeg_set_quality(&cinfo, quality_, kForceBaseline);
-  static const bool kWriteAllTables = true;
+  static const boolean kWriteAllTables = TRUE;
   jpeg_start_compress(&cinfo, kWriteAllTables);
 
   size_t exifsize = 0;
