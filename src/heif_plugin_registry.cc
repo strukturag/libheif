@@ -39,7 +39,7 @@ std::set<const struct heif_decoder_plugin*> heif::s_decoder_plugins;
 struct encoder_descriptor_priority_order
 {
   bool operator() (const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                   const std::unique_ptr<struct heif_encoder_descriptor>& b) {
+                   const std::unique_ptr<struct heif_encoder_descriptor>& b) const {
     return a->plugin->priority > b->plugin->priority;  // highest priority first
   }
 };
