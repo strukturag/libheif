@@ -50,7 +50,7 @@
 
 namespace heif {
 
-#define fourcc(id) ((id[0]<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
+#define fourcc(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
 
   /*
   constexpr uint32_t fourcc(const char* string)
