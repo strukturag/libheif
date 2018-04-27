@@ -309,30 +309,30 @@ struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif_image*
 
 static const struct heif_decoder_plugin decoder_libde265
 {
-  .plugin_api_version = 1,
-  .get_plugin_name = libde265_plugin_name,
-  .init_plugin = libde265_init_plugin,
-  .deinit_plugin = libde265_deinit_plugin,
-  .does_support_format = libde265_does_support_format,
-  .new_decoder = libde265_new_decoder,
-  .free_decoder = libde265_free_decoder,
-  .push_data = libde265_v2_push_data,
-  .decode_image = libde265_v2_decode_image
+  1,
+  libde265_plugin_name,
+  libde265_init_plugin,
+  libde265_deinit_plugin,
+  libde265_does_support_format,
+  libde265_new_decoder,
+  libde265_free_decoder,
+  libde265_v2_push_data,
+  libde265_v2_decode_image
 };
 
 #else
 
 static const struct heif_decoder_plugin decoder_libde265
 {
-  .plugin_api_version = 1,
-  .get_plugin_name = libde265_plugin_name,
-  .init_plugin = libde265_init_plugin,
-  .deinit_plugin = libde265_deinit_plugin,
-  .does_support_format = libde265_does_support_format,
-  .new_decoder = libde265_new_decoder,
-  .free_decoder = libde265_free_decoder,
-  .push_data = libde265_v1_push_data,
-  .decode_image = libde265_v1_decode_image
+  1,
+  libde265_plugin_name,
+  libde265_init_plugin,
+  libde265_deinit_plugin,
+  libde265_does_support_format,
+  libde265_new_decoder,
+  libde265_free_decoder,
+  libde265_v1_push_data,
+  libde265_v1_decode_image
 };
 
 #endif
