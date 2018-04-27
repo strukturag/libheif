@@ -40,6 +40,31 @@ if %ERRORLEVEL% neq 0 goto error
 copy /y libde265\de265.h "%LIBDE265_BUILD%\libde265"
 copy /y libde265\en265.h "%LIBDE265_BUILD%\libde265"
 copy /y "%LIBDE265_BUILD%\libde265\%CONFIGURATION%\libde265.*" "%LIBDE265_BUILD%"
+cd ..
+
+set X265_VERSION=2.7
+set X265_SOURCE=https://github.com/videolan/x265/archive/%X265_VERSION%.zip
+set X265_DESTINATION=x265-%X265_VERSION%.zip
+
+echo Downloading x265 %X265_VERSION% from %X265_SOURCE% to %X265_DESTINATION% ...
+curl -L -o "%X265_DESTINATION%" "%X265_SOURCE%"
+if %ERRORLEVEL% neq 0 goto error
+7z x "%X265_DESTINATION%"
+if %ERRORLEVEL% neq 0 goto error
+
+echo Building x265 in x265-%X265_VERSION% ...
+cd "x265-%X265_VERSION%\source"
+set X265_BUILD=%APPVEYOR_BUILD_FOLDER%\build-x265
+cmake "-G%GENERATOR%%CMAKE_GEN_SUFFIX%" -H. "-B%X265_BUILD%"
+if %ERRORLEVEL% neq 0 goto error
+cmake --build "%X265_BUILD%" --config %CONFIGURATION%
+if %ERRORLEVEL% neq 0 goto error
+copy /y x265.h "%X265_BUILD%"
+copy /y "%X265_BUILD%\%CONFIGURATION%\libx265.*" "%X265_BUILD%"
+copy /y "%X265_BUILD%\%CONFIGURATION%\x265.*" "%X265_BUILD%"
+
+cd ..\..
+
 
 goto done
 

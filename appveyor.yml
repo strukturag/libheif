@@ -22,7 +22,7 @@ build:
 build_script:
   - ps: if($env:PLATFORM -eq "x64") { $env:CMAKE_GEN_SUFFIX=" Win64" }
   - cmd: scripts\prepare-appveyor.cmd
-  - cmake "-G%GENERATOR%%CMAKE_GEN_SUFFIX%" -H. -Bbuild -DLIBDE265_FOUND=1 -DLIBDE265_CFLAGS=/I"%APPVEYOR_BUILD_FOLDER%\build-libde265" -DLIBDE265_LIBRARIES="%APPVEYOR_BUILD_FOLDER%\build-libde265\libde265.lib"
+  - cmake "-G%GENERATOR%%CMAKE_GEN_SUFFIX%" -H. -Bbuild -DLIBDE265_FOUND=1 -DLIBDE265_CFLAGS=/I"%APPVEYOR_BUILD_FOLDER%\build-libde265" -DLIBDE265_LIBRARIES="%APPVEYOR_BUILD_FOLDER%\build-libde265\libde265.lib" -DX265_FOUND=1 -DX265_CFLAGS=/I"%APPVEYOR_BUILD_FOLDER%\build-x265" -DX265_LIBRARIES="%APPVEYOR_BUILD_FOLDER%\build-x265\libx265.lib"
   - cmake --build build --config %CONFIGURATION%
 
 artifacts:
