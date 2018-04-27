@@ -50,6 +50,9 @@
 
 namespace heif {
 
+#define fourcc(id) ((id[0]<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
+
+  /*
   constexpr uint32_t fourcc(const char* string)
   {
     return ((string[0]<<24) |
@@ -57,6 +60,7 @@ namespace heif {
             (string[2]<< 8) |
             (string[3]));
   }
+  */
 
 
   class Fraction {
