@@ -545,33 +545,33 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 
 static const struct heif_encoder_plugin encoder_plugin_x265
 {
-  .plugin_api_version = 1,
-  .compression_format = heif_compression_HEVC,
-  .id_name = "x265",
-  .priority = X265_PLUGIN_PRIORITY,
-  .supports_lossy_compression = true,
-  .supports_lossless_compression = true,
-  .get_plugin_name = x265_plugin_name,
-  .init_plugin = x265_init_plugin,
-  .cleanup_plugin = x265_cleanup_plugin,
-  .new_encoder = x265_new_encoder,
-  .free_encoder = x265_free_encoder,
-  .set_parameter_quality = x265_set_parameter_quality,
-  .get_parameter_quality = x265_get_parameter_quality,
-  .set_parameter_lossless = x265_set_parameter_lossless,
-  .get_parameter_lossless = x265_get_parameter_lossless,
-  .set_parameter_logging_level = x265_set_parameter_logging_level,
-  .get_parameter_logging_level = x265_get_parameter_logging_level,
-  .list_parameters = x265_list_parameters,
-  .set_parameter_integer = x265_set_parameter_integer,
-  .get_parameter_integer = x265_get_parameter_integer,
-  .set_parameter_boolean = x265_set_parameter_integer, // boolean also maps to integer function
-  .get_parameter_boolean = x265_get_parameter_integer, // boolean also maps to integer function
-  .set_parameter_string = x265_set_parameter_string,
-  .get_parameter_string = x265_get_parameter_string,
-  .query_input_colorspace = x265_query_input_colorspace,
-  .encode_image = x265_encode_image,
-  .get_compressed_data = x265_get_compressed_data
+  /* plugin_api_version */ 1,
+  /* compression_format */ heif_compression_HEVC,
+  /* id_name */ "x265",
+  /* priority */ X265_PLUGIN_PRIORITY,
+  /* supports_lossy_compression */ true,
+  /* supports_lossless_compression */ true,
+  /* get_plugin_name */ x265_plugin_name,
+  /* init_plugin */ x265_init_plugin,
+  /* cleanup_plugin */ x265_cleanup_plugin,
+  /* new_encoder */ x265_new_encoder,
+  /* free_encoder */ x265_free_encoder,
+  /* set_parameter_quality */ x265_set_parameter_quality,
+  /* get_parameter_quality */ x265_get_parameter_quality,
+  /* set_parameter_lossless */ x265_set_parameter_lossless,
+  /* get_parameter_lossless */ x265_get_parameter_lossless,
+  /* set_parameter_logging_level */ x265_set_parameter_logging_level,
+  /* get_parameter_logging_level */ x265_get_parameter_logging_level,
+  /* list_parameters */ x265_list_parameters,
+  /* set_parameter_integer */ x265_set_parameter_integer,
+  /* get_parameter_integer */ x265_get_parameter_integer,
+  /* set_parameter_boolean */ x265_set_parameter_integer, // boolean also maps to integer function
+  /* get_parameter_boolean */ x265_get_parameter_integer, // boolean also maps to integer function
+  /* set_parameter_string */ x265_set_parameter_string,
+  /* get_parameter_string */ x265_get_parameter_string,
+  /* query_input_colorspace */ x265_query_input_colorspace,
+  /* encode_image */ x265_encode_image,
+  /* get_compressed_data */ x265_get_compressed_data
 };
 
 const struct heif_encoder_plugin* get_encoder_plugin_x265()
