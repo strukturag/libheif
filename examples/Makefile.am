@@ -11,6 +11,16 @@ heif_convert_LDFLAGS =
 heif_convert_LDADD = ../src/libheif.la
 heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc
 
+
+if HAVE_LIBPNG
+bin_PROGRAMS += heif-thumbnailer
+heif_thumbnailer_DEPENDENCIES = ../src/libheif.la
+heif_thumbnailer_CXXFLAGS = -I../src $(libpng_CFLAGS)
+heif_thumbnailer_LDFLAGS = $(libpng_LIBS)
+heif_thumbnailer_LDADD = ../src/libheif.la
+heif_thumbnailer_SOURCES = encoder.cc encoder.h heif_thumbnailer.cc encoder_png.cc encoder_png.h
+endif
+
 if HAVE_LIBJPEG
 heif_convert_CXXFLAGS += $(libjpeg_CFLAGS)
 heif_convert_LDADD += $(libjpeg_LIBS)
