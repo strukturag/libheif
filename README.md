@@ -105,12 +105,20 @@ This is `libheif` running in JavaScript in your browser.
 
 ## Example programs
 
-Two example programs are provided in the `examples` directory.
+Some example programs are provided in the `examples` directory.
 The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
 `heif-enc` lets you convert JPEG files to HEIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
+
+
+## HEIF thumbnails for the Gnome desktop
+
+The program `heif-thumbnailer` can be used as a HEIF thumbnailer for the Gnome desktop.
+The matching Gnome configuration files are in the `gnome` directory.
+Place the file `heif.xml` into `/usr/share/mime/packages` and `heif.thumbnailer` into `/usr/share/thumbnailers`.
+You may have to run `update-mime-database /usr/share/mime` to update the list of known MIME types.
 
 
 ## License
