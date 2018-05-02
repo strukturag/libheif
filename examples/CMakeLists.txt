@@ -66,3 +66,18 @@ target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
 
 add_executable (heif-enc ${heif_enc_sources})
 target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES} ${LIBPNG_LIBRARIES})
+
+
+
+if(LIBPNG_FOUND)
+  set (heif_thumbnailer_sources
+    encoder.cc
+    encoder.h
+    heif_thumbnailer.cc
+    encoder_png.cc
+    encoder_png.h
+    )
+
+  add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
+  target_link_libraries (heif-thumbnailer ${LIBHEIF_LIBRARY_NAME} ${LIBPNG_LIBRARIES})
+endif()
