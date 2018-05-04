@@ -623,7 +623,7 @@ struct heif_writer {
   int writer_api_version;
 
   // --- version 1 functions ---
-  struct heif_error (*write)(struct heif_context* ctx,
+  struct heif_error (*write)(struct heif_context* ctx, // TODO: why do we need this parameter?
                              const void* data,
                              size_t size,
                              void* userdata);
@@ -654,7 +654,7 @@ struct heif_encoder_parameter;
 // The returned list of encoders is sorted by their priority (which is a plugin property).
 // Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
 LIBHEIF_API
-int heif_context_get_encoder_descriptors(struct heif_context*,
+int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do we need this parameter?
                                          enum heif_compression_format format_filter,
                                          const char* name_filter,
                                          const struct heif_encoder_descriptor** out_encoders,

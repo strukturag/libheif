@@ -85,8 +85,27 @@ namespace heif {
 
     Error get_primary_image_handle(ImageHandle* out_handle);
 
+
+    class Writer {
+    public:
+      virtual ~Writer() { }
+
+      virtual heif_error write(Context&, const void* data, size_t size) = 0;
+    };
+
+    Error write(Writer&);
+
+    Error write_to_file(std::string filename) const;
+
   private:
     std::shared_ptr<heif_context> m_context;
+
+    friend struct ::heif_error heif_writer_trampoline_write(struct heif_context* ctx,
+                                                          const void* data,
+                                                          size_t size,
+                                                          void* userdata);
+
+    static Context wrap_without_releasing(heif_context*); // internal use in friend function only
   };
 
 
@@ -220,6 +239,36 @@ namespace heif {
     }
   }
 
+  Context Context::wrap_without_releasing(heif_context* ctx) {
+    Context context;
+    context.m_context = std::shared_ptr<heif_context>(ctx,
+                                                      [] (heif_context* c) { /* NOP */ });
+    return context;
+  }
+
+  inline struct ::heif_error heif_writer_trampoline_write(struct heif_context* ctx,
+                                                          const void* data,
+                                                          size_t size,
+                                                          void* userdata) {
+    Context::Writer* writer = (Context::Writer*)userdata;
+
+    Context context = Context::wrap_without_releasing(ctx);
+    return writer->write(context, data, size);
+  }
+
+  static struct heif_writer heif_writer_trampoline =
+  {
+    1,
+    &heif_writer_trampoline_write
+  };
+
+  inline Error Context::write(Writer& writer) {
+    return Error(heif_context_write(m_context.get(), &heif_writer_trampoline, &writer));
+  }
+
+  inline Error Context::write_to_file(std::string filename) const {
+    heif_context_write_to_file(m_context.get(), filename.c_str());
+  }
 
 
 
