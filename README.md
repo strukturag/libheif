@@ -57,7 +57,6 @@ Writing an HEIF file can be done like this:
 
 ```C
 heif_context* ctx = heif_context_alloc();
-heif_context_new_heic(ctx);
 
 // get the default encoder
 heif_encoder* encoder;
