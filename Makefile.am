@@ -14,10 +14,11 @@ EXTRA_DIST = \
     appveyor.yml \
     autogen.sh \
     CMakeLists.txt \
-    */CMakeLists.txt \
+    examples/CMakeLists.txt \
+    src/CMakeLists.txt \
     CPPLINT.cfg \
     README.md \
     pre.js \
     post.js \
     build-emscripten.sh \
-    */COPYING
+    examples/COPYING
