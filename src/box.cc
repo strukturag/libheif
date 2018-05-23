@@ -288,7 +288,7 @@ Error Box::parse(BitstreamRange& range)
   else {
     uint64_t content_size = get_box_size() - get_header_size();
     if (range.read(content_size)) {
-      if (content_size > (uint64_t)std::numeric_limits<std::istream::pos_type>::max()) {
+      if (content_size > MAX_BOX_SIZE) {
         return Error(heif_error_Invalid_input,
                      heif_suberror_Invalid_box_size);
       }

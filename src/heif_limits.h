@@ -44,4 +44,6 @@ static const int MAX_IMAGE_HEIGHT = 16384;
 // We put a limit on this to avoid unlimited stack usage by malicious input files.
 static const int MAX_BOX_NESTING_LEVEL = 20;
 
+static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
+
 #endif  // LIBHEIF_HEIF_LIMITS_H
