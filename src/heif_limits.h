@@ -40,4 +40,8 @@ static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 static const int MAX_IMAGE_WIDTH = 16384;
 static const int MAX_IMAGE_HEIGHT = 16384;
 
+// Maximum nesting level of boxes in input files.
+// We put a limit on this to avoid unlimited stack usage by malicious input files.
+static const int MAX_BOX_NESTING_LEVEL = 20;
+
 #endif  // LIBHEIF_HEIF_LIMITS_H

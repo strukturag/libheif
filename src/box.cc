@@ -432,6 +432,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
                  sstr.str());
   }
 
+
+  if (range.get_nesting_level() > MAX_BOX_NESTING_LEVEL) {
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 "Security limit for maximum nesting of boxes has been exceeded");
+  }
+
+
   BitstreamRange boxrange(range.get_istream(),
                           hdr.get_box_size() - hdr.get_header_size(),
                           &range);

@@ -138,6 +138,8 @@ namespace heif {
 
     std::istream* get_istream() { return m_istr; }
 
+    int get_nesting_level() const { return m_nesting_level; }
+
   protected:
     void construct(std::istream* istr, uint64_t length, BitstreamRange* parent) {
       m_remaining = length;
@@ -145,11 +147,16 @@ namespace heif {
 
       m_istr = istr;
       m_parent_range = parent;
+
+      if (parent) {
+        m_nesting_level = parent->m_nesting_level + 1;
+      }
     }
 
   private:
     std::istream* m_istr = nullptr;
     BitstreamRange* m_parent_range = nullptr;
+    int m_nesting_level = 0;
 
     uint64_t m_remaining;
     bool m_end_reached = false;
