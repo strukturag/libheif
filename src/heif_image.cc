@@ -903,6 +903,8 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
     case heif_channel_B: val16=b; break;
     case heif_channel_Alpha: val16=a; break;
     default:
+      // initialization only to avoid warning of uninitalized variable.
+      val16 = 0;
       // Should already be detected by the check above ("m_planes.find").
       assert(false);
     }
