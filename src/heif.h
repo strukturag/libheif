@@ -46,7 +46,7 @@ extern "C" {
   #else
   #define LIBHEIF_API __declspec(dllimport)
   #endif
-#elif HAVE_VISIBILITY
+#elif defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
   #ifdef LIBHEIF_EXPORTS
   #define LIBHEIF_API __attribute__((__visibility__("default")))
   #else
@@ -105,7 +105,10 @@ enum heif_error_code {
   heif_error_Decoder_plugin_error = 7,
 
   // The decoder plugin generated an error
-  heif_error_Encoder_plugin_error = 8
+  heif_error_Encoder_plugin_error = 8,
+
+  // Error during encoding or when writing to the output
+  heif_error_Encoding_error = 9
 };
 
 
@@ -228,6 +231,10 @@ enum heif_suberror_code {
 
   // --- Encoder_plugin_error ---
 
+
+  // --- Encoding_error ---
+
+  heif_suberror_Cannot_write_output_data = 5000,
 };
 
 
@@ -681,6 +688,7 @@ int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_enc
 
 
 // Get an encoder instance that can be used to actually encode images from a descriptor.
+// TODO: why do we need the context here? I think we should remove this. You may pass a NULL context.
 LIBHEIF_API
 struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor*,
@@ -688,6 +696,7 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 
 // Get an encoder for the given compression format. If there are several encoder plugins
 // for this format, the encoder with the highest plugin priority will be returned.
+// TODO: why do we need the context here? I think we should remove this. You may pass a NULL context.
 LIBHEIF_API
 struct heif_error heif_context_get_encoder_for_format(struct heif_context* context,
                                                       enum heif_compression_format format,
@@ -746,6 +755,16 @@ LIBHEIF_API
 enum heif_encoder_parameter_type heif_encoder_parameter_get_type(const struct heif_encoder_parameter*);
 
 LIBHEIF_API
+struct heif_error heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_parameter*,
+                                                                 int* have_minimum_maximum,
+                                                                 int* minimum, int* maximum);
+
+LIBHEIF_API
+struct heif_error heif_encoder_parameter_get_valid_string_values(const struct heif_encoder_parameter*,
+                                                                 const char*const** out_stringarray);
+
+
+LIBHEIF_API
 struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int value);
@@ -755,7 +774,8 @@ struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder*,
                                                      const char* parameter_name,
                                                      int* value);
 
-LIBHEIF_API
+// TODO: name should be changed to heif_encoder_get_valid_integer_parameter_range
+LIBHEIF_API // DEPRECATED.
 struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder*,
                                                              const char* parameter_name,
                                                              int* have_minimum_maximum,

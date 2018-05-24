@@ -66,6 +66,96 @@ namespace heif {
   class Image;
 
 
+  class EncoderParameter
+  {
+  public:
+    std::string get_name() const noexcept;
+
+    enum heif_encoder_parameter_type get_type() const noexcept;
+
+    bool is_integer() const noexcept;
+    bool get_valid_integer_range(int& out_minimum, int& out_maximum);
+
+    bool is_boolean() const noexcept;
+
+    bool is_string() const noexcept;
+    std::vector<std::string> get_valid_string_values() const;
+
+  private:
+    EncoderParameter(const heif_encoder_parameter*);
+
+    const struct heif_encoder_parameter* m_parameter;
+
+    friend class Encoder;
+  };
+
+
+  class Encoder
+  {
+  public:
+    // throws Error
+    Encoder(enum heif_compression_format format);
+
+    // throws Error
+    void set_lossy_quality(int quality);
+
+    // throws Error
+    void set_lossless(bool enable_lossless);
+
+    std::vector<EncoderParameter> list_parameters() const;
+
+    void set_integer_parameter(std::string parameter_name, int value);
+    int  get_integer_parameter(std::string parameter_name) const;
+
+    void set_boolean_parameter(std::string parameter_name, bool value);
+    bool get_boolean_parameter(std::string parameter_name) const;
+
+    void        set_string_parameter(std::string parameter_name, std::string value);
+    std::string get_string_parameter(std::string parameter_name) const;
+
+    void        set_parameter(std::string parameter_name, std::string parameter_value);
+    std::string get_parameter(std::string parameter_name) const;
+
+  private:
+    Encoder(struct heif_encoder*) noexcept;
+
+    std::shared_ptr<heif_encoder> m_encoder;
+
+    friend class EncoderDescriptor;
+    friend class Context;
+  };
+
+
+  class EncoderDescriptor
+  {
+  public:
+    static std::vector<EncoderDescriptor>
+      get_encoder_descriptors(enum heif_compression_format format_filter,
+                              const char* name_filter) noexcept;
+
+    std::string get_name() const noexcept;
+
+    std::string get_id_name() const noexcept;
+
+    enum heif_compression_format get_compression_format() const noexcept;
+
+    bool supportes_lossy_compression() const noexcept;
+
+    bool supportes_lossless_compression() const noexcept;
+
+
+    // throws Error
+    Encoder get_encoder() const;
+
+
+  private:
+  EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr) { }
+
+    const struct heif_encoder_descriptor* m_descriptor = nullptr;
+  };
+
+
+
   class Context
   {
   public:
@@ -91,6 +181,13 @@ namespace heif {
     // throws Error
     ImageHandle get_primary_image_handle() const;
 
+
+
+
+    class EncodingOptions { };
+
+    ImageHandle encode_image(const Image& img, Encoder& encoder,
+                             const EncodingOptions& options = EncodingOptions());
 
     class Writer {
     public:
@@ -199,7 +296,10 @@ namespace heif {
 
   private:
     std::shared_ptr<heif_image> m_image;
+
+    friend class Context;
   };
+
 
 
   // ==========================================================================================
@@ -212,14 +312,14 @@ namespace heif {
                                               [] (heif_context* c) { heif_context_free(c); });
   }
 
-  inline void Context::read_from_file(std::string filename, const ReadingOptions& opts) {
+  inline void Context::read_from_file(std::string filename, const ReadingOptions& /*opts*/) {
     Error err = Error(heif_context_read_from_file(m_context.get(), filename.c_str(), NULL));
     if (err) {
       throw err;
     }
   }
 
-  inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& opts) {
+  inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& /*opts*/) {
     Error err = Error(heif_context_read_from_memory(m_context.get(), mem, size, NULL));
     if (err) {
       throw err;
@@ -261,10 +361,10 @@ namespace heif {
     return ImageHandle(handle);
   }
 
-  Context Context::wrap_without_releasing(heif_context* ctx) {
+  inline Context Context::wrap_without_releasing(heif_context* ctx) {
     Context context;
     context.m_context = std::shared_ptr<heif_context>(ctx,
-                                                      [] (heif_context* c) { /* NOP */ });
+                                                      [] (heif_context*) { /* NOP */ });
     return context;
   }
 
@@ -349,7 +449,7 @@ namespace heif {
   }
 
   inline Image ImageHandle::decode_image(heif_colorspace colorspace, heif_chroma chroma,
-                                         const DecodingOptions& options) {
+                                         const DecodingOptions& /*options*/) {
     heif_image* out_img;
     Error err = Error(heif_decode_image(m_image_handle.get(),
                                         &out_img,
@@ -423,7 +523,7 @@ namespace heif {
   }
 
   inline Image Image::scale_image(int width, int height,
-                                  const ScalingOptions& options) const {
+                                  const ScalingOptions&) const {
     heif_image* img;
     Error err = Error(heif_image_scale_image(m_image.get(), &img, width,height,
                                              nullptr)); // TODO: scaling options not defined yet
@@ -434,6 +534,253 @@ namespace heif {
     return Image(img);
   }
 
+
+
+  inline std::vector<EncoderDescriptor>
+    EncoderDescriptor::get_encoder_descriptors(enum heif_compression_format format_filter,
+                                               const char* name_filter) noexcept {
+    int maxDescriptors = 10;
+    int nDescriptors;
+    for (;;) {
+      const struct heif_encoder_descriptor** descriptors;
+      descriptors = new const heif_encoder_descriptor*[maxDescriptors];
+
+      nDescriptors = heif_context_get_encoder_descriptors(nullptr,
+                                                          format_filter,
+                                                          name_filter,
+                                                          descriptors,
+                                                          maxDescriptors);
+      if (nDescriptors < maxDescriptors) {
+        std::vector<EncoderDescriptor> outDescriptors;
+        for (int i=0;i<nDescriptors;i++) {
+          outDescriptors.push_back(EncoderDescriptor(descriptors[i]));
+        }
+
+        delete[] descriptors;
+
+        return outDescriptors;
+      }
+      else {
+        delete[] descriptors;
+        maxDescriptors *= 2;
+      }
+    }
+  }
+
+
+  inline std::string EncoderDescriptor::get_name() const noexcept {
+    return heif_encoder_descriptor_get_name(m_descriptor);
+  }
+
+  inline std::string EncoderDescriptor::get_id_name() const noexcept {
+    return heif_encoder_descriptor_get_id_name(m_descriptor);
+  }
+
+  inline enum heif_compression_format EncoderDescriptor::get_compression_format() const noexcept {
+    return heif_encoder_descriptor_get_compression_format(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supportes_lossy_compression() const noexcept {
+    return heif_encoder_descriptor_supportes_lossy_compression(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supportes_lossless_compression() const noexcept {
+    return heif_encoder_descriptor_supportes_lossless_compression(m_descriptor);
+  }
+
+  inline Encoder EncoderDescriptor::get_encoder() const {
+    heif_encoder* encoder;
+    Error err = Error(heif_context_get_encoder(nullptr, m_descriptor, &encoder));
+    if (err) {
+      throw err;
+    }
+
+    return Encoder(encoder);
+  }
+
+
+  inline Encoder::Encoder(enum heif_compression_format format) {
+    heif_encoder* encoder;
+    Error err = Error(heif_context_get_encoder_for_format(nullptr, format, &encoder));
+    if (err) {
+      throw err;
+    }
+
+    m_encoder = std::shared_ptr<heif_encoder>(encoder,
+                                              [] (heif_encoder* e) { heif_encoder_release(e); });
+  }
+
+  inline Encoder::Encoder(struct heif_encoder* encoder) noexcept
+  {
+    m_encoder = std::shared_ptr<heif_encoder>(encoder,
+                                              [] (heif_encoder* e) { heif_encoder_release(e); });
+  }
+
+
+  inline EncoderParameter::EncoderParameter(const heif_encoder_parameter* param)
+    : m_parameter(param)
+  {
+  }
+
+  inline std::string EncoderParameter::get_name() const noexcept {
+    return heif_encoder_parameter_get_name(m_parameter);
+  }
+
+  inline enum heif_encoder_parameter_type EncoderParameter::get_type() const noexcept {
+    return heif_encoder_parameter_get_type(m_parameter);
+  }
+
+  inline bool EncoderParameter::is_integer() const noexcept {
+    return get_type() == heif_encoder_parameter_type_integer;
+  }
+
+  inline bool EncoderParameter::get_valid_integer_range(int& out_minimum, int& out_maximum) {
+    int have_minimum_maximum;
+    Error err = Error(heif_encoder_parameter_get_valid_integer_range(m_parameter,
+                                                                     &have_minimum_maximum,
+                                                                     &out_minimum, &out_maximum));
+    if (err) {
+      throw err;
+    }
+
+    return have_minimum_maximum;
+  }
+
+  inline bool EncoderParameter::is_boolean() const noexcept {
+    return get_type() == heif_encoder_parameter_type_boolean;
+  }
+
+  inline bool EncoderParameter::is_string() const noexcept {
+    return get_type() == heif_encoder_parameter_type_string;
+  }
+
+  inline std::vector<std::string> EncoderParameter::get_valid_string_values() const {
+    const char*const* stringarray;
+    Error err = Error(heif_encoder_parameter_get_valid_string_values(m_parameter,
+                                                                     &stringarray));
+    if (err) {
+      throw err;
+    }
+
+    std::vector<std::string> values;
+    for (int i=0; stringarray[i]; i++) {
+      values.push_back(stringarray[i]);
+    }
+
+    return values;
+  }
+
+  inline std::vector<EncoderParameter> Encoder::list_parameters() const {
+    std::vector<EncoderParameter> parameters;
+
+    for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(m_encoder.get());
+         *params;
+         params++) {
+      parameters.push_back(EncoderParameter(*params));
+    }
+
+    return parameters;
+  }
+
+
+  inline void Encoder::set_lossy_quality(int quality) {
+    Error err = Error(heif_encoder_set_lossy_quality(m_encoder.get(), quality));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline void Encoder::set_lossless(bool enable_lossless) {
+    Error err = Error(heif_encoder_set_lossless(m_encoder.get(), enable_lossless));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline void Encoder::set_integer_parameter(std::string parameter_name, int value) {
+    Error err = Error(heif_encoder_set_parameter_integer(m_encoder.get(), parameter_name.c_str(), value));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline int  Encoder::get_integer_parameter(std::string parameter_name) const {
+    int value;
+    Error err = Error(heif_encoder_get_parameter_integer(m_encoder.get(), parameter_name.c_str(), &value));
+    if (err) {
+      throw err;
+    }
+    return value;
+  }
+
+  inline void Encoder::set_boolean_parameter(std::string parameter_name, bool value) {
+    Error err = Error(heif_encoder_set_parameter_boolean(m_encoder.get(), parameter_name.c_str(), value));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline bool Encoder::get_boolean_parameter(std::string parameter_name) const {
+    int value;
+    Error err = Error(heif_encoder_get_parameter_boolean(m_encoder.get(), parameter_name.c_str(), &value));
+    if (err) {
+      throw err;
+    }
+    return value;
+  }
+
+  inline void Encoder::set_string_parameter(std::string parameter_name, std::string value) {
+    Error err = Error(heif_encoder_set_parameter_string(m_encoder.get(), parameter_name.c_str(), value.c_str()));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline std::string Encoder::get_string_parameter(std::string parameter_name) const {
+    const int max_size = 250;
+    char value[max_size];
+    Error err = Error(heif_encoder_get_parameter_string(m_encoder.get(), parameter_name.c_str(),
+                                                        value, max_size));
+    if (err) {
+      throw err;
+    }
+    return value;
+  }
+
+  inline void Encoder::set_parameter(std::string parameter_name, std::string parameter_value) {
+    Error err = Error(heif_encoder_set_parameter(m_encoder.get(), parameter_name.c_str(),
+                                                 parameter_value.c_str()));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline std::string Encoder::get_parameter(std::string parameter_name) const {
+    const int max_size = 250;
+    char value[max_size];
+    Error err = Error(heif_encoder_get_parameter(m_encoder.get(), parameter_name.c_str(),
+                                                 value, max_size));
+    if (err) {
+      throw err;
+    }
+    return value;
+  }
+
+  inline ImageHandle Context::encode_image(const Image& img, Encoder& encoder,
+                                           const EncodingOptions&) {
+    struct heif_image_handle* image_handle;
+
+    Error err = Error(heif_context_encode_image(m_context.get(),
+                                                img.m_image.get(),
+                                                encoder.m_encoder.get(),
+                                                nullptr,
+                                                &image_handle));
+    if (err) {
+      throw err;
+    }
+
+    return ImageHandle(image_handle);
+  }
 }
 
 

@@ -55,7 +55,7 @@ struct heif_encoder
   void release();
 
 
-  std::shared_ptr<heif::HeifContext> context;
+  //std::shared_ptr<heif::HeifContext> context;
   const struct heif_encoder_plugin* plugin;
   void* encoder = nullptr;
 };

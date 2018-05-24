@@ -56,6 +56,7 @@ const char* heif::Error::get_error_string(heif_error_code err)
   case heif_error_Memory_allocation_error: return "Memory allocation error";
   case heif_error_Decoder_plugin_error: return "Decoder plugin generated an error";
   case heif_error_Encoder_plugin_error: return "Encoder plugin generated an error";
+  case heif_error_Encoding_error: return "Error during encoding or writing output file";
   }
 
   assert(false);
@@ -120,6 +121,9 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     // --- Encoder_plugin_error --
 
+    // --- Encoding_error --
+
+  case heif_suberror_Cannot_write_output_data: return "Cannot write output data";
   }
 
   assert(false);

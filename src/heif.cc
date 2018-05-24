@@ -819,7 +819,14 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
                  heif_suberror_Null_pointer_argument).error_struct(nullptr);
   }
 
-  *encoder = new struct heif_encoder(context->context, descriptor->plugin);
+  if (context==nullptr) {
+    *encoder = new struct heif_encoder(nullptr, descriptor->plugin);
+  }
+  else {
+    // DEPRECATED. We do not need the context anywhere.
+    *encoder = new struct heif_encoder(context->context, descriptor->plugin);
+  }
+
   (*encoder)->alloc();
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
@@ -840,7 +847,14 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
   descriptors = get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size()>0) {
-    *encoder = new struct heif_encoder(context->context, descriptors[0]->plugin);
+    if (context==nullptr) {
+      *encoder = new struct heif_encoder(nullptr, descriptors[0]->plugin);
+    }
+    else {
+      // DEPRECATED. We do not need the context anywhere.
+      *encoder = new struct heif_encoder(context->context, descriptors[0]->plugin);
+    }
+
     (*encoder)->alloc();
 
     struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
@@ -946,6 +960,47 @@ struct heif_error heif_encoder_get_parameter_integer(struct heif_encoder* encode
   return encoder->plugin->get_parameter_integer(encoder->encoder, parameter_name, value_ptr);
 }
 
+struct heif_error
+heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_parameter* param,
+                                               int* have_minimum_maximum,
+                                               int* minimum, int* maximum)
+{
+  if (param->type != heif_encoder_parameter_type_integer) {
+    return error_unsupported_parameter; // TODO: correct error ?
+  }
+
+  if (param->integer.have_minimum_maximum) {
+    if (minimum) {
+      *minimum = param->integer.minimum;
+    }
+
+    if (maximum) {
+      *maximum = param->integer.maximum;
+    }
+  }
+
+  if (have_minimum_maximum) {
+    *have_minimum_maximum = param->integer.have_minimum_maximum;
+  }
+
+  return error_Ok;
+}
+
+struct heif_error
+heif_encoder_parameter_get_valid_string_values(const struct heif_encoder_parameter* param,
+                                               const char*const** out_stringarray)
+{
+  if (param->type != heif_encoder_parameter_type_string) {
+    return error_unsupported_parameter; // TODO: correct error ?
+  }
+
+  if (out_stringarray) {
+    *out_stringarray = param->string.valid_values;
+  }
+
+  return error_Ok;
+}
+
 struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder* encoder,
                                                              const char* parameter_name,
                                                              int* have_minimum_maximum,
@@ -955,25 +1010,8 @@ struct heif_error heif_encoder_parameter_integer_valid_range(struct heif_encoder
        *params;
        params++) {
     if (strcmp((*params)->name, parameter_name)==0) {
-      if ((*params)->type != heif_encoder_parameter_type_integer) {
-        return error_unsupported_parameter; // TODO: correct error ?
-      }
-
-      if ((*params)->integer.have_minimum_maximum) {
-        if (minimum) {
-          *minimum = (*params)->integer.minimum;
-        }
-
-        if (maximum) {
-          *maximum = (*params)->integer.maximum;
-        }
-      }
-
-      if (have_minimum_maximum) {
-        *have_minimum_maximum = (*params)->integer.have_minimum_maximum;
-      }
-
-      return error_Ok;
+      return heif_encoder_parameter_get_valid_integer_range(*params, have_minimum_maximum,
+                                                            minimum, maximum);
     }
   }
 
@@ -1017,15 +1055,7 @@ struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder
        *params;
        params++) {
     if (strcmp((*params)->name, parameter_name)==0) {
-      if ((*params)->type != heif_encoder_parameter_type_string) {
-        return error_unsupported_parameter; // TODO: correct error ?
-      }
-
-      if (out_stringarray) {
-        *out_stringarray = (*params)->string.valid_values;
-      }
-
-      return error_Ok;
+      return heif_encoder_parameter_get_valid_string_values(*params, out_stringarray);
     }
   }
 
@@ -1148,20 +1178,32 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   std::shared_ptr<HeifContext::Image> image;
   Error error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+
+  printf("a %p\n",encoder);
+  printf("b %p\n",encoder->plugin);
+  printf("b2 %p\n",input_image);
+  printf("b3 %p\n",input_image->image.get());
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
+      printf("q1\n");
       image = ctx->context->add_new_hvc1_image();
+      printf("q2 %p\n",image.get());
       error = image->encode_image_as_hevc(input_image->image, encoder,
                                           heif_image_input_class_normal);
+      printf("q3\n");
       break;
 
     default:
       // Will return "heif_suberror_Unsupported_codec" from above.
+  printf("c %p\n",encoder);
       break;
   }
   if (error != Error::Ok) {
+  printf("d %p\n",encoder);
     return error.error_struct(ctx->context.get());
   }
+  printf("e %p\n",ctx);
+  printf("f %p\n",ctx->context);
   ctx->context->set_primary_image(image);
 
   if (out_image_handle) {
