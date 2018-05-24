@@ -35,9 +35,7 @@
 #include <string>
 #include <memory>
 #include <limits>
-#include <istream>
 #include <ostream>
-#include <sstream>
 
 
 #include "heif.h"

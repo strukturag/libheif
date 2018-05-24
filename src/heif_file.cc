@@ -18,10 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "heif_context.h"
 #include "heif_file.h"
 #include "heif_image.h"
 
-#include <fstream>
 #include <limits>
 #include <sstream>
 #include <utility>
@@ -54,29 +54,11 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 }
 
 
-Error HeifFile::read_from_file(const char* input_filename)
+Error HeifFile::read(HeifReader* reader)
 {
-  m_input_stream = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
+  m_reader = reader;
 
-  uint64_t maxSize = std::numeric_limits<uint64_t>::max();
-  heif::BitstreamRange range(m_input_stream.get(), maxSize);
-
-
-  Error error = parse_heif_file(range);
-  return error;
-}
-
-
-
-Error HeifFile::read_from_memory(const void* data, size_t size)
-{
-  // TODO: Work on passed memory directly instead of creating a copy here.
-  // Note: we cannot use basic_streambuf for this, because it does not support seeking
-  std::string s(static_cast<const char*>(data), size);
-
-  m_input_stream = std::unique_ptr<std::istream>(new std::istringstream(std::move(s)));
-
-  heif::BitstreamRange range(m_input_stream.get(), size);
+  heif::BitstreamRange range(m_reader);
 
   Error error = parse_heif_file(range);
   return error;
@@ -85,7 +67,7 @@ Error HeifFile::read_from_memory(const void* data, size_t size)
 
 void HeifFile::new_empty_file()
 {
-  m_input_stream.reset();
+  m_reader = nullptr;
   m_top_level_boxes.clear();
 
   m_ftyp_box = std::make_shared<Box_ftyp>();
@@ -398,11 +380,11 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_item_data);
     }
 
-    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_reader, m_idat_box, data);
   } else if (item_type == "grid" ||
              item_type == "iovl" ||
              item_type == "Exif") {
-    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_reader, m_idat_box, data);
   }
 
   if (error != Error::Ok) {

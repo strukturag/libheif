@@ -35,7 +35,6 @@
 #include <string>
 #include <memory>
 #include <limits>
-#include <istream>
 
 
 namespace heif {

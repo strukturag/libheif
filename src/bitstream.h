@@ -35,79 +35,33 @@
 #include <string>
 #include <memory>
 #include <limits>
-#include <istream>
-#include <string>
 
 #include "error.h"
 
 
 namespace heif {
 
+  class HeifReader;
+
   class BitstreamRange
   {
   public:
-    BitstreamRange(std::istream* istr, uint64_t length, BitstreamRange* parent = nullptr) {
-      construct(istr, length, parent);
-    }
+    explicit BitstreamRange(HeifReader* reader, BitstreamRange* parent = nullptr);
+    BitstreamRange(HeifReader* reader, uint64_t length, BitstreamRange* parent = nullptr);
 
     uint8_t read8();
     uint16_t read16();
     uint32_t read32();
     std::string read_string();
 
-    bool read(int n) {
-      if (n<0) {
-        return false;
-      }
-      return read(static_cast<uint64_t>(n));
-    }
+    bool read_data(void* data, uint64_t size);
+    bool read_vector(std::vector<uint8_t>* data, uint64_t size);
 
-    bool read(uint64_t n) {
-      if (m_remaining >= n) {
-        if (m_parent_range) {
-          m_parent_range->read(n);
-        }
+    void skip(uint64_t size);
 
-        m_remaining -= n;
-        m_end_reached = (m_remaining==0);
+    void skip_to_end_of_file();
 
-        return true;
-      }
-      else if (m_remaining==0) {
-        m_error = true;
-        return false;
-      }
-      else {
-        if (m_parent_range) {
-          m_parent_range->read(m_remaining);
-        }
-
-        m_istr->seekg(m_remaining, std::ios::cur);
-        m_remaining = 0;
-        m_end_reached = true;
-        m_error = true;
-        return false;
-      }
-    }
-
-    void skip_to_end_of_file() {
-      m_istr->seekg(0, std::ios_base::end);
-      m_remaining = 0;
-      m_end_reached = true;
-    }
-
-    void skip_to_end_of_box() {
-      if (m_remaining) {
-        if (m_parent_range) {
-          m_parent_range->read(m_remaining);
-        }
-
-        m_istr->seekg(m_remaining, std::ios_base::cur);
-        m_remaining = 0;
-      }
-
-      m_end_reached = true;
-    }
+    void skip_to_end_of_box();
 
     void set_eof_reached() {
       m_remaining = 0;
@@ -119,33 +73,46 @@ namespace heif {
     }
 
     bool eof() const {
-      return m_end_reached;
+      if (m_end_reached) {
+        return true;
+      } else if (m_parent_range) {
+        return m_parent_range->eof();
+      } else {
+        return false;
+      }
     }
 
     bool error() const {
-      return m_error;
+      if (m_error) {
+        return true;
+      } else if (m_parent_range) {
+        return m_parent_range->error();
+      } else {
+        return false;
+      }
     }
 
     Error get_error() const {
       if (m_error) {
         return Error(heif_error_Invalid_input,
                      heif_suberror_End_of_data);
-      }
-      else {
+      } else if (m_parent_range) {
+        return m_parent_range->get_error();
+      } else {
         return Error::Ok;
       }
     }
 
-    std::istream* get_istream() { return m_istr; }
+    HeifReader* reader() const { return m_reader; }
 
     int get_nesting_level() const { return m_nesting_level; }
 
   protected:
-    void construct(std::istream* istr, uint64_t length, BitstreamRange* parent) {
+    void construct(HeifReader* reader,
+        uint64_t length, BitstreamRange* parent) {
+      m_reader = reader;
       m_remaining = length;
-      m_end_reached = (length==0);
-
-      m_istr = istr;
+      m_end_reached = (length == 0);
       m_parent_range = parent;
 
       if (parent) {
@@ -154,11 +121,11 @@ namespace heif {
     }
 
   private:
-    std::istream* m_istr = nullptr;
+    HeifReader* m_reader = nullptr;
     BitstreamRange* m_parent_range = nullptr;
     int m_nesting_level = 0;
 
-    uint64_t m_remaining;
+    uint64_t m_remaining = 0;
     bool m_end_reached = false;
     bool m_error = false;
   };

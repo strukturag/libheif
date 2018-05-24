@@ -25,8 +25,8 @@
 #include <assert.h>
 #include <string.h>
 #include <algorithm>
-#include <iostream>
 #include <limits>
+#include <sstream>
 #include <utility>
 #include <math.h>
 
@@ -324,8 +324,175 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 }
 
 
+HeifReader::HeifReader(struct heif_context* ctx, struct heif_reader* reader,
+    void* userdata)
+  : m_ctx(ctx), m_reader(reader), m_userdata(userdata) {}
 
+uint64_t HeifReader::length() const {
+  return m_reader->get_length(m_ctx, m_userdata);
+}
 
+uint64_t HeifReader::position() const {
+  return m_reader->get_position(m_ctx, m_userdata);
+}
+
+bool HeifReader::read(void* data, size_t size) {
+  return m_reader->read(m_ctx, data, size, m_userdata);
+}
+
+bool HeifReader::seek(int64_t position, enum heif_reader_offset offset) {
+  return m_reader->seek(m_ctx, position, offset, m_userdata);
+}
+
+// static
+uint64_t HeifContext::internal_get_length(struct heif_context* ctx,
+                                          void* userdata) {
+  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  return reader->length();
+}
+
+// static
+uint64_t HeifContext::internal_get_position(struct heif_context* ctx,
+                                            void* userdata) {
+  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  return reader->position();
+}
+
+// static
+int HeifContext::internal_read(struct heif_context* ctx,
+                               void* data,
+                               size_t size,
+                               void* userdata) {
+  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  return reader->read(data, size);
+}
+
+// static
+int HeifContext::internal_seek(struct heif_context* ctx,
+                               int64_t position,
+                               enum heif_reader_offset offset,
+                               void* userdata) {
+  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  return reader->seek(position, offset);
+}
+
+class HeifContext::InternalMemoryReader : public HeifContext::InternalReader {
+ public:
+  InternalMemoryReader(const void* data, size_t size)
+    : data_(static_cast<const uint8_t*>(data)),
+      position_(data_),
+      end_(data_ + size),
+      size_(size) {}
+
+  uint64_t length() const {
+    return size_;
+  }
+
+  uint64_t position() const  {
+    return position_ - data_;
+  }
+
+  bool read(void* data, size_t size)  {
+    if (size > size_ || end_ - size < position_) {
+      return false;
+    }
+
+    memcpy(data, position_, size);
+    position_ += size;
+    return true;
+  }
+
+  bool seek(int64_t position, enum heif_reader_offset offset) {
+    const uint8_t* new_position;
+    switch (offset) {
+      case heif_seek_start:
+        if (position < 0 || static_cast<uint64_t>(position) > size_) {
+          return false;
+        }
+
+        new_position = data_ + position;
+        break;
+      case heif_seek_current:
+        new_position = position_ + position;
+        if (new_position < data_ || new_position > end_) {
+          return false;
+        }
+        break;
+      case heif_seek_end:
+        new_position = end_ + position;
+        if (new_position < data_ || new_position > end_) {
+          return false;
+        }
+        break;
+      default:
+        assert(false);
+        return false;
+    }
+
+    position_ = new_position;
+    return true;
+  }
+
+ private:
+  const uint8_t* data_;
+  const uint8_t* position_;
+  const uint8_t* end_;
+  size_t size_;
+};
+
+class HeifContext::InternalFileReader : public HeifContext::InternalReader {
+ public:
+  InternalFileReader(const char* filename) : fp_(fopen(filename, "rb")) {
+    if (fp_) {
+      fseek(fp_, 0, SEEK_END);
+      size_ = ftell(fp_);
+      fseek(fp_, 0, SEEK_SET);
+    }
+  }
+  ~InternalFileReader() {
+    if (fp_) {
+      fclose(fp_);
+    }
+  }
+
+  uint64_t length() const {
+    return size_;
+  }
+
+  uint64_t position() const  {
+    return fp_ ? ftell(fp_) : 0;
+  }
+
+  bool read(void* data, size_t size)  {
+    if (!fp_) {
+      return false;
+    }
+
+    return fread(data, 1, size, fp_) == size;
+  }
+
+  bool seek(int64_t position, enum heif_reader_offset offset) {
+    if (!fp_) {
+      return false;
+    }
+
+    switch (offset) {
+      case heif_seek_start:
+        return fseek(fp_, position, SEEK_SET) == 0;
+      case heif_seek_current:
+        return fseek(fp_, position, SEEK_CUR) == 0;
+      case heif_seek_end:
+        return fseek(fp_, position, SEEK_END) == 0;
+      default:
+        assert(false);
+        return false;
+    }
+  }
+
+ private:
+  FILE* fp_;
+  uint64_t size_ = 0;
+};
 
 HeifContext::HeifContext()
 {
@@ -338,16 +505,24 @@ HeifContext::HeifContext()
 #endif
 
   reset_to_empty_heif();
+
+  m_internal_reader.reader_api_version = 1;
+  m_internal_reader.get_length = internal_get_length;
+  m_internal_reader.get_position = internal_get_position;
+  m_internal_reader.read = internal_read;
+  m_internal_reader.seek = internal_seek;
 }
 
 HeifContext::~HeifContext()
 {
 }
 
-Error HeifContext::read_from_file(const char* input_filename)
+Error HeifContext::read(struct heif_context* ctx, struct heif_reader* reader,
+    void* userdata)
 {
+  m_heif_reader.reset(new HeifReader(ctx, reader, userdata));
   m_heif_file = std::make_shared<HeifFile>();
-  Error err = m_heif_file->read_from_file(input_filename);
+  Error err = m_heif_file->read(m_heif_reader.get());
   if (err) {
     return err;
   }
@@ -355,15 +530,28 @@ Error HeifContext::read_from_file(const char* input_filename)
   return interpret_heif_file();
 }
 
+// static
+std::unique_ptr<HeifContext::InternalReader> HeifContext::CreateReader(
+    const void* data, size_t size) {
+  return std::unique_ptr<InternalReader>(new InternalMemoryReader(data, size));
+}
+
+// static
+std::unique_ptr<HeifContext::InternalReader> HeifContext::CreateReader(
+    const char* filename) {
+  return std::unique_ptr<InternalReader>(new InternalFileReader(filename));
+}
+
+Error HeifContext::read_from_file(const char* input_filename)
+{
+  m_temp_reader = CreateReader(input_filename);
+  return read(nullptr, &m_internal_reader, m_temp_reader.get());
+}
+
 Error HeifContext::read_from_memory(const void* data, size_t size)
 {
-  m_heif_file = std::make_shared<HeifFile>();
-  Error err = m_heif_file->read_from_memory(data,size);
-  if (err) {
-    return err;
-  }
-
-  return interpret_heif_file();
+  m_temp_reader = CreateReader(data, size);
+  return read(nullptr, &m_internal_reader, m_temp_reader.get());
 }
 
 void HeifContext::reset_to_empty_heif()
