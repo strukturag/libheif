@@ -488,7 +488,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24_32() const
 
   outimg->add_plane(heif_channel_interleaved, m_width, m_height, has_alpha ? 32 : 24);
 
-  const uint8_t *in_r,*in_g,*in_b,*in_a;
+  const uint8_t *in_r,*in_g,*in_b,*in_a=nullptr;
   int in_r_stride=0, in_g_stride=0, in_b_stride=0, in_a_stride=0;
 
   uint8_t *out_p;
