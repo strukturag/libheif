@@ -9,87 +9,10 @@
 #include <utility>
 #include <vector>
 
-#include "box.h"
-#include "heif_file.h"
+#include "heif.h"
 
-namespace heif {
-
-static std::string dump_box_header(BoxHeader* header) {
-  if (!header) {
-    return "";
-  }
-
-  Indent indent;
-  return header->dump(indent);
-}
-
-static std::string dump_box(Box* box) {
-  if (!box) {
-    return "";
-  }
-
-  Indent indent;
-  return box->dump(indent);
-}
-
-static std::shared_ptr<Box> Box_read(BitstreamRange& range) {
-  std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
-  if (error) {
-    return nullptr;
-  }
-
-  return box;
-}
-
-class EmscriptenBitstreamRange : public BitstreamRange {
- public:
-  explicit EmscriptenBitstreamRange(const std::string& data)
-    : BitstreamRange(nullptr, 0),
-      data_(data),
-      stream_(std::move(data_)) {
-    construct(&stream_, data.size(), nullptr);
-  }
-  bool error() const {
-    return BitstreamRange::error();
-  }
-
- private:
-  std::string data_;
-  std::basic_istringstream<char> stream_;
-};
-
-static Error HeifFile_read_from_memory(HeifFile* file,
-    const std::string& data) {
-  if (!file) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument);
-  }
-
-  return file->read_from_memory(data.data(), data.size());
-}
-
-static emscripten::val HeifFile_get_compressed_image_data(HeifFile* file,
-    uint16_t ID, const std::string& data) {
-  emscripten::val result = emscripten::val::object();
-  if (!file) {
-    return result;
-  }
-
-  std::vector<uint8_t> image_data;
-  Error err = file->get_compressed_image_data(ID, &image_data);
-  if (err) {
-    return emscripten::val(err);
-  }
-
-  result.set("type", file->get_item_type(ID));
-  result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
-      image_data.size()));
-  return result;
-}
-
-static std::string heif_get_version() {
-  return ::heif_get_version();
+static std::string _heif_get_version() {
+  return heif_get_version();
 }
 
 static struct heif_error _heif_context_read_from_memory(
@@ -140,8 +63,9 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
 
   heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
   if (!ids) {
-    Error err = Error(heif_error_Memory_allocation_error,
-                      heif_suberror_Security_limit_exceeded);
+    struct heif_error err;
+    err.code = heif_error_Memory_allocation_error;
+    err.subcode = heif_suberror_Security_limit_exceeded;
     return emscripten::val(err);
   }
 
@@ -238,7 +162,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
 
 EMSCRIPTEN_BINDINGS(libheif) {
-  EXPORT_HEIF_FUNCTION(heif_get_version);
+  emscripten::function("heif_get_version", &_heif_get_version,
+      emscripten::allow_raw_pointers());
   EXPORT_HEIF_FUNCTION(heif_get_version_number);
 
   EXPORT_HEIF_FUNCTION(heif_context_alloc);
@@ -253,53 +178,6 @@ EMSCRIPTEN_BINDINGS(libheif) {
   emscripten::function("heif_js_decode_image",
       &heif_js_decode_image, emscripten::allow_raw_pointers());
   EXPORT_HEIF_FUNCTION(heif_image_handle_release);
-
-  emscripten::class_<Error>("Error")
-    .constructor<>()
-    .class_property("Ok", &Error::Ok)
-    .property("error_code", &Error::error_code)
-    .property("sub_error_code", &Error::sub_error_code)
-    ;
-
-  emscripten::class_<BitstreamRange>("BitstreamRangeBase")
-    ;
-
-  emscripten::class_<EmscriptenBitstreamRange,
-      emscripten::base<BitstreamRange>>("BitstreamRange")
-    .constructor<const std::string&>()
-    .function("error", &EmscriptenBitstreamRange::error)
-    ;
-
-  emscripten::class_<Indent>("Indent")
-    .constructor<>()
-    .function("get_indent", &Indent::get_indent)
-    ;
-
-  emscripten::class_<BoxHeader>("BoxHeader")
-    .function("get_box_size", &BoxHeader::get_box_size)
-    .function("get_header_size", &BoxHeader::get_header_size)
-    .function("get_short_type", &BoxHeader::get_short_type)
-    .function("get_type_string", &BoxHeader::get_type_string)
-    .function("dump", &dump_box_header, emscripten::allow_raw_pointers())
-    ;
-
-  emscripten::class_<Box, emscripten::base<BoxHeader>>("Box")
-    .class_function("read", &Box_read, emscripten::allow_raw_pointers())
-    .function("get_child_box", &Box::get_child_box)
-    .function("dump", &dump_box, emscripten::allow_raw_pointers())
-    .smart_ptr<std::shared_ptr<Box>>("Box")
-    ;
-
-  emscripten::class_<HeifFile>("HeifFile")
-    .constructor<>()
-    .function("read_from_memory", &HeifFile_read_from_memory,
-        emscripten::allow_raw_pointers())
-    .function("get_num_images", &HeifFile::get_num_images)
-    .function("get_primary_image_ID", &HeifFile::get_primary_image_ID)
-    .function("get_item_IDs", &HeifFile::get_item_IDs)
-    .function("get_compressed_image_data", &HeifFile_get_compressed_image_data,
-        emscripten::allow_raw_pointers())
-    ;
 
   emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
@@ -391,8 +269,6 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_channel_interleaved", heif_channel_interleaved)
     ;
 
-  emscripten::register_vector<std::string>("StringVector");
-  emscripten::register_vector<uint32_t>("UInt32Vector");
   emscripten::class_<heif_context>("heif_context");
   emscripten::class_<heif_image_handle>("heif_image_handle");
   emscripten::class_<heif_image>("heif_image");
@@ -401,7 +277,5 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .field("subcode", &heif_error::subcode)
     ;
 }
-
-}  // namespace heif
 
 #endif  // LIBHEIF_BOX_EMSCRIPTEN_H

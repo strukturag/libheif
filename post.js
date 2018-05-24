@@ -168,15 +168,7 @@ var libheif = {
             s.charCodeAt(1) << 16 |
             s.charCodeAt(2) << 8 |
             s.charCodeAt(3);
-    },
-    /** @expose */
-    BitstreamRange: Module.BitstreamRange,
-    /** @expose */
-    Box: Module.Box,
-    /** @expose */
-    Error: Module.Error,
-    /** @expose */
-    HeifFile: Module.HeifFile,
+    }
 };
 
 var key;
