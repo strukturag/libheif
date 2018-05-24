@@ -1203,7 +1203,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     return error.error_struct(ctx->context.get());
   }
   printf("e %p\n",ctx);
-  printf("f %p\n",ctx->context);
+  printf("f %p\n",ctx->context.get());
   ctx->context->set_primary_image(image);
 
   if (out_image_handle) {
