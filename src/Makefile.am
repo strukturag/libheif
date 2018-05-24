@@ -71,7 +71,8 @@ endif
 libheif_la_HEADERS = \
   heif.h \
   heif_plugin.h \
-  heif-version.h
+  heif-version.h \
+  heif-cxx.h
 
 noinst_HEADERS = \
   heif-emscripten.h

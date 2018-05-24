@@ -2,7 +2,7 @@
  * C++ interface to libheif
  * Copyright (c) 2018 struktur AG, Dirk Farin <farin@struktur.de>
  *
- * This file is part of heif, an example application using libheif.
+ * This file is part of libheif.
  *
  * heif is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,11 @@ namespace heif {
 
     class ReadingOptions { };
 
-    Error read_from_file(std::string filename, const ReadingOptions& opts = ReadingOptions());
+    // throws Error
+    void read_from_file(std::string filename, const ReadingOptions& opts = ReadingOptions());
+
+    // throws Error
+    void read_from_memory(const void* mem, size_t size, const ReadingOptions& opts = ReadingOptions());
 
     int get_number_of_top_level_images() const;
 
@@ -81,9 +85,11 @@ namespace heif {
 
     std::vector<heif_item_id> get_list_of_top_level_image_IDs() const;
 
-    Error get_primary_image_ID(heif_item_id* id);
+    // throws Error
+    heif_item_id get_primary_image_ID() const;
 
-    Error get_primary_image_handle(ImageHandle* out_handle);
+    // throws Error
+    ImageHandle get_primary_image_handle() const;
 
 
     class Writer {
@@ -93,17 +99,19 @@ namespace heif {
       virtual heif_error write(Context&, const void* data, size_t size) = 0;
     };
 
-    Error write(Writer&);
+    // throws Error
+    void write(Writer&);
 
-    Error write_to_file(std::string filename) const;
+    // throws Error
+    void write_to_file(std::string filename) const;
 
   private:
     std::shared_ptr<heif_context> m_context;
 
     friend struct ::heif_error heif_writer_trampoline_write(struct heif_context* ctx,
-                                                          const void* data,
-                                                          size_t size,
-                                                          void* userdata);
+                                                            const void* data,
+                                                            size_t size,
+                                                            void* userdata);
 
     static Context wrap_without_releasing(heif_context*); // internal use in friend function only
   };
@@ -134,7 +142,8 @@ namespace heif {
 
     std::vector<heif_item_id> get_list_of_thumbnail_IDs() const;
 
-    Error get_thumbnail(heif_item_id id, ImageHandle* out_handle);
+    // throws Error
+    ImageHandle get_thumbnail(heif_item_id id);
 
     // ------------------------- metadata (Exif / XMP) -------------------------
 
@@ -143,7 +152,8 @@ namespace heif {
 
     class DecodingOptions { };
 
-    Error decode_image(Image* output, heif_colorspace colorspace, heif_chroma chroma,
+    // throws Error
+    Image decode_image(heif_colorspace colorspace, heif_chroma chroma,
                        const DecodingOptions& options = DecodingOptions());
 
   private:
@@ -158,12 +168,14 @@ namespace heif {
     Image(heif_image* image);
 
 
-    Error create(int width, int height,
-                 enum heif_colorspace colorspace,
-                 enum heif_chroma chroma);
+    // throws Error
+    void create(int width, int height,
+                enum heif_colorspace colorspace,
+                enum heif_chroma chroma);
 
-    Error add_plane(enum heif_channel channel,
-                    int width, int height, int bit_depth);
+    // throws Error
+    void add_plane(enum heif_channel channel,
+                   int width, int height, int bit_depth);
 
     heif_colorspace get_colorspace() const;
 
@@ -181,8 +193,8 @@ namespace heif {
 
     class ScalingOptions { };
 
-    Error scale_image(Image* output,
-                      int width, int height,
+    // throws Error
+    Image scale_image(int width, int height,
                       const ScalingOptions& options = ScalingOptions()) const;
 
   private:
@@ -200,8 +212,18 @@ namespace heif {
                                               [] (heif_context* c) { heif_context_free(c); });
   }
 
-  inline Error Context::read_from_file(std::string filename, const ReadingOptions& opts) {
-    return Error(heif_context_read_from_file(m_context.get(), filename.c_str(), NULL));
+  inline void Context::read_from_file(std::string filename, const ReadingOptions& opts) {
+    Error err = Error(heif_context_read_from_file(m_context.get(), filename.c_str(), NULL));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& opts) {
+    Error err = Error(heif_context_read_from_memory(m_context.get(), mem, size, NULL));
+    if (err) {
+      throw err;
+    }
   }
 
 
@@ -220,23 +242,23 @@ namespace heif {
     return IDs;
   }
 
-  inline Error Context::get_primary_image_ID(heif_item_id* id) {
-    return Error(heif_context_get_primary_image_ID(m_context.get(), id));
+  inline heif_item_id Context::get_primary_image_ID() const {
+    heif_item_id id;
+    Error err = Error(heif_context_get_primary_image_ID(m_context.get(), &id));
+    if (err) {
+      throw err;
+    }
+    return id;
   }
 
-  inline Error Context::get_primary_image_handle(ImageHandle* out_handle) {
-    if (out_handle==nullptr) {
-      return Error(heif_context_get_primary_image_handle(m_context.get(), nullptr));
+  inline ImageHandle Context::get_primary_image_handle() const {
+    heif_image_handle* handle;
+    Error err = Error(heif_context_get_primary_image_handle(m_context.get(), &handle));
+    if (err) {
+      throw err;
     }
-    else {
-      heif_image_handle* handle;
-      heif_error err = heif_context_get_primary_image_handle(m_context.get(), &handle);
-      if (err.code == heif_error_Ok) {
-        *out_handle = ImageHandle(handle);
-      }
 
-      return Error(err);
-    }
+    return ImageHandle(handle);
   }
 
   Context Context::wrap_without_releasing(heif_context* ctx) {
@@ -257,17 +279,23 @@ namespace heif {
   }
 
   static struct heif_writer heif_writer_trampoline =
-  {
-    1,
-    &heif_writer_trampoline_write
-  };
+    {
+      1,
+      &heif_writer_trampoline_write
+    };
 
-  inline Error Context::write(Writer& writer) {
-    return Error(heif_context_write(m_context.get(), &heif_writer_trampoline, &writer));
+  inline void Context::write(Writer& writer) {
+    Error err = Error(heif_context_write(m_context.get(), &heif_writer_trampoline, &writer));
+    if (err) {
+      throw err;
+    }
   }
 
-  inline Error Context::write_to_file(std::string filename) const {
-    heif_context_write_to_file(m_context.get(), filename.c_str());
+  inline void Context::write_to_file(std::string filename) const {
+    Error err = Error(heif_context_write_to_file(m_context.get(), filename.c_str()));
+    if (err) {
+      throw err;
+    }
   }
 
 
@@ -310,39 +338,29 @@ namespace heif {
     return IDs;
   }
 
-  inline Error ImageHandle::get_thumbnail(heif_item_id id, ImageHandle* out_handle) {
-    if (out_handle==nullptr) {
-      return Error(heif_image_handle_get_thumbnail(m_image_handle.get(), id, nullptr));
+  inline ImageHandle ImageHandle::get_thumbnail(heif_item_id id) {
+    heif_image_handle* handle;
+    Error err = Error(heif_image_handle_get_thumbnail(m_image_handle.get(), id, &handle));
+    if (err) {
+      throw err;
     }
-    else {
-      heif_image_handle* handle;
-      heif_error err = heif_image_handle_get_thumbnail(m_image_handle.get(), id, &handle);
-      if (err.code == heif_error_Ok) {
-        *out_handle = ImageHandle(handle);
-      }
 
-      return Error(err);
-    }
+    return ImageHandle(handle);
   }
 
-  inline Error ImageHandle::decode_image(Image* output, heif_colorspace colorspace, heif_chroma chroma,
+  inline Image ImageHandle::decode_image(heif_colorspace colorspace, heif_chroma chroma,
                                          const DecodingOptions& options) {
-    if (output==nullptr) {
-      return Error(heif_decode_image(m_image_handle.get(), nullptr, colorspace, chroma, nullptr));
+    heif_image* out_img;
+    Error err = Error(heif_decode_image(m_image_handle.get(),
+                                        &out_img,
+                                        colorspace,
+                                        chroma,
+                                        nullptr)); //const struct heif_decoding_options* options);
+    if (err) {
+      throw err;
     }
-    else {
-      heif_image* out_img;
-      heif_error err = heif_decode_image(m_image_handle.get(),
-                                         &out_img,
-                                         colorspace,
-                                         chroma,
-                                         nullptr); //const struct heif_decoding_options* options);
-      if (err.code == heif_error_Ok) {
-        *output = Image(out_img);
-      }
 
-      return Error(err);
-    }
+    return Image(out_img);
   }
 
 
@@ -353,25 +371,27 @@ namespace heif {
   }
 
 
-  inline Error Image::create(int width, int height,
-                             enum heif_colorspace colorspace,
-                             enum heif_chroma chroma) {
+  inline void Image::create(int width, int height,
+                            enum heif_colorspace colorspace,
+                            enum heif_chroma chroma) {
     heif_image* image;
-    heif_error err = heif_image_create(width, height, colorspace, chroma, &image);
-    if (err.code == heif_error_Ok) {
+    Error err = Error(heif_image_create(width, height, colorspace, chroma, &image));
+    if (err) {
+      m_image.reset();
+      throw err;
+    }
+    else {
       m_image = std::shared_ptr<heif_image>(image,
                                             [] (heif_image* h) { heif_image_release(h); });
     }
-    else {
-      m_image.reset();
-    }
-
-    return Error(err);
   }
 
-  inline Error Image::add_plane(enum heif_channel channel,
-                                int width, int height, int bit_depth) {
-    return Error(heif_image_add_plane(m_image.get(), channel, width, height, bit_depth));
+  inline void Image::add_plane(enum heif_channel channel,
+                               int width, int height, int bit_depth) {
+    Error err = Error(heif_image_add_plane(m_image.get(), channel, width, height, bit_depth));
+    if (err) {
+      throw err;
+    }
   }
 
   inline heif_colorspace Image::get_colorspace() const {
@@ -402,22 +422,16 @@ namespace heif {
     return heif_image_get_plane(m_image.get(), channel, out_stride);
   }
 
-  inline Error Image::scale_image(Image* output,
-                                  int width, int height,
+  inline Image Image::scale_image(int width, int height,
                                   const ScalingOptions& options) const {
     heif_image* img;
-    if (output==nullptr) {
-      return Error(heif_image_scale_image(m_image.get(), nullptr, width,height, nullptr));
+    Error err = Error(heif_image_scale_image(m_image.get(), &img, width,height,
+                                             nullptr)); // TODO: scaling options not defined yet
+    if (err) {
+      throw err;
     }
-    else {
-      heif_error err = heif_image_scale_image(m_image.get(), &img, width,height,
-                                              nullptr); // TODO: scaling options not defined yet
-      if (err.code == heif_error_Ok) {
-        *output = Image(img);
-      }
 
-      return Error(err);
-    }
+    return Image(img);
   }
 
 }
