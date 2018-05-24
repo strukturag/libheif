@@ -19,7 +19,7 @@
  */
 
 #include <assert.h>
-#include <alloca.h>
+#include <stdlib.h>
 
 #include "heif.h"
 
@@ -77,7 +77,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     goto quit;
   }
 
-  image_IDs = (heif_item_id*)alloca(images_count * sizeof(heif_item_id));
+  image_IDs = (heif_item_id*)malloc(images_count * sizeof(heif_item_id));
 
   for (int i = 0; i < images_count; ++i) {
     err = heif_context_get_image_handle(ctx, image_IDs[i], &handle);
@@ -103,5 +103,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 quit:
   heif_context_free(ctx);
+  free(image_IDs);
   return 0;
 }
