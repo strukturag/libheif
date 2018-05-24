@@ -1179,31 +1179,20 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   std::shared_ptr<HeifContext::Image> image;
   Error error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
 
-  printf("a %p\n",encoder);
-  printf("b %p\n",encoder->plugin);
-  printf("b2 %p\n",input_image);
-  printf("b3 %p\n",input_image->image.get());
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
-      printf("q1\n");
       image = ctx->context->add_new_hvc1_image();
-      printf("q2 %p\n",image.get());
       error = image->encode_image_as_hevc(input_image->image, encoder,
                                           heif_image_input_class_normal);
-      printf("q3\n");
       break;
 
     default:
       // Will return "heif_suberror_Unsupported_codec" from above.
-  printf("c %p\n",encoder);
       break;
   }
   if (error != Error::Ok) {
-  printf("d %p\n",encoder);
     return error.error_struct(ctx->context.get());
   }
-  printf("e %p\n",ctx);
-  printf("f %p\n",ctx->context.get());
   ctx->context->set_primary_image(image);
 
   if (out_image_handle) {
