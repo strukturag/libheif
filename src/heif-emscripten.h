@@ -311,9 +311,11 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_error_Memory_allocation_error", heif_error_Memory_allocation_error)
     .value("heif_error_Decoder_plugin_error", heif_error_Decoder_plugin_error)
     .value("heif_error_Encoder_plugin_error", heif_error_Encoder_plugin_error)
+    .value("heif_error_Encoding_error", heif_error_Encoding_error)
     ;
   emscripten::enum_<heif_suberror_code>("heif_suberror_code")
     .value("heif_suberror_Unspecified", heif_suberror_Unspecified)
+    .value("heif_suberror_Cannot_write_output_data", heif_suberror_Cannot_write_output_data)
     .value("heif_suberror_End_of_data", heif_suberror_End_of_data)
     .value("heif_suberror_Invalid_box_size", heif_suberror_Invalid_box_size)
     .value("heif_suberror_No_ftyp_box", heif_suberror_No_ftyp_box)
