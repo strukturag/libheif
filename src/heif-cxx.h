@@ -128,6 +128,7 @@ namespace heif {
   };
 
 
+
   class ImageHandle
   {
   public:
@@ -158,7 +159,13 @@ namespace heif {
 
     // ------------------------- metadata (Exif / XMP) -------------------------
 
-    // TODO
+    // Can optionally be filtered by type ("Exif" / "XMP")
+    std::vector<heif_item_id> get_list_of_metadata_block_IDs(const char* type_filter = nullptr) const noexcept;
+
+    std::string get_metadata_type(heif_item_id) const noexcept;
+
+    // throws error
+    std::vector<uint8_t> get_metadata(heif_item_id) const;
 
 
     class DecodingOptions { };
@@ -166,6 +173,10 @@ namespace heif {
     // throws Error
     Image decode_image(heif_colorspace colorspace, heif_chroma chroma,
                        const DecodingOptions& options = DecodingOptions());
+
+
+    heif_image_handle* get_raw_image_handle() { return m_image_handle.get(); }
+    const heif_image_handle* get_raw_image_handle() const { return m_image_handle.get(); }
 
   private:
     std::shared_ptr<heif_image_handle> m_image_handle;
@@ -466,6 +477,38 @@ namespace heif {
     }
 
     return Image(out_img);
+  }
+
+
+  inline std::vector<heif_item_id> ImageHandle::get_list_of_metadata_block_IDs(const char* type_filter) const noexcept {
+    int nBlocks = heif_image_handle_get_number_of_metadata_blocks(m_image_handle.get(),
+                                                                  type_filter);
+    std::vector<heif_item_id> ids(nBlocks);
+    int n = heif_image_handle_get_list_of_metadata_block_IDs(m_image_handle.get(),
+                                                             type_filter,
+                                                             ids.data(), nBlocks);
+    assert(n==nBlocks);
+    return ids;
+  }
+
+  inline std::string ImageHandle::get_metadata_type(heif_item_id metadata_id) const noexcept {
+    return heif_image_handle_get_metadata_type(m_image_handle.get(), metadata_id);
+  }
+
+  inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id) const {
+    size_t data_size = heif_image_handle_get_metadata_size(m_image_handle.get(),
+                                                           metadata_id);
+
+    std::vector<uint8_t> data(data_size);
+
+    Error err = Error(heif_image_handle_get_metadata(m_image_handle.get(),
+                                                     metadata_id,
+                                                     data.data()));
+    if (err) {
+      throw err;
+    }
+
+    return data;
   }
 
 
