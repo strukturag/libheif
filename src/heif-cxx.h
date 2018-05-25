@@ -65,95 +65,9 @@ namespace heif {
   class ImageHandle;
   class Image;
 
-
-  class EncoderParameter
-  {
-  public:
-    std::string get_name() const noexcept;
-
-    enum heif_encoder_parameter_type get_type() const noexcept;
-
-    bool is_integer() const noexcept;
-    bool get_valid_integer_range(int& out_minimum, int& out_maximum);
-
-    bool is_boolean() const noexcept;
-
-    bool is_string() const noexcept;
-    std::vector<std::string> get_valid_string_values() const;
-
-  private:
-    EncoderParameter(const heif_encoder_parameter*);
-
-    const struct heif_encoder_parameter* m_parameter;
-
-    friend class Encoder;
-  };
-
-
-  class Encoder
-  {
-  public:
-    // throws Error
-    Encoder(enum heif_compression_format format);
-
-    // throws Error
-    void set_lossy_quality(int quality);
-
-    // throws Error
-    void set_lossless(bool enable_lossless);
-
-    std::vector<EncoderParameter> list_parameters() const;
-
-    void set_integer_parameter(std::string parameter_name, int value);
-    int  get_integer_parameter(std::string parameter_name) const;
-
-    void set_boolean_parameter(std::string parameter_name, bool value);
-    bool get_boolean_parameter(std::string parameter_name) const;
-
-    void        set_string_parameter(std::string parameter_name, std::string value);
-    std::string get_string_parameter(std::string parameter_name) const;
-
-    void        set_parameter(std::string parameter_name, std::string parameter_value);
-    std::string get_parameter(std::string parameter_name) const;
-
-  private:
-    Encoder(struct heif_encoder*) noexcept;
-
-    std::shared_ptr<heif_encoder> m_encoder;
-
-    friend class EncoderDescriptor;
-    friend class Context;
-  };
-
-
-  class EncoderDescriptor
-  {
-  public:
-    static std::vector<EncoderDescriptor>
-      get_encoder_descriptors(enum heif_compression_format format_filter,
-                              const char* name_filter) noexcept;
-
-    std::string get_name() const noexcept;
-
-    std::string get_id_name() const noexcept;
-
-    enum heif_compression_format get_compression_format() const noexcept;
-
-    bool supportes_lossy_compression() const noexcept;
-
-    bool supportes_lossless_compression() const noexcept;
-
-
-    // throws Error
-    Encoder get_encoder() const;
-
-
-  private:
-  EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr) { }
-
-    const struct heif_encoder_descriptor* m_descriptor = nullptr;
-  };
-
+  class Encoder;
+  class EncoderParameter;
+  class EncoderDescriptor;
 
 
   class Context
@@ -300,6 +214,97 @@ namespace heif {
     friend class Context;
   };
 
+
+
+  class EncoderDescriptor
+  {
+  public:
+    static std::vector<EncoderDescriptor>
+      get_encoder_descriptors(enum heif_compression_format format_filter,
+                              const char* name_filter) noexcept;
+
+    std::string get_name() const noexcept;
+
+    std::string get_id_name() const noexcept;
+
+    enum heif_compression_format get_compression_format() const noexcept;
+
+    bool supportes_lossy_compression() const noexcept;
+
+    bool supportes_lossless_compression() const noexcept;
+
+
+    // throws Error
+    Encoder get_encoder() const;
+
+
+  private:
+  EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr) { }
+
+    const struct heif_encoder_descriptor* m_descriptor = nullptr;
+  };
+
+
+
+  class EncoderParameter
+  {
+  public:
+    std::string get_name() const noexcept;
+
+    enum heif_encoder_parameter_type get_type() const noexcept;
+
+    bool is_integer() const noexcept;
+    // Returns 'true' if the integer range is limited.
+    bool get_valid_integer_range(int& out_minimum, int& out_maximum);
+
+    bool is_boolean() const noexcept;
+
+    bool is_string() const noexcept;
+    std::vector<std::string> get_valid_string_values() const;
+
+  private:
+    EncoderParameter(const heif_encoder_parameter*);
+
+    const struct heif_encoder_parameter* m_parameter;
+
+    friend class Encoder;
+  };
+
+
+  class Encoder
+  {
+  public:
+    // throws Error
+    Encoder(enum heif_compression_format format);
+
+    // throws Error
+    void set_lossy_quality(int quality);
+
+    // throws Error
+    void set_lossless(bool enable_lossless);
+
+    std::vector<EncoderParameter> list_parameters() const;
+
+    void set_integer_parameter(std::string parameter_name, int value);
+    int  get_integer_parameter(std::string parameter_name) const;
+
+    void set_boolean_parameter(std::string parameter_name, bool value);
+    bool get_boolean_parameter(std::string parameter_name) const;
+
+    void        set_string_parameter(std::string parameter_name, std::string value);
+    std::string get_string_parameter(std::string parameter_name) const;
+
+    void        set_parameter(std::string parameter_name, std::string parameter_value);
+    std::string get_parameter(std::string parameter_name) const;
+
+  private:
+    Encoder(struct heif_encoder*) noexcept;
+
+    std::shared_ptr<heif_encoder> m_encoder;
+
+    friend class EncoderDescriptor;
+    friend class Context;
+  };
 
 
   // ==========================================================================================
