@@ -4,6 +4,7 @@ SUBDIRS = \
     src \
     examples \
     extra \
+    gnome \
     go \
     scripts
 
