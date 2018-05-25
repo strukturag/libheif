@@ -48,7 +48,7 @@ API_DEFINES=$(echo "$API_DEFINES" | sort)
 
 EMSCRIPTEN_DEFINES=""
 for type in $DEFINE_TYPES; do
-    DEFINES=$(grep "\.value(\"$type" src/heif-emscripten.h | sed 's|[^\"]*\"\(.*\)\".*|\1|g')
+    DEFINES=$(grep "\.value(\"$type" src/heif_emscripten.h | sed 's|[^\"]*\"\(.*\)\".*|\1|g')
     if [ -z "$EMSCRIPTEN_DEFINES" ]; then
         EMSCRIPTEN_DEFINES="$DEFINES"
     else
@@ -62,13 +62,13 @@ set +e
 CHANGES=$(diff -u <(echo "$API_DEFINES") <(echo "$EMSCRIPTEN_DEFINES"))
 set -e
 if [ -z "$CHANGES" ]; then
-    echo "All defines from heif.h are present in heif-emscripten.h"
+    echo "All defines from heif.h are present in heif_emscripten.h"
     exit 0
 fi
 
-echo "Differences found between enum defines in heif.h and heif-emscripten.h."
-echo "Lines prefixed with '+' are only in heif-emscripten.h, resulting in"
-echo "compile errors. Lines prefixed with '-' are missing in heif-emscripten.h"
+echo "Differences found between enum defines in heif.h and heif_emscripten.h."
+echo "Lines prefixed with '+' are only in heif_emscripten.h, resulting in"
+echo "compile errors. Lines prefixed with '-' are missing in heif_emscripten.h"
 echo
 echo "$CHANGES"
 exit 1
