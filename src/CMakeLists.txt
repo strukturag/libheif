@@ -21,7 +21,7 @@ heif_plugin_registry.cc
 heif_limits.h
 heif_plugin.h
 heif_plugin.cc
-heif-version.h
+heif_version.h
 logging.h
 )
 

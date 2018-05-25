@@ -135,6 +135,6 @@ AC_CONFIG_FILES([go/Makefile])
 AC_CONFIG_FILES([gnome/Makefile])
 AC_CONFIG_FILES([scripts/Makefile])
 AC_CONFIG_FILES([src/Makefile])
-AC_CONFIG_FILES([src/heif-version.h])
+AC_CONFIG_FILES([src/heif_version.h])
 AC_CONFIG_FILES([libheif.pc])
 AC_OUTPUT

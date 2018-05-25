@@ -31,7 +31,7 @@
 #include "bitstream.h"
 
 #if defined(__EMSCRIPTEN__)
-#include "heif-emscripten.h"
+#include "heif_emscripten.h"
 #endif
 
 #include <algorithm>

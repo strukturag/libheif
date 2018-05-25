@@ -28,7 +28,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#include "heif-version.h"
+#include "heif_version.h"
 
 
 // API versions table

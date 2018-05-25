@@ -71,11 +71,11 @@ endif
 libheif_la_HEADERS = \
   heif.h \
   heif_plugin.h \
-  heif-version.h \
-  heif-cxx.h
+  heif_version.h \
+  heif_cxx.h
 
 noinst_HEADERS = \
-  heif-emscripten.h
+  heif_emscripten.h
 
 if HAVE_VISIBILITY
 libheif_la_CFLAGS += -DHAVE_VISIBILITY
@@ -93,25 +93,25 @@ endif
 else
 noinst_LIBRARIES = libfuzzers.a
 libfuzzers_a_SOURCES = \
-  box-fuzzer.cc \
-  encoder-fuzzer.cc \
-  file-fuzzer.cc
+  box_fuzzer.cc \
+  encoder_fuzzer.cc \
+  file_fuzzer.cc
 endif
 
 box_fuzzer_DEPENDENCIES =
 box_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
 box_fuzzer_LDFLAGS = -fsanitize=fuzzer
 box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-box_fuzzer_SOURCES = $(libheif_la_SOURCES) box-fuzzer.cc
+box_fuzzer_SOURCES = $(libheif_la_SOURCES) box_fuzzer.cc
 
 encoder_fuzzer_DEPENDENCIES =
 encoder_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
 encoder_fuzzer_LDFLAGS = -fsanitize=fuzzer
 encoder_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-encoder_fuzzer_SOURCES = $(libheif_la_SOURCES) encoder-fuzzer.cc
+encoder_fuzzer_SOURCES = $(libheif_la_SOURCES) encoder_fuzzer.cc
 
 file_fuzzer_DEPENDENCIES =
 file_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
 file_fuzzer_LDFLAGS = -fsanitize=fuzzer
 file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-file_fuzzer_SOURCES = $(libheif_la_SOURCES) file-fuzzer.cc
+file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
