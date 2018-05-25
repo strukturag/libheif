@@ -76,6 +76,12 @@ heif_context_write_to_file(context, "output.heic");
 
 See the header file `heif.h` for the complete C API.
 
+There is also a C++ API which is a header-only wrapper to the C API.
+Hence, you can use the C++ API and still be binary compatible.
+Code using the C++ API is much less verbose than using the C API directly.
+
+There is also an experimental Go API, but this is not stable yet.
+
 
 ## Compiling
 
