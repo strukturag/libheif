@@ -18,7 +18,7 @@ libheif has support for decoding
 * tiled images
 * alpha channels
 * thumbnails
-* reading EXIF data
+* reading EXIF and XMP metadata
 * reading the depth channel
 * multiple images in a HEIF file
 * image transformations (crop, mirror, rotate)
