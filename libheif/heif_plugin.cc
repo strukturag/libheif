@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <heif_plugin.h>
-#include <heif.h>
+#include "heif_plugin.h"
+#include "heif.h"
 
 struct heif_error heif_error_ok = { heif_error_Ok, heif_suberror_Unspecified, "Success" };
 
