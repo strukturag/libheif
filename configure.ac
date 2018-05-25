@@ -1,14 +1,14 @@
 AC_PREREQ([2.68])
-AC_INIT([libheif], [1.1.0], [opensource@struktur.de])
+AC_INIT([libheif], [1.2.0], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
-NUMERIC_VERSION=0x01010000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
+NUMERIC_VERSION=0x01020000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
 AC_SUBST(NUMERIC_VERSION)
 
-LIBHEIF_CURRENT=2
+LIBHEIF_CURRENT=3
 LIBHEIF_REVISION=0
-LIBHEIF_AGE=1
+LIBHEIF_AGE=2
 AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
 AC_SUBST(LIBHEIF_AGE)
