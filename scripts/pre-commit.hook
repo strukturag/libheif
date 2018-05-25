@@ -32,7 +32,7 @@ fi
 check_enums=
 for file in `git diff-index --cached --name-only HEAD --diff-filter=ACMR| grep -E "\.cc$|\.h$|\.c$"` ; do
     "$CPPLINT" "$file"
-    if [ "$file" = "src/heif.h" ] || [ "$file" = "src/heif_emscripten.h" ] ; then
+    if [ "$file" = "libheif/heif.h" ] || [ "$file" = "libheif/heif_emscripten.h" ] ; then
         check_enums=1
     fi
 done

@@ -31,14 +31,14 @@ DEFINE_TYPES="
 
 API_DEFINES=""
 for type in $DEFINE_TYPES; do
-    DEFINES=$(grep "^[ \t]*$type" src/heif.h | sed 's|[[:space:]]*\([^ \t=]*\)[[:space:]]*=.*|\1|g')
+    DEFINES=$(grep "^[ \t]*$type" libheif/heif.h | sed 's|[[:space:]]*\([^ \t=]*\)[[:space:]]*=.*|\1|g')
     if [ -z "$API_DEFINES" ]; then
         API_DEFINES="$DEFINES"
     else
         API_DEFINES="$API_DEFINES
 $DEFINES"
     fi
-    ALIASES=$(grep "^[ \t]*#define $type" src/heif.h | sed 's|[[:space:]]*#define \([^ \t]*\)[[:space:]]*.*|\1|g')
+    ALIASES=$(grep "^[ \t]*#define $type" libheif/heif.h | sed 's|[[:space:]]*#define \([^ \t]*\)[[:space:]]*.*|\1|g')
     if [ ! -z "$ALIASES" ]; then
         API_DEFINES="$API_DEFINES
 $ALIASES"
@@ -48,7 +48,7 @@ API_DEFINES=$(echo "$API_DEFINES" | sort)
 
 EMSCRIPTEN_DEFINES=""
 for type in $DEFINE_TYPES; do
-    DEFINES=$(grep "\.value(\"$type" src/heif_emscripten.h | sed 's|[^\"]*\"\(.*\)\".*|\1|g')
+    DEFINES=$(grep "\.value(\"$type" libheif/heif_emscripten.h | sed 's|[^\"]*\"\(.*\)\".*|\1|g')
     if [ -z "$EMSCRIPTEN_DEFINES" ]; then
         EMSCRIPTEN_DEFINES="$DEFINES"
     else
