@@ -31,7 +31,7 @@
 #include <sstream>
 #include <assert.h>
 
-#include "heif.h"
+#include <libheif/heif.h>
 
 #include "encoder.h"
 #if HAVE_LIBPNG

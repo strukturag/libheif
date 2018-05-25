@@ -31,7 +31,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "heif.h"
+#include <libheif/heif.h>
 
 #if HAVE_LIBJPEG
 extern "C" {

@@ -29,7 +29,7 @@
 #define STDOUT_FILENO 1
 #endif
 
-#include "heif.h"
+#include <libheif/heif.h>
 
 #include <fstream>
 #include <iostream>
