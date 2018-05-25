@@ -4,6 +4,9 @@ language: cpp
 compiler:
   - gcc
   - clang
+os:
+  - linux
+  - osx
 cache: ccache
 sudo: required
 env:
@@ -23,6 +26,7 @@ env:
 
 matrix:
   exclude:
+    # Don't build various targets with clang.
     - compiler: clang
       env: CHECK_LICENSES=1
     - compiler: clang
@@ -41,9 +45,30 @@ matrix:
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
+    # Don't build various targets on OSX.
+    - os: osx
+      env: CHECK_LICENSES=1
+    - os: osx
+      env: CPPLINT=1
+    - os: osx
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
+    - os: osx
+      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=
+    - os: osx
+      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=1
+    - os: osx
+      env: WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
+    - os: osx
+      env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
+    - os: osx
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
+    - os: osx
+      env: EMSCRIPTEN_VERSION=1.37.26
+    - os: osx
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
 
 before_install:
-  - ./scripts/install-ci.sh
+  - ./scripts/install-ci-$TRAVIS_OS_NAME.sh
 
 before_script:
   - ./scripts/prepare-ci.sh
