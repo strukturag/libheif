@@ -26,7 +26,7 @@
 #include <vector>
 
 extern "C" {
-#include <libheif/heif.h>
+#include <heif.h>
 }
 
 
@@ -95,6 +95,7 @@ namespace heif {
     // throws Error
     ImageHandle get_primary_image_handle() const;
 
+    ImageHandle get_image_handle(heif_item_id id) const;
 
 
 
@@ -378,6 +379,15 @@ namespace heif {
     return ImageHandle(handle);
   }
 
+  inline ImageHandle Context::get_image_handle(heif_item_id id) const {
+    struct heif_image_handle* handle;
+    Error err = Error(heif_context_get_image_handle(m_context.get(), id, &handle));
+    if (err) {
+      throw err;
+    }
+    return ImageHandle(handle);
+  }
+
 #if 0
   inline Context Context::wrap_without_releasing(heif_context* ctx) {
     Context context;
@@ -491,7 +501,8 @@ namespace heif {
     int n = heif_image_handle_get_list_of_metadata_block_IDs(m_image_handle.get(),
                                                              type_filter,
                                                              ids.data(), nBlocks);
-    assert(n==nBlocks);
+    (void)n;
+    //assert(n==nBlocks);
     return ids;
   }
 
@@ -575,7 +586,7 @@ namespace heif {
   }
 
   inline Image Image::scale_image(int width, int height,
-                                  const ScalingOptions&) const noexcept {
+                                  const ScalingOptions&) const {
     heif_image* img;
     Error err = Error(heif_image_scale_image(m_image.get(), &img, width,height,
                                              nullptr)); // TODO: scaling options not defined yet
