@@ -273,6 +273,36 @@ void heif_context_free(struct heif_context*);
 
 struct heif_reading_options;
 
+enum heif_reader_offset {
+  heif_seek_start,
+  heif_seek_current,
+  heif_seek_end
+};
+
+struct heif_reader {
+  // API version supported by this reader
+  int reader_api_version;
+
+  // --- version 1 functions ---
+  int64_t (*get_length)(struct heif_context* ctx, void* userdata);
+  int64_t (*get_position)(struct heif_context* ctx, void* userdata);
+  int (*read)(struct heif_context* ctx,
+              void* data,
+              size_t size,
+              void* userdata);
+  int (*seek)(struct heif_context* ctx,
+              int64_t position,
+              enum heif_reader_offset offset,
+              void* userdata);
+};
+
+// The heif_reading_options should currently be set to NULL.
+LIBHEIF_API
+struct heif_error heif_context_read(struct heif_context* ctx,
+                                    struct heif_reader* reader,
+                                    const struct heif_reading_options* options,
+                                    void* userdata);
+
 // Read a HEIF file from a named disk file.
 // The heif_reading_options should currently be set to NULL.
 LIBHEIF_API

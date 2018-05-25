@@ -18,14 +18,49 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sstream>
+#include <assert.h>
+#include <string.h>
 
 #include "box.h"
+#include "heif.h"
+#include "heif_context.h"
+
+static int64_t memory_get_length(struct heif_context* ctx, void* userdata) {
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
+  return reader->length();
+}
+
+static int64_t memory_get_position(struct heif_context* ctx, void* userdata) {
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
+  return reader->position();
+}
+
+static int memory_read(struct heif_context* ctx, void* data,
+    size_t size,  void* userdata) {
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
+  return reader->read(data, size);
+}
+
+static int memory_seek(struct heif_context* ctx, int64_t position,
+    enum heif_reader_offset offset, void* userdata) {
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
+  return reader->seek(position, offset);
+}
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
-  std::istringstream stream(s);
-  heif::BitstreamRange range(&stream, size);
+  std::unique_ptr<heif::HeifContext::ReaderInterface> mem(heif::HeifContext::CreateReader(data, size));
+  struct heif_reader reader = {0};
+  reader.reader_api_version = 1;
+  reader.get_length = memory_get_length;
+  reader.get_position = memory_get_position;
+  reader.read = memory_read;
+  reader.seek = memory_seek;
+  heif::HeifReader r(nullptr, &reader, mem.get());
+  heif::BitstreamRange range(&r);
   for (;;) {
     std::shared_ptr<heif::Box> box;
     heif::Error error = heif::Box::read(range, &box);

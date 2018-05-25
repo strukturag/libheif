@@ -35,7 +35,6 @@
 #include <string>
 #include <memory>
 #include <limits>
-#include <istream>
 #include <bitset>
 
 #include "error.h"
@@ -49,6 +48,8 @@
 #endif
 
 namespace heif {
+
+  class HeifReader;
 
 #define fourcc(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
 
@@ -299,7 +300,7 @@ namespace heif {
 
     const std::vector<Item>& get_items() const { return m_items; }
 
-    Error read_data(const Item& item, std::istream& istr,
+    Error read_data(const Item& item, HeifReader* reader,
                     const std::shared_ptr<class Box_idat>&,
                     std::vector<uint8_t>* dest) const;
 
@@ -680,13 +681,13 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    Error read_data(std::istream& istr, uint64_t start, uint64_t length,
+    Error read_data(HeifReader* reader, uint64_t start, uint64_t length,
                     std::vector<uint8_t>& out_data) const;
 
   protected:
     Error parse(BitstreamRange& range) override;
 
-    std::streampos m_data_start_pos;
+    uint64_t m_data_start_pos;
   };
 
 

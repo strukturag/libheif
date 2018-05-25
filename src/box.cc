@@ -22,12 +22,13 @@
 #endif
 
 #include "box.h"
+#include "heif_context.h"
 #include "heif_limits.h"
 
-#include <sstream>
 #include <iomanip>
 #include <utility>
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <string.h>
 #include <assert.h>
@@ -171,12 +172,14 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
   }
 
   if (m_type==fourcc("uuid")) {
-    if (range.read(16)) {
-      m_uuid_type.resize(16);
-      range.get_istream()->read((char*)m_uuid_type.data(), 16);
+    static const size_t kUuidSize = 16;
+    uint8_t uuid[kUuidSize];
+    if (!range.read_data(&uuid, sizeof(uuid))) {
+      m_uuid_type.resize(sizeof(uuid));
+      memcpy(m_uuid_type.data(), uuid, sizeof(uuid));
     }
 
-    m_header_size += 16;
+    m_header_size += sizeof(uuid);
   }
 
   return range.get_error();
@@ -287,18 +290,13 @@ Error Box::parse(BitstreamRange& range)
   }
   else {
     uint64_t content_size = get_box_size() - get_header_size();
-    if (range.read(content_size)) {
-      if (content_size > MAX_BOX_SIZE) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_box_size);
-      }
-
-      range.get_istream()->seekg(get_box_size() - get_header_size(), std::ios_base::cur);
+    if (content_size > MAX_BOX_SIZE) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_box_size);
     }
-  }
 
-  // Note: seekg() clears the eof flag and it will not be set again afterwards,
-  // hence we have to test for the fail flag.
+    range.skip(content_size);
+  }
 
   return range.get_error();
 }
@@ -440,7 +438,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
   }
 
 
-  BitstreamRange boxrange(range.get_istream(),
+  BitstreamRange boxrange(range.reader(),
                           hdr.get_box_size() - hdr.get_header_size(),
                           &range);
 
@@ -950,19 +948,14 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-Error Box_iloc::read_data(const Item& item, std::istream& istr,
+Error Box_iloc::read_data(const Item& item, HeifReader* reader,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
-  istr.clear();
-
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
-      istr.seekg(extent.offset + item.base_offset, std::ios::beg);
-      if (istr.eof()) {
+      if (!reader->seek(extent.offset + item.base_offset, heif_seek_start)) {
         // Out-of-bounds
-        dest->clear();
-
         std::stringstream sstr;
         sstr << "Extent in iloc box references data outside of file bounds "
              << "(points to file position " << extent.offset + item.base_offset << ")\n";
@@ -985,10 +978,10 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
       }
 
       dest->resize(static_cast<size_t>(old_size + extent.length));
-      istr.read((char*)dest->data() + old_size, static_cast<size_t>(extent.length));
-      if (istr.eof()) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_End_of_data);
+      if (!reader->read((char*)dest->data() + old_size, static_cast<size_t>(extent.length))) {
+        dest->resize(old_size);
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_End_of_data);
       }
     }
     else if (item.construction_method==1) {
@@ -998,7 +991,7 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                      "idat box referenced in iref box is not present in file");
       }
 
-      idat->read_data(istr,
+      idat->read_data(reader,
                       extent.offset + item.base_offset,
                       extent.length,
                       *dest);
@@ -1751,7 +1744,7 @@ Error Box_auxC::parse(BitstreamRange& range)
 
   m_aux_type = range.read_string();
 
-  while (!range.eof()) {
+  while (!range.eof() && !range.error()) {
     m_aux_subtypes.push_back( range.read8() );
   }
 
@@ -2154,9 +2147,18 @@ Error Box_hvcC::parse(BitstreamRange& range)
           continue;
         }
 
-        if (range.read(size)) {
-          nal_unit.resize(size);
-          range.get_istream()->read((char*)nal_unit.data(), size);
+        if (size > MAX_MEMORY_BLOCK_SIZE) {
+          std::stringstream sstr;
+          sstr << "hvcC box contained " << size << " bytes, total memory size would be "
+               << size << " bytes, exceeding the security limit of "
+               << MAX_MEMORY_BLOCK_SIZE << " bytes";
+
+          return Error(heif_error_Memory_allocation_error,
+                       heif_suberror_Security_limit_exceeded,
+                       sstr.str());
+        }
+        if (!range.read_vector(&nal_unit, size)) {
+          return range.get_error();
         }
 
         array.m_nal_units.push_back( std::move(nal_unit) );
@@ -2365,7 +2367,7 @@ Error Box_idat::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  m_data_start_pos = range.get_istream()->tellg();
+  m_data_start_pos = range.reader()->position();
 
   return range.get_error();
 }
@@ -2382,11 +2384,14 @@ std::string Box_idat::dump(Indent& indent) const
 }
 
 
-Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
+Error Box_idat::read_data(HeifReader* reader, uint64_t start, uint64_t length,
                           std::vector<uint8_t>& out_data) const
 {
   // move to start of data
-  istr.seekg(m_data_start_pos + (std::streampos)start, std::ios_base::beg);
+  if (!reader->seek(m_data_start_pos + start, heif_seek_start)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
 
   // reserve space for the data in the output array
   auto curr_size = out_data.size();
@@ -2405,7 +2410,11 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
   out_data.resize(static_cast<size_t>(curr_size + length));
   uint8_t* data = &out_data[curr_size];
 
-  istr.read((char*)data, static_cast<size_t>(length));
+  if (!reader->read(data, length)) {
+    out_data.resize(curr_size);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
 
   return Error::Ok;
 }

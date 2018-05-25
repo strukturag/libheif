@@ -22,6 +22,8 @@
 
 #include <assert.h>
 
+#include <sstream>
+
 // static
 const char heif::Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";

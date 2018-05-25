@@ -19,6 +19,7 @@
  */
 
 #include "bitstream.h"
+#include "heif_context.h"
 
 #include <string.h>
 #include <assert.h>
@@ -27,20 +28,18 @@
 
 using namespace heif;
 
+BitstreamRange::BitstreamRange(HeifReader* reader, BitstreamRange* parent) {
+  construct(reader, reader->length(), parent);
+}
+
+BitstreamRange::BitstreamRange(HeifReader* reader, uint64_t length, BitstreamRange* parent) {
+  construct(reader, length, parent);
+}
 
 uint8_t BitstreamRange::read8()
 {
-  if (!read(1)) {
-    return 0;
-  }
-
   uint8_t buf;
-
-  std::istream* istr = get_istream();
-  istr->read((char*)&buf,1);
-
-  if (istr->fail()) {
-    set_eof_reached();
+  if (!read_data(&buf, 1)) {
     return 0;
   }
 
@@ -50,17 +49,8 @@ uint8_t BitstreamRange::read8()
 
 uint16_t BitstreamRange::read16()
 {
-  if (!read(2)) {
-    return 0;
-  }
-
   uint8_t buf[2];
-
-  std::istream* istr = get_istream();
-  istr->read((char*)buf,2);
-
-  if (istr->fail()) {
-    set_eof_reached();
+  if (!read_data(&buf, 2)) {
     return 0;
   }
 
@@ -70,17 +60,8 @@ uint16_t BitstreamRange::read16()
 
 uint32_t BitstreamRange::read32()
 {
-  if (!read(4)) {
-    return 0;
-  }
-
   uint8_t buf[4];
-
-  std::istream* istr = get_istream();
-  istr->read((char*)buf,4);
-
-  if (istr->fail()) {
-    set_eof_reached();
+  if (!read_data(&buf, 4)) {
     return 0;
   }
 
@@ -93,36 +74,138 @@ uint32_t BitstreamRange::read32()
 
 std::string BitstreamRange::read_string()
 {
-  std::string str;
-
   if (eof()) {
     return "";
   }
 
+  std::string str;
   for (;;) {
-    if (!read(1)) {
+    char ch;
+    if (!read_data(&ch, 1)) {
       return std::string();
     }
 
-    std::istream* istr = get_istream();
-    int c = istr->get();
-
-    if (istr->fail()) {
-      set_eof_reached();
-      return std::string();
-    }
-
-    if (c==0) {
+    if (ch == 0) {
       break;
-    }
-    else {
-      str += (char)c;
+    } else {
+      str += ch;
     }
   }
 
   return str;
 }
 
+
+bool BitstreamRange::read_data(void* data, uint64_t size) {
+  if (!m_remaining) {
+    m_error = true;
+    return false;
+  }
+
+  if (m_remaining < size) {
+    if (m_parent_range) {
+      m_parent_range->skip(m_remaining);
+    } else {
+      m_reader->seek(m_remaining, heif_seek_current);
+    }
+
+    m_remaining = 0;
+    m_end_reached = true;
+    m_error = true;
+    return false;
+  }
+
+  if (m_parent_range) {
+    if (!m_parent_range->read_data(data, size)) {
+      m_error = true;
+      return false;
+    }
+    m_end_reached = m_parent_range->m_end_reached;
+  } else {
+    m_reader->read(data, size);
+  }
+
+  m_remaining -= size;
+  m_end_reached = (m_remaining == 0);
+  return true;
+}
+
+
+bool BitstreamRange::read_vector(std::vector<uint8_t>* data, uint64_t size) {
+  if (!m_remaining) {
+    m_error = true;
+    return false;
+  }
+
+  if (m_remaining < size) {
+    if (m_parent_range) {
+      m_parent_range->skip(m_remaining);
+    } else {
+      m_reader->seek(m_remaining, heif_seek_current);
+    }
+
+    m_remaining = 0;
+    m_end_reached = true;
+    m_error = true;
+    return false;
+  }
+
+  if (m_parent_range) {
+    if (!m_parent_range->read_vector(data, size)) {
+      m_error = true;
+      return false;
+    }
+    m_end_reached = m_parent_range->m_end_reached;
+  } else {
+    data->resize(size);
+    m_reader->read(data->data(), size);
+  }
+
+  m_remaining -= size;
+  m_end_reached = (m_remaining == 0);
+  return true;
+}
+
+
+void BitstreamRange::skip(uint64_t size) {
+  if (m_parent_range) {
+    m_parent_range->skip(size);
+  } else {
+    m_reader->seek(size, heif_seek_current);
+  }
+  if (m_remaining >= size) {
+    m_remaining -= size;
+    m_end_reached = (m_remaining == 0);
+  } else {
+    m_remaining = 0;
+    m_end_reached = true;
+  }
+}
+
+
+void BitstreamRange::skip_to_end_of_file() {
+  if (m_parent_range) {
+    m_parent_range->skip_to_end_of_file();
+  } else {
+    m_reader->seek(0, heif_seek_end);
+  }
+  m_remaining = 0;
+  m_end_reached = true;
+}
+
+
+void BitstreamRange::skip_to_end_of_box() {
+  if (m_remaining) {
+    if (m_parent_range) {
+      m_parent_range->skip(m_remaining);
+    } else {
+      m_reader->seek(m_remaining, heif_seek_current);
+    }
+    m_remaining = 0;
+  }
+
+  m_end_reached = true;
+}
 
 
 

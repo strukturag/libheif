@@ -42,6 +42,7 @@ namespace heif {
 
   class HeifPixelImage;
   class HeifImage;
+  class HeifReader;
 
 
   class HeifFile {
@@ -49,8 +50,7 @@ namespace heif {
     HeifFile();
     ~HeifFile();
 
-    Error read_from_file(const char* input_filename);
-    Error read_from_memory(const void* data, size_t size);
+    Error read(HeifReader* reader);
 
     void new_empty_file();
 
@@ -119,7 +119,7 @@ namespace heif {
     mutable std::mutex m_read_mutex;
 #endif
 
-    std::unique_ptr<std::istream> m_input_stream;
+    HeifReader* m_reader = nullptr;
 
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
 

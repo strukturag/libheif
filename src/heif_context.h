@@ -52,6 +52,21 @@ namespace heif {
     std::vector<uint8_t> m_data;
   };
 
+  class HeifReader {
+   public:
+    HeifReader(struct heif_context* ctx, struct heif_reader* reader, void* userdata);
+
+    uint64_t length() const;
+    uint64_t position() const;
+
+    bool read(void* data, size_t size);
+    bool seek(int64_t position, enum heif_reader_offset offset);
+
+   private:
+    struct heif_context* m_ctx;
+    struct heif_reader* m_reader;
+    void* m_userdata;
+  };
 
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
@@ -61,6 +76,7 @@ namespace heif {
     HeifContext();
     ~HeifContext();
 
+    Error read(struct heif_context* ctx, struct heif_reader* reader, void* userdata);
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 
@@ -202,6 +218,20 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
+    class ReaderInterface {
+     public:
+      virtual ~ReaderInterface() {}
+
+      virtual int64_t length() const = 0;
+      virtual int64_t position() const = 0;
+
+      virtual bool read(void* data, size_t size) = 0;
+      virtual bool seek(int64_t position, enum heif_reader_offset offset) = 0;
+    };
+
+    static std::unique_ptr<ReaderInterface> CreateReader(const void* data, size_t size);
+    static std::unique_ptr<ReaderInterface> CreateReader(const char* filename);
+
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
 
@@ -216,6 +246,26 @@ namespace heif {
     std::shared_ptr<Image> m_primary_image; // shortcut to primary image
 
     std::shared_ptr<HeifFile> m_heif_file;
+    std::unique_ptr<HeifReader> m_heif_reader;
+    struct heif_reader m_internal_reader;
+
+    static int64_t internal_get_length(struct heif_context* ctx,
+                                       void* userdata);
+    static int64_t internal_get_position(struct heif_context* ctx,
+                                         void* userdata);
+    static int internal_read(struct heif_context* ctx,
+                             void* data,
+                             size_t size,
+                             void* userdata);
+    static int internal_seek(struct heif_context* ctx,
+                             int64_t position,
+                             enum heif_reader_offset offset,
+                             void* userdata);
+
+    class FileReader;
+    class MemoryReader;
+
+    std::unique_ptr<ReaderInterface> m_temp_reader;
 
     Error interpret_heif_file();
 

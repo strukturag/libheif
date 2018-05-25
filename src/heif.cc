@@ -94,6 +94,14 @@ void heif_context_free(heif_context* ctx)
   delete ctx;
 }
 
+struct heif_error heif_context_read(struct heif_context* ctx,
+                                    struct heif_reader* reader,
+                                    const struct heif_reading_options* options,
+                                    void* userdata) {
+  Error err = ctx->context->read(ctx, reader, userdata);
+  return err.error_struct(ctx->context.get());
+}
+
 heif_error heif_context_read_from_file(heif_context* ctx, const char* filename,
                                        const struct heif_reading_options*)
 {
