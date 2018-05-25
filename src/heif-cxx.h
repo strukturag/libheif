@@ -211,6 +211,8 @@ namespace heif {
 
     int get_bits_per_pixel(enum heif_channel channel) const noexcept;
 
+    bool has_channel(enum heif_channel channel) const noexcept;
+
     const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const noexcept;
 
     uint8_t* get_plane(enum heif_channel channel, int* out_stride) noexcept;
@@ -575,6 +577,10 @@ namespace heif {
 
   inline int Image::get_bits_per_pixel(enum heif_channel channel) const noexcept {
     return heif_image_get_bits_per_pixel(m_image.get(), channel);
+  }
+
+  inline bool Image::has_channel(enum heif_channel channel) const noexcept {
+    return heif_image_has_channel(m_image.get(), channel);
   }
 
   inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const noexcept {

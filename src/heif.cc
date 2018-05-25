@@ -507,6 +507,12 @@ int heif_image_get_bits_per_pixel(const struct heif_image* img,enum heif_channel
 }
 
 
+int heif_image_has_channel(const struct heif_image* img, enum heif_channel channel)
+{
+  return img->image->has_channel(channel);
+}
+
+
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        heif_channel channel, int width, int height, int bit_depth)
 {

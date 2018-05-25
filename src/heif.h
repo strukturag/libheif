@@ -589,6 +589,9 @@ int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
 
+LIBHEIF_API
+int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
+
 // Get a pointer to the actual pixel data.
 // The 'out_stride' is returned as "bytes per line".
 // When out_stride is NULL, no value will be written.
