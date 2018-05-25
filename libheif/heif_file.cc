@@ -310,6 +310,17 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
 }
 
 
+std::string HeifFile::get_content_type(heif_item_id ID) const
+{
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
+    return "";
+  }
+
+  return infe_box->get_content_type();
+}
+
+
 Error HeifFile::get_properties(heif_item_id imageID,
                                std::vector<Box_ipco::Property>& properties) const
 {
@@ -345,6 +356,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
 
   std::string item_type = infe_box->get_item_type();
+  std::string content_type = infe_box->get_content_type();
 
   // --- get coded image data pointers
 
@@ -401,7 +413,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   } else if (item_type == "grid" ||
              item_type == "iovl" ||
-             item_type == "Exif") {
+             item_type == "Exif" ||
+             (item_type == "mime" && content_type=="application/rdf+xml")) {
     error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
   }
 

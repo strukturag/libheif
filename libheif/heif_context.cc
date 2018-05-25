@@ -669,11 +669,15 @@ Error HeifContext::interpret_heif_file()
   // --- read metadata and assign to image
 
   for (heif_item_id id : image_IDs) {
-    std::string item_type = m_heif_file->get_item_type(id);
-    if (item_type == "Exif") {
+    std::string item_type    = m_heif_file->get_item_type(id);
+    std::string content_type = m_heif_file->get_content_type(id);
+
+    if (item_type == "Exif" ||
+        (item_type=="mime" && content_type=="application/rdf+xml")) {
       std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
       metadata->item_id = id;
       metadata->item_type = item_type;
+      metadata->content_type = content_type;
 
       Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
       if (err) {

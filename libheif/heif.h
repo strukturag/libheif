@@ -454,6 +454,10 @@ LIBHEIF_API
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
                                                 heif_item_id metadata_id);
 
+LIBHEIF_API
+const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
+                                                        heif_item_id metadata_id);
+
 // Get the size of the raw metadata, as stored in the HEIF file.
 LIBHEIF_API
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,

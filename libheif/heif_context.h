@@ -49,6 +49,7 @@ namespace heif {
   public:
     heif_item_id item_id;
     std::string item_type;  // e.g. "Exif"
+    std::string content_type;
     std::vector<uint8_t> m_data;
   };
 

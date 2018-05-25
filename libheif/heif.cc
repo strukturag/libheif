@@ -625,6 +625,21 @@ const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* 
 }
 
 
+const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
+                                                        heif_item_id metadata_id)
+{
+  auto metadata_list = handle->image->get_metadata();
+
+  for (auto metadata : metadata_list) {
+    if (metadata->item_id == metadata_id) {
+      return metadata->content_type.c_str();
+    }
+  }
+
+  return NULL;
+}
+
+
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
                                            heif_item_id metadata_id)
 {

@@ -164,7 +164,9 @@ namespace heif {
     // Can optionally be filtered by type ("Exif" / "XMP")
     std::vector<heif_item_id> get_list_of_metadata_block_IDs(const char* type_filter = nullptr) const noexcept;
 
-    std::string get_metadata_type(heif_item_id) const noexcept;
+    std::string get_metadata_type(heif_item_id metadata_id) const noexcept;
+
+    std::string get_metadata_content_type(heif_item_id metadata_id) const noexcept;
 
     // throws error
     std::vector<uint8_t> get_metadata(heif_item_id) const;
@@ -512,6 +514,10 @@ namespace heif {
 
   inline std::string ImageHandle::get_metadata_type(heif_item_id metadata_id) const noexcept {
     return heif_image_handle_get_metadata_type(m_image_handle.get(), metadata_id);
+  }
+
+  inline std::string ImageHandle::get_metadata_content_type(heif_item_id metadata_id) const noexcept {
+    return heif_image_handle_get_metadata_content_type(m_image_handle.get(), metadata_id);
   }
 
   inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id) const {

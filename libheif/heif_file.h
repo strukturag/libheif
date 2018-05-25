@@ -66,6 +66,8 @@ namespace heif {
 
     std::string get_item_type(heif_item_id ID) const;
 
+    std::string get_content_type(heif_item_id ID) const;
+
     Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
 

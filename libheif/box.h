@@ -364,6 +364,8 @@ namespace heif {
 
     void set_item_name(std::string name) { m_item_name = name; }
 
+    std::string get_content_type() const { return m_content_type; }
+
     void derive_box_version() override;
 
     Error write(StreamWriter& writer) const override;
