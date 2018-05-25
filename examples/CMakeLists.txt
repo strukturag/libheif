@@ -36,6 +36,10 @@ set (heif_enc_sources
   heif_enc.cc
 )
 
+set (heif_test_sources
+  heif_test.cc
+)
+
 if(MSVC)
   set (heif_convert_sources
     ${heif_convert_sources}
@@ -67,6 +71,8 @@ target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
 add_executable (heif-enc ${heif_enc_sources})
 target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES} ${LIBPNG_LIBRARIES})
 
+add_executable (heif-test ${heif_test_sources})
+target_link_libraries (heif-test ${LIBHEIF_LIBRARY_NAME})
 
 
 if(LIBPNG_FOUND)

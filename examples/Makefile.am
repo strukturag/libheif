@@ -5,6 +5,9 @@ bin_PROGRAMS = \
   heif-enc \
   heif-info
 
+noinst_PROGRAMS = \
+  heif-test
+
 heif_convert_DEPENDENCIES = ../src/libheif.la
 heif_convert_CXXFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 heif_convert_LDFLAGS =
@@ -54,6 +57,12 @@ if HAVE_LIBPNG
 heif_enc_CXXFLAGS += $(libpng_CFLAGS)
 heif_enc_LDADD += $(libpng_LIBS)
 endif
+
+heif_test_DEPENDENCIES = ../src/libheif.la
+heif_test_CXXFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+heif_test_LDFLAGS =
+heif_test_LDADD = ../src/libheif.la
+heif_test_SOURCES = heif_test.cc
 
 EXTRA_DIST = \
     demo.html \
