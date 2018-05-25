@@ -1,7 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = \
-    src \
+    libheif \
     examples \
     extra \
     gnome \
@@ -17,7 +17,7 @@ EXTRA_DIST = \
     autogen.sh \
     CMakeLists.txt \
     examples/CMakeLists.txt \
-    src/CMakeLists.txt \
+    libheif/CMakeLists.txt \
     CPPLINT.cfg \
     README.md \
     pre.js \

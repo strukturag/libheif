@@ -1,6 +1,6 @@
 AC_PREREQ([2.68])
 AC_INIT([libheif], [1.1.0], [opensource@struktur.de])
-AC_CONFIG_SRCDIR([src/box.cc])
+AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
 NUMERIC_VERSION=0x01010000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
@@ -134,7 +134,7 @@ AC_CONFIG_FILES([extra/Makefile])
 AC_CONFIG_FILES([go/Makefile])
 AC_CONFIG_FILES([gnome/Makefile])
 AC_CONFIG_FILES([scripts/Makefile])
-AC_CONFIG_FILES([src/Makefile])
-AC_CONFIG_FILES([src/heif_version.h])
+AC_CONFIG_FILES([libheif/Makefile])
+AC_CONFIG_FILES([libheif/heif_version.h])
 AC_CONFIG_FILES([libheif.pc])
 AC_OUTPUT

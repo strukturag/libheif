@@ -26,7 +26,7 @@
 #include <vector>
 
 extern "C" {
-#include <heif.h>
+#include <libheif/heif.h>
 }
 
 
@@ -404,6 +404,8 @@ namespace heif {
                                                           size_t size,
                                                           void* userdata) {
     Context::Writer* writer = (Context::Writer*)userdata;
+
+    (void)ctx;
 
     //Context context = Context::wrap_without_releasing(ctx);
     //return writer->write(context, data, size);

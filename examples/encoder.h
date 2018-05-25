@@ -23,7 +23,7 @@
 #include <string>
 #include <memory>
 
-#include "heif.h"
+#include "libheif/heif.h"
 
 class Encoder {
  public:
