@@ -222,8 +222,8 @@ namespace heif {
      public:
       virtual ~ReaderInterface() {}
 
-      virtual uint64_t length() const = 0;
-      virtual uint64_t position() const = 0;
+      virtual int64_t length() const = 0;
+      virtual int64_t position() const = 0;
 
       virtual bool read(void* data, size_t size) = 0;
       virtual bool seek(int64_t position, enum heif_reader_offset offset) = 0;
@@ -249,10 +249,10 @@ namespace heif {
     std::unique_ptr<HeifReader> m_heif_reader;
     struct heif_reader m_internal_reader;
 
-    static uint64_t internal_get_length(struct heif_context* ctx,
-                                        void* userdata);
-    static uint64_t internal_get_position(struct heif_context* ctx,
-                                          void* userdata);
+    static int64_t internal_get_length(struct heif_context* ctx,
+                                       void* userdata);
+    static int64_t internal_get_position(struct heif_context* ctx,
+                                         void* userdata);
     static int internal_read(struct heif_context* ctx,
                              void* data,
                              size_t size,

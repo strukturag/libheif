@@ -345,14 +345,14 @@ bool HeifReader::seek(int64_t position, enum heif_reader_offset offset) {
 }
 
 // static
-uint64_t HeifContext::internal_get_length(struct heif_context* ctx,
+int64_t HeifContext::internal_get_length(struct heif_context* ctx,
                                           void* userdata) {
   ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->length();
 }
 
 // static
-uint64_t HeifContext::internal_get_position(struct heif_context* ctx,
+int64_t HeifContext::internal_get_position(struct heif_context* ctx,
                                             void* userdata) {
   ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->position();
@@ -384,11 +384,11 @@ class HeifContext::MemoryReader : public HeifContext::ReaderInterface {
       end_(data_ + size),
       size_(size) {}
 
-  uint64_t length() const {
+  int64_t length() const {
     return size_;
   }
 
-  uint64_t position() const  {
+  int64_t position() const  {
     return position_ - data_;
   }
 
@@ -455,11 +455,11 @@ class HeifContext::FileReader : public HeifContext::ReaderInterface {
     }
   }
 
-  uint64_t length() const {
+  int64_t length() const {
     return size_;
   }
 
-  uint64_t position() const  {
+  int64_t position() const  {
     return fp_ ? ftell(fp_) : 0;
   }
 

@@ -284,8 +284,8 @@ struct heif_reader {
   int reader_api_version;
 
   // --- version 1 functions ---
-  uint64_t (*get_length)(struct heif_context* ctx, void* userdata);
-  uint64_t (*get_position)(struct heif_context* ctx, void* userdata);
+  int64_t (*get_length)(struct heif_context* ctx, void* userdata);
+  int64_t (*get_position)(struct heif_context* ctx, void* userdata);
   int (*read)(struct heif_context* ctx,
               void* data,
               size_t size,

@@ -25,13 +25,13 @@
 #include "heif.h"
 #include "heif_context.h"
 
-static uint64_t memory_get_length(struct heif_context* ctx, void* userdata) {
+static int64_t memory_get_length(struct heif_context* ctx, void* userdata) {
   heif::HeifContext::ReaderInterface* reader =
       static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->length();
 }
 
-static uint64_t memory_get_position(struct heif_context* ctx, void* userdata) {
+static int64_t memory_get_position(struct heif_context* ctx, void* userdata) {
   heif::HeifContext::ReaderInterface* reader =
       static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->position();
