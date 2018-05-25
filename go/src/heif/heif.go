@@ -21,10 +21,9 @@
 package heif
 
 /*
-#cgo CPPFLAGS: -I/home/domain/farindk/sys/include/libheif
 #cgo pkg-config: libheif
 #include <stdlib.h>
-#include <heif.h>
+#include <libheif/heif.h>
 */
 import "C"
 
