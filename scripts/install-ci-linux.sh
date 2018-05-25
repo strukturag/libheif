@@ -79,6 +79,16 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
+if [ ! -z "$MINGW64" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        binutils-mingw-w64-x86-64 \
+        g++-mingw-w64-x86-64 \
+        gcc-mingw-w64-x86-64 \
+        mingw-w64-x86-64-dev \
+        wine \
+        "
+fi
+
 if [ ! -z "$UPDATE_APT" ]; then
     echo "Updating package lists ..."
     sudo apt-get update -qq

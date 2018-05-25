@@ -32,6 +32,17 @@ if [ ! -z "$CPPLINT" ]; then
     exit 0
 fi
 
+BIN_SUFFIX=
+BIN_WRAPPER=
+if [ ! -z "$MINGW64" ]; then
+    # Make sure the correct compiler will be used.
+    unset CC
+    unset CXX
+    BIN_SUFFIX=.exe
+    BIN_WRAPPER=wine64
+    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/4.8/;/usr/x86_64-w64-mingw32/lib"
+fi
+
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
     cmake .
@@ -41,16 +52,16 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
     echo "Building libheif ..."
     make
     echo "Dumping information of sample file ..."
-    ./examples/heif-info --dump-boxes examples/example.heic
+    ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
     if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_LIBDE265" ]; then
         echo "Converting sample file to JPEG ..."
-        ./examples/heif-convert examples/example.heic example.jpg
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.jpg
         echo "Checking first generated file ..."
         [ -s "example-1.jpg" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "example-2.jpg" ] || exit 1
         echo "Converting sample file to PNG ..."
-        ./examples/heif-convert examples/example.heic example.png
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.png
         echo "Checking first generated file ..."
         [ -s "example-1.png" ] || exit 1
         echo "Checking second generated file ..."
