@@ -4,6 +4,7 @@ SUBDIRS = \
     src \
     examples \
     extra \
+    go \
     scripts
 
 pkgconfigdir = $(libdir)/pkgconfig
