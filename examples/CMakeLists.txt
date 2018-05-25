@@ -59,6 +59,12 @@ if(MSVC)
     ../extra/getopt.h
     ../extra/getopt_long.c
   )
+  set (heif_test_sources
+    ${heif_test_sources}
+    ../extra/getopt.c
+    ../extra/getopt.h
+    ../extra/getopt_long.c
+  )
   include_directories ("../extra")
 endif()
 
