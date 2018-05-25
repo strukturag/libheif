@@ -9,6 +9,9 @@ os:
   - osx
 cache: ccache
 sudo: required
+addons:
+  apt:
+    update: true
 env:
   - CHECK_LICENSES=1
   - CPPLINT=1
@@ -23,6 +26,7 @@ env:
   - EMSCRIPTEN_VERSION=1.37.26
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
+  - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
 
 matrix:
   exclude:
@@ -45,6 +49,8 @@ matrix:
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
+    - compiler: clang
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
     # Don't build various targets on OSX.
     - os: osx
       env: CHECK_LICENSES=1
@@ -66,6 +72,8 @@ matrix:
       env: EMSCRIPTEN_VERSION=1.37.26
     - os: osx
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
+    - os: osx
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
 
 before_install:
   - ./scripts/install-ci-$TRAVIS_OS_NAME.sh

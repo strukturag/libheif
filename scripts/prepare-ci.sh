@@ -26,7 +26,19 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     export PKG_CONFIG_PATH=$BUILD_ROOT/libde265/dist/lib/pkgconfig/
 fi
 
+CONFIGURE_HOST=
+if [ ! -z "$MINGW64" ]; then
+    CONFIGURE_HOST=x86_64-w64-mingw32
+fi
+
 if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     ./autogen.sh
-    ./configure
+    if [ -z "$CONFIGURE_HOST" ]; then
+        ./configure
+    else
+        # Make sure the correct compiler will be used.
+        unset CC
+        unset CXX
+        ./configure --host=$CONFIGURE_HOST
+    fi
 fi
