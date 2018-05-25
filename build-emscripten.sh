@@ -36,7 +36,7 @@ emmake make -j${CORES}
 export TOTAL_MEMORY=16777216
 
 echo "Running Emscripten..."
-emcc src/.libs/libheif.so \
+emcc libheif/.libs/libheif.so \
     --bind \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
