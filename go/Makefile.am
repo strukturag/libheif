@@ -1,3 +1,3 @@
 EXTRA_DIST = \
-    src/*.go \
-    src/heif/*.go
+    src/heif-test.go \
+    src/heif/heif.go
