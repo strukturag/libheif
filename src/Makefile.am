@@ -29,6 +29,9 @@ libheif_la_CXXFLAGS = \
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
+if MINGW
+libheif_la_LDFLAGS += -no-undefined
+endif
 
 libheif_la_SOURCES = \
   bitstream.h \

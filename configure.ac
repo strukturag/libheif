@@ -25,6 +25,7 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_GREP
+AM_CONDITIONAL(MINGW, expr $host : '.*-mingw' >/dev/null 2>&1)
 
 AM_INIT_AUTOMAKE([foreign])
 
