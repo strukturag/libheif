@@ -53,7 +53,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 endif()
 
-include_directories ("${PROJECT_SOURCE_DIR}/libheif")
+include_directories ("${PROJECT_SOURCE_DIR}")
 
 if(UNIX)
   set(LIBHEIF_LIBRARY_NAME heif)
