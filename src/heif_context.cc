@@ -347,14 +347,14 @@ bool HeifReader::seek(int64_t position, enum heif_reader_offset offset) {
 // static
 uint64_t HeifContext::internal_get_length(struct heif_context* ctx,
                                           void* userdata) {
-  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->length();
 }
 
 // static
 uint64_t HeifContext::internal_get_position(struct heif_context* ctx,
                                             void* userdata) {
-  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->position();
 }
 
@@ -363,7 +363,7 @@ int HeifContext::internal_read(struct heif_context* ctx,
                                void* data,
                                size_t size,
                                void* userdata) {
-  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->read(data, size);
 }
 
@@ -372,13 +372,13 @@ int HeifContext::internal_seek(struct heif_context* ctx,
                                int64_t position,
                                enum heif_reader_offset offset,
                                void* userdata) {
-  InternalReader* reader = static_cast<InternalReader*>(userdata);
+  ReaderInterface* reader = static_cast<ReaderInterface*>(userdata);
   return reader->seek(position, offset);
 }
 
-class HeifContext::InternalMemoryReader : public HeifContext::InternalReader {
+class HeifContext::MemoryReader : public HeifContext::ReaderInterface {
  public:
-  InternalMemoryReader(const void* data, size_t size)
+  MemoryReader(const void* data, size_t size)
     : data_(static_cast<const uint8_t*>(data)),
       position_(data_),
       end_(data_ + size),
@@ -440,16 +440,16 @@ class HeifContext::InternalMemoryReader : public HeifContext::InternalReader {
   size_t size_;
 };
 
-class HeifContext::InternalFileReader : public HeifContext::InternalReader {
+class HeifContext::FileReader : public HeifContext::ReaderInterface {
  public:
-  InternalFileReader(const char* filename) : fp_(fopen(filename, "rb")) {
+  FileReader(const char* filename) : fp_(fopen(filename, "rb")) {
     if (fp_) {
       fseek(fp_, 0, SEEK_END);
       size_ = ftell(fp_);
       fseek(fp_, 0, SEEK_SET);
     }
   }
-  ~InternalFileReader() {
+  ~FileReader() {
     if (fp_) {
       fclose(fp_);
     }
@@ -531,15 +531,15 @@ Error HeifContext::read(struct heif_context* ctx, struct heif_reader* reader,
 }
 
 // static
-std::unique_ptr<HeifContext::InternalReader> HeifContext::CreateReader(
+std::unique_ptr<HeifContext::ReaderInterface> HeifContext::CreateReader(
     const void* data, size_t size) {
-  return std::unique_ptr<InternalReader>(new InternalMemoryReader(data, size));
+  return std::unique_ptr<ReaderInterface>(new MemoryReader(data, size));
 }
 
 // static
-std::unique_ptr<HeifContext::InternalReader> HeifContext::CreateReader(
+std::unique_ptr<HeifContext::ReaderInterface> HeifContext::CreateReader(
     const char* filename) {
-  return std::unique_ptr<InternalReader>(new InternalFileReader(filename));
+  return std::unique_ptr<ReaderInterface>(new FileReader(filename));
 }
 
 Error HeifContext::read_from_file(const char* input_filename)

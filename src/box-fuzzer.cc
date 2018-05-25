@@ -26,33 +26,33 @@
 #include "heif_context.h"
 
 static uint64_t memory_get_length(struct heif_context* ctx, void* userdata) {
-  heif::HeifContext::InternalReader* reader =
-      static_cast<heif::HeifContext::InternalReader*>(userdata);
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->length();
 }
 
 static uint64_t memory_get_position(struct heif_context* ctx, void* userdata) {
-  heif::HeifContext::InternalReader* reader =
-      static_cast<heif::HeifContext::InternalReader*>(userdata);
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->position();
 }
 
 static int memory_read(struct heif_context* ctx, void* data,
     size_t size,  void* userdata) {
-  heif::HeifContext::InternalReader* reader =
-      static_cast<heif::HeifContext::InternalReader*>(userdata);
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->read(data, size);
 }
 
 static int memory_seek(struct heif_context* ctx, int64_t position,
     enum heif_reader_offset offset, void* userdata) {
-  heif::HeifContext::InternalReader* reader =
-      static_cast<heif::HeifContext::InternalReader*>(userdata);
+  heif::HeifContext::ReaderInterface* reader =
+      static_cast<heif::HeifContext::ReaderInterface*>(userdata);
   return reader->seek(position, offset);
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  std::unique_ptr<heif::HeifContext::InternalReader> mem(heif::HeifContext::CreateReader(data, size));
+  std::unique_ptr<heif::HeifContext::ReaderInterface> mem(heif::HeifContext::CreateReader(data, size));
   struct heif_reader reader = {0};
   reader.reader_api_version = 1;
   reader.get_length = memory_get_length;

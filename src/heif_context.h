@@ -218,9 +218,9 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
-    class InternalReader {
+    class ReaderInterface {
      public:
-      virtual ~InternalReader() {}
+      virtual ~ReaderInterface() {}
 
       virtual uint64_t length() const = 0;
       virtual uint64_t position() const = 0;
@@ -229,8 +229,8 @@ namespace heif {
       virtual bool seek(int64_t position, enum heif_reader_offset offset) = 0;
     };
 
-    static std::unique_ptr<InternalReader> CreateReader(const void* data, size_t size);
-    static std::unique_ptr<InternalReader> CreateReader(const char* filename);
+    static std::unique_ptr<ReaderInterface> CreateReader(const void* data, size_t size);
+    static std::unique_ptr<ReaderInterface> CreateReader(const char* filename);
 
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
@@ -262,10 +262,10 @@ namespace heif {
                              enum heif_reader_offset offset,
                              void* userdata);
 
-    class InternalFileReader;
-    class InternalMemoryReader;
+    class FileReader;
+    class MemoryReader;
 
-    std::unique_ptr<InternalReader> m_temp_reader;
+    std::unique_ptr<ReaderInterface> m_temp_reader;
 
     Error interpret_heif_file();
 
