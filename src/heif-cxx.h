@@ -83,11 +83,11 @@ namespace heif {
     // throws Error
     void read_from_memory(const void* mem, size_t size, const ReadingOptions& opts = ReadingOptions());
 
-    int get_number_of_top_level_images() const;
+    int get_number_of_top_level_images() const noexcept;
 
-    bool is_top_level_image_ID(heif_item_id id) const;
+    bool is_top_level_image_ID(heif_item_id id) const noexcept;
 
-    std::vector<heif_item_id> get_list_of_top_level_image_IDs() const;
+    std::vector<heif_item_id> get_list_of_top_level_image_IDs() const noexcept;
 
     // throws Error
     heif_item_id get_primary_image_ID() const;
@@ -100,6 +100,7 @@ namespace heif {
 
     class EncodingOptions { };
 
+    // throws Error
     ImageHandle encode_image(const Image& img, Encoder& encoder,
                              const EncodingOptions& options = EncodingOptions());
 
@@ -107,7 +108,7 @@ namespace heif {
     public:
       virtual ~Writer() { }
 
-      virtual heif_error write(Context&, const void* data, size_t size) = 0;
+      virtual heif_error write(const void* data, size_t size) = 0;
     };
 
     // throws Error
@@ -124,7 +125,7 @@ namespace heif {
                                                             size_t size,
                                                             void* userdata);
 
-    static Context wrap_without_releasing(heif_context*); // internal use in friend function only
+    //static Context wrap_without_releasing(heif_context*); // internal use in friend function only
   };
 
 
@@ -136,13 +137,13 @@ namespace heif {
 
     ImageHandle(heif_image_handle* handle);
 
-    bool is_primary_image() const;
+    bool is_primary_image() const noexcept;
 
-    int get_width() const;
+    int get_width() const noexcept;
 
-    int get_height() const;
+    int get_height() const noexcept;
 
-    bool has_alpha_channel() const;
+    bool has_alpha_channel() const noexcept;
 
     // ------------------------- depth images -------------------------
 
@@ -150,9 +151,9 @@ namespace heif {
 
     // ------------------------- thumbnails -------------------------
 
-    int get_number_of_thumbnails() const;
+    int get_number_of_thumbnails() const noexcept;
 
-    std::vector<heif_item_id> get_list_of_thumbnail_IDs() const;
+    std::vector<heif_item_id> get_list_of_thumbnail_IDs() const noexcept;
 
     // throws Error
     ImageHandle get_thumbnail(heif_item_id id);
@@ -175,8 +176,8 @@ namespace heif {
                        const DecodingOptions& options = DecodingOptions());
 
 
-    heif_image_handle* get_raw_image_handle() { return m_image_handle.get(); }
-    const heif_image_handle* get_raw_image_handle() const { return m_image_handle.get(); }
+    heif_image_handle* get_raw_image_handle() noexcept { return m_image_handle.get(); }
+    const heif_image_handle* get_raw_image_handle() const noexcept { return m_image_handle.get(); }
 
   private:
     std::shared_ptr<heif_image_handle> m_image_handle;
@@ -199,19 +200,19 @@ namespace heif {
     void add_plane(enum heif_channel channel,
                    int width, int height, int bit_depth);
 
-    heif_colorspace get_colorspace() const;
+    heif_colorspace get_colorspace() const noexcept;
 
-    heif_chroma get_chroma_format() const;
+    heif_chroma get_chroma_format() const noexcept;
 
-    int get_width(enum heif_channel channel) const;
+    int get_width(enum heif_channel channel) const noexcept;
 
-    int get_height(enum heif_channel channel) const;
+    int get_height(enum heif_channel channel) const noexcept;
 
-    int get_bits_per_pixel(enum heif_channel channel) const;
+    int get_bits_per_pixel(enum heif_channel channel) const noexcept;
 
-    const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
+    const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const noexcept;
 
-    uint8_t* get_plane(enum heif_channel channel, int* out_stride);
+    uint8_t* get_plane(enum heif_channel channel, int* out_stride) noexcept;
 
     class ScalingOptions { };
 
@@ -294,7 +295,7 @@ namespace heif {
     // throws Error
     void set_lossless(bool enable_lossless);
 
-    std::vector<EncoderParameter> list_parameters() const;
+    std::vector<EncoderParameter> list_parameters() const noexcept;
 
     void set_integer_parameter(std::string parameter_name, int value);
     int  get_integer_parameter(std::string parameter_name) const;
@@ -343,15 +344,15 @@ namespace heif {
   }
 
 
-  inline int Context::get_number_of_top_level_images() const {
+  inline int Context::get_number_of_top_level_images() const noexcept {
     return heif_context_get_number_of_top_level_images(m_context.get());
   }
 
-  inline bool Context::is_top_level_image_ID(heif_item_id id) const {
+  inline bool Context::is_top_level_image_ID(heif_item_id id) const noexcept {
     return heif_context_is_top_level_image_ID(m_context.get(), id);
   }
 
-  inline std::vector<heif_item_id> Context::get_list_of_top_level_image_IDs() const {
+  inline std::vector<heif_item_id> Context::get_list_of_top_level_image_IDs() const noexcept {
     int num = get_number_of_top_level_images();
     std::vector<heif_item_id> IDs(num);
     heif_context_get_list_of_top_level_image_IDs(m_context.get(), IDs.data(), num);
@@ -377,12 +378,14 @@ namespace heif {
     return ImageHandle(handle);
   }
 
+#if 0
   inline Context Context::wrap_without_releasing(heif_context* ctx) {
     Context context;
     context.m_context = std::shared_ptr<heif_context>(ctx,
                                                       [] (heif_context*) { /* NOP */ });
     return context;
   }
+#endif
 
   inline struct ::heif_error heif_writer_trampoline_write(struct heif_context* ctx,
                                                           const void* data,
@@ -390,8 +393,9 @@ namespace heif {
                                                           void* userdata) {
     Context::Writer* writer = (Context::Writer*)userdata;
 
-    Context context = Context::wrap_without_releasing(ctx);
-    return writer->write(context, data, size);
+    //Context context = Context::wrap_without_releasing(ctx);
+    //return writer->write(context, data, size);
+    return writer->write(data, size);
   }
 
   static struct heif_writer heif_writer_trampoline =
@@ -421,19 +425,19 @@ namespace heif {
                                                         [] (heif_image_handle* h) { heif_image_handle_release(h); });
   }
 
-  inline bool ImageHandle::is_primary_image() const {
+  inline bool ImageHandle::is_primary_image() const noexcept {
     return heif_image_handle_is_primary_image(m_image_handle.get()) != 0;
   }
 
-  inline int ImageHandle::get_width() const {
+  inline int ImageHandle::get_width() const noexcept {
     return heif_image_handle_get_width(m_image_handle.get());
   }
 
-  inline int ImageHandle::get_height() const {
+  inline int ImageHandle::get_height() const noexcept {
     return heif_image_handle_get_height(m_image_handle.get());
   }
 
-  inline bool ImageHandle::has_alpha_channel() const {
+  inline bool ImageHandle::has_alpha_channel() const noexcept {
     return heif_image_handle_has_alpha_channel(m_image_handle.get()) != 0;
   }
 
@@ -443,11 +447,11 @@ namespace heif {
 
   // ------------------------- thumbnails -------------------------
 
-  inline int ImageHandle::get_number_of_thumbnails() const {
+  inline int ImageHandle::get_number_of_thumbnails() const noexcept {
     return heif_image_handle_get_number_of_thumbnails(m_image_handle.get());
   }
 
-  inline std::vector<heif_item_id> ImageHandle::get_list_of_thumbnail_IDs() const {
+  inline std::vector<heif_item_id> ImageHandle::get_list_of_thumbnail_IDs() const noexcept {
     int num = get_number_of_thumbnails();
     std::vector<heif_item_id> IDs(num);
     heif_image_handle_get_list_of_thumbnail_IDs(m_image_handle.get(), IDs.data(), num);
@@ -542,36 +546,36 @@ namespace heif {
     }
   }
 
-  inline heif_colorspace Image::get_colorspace() const {
+  inline heif_colorspace Image::get_colorspace() const noexcept {
     return heif_image_get_colorspace(m_image.get());
   }
 
-  inline heif_chroma Image::get_chroma_format() const {
+  inline heif_chroma Image::get_chroma_format() const noexcept {
     return heif_image_get_chroma_format(m_image.get());
   }
 
-  inline int Image::get_width(enum heif_channel channel) const {
+  inline int Image::get_width(enum heif_channel channel) const noexcept {
     return heif_image_get_width(m_image.get(), channel);
   }
 
-  inline int Image::get_height(enum heif_channel channel) const {
+  inline int Image::get_height(enum heif_channel channel) const noexcept {
     return heif_image_get_height(m_image.get(), channel);
   }
 
-  inline int Image::get_bits_per_pixel(enum heif_channel channel) const {
+  inline int Image::get_bits_per_pixel(enum heif_channel channel) const noexcept {
     return heif_image_get_bits_per_pixel(m_image.get(), channel);
   }
 
-  inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const {
+  inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const noexcept {
     return heif_image_get_plane_readonly(m_image.get(), channel, out_stride);
   }
 
-  inline uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) {
+  inline uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) noexcept {
     return heif_image_get_plane(m_image.get(), channel, out_stride);
   }
 
   inline Image Image::scale_image(int width, int height,
-                                  const ScalingOptions&) const {
+                                  const ScalingOptions&) const noexcept {
     heif_image* img;
     Error err = Error(heif_image_scale_image(m_image.get(), &img, width,height,
                                              nullptr)); // TODO: scaling options not defined yet
@@ -718,7 +722,7 @@ namespace heif {
     return values;
   }
 
-  inline std::vector<EncoderParameter> Encoder::list_parameters() const {
+  inline std::vector<EncoderParameter> Encoder::list_parameters() const noexcept {
     std::vector<EncoderParameter> parameters;
 
     for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(m_encoder.get());
