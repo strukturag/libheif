@@ -79,7 +79,15 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
-if [ ! -z "$MINGW64" ]; then
+if [ ! -z "$MINGW32" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        binutils-mingw-w64-i686 \
+        g++-mingw-w64-i686 \
+        gcc-mingw-w64-i686 \
+        mingw-w64-i686-dev \
+        wine \
+        "
+elif [ ! -z "$MINGW64" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-x86-64 \
         g++-mingw-w64-x86-64 \

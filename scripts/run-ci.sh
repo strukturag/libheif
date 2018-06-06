@@ -34,7 +34,14 @@ fi
 
 BIN_SUFFIX=
 BIN_WRAPPER=
-if [ ! -z "$MINGW64" ]; then
+if [ ! -z "$MINGW32" ]; then
+    # Make sure the correct compiler will be used.
+    unset CC
+    unset CXX
+    BIN_SUFFIX=.exe
+    BIN_WRAPPER=wine
+    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/4.8/;/usr/i686-w64-mingw32/lib"
+elif [ ! -z "$MINGW64" ]; then
     # Make sure the correct compiler will be used.
     unset CC
     unset CXX

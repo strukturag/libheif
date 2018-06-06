@@ -26,6 +26,7 @@ env:
   - EMSCRIPTEN_VERSION=1.37.26
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
+  - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
   - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
 
 matrix:
@@ -36,19 +37,23 @@ matrix:
     - compiler: clang
       env: CPPLINT=1
     - compiler: clang
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
+    - compiler: clang
       env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=
     - compiler: clang
       env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=1
     - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
+      env: WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
     - compiler: clang
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
+      env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
     - compiler: clang
       env: EMSCRIPTEN_VERSION=1.37.26
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
     - compiler: clang
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
+    - compiler: clang
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
     - compiler: clang
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
     # Don't build various targets on OSX.
@@ -67,13 +72,22 @@ matrix:
     - os: osx
       env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
     - os: osx
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
-    - os: osx
       env: EMSCRIPTEN_VERSION=1.37.26
     - os: osx
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
     - os: osx
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
+    - os: osx
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
+    - os: osx
+      compiler: clang
+      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=
+    - os: osx
+      compiler: clang
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
+    - os: osx
+      compiler: clang
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
 
 before_install:
   - ./scripts/install-ci-$TRAVIS_OS_NAME.sh
