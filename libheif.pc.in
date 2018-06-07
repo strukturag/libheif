@@ -2,6 +2,8 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
+builtin_h265_decoder=@have_libde265@
+builtin_h265_encoder=@have_x265@
 
 Name: libheif
 Description: HEIF image codec.

@@ -58,6 +58,7 @@ PKG_CHECK_MODULES([libde265], [libde265], [
     have_libde265="yes"
 ], [have_libde265="no"])
 AM_CONDITIONAL([HAVE_LIBDE265], [test "x$have_libde265" = "xyes"])
+AC_SUBST([have_libde265])
 
 PKG_CHECK_MODULES([x265], [x265], [
     AC_DEFINE([HAVE_X265], [1], [Whether x265 was found.])
@@ -66,6 +67,7 @@ PKG_CHECK_MODULES([x265], [x265], [
     have_x265="yes"
 ], [have_x265="no"])
 AM_CONDITIONAL([HAVE_X265], [test "x$have_x265" = "xyes"])
+AC_SUBST([have_x265])
 
 AC_CHECK_HEADERS([jpeglib.h])
 AC_CHECK_LIB([jpeg], [jpeg_CreateCompress], [
