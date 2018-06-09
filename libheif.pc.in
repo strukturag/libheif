@@ -10,6 +10,6 @@ Description: HEIF image codec.
 URL: https://github.com/strukturag/libheif
 Version: @VERSION@
 Requires:
-Libs: -lheif -L@libdir@
+Libs: -L@libdir@ -lheif
 Libs.private: @LIBS@ -lstdc++
 Cflags: -I@includedir@
