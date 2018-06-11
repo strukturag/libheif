@@ -28,6 +28,15 @@
 
 #include "heif_plugin_registry.h"
 
+#if HAVE_LIBDE265
+#include "heif_decoder_libde265.h"
+#endif
+
+#if HAVE_X265
+#include "heif_encoder_x265.h"
+#endif
+
+
 using namespace heif;
 
 
@@ -47,6 +56,22 @@ struct encoder_descriptor_priority_order
 
 std::set<std::unique_ptr<struct heif_encoder_descriptor>,
          encoder_descriptor_priority_order> s_encoder_descriptors;
+
+
+
+static class Register_Default_Plugins
+{
+public:
+  Register_Default_Plugins() {
+#if HAVE_LIBDE265
+    heif::register_decoder(get_decoder_plugin_libde265());
+#endif
+
+#if HAVE_X265
+    heif::register_encoder(get_encoder_plugin_x265());
+#endif
+  }
+} dummy;
 
 
 void heif::register_decoder(const heif_decoder_plugin* decoder_plugin)

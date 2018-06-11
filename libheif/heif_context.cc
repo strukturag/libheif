@@ -42,14 +42,6 @@
 #include "heif_hevc.h"
 #include "heif_plugin_registry.h"
 
-#if HAVE_LIBDE265
-#include "heif_decoder_libde265.h"
-#endif
-
-#if HAVE_X265
-#include "heif_encoder_x265.h"
-#endif
-
 
 using namespace heif;
 
@@ -329,14 +321,6 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
 HeifContext::HeifContext()
 {
-#if HAVE_LIBDE265
-  heif::register_decoder(get_decoder_plugin_libde265());
-#endif
-
-#if HAVE_X265
-  heif::register_encoder(get_encoder_plugin_x265());
-#endif
-
   reset_to_empty_heif();
 }
 
