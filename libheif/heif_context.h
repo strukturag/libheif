@@ -193,8 +193,6 @@ namespace heif {
     // contain no valid data yet.
     void reset_to_empty_heif();
 
-    std::shared_ptr<Image> add_new_hvc1_image();
-
     Error encode_image(std::shared_ptr<HeifPixelImage> image,
                        struct heif_encoder* encoder,
                        enum heif_image_input_class input_class,

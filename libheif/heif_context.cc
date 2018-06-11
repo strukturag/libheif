@@ -1229,6 +1229,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 }
 
 
+/*
 std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
 {
   heif_item_id image_id = m_heif_file->add_new_image("hvc1");
@@ -1239,6 +1240,7 @@ std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
 
   return image;
 }
+*/
 
 
 static std::shared_ptr<HeifPixelImage>
@@ -1369,9 +1371,15 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
-      out_image = add_new_hvc1_image();
-      error = out_image->encode_image_as_hevc(pixel_image, encoder,
-                                              heif_image_input_class_normal);
+      {
+        heif_item_id image_id = m_heif_file->add_new_image("hvc1");
+
+        out_image = std::make_shared<Image>(this, image_id);
+        m_top_level_images.push_back(out_image);
+
+        error = out_image->encode_image_as_hevc(pixel_image, encoder,
+                                                heif_image_input_class_normal);
+      }
       break;
 
     default:
@@ -1426,10 +1434,10 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
     // --- encode the alpha image
 
-    std::shared_ptr<HeifContext::Image> heif_alpha_image;
-    heif_alpha_image = m_heif_context->add_new_hvc1_image();
+    heif_item_id alpha_image_id = m_heif_context->m_heif_file->add_new_image("hvc1");
 
-    heif_item_id alpha_image_id = heif_alpha_image->get_id();
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+    heif_alpha_image = std::make_shared<Image>(m_heif_context, alpha_image_id);
 
 
     Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder,
