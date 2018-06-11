@@ -1229,20 +1229,6 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 }
 
 
-/*
-std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
-{
-  heif_item_id image_id = m_heif_file->add_new_image("hvc1");
-
-  auto image = std::make_shared<Image>(this, image_id);
-
-  m_top_level_images.push_back(image);
-
-  return image;
-}
-*/
-
-
 static std::shared_ptr<HeifPixelImage>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage> image)
 {
@@ -1420,6 +1406,9 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   }
 
 
+  m_width  = image->get_width(heif_channel_Y);
+  m_height = image->get_height(heif_channel_Y);
+
 
   // --- if there is an alpha channel, add it as an additional image
 
@@ -1515,4 +1504,85 @@ void HeifContext::set_primary_image(std::shared_ptr<Image> image)
   // update pitm box in HeifFile
 
   m_heif_file->set_primary_item_id(image->get_id());
+}
+
+
+Error HeifContext::set_primary_item(heif_item_id id)
+{
+  auto iter = m_all_images.find(id);
+  if (iter == m_all_images.end()) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_or_invalid_primary_item,
+                 "Cannot set primary item as the ID does not exist.");
+  }
+
+  set_primary_image(iter->second);
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::assign_thumbnail(std::shared_ptr<Image> master_image,
+                                    std::shared_ptr<Image> thumbnail_image)
+{
+  m_heif_file->add_iref_reference(thumbnail_image->get_id(),
+                                  fourcc("thmb"), { master_image->get_id() });
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
+                                    std::shared_ptr<Image> image_handle,
+                                    struct heif_encoder* encoder,
+                                    const struct heif_encoding_options* options,
+                                    int bbox_size,
+                                    std::shared_ptr<Image>& out_thumbnail_handle)
+{
+  Error error;
+
+  int orig_width  = image->get_width();
+  int orig_height = image->get_height();
+
+  int thumb_width, thumb_height;
+
+  if (orig_width <= bbox_size && orig_height <= bbox_size) {
+    // original image is smaller than thumbnail size -> do not encode any thumbnail
+
+    out_thumbnail_handle.reset();
+    return Error::Ok;
+  }
+  else if (orig_width > orig_height) {
+    thumb_height = orig_height * bbox_size / orig_width;
+    thumb_width  = bbox_size;
+  }
+  else {
+    thumb_width  = orig_width * bbox_size / orig_height;
+    thumb_height = bbox_size;
+  }
+
+
+  // round size to even width and height
+
+  thumb_width  &= ~1;
+  thumb_height &= ~1;
+
+
+  std::shared_ptr<HeifPixelImage> thumbnail_image;
+  error = image->scale_nearest_neighbor(thumbnail_image, thumb_width, thumb_height);
+  if (error) {
+    return error;
+  }
+
+  error = encode_image(thumbnail_image,
+                       encoder,
+                       heif_image_input_class_thumbnail,
+                       out_thumbnail_handle);
+  if (error) {
+    return error;
+  }
+
+  error = assign_thumbnail(image_handle, out_thumbnail_handle);
+
+  return error;
 }

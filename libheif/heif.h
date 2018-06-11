@@ -842,7 +842,10 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              char* value_ptr, int value_size);
 
 
-struct heif_encoding_options;
+struct heif_encoding_options {
+  int save_alpha_channel;
+};
+
 
 // Compress the input image.
 // Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
@@ -853,6 +856,24 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_encoder* encoder,
                                             const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_context_assign_thumbnail(struct heif_context*,
+                                                const struct heif_image_handle* thumbnail_image,
+                                                const struct heif_image_handle* master_image);
+
+LIBHEIF_API
+struct heif_error heif_context_encode_thumbnail(struct heif_context*,
+                                                const struct heif_image* image,
+                                                const struct heif_image_handle* image_handle,
+                                                struct heif_encoder* encoder,
+                                                const struct heif_encoding_options* options,
+                                                int bbox_size,
+                                                struct heif_image_handle** out_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_set_primary_image(struct heif_context*,
+                                         struct heif_image_handle* image_handle);
 
 
 // --- heif_image allocation

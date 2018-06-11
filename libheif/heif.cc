@@ -1230,6 +1230,56 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     (*out_image_handle)->image = image;
   }
 
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-  return err;
+  return error_Ok;
+}
+
+
+struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
+                                                const struct heif_image_handle* thumbnail_image,
+                                                const struct heif_image_handle* master_image)
+{
+  Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
+  return error.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
+                                                const struct heif_image* image,
+                                                const struct heif_image_handle* image_handle,
+                                                struct heif_encoder* encoder,
+                                                const struct heif_encoding_options* options,
+                                                int bbox_size,
+                                                struct heif_image_handle** out_image_handle)
+{
+  std::shared_ptr<HeifContext::Image> thumbnail_image;
+
+  Error error = ctx->context->encode_thumbnail(image->image,
+                                               image_handle->image,
+                                               encoder, options,
+                                               bbox_size,
+                                               thumbnail_image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  if (out_image_handle) {
+    if (thumbnail_image) {
+      *out_image_handle = new heif_image_handle;
+      (*out_image_handle)->image = thumbnail_image;
+    }
+    else {
+      *out_image_handle = nullptr;
+    }
+  }
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_set_primary_image(struct heif_context* ctx,
+                                         struct heif_image_handle* image_handle)
+{
+  ctx->context->set_primary_image(image_handle->image);
+
+  return error_Ok;
 }

@@ -200,6 +200,18 @@ namespace heif {
 
     void set_primary_image(std::shared_ptr<Image> image);
 
+    Error set_primary_item(heif_item_id id);
+
+    Error assign_thumbnail(std::shared_ptr<Image> master_image,
+                           std::shared_ptr<Image> thumbnail_image);
+
+    Error encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
+                           std::shared_ptr<Image> image_handle,
+                           struct heif_encoder* encoder,
+                           const struct heif_encoding_options* options,
+                           int bbox_size,
+                           std::shared_ptr<Image>& out_image_handle);
+
     void write(StreamWriter& writer);
 
   private:

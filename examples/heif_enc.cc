@@ -53,6 +53,7 @@ static struct option long_options[] = {
   {"quality",    required_argument, 0, 'q' },
   {"output",     required_argument, 0, 'o' },
   {"lossless",   no_argument,       0, 'L' },
+  {"thumb",      required_argument, 0, 't' },
   {"verbose",    no_argument,       0, 'v' },
   {"params",     no_argument,       0, 'P' },
   {0,         0,                 0,  0 }
@@ -68,6 +69,7 @@ void show_help(const char* argv0)
             << "  -h, --help      show help\n"
             << "  -q, --quality   set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless  generate lossless output (-q has no effect)\n"
+            << "  -t, --thumb #   generate thumbnail with maximum size # (default: off)\n"
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
@@ -579,12 +581,13 @@ int main(int argc, char** argv)
   std::string output_filename;
   int logging_level = 0;
   bool option_show_parameters = false;
+  int thumbnail_bbox_size = 0;
 
   std::vector<std::string> raw_params;
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -609,6 +612,9 @@ int main(int argc, char** argv)
       break;
     case 'p':
       raw_params.push_back(optarg);
+      break;
+    case 't':
+      thumbnail_bbox_size = atoi(optarg);
       break;
     }
   }
@@ -738,6 +744,33 @@ int main(int argc, char** argv)
     std::cerr << "Could not read HEIF file: " << error.message << "\n";
     return 1;
   }
+
+
+  if (thumbnail_bbox_size > 0)
+  {
+    // encode thumbnail
+
+    struct heif_image_handle* thumbnail_handle;
+
+    error = heif_context_encode_thumbnail(context.get(),
+                                          image.get(),
+                                          handle,
+                                          encoder,
+                                          nullptr, // options
+                                          thumbnail_bbox_size,
+                                          &thumbnail_handle);
+    if (error.code) {
+      std::cerr << "Could not generate thumbnail: " << error.message << "\n";
+      return 5;
+    }
+
+    if (thumbnail_handle) {
+      heif_image_handle_release(thumbnail_handle);
+    }
+  }
+
+
+  error = heif_set_primary_image(context.get(), handle);
 
   heif_encoder_release(encoder);
 

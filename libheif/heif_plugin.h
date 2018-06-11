@@ -111,7 +111,8 @@ enum heif_image_input_class
 {
   heif_image_input_class_normal = 1,
   heif_image_input_class_alpha = 2,
-  heif_image_input_class_depth = 3
+  heif_image_input_class_depth = 3,
+  heif_image_input_class_thumbnail = 4
 };
 
 
