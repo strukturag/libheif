@@ -2318,7 +2318,7 @@ Error Box_hvcC::write(StreamWriter& writer) const
     }
 
   writer.write8(c.general_level_idc);
-  writer.write16(c.min_spatial_segmentation_idc & 0x0FFF);
+  writer.write16((c.min_spatial_segmentation_idc & 0x0FFF) | 0xF000);
   writer.write8(c.parallelism_type | 0xFC);
   writer.write8(c.chroma_format | 0xFC);
   writer.write8((uint8_t)((c.bit_depth_luma - 8) | 0xF8));
