@@ -59,6 +59,22 @@ void heif::register_decoder(const heif_decoder_plugin* decoder_plugin)
 }
 
 
+const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format type)
+{
+  int highest_priority = 0;
+  const struct heif_decoder_plugin* best_plugin = nullptr;
+
+  for (const auto* plugin : s_decoder_plugins) {
+    int priority = plugin->does_support_format(type);
+    if (priority > highest_priority) {
+      highest_priority = priority;
+      best_plugin = plugin;
+    }
+  }
+
+  return best_plugin;
+}
+
 void heif::register_encoder(const heif_encoder_plugin* encoder_plugin)
 {
   if (encoder_plugin->init_plugin) {

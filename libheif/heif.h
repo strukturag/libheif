@@ -701,6 +701,16 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor*,
                                            struct heif_encoder** out_encoder);
 
+// Quick check whether there is a decoder available for the given format.
+// Note that the decoder still may not be able to decoder all variants of that format.
+// You will have to query that further (todo) or just try to decode and check the returned error.
+int heif_have_decoder_for_format(enum heif_compression_format format);
+
+// Quick check whether there is an enoder available for the given format.
+// Note that the encoder may be limited to a certain subset of features (e.g. only 8 bit, only lossy).
+// You will have to query the specific capabilities further.
+int heif_have_encoder_for_format(enum heif_compression_format format);
+
 // Get an encoder for the given compression format. If there are several encoder plugins
 // for this format, the encoder with the highest plugin priority will be returned.
 // TODO: why do we need the context here? I think we should remove this. You may pass a NULL context.

@@ -404,12 +404,9 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
   // search global plugins
 
-  for (const auto* plugin : s_decoder_plugins) {
-    int priority = plugin->does_support_format(type);
-    if (priority > highest_priority) {
-      highest_priority = priority;
-      best_plugin = plugin;
-    }
+  best_plugin = heif::get_decoder(type);
+  if (best_plugin != nullptr) {
+    highest_priority = best_plugin->does_support_format(type);
   }
 
 

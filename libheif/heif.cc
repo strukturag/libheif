@@ -855,6 +855,20 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 }
 
 
+int heif_have_decoder_for_format(enum heif_compression_format format)
+{
+  auto plugin = heif::get_decoder(format);
+  return plugin != nullptr;
+}
+
+
+int heif_have_encoder_for_format(enum heif_compression_format format)
+{
+  auto plugin = heif::get_encoder(format);
+  return plugin != nullptr;
+}
+
+
 struct heif_error heif_context_get_encoder_for_format(struct heif_context* context,
                                                       enum heif_compression_format format,
                                                       struct heif_encoder** encoder)
