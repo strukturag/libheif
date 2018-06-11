@@ -704,11 +704,13 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 // Quick check whether there is a decoder available for the given format.
 // Note that the decoder still may not be able to decoder all variants of that format.
 // You will have to query that further (todo) or just try to decode and check the returned error.
+LIBHEIF_API
 int heif_have_decoder_for_format(enum heif_compression_format format);
 
 // Quick check whether there is an enoder available for the given format.
 // Note that the encoder may be limited to a certain subset of features (e.g. only 8 bit, only lossy).
 // You will have to query the specific capabilities further.
+LIBHEIF_API
 int heif_have_encoder_for_format(enum heif_compression_format format);
 
 // Get an encoder for the given compression format. If there are several encoder plugins
