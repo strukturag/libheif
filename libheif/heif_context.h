@@ -195,9 +195,10 @@ namespace heif {
 
     std::shared_ptr<Image> add_new_hvc1_image();
 
-    Error add_alpha_image(std::shared_ptr<HeifPixelImage> image,
-                          heif_item_id* out_item_id,
-                          struct heif_encoder* encoder);
+    Error encode_image(std::shared_ptr<HeifPixelImage> image,
+                       struct heif_encoder* encoder,
+                       enum heif_image_input_class input_class,
+                       std::shared_ptr<Image>& out_image);
 
     void set_primary_image(std::shared_ptr<Image> image);
 

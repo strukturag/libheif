@@ -1212,22 +1212,17 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   }
 
   std::shared_ptr<HeifContext::Image> image;
-  Error error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+  Error error;
 
-  switch (encoder->plugin->compression_format) {
-    case heif_compression_HEVC:
-      image = ctx->context->add_new_hvc1_image();
-      error = image->encode_image_as_hevc(input_image->image, encoder,
-                                          heif_image_input_class_normal);
-      break;
-
-    default:
-      // Will return "heif_suberror_Unsupported_codec" from above.
-      break;
-  }
+  error = ctx->context->encode_image(input_image->image,
+                                     encoder,
+                                     heif_image_input_class_normal,
+                                     image);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
+
+  // mark the new image as primary image
   ctx->context->set_primary_image(image);
 
   if (out_image_handle) {

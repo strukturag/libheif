@@ -1241,17 +1241,9 @@ std::shared_ptr<HeifContext::Image> HeifContext::add_new_hvc1_image()
 }
 
 
-Error HeifContext::add_alpha_image(std::shared_ptr<HeifPixelImage> image, heif_item_id* out_item_id,
-                                   struct heif_encoder* encoder)
+static std::shared_ptr<HeifPixelImage>
+create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage> image)
 {
-  std::shared_ptr<HeifContext::Image> heif_alpha_image;
-
-  heif_alpha_image = add_new_hvc1_image();
-
-  assert(out_item_id);
-  *out_item_id = heif_alpha_image->get_id();
-
-
   // --- generate alpha image
   // TODO: can we directly code a monochrome image instead of the dummy color channels?
 
@@ -1265,14 +1257,8 @@ Error HeifContext::add_alpha_image(std::shared_ptr<HeifPixelImage> image, heif_i
   alpha_image->fill_new_plane(heif_channel_Cb, 128, chroma_width, chroma_height);
   alpha_image->fill_new_plane(heif_channel_Cr, 128, chroma_width, chroma_height);
 
-
-  // --- encode the alpha image
-
-  Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder,
-                                                       heif_image_input_class_alpha);
-  return error;
+  return alpha_image;
 }
-
 
 
 void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
@@ -1374,6 +1360,28 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 }
 
 
+Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
+                                struct heif_encoder* encoder,
+                                enum heif_image_input_class input_class,
+                                std::shared_ptr<Image>& out_image)
+{
+  Error error;
+
+  switch (encoder->plugin->compression_format) {
+    case heif_compression_HEVC:
+      out_image = add_new_hvc1_image();
+      error = out_image->encode_image_as_hevc(pixel_image, encoder,
+                                              heif_image_input_class_normal);
+      break;
+
+    default:
+      return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+  }
+
+  return error;
+}
+
+
 Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                                struct heif_encoder* encoder,
                                                enum heif_image_input_class input_class)
@@ -1408,10 +1416,26 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   // --- if there is an alpha channel, add it as an additional image
 
   if (image->has_channel(heif_channel_Alpha)) {
-    heif_item_id alpha_image_id;
-    Error err = m_heif_context->add_alpha_image(image, &alpha_image_id, encoder);
-    if (err) {
-      return err;
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+    heif_alpha_image = m_heif_context->add_new_hvc1_image();
+
+    heif_item_id alpha_image_id = heif_alpha_image->get_id();
+
+
+    Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder,
+                                                         heif_image_input_class_alpha);
+    if (error) {
+      return error;
     }
 
     m_heif_context->m_heif_file->add_iref_reference(alpha_image_id, fourcc("auxl"), { m_id });
