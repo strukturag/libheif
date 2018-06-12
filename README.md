@@ -29,6 +29,7 @@ The encoder supports:
 * lossy compression with adjustable quality
 * lossless compression
 * alpha channels
+* thumbnails
 
 ## API
 
