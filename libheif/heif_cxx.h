@@ -453,7 +453,7 @@ namespace heif {
 
 
   inline ImageHandle::ImageHandle(heif_image_handle* handle) {
-    if (m_image_handle != nullptr) {
+    if (handle != nullptr) {
       m_image_handle = std::shared_ptr<heif_image_handle>(handle,
                                                           [] (heif_image_handle* h) { heif_image_handle_release(h); });
     }
