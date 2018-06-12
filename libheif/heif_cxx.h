@@ -123,6 +123,10 @@ namespace heif {
     void add_exif_metadata(const ImageHandle& master_image,
                            const void* data, int size);
 
+    // throws Error
+    void add_XMP_metadata(const ImageHandle& master_image,
+                          const void* data, int size);
+
     class Writer {
     public:
       virtual ~Writer() { }
@@ -927,6 +931,16 @@ namespace heif {
     Error err = Error(heif_context_add_exif_metadata(m_context.get(),
                                                      master_image.get_raw_image_handle(),
                                                      data, size));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline void Context::add_XMP_metadata(const ImageHandle& master_image,
+                                        const void* data, int size) {
+    Error err = Error(heif_context_add_XMP_metadata(m_context.get(),
+                                                    master_image.get_raw_image_handle(),
+                                                    data, size));
     if (err) {
       throw err;
     }

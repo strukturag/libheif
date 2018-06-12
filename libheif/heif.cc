@@ -1343,3 +1343,17 @@ struct heif_error heif_context_add_exif_metadata(struct heif_context* ctx,
     return error_Ok;
   }
 }
+
+
+struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
+                                                const struct heif_image_handle* image_handle,
+                                                const void* data, int size)
+{
+  Error error = ctx->context->add_XMP_metadata(image_handle->image, data, size);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+  else {
+    return error_Ok;
+  }
+}

@@ -901,6 +901,12 @@ struct heif_error heif_context_add_exif_metadata(struct heif_context*,
                                                  const struct heif_image_handle* image_handle,
                                                  const void* data, int size);
 
+// Add XMP metadata to an image.
+LIBHEIF_API
+struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
+                                                const struct heif_image_handle* image_handle,
+                                                const void* data, int size);
+
 
 // --- heif_image allocation
 
