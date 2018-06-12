@@ -1254,13 +1254,19 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
   std::shared_ptr<HeifContext::Image> thumbnail_image;
 
   Error error = ctx->context->encode_thumbnail(image->image,
-                                               image_handle->image,
                                                encoder, options,
                                                bbox_size,
                                                thumbnail_image);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
+
+
+  error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
 
   if (out_image_handle) {
     if (thumbnail_image) {
@@ -1276,8 +1282,8 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_set_primary_image(struct heif_context* ctx,
-                                         struct heif_image_handle* image_handle)
+struct heif_error heif_context_set_primary_image(struct heif_context* ctx,
+                                                 struct heif_image_handle* image_handle)
 {
   ctx->context->set_primary_image(image_handle->image);
 

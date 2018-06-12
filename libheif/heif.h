@@ -843,7 +843,7 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
 
 
 struct heif_encoding_options {
-  int save_alpha_channel;
+  // int save_alpha_channel;   // TODO
 };
 
 
@@ -858,22 +858,30 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
-struct heif_error heif_context_assign_thumbnail(struct heif_context*,
-                                                const struct heif_image_handle* thumbnail_image,
-                                                const struct heif_image_handle* master_image);
+struct heif_error heif_context_set_primary_image(struct heif_context*,
+                                         struct heif_image_handle* image_handle);
 
+// Encode the 'image' as a scaled down thumbnail image.
+// The image is scaled down to fit into a square area of width 'bbox_size'.
+// If the input image is already so small that it fits into this bounding box, no thumbnail
+// image is encoded and NULL is returned in 'out_thumb_image_handle'.
+// No error is returned in this case.
+// The encoded thumbnail is automatically assigned to the 'master_image_handle'. Hence, you
+// do not have to call heif_context_assign_thumbnail().
 LIBHEIF_API
 struct heif_error heif_context_encode_thumbnail(struct heif_context*,
                                                 const struct heif_image* image,
-                                                const struct heif_image_handle* image_handle,
+                                                const struct heif_image_handle* master_image_handle,
                                                 struct heif_encoder* encoder,
                                                 const struct heif_encoding_options* options,
                                                 int bbox_size,
-                                                struct heif_image_handle** out_image_handle);
+                                                struct heif_image_handle** out_thumb_image_handle);
 
+// Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
-struct heif_error heif_set_primary_image(struct heif_context*,
-                                         struct heif_image_handle* image_handle);
+struct heif_error heif_context_assign_thumbnail(struct heif_context*,
+                                                const struct heif_image_handle* thumbnail_image,
+                                                const struct heif_image_handle* master_image);
 
 
 // --- heif_image allocation

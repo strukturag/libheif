@@ -1533,7 +1533,6 @@ Error HeifContext::assign_thumbnail(std::shared_ptr<Image> master_image,
 
 
 Error HeifContext::encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
-                                    std::shared_ptr<Image> image_handle,
                                     struct heif_encoder* encoder,
                                     const struct heif_encoding_options* options,
                                     int bbox_size,
@@ -1581,8 +1580,6 @@ Error HeifContext::encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
   if (error) {
     return error;
   }
-
-  error = assign_thumbnail(image_handle, out_thumbnail_handle);
 
   return error;
 }
