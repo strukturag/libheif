@@ -20,7 +20,7 @@ libheif has support for decoding
 * thumbnails
 * reading EXIF and XMP metadata
 * reading the depth channel
-* multiple images in a HEIF file
+* multiple images in an HEIF file
 * image transformations (crop, mirror, rotate)
 * overlay images
 * plugin interface to add decoders for additional formats (AVC, JPEG)
@@ -30,13 +30,14 @@ The encoder supports:
 * lossless compression
 * alpha channels
 * thumbnails
+* save multiple images to an HEIF file
 
 ## API
 
 The library has a C API for easy integration and wide language support.
 Note that the API is still work in progress and may still change.
 
-Loading the primary image in a HEIF file is as easy as this:
+Loading the primary image in an HEIF file is as easy as this:
 
 ```C
 heif_context* ctx = heif_context_alloc();
