@@ -741,7 +741,7 @@ int main(int argc, char** argv)
   set_params(encoder, raw_params);
 
   struct heif_encoding_options* options = heif_encoding_options_alloc();
-  options->save_alpha_channel = master_alpha;
+  options->save_alpha_channel = (uint8_t)master_alpha;
 
   struct heif_image_handle* handle;
   struct heif_error error = heif_context_encode_image(context.get(),
