@@ -109,11 +109,11 @@ namespace heif {
     void set_primary_image(ImageHandle& new_primary_image_handle);
 
     // throws Error
-    ImageHandle encode_thumbnails(const Image& image,
-                                  const ImageHandle& master_image,
-                                  Encoder& encoder,
-                                  const EncodingOptions&,
-                                  int bbox_size);
+    ImageHandle encode_thumbnail(const Image& image,
+                                 const ImageHandle& master_image,
+                                 Encoder& encoder,
+                                 const EncodingOptions&,
+                                 int bbox_size);
 
     // throws Error
     void assign_thumbnail(const ImageHandle& thumbnail_image,
@@ -894,11 +894,11 @@ namespace heif {
   }
 
 
-  inline ImageHandle Context::encode_thumbnails(const Image& image,
-                                                const ImageHandle& master_image_handle,
-                                                Encoder& encoder,
-                                                const EncodingOptions&,
-                                                int bbox_size) {
+  inline ImageHandle Context::encode_thumbnail(const Image& image,
+                                               const ImageHandle& master_image_handle,
+                                               Encoder& encoder,
+                                               const EncodingOptions&,
+                                               int bbox_size) {
     struct heif_image_handle* thumb_image_handle;
 
     Error err = Error(heif_context_encode_thumbnail(m_context.get(),
