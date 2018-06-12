@@ -843,8 +843,18 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
 
 
 struct heif_encoding_options {
-  // int save_alpha_channel;   // TODO
+  uint8_t version;
+
+  // version 1 options
+
+  uint8_t save_alpha_channel; // default: true
 };
+
+LIBHEIF_API
+struct heif_encoding_options* heif_encoding_options_alloc();
+
+LIBHEIF_API
+void heif_encoding_options_free(struct heif_encoding_options*);
 
 
 // Compress the input image.

@@ -1350,6 +1350,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
 
 Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
                                 struct heif_encoder* encoder,
+                                const struct heif_encoding_options* options,
                                 enum heif_image_input_class input_class,
                                 std::shared_ptr<Image>& out_image)
 {
@@ -1363,7 +1364,9 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
         out_image = std::make_shared<Image>(this, image_id);
         m_top_level_images.push_back(out_image);
 
-        error = out_image->encode_image_as_hevc(pixel_image, encoder,
+        error = out_image->encode_image_as_hevc(pixel_image,
+                                                encoder,
+                                                options,
                                                 heif_image_input_class_normal);
       }
       break;
@@ -1378,6 +1381,7 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 
 Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                                struct heif_encoder* encoder,
+                                               const struct heif_encoding_options* options,
                                                enum heif_image_input_class input_class)
 {
   /*
@@ -1412,7 +1416,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   // --- if there is an alpha channel, add it as an additional image
 
-  if (image->has_channel(heif_channel_Alpha)) {
+  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
 
     // --- generate alpha image
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
@@ -1429,7 +1433,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
     heif_alpha_image = std::make_shared<Image>(m_heif_context, alpha_image_id);
 
 
-    Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder,
+    Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder, options,
                                                          heif_image_input_class_alpha);
     if (error) {
       return error;
@@ -1574,7 +1578,7 @@ Error HeifContext::encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
   }
 
   error = encode_image(thumbnail_image,
-                       encoder,
+                       encoder, options,
                        heif_image_input_class_thumbnail,
                        out_thumbnail_handle);
   if (error) {

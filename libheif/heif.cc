@@ -1200,6 +1200,29 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
 }
 
 
+static void set_default_options(heif_encoding_options& options)
+{
+  options.version = 1;
+
+  options.save_alpha_channel = true;
+}
+
+
+heif_encoding_options* heif_encoding_options_alloc()
+{
+  auto options = new heif_encoding_options;
+
+  set_default_options(*options);
+
+  return options;
+}
+
+
+void heif_encoding_options_free(heif_encoding_options* options)
+{
+  delete options;
+}
+
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             const struct heif_image* input_image,
                                             struct heif_encoder* encoder,
@@ -1211,11 +1234,18 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
+  heif_encoding_options default_options;
+  if (options==nullptr) {
+    set_default_options(default_options);
+    options = &default_options;
+  }
+
   std::shared_ptr<HeifContext::Image> image;
   Error error;
 
   error = ctx->context->encode_image(input_image->image,
                                      encoder,
+                                     options,
                                      heif_image_input_class_normal,
                                      image);
   if (error != Error::Ok) {
@@ -1253,8 +1283,15 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
 {
   std::shared_ptr<HeifContext::Image> thumbnail_image;
 
+  heif_encoding_options default_options;
+  if (options==nullptr) {
+    set_default_options(default_options);
+    options = &default_options;
+  }
+
   Error error = ctx->context->encode_thumbnail(image->image,
-                                               encoder, options,
+                                               encoder,
+                                               options,
                                                bbox_size,
                                                thumbnail_image);
   if (error != Error::Ok) {

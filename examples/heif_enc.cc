@@ -47,6 +47,8 @@ extern "C" {
 
 #include <assert.h>
 
+int master_alpha = 1;
+int thumb_alpha = 1;
 
 static struct option long_options[] = {
   {"help",       no_argument,       0, 'h' },
@@ -56,6 +58,8 @@ static struct option long_options[] = {
   {"thumb",      required_argument, 0, 't' },
   {"verbose",    no_argument,       0, 'v' },
   {"params",     no_argument,       0, 'P' },
+  {"no-alpha",   no_argument, &master_alpha, 0 },
+  {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
   {0,         0,                 0,  0 }
 };
 
@@ -70,6 +74,8 @@ void show_help(const char* argv0)
             << "  -q, --quality   set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless  generate lossless output (-q has no effect)\n"
             << "  -t, --thumb #   generate thumbnail with maximum size # (default: off)\n"
+            << "      --no-alpha  do not save alpha channel\n"
+            << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
@@ -734,11 +740,14 @@ int main(int argc, char** argv)
 
   set_params(encoder, raw_params);
 
+  struct heif_encoding_options* options = heif_encoding_options_alloc();
+  options->save_alpha_channel = master_alpha;
+
   struct heif_image_handle* handle;
   struct heif_error error = heif_context_encode_image(context.get(),
                                                       image.get(),
                                                       encoder,
-                                                      nullptr,
+                                                      options,
                                                       &handle);
   if (error.code != 0) {
     std::cerr << "Could not read HEIF file: " << error.message << "\n";
@@ -752,11 +761,13 @@ int main(int argc, char** argv)
 
     struct heif_image_handle* thumbnail_handle;
 
+    options->save_alpha_channel = master_alpha && thumb_alpha;
+
     error = heif_context_encode_thumbnail(context.get(),
                                           image.get(),
                                           handle,
                                           encoder,
-                                          nullptr, // options
+                                          options,
                                           thumbnail_bbox_size,
                                           &thumbnail_handle);
     if (error.code) {
