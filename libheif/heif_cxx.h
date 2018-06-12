@@ -119,6 +119,10 @@ namespace heif {
     void assign_thumbnail(const ImageHandle& thumbnail_image,
                           const ImageHandle& master_image);
 
+    // throws Error
+    void add_exif_metadata(const ImageHandle& master_image,
+                           const void* data, int size);
+
     class Writer {
     public:
       virtual ~Writer() { }
@@ -908,16 +912,25 @@ namespace heif {
   }
 
 
-  void Context::assign_thumbnail(const ImageHandle& thumbnail_image,
-                                 const ImageHandle& master_image) {
-   Error err = Error(heif_context_assign_thumbnail(m_context.get(),
-                                                   thumbnail_image.get_raw_image_handle(),
-                                                   master_image.get_raw_image_handle()));
-   if (err) {
-     throw err;
-   }
- }
+  inline void Context::assign_thumbnail(const ImageHandle& thumbnail_image,
+                                        const ImageHandle& master_image) {
+    Error err = Error(heif_context_assign_thumbnail(m_context.get(),
+                                                    thumbnail_image.get_raw_image_handle(),
+                                                    master_image.get_raw_image_handle()));
+    if (err) {
+      throw err;
+    }
+  }
 
+  inline void Context::add_exif_metadata(const ImageHandle& master_image,
+                                         const void* data, int size) {
+    Error err = Error(heif_context_add_exif_metadata(m_context.get(),
+                                                     master_image.get_raw_image_handle(),
+                                                     data, size));
+    if (err) {
+      throw err;
+    }
+  }
 }
 
 
