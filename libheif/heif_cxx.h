@@ -99,7 +99,10 @@ namespace heif {
 
 
 
-    class EncodingOptions { };
+    class EncodingOptions : public heif_encoding_options {
+    public:
+      EncodingOptions();
+    };
 
     // throws Error
     ImageHandle encode_image(const Image& img, Encoder& encoder,
@@ -877,14 +880,26 @@ namespace heif {
     }
   }
 
+
+  Context::EncodingOptions::EncodingOptions() {
+    // TODO: this is a bit hacky. It would be better to have an API function to set
+    // the options to default values. But I do not see any reason for that apart from
+    // this use-case.
+
+    struct heif_encoding_options* default_options = heif_encoding_options_alloc();
+    *static_cast<heif_encoding_options*>(this) = *default_options; // copy over all options
+    heif_encoding_options_free(default_options);
+  }
+
+
   inline ImageHandle Context::encode_image(const Image& img, Encoder& encoder,
-                                           const EncodingOptions&) {
+                                           const EncodingOptions& options) {
     struct heif_image_handle* image_handle;
 
     Error err = Error(heif_context_encode_image(m_context.get(),
                                                 img.m_image.get(),
                                                 encoder.m_encoder.get(),
-                                                nullptr,
+                                                &options,
                                                 &image_handle));
     if (err) {
       throw err;
@@ -897,7 +912,7 @@ namespace heif {
   inline ImageHandle Context::encode_thumbnail(const Image& image,
                                                const ImageHandle& master_image_handle,
                                                Encoder& encoder,
-                                               const EncodingOptions&,
+                                               const EncodingOptions& options,
                                                int bbox_size) {
     struct heif_image_handle* thumb_image_handle;
 
@@ -905,7 +920,7 @@ namespace heif {
                                                     image.m_image.get(),
                                                     master_image_handle.get_raw_image_handle(),
                                                     encoder.m_encoder.get(),
-                                                    nullptr, // heif_encoding_options* options,
+                                                    &options,
                                                     bbox_size,
                                                     &thumb_image_handle));
     if (err) {
