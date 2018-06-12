@@ -453,18 +453,24 @@ heif_item_id HeifFile::get_unused_item_id() const
 
 heif_item_id HeifFile::add_new_image(const char* item_type)
 {
+  auto box = add_new_infe_box(item_type);
+  return box->get_item_ID();
+}
+
+
+std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
+{
   heif_item_id id = get_unused_item_id();
 
   auto infe = std::make_shared<Box_infe>();
   infe->set_item_ID(id);
   infe->set_hidden_item(false);
   infe->set_item_type(item_type);
-  //infe->set_item_name("Nice image");
 
   m_infe_boxes[id] = infe;
   m_iinf_box->append_child_box(infe);
 
-  return id;
+  return infe;
 }
 
 

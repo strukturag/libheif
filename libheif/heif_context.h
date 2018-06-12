@@ -215,6 +215,8 @@ namespace heif {
                            int bbox_size,
                            std::shared_ptr<Image>& out_image_handle);
 
+    Error add_exif_metadata(std::shared_ptr<Image> master_image, const void* data, int size);
+
     void write(StreamWriter& writer);
 
   private:

@@ -98,6 +98,7 @@ namespace heif {
     heif_item_id get_unused_item_id() const;
 
     heif_item_id add_new_image(const char* item_type);
+    std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
     void add_hvcC_property(heif_item_id id);
     Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);

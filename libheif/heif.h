@@ -895,6 +895,12 @@ struct heif_error heif_context_assign_thumbnail(struct heif_context*,
                                                 const struct heif_image_handle* thumbnail_image,
                                                 const struct heif_image_handle* master_image);
 
+// Add EXIF metadata to an image. The raw EXIF metadata shall begin with the TIFF header.
+LIBHEIF_API
+struct heif_error heif_context_add_exif_metadata(struct heif_context*,
+                                                 const struct heif_image_handle* image_handle,
+                                                 const void* data, int size);
+
 
 // --- heif_image allocation
 
