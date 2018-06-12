@@ -770,7 +770,7 @@ int main(int argc, char** argv)
   }
 
 
-  error = heif_set_primary_image(context.get(), handle);
+  error = heif_context_set_primary_image(context.get(), handle);
 
   heif_encoder_release(encoder);
 
