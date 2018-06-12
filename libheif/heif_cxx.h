@@ -105,6 +105,20 @@ namespace heif {
     ImageHandle encode_image(const Image& img, Encoder& encoder,
                              const EncodingOptions& options = EncodingOptions());
 
+    // throws Error
+    void set_primary_image(ImageHandle& new_primary_image_handle);
+
+    // throws Error
+    ImageHandle encode_thumbnails(const Image& image,
+                                  const ImageHandle& master_image,
+                                  Encoder& encoder,
+                                  const EncodingOptions&,
+                                  int bbox_size);
+
+    // throws Error
+    void assign_thumbnail(const ImageHandle& thumbnail_image,
+                          const ImageHandle& master_image);
+
     class Writer {
     public:
       virtual ~Writer() { }
@@ -137,6 +151,8 @@ namespace heif {
     ImageHandle() { }
 
     ImageHandle(heif_image_handle* handle);
+
+    bool empty() const noexcept { return !m_image_handle; }
 
     bool is_primary_image() const noexcept;
 
@@ -437,8 +453,10 @@ namespace heif {
 
 
   inline ImageHandle::ImageHandle(heif_image_handle* handle) {
-    m_image_handle = std::shared_ptr<heif_image_handle>(handle,
-                                                        [] (heif_image_handle* h) { heif_image_handle_release(h); });
+    if (m_image_handle != nullptr) {
+      m_image_handle = std::shared_ptr<heif_image_handle>(handle,
+                                                          [] (heif_image_handle* h) { heif_image_handle_release(h); });
+    }
   }
 
   inline bool ImageHandle::is_primary_image() const noexcept {
@@ -843,6 +861,14 @@ namespace heif {
     return value;
   }
 
+  inline void Context::set_primary_image(ImageHandle& new_primary_image_handle) {
+    Error err = Error(heif_context_set_primary_image(m_context.get(),
+                                                     new_primary_image_handle.get_raw_image_handle()));
+    if (err) {
+      throw err;
+    }
+  }
+
   inline ImageHandle Context::encode_image(const Image& img, Encoder& encoder,
                                            const EncodingOptions&) {
     struct heif_image_handle* image_handle;
@@ -858,6 +884,40 @@ namespace heif {
 
     return ImageHandle(image_handle);
   }
+
+
+  inline ImageHandle Context::encode_thumbnails(const Image& image,
+                                                const ImageHandle& master_image_handle,
+                                                Encoder& encoder,
+                                                const EncodingOptions&,
+                                                int bbox_size) {
+    struct heif_image_handle* thumb_image_handle;
+
+    Error err = Error(heif_context_encode_thumbnail(m_context.get(),
+                                                    image.m_image.get(),
+                                                    master_image_handle.get_raw_image_handle(),
+                                                    encoder.m_encoder.get(),
+                                                    nullptr, // heif_encoding_options* options,
+                                                    bbox_size,
+                                                    &thumb_image_handle));
+    if (err) {
+      throw err;
+    }
+
+    return ImageHandle(thumb_image_handle);
+  }
+
+
+  void Context::assign_thumbnail(const ImageHandle& thumbnail_image,
+                                 const ImageHandle& master_image) {
+   Error err = Error(heif_context_assign_thumbnail(m_context.get(),
+                                                   thumbnail_image.get_raw_image_handle(),
+                                                   master_image.get_raw_image_handle()));
+   if (err) {
+     throw err;
+   }
+ }
+
 }
 
 
