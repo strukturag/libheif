@@ -1253,7 +1253,10 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   }
 
   // mark the new image as primary image
-  ctx->context->set_primary_image(image);
+
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(image);
+  }
 
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;

@@ -860,6 +860,8 @@ void heif_encoding_options_free(struct heif_encoding_options*);
 // Compress the input image.
 // Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
 // 'options' should be NULL for now.
+// The first image added to the context is also automatically set the primary image, but
+// you can change the primary image later with heif_context_set_primary_image().
 LIBHEIF_API
 struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_image* image,

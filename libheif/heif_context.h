@@ -204,6 +204,8 @@ namespace heif {
 
     Error set_primary_item(heif_item_id id);
 
+    bool  is_primary_image_set() const { return !!m_primary_image; }
+
     Error assign_thumbnail(std::shared_ptr<Image> master_image,
                            std::shared_ptr<Image> thumbnail_image);
 

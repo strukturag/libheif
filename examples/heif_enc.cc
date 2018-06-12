@@ -591,6 +591,7 @@ int main(int argc, char** argv)
 
   std::vector<std::string> raw_params;
 
+
   while (true) {
     int option_index = 0;
     int c = getopt_long(argc, argv, "hq:Lo:vPp:t:", long_options, &option_index);
@@ -625,7 +626,7 @@ int main(int argc, char** argv)
     }
   }
 
-  if (optind != argc-1) {
+  if (optind > argc-1) {
     show_help(argv[0]);
     return 0;
   }
@@ -691,101 +692,101 @@ int main(int argc, char** argv)
 
 
 
+  struct heif_error error;
 
-  std::string input_filename = argv[optind];
+  for ( ; optind<argc ; optind++) {
+    std::string input_filename = argv[optind];
 
-  if (output_filename.empty()) {
-    std::string filename_without_suffix;
-    std::string::size_type dot_position = input_filename.find_last_of('.');
-    if (dot_position != std::string::npos) {
-      filename_without_suffix = input_filename.substr(0 , dot_position);
+    if (output_filename.empty()) {
+      std::string filename_without_suffix;
+      std::string::size_type dot_position = input_filename.find_last_of('.');
+      if (dot_position != std::string::npos) {
+        filename_without_suffix = input_filename.substr(0 , dot_position);
+      }
+      else {
+        filename_without_suffix = input_filename;
+      }
+
+      output_filename = filename_without_suffix + ".heic";
+    }
+
+
+    // ==============================================================================
+
+    // get file type from file name
+
+    std::string suffix;
+    auto suffix_pos = input_filename.find_last_of('.');
+    if (suffix_pos != std::string::npos) {
+      suffix = input_filename.substr(suffix_pos+1);
+      std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
+    }
+
+    enum { PNG, JPEG } filetype = JPEG;
+    if (suffix == "png") {
+      filetype = PNG;
+    }
+
+    std::shared_ptr<heif_image> image;
+    if (filetype==PNG) {
+      image = loadPNG(input_filename.c_str());
     }
     else {
-      filename_without_suffix = input_filename;
+      image = loadJPEG(input_filename.c_str());
     }
 
-    output_filename = filename_without_suffix + ".heic";
-  }
 
 
-  // ==============================================================================
+    heif_encoder_set_lossy_quality(encoder, quality);
+    heif_encoder_set_lossless(encoder, lossless);
+    heif_encoder_set_logging_level(encoder, logging_level);
 
-  // get file type from file name
+    set_params(encoder, raw_params);
 
-  std::string suffix;
-  auto suffix_pos = input_filename.find_last_of('.');
-  if (suffix_pos != std::string::npos) {
-    suffix = input_filename.substr(suffix_pos+1);
-    std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
-  }
+    struct heif_encoding_options* options = heif_encoding_options_alloc();
+    options->save_alpha_channel = (uint8_t)master_alpha;
 
-  enum { PNG, JPEG } filetype = JPEG;
-  if (suffix == "png") {
-    filetype = PNG;
-  }
-
-  std::shared_ptr<heif_image> image;
-  if (filetype==PNG) {
-    image = loadPNG(input_filename.c_str());
-  }
-  else {
-    image = loadJPEG(input_filename.c_str());
-  }
-
-
-
-  heif_encoder_set_lossy_quality(encoder, quality);
-  heif_encoder_set_lossless(encoder, lossless);
-  heif_encoder_set_logging_level(encoder, logging_level);
-
-  set_params(encoder, raw_params);
-
-  struct heif_encoding_options* options = heif_encoding_options_alloc();
-  options->save_alpha_channel = (uint8_t)master_alpha;
-
-  struct heif_image_handle* handle;
-  struct heif_error error = heif_context_encode_image(context.get(),
-                                                      image.get(),
-                                                      encoder,
-                                                      options,
-                                                      &handle);
-  if (error.code != 0) {
-    std::cerr << "Could not read HEIF file: " << error.message << "\n";
-    return 1;
-  }
-
-
-  if (thumbnail_bbox_size > 0)
-  {
-    // encode thumbnail
-
-    struct heif_image_handle* thumbnail_handle;
-
-    options->save_alpha_channel = master_alpha && thumb_alpha;
-
-    error = heif_context_encode_thumbnail(context.get(),
-                                          image.get(),
-                                          handle,
-                                          encoder,
-                                          options,
-                                          thumbnail_bbox_size,
-                                          &thumbnail_handle);
-    if (error.code) {
-      std::cerr << "Could not generate thumbnail: " << error.message << "\n";
-      return 5;
+    struct heif_image_handle* handle;
+    error = heif_context_encode_image(context.get(),
+                                      image.get(),
+                                      encoder,
+                                      options,
+                                      &handle);
+    if (error.code != 0) {
+      std::cerr << "Could not read HEIF file: " << error.message << "\n";
+      return 1;
     }
 
-    if (thumbnail_handle) {
-      heif_image_handle_release(thumbnail_handle);
-    }
+
+    if (thumbnail_bbox_size > 0)
+      {
+        // encode thumbnail
+
+        struct heif_image_handle* thumbnail_handle;
+
+        options->save_alpha_channel = master_alpha && thumb_alpha;
+
+        error = heif_context_encode_thumbnail(context.get(),
+                                              image.get(),
+                                              handle,
+                                              encoder,
+                                              options,
+                                              thumbnail_bbox_size,
+                                              &thumbnail_handle);
+        if (error.code) {
+          std::cerr << "Could not generate thumbnail: " << error.message << "\n";
+          return 5;
+        }
+
+        if (thumbnail_handle) {
+          heif_image_handle_release(thumbnail_handle);
+        }
+      }
+
+    heif_image_handle_release(handle);
   }
-
-
-  error = heif_context_set_primary_image(context.get(), handle);
 
   heif_encoder_release(encoder);
-
-  heif_image_handle_release(handle);
 
   error = heif_context_write_to_file(context.get(), output_filename.c_str());
   if (error.code) {
