@@ -869,7 +869,7 @@ struct heif_error heif_context_encode_image(struct heif_context*,
 
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
-                                         struct heif_image_handle* image_handle);
+                                                 struct heif_image_handle* image_handle);
 
 // Encode the 'image' as a scaled down thumbnail image.
 // The image is scaled down to fit into a square area of width 'bbox_size'.
