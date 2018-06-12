@@ -1608,8 +1608,12 @@ Error HeifContext::add_exif_metadata(std::shared_ptr<Image> master_image, const 
   // copy the Exif data into the file, store the pointer to it in an iloc box entry
 
   std::vector<uint8_t> data_array;
-  data_array.resize(size);
-  memcpy(data_array.data(), data, size);
+  data_array.resize(size+4);
+  data_array[0] = 0;
+  data_array[1] = 0;
+  data_array[2] = 0;
+  data_array[3] = 0;
+  memcpy(data_array.data()+4, data, size);
 
   m_heif_file->append_iloc_data(metadata_id, data_array);
 
