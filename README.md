@@ -31,6 +31,7 @@ The encoder supports:
 * alpha channels
 * thumbnails
 * save multiple images to an HEIF file
+* save EXIF and XMP metadata
 
 ## API
 
