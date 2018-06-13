@@ -65,7 +65,6 @@ namespace heif {
     // returns 'false' when we read out of the available file size
     virtual bool    read(void* data, size_t size) = 0;
 
-    virtual bool    can_seek_backwards() const { return false; }
     virtual bool    seek_abs(int64_t position) = 0;
     virtual bool    seek_cur(int64_t position_offset) {
       return seek_abs(get_position() + position_offset);
@@ -97,8 +96,6 @@ namespace heif {
       m_istr->read((char*)data, size);
       return true;
     }
-
-    virtual bool    can_seek_backwards() const { return true; }
 
     virtual bool    seek_abs(int64_t position) {
       if (position>m_length)
