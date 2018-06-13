@@ -171,7 +171,7 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
   }
 
   if (m_type==fourcc("uuid")) {
-    if (range.read(16)) {
+    if (range.prepare_read(16)) {
       m_uuid_type.resize(16);
       range.get_istream()->read((char*)m_uuid_type.data(), 16);
     }
@@ -287,7 +287,7 @@ Error Box::parse(BitstreamRange& range)
   }
   else {
     uint64_t content_size = get_box_size() - get_header_size();
-    if (range.read(content_size)) {
+    if (range.prepare_read(content_size)) {
       if (content_size > MAX_BOX_SIZE) {
         return Error(heif_error_Invalid_input,
                      heif_suberror_Invalid_box_size);
@@ -2173,7 +2173,7 @@ Error Box_hvcC::parse(BitstreamRange& range)
           continue;
         }
 
-        if (range.read(size)) {
+        if (range.prepare_read(size)) {
           nal_unit.resize(size);
           range.get_istream()->read((char*)nal_unit.data(), size);
         }

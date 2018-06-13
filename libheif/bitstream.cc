@@ -169,10 +169,24 @@ bool    StreamReader_CApi::seek_cur(int64_t position_offset)
 
 
 
+BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
+                               uint64_t length,
+                               BitstreamRange* parent)
+{
+  m_remaining = length;
+
+  m_istr = istr;
+  m_parent_range = parent;
+
+  if (parent) {
+    m_nesting_level = parent->m_nesting_level + 1;
+  }
+}
+
 
 uint8_t BitstreamRange::read8()
 {
-  if (!read(1)) {
+  if (!prepare_read(1)) {
     return 0;
   }
 
@@ -192,7 +206,7 @@ uint8_t BitstreamRange::read8()
 
 uint16_t BitstreamRange::read16()
 {
-  if (!read(2)) {
+  if (!prepare_read(2)) {
     return 0;
   }
 
@@ -212,7 +226,7 @@ uint16_t BitstreamRange::read16()
 
 uint32_t BitstreamRange::read32()
 {
-  if (!read(4)) {
+  if (!prepare_read(4)) {
     return 0;
   }
 
@@ -244,7 +258,7 @@ std::string BitstreamRange::read_string()
   */
 
   for (;;) {
-    if (!read(1)) {
+    if (!prepare_read(1)) {
       return std::string();
     }
 

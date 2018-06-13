@@ -131,76 +131,82 @@ namespace heif {
   };
 
 
+  // This class simplifies safely reading part of a file (e.g. a box).
+  // It makes sure that we do not read past the boundaries of a box.
   class BitstreamRange
   {
   public:
-    BitstreamRange(std::shared_ptr<StreamReader> istr, uint64_t length,
-                   BitstreamRange* parent = nullptr) {
-      construct(istr, length, parent);
-    }
+    BitstreamRange(std::shared_ptr<StreamReader> istr,
+                   uint64_t length,
+                   BitstreamRange* parent = nullptr);
 
     uint8_t read8();
     uint16_t read16();
     uint32_t read32();
     std::string read_string();
 
+    /*
     bool read(int n) {
       if (n<0) {
         return false;
       }
       return read(static_cast<uint64_t>(n));
     }
+*/
 
-    bool read(uint64_t n) {
-      if (m_remaining >= n) {
-        if (m_parent_range) {
-          m_parent_range->read(n);
-        }
 
-        m_remaining -= n;
-        m_end_reached = (m_remaining==0);
+    bool prepare_read(int64_t n) {
+      if (n<0) {
+        // we cannot read negative amounts of bytes
 
-        return true;
+        return false;
       }
       else if (m_remaining==0) {
         m_error = true;
         return false;
       }
-      else {
+      else if (m_remaining < n) {
         if (m_parent_range) {
-          m_parent_range->read(m_remaining);
+          m_parent_range->prepare_read(m_remaining);
         }
 
-        m_istr->seek_cur(m_remaining);
+        if (m_remaining>0) {
+          m_istr->seek_cur(m_remaining);
+        }
+
         m_remaining = 0;
-        m_end_reached = true;
         m_error = true;
         return false;
+      }
+      else { // if (m_remaining >= n) {
+        if (m_parent_range) {
+          m_parent_range->prepare_read(n);
+        }
+
+        m_remaining -= n;
+
+        return true;
       }
     }
 
     void skip_to_end_of_file() {
       m_istr->seek_abs( m_istr->get_length() ); // TODO: not really end of file
       m_remaining = 0;
-      m_end_reached = true;
     }
 
     void skip_to_end_of_box() {
       if (m_remaining) {
         if (m_parent_range) {
-          m_parent_range->read(m_remaining);
+          m_parent_range->prepare_read(m_remaining);
         }
 
         m_istr->seek_cur(m_remaining);
         m_remaining = 0;
       }
-
-      m_end_reached = true;
     }
 
     void set_eof_reached() {
       m_remaining = 0;
-      m_end_reached = true;
 
       if (m_parent_range) {
         m_parent_range->set_eof_reached();
@@ -208,7 +214,7 @@ namespace heif {
     }
 
     bool eof() const {
-      return m_end_reached;
+      return m_remaining == 0;
     }
 
     bool error() const {
@@ -229,26 +235,12 @@ namespace heif {
 
     int get_nesting_level() const { return m_nesting_level; }
 
-  protected:
-    void construct(std::shared_ptr<StreamReader> istr, uint64_t length, BitstreamRange* parent) {
-      m_remaining = length;
-      m_end_reached = (length==0);
-
-      m_istr = istr;
-      m_parent_range = parent;
-
-      if (parent) {
-        m_nesting_level = parent->m_nesting_level + 1;
-      }
-    }
-
   private:
     std::shared_ptr<StreamReader> m_istr;
     BitstreamRange* m_parent_range = nullptr;
     int m_nesting_level = 0;
 
-    uint64_t m_remaining;
-    bool m_end_reached = false;
+    int64_t m_remaining;
     bool m_error = false;
   };
 

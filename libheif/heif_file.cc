@@ -76,7 +76,7 @@ Error HeifFile::read(std::shared_ptr<StreamReader> reader)
 {
   m_input_stream = reader;
 
-  uint64_t maxSize = std::numeric_limits<uint64_t>::max();
+  uint64_t maxSize = std::numeric_limits<int64_t>::max();
   heif::BitstreamRange range(m_input_stream, maxSize);
 
   Error error = parse_heif_file(range);
