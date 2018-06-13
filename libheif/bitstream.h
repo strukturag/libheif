@@ -121,9 +121,9 @@ namespace heif {
 
     StreamReader::grow_status wait_for_file_size(int64_t target_size) override;
 
-    bool    read(void* data, size_t size) { return !m_func_table->read(data,size,m_userdata); }
-    bool    seek_abs(int64_t position) { return !m_func_table->seek_abs(position,m_userdata); }
-    bool    seek_cur(int64_t position_offset);
+    bool    read(void* data, size_t size) override { return !m_func_table->read(data,size,m_userdata); }
+    bool    seek_abs(int64_t position) override { return !m_func_table->seek_abs(position,m_userdata); }
+    bool    seek_cur(int64_t position_offset) override;
 
   private:
     heif_reader* m_func_table;
