@@ -20,6 +20,7 @@
 
 #include "bitstream.h"
 
+#include <utility>
 #include <string.h>
 #include <assert.h>
 
