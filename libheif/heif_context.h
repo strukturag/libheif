@@ -31,6 +31,7 @@
 
 #include "heif.h"
 #include "heif_plugin.h"
+#include "bitstream.h"
 
 namespace heif {
 class HeifContext;
@@ -62,6 +63,7 @@ namespace heif {
     HeifContext();
     ~HeifContext();
 
+    Error read(std::shared_ptr<StreamReader> reader);
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 

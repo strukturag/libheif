@@ -129,7 +129,7 @@ bool    StreamReader_memory::seek_cur(int64_t position_offset)
 
 
 
-StreamReader_CApi::StreamReader_CApi(heif_reader* func_table, void* userdata)
+StreamReader_CApi::StreamReader_CApi(const heif_reader* func_table, void* userdata)
   : m_func_table(func_table), m_userdata(userdata)
 {
 }

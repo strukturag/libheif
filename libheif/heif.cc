@@ -108,6 +108,17 @@ heif_error heif_context_read_from_memory(heif_context* ctx, const void* mem, siz
   return err.error_struct(ctx->context.get());
 }
 
+heif_error heif_context_read_from_reader(struct heif_context* ctx,
+                                         const struct heif_reader* reader_func_table,
+                                         void* userdata,
+                                         const struct heif_reading_options*)
+{
+  auto reader = std::make_shared<StreamReader_CApi>(reader_func_table, userdata);
+
+  Error err = ctx->context->read(reader);
+  return err.error_struct(ctx->context.get());
+}
+
 // TODO: heif_error heif_context_read_from_file_descriptor(heif_context*, int fd);
 
 void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd) {

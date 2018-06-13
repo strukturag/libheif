@@ -114,7 +114,7 @@ namespace heif {
   class StreamReader_CApi : public StreamReader
   {
   public:
-    StreamReader_CApi(heif_reader* func_table, void* userdata);
+    StreamReader_CApi(const heif_reader* func_table, void* userdata);
 
     int64_t get_position() const override { return m_func_table->get_position(m_userdata); }
     int64_t get_length() const override { return m_func_table->get_length(m_userdata); }
@@ -126,7 +126,7 @@ namespace heif {
     bool    seek_cur(int64_t position_offset) override;
 
   private:
-    heif_reader* m_func_table;
+    const heif_reader* m_func_table;
     void* m_userdata;
   };
 
