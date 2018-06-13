@@ -25,8 +25,9 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
-  std::istringstream stream(s);
-  auto reader = std::make_shared<heif::StreamReader_istream>(&stream);
+
+  auto stream = std::make_unique<std::istringstream>(s);
+  auto reader = std::make_shared<heif::StreamReader_istream>(std::move(stream));
 
   heif::BitstreamRange range(reader, size);
   for (;;) {

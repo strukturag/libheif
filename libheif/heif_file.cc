@@ -56,31 +56,28 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 
 Error HeifFile::read_from_file(const char* input_filename)
 {
-  m_input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
+  auto input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
+  auto input_stream = std::make_shared<StreamReader_istream>(std::move(input_stream_istr));
 
-  m_input_stream = std::make_shared<StreamReader_istream>(m_input_stream_istr.get());
-
-  uint64_t maxSize = std::numeric_limits<uint64_t>::max();
-  heif::BitstreamRange range(m_input_stream, maxSize);
-
-
-  Error error = parse_heif_file(range);
-  return error;
+  return read(input_stream);
 }
 
 
 
 Error HeifFile::read_from_memory(const void* data, size_t size)
 {
-  // TODO: Work on passed memory directly instead of creating a copy here.
-  // Note: we cannot use basic_streambuf for this, because it does not support seeking
-  std::string s(static_cast<const char*>(data), size);
+  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*)data, size);
 
-  m_input_stream_istr = std::unique_ptr<std::istream>(new std::istringstream(std::move(s)));
+  return read(input_stream);
+}
 
-  m_input_stream = std::make_shared<StreamReader_istream>(m_input_stream_istr.get());
 
-  heif::BitstreamRange range(m_input_stream, size);
+Error HeifFile::read(std::shared_ptr<StreamReader> reader)
+{
+  m_input_stream = reader;
+
+  uint64_t maxSize = std::numeric_limits<uint64_t>::max();
+  heif::BitstreamRange range(m_input_stream, maxSize);
 
   Error error = parse_heif_file(range);
   return error;

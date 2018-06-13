@@ -49,6 +49,7 @@ namespace heif {
     HeifFile();
     ~HeifFile();
 
+    Error read(std::shared_ptr<StreamReader> reader);
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size);
 
@@ -122,7 +123,6 @@ namespace heif {
     mutable std::mutex m_read_mutex;
 #endif
 
-    std::unique_ptr<std::istream> m_input_stream_istr;
     std::shared_ptr<StreamReader> m_input_stream;
 
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;

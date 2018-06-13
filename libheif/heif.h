@@ -273,6 +273,39 @@ void heif_context_free(struct heif_context*);
 
 struct heif_reading_options;
 
+enum heif_reader_grow_status {
+  heif_reader_grow_status_size_reached,   // requested size has been reached
+  heif_reader_grow_status_timeout,        // size has not been reached yet, but it may still grow further
+  heif_reader_grow_status_size_beyond_eof // size has not been reached and never will. The file has grown to its full size
+};
+
+struct heif_reader {
+  // API version supported by this reader
+  int reader_api_version;
+
+  // --- version 1 functions ---
+  int64_t (*get_position)(void* userdata);
+
+  int64_t (*get_length)(void* userdata);
+
+  // The functions read(), seek_abs(), and seek_cur() return 0 on success.
+  // Generally, libheif will make sure that we do not read past the file size.
+  int (*read)(void* data,
+              size_t size,
+              void* userdata);
+  int (*seek_abs)(int64_t position,
+                  void* userdata);
+
+  // If this function is set to NULL, seek_abs() with be used together with get_position().
+  int (*seek_cur)(int64_t position,
+                  void* userdata);
+
+  // If this function is set to NULL, libheif will assume that the file size will not
+  // change and it uses get_length() only.
+  heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
+};
+
+
 // Read a HEIF file from a named disk file.
 // The heif_reading_options should currently be set to NULL.
 LIBHEIF_API

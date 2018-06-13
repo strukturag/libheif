@@ -75,48 +75,59 @@ namespace heif {
   class StreamReader_istream : public StreamReader
   {
   public:
-    StreamReader_istream(std::istream* istr)
-      : m_istr(istr)
-    {
-      istr->seekg(0, std::ios_base::end);
-      m_length = istr->tellg();
-      istr->seekg(0, std::ios_base::beg);
-    }
+    StreamReader_istream(std::unique_ptr<std::istream>&& istr);
 
-    int64_t get_position() const { return m_istr->tellg(); }
-    int64_t get_length() const { return m_length; }
+    int64_t get_position() const override;
+    int64_t get_length() const override;
 
-    // returns 'false' when we read out of the available file size
-    virtual bool    read(void* data, size_t size) {
-      int64_t end_pos = get_position() + size;
-      if (end_pos > m_length) {
-        return false;
-      }
+    bool    read(void* data, size_t size) override;
 
-      m_istr->read((char*)data, size);
-      return true;
-    }
-
-    virtual bool    seek_abs(int64_t position) {
-      if (position>m_length)
-        return false;
-
-      m_istr->seekg(position, std::ios_base::beg);
-      return true;
-    }
-
-    virtual bool    seek_cur(int64_t position_offset) {
-      int64_t target_pos = (get_position() + position_offset);
-      if (target_pos < 0 || target_pos > m_length)
-        return false;
-
-      m_istr->seekg(position_offset, std::ios_base::cur);
-      return true;
-    }
+    bool    seek_abs(int64_t position) override;
+    bool    seek_cur(int64_t position_offset) override;
 
   private:
-    std::istream* m_istr;
+    std::unique_ptr<std::istream> m_istr;
     int64_t m_length;
+  };
+
+
+  class StreamReader_memory : public StreamReader
+  {
+  public:
+    StreamReader_memory(const uint8_t* data, int64_t size);
+
+    int64_t get_position() const override;
+    int64_t get_length() const override;
+
+    bool    read(void* data, size_t size) override;
+
+    bool    seek_abs(int64_t position) override;
+    bool    seek_cur(int64_t position_offset) override;
+
+  private:
+    const uint8_t* m_data;
+    int64_t m_length;
+    int64_t m_position;
+  };
+
+
+  class StreamReader_CApi : public StreamReader
+  {
+  public:
+    StreamReader_CApi(heif_reader* func_table, void* userdata);
+
+    int64_t get_position() const override { return m_func_table->get_position(m_userdata); }
+    int64_t get_length() const override { return m_func_table->get_length(m_userdata); }
+
+    StreamReader::grow_status wait_for_file_size(int64_t target_size) override;
+
+    bool    read(void* data, size_t size) { return !m_func_table->read(data,size,m_userdata); }
+    bool    seek_abs(int64_t position) { return !m_func_table->seek_abs(position,m_userdata); }
+    bool    seek_cur(int64_t position_offset);
+
+  private:
+    heif_reader* m_func_table;
+    void* m_userdata;
   };
 
 

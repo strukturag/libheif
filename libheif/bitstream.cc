@@ -28,6 +28,147 @@
 using namespace heif;
 
 
+StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
+  : m_istr(std::move(istr))
+{
+  m_istr->seekg(0, std::ios_base::end);
+  m_length = m_istr->tellg();
+  m_istr->seekg(0, std::ios_base::beg);
+}
+
+int64_t StreamReader_istream::get_position() const
+{
+  return m_istr->tellg();
+}
+
+int64_t StreamReader_istream::get_length() const
+{
+  return m_length;
+}
+
+bool    StreamReader_istream::read(void* data, size_t size)
+{
+  int64_t end_pos = get_position() + size;
+  if (end_pos > m_length) {
+    return false;
+  }
+
+  m_istr->read((char*)data, size);
+  return true;
+}
+
+bool    StreamReader_istream::seek_abs(int64_t position)
+{
+  if (position>m_length)
+    return false;
+
+  m_istr->seekg(position, std::ios_base::beg);
+  return true;
+}
+
+bool    StreamReader_istream::seek_cur(int64_t position_offset)
+{
+  int64_t target_pos = (get_position() + position_offset);
+  if (target_pos < 0 || target_pos > m_length)
+    return false;
+
+  m_istr->seekg(position_offset, std::ios_base::cur);
+  return true;
+}
+
+
+
+StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size)
+  : m_data(data),
+    m_length(size)
+{
+}
+
+int64_t StreamReader_memory::get_position() const
+{
+  return m_position;
+}
+
+int64_t StreamReader_memory::get_length() const
+{
+  return m_length;
+}
+
+bool    StreamReader_memory::read(void* data, size_t size)
+{
+  int64_t end_pos = m_position + size;
+  if (end_pos > m_length) {
+    return false;
+  }
+
+  memcpy(data, &m_data[m_position], size);
+  m_position += size;
+
+  return true;
+}
+
+bool    StreamReader_memory::seek_abs(int64_t position)
+{
+  if (position>m_length || position<0)
+    return false;
+
+  m_position = position;
+  return true;
+}
+
+bool    StreamReader_memory::seek_cur(int64_t position_offset)
+{
+  int64_t target_pos = m_position + position_offset;
+  if (target_pos < 0 || target_pos > m_length)
+    return false;
+
+  m_position = target_pos;
+  return true;
+}
+
+
+
+StreamReader_CApi::StreamReader_CApi(heif_reader* func_table, void* userdata)
+  : m_func_table(func_table), m_userdata(userdata)
+{
+}
+
+StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_size)
+{
+  if (m_func_table->wait_for_file_size == nullptr) {
+    return target_size <= get_length() ? size_reached : size_beyond_eof;
+  }
+  else {
+    heif_reader_grow_status status = m_func_table->wait_for_file_size(target_size, m_userdata);
+    switch (status) {
+    case heif_reader_grow_status_size_reached: return size_reached;
+    case heif_reader_grow_status_timeout: return timeout;
+    case heif_reader_grow_status_size_beyond_eof: return size_beyond_eof;
+    default:
+      assert(0);
+    }
+  }
+}
+
+bool    StreamReader_CApi::seek_cur(int64_t position_offset)
+{
+  if (m_func_table->seek_cur == nullptr) {
+    int64_t target_pos = (get_position() + position_offset);
+    if (target_pos < 0 || target_pos > get_length()) {
+      return false;
+    }
+
+    return !m_func_table->seek_abs(target_pos,m_userdata);
+  }
+  else {
+    return !m_func_table->seek_cur(position_offset,m_userdata);
+  }
+}
+
+
+
+
+
 uint8_t BitstreamRange::read8()
 {
   if (!read(1)) {
