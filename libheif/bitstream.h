@@ -57,7 +57,8 @@ namespace heif {
       size_beyond_eof // size has not been reached and never will. The file has grown to its full size
     };
 
-    virtual grow_status wait_for_file_size(int64_t target_size, int32_t timeout_ms) {
+    // a StreamReader can maintain a timeout for waiting for new data
+    virtual grow_status wait_for_file_size(int64_t target_size) {
       return target_size <= get_length() ? size_reached : size_beyond_eof;
     }
 

@@ -957,8 +957,6 @@ Error Box_iloc::read_data(const Item& item,
 {
   //istr.clear();
 
-  const int timeout_ms = 10; // TODO
-
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
 
@@ -979,7 +977,7 @@ Error Box_iloc::read_data(const Item& item,
 
       // --- make sure that all data is available
 
-      StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length, timeout_ms);
+      StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
       if (status == StreamReader::size_beyond_eof) {
         // Out-of-bounds
         // TODO: I think we should not clear this. Maybe we want to try reading again later and
@@ -2425,8 +2423,7 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
 
   // move to start of data
 
-  const int timeout = 10; // TODO
-  StreamReader::grow_status status = istr->wait_for_file_size((int64_t)m_data_start_pos + start + length, timeout);
+  StreamReader::grow_status status = istr->wait_for_file_size((int64_t)m_data_start_pos + start + length);
   if (status == StreamReader::size_beyond_eof ||
       status == StreamReader::timeout) {
     // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
