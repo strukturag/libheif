@@ -147,6 +147,7 @@ StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_s
     case heif_reader_grow_status_size_beyond_eof: return size_beyond_eof;
     default:
       assert(0);
+      return size_beyond_eof;
     }
   }
 }
