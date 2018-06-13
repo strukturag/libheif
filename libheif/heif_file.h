@@ -122,7 +122,8 @@ namespace heif {
     mutable std::mutex m_read_mutex;
 #endif
 
-    std::unique_ptr<std::istream> m_input_stream;
+    std::unique_ptr<std::istream> m_input_stream_istr;
+    std::shared_ptr<StreamReader> m_input_stream;
 
     std::vector<std::shared_ptr<Box> > m_top_level_boxes;
 

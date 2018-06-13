@@ -36,10 +36,10 @@ uint8_t BitstreamRange::read8()
 
   uint8_t buf;
 
-  std::istream* istr = get_istream();
-  istr->read((char*)&buf,1);
+  auto istr = get_istream();
+  bool success = istr->read((char*)&buf,1);
 
-  if (istr->fail()) {
+  if (!success) {
     set_eof_reached();
     return 0;
   }
@@ -56,10 +56,10 @@ uint16_t BitstreamRange::read16()
 
   uint8_t buf[2];
 
-  std::istream* istr = get_istream();
-  istr->read((char*)buf,2);
+  auto istr = get_istream();
+  bool success = istr->read((char*)buf,2);
 
-  if (istr->fail()) {
+  if (!success) {
     set_eof_reached();
     return 0;
   }
@@ -76,10 +76,10 @@ uint32_t BitstreamRange::read32()
 
   uint8_t buf[4];
 
-  std::istream* istr = get_istream();
-  istr->read((char*)buf,4);
+  auto istr = get_istream();
+  bool success = istr->read((char*)buf,4);
 
-  if (istr->fail()) {
+  if (!success) {
     set_eof_reached();
     return 0;
   }
@@ -95,19 +95,22 @@ std::string BitstreamRange::read_string()
 {
   std::string str;
 
+  /*
   if (eof()) {
     return "";
   }
+  */
 
   for (;;) {
     if (!read(1)) {
       return std::string();
     }
 
-    std::istream* istr = get_istream();
-    int c = istr->get();
+    auto istr = get_istream();
+    char c;
+    bool success = istr->read(&c,1);
 
-    if (istr->fail()) {
+    if (!success) {
       set_eof_reached();
       return std::string();
     }

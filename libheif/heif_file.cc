@@ -56,10 +56,12 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 
 Error HeifFile::read_from_file(const char* input_filename)
 {
-  m_input_stream = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
+  m_input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(input_filename));
+
+  m_input_stream = std::make_shared<StreamReader_istream>(m_input_stream_istr.get());
 
   uint64_t maxSize = std::numeric_limits<uint64_t>::max();
-  heif::BitstreamRange range(m_input_stream.get(), maxSize);
+  heif::BitstreamRange range(m_input_stream, maxSize);
 
 
   Error error = parse_heif_file(range);
@@ -74,9 +76,11 @@ Error HeifFile::read_from_memory(const void* data, size_t size)
   // Note: we cannot use basic_streambuf for this, because it does not support seeking
   std::string s(static_cast<const char*>(data), size);
 
-  m_input_stream = std::unique_ptr<std::istream>(new std::istringstream(std::move(s)));
+  m_input_stream_istr = std::unique_ptr<std::istream>(new std::istringstream(std::move(s)));
 
-  heif::BitstreamRange range(m_input_stream.get(), size);
+  m_input_stream = std::make_shared<StreamReader_istream>(m_input_stream_istr.get());
+
+  heif::BitstreamRange range(m_input_stream, size);
 
   Error error = parse_heif_file(range);
   return error;
@@ -410,12 +414,12 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_item_data);
     }
 
-    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   } else if (item_type == "grid" ||
              item_type == "iovl" ||
              item_type == "Exif" ||
              (item_type == "mime" && content_type=="application/rdf+xml")) {
-    error = m_iloc_box->read_data(*item, *m_input_stream.get(), m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
 
   if (error != Error::Ok) {

@@ -299,7 +299,8 @@ namespace heif {
 
     const std::vector<Item>& get_items() const { return m_items; }
 
-    Error read_data(const Item& item, std::istream& istr,
+    Error read_data(const Item& item,
+                    std::shared_ptr<StreamReader> istr,
                     const std::shared_ptr<class Box_idat>&,
                     std::vector<uint8_t>* dest) const;
 
@@ -684,7 +685,8 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    Error read_data(std::istream& istr, uint64_t start, uint64_t length,
+    Error read_data(std::shared_ptr<StreamReader> istr,
+                    uint64_t start, uint64_t length,
                     std::vector<uint8_t>& out_data) const;
 
   protected:

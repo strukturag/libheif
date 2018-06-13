@@ -293,7 +293,7 @@ Error Box::parse(BitstreamRange& range)
                      heif_suberror_Invalid_box_size);
       }
 
-      range.get_istream()->seekg(get_box_size() - get_header_size(), std::ios_base::cur);
+      range.get_istream()->seek_cur(get_box_size() - get_header_size());
     }
   }
 
@@ -950,27 +950,19 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-Error Box_iloc::read_data(const Item& item, std::istream& istr,
+Error Box_iloc::read_data(const Item& item,
+                          std::shared_ptr<StreamReader> istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
-  istr.clear();
+  //istr.clear();
+
+  const int timeout_ms = 10; // TODO
 
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
-      istr.seekg(extent.offset + item.base_offset, std::ios::beg);
-      if (istr.eof()) {
-        // Out-of-bounds
-        dest->clear();
 
-        std::stringstream sstr;
-        sstr << "Extent in iloc box references data outside of file bounds "
-             << "(points to file position " << extent.offset + item.base_offset << ")\n";
-
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_End_of_data,
-                     sstr.str());
-      }
+      // --- security check that we do not allocate too much memory
 
       size_t old_size = dest->size();
       if (MAX_MEMORY_BLOCK_SIZE - old_size < extent.length) {
@@ -984,12 +976,41 @@ Error Box_iloc::read_data(const Item& item, std::istream& istr,
                      sstr.str());
       }
 
-      dest->resize(static_cast<size_t>(old_size + extent.length));
-      istr.read((char*)dest->data() + old_size, static_cast<size_t>(extent.length));
-      if (istr.eof()) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_End_of_data);
+
+      // --- make sure that all data is available
+
+      StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length, timeout_ms);
+      if (status == StreamReader::size_beyond_eof) {
+        // Out-of-bounds
+        // TODO: I think we should not clear this. Maybe we want to try reading again later and
+        // hence should not lose the data already read.
+        dest->clear();
+
+        std::stringstream sstr;
+        sstr << "Extent in iloc box references data outside of file bounds "
+             << "(points to file position " << extent.offset + item.base_offset << ")\n";
+
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_End_of_data,
+                     sstr.str());
       }
+      else if (status == StreamReader::timeout) {
+        // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_End_of_data);
+      }
+
+      // --- move file pointer to start of data
+
+      bool success = istr->seek_abs(extent.offset + item.base_offset);
+      assert(success);
+
+
+      // --- read data
+
+      dest->resize(static_cast<size_t>(old_size + extent.length));
+      success = istr->read((char*)dest->data() + old_size, static_cast<size_t>(extent.length));
+      assert(success);
     }
     else if (item.construction_method==1) {
       if (!idat) {
@@ -2365,7 +2386,7 @@ Error Box_idat::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  m_data_start_pos = range.get_istream()->tellg();
+  m_data_start_pos = range.get_istream()->get_position();
 
   return range.get_error();
 }
@@ -2382,13 +2403,12 @@ std::string Box_idat::dump(Indent& indent) const
 }
 
 
-Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
+Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
+                          uint64_t start, uint64_t length,
                           std::vector<uint8_t>& out_data) const
 {
-  // move to start of data
-  istr.seekg(m_data_start_pos + (std::streampos)start, std::ios_base::beg);
+  // --- security check that we do not allocate too much data
 
-  // reserve space for the data in the output array
   auto curr_size = out_data.size();
 
   if (MAX_MEMORY_BLOCK_SIZE - curr_size < length) {
@@ -2402,10 +2422,29 @@ Error Box_idat::read_data(std::istream& istr, uint64_t start, uint64_t length,
                  sstr.str());
   }
 
+
+  // move to start of data
+
+  const int timeout = 10; // TODO
+  StreamReader::grow_status status = istr->wait_for_file_size((int64_t)m_data_start_pos + start + length, timeout);
+  if (status == StreamReader::size_beyond_eof ||
+      status == StreamReader::timeout) {
+    // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
+
+  bool success;
+  success = istr->seek_abs(m_data_start_pos + (std::streampos)start);
+  assert(success);
+
+  // reserve space for the data in the output array
+
   out_data.resize(static_cast<size_t>(curr_size + length));
   uint8_t* data = &out_data[curr_size];
 
-  istr.read((char*)data, static_cast<size_t>(length));
+  success = istr->read((char*)data, static_cast<size_t>(length));
+  assert(success);
 
   return Error::Ok;
 }

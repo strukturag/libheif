@@ -100,7 +100,7 @@ namespace heif {
     virtual bool    can_seek_backwards() const { return true; }
 
     virtual bool    seek_abs(int64_t position) {
-      if (position>=m_length)
+      if (position>m_length)
         return false;
 
       m_istr->seekg(position, std::ios_base::beg);
@@ -109,7 +109,7 @@ namespace heif {
 
     virtual bool    seek_cur(int64_t position_offset) {
       int64_t target_pos = (get_position() + position_offset);
-      if (target_pos < 0 || target_pos >= m_length)
+      if (target_pos < 0 || target_pos > m_length)
         return false;
 
       m_istr->seekg(position_offset, std::ios_base::cur);
@@ -125,7 +125,8 @@ namespace heif {
   class BitstreamRange
   {
   public:
-    BitstreamRange(std::istream* istr, uint64_t length, BitstreamRange* parent = nullptr) {
+    BitstreamRange(std::shared_ptr<StreamReader> istr, uint64_t length,
+                   BitstreamRange* parent = nullptr) {
       construct(istr, length, parent);
     }
 
@@ -161,7 +162,7 @@ namespace heif {
           m_parent_range->read(m_remaining);
         }
 
-        m_istr->seekg(m_remaining, std::ios::cur);
+        m_istr->seek_cur(m_remaining);
         m_remaining = 0;
         m_end_reached = true;
         m_error = true;
@@ -170,7 +171,7 @@ namespace heif {
     }
 
     void skip_to_end_of_file() {
-      m_istr->seekg(0, std::ios_base::end);
+      m_istr->seek_abs( m_istr->get_length() ); // TODO: not really end of file
       m_remaining = 0;
       m_end_reached = true;
     }
@@ -181,7 +182,7 @@ namespace heif {
           m_parent_range->read(m_remaining);
         }
 
-        m_istr->seekg(m_remaining, std::ios_base::cur);
+        m_istr->seek_cur(m_remaining);
         m_remaining = 0;
       }
 
@@ -215,12 +216,12 @@ namespace heif {
       }
     }
 
-    std::istream* get_istream() { return m_istr; }
+    std::shared_ptr<StreamReader> get_istream() { return m_istr; }
 
     int get_nesting_level() const { return m_nesting_level; }
 
   protected:
-    void construct(std::istream* istr, uint64_t length, BitstreamRange* parent) {
+    void construct(std::shared_ptr<StreamReader> istr, uint64_t length, BitstreamRange* parent) {
       m_remaining = length;
       m_end_reached = (length==0);
 
@@ -233,7 +234,7 @@ namespace heif {
     }
 
   private:
-    std::istream* m_istr = nullptr;
+    std::shared_ptr<StreamReader> m_istr;
     BitstreamRange* m_parent_range = nullptr;
     int m_nesting_level = 0;
 
