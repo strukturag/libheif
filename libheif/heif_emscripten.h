@@ -42,6 +42,7 @@ static std::shared_ptr<Box> Box_read(BitstreamRange& range) {
   return box;
 }
 
+/*
 class EmscriptenBitstreamRange : public BitstreamRange {
  public:
   explicit EmscriptenBitstreamRange(const std::string& data)
@@ -58,6 +59,7 @@ class EmscriptenBitstreamRange : public BitstreamRange {
   std::string data_;
   std::basic_istringstream<char> stream_;
 };
+*/
 
 static Error HeifFile_read_from_memory(HeifFile* file,
     const std::string& data) {
@@ -264,11 +266,13 @@ EMSCRIPTEN_BINDINGS(libheif) {
   emscripten::class_<BitstreamRange>("BitstreamRangeBase")
     ;
 
+  /*
   emscripten::class_<EmscriptenBitstreamRange,
       emscripten::base<BitstreamRange>>("BitstreamRange")
     .constructor<const std::string&>()
     .function("error", &EmscriptenBitstreamRange::error)
     ;
+  */
 
   emscripten::class_<Indent>("Indent")
     .constructor<>()
