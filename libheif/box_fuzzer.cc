@@ -21,11 +21,14 @@
 #include <sstream>
 
 #include "box.h"
+#include "bitstream.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::string s(size ? reinterpret_cast<const char*>(data) : nullptr, size);
   std::istringstream stream(s);
-  heif::BitstreamRange range(&stream, size);
+  auto reader = std::make_shared<heif::StreamReader_istream>(&stream);
+
+  heif::BitstreamRange range(reader, size);
   for (;;) {
     std::shared_ptr<heif::Box> box;
     heif::Error error = heif::Box::read(range, &box);
@@ -33,5 +36,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       break;
     }
   }
+
   return 0;
 }
