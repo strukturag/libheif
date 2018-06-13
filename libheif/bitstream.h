@@ -140,64 +140,33 @@ namespace heif {
                    uint64_t length,
                    BitstreamRange* parent = nullptr);
 
+    // This function tries to make sure that the full data of this range is
+    // available. You should call this before starting reading the range.
+    // If you don't, you have to make sure that you do not read past the available data.
+    StreamReader::grow_status wait_until_range_is_available();
+
     uint8_t read8();
     uint16_t read16();
     uint32_t read32();
     std::string read_string();
 
-    /*
-    bool read(int n) {
-      if (n<0) {
-        return false;
-      }
-      return read(static_cast<uint64_t>(n));
-    }
-*/
-
-
-    bool prepare_read(int64_t n) {
-      if (n<0) {
-        // we cannot read negative amounts of bytes
-
-        return false;
-      }
-      else if (m_remaining==0) {
-        m_error = true;
-        return false;
-      }
-      else if (m_remaining < n) {
-        if (m_parent_range) {
-          m_parent_range->prepare_read(m_remaining);
-        }
-
-        if (m_remaining>0) {
-          m_istr->seek_cur(m_remaining);
-        }
-
-        m_remaining = 0;
-        m_error = true;
-        return false;
-      }
-      else { // if (m_remaining >= n) {
-        if (m_parent_range) {
-          m_parent_range->prepare_read(n);
-        }
-
-        m_remaining -= n;
-
-        return true;
-      }
-    }
+    bool prepare_read(int64_t nBytes);
 
     void skip_to_end_of_file() {
-      m_istr->seek_abs( m_istr->get_length() ); // TODO: not really end of file
+      // we do not actually move the file position here (because the stream may still be incomplete),
+      // but we set all m_remaining to zero
       m_remaining = 0;
+
+      if (m_parent_range) {
+        m_parent_range->skip_to_end_of_file();
+      }
     }
 
     void skip_to_end_of_box() {
-      if (m_remaining) {
+      if (m_remaining>0) {
         if (m_parent_range) {
-          m_parent_range->prepare_read(m_remaining);
+          // also advance position in parent range
+          m_parent_range->skip_without_advancing_file_pos(m_remaining);
         }
 
         m_istr->seek_cur(m_remaining);
@@ -205,12 +174,14 @@ namespace heif {
       }
     }
 
-    void set_eof_reached() {
+    void set_eof_while_reading() {
       m_remaining = 0;
 
       if (m_parent_range) {
-        m_parent_range->set_eof_reached();
+        m_parent_range->set_eof_while_reading();
       }
+
+      m_error = true;
     }
 
     bool eof() const {
@@ -242,6 +213,9 @@ namespace heif {
 
     int64_t m_remaining;
     bool m_error = false;
+
+    // Note: 'nBytes' may not be larger than the number of remaining bytes
+    void skip_without_advancing_file_pos(int64_t nBytes);
   };
 
 

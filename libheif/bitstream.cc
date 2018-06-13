@@ -185,6 +185,12 @@ BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
 }
 
 
+StreamReader::grow_status BitstreamRange::wait_until_range_is_available()
+{
+  return m_istr->wait_for_file_size( m_istr->get_position() + m_remaining );
+}
+
+
 uint8_t BitstreamRange::read8()
 {
   if (!prepare_read(1)) {
@@ -197,7 +203,7 @@ uint8_t BitstreamRange::read8()
   bool success = istr->read((char*)&buf,1);
 
   if (!success) {
-    set_eof_reached();
+    set_eof_while_reading();
     return 0;
   }
 
@@ -217,7 +223,7 @@ uint16_t BitstreamRange::read16()
   bool success = istr->read((char*)buf,2);
 
   if (!success) {
-    set_eof_reached();
+    set_eof_while_reading();
     return 0;
   }
 
@@ -237,7 +243,7 @@ uint32_t BitstreamRange::read32()
   bool success = istr->read((char*)buf,4);
 
   if (!success) {
-    set_eof_reached();
+    set_eof_while_reading();
     return 0;
   }
 
@@ -252,12 +258,6 @@ std::string BitstreamRange::read_string()
 {
   std::string str;
 
-  /*
-  if (eof()) {
-    return "";
-  }
-  */
-
   for (;;) {
     if (!prepare_read(1)) {
       return std::string();
@@ -268,7 +268,7 @@ std::string BitstreamRange::read_string()
     bool success = istr->read(&c,1);
 
     if (!success) {
-      set_eof_reached();
+      set_eof_while_reading();
       return std::string();
     }
 
@@ -281,6 +281,48 @@ std::string BitstreamRange::read_string()
   }
 
   return str;
+}
+
+
+bool BitstreamRange::prepare_read(int64_t nBytes)
+{
+  if (nBytes<0) {
+    // --- we cannot read negative amounts of bytes
+
+    assert(false);
+    return false;
+  }
+  else if (m_remaining < nBytes) {
+    // --- not enough data left in box -> move to end of box and set error flag
+
+    skip_to_end_of_box();
+
+    m_error = true;
+    return false;
+  }
+  else {
+    // --- this is the normal case (m_remaining >= nBytes)
+
+    if (m_parent_range) {
+      m_parent_range->prepare_read(nBytes);
+    }
+
+    m_remaining -= nBytes;
+
+    return true;
+  }
+}
+
+
+void BitstreamRange::skip_without_advancing_file_pos(int64_t n)
+{
+  assert(n<=m_remaining);
+
+  m_remaining -= n;
+
+  if (m_parent_range) {
+    m_parent_range->skip_without_advancing_file_pos(n);
+  }
 }
 
 
