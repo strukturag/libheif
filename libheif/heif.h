@@ -274,7 +274,7 @@ void heif_context_free(struct heif_context*);
 struct heif_reading_options;
 
 enum heif_reader_grow_status {
-  heif_reader_grow_status_size_reached,   // requested size has been reached
+  heif_reader_grow_status_size_reached,   // requested size has been reached, we can read until this point
   heif_reader_grow_status_timeout,        // size has not been reached yet, but it may still grow further
   heif_reader_grow_status_size_beyond_eof // size has not been reached and never will. The file has grown to its full size
 };
@@ -295,7 +295,7 @@ struct heif_reader {
               void* userdata);
 
   // Even if your input files will not grow, you will have to implement at least
-  // detection whether the target_size is above the (fixed) file length (-> size_beyong_eof).
+  // detection whether the target_size is above the (fixed) file length (-> size_beyond_eof).
   heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
 };
 
