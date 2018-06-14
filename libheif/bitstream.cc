@@ -71,7 +71,8 @@ bool    StreamReader_istream::seek(int64_t position)
 
 StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size)
   : m_data(data),
-    m_length(size)
+    m_length(size),
+    m_position(0)
 {
 }
 
