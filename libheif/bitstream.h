@@ -49,7 +49,6 @@ namespace heif {
     virtual ~StreamReader() { }
 
     virtual int64_t get_position() const = 0;
-    virtual int64_t get_length() const = 0; // note: files may grow while reading
 
     enum grow_status {
       size_reached,   // requested size has been reached
@@ -58,9 +57,7 @@ namespace heif {
     };
 
     // a StreamReader can maintain a timeout for waiting for new data
-    virtual grow_status wait_for_file_size(int64_t target_size) {
-      return target_size <= get_length() ? size_reached : size_beyond_eof;
-    }
+    virtual grow_status wait_for_file_size(int64_t target_size) = 0;
 
     // returns 'false' when we read out of the available file size
     virtual bool    read(void* data, size_t size) = 0;
@@ -78,7 +75,8 @@ namespace heif {
     StreamReader_istream(std::unique_ptr<std::istream>&& istr);
 
     int64_t get_position() const override;
-    int64_t get_length() const override;
+
+    grow_status wait_for_file_size(int64_t target_size) override;
 
     bool    read(void* data, size_t size) override;
 
@@ -97,7 +95,8 @@ namespace heif {
     StreamReader_memory(const uint8_t* data, int64_t size);
 
     int64_t get_position() const override;
-    int64_t get_length() const override;
+
+    grow_status wait_for_file_size(int64_t target_size) override;
 
     bool    read(void* data, size_t size) override;
 
@@ -117,7 +116,6 @@ namespace heif {
     StreamReader_CApi(const heif_reader* func_table, void* userdata);
 
     int64_t get_position() const override { return m_func_table->get_position(m_userdata); }
-    int64_t get_length() const override { return m_func_table->get_length(m_userdata); }
 
     StreamReader::grow_status wait_for_file_size(int64_t target_size) override;
 

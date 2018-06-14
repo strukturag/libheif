@@ -42,9 +42,9 @@ int64_t StreamReader_istream::get_position() const
   return m_istr->tellg();
 }
 
-int64_t StreamReader_istream::get_length() const
+StreamReader::grow_status StreamReader_istream::wait_for_file_size(int64_t target_size)
 {
-  return m_length;
+  return (target_size > m_length) ? size_beyond_eof : size_reached;
 }
 
 bool    StreamReader_istream::read(void* data, size_t size)
@@ -90,9 +90,9 @@ int64_t StreamReader_memory::get_position() const
   return m_position;
 }
 
-int64_t StreamReader_memory::get_length() const
+StreamReader::grow_status StreamReader_memory::wait_for_file_size(int64_t target_size)
 {
-  return m_length;
+  return (target_size > m_length) ? size_beyond_eof : size_reached;
 }
 
 bool    StreamReader_memory::read(void* data, size_t size)
@@ -136,19 +136,14 @@ StreamReader_CApi::StreamReader_CApi(const heif_reader* func_table, void* userda
 
 StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_size)
 {
-  if (m_func_table->wait_for_file_size == nullptr) {
-    return target_size <= get_length() ? size_reached : size_beyond_eof;
-  }
-  else {
-    heif_reader_grow_status status = m_func_table->wait_for_file_size(target_size, m_userdata);
-    switch (status) {
-    case heif_reader_grow_status_size_reached: return size_reached;
-    case heif_reader_grow_status_timeout: return timeout;
-    case heif_reader_grow_status_size_beyond_eof: return size_beyond_eof;
-    default:
-      assert(0);
-      return size_beyond_eof;
-    }
+  heif_reader_grow_status status = m_func_table->wait_for_file_size(target_size, m_userdata);
+  switch (status) {
+  case heif_reader_grow_status_size_reached: return size_reached;
+  case heif_reader_grow_status_timeout: return timeout;
+  case heif_reader_grow_status_size_beyond_eof: return size_beyond_eof;
+  default:
+    assert(0);
+    return size_beyond_eof;
   }
 }
 
@@ -156,7 +151,7 @@ bool    StreamReader_CApi::seek_cur(int64_t position_offset)
 {
   if (m_func_table->seek_cur == nullptr) {
     int64_t target_pos = (get_position() + position_offset);
-    if (target_pos < 0 || target_pos > get_length()) {
+    if (target_pos < 0) {
       return false;
     }
 

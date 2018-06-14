@@ -286,8 +286,6 @@ struct heif_reader {
   // --- version 1 functions ---
   int64_t (*get_position)(void* userdata);
 
-  int64_t (*get_length)(void* userdata);
-
   // The functions read(), seek_abs(), and seek_cur() return 0 on success.
   // Generally, libheif will make sure that we do not read past the file size.
   int (*read)(void* data,
@@ -300,8 +298,8 @@ struct heif_reader {
   int (*seek_cur)(int64_t position,
                   void* userdata);
 
-  // If this function is set to NULL, libheif will assume that the file size will not
-  // change and it uses get_length() only.
+  // Even if your input files will not grow, you will have to implement at least
+  // detection whether the target_size is above the (fixed) file length (-> size_beyong_eof).
   heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
 };
 
