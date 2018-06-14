@@ -157,12 +157,27 @@ std::string heif::BoxHeader::get_type_string() const
 
 heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 {
+  StreamReader::grow_status status;
+  status = range.wait_for_available_bytes(8);
+  if (status != StreamReader::size_reached) {
+    // TODO: return recoverable error at timeout
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
+
   m_size = range.read32();
   m_type = range.read32();
 
   m_header_size = 8;
 
   if (m_size==1) {
+    status = range.wait_for_available_bytes(8);
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
+
     uint64_t high = range.read32();
     uint64_t low  = range.read32();
 
@@ -171,6 +186,13 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
   }
 
   if (m_type==fourcc("uuid")) {
+    status = range.wait_for_available_bytes(16);
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
+
     if (range.prepare_read(16)) {
       m_uuid_type.resize(16);
       range.get_istream()->read((char*)m_uuid_type.data(), 16);
@@ -439,6 +461,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
                  "Security limit for maximum nesting of boxes has been exceeded");
   }
 
+
+  auto status = range.wait_for_available_bytes( hdr.get_box_size() - hdr.get_header_size() );
+  if (status != StreamReader::size_reached) {
+    // TODO: return recoverable error at timeout
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
 
   BitstreamRange boxrange(range.get_istream(),
                           hdr.get_box_size() - hdr.get_header_size(),

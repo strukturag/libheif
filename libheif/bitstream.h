@@ -148,6 +148,8 @@ namespace heif {
 
     bool prepare_read(int64_t nBytes);
 
+    StreamReader::grow_status wait_for_available_bytes(int64_t nBytes);
+
     void skip_to_end_of_file() {
       // we do not actually move the file position here (because the stream may still be incomplete),
       // but we set all m_remaining to zero
