@@ -58,22 +58,12 @@ bool    StreamReader_istream::read(void* data, size_t size)
   return true;
 }
 
-bool    StreamReader_istream::seek_abs(int64_t position)
+bool    StreamReader_istream::seek(int64_t position)
 {
   if (position>m_length)
     return false;
 
   m_istr->seekg(position, std::ios_base::beg);
-  return true;
-}
-
-bool    StreamReader_istream::seek_cur(int64_t position_offset)
-{
-  int64_t target_pos = (get_position() + position_offset);
-  if (target_pos < 0 || target_pos > m_length)
-    return false;
-
-  m_istr->seekg(position_offset, std::ios_base::cur);
   return true;
 }
 
@@ -108,22 +98,12 @@ bool    StreamReader_memory::read(void* data, size_t size)
   return true;
 }
 
-bool    StreamReader_memory::seek_abs(int64_t position)
+bool    StreamReader_memory::seek(int64_t position)
 {
   if (position>m_length || position<0)
     return false;
 
   m_position = position;
-  return true;
-}
-
-bool    StreamReader_memory::seek_cur(int64_t position_offset)
-{
-  int64_t target_pos = m_position + position_offset;
-  if (target_pos < 0 || target_pos > m_length)
-    return false;
-
-  m_position = target_pos;
   return true;
 }
 
@@ -144,21 +124,6 @@ StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_s
   default:
     assert(0);
     return size_beyond_eof;
-  }
-}
-
-bool    StreamReader_CApi::seek_cur(int64_t position_offset)
-{
-  if (m_func_table->seek_cur == nullptr) {
-    int64_t target_pos = (get_position() + position_offset);
-    if (target_pos < 0) {
-      return false;
-    }
-
-    return !m_func_table->seek_abs(target_pos,m_userdata);
-  }
-  else {
-    return !m_func_table->seek_cur(position_offset,m_userdata);
   }
 }
 

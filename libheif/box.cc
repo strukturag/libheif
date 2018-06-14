@@ -1000,7 +1000,7 @@ Error Box_iloc::read_data(const Item& item,
 
       // --- move file pointer to start of data
 
-      bool success = istr->seek_abs(extent.offset + item.base_offset);
+      bool success = istr->seek(extent.offset + item.base_offset);
       assert(success);
 
 
@@ -2432,7 +2432,7 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
   }
 
   bool success;
-  success = istr->seek_abs(m_data_start_pos + (std::streampos)start);
+  success = istr->seek(m_data_start_pos + (std::streampos)start);
   assert(success);
 
   // reserve space for the data in the output array

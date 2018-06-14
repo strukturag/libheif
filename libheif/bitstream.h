@@ -62,9 +62,10 @@ namespace heif {
     // returns 'false' when we read out of the available file size
     virtual bool    read(void* data, size_t size) = 0;
 
-    virtual bool    seek_abs(int64_t position) = 0;
-    virtual bool    seek_cur(int64_t position_offset) {
-      return seek_abs(get_position() + position_offset);
+    virtual bool    seek(int64_t position) = 0;
+
+    bool seek_cur(int64_t position_offset) {
+      return seek(get_position() + position_offset);
     }
   };
 
@@ -80,8 +81,7 @@ namespace heif {
 
     bool    read(void* data, size_t size) override;
 
-    bool    seek_abs(int64_t position) override;
-    bool    seek_cur(int64_t position_offset) override;
+    bool    seek(int64_t position) override;
 
   private:
     std::unique_ptr<std::istream> m_istr;
@@ -100,8 +100,7 @@ namespace heif {
 
     bool    read(void* data, size_t size) override;
 
-    bool    seek_abs(int64_t position) override;
-    bool    seek_cur(int64_t position_offset) override;
+    bool    seek(int64_t position) override;
 
   private:
     const uint8_t* m_data;
@@ -120,8 +119,7 @@ namespace heif {
     StreamReader::grow_status wait_for_file_size(int64_t target_size) override;
 
     bool    read(void* data, size_t size) override { return !m_func_table->read(data,size,m_userdata); }
-    bool    seek_abs(int64_t position) override { return !m_func_table->seek_abs(position,m_userdata); }
-    bool    seek_cur(int64_t position_offset) override;
+    bool    seek(int64_t position) override { return !m_func_table->seek(position,m_userdata); }
 
   private:
     const heif_reader* m_func_table;
