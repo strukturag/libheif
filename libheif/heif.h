@@ -33,11 +33,11 @@ extern "C" {
 
 // API versions table
 //
-// release    depth.rep   dec.options   heif_writer   heif_reader
-// ---------------------------------------------------------------
-//  1.0          1             1           N/A           N/A
-//  1.1          1             1            1            N/A
-//  1.3          1             1            1             1
+// release    depth.rep   dec.options   enc.options   heif_reader   heif_writer
+// ------------------------------------------------------------------------------
+//  1.0          1             1           N/A           N/A           N/A
+//  1.1          1             1           N/A           N/A            1
+//  1.3          1             1            1             1             1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -294,8 +294,14 @@ struct heif_reader {
   int (*seek)(int64_t position,
               void* userdata);
 
+  // When calling this function, libheif wants to make sure that it can read the file
+  // up to 'target_size'. This is useful when the file is currently downloaded and may
+  // grow with time. You may, for example, extract the image sizes even before the actual
+  // compressed image data has been completely downloaded.
+  //
   // Even if your input files will not grow, you will have to implement at least
-  // detection whether the target_size is above the (fixed) file length (-> size_beyond_eof).
+  // detection whether the target_size is above the (fixed) file length
+  // (in this case, return 'size_beyond_eof').
   enum heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
 };
 
@@ -735,7 +741,7 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            struct heif_encoder** out_encoder);
 
 // Quick check whether there is a decoder available for the given format.
-// Note that the decoder still may not be able to decoder all variants of that format.
+// Note that the decoder still may not be able to decode all variants of that format.
 // You will have to query that further (todo) or just try to decode and check the returned error.
 LIBHEIF_API
 int heif_have_decoder_for_format(enum heif_compression_format format);
