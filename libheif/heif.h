@@ -33,11 +33,11 @@ extern "C" {
 
 // API versions table
 //
-// release    depth.rep   dec.options   heif_writer
-// ------------------------------------------------
-//  1.0          1             1           N/A
-//  1.1          1             1            1
-
+// release    depth.rep   dec.options   heif_writer   heif_reader
+// ---------------------------------------------------------------
+//  1.0          1             1           N/A           N/A
+//  1.1          1             1            1            N/A
+//  1.3          1             1            1             1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
