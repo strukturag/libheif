@@ -2,8 +2,8 @@
 # https://travis-ci.org/strukturag/libheif/
 language: cpp
 compiler:
-  - gcc
   - clang
+  - gcc
 os:
   - osx
   - linux
