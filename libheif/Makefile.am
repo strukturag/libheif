@@ -25,7 +25,7 @@ libheif_la_CXXFLAGS = \
   $(CFLAG_VISIBILITY) \
   $(libde265_CFLAGS) \
   $(x265_CFLAGS) \
-  -DLIBHEIF_EXPORTS
+  -DLIBHEIF_EXPORTS -I$(top_srcdir)
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
