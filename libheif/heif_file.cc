@@ -64,9 +64,9 @@ Error HeifFile::read_from_file(const char* input_filename)
 
 
 
-Error HeifFile::read_from_memory(const void* data, size_t size)
+Error HeifFile::read_from_memory(const void* data, size_t size, bool copy)
 {
-  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*)data, size);
+  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*)data, size, copy);
 
   return read(input_stream);
 }

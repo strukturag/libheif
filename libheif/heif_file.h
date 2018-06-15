@@ -51,7 +51,7 @@ namespace heif {
 
     Error read(std::shared_ptr<StreamReader> reader);
     Error read_from_file(const char* input_filename);
-    Error read_from_memory(const void* data, size_t size);
+    Error read_from_memory(const void* data, size_t size, bool copy);
 
     void new_empty_file();
 

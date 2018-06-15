@@ -92,7 +92,8 @@ namespace heif {
   class StreamReader_memory : public StreamReader
   {
   public:
-    StreamReader_memory(const uint8_t* data, int64_t size);
+    StreamReader_memory(const uint8_t* data, int64_t size, bool copy);
+    ~StreamReader_memory();
 
     int64_t get_position() const override;
 
@@ -106,6 +107,9 @@ namespace heif {
     const uint8_t* m_data;
     int64_t m_length;
     int64_t m_position;
+
+    // if we made a copy of the data, we store a pointer to the owned memory area here
+    uint8_t* m_owned_data = nullptr;
   };
 
 

@@ -314,10 +314,18 @@ struct heif_error heif_context_read_from_file(struct heif_context*, const char* 
 
 // Read a HEIF file stored completely in memory.
 // The heif_reading_options should currently be set to NULL.
+// DEPRECATED: use heif_context_read_from_memory_without_copy() instead.
 LIBHEIF_API
 struct heif_error heif_context_read_from_memory(struct heif_context*,
                                                 const void* mem, size_t size,
                                                 const struct heif_reading_options*);
+
+// Same as heif_context_read_from_memory() except that the provided memory is not copied.
+// That means, you will have to keep the memory area alive as long as you use the heif_context.
+LIBHEIF_API
+struct heif_error heif_context_read_from_memory_without_copy(struct heif_context*,
+                                                             const void* mem, size_t size,
+                                                             const struct heif_reading_options*);
 
 LIBHEIF_API
 struct heif_error heif_context_read_from_reader(struct heif_context*,

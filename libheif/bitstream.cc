@@ -69,11 +69,26 @@ bool    StreamReader_istream::seek(int64_t position)
 
 
 
-StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size)
-  : m_data(data),
-    m_length(size),
+StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size, bool copy)
+  : m_length(size),
     m_position(0)
 {
+  if (copy) {
+    m_owned_data = new uint8_t[m_length];
+    memcpy(m_owned_data, data, m_length);
+
+    m_data = m_owned_data;
+  }
+  else {
+    m_data = data;
+  }
+}
+
+StreamReader_memory::~StreamReader_memory()
+{
+  if (m_owned_data) {
+    delete[] m_owned_data;
+  }
 }
 
 int64_t StreamReader_memory::get_position() const
