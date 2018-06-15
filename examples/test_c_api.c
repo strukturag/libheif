@@ -1,6 +1,6 @@
 /*
- * libheif testing application
- * Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
+ * Very simple test whether the header file compiler with a plain C compiler
+ * Copyright (c) 2018 struktur AG, Dirk Farin <farin@struktur.de>
  *
  * This file is part of libheif. It performs test calculations for CI checks.
  *
@@ -18,9 +18,10 @@
  * along with heif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Very simple test whether the header file compiler with a plain C compiler
 
 #include "libheif/heif.h"
+#include "libheif/heif_version.h"
+#include "libheif/heif_plugin.h"
 
 int main()
 {
