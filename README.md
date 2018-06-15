@@ -24,6 +24,7 @@ libheif has support for decoding
 * image transformations (crop, mirror, rotate)
 * overlay images
 * plugin interface to add decoders for additional formats (AVC, JPEG)
+* decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 
 The encoder supports:
 * lossy compression with adjustable quality
