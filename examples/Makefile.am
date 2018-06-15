@@ -6,7 +6,8 @@ bin_PROGRAMS = \
   heif-info
 
 noinst_PROGRAMS = \
-  heif-test
+  heif-test \
+  test-c-api
 
 heif_convert_DEPENDENCIES = ../libheif/libheif.la
 heif_convert_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)/.
@@ -63,6 +64,12 @@ heif_test_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)
 heif_test_LDFLAGS =
 heif_test_LDADD = ../libheif/libheif.la
 heif_test_SOURCES = heif_test.cc
+
+test_c_api_DEPENDENCIES = ../libheif/libheif.la
+test_c_api_CFLAGS = -I$(top_srcdir) -I$(top_builddir)
+test_c_api_LDFLAGS =
+test_c_api_LDADD = ../libheif/libheif.la
+test_c_api_SOURCES = test_c_api.c
 
 EXTRA_DIST = \
     demo.html \
