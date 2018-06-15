@@ -217,7 +217,7 @@ struct heif_encoder_parameter
     struct {
       int default_value;
 
-      bool have_minimum_maximum;
+      uint8_t have_minimum_maximum; // bool
       int minimum;
       int maximum;
 
