@@ -80,8 +80,12 @@ namespace heif {
     // throws Error
     void read_from_file(std::string filename, const ReadingOptions& opts = ReadingOptions());
 
+    // DEPRECATED. Use read_from_memory_without_copy() instead.
     // throws Error
     void read_from_memory(const void* mem, size_t size, const ReadingOptions& opts = ReadingOptions());
+
+    // throws Error
+    void read_from_memory_without_copy(const void* mem, size_t size, const ReadingOptions& opts = ReadingOptions());
 
     class Reader {
     public:
@@ -383,6 +387,13 @@ namespace heif {
 
   inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& /*opts*/) {
     Error err = Error(heif_context_read_from_memory(m_context.get(), mem, size, NULL));
+    if (err) {
+      throw err;
+    }
+  }
+
+  inline void Context::read_from_memory_without_copy(const void* mem, size_t size, const ReadingOptions& /*opts*/) {
+    Error err = Error(heif_context_read_from_memory_without_copy(m_context.get(), mem, size, NULL));
     if (err) {
       throw err;
     }
