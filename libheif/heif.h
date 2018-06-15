@@ -296,7 +296,7 @@ struct heif_reader {
 
   // Even if your input files will not grow, you will have to implement at least
   // detection whether the target_size is above the (fixed) file length (-> size_beyond_eof).
-  heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
+  enum heif_reader_grow_status (*wait_for_file_size)(int64_t target_size, void* userdata);
 };
 
 
