@@ -944,7 +944,7 @@ namespace heif {
   }
 
 
-  Context::EncodingOptions::EncodingOptions() {
+  inline Context::EncodingOptions::EncodingOptions() {
     // TODO: this is a bit hacky. It would be better to have an API function to set
     // the options to default values. But I do not see any reason for that apart from
     // this use-case.
