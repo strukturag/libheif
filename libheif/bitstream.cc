@@ -234,6 +234,12 @@ std::string BitstreamRange::read_string()
 {
   std::string str;
 
+  // Reading a string when no more data is available, returns an empty string.
+  // Such a case happens, for example, when reading a 'url' box without content.
+  if (eof()) {
+    return std::string();
+  }
+
   for (;;) {
     if (!prepare_read(1)) {
       return std::string();
