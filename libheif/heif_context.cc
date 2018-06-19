@@ -1017,9 +1017,6 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   std::deque<tile_data> tiles;
   tiles.resize(grid.get_rows() * grid.get_columns() );
 
-  int nThreads = 6;
-  nThreads = std::min(grid.get_rows() * grid.get_columns(), nThreads);
-
   std::deque<std::future<Error> > errs;
 #endif
 
@@ -1061,7 +1058,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
     // If maximum number of threads running, wait until first thread finishes
 
-    if (errs.size() >= (size_t)nThreads) {
+    if (errs.size() >= (size_t)m_max_decoding_threads) {
       Error e = errs.front().get();
       if (e) {
         return e;

@@ -63,6 +63,8 @@ namespace heif {
     HeifContext();
     ~HeifContext();
 
+    void set_max_decoding_threads(int max_threads) { m_max_decoding_threads = max_threads; }
+
     Error read(std::shared_ptr<StreamReader> reader);
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size, bool copy);
@@ -237,6 +239,8 @@ namespace heif {
     std::shared_ptr<Image> m_primary_image; // shortcut to primary image
 
     std::shared_ptr<HeifFile> m_heif_file;
+
+    int m_max_decoding_threads = 4;
 
     Error interpret_heif_file();
 
