@@ -29,6 +29,7 @@
 #include <limits>
 #include <utility>
 #include <math.h>
+#include <deque>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -1005,9 +1006,21 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   int y0=0;
   int reference_idx = 0;
 
+
 #if ENABLE_PARALLEL_TILE_DECODING
-  std::vector<std::future<Error> > errs;
-  errs.resize(grid.get_rows() * grid.get_columns() );
+  // remember which tile to put where into the image
+  struct tile_data {
+    heif_item_id tileID;
+    int x_origin,y_origin;
+  };
+
+  std::deque<tile_data> tiles;
+  tiles.resize(grid.get_rows() * grid.get_columns() );
+
+  int nThreads = 6;
+  nThreads = std::min(grid.get_rows() * grid.get_columns(), nThreads);
+
+  std::deque<std::future<Error> > errs;
 #endif
 
   for (int y=0;y<grid.get_rows();y++) {
@@ -1023,9 +1036,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       int src_height = tileImg->get_height();
 
 #if ENABLE_PARALLEL_TILE_DECODING
-      errs[x+y*grid.get_columns()] = std::async(std::launch::async,
-                                                &HeifContext::decode_and_paste_tile_image, this,
-                                                tileID, img, x0,y0);
+      tiles[x+y*grid.get_columns()] = tile_data { tileID, x0,y0 };
 #else
       Error err = decode_and_paste_tile_image(tileID, img, x0,y0);
       if (err) {
@@ -1043,13 +1054,42 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   }
 
 #if ENABLE_PARALLEL_TILE_DECODING
-  // check for decoding errors in all decoded tiles
+  // Process all tiles in a set of background threads.
+  // Do not start more than the maximum number of threads.
 
-  for (int i=0;i<grid.get_rows() * grid.get_columns();i++) {
-    Error e = errs[i].get();
+  while (tiles.empty()==false) {
+
+    // If maximum number of threads running, wait until first thread finishes
+
+    if (errs.size() >= (size_t)nThreads) {
+      Error e = errs.front().get();
+      if (e) {
+        return e;
+      }
+
+      errs.pop_front();
+    }
+
+
+    // Start a new decoding thread
+
+    tile_data data = tiles.front();
+    tiles.pop_front();
+
+    errs.push_back( std::async(std::launch::async,
+                               &HeifContext::decode_and_paste_tile_image, this,
+                               data.tileID, img, data.x_origin,data.y_origin) );
+  }
+
+  // check for decoding errors in remaining tiles
+
+  while (errs.empty() == false) {
+    Error e = errs.front().get();
     if (e) {
       return e;
     }
+
+    errs.pop_front();
   }
 #endif
 
