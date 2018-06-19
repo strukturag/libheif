@@ -1,9 +1,9 @@
 AC_PREREQ([2.68])
-AC_INIT([libheif], [1.3.1], [opensource@struktur.de])
+AC_INIT([libheif], [1.3.2], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
-NUMERIC_VERSION=0x01030100 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
+NUMERIC_VERSION=0x01030200 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
 AC_SUBST(NUMERIC_VERSION)
 
 # From https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html:
@@ -13,7 +13,7 @@ AC_SUBST(NUMERIC_VERSION)
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 
 LIBHEIF_CURRENT=4
-LIBHEIF_REVISION=1
+LIBHEIF_REVISION=2
 LIBHEIF_AGE=3
 AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
