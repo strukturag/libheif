@@ -953,7 +953,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                                           const std::vector<uint8_t>& grid_data) const
 {
   ImageGrid grid;
-  grid.parse(grid_data);
+  Error err = grid.parse(grid_data);
+  if (err) {
+    return err;
+  }
   // std::cout << grid.dump();
 
 
