@@ -1124,6 +1124,11 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     int out_stride;
     uint8_t* out_data = img->get_plane(channel, &out_stride);
 
+    if (w <= x0 || h <= y0) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_grid_data);
+    }
+
     int copy_width  = std::min(src_width, w - x0);
     int copy_height = std::min(src_height, h - y0);
 
