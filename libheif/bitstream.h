@@ -208,7 +208,9 @@ namespace heif {
 
     int get_nesting_level() const { return m_nesting_level; }
 
-  private:
+    int64_t get_remaining_bytes() const { return m_remaining; }
+
+private:
     std::shared_ptr<StreamReader> m_istr;
     BitstreamRange* m_parent_range = nullptr;
     int m_nesting_level = 0;

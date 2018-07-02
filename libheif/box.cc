@@ -469,8 +469,29 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
                  heif_suberror_End_of_data);
   }
 
+
+  // Security check: make sure that box size does not exceed int64 size.
+
+  if (hdr.get_box_size() > std::numeric_limits<int64_t>::max()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_box_size);
+  }
+
+  int64_t box_size = static_cast<int64_t>(hdr.get_box_size());
+  int64_t box_size_without_header = box_size - hdr.get_header_size();
+
+  // Box size may not be larger than remaining bytes in parent box.
+
+  if (range.get_remaining_bytes() < box_size_without_header) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_box_size);
+  }
+
+
+  // Create child bitstream range and read box from that range.
+
   BitstreamRange boxrange(range.get_istream(),
-                          hdr.get_box_size() - hdr.get_header_size(),
+                          box_size_without_header,
                           &range);
 
   Error err = box->parse(boxrange);
