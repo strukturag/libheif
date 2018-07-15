@@ -346,8 +346,8 @@ namespace heif {
 
   class Box_infe : public Box {
   public:
-    Box_infe() { set_short_type(fourcc("infe")); set_is_full_box(true); }
-  Box_infe(const BoxHeader& hdr) : Box(hdr) { }
+    Box_infe() { set_short_type(fourcc("infe")); set_is_full_box(true); m_item_protection_index = 0; }
+  Box_infe(const BoxHeader& hdr) : Box(hdr) { m_item_protection_index = 0; }
 
     std::string dump(Indent&) const override;
 
