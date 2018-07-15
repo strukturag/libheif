@@ -438,6 +438,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_url>(hdr);
     break;
 
+  case fourcc("colr"):
+    box = std::make_shared<Box_colr>(hdr);
+    break;
+
   default:
     box = std::make_shared<Box>(hdr);
     break;
@@ -1555,6 +1559,73 @@ std::string Box_ipco::dump(Indent& indent) const
   return sstr.str();
 }
 
+Error Box_colr::parse(BitstreamRange& range)
+{
+  StreamReader::grow_status status;
+  m_colour_type = range.read32();
+  if (m_colour_type == fourcc("nclx")) {
+    status = range.wait_for_available_bytes(7);
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
+    m_colour_primaries = range.read16();
+    m_transfer_characteristics = range.read16();
+    m_matrix_coefficients = range.read16();
+    m_full_range_flag = (range.read8() & 0x80 ? true : false);
+  } else if (m_colour_type == fourcc("prof")) {
+    auto profile_size = get_box_size() - get_header_size() - 4;
+    status = range.wait_for_available_bytes(profile_size);
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
+
+    m_color_profile.resize(profile_size);
+    for (size_t i = 0; i < profile_size; i++ ){
+      m_color_profile.at(i) = range.read8();
+    }
+  }
+  return range.get_error();
+}
+
+
+std::string Box_colr::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "colour_type: " << to_fourcc(m_colour_type) << "\n"
+       << indent << "colour_primaries: " << m_colour_primaries << "\n"
+       << indent << "transfer_characteristics: " << m_transfer_characteristics << "\n"
+       << indent << "matrix_coefficients: " << m_matrix_coefficients << "\n"
+       << indent << "full_range_flag: " << m_full_range_flag << "\n"
+       << indent << "profile size: " << m_color_profile.size() << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_colr::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_colour_type);
+  if (m_colour_type == fourcc("nclx")) {
+    writer.write16(m_colour_primaries);
+    writer.write16(m_transfer_characteristics);
+    writer.write16(m_matrix_coefficients);
+    writer.write8(m_full_range_flag ? 0x80 : 0x00);
+  } else if (m_colour_type == fourcc("prof")) {
+    writer.write(m_color_profile);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
 
 Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                                            const std::shared_ptr<class Box_ipma>& ipma,

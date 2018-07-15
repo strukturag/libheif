@@ -454,6 +454,7 @@ Error HeifContext::interpret_heif_file()
 
   std::vector<heif_item_id> image_IDs = m_heif_file->get_item_IDs();
 
+  bool primary_is_grid = false;
   for (heif_item_id id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
@@ -469,6 +470,7 @@ Error HeifContext::interpret_heif_file()
         if (id==m_heif_file->get_primary_image_ID()) {
           image->set_primary(true);
           m_primary_image = image;
+          primary_is_grid = infe_box->get_item_type() == "grid";
         }
 
         m_top_level_images.push_back(image);
@@ -613,6 +615,7 @@ Error HeifContext::interpret_heif_file()
     }
 
     bool ispe_read = false;
+    bool primary_colr_set = false;
     for (const auto& prop : properties) {
       auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
       if (ispe) {
@@ -654,9 +657,27 @@ Error HeifContext::interpret_heif_file()
           }
         }
       }
+
+      auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
+      if (colr && colr->get_color_profile_size() > 0) {
+        auto data = colr->get_color_profile();
+
+        // @TODO: it might be wasteful to assign color profile for each of the
+        // grid items since they probably share it. might be better to use shared
+        // pointer here.
+        image->copy_color_profile_from(data);
+
+        // if this is a grid item we assign the first one's color profile
+        // to the main image which is supposed to be a grid
+        if (primary_is_grid &&
+            !primary_colr_set &&
+            image->is_grid_item()) {
+          m_primary_image->copy_color_profile_from(data);
+          primary_colr_set = true;
+        }
+      }
     }
   }
-
 
 
   // --- read metadata and assign to image
@@ -664,7 +685,6 @@ Error HeifContext::interpret_heif_file()
   for (heif_item_id id : image_IDs) {
     std::string item_type    = m_heif_file->get_item_type(id);
     std::string content_type = m_heif_file->get_content_type(id);
-
     if (item_type == "Exif" ||
         (item_type=="mime" && content_type=="application/rdf+xml")) {
       std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
@@ -1457,11 +1477,13 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
+  std::vector<uint8_t> color_profile = image->get_color_profile();
+
   encoder->plugin->query_input_colorspace(&colorspace, &chroma);
 
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
-
+    // @TODO: use color profile when converting
     image = image->convert_colorspace(colorspace, chroma);
   }
 
@@ -1469,6 +1491,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width  = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
+  m_heif_context->m_heif_file->copy_color_profile_from(m_id, color_profile);
 
   // --- if there is an alpha channel, add it as an additional image
 
@@ -1500,8 +1523,8 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   }
 
 
-
   m_heif_context->m_heif_file->add_hvcC_property(m_id);
+
 
 
   heif_image c_api_image;
@@ -1543,7 +1566,6 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
       m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
     }
   }
-
 
   return Error::Ok;
 }

@@ -750,6 +750,35 @@ namespace heif {
     std::string m_location;
   };
 
+  class Box_colr : public Box {
+  public:
+  Box_colr() { set_short_type(fourcc("colr")); set_is_full_box(false); }
+  Box_colr(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+    uint32_t get_colour_type(){return m_colour_type;}
+    uint16_t get_colour_primaries(){return m_colour_primaries;}
+    uint16_t get_transfer_characteristics(){return m_transfer_characteristics;}
+    uint16_t get_matrix_coefficients(){return m_matrix_coefficients;}
+    bool get_full_range_flag(){return m_full_range_flag;}
+    size_t get_color_profile_size(){return m_color_profile.size();}
+    std::vector<uint8_t> get_color_profile(){return m_color_profile;}
+
+    void set_colour_type(uint32_t colour_type){m_colour_type = colour_type;};
+    void copy_color_profile_from(const std::vector<uint8_t>& color_profile){m_color_profile = color_profile;};
+
+    Error write(StreamWriter& writer) const override;
+  protected:
+    Error parse(BitstreamRange& range) override;
+  private:
+    uint32_t m_colour_type;
+    uint16_t m_colour_primaries;
+    uint16_t m_transfer_characteristics;
+    uint16_t m_matrix_coefficients;
+    bool m_full_range_flag;
+    std::vector<uint8_t> m_color_profile;
+  };
+
 }
 
 #endif

@@ -94,6 +94,10 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
 
+  void copy_color_profile_from(const std::vector<uint8_t> color_profile){ m_color_profile = color_profile; };
+  
+  std::vector<uint8_t> get_color_profile(){ return m_color_profile; };
+
  private:
   struct ImagePlane {
     int width;
@@ -108,6 +112,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   int m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
+  std::vector<uint8_t> m_color_profile;
 
   std::map<heif_channel, ImagePlane> m_planes;
 

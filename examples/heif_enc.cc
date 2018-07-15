@@ -273,6 +273,16 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
   png_infop info_ptr;
   png_uint_32 width, height;
   int bit_depth, color_type, interlace_type;
+  int compression_type;
+  png_charp name;
+#if (PNG_LIBPNG_VER < 10500)
+  png_charp png_profile_data;
+#else
+  png_bytep png_profile_data;
+#endif
+  uint8_t * profile_data;
+  png_uint_32 profile_length = 5;
+  bool color_profile_valid = false;
 
   /* Create and initialize the png_struct with the desired error handler
    * functions.  If you want to use the default stderr and longjump method,
@@ -316,6 +326,13 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
 
   assert(bit_depth < 16); // , "cannot handle 16 bit images");
 
+  if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
+    if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length)) {
+      color_profile_valid = 1;
+      profile_data = (uint8_t*) malloc(profile_length);
+      memcpy(profile_data, png_profile_data, profile_length);
+    }
+  }
   /**** Set up the data transformations you want.  Note that these are all
    **** optional.  Only call them if you want/need them.  Many of the
    **** transformations only work on specific types of images, and many
@@ -471,6 +488,11 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
         memcpy(p + y*stride, row_pointers[y], width*3);
       }
     }
+  }
+
+  if (color_profile_valid && profile_length > 0){
+    heif_image_set_color_profile(image, profile_data, (size_t) profile_length);
+    free(profile_data);
   }
 
   for (uint32_t y = 0; y < height; y++) {
