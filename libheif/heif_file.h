@@ -120,6 +120,8 @@ namespace heif {
 
     void set_auxC_property(heif_item_id id, std::string type);
 
+    void copy_color_profile_from(heif_item_id id, const std::vector<uint8_t>& color_profile);
+
   private:
 #if ENABLE_PARALLEL_TILE_DECODING
     mutable std::mutex m_read_mutex;

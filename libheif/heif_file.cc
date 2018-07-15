@@ -164,7 +164,15 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   for (;;) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::Ok || range.error() || range.eof()) {
+    if (error != Error::Ok) {
+      return error;
+    }
+
+    if (range.error()) {
+      return range.get_error();
+    }
+
+    if (range.eof()) {
       break;
     }
 
@@ -348,7 +356,6 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   assert(false);
   return heif_chroma_420;
 }
-
 
 
 Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
@@ -608,6 +615,19 @@ void HeifFile::set_auxC_property(heif_item_id id, std::string type)
   auxC->set_aux_type(type);
 
   int index = m_ipco_box->append_child_box(auxC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+}
+
+void HeifFile::copy_color_profile_from(heif_item_id id, const std::vector<uint8_t>& color_profile)
+{
+  if (color_profile.size() <= 0)
+    return;
+  auto colr = std::make_shared<Box_colr>();
+  colr->set_colour_type(fourcc("prof"));
+  colr->copy_color_profile_from(color_profile);
+
+  int index = m_ipco_box->append_child_box(colr);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
 }
