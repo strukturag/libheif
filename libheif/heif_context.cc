@@ -244,7 +244,7 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 
   if (m_version != 0) {
     std::stringstream sstr;
-    sstr << "Overlay image data version " << m_version << " is not implemented yet";
+    sstr << "Overlay image data version " << ((int)m_version) << " is not implemented yet";
 
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
@@ -1219,8 +1219,10 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 
 
   ImageOverlay overlay;
-  overlay.parse(image_references.size(), overlay_data);
-  //std::cout << overlay.dump();
+  Error err = overlay.parse(image_references.size(), overlay_data);
+  if (err) {
+    return err;
+  }
 
   if (image_references.size() != overlay.get_num_offsets()) {
     return Error(heif_error_Invalid_input,
@@ -1253,7 +1255,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   uint16_t bkg_color[4];
   overlay.get_background_color(bkg_color);
 
-  Error err = img->fill_RGB_16bit(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+  err = img->fill_RGB_16bit(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
   if (err) {
     return err;
   }
