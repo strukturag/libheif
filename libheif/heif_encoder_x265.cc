@@ -438,6 +438,7 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   param->rc.rfConstant = (100 - encoder->quality)/2;
   param->bLossless = encoder->lossless;
   param->logLevel = encoder->logLevel;
+  x265_param_parse(param, "range", "full");
 
   char buf[100];
   sprintf(buf, "%d", encoder->tu_intra_depth);
