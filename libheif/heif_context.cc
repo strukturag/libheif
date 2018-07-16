@@ -1031,7 +1031,14 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
       heif_item_id tileID = image_references[reference_idx];
 
-      const std::shared_ptr<Image> tileImg = m_all_images.find(tileID)->second;
+      auto iter = m_all_images.find(tileID);
+      if (iter == m_all_images.end()) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Missing_grid_images,
+                     "Unexisting grid image referenced");
+      }
+
+      const std::shared_ptr<Image> tileImg = iter->second;
       int src_width = tileImg->get_width();
       int src_height = tileImg->get_height();
 
