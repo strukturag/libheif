@@ -183,6 +183,15 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 
     m_size = (high<<32) | low;
     m_header_size += 8;
+
+    std::stringstream sstr;
+    sstr << "Box size " << m_size << " exceeds security limit.";
+
+    if (m_size > MAX_LARGE_BOX_SIZE) {
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
+    }
   }
 
   if (m_type==fourcc("uuid")) {
@@ -342,7 +351,11 @@ Error BoxHeader::parse_full_box_header(BitstreamRange& range)
 Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 {
   BoxHeader hdr;
-  hdr.parse(range);
+  Error err = hdr.parse(range);
+  if (err) {
+    return err;
+  }
+
   if (range.error()) {
     return range.get_error();
   }
@@ -462,6 +475,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
   }
 
 
+  std::cout << "bx: " << hdr.get_box_size() << " hdr: " << hdr.get_header_size() << "\n";
   auto status = range.wait_for_available_bytes( hdr.get_box_size() - hdr.get_header_size() );
   if (status != StreamReader::size_reached) {
     // TODO: return recoverable error at timeout
@@ -494,7 +508,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
                           box_size_without_header,
                           &range);
 
-  Error err = box->parse(boxrange);
+  err = box->parse(boxrange);
   if (err == Error::Ok) {
     *result = std::move(box);
   }

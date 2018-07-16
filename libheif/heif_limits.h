@@ -45,5 +45,6 @@ static const int MAX_IMAGE_HEIGHT = 16384;
 static const int MAX_BOX_NESTING_LEVEL = 20;
 
 static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
+static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 
 #endif  // LIBHEIF_HEIF_LIMITS_H
