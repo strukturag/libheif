@@ -475,7 +475,6 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
   }
 
 
-  std::cout << "bx: " << hdr.get_box_size() << " hdr: " << hdr.get_header_size() << "\n";
   auto status = range.wait_for_available_bytes( hdr.get_box_size() - hdr.get_header_size() );
   if (status != StreamReader::size_reached) {
     // TODO: return recoverable error at timeout
