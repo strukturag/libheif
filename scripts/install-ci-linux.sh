@@ -117,3 +117,7 @@ if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
     mkdir -p $BUILD_ROOT/emscripten
     ./scripts/install-emscripten.sh $EMSCRIPTEN_VERSION $BUILD_ROOT/emscripten
 fi
+
+if [ ! -z "$FUZZER" ]; then
+    ./scripts/install_clang.sh "$(mktemp -d)" "$BUILD_ROOT/clang" "$TRAVIS_OS_NAME"
+fi
