@@ -101,4 +101,9 @@ fi
 if [ ! -z "$FUZZER" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
     ./libheif/file-fuzzer ./fuzzing/corpus/*
+
+    echo "Running encoder fuzzer ..."
+    ./libheif/encoder-fuzzer -max_total_time=120
+    echo "Running file fuzzer ..."
+    ./libheif/file-fuzzer -dict=./fuzzing/dictionary.txt -max_total_time=120
 fi
