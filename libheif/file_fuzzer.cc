@@ -78,6 +78,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
 
   image_IDs = (heif_item_id*)malloc(images_count * sizeof(heif_item_id));
+  assert(image_IDs);
+  images_count = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, images_count);
+  if (!images_count) {
+    // Could not get list of image ids.
+    goto quit;
+  }
 
   for (int i = 0; i < images_count; ++i) {
     err = heif_context_get_image_handle(ctx, image_IDs[i], &handle);
