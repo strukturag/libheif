@@ -4,6 +4,7 @@ SUBDIRS = \
     libheif \
     examples \
     extra \
+    fuzzing \
     gnome \
     go \
     scripts
