@@ -48,6 +48,9 @@ elif [ ! -z "$MINGW64" ]; then
     BIN_SUFFIX=.exe
     BIN_WRAPPER=wine64
     export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/4.8/;/usr/x86_64-w64-mingw32/lib"
+elif [ ! -z "$FUZZER" ]; then
+    export CC="$BUILD_ROOT/clang/bin/clang"
+    export CXX="$BUILD_ROOT/clang/bin/clang++"
 fi
 
 if [ ! -z "$CMAKE" ]; then
@@ -93,4 +96,14 @@ if [ ! -z "$TARBALL" ]; then
     ./configure
     make
     popd
+fi
+
+if [ ! -z "$FUZZER" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
+    export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
+    ./libheif/file-fuzzer ./fuzzing/corpus/*
+
+    echo "Running encoder fuzzer ..."
+    ./libheif/encoder-fuzzer -max_total_time=120
+    echo "Running file fuzzer ..."
+    ./libheif/file-fuzzer -dict=./fuzzing/dictionary.txt -max_total_time=120
 fi
