@@ -119,5 +119,5 @@ if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
 fi
 
 if [ ! -z "$FUZZER" ]; then
-    ./scripts/install_clang.sh "$(mktemp -d)" "$BUILD_ROOT/clang" "$TRAVIS_OS_NAME"
+    ./scripts/install-clang.sh "$BUILD_ROOT/clang"
 fi
