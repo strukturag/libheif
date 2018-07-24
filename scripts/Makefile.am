@@ -2,7 +2,7 @@ EXTRA_DIST = \
     pre-commit.hook \
     check-emscripten-enums.sh \
     check-licenses.sh \
-    install_clang.sh \
+    install-clang.sh \
     install-ci-linux.sh \
     install-ci-osx.sh \
     install-emscripten.sh \
