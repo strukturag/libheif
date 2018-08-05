@@ -586,6 +586,17 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
   return Error::Ok.error_struct(input->image.get());
 }
 
+struct heif_error heif_image_set_color_profile(struct heif_image* image,
+                                               const uint8_t* profile_data,
+                                               const size_t profile_size)
+{
+  std::vector<uint8_t> data;
+  data.insert(data.end(), profile_data, profile_data + profile_size);
+  image->image->copy_color_profile_from(data);
+  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
+  return err;
+}
+
 
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
                                                     const char* type_filter)
@@ -700,6 +711,28 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
   return err.error_struct(handle->image.get());
 }
 
+size_t heif_image_handle_get_color_profile_size(const struct heif_image_handle* handle)
+{
+  return handle->image->get_color_profile().size();
+}
+
+struct heif_error heif_image_handle_get_color_profile(const struct heif_image_handle* handle,
+                                                      void* out_data)
+{
+  if (out_data==nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto color_profile = handle->image->get_color_profile();
+
+  memcpy(out_data,
+         color_profile.data(),
+         color_profile.size());
+
+  return Error::Ok.error_struct(handle->image.get());
+}
 
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)

@@ -520,6 +520,13 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  void* out_data);
 
 
+LIBHEIF_API
+size_t heif_image_handle_get_color_profile_size(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_color_profile(const struct heif_image_handle* handle,
+                                                      void* out_data);
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
@@ -666,6 +673,12 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          struct heif_image** output,
                                          int width, int height,
                                          const struct heif_scaling_options* options);
+
+
+LIBHEIF_API
+struct heif_error heif_image_set_color_profile(struct heif_image* image,
+                                               const uint8_t* profile_data,
+                                               const size_t profile_size);
 
 // Release heif_image.
 LIBHEIF_API
@@ -942,7 +955,7 @@ struct heif_error heif_context_assign_thumbnail(struct heif_context*,
                                                 const struct heif_image_handle* thumbnail_image,
                                                 const struct heif_image_handle* master_image);
 
-// Add EXIF metadata to an image. The raw EXIF metadata shall begin with the TIFF header.
+// Add EXIF metadata to an image.
 LIBHEIF_API
 struct heif_error heif_context_add_exif_metadata(struct heif_context*,
                                                  const struct heif_image_handle* image_handle,
@@ -953,7 +966,6 @@ LIBHEIF_API
 struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
                                                 const struct heif_image_handle* image_handle,
                                                 const void* data, int size);
-
 
 // --- heif_image allocation
 

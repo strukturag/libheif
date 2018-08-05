@@ -152,6 +152,11 @@ namespace heif {
                                  const struct heif_encoding_options* options,
                                  enum heif_image_input_class input_class);
 
+      std::vector<uint8_t> get_color_profile() const { return m_color_profile; }
+
+      void copy_color_profile_from(const std::vector<uint8_t> color_profile){ m_color_profile = color_profile; };
+
+      bool is_grid_item(){ return !m_is_primary && !m_is_primary && !m_is_alpha_channel && !m_is_depth_channel; };
     private:
       HeifContext* m_heif_context;
 
@@ -176,6 +181,8 @@ namespace heif {
       struct heif_depth_representation_info m_depth_representation_info;
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
+
+      std::vector<uint8_t> m_color_profile;
     };
 
 
