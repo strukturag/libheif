@@ -604,6 +604,26 @@ Error HeifContext::interpret_heif_file()
   }
 
 
+  // --- check that HEVC images have an hvcC property
+
+  for (auto& pair : m_all_images) {
+    auto& image = pair.second;
+
+    std::shared_ptr<Box_infe> infe = m_heif_file->get_infe_box(image->get_id());
+    if (infe->get_item_type() == "hvc1") {
+
+      auto ipma = m_heif_file->get_ipma_box();
+      auto ipco = m_heif_file->get_ipco_box();
+
+      if (!ipco->get_property_for_item_ID(image->get_id(), ipma, fourcc("hvcC"))) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_No_hvcC_box,
+                     "No hvcC property in hvc1 type image");
+      }
+    }
+  }
+
+
   // --- read through properties for each image and extract image resolutions
 
   for (auto& pair : m_all_images) {

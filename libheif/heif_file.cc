@@ -417,6 +417,9 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     }
 
     if (!hvcC_box) {
+      // Should always have an hvcC box, because we are checking this in
+      // heif_context::interpret_heif_file()
+      assert(false);
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_hvcC_box);
     } else if (!hvcC_box->get_headers(data)) {
@@ -518,6 +521,9 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>
     return Error::Ok;
   }
   else {
+    // Should always have an hvcC box, because we are checking this in
+    // heif_context::interpret_heif_file()
+    assert(false);
     return Error(heif_error_Usage_error,
                  heif_suberror_No_hvcC_box);
   }
