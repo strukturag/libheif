@@ -178,12 +178,13 @@ namespace heif {
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
     };
 
-
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
+
+    bool is_image(heif_item_id ID) const;
 
     Error decode_image(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                        const struct heif_decoding_options* options = nullptr) const;

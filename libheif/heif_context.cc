@@ -746,6 +746,16 @@ HeifContext::Image::~Image()
 {
 }
 
+bool HeifContext::is_image(heif_item_id ID) const
+{
+  for (const auto& img : m_all_images) {
+    if (img.first == ID)
+      return true;
+  }
+
+  return false;
+}
+
 Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
                                        heif_chroma chroma,
@@ -1005,6 +1015,20 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     return Error(heif_error_Invalid_input,
                  heif_suberror_Missing_grid_images,
                  sstr.str());
+  }
+
+
+  // --- check that all image IDs are valid images
+
+  for (heif_item_id tile_id : image_references) {
+    if (!is_image(tile_id)) {
+      std::stringstream sstr;
+      sstr << "Tile image ID=" << tile_id << " is not a proper image.";
+
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Missing_grid_images,
+                   sstr.str());
+    }
   }
 
 
