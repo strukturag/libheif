@@ -594,11 +594,24 @@ namespace heif {
     Box_iref() { set_short_type(fourcc("iref")); set_is_full_box(true); }
     Box_iref(const BoxHeader& hdr) : Box(hdr) { }
 
+    struct Reference {
+      BoxHeader header;
+
+      heif_item_id from_item_ID;
+      std::vector<heif_item_id> to_item_ID;
+    };
+
+
     std::string dump(Indent&) const override;
 
     bool has_references(heif_item_id itemID) const;
+
+    // DEPRECATED because an itemID can have several references
     uint32_t get_reference_type(heif_item_id itemID) const;
+    // DEPRECATED because an itemID can have several references
     std::vector<heif_item_id> get_references(heif_item_id itemID) const;
+
+    std::vector<Reference> get_references_from(heif_item_id itemID) const;
 
     void add_reference(heif_item_id from_id, uint32_t type, std::vector<heif_item_id> to_ids);
 
@@ -609,13 +622,6 @@ namespace heif {
     void derive_box_version() override;
 
   private:
-    struct Reference {
-      BoxHeader header;
-
-      heif_item_id from_item_ID;
-      std::vector<heif_item_id> to_item_ID;
-    };
-
     std::vector<Reference> m_references;
   };
 

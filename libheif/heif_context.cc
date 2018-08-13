@@ -493,108 +493,112 @@ Error HeifContext::interpret_heif_file()
     for (auto& pair : m_all_images) {
       auto& image = pair.second;
 
-      uint32_t type = iref_box->get_reference_type(image->get_id());
+      std::vector<Box_iref::Reference> references = iref_box->get_references_from(image->get_id());
 
-      if (type==fourcc("thmb")) {
-        // --- this is a thumbnail image, attach to the main image
+      for (const Box_iref::Reference& ref : references) {
+        uint32_t type = ref.header.get_short_type();
 
-        std::vector<heif_item_id> refs = iref_box->get_references(image->get_id());
-        if (refs.size() != 1) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Unspecified,
-                       "Too many thumbnail references");
-        }
+        if (type==fourcc("thmb")) {
+          // --- this is a thumbnail image, attach to the main image
 
-        image->set_is_thumbnail_of(refs[0]);
-
-        auto master_iter = m_all_images.find(refs[0]);
-        if (master_iter == m_all_images.end()) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_item_referenced,
-                       "Thumbnail references a non-existing image");
-        }
-
-        if (master_iter->second->is_thumbnail()) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Nonexisting_item_referenced,
-                       "Thumbnail references another thumbnail");
-        }
-
-        master_iter->second->add_thumbnail(image);
-
-        remove_top_level_image(image);
-      }
-      else if (type==fourcc("auxl")) {
-
-        // --- this is an auxiliary image
-        //     check whether it is an alpha channel and attach to the main image if yes
-
-        std::vector<Box_ipco::Property> properties;
-        Error err = m_heif_file->get_properties(image->get_id(), properties);
-        if (err) {
-          return err;
-        }
-
-        std::shared_ptr<Box_auxC> auxC_property;
-        for (const auto& property : properties) {
-          auto auxC = std::dynamic_pointer_cast<Box_auxC>(property.property);
-          if (auxC) {
-            auxC_property = auxC;
+          std::vector<heif_item_id> refs = ref.to_item_ID;
+          if (refs.size() != 1) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Unspecified,
+                         "Too many thumbnail references");
           }
-        }
 
-        if (!auxC_property) {
-          std::stringstream sstr;
-          sstr << "No auxC property for image " << image->get_id();
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Auxiliary_image_type_unspecified,
-                       sstr.str());
-        }
-
-        std::vector<heif_item_id> refs = iref_box->get_references(image->get_id());
-        if (refs.size() != 1) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Unspecified,
-                       "Too many auxiliary image references");
-        }
-
-
-        // alpha channel
-
-        if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||
-            auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1") {
-          image->set_is_alpha_channel_of(refs[0]);
+          image->set_is_thumbnail_of(refs[0]);
 
           auto master_iter = m_all_images.find(refs[0]);
-          master_iter->second->set_alpha_channel(image);
+          if (master_iter == m_all_images.end()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Thumbnail references a non-existing image");
+          }
+
+          if (master_iter->second->is_thumbnail()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Thumbnail references another thumbnail");
+          }
+
+          master_iter->second->add_thumbnail(image);
+
+          remove_top_level_image(image);
         }
+        else if (type==fourcc("auxl")) {
 
+          // --- this is an auxiliary image
+          //     check whether it is an alpha channel and attach to the main image if yes
 
-        // depth channel
+          std::vector<Box_ipco::Property> properties;
+          Error err = m_heif_file->get_properties(image->get_id(), properties);
+          if (err) {
+            return err;
+          }
 
-        if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2") {
-          image->set_is_depth_channel_of(refs[0]);
-
-          auto master_iter = m_all_images.find(refs[0]);
-          master_iter->second->set_depth_channel(image);
-
-          auto subtypes = auxC_property->get_subtypes();
-
-          std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-          Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
-
-          for (auto& msg : sei_messages) {
-            auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
-            if (depth_msg) {
-              image->set_depth_representation_info(*depth_msg);
+          std::shared_ptr<Box_auxC> auxC_property;
+          for (const auto& property : properties) {
+            auto auxC = std::dynamic_pointer_cast<Box_auxC>(property.property);
+            if (auxC) {
+              auxC_property = auxC;
             }
           }
-        }
 
-        remove_top_level_image(image);
-      }
-      else {
-        // 'image' is a normal image, keep it as a top-level image
+          if (!auxC_property) {
+            std::stringstream sstr;
+            sstr << "No auxC property for image " << image->get_id();
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Auxiliary_image_type_unspecified,
+                         sstr.str());
+          }
+
+          std::vector<heif_item_id> refs = ref.to_item_ID;
+          if (refs.size() != 1) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Unspecified,
+                         "Too many auxiliary image references");
+          }
+
+
+          // alpha channel
+
+          if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||
+              auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1") {
+            image->set_is_alpha_channel_of(refs[0]);
+
+            auto master_iter = m_all_images.find(refs[0]);
+            master_iter->second->set_alpha_channel(image);
+          }
+
+
+          // depth channel
+
+          if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2") {
+            image->set_is_depth_channel_of(refs[0]);
+
+            auto master_iter = m_all_images.find(refs[0]);
+            master_iter->second->set_depth_channel(image);
+
+            auto subtypes = auxC_property->get_subtypes();
+
+            std::vector<std::shared_ptr<SEIMessage>> sei_messages;
+            Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+
+            for (auto& msg : sei_messages) {
+              auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
+              if (depth_msg) {
+                image->set_depth_representation_info(*depth_msg);
+              }
+            }
+          }
+
+          remove_top_level_image(image);
+        }
+        else {
+          // 'image' is a normal image, keep it as a top-level image
+        }
       }
     }
   }
@@ -683,24 +687,26 @@ Error HeifContext::interpret_heif_file()
       // --- assign metadata to the image
 
       if (iref_box) {
-        uint32_t type = iref_box->get_reference_type(id);
-        if (type == fourcc("cdsc")) {
-          std::vector<uint32_t> refs = iref_box->get_references(id);
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Exif data not correctly assigned to image");
-          }
+        std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+        for (const auto& ref : references) {
+          if (ref.header.get_short_type() == fourcc("cdsc")) {
+            std::vector<uint32_t> refs = ref.to_item_ID;
+            if (refs.size() != 1) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Unspecified,
+                           "Exif data not correctly assigned to image");
+            }
 
-          uint32_t exif_image_id = refs[0];
-          auto img_iter = m_all_images.find(exif_image_id);
-          if (img_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Exif data assigned to non-existing image");
-          }
+            uint32_t exif_image_id = refs[0];
+            auto img_iter = m_all_images.find(exif_image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Exif data assigned to non-existing image");
+            }
 
-          img_iter->second->add_metadata(metadata);
+            img_iter->second->add_metadata(metadata);
+          }
         }
       }
     }
