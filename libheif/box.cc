@@ -2140,18 +2140,6 @@ bool Box_iref::has_references(uint32_t itemID) const
 }
 
 
-uint32_t Box_iref::get_reference_type(uint32_t itemID) const
-{
-  for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
-      return ref.header.get_short_type();
-    }
-  }
-
-  return 0;
-}
-
-
 std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id itemID) const
 {
   std::vector<Reference> references;
@@ -2166,10 +2154,11 @@ std::vector<Box_iref::Reference> Box_iref::get_references_from(heif_item_id item
 }
 
 
-std::vector<uint32_t> Box_iref::get_references(uint32_t itemID) const
+std::vector<uint32_t> Box_iref::get_references(uint32_t itemID, uint32_t ref_type) const
 {
   for (const Reference& ref : m_references) {
-    if (ref.from_item_ID == itemID) {
+    if (ref.from_item_ID == itemID &&
+        ref.header.get_short_type() == ref_type) {
       return ref.to_item_ID;
     }
   }

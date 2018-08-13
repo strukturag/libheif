@@ -606,10 +606,7 @@ namespace heif {
 
     bool has_references(heif_item_id itemID) const;
 
-    // DEPRECATED because an itemID can have several references
-    uint32_t get_reference_type(heif_item_id itemID) const;
-    // DEPRECATED because an itemID can have several references
-    std::vector<heif_item_id> get_references(heif_item_id itemID) const;
+    std::vector<heif_item_id> get_references(heif_item_id itemID, uint32_t ref_type) const;
 
     std::vector<Reference> get_references_from(heif_item_id itemID) const;
 
