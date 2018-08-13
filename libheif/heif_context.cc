@@ -974,7 +974,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                  "No iref box available, but needed for grid image");
   }
 
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("grid"));
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
 
   if ((int)image_references.size() != grid.get_rows() * grid.get_columns()) {
     std::stringstream sstr;
@@ -1210,7 +1210,7 @@ Error HeifContext::decode_derived_image(heif_item_id ID,
                  "No iref box available, but needed for iden image");
   }
 
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("iden"));
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
 
   if ((int)image_references.size() != 1) {
     return Error(heif_error_Invalid_input,
@@ -1241,7 +1241,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
                  "No iref box available, but needed for iovl image");
   }
 
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("iovl"));
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
 
   /* TODO: probably, it is valid that an iovl image has no references ?
 
