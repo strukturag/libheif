@@ -91,6 +91,8 @@ namespace heif {
     Error get_properties(heif_item_id imageID,
                          std::vector<Box_ipco::Property>& properties) const;
 
+    heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const;
+
     std::string debug_dump_boxes() const;
 
 

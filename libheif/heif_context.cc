@@ -981,11 +981,31 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                  sstr.str());
   }
 
-  // --- generate image of full output size
 
-  int w = grid.get_width();
-  int h = grid.get_height();
-  int bpp = 8; // TODO: how do we know ?
+  const int w = grid.get_width();
+  const int h = grid.get_height();
+  const int bpp = 8; // TODO: how do we know ?
+
+
+  // --- determine output image chroma size and make sure all tiles have same chroma
+
+  assert(!image_references.empty());
+  heif_item_id some_tile_id = image_references[0];
+  heif_chroma tile_chroma = m_heif_file->get_image_chroma_from_configuration(some_tile_id);
+
+  const int cw = w/chroma_h_subsampling(tile_chroma);
+  const int ch = h/chroma_v_subsampling(tile_chroma);
+
+  for (heif_item_id tile_id : image_references) {
+    if (m_heif_file->get_image_chroma_from_configuration(tile_id) != tile_chroma) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_grid_data,
+                   "Images in grid do not all have the same chroma format.");
+    }
+  }
+
+
+  // --- generate image of full output size
 
   if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
     std::stringstream sstr;
@@ -997,18 +1017,22 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                  sstr.str());
   }
 
+
   img = std::make_shared<HeifPixelImage>();
   img->create(w,h,
               heif_colorspace_YCbCr, // TODO: how do we know ?
-              heif_chroma_420); // TODO: how do we know ?
+              tile_chroma);
 
   img->add_plane(heif_channel_Y,  w,h, bpp);
-  img->add_plane(heif_channel_Cb, w/2,h/2, bpp);
-  img->add_plane(heif_channel_Cr, w/2,h/2, bpp);
+
+  if (tile_chroma != heif_chroma_monochrome) {
+    img->add_plane(heif_channel_Cb, cw,ch, bpp);
+    img->add_plane(heif_channel_Cr, cw,ch, bpp);
+  }
+
 
   int y0=0;
   int reference_idx = 0;
-
 
 #if ENABLE_PARALLEL_TILE_DECODING
   // remember which tile to put where into the image
@@ -1127,7 +1151,10 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   assert(src_width >= 0);
   assert(src_height >= 0);
 
-  for (heif_channel channel : { heif_channel_Y, heif_channel_Cb, heif_channel_Cr }) {
+  heif_chroma chroma = img->get_chroma_format();
+  std::set<enum heif_channel> channels = img->get_channel_set();
+
+  for (heif_channel channel : channels) {
     int tile_stride;
     uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
 
@@ -1145,10 +1172,12 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     int xs=x0, ys=y0;
 
     if (channel != heif_channel_Y) {
-      copy_width /= 2;
-      copy_height /= 2;
-      xs /= 2;
-      ys /= 2;
+      int subH = chroma_h_subsampling(chroma);
+      int subV = chroma_v_subsampling(chroma);
+      copy_width /= subH;
+      copy_height /= subV;
+      xs /= subH;
+      ys /= subV;
     }
 
     for (int py=0;py<copy_height;py++) {

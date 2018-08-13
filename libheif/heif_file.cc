@@ -337,6 +337,19 @@ Error HeifFile::get_properties(heif_item_id imageID,
 }
 
 
+heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) const
+{
+  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
+  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  if (hvcC_box) {
+    return (heif_chroma)(hvcC_box->get_configuration().chroma_format);
+  }
+
+  assert(false);
+  return heif_chroma_420;
+}
+
+
 
 Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {

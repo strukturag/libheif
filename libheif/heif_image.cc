@@ -29,6 +29,45 @@
 using namespace heif;
 
 
+int heif::chroma_h_subsampling(heif_chroma c)
+{
+  switch (c) {
+  case heif_chroma_monochrome:
+  case heif_chroma_444:
+    return 1;
+
+  case heif_chroma_420:
+  case heif_chroma_422:
+    return 2;
+
+  case heif_chroma_interleaved_RGB:
+  case heif_chroma_interleaved_RGBA:
+  default:
+    assert(false);
+    return 0;
+  }
+}
+
+int heif::chroma_v_subsampling(heif_chroma c)
+{
+  switch (c) {
+  case heif_chroma_monochrome:
+  case heif_chroma_444:
+  case heif_chroma_422:
+    return 1;
+
+  case heif_chroma_420:
+    return 2;
+
+  case heif_chroma_interleaved_RGB:
+  case heif_chroma_interleaved_RGBA:
+  default:
+    assert(false);
+    return 0;
+  }
+}
+
+
 HeifPixelImage::HeifPixelImage()
 {
 }
