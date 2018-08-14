@@ -54,7 +54,7 @@ for file in `git diff-index --cached --name-only HEAD --diff-filter=ACMR| grep "
     newfile=`mktemp /tmp/${nf}.XXXXXX` || exit 1
     gofmt ${nf} > "${newfile}" 2>> /dev/null
     set +e
-    diff -u -p "${nf}" "${newfile}"
+    diff -u -p --label "$file" "${nf}" --label "$file (formatted)" "${newfile}"
     r=$?
     set -e
     rm "${newfile}"
