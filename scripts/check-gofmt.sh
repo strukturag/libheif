@@ -20,6 +20,8 @@ set -eufo pipefail
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+realpath() { python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$1"; }
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 
 FILES=$(find "$DIR"/.. -name *.go)
