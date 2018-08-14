@@ -22,9 +22,24 @@ set -eufo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 
-FILES=$(find "$DIR"/.. -name *.go -exec go fmt "{}" \;)
-if [[ -n "$FILES" ]]; then
-	echo "The following Go files are not properly formatted:"
-	echo "$FILES"
+FILES=$(find "$DIR"/.. -name *.go)
+result=0
+for filename in $FILES; do
+	filename=$(realpath "${filename}")
+	newfile=`mktemp /tmp/fmt.XXXXXX` || exit 1
+	gofmt "${filename}" > "${newfile}" 2>> /dev/null
+	set +e
+	diff -u -p "${filename}" --label "${filename}" --label "${filename} (formatted)" "${newfile}"
+	r=$?
+	set -e
+	rm "${newfile}"
+	if [ $r != 0 ] ; then
+		result=1
+	fi
+done
+
+if [ $result != 0 ] ; then
+	echo
+	echo "Please fix the formatting errors above." >& 2
 	exit 1
 fi
