@@ -29,6 +29,9 @@ if [ ! -z "$CPPLINT" ]; then
     echo "Running cpplint ..."
     find -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py
     ./scripts/check-emscripten-enums.sh
+
+    echo "Running gofmt ..."
+    ./scripts/check-gofmt.sh
     exit 0
 fi
 
