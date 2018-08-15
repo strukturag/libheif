@@ -60,6 +60,9 @@ const (
 	Chroma444             = C.heif_chroma_444
 	ChromaInterleavedRGB  = C.heif_chroma_interleaved_RGB
 	ChromaInterleavedRGBA = C.heif_chroma_interleaved_RGBA
+
+	ChromaInterleaved24Bit = C.heif_chroma_interleaved_24bit
+	ChromaInterleaved32Bit = C.heif_chroma_interleaved_32bit
 )
 
 type Colorspace int
@@ -93,9 +96,164 @@ const (
 
 // --- HeifError
 
+type ErrorCode int
+
+const (
+	ErrorOk = C.heif_error_Ok
+
+	// Input file does not exist.
+	ErrorInputDoesNotExist = C.heif_error_Input_does_not_exist
+
+	// Error in input file. Corrupted or invalid content.
+	errorInvalidInput = C.heif_error_Invalid_input
+
+	// Input file type is not supported.
+	ErrorUnsupportedFiletype = C.heif_error_Unsupported_filetype
+
+	// Image requires an unsupported decoder feature.
+	ErrorUnsupportedFeature = C.heif_error_Unsupported_feature
+
+	// Library API has been used in an invalid way.
+	ErrorUsageError = C.heif_error_Usage_error
+
+	// Could not allocate enough memory.
+	ErrorMemoryAllocationError = C.heif_error_Memory_allocation_error
+
+	// The decoder plugin generated an error
+	ErrorDecoderPluginError = C.heif_error_Decoder_plugin_error
+
+	// The decoder plugin generated an error
+	ErrorEncoderPluginError = C.heif_error_Encoder_plugin_error
+
+	// Error during encoding or when writing to the output
+	// ErrorEncodingError = C.heif_error_Encoding_error
+)
+
+type ErrorSubcode int
+
+const (
+	// no further information available
+	SuberrorUnspecified = C.heif_suberror_Unspecified
+
+	// --- Invalid_input ---
+
+	// End of data reached unexpectedly.
+	SuberrorEndOfData = C.heif_suberror_End_of_data
+
+	// Size of box (defined in header) is wrong
+	SuberrorInvalidBoxSize = C.heif_suberror_Invalid_box_size
+
+	// Mandatory 'ftyp' box is missing
+	SuberrorNoFtypBox = C.heif_suberror_No_ftyp_box
+
+	SuberrorNoIdatBox = C.heif_suberror_No_idat_box
+
+	SuberrorNoMetaBox = C.heif_suberror_No_meta_box
+
+	SuberrorNoHdlrBox = C.heif_suberror_No_hdlr_box
+
+	SuberrorNoHvcCBox = C.heif_suberror_No_hvcC_box
+
+	SuberrorNoPitmBox = C.heif_suberror_No_pitm_box
+
+	SuberrorNoIpcoBox = C.heif_suberror_No_ipco_box
+
+	SuberrorNoIpmaBox = C.heif_suberror_No_ipma_box
+
+	SuberrorNoIlocBox = C.heif_suberror_No_iloc_box
+
+	SuberrorNoIinfBox = C.heif_suberror_No_iinf_box
+
+	SuberrorNoIprpBox = C.heif_suberror_No_iprp_box
+
+	SuberrorNoIrefBox = C.heif_suberror_No_iref_box
+
+	SuberrorNoPictHandler = C.heif_suberror_No_pict_handler
+
+	// An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
+	SuberrorIpmaBoxReferencesNonexistingProperty = C.heif_suberror_Ipma_box_references_nonexisting_property
+
+	// No properties have been assigned to an item.
+	SuberrorNoPropertiesAssignedToItem = C.heif_suberror_No_properties_assigned_to_item
+
+	// Image has no (compressed) data
+	SuberrorNoItemData = C.heif_suberror_No_item_data
+
+	// Invalid specification of image grid (tiled image)
+	SuberrorInvalidGridData = C.heif_suberror_Invalid_grid_data
+
+	// Tile-images in a grid image are missing
+	SuberrorMissingGridImages = C.heif_suberror_Missing_grid_images
+
+	SuberrorInvalidCleanAperture = C.heif_suberror_Invalid_clean_aperture
+
+	// Invalid specification of overlay image
+	SuberrorInvalidOverlayData = C.heif_suberror_Invalid_overlay_data
+
+	// Overlay image completely outside of visible canvas area
+	SuberrorOverlayImageOutsideOfCanvas = C.heif_suberror_Overlay_image_outside_of_canvas
+
+	SuberrorAuxiliaryImageTypeUnspecified = C.heif_suberror_Auxiliary_image_type_unspecified
+
+	SuberrorNoOrInvalidPrimaryItem = C.heif_suberror_No_or_invalid_primary_item
+
+	SuberrorNoInfeBox = C.heif_suberror_No_infe_box
+
+	// --- Memory_allocation_error ---
+
+	// A security limit preventing unreasonable memory allocations was exceeded by the input file.
+	// Please check whether the file is valid. If it is, contact us so that we could increase the
+	// security limits further.
+	SuberrorSecurityLimitExceeded = C.heif_suberror_Security_limit_exceeded
+
+	// --- Usage_error ---
+
+	// An item ID was used that is not present in the file.
+	SuberrorNonexistingItemReferenced = C.heif_suberror_Nonexisting_item_referenced // also used for Invalid_input
+
+	// An API argument was given a NULL pointer, which is not allowed for that function.
+	SuberrorNullPointerArgument = C.heif_suberror_Null_pointer_argument
+
+	// Image channel referenced that does not exist in the image
+	SuberrorNonexistingImageChannelReferenced = C.heif_suberror_Nonexisting_image_channel_referenced
+
+	// The version of the passed plugin is not supported.
+	SuberrorUnsupportedPluginVersion = C.heif_suberror_Unsupported_plugin_version
+
+	// The version of the passed writer is not supported.
+	SuberrorUnsupportedWriterVersion = C.heif_suberror_Unsupported_writer_version
+
+	// The given (encoder) parameter name does not exist.
+	SuberrorUnsupportedParameter = C.heif_suberror_Unsupported_parameter
+
+	// The value for the given parameter is not in the valid range.
+	SuberrorInvalidParameterValue = C.heif_suberror_Invalid_parameter_value
+
+	// --- Unsupported_feature ---
+
+	// Image was coded with an unsupported compression method.
+	SuberrorUnsupportedCodec = C.heif_suberror_Unsupported_codec
+
+	// Image is specified in an unknown way, e.g. as tiled grid image (which is supported)
+	SuberrorUnsupportedImageType = C.heif_suberror_Unsupported_image_type
+
+	SuberrorUnsupportedDataVersion = C.heif_suberror_Unsupported_data_version
+
+	// The conversion of the source image to the requested chroma / colorspace is not supported.
+	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion
+
+	SuberrorUnsupportedItemConstructionMethod = C.heif_suberror_Unsupported_item_construction_method
+
+	// --- Encoder_plugin_error ---
+
+	// --- Encoding_error ---
+
+	// SuberrorCannotWriteOutputData = C.heif_suberror_Cannot_write_output_data
+)
+
 type HeifError struct {
-	Code    int
-	Subcode int
+	Code    ErrorCode
+	Subcode ErrorSubcode
 	Message string
 }
 
@@ -108,11 +266,15 @@ func convertHeifError(cerror C.struct_heif_error) error {
 		return nil
 	}
 
-	return &HeifError{
-		Code:    int(cerror.code),
-		Subcode: int(cerror.subcode),
+	err := &HeifError{
+		Code:    ErrorCode(cerror.code),
+		Subcode: ErrorSubcode(cerror.subcode),
 		Message: C.GoString(cerror.message),
 	}
+	if err.Code == ErrorUnsupportedFiletype {
+		fmt.Println("XXX")
+	}
+	return err
 }
 
 func convertItemIds(ids []C.heif_item_id, count int) []int {
