@@ -21,8 +21,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/png"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -33,7 +38,43 @@ import (
 //                      TEST
 // ==================================================
 
-func test_heif(filename string) {
+func save_png(img image.Image, filename string) {
+	var out bytes.Buffer
+	if err := png.Encode(&out, img); err != nil {
+		fmt.Printf("Could not encode image as PNG: %s\n", err)
+	} else {
+		if err := ioutil.WriteFile(filename, out.Bytes(), 0644); err != nil {
+			fmt.Printf("Could not save PNG image as %s: %s\n", filename, err)
+		} else {
+			fmt.Printf("Written to %s\n", filename)
+		}
+	}
+}
+
+func test_heif_highlevel(filename string) {
+	fmt.Printf("Performing highlevel conversion of %s\n", filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("Could not read file %s: %s\n", filename, err)
+		return
+	}
+	defer file.Close()
+
+	img, magic, err := image.Decode(file)
+	if err != nil {
+		fmt.Printf("Could not decode image: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Decoded image of type %s: %s\n", magic, img.Bounds())
+
+	ext := filepath.Ext(filename)
+	out_filename := filename[0:len(filename)-len(ext)] + "_highlevel.png"
+	save_png(img, out_filename)
+}
+
+func test_heif_lowlevel(filename string) {
+	fmt.Printf("Performing lowlevel conversion of %s\n", filename)
 	c, err := heif.NewContext()
 	if err != nil {
 		fmt.Printf("Could not create context: %s\n", err)
@@ -65,14 +106,18 @@ func test_heif(filename string) {
 
 	fmt.Printf("image size: %v %v\n", handle.GetWidth(), handle.GetHeight())
 
-	if image, err := handle.DecodeImage(heif.ColorspaceRGB,
-		heif.Chroma444,
+	if img, err := handle.DecodeImage(heif.ColorspaceUndefined,
+		heif.ChromaUndefined,
 		nil); err != nil {
 		fmt.Printf("Could not decode image: %s\n", err)
-	} else if access, err := image.GetPlane(heif.ChannelR); err != nil {
-		fmt.Printf("Could not get image plane: %s\n", err)
+	} else if i, err := img.GetImage(); err != nil {
+		fmt.Printf("Could not get image: %s\n", err)
 	} else {
-		fmt.Printf("stride: %v\n", access.Stride)
+		fmt.Printf("Rectangle: %v\n", i.Bounds())
+
+		ext := filepath.Ext(filename)
+		out_filename := filename[0:len(filename)-len(ext)] + "_lowlevel.png"
+		save_png(i, out_filename)
 	}
 }
 
@@ -83,7 +128,9 @@ func main() {
 		return
 	}
 
-	test_heif(os.Args[1])
+	test_heif_lowlevel(os.Args[1])
+	fmt.Println()
+	test_heif_highlevel(os.Args[1])
 
 	runtime.GC()
 
