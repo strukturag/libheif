@@ -29,6 +29,10 @@ import "C"
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"io"
+	"io/ioutil"
 	"runtime"
 	"unsafe"
 )
@@ -151,6 +155,12 @@ func (c *Context) ReadFromFile(filename string) error {
 	return convertHeifError(err)
 }
 
+func (c *Context) ReadFromMemory(data []byte) error {
+	// TODO: Use reader API internally.
+	err := C.heif_context_read_from_memory(c.context, unsafe.Pointer(&data[0]), C.size_t(len(data)), nil)
+	return convertHeifError(err)
+}
+
 func (c *Context) GetNumberofTopLevelImages() int {
 	return int(C.heif_context_get_number_of_top_level_images(c.context))
 }
@@ -194,7 +204,10 @@ func free_heif_image_handle(c *ImageHandle) {
 
 func (c *Context) GetPrimaryImageHandle() (*ImageHandle, error) {
 	var handle ImageHandle
-	var err = C.heif_context_get_primary_image_handle(c.context, &handle.handle)
+	err := C.heif_context_get_primary_image_handle(c.context, &handle.handle)
+	if err := convertHeifError(err); err != nil {
+		return nil, err
+	}
 	runtime.SetFinalizer(&handle, free_heif_image_handle)
 	return &handle, convertHeifError(err)
 }
@@ -350,6 +363,82 @@ func (img *Image) GetBitsPerPixel(channel Channel) int {
 	return int(C.heif_image_get_bits_per_pixel(img.image, uint32(channel)))
 }
 
+func (img *Image) GetImage() (image.Image, error) {
+	var i image.Image
+	switch img.GetColorspace() {
+	case ColorspaceYCbCr:
+		var subsample image.YCbCrSubsampleRatio
+		switch img.GetChromaFormat() {
+		case Chroma420:
+			subsample = image.YCbCrSubsampleRatio420
+		case Chroma422:
+			subsample = image.YCbCrSubsampleRatio422
+		case Chroma444:
+			subsample = image.YCbCrSubsampleRatio444
+		default:
+			return nil, fmt.Errorf("Unsupported YCbCr chrome format: %v", img.GetChromaFormat())
+		}
+		y, err := img.GetPlane(ChannelY)
+		if err != nil {
+			return nil, err
+		}
+		cb, err := img.GetPlane(ChannelCb)
+		if err != nil {
+			return nil, err
+		}
+		cr, err := img.GetPlane(ChannelCr)
+		if err != nil {
+			return nil, err
+		}
+		i = &image.YCbCr{
+			Y:              y.Plane,
+			Cb:             cb.Plane,
+			Cr:             cr.Plane,
+			YStride:        y.Stride,
+			CStride:        cb.Stride,
+			SubsampleRatio: subsample,
+			Rect: image.Rectangle{
+				Min: image.Point{
+					X: 0,
+					Y: 0,
+				},
+				Max: image.Point{
+					X: img.GetWidth(ChannelY),
+					Y: img.GetHeight(ChannelY),
+				},
+			},
+		}
+	case ColorspaceRGB:
+		switch img.GetChromaFormat() {
+		case ChromaInterleavedRGBA:
+			rgba, err := img.GetPlane(ChannelInterleaved)
+			if err != nil {
+				return nil, err
+			}
+			i = &image.RGBA{
+				Pix:    rgba.Plane,
+				Stride: rgba.Stride,
+				Rect: image.Rectangle{
+					Min: image.Point{
+						X: 0,
+						Y: 0,
+					},
+					Max: image.Point{
+						X: img.GetWidth(ChannelInterleaved),
+						Y: img.GetHeight(ChannelInterleaved),
+					},
+				},
+			}
+		default:
+			return nil, fmt.Errorf("Unsupported RGB chroma format: %v", img.GetChromaFormat())
+		}
+	default:
+		return nil, fmt.Errorf("Unsupported colorspace: %v", img.GetColorspace())
+	}
+
+	return i, nil
+}
+
 type ImageAccess struct {
 	Plane  []byte
 	Stride int
@@ -386,4 +475,63 @@ func (img *Image) ScaleImage(width int, height int) (*Image, error) {
 
 	runtime.SetFinalizer(&scaled_image, free_heif_image)
 	return &scaled_image, nil
+}
+
+// --- High-level decoding API, always decodes primary image (if present).
+
+func decodePrimaryImageFromReader(r io.Reader) (*ImageHandle, error) {
+	ctx, err := NewContext()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ctx.ReadFromMemory(data); err != nil {
+		return nil, err
+	}
+
+	handle, err := ctx.GetPrimaryImageHandle()
+	if err != nil {
+		return nil, err
+	}
+
+	return handle, nil
+}
+
+func decodeImage(r io.Reader) (image.Image, error) {
+	handle, err := decodePrimaryImageFromReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := handle.DecodeImage(ColorspaceUndefined, ChromaUndefined, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return img.GetImage()
+}
+
+func decodeConfig(r io.Reader) (image.Config, error) {
+	var config image.Config
+	handle, err := decodePrimaryImageFromReader(r)
+	if err != nil {
+		return config, err
+	}
+
+	config = image.Config{
+		ColorModel: color.YCbCrModel,
+		Width:      handle.GetWidth(),
+		Height:     handle.GetHeight(),
+	}
+	return config, nil
+}
+
+func init() {
+	// Assume .heic images always start with "\x00\x00\x00\x1cftyp".
+	image.RegisterFormat("heif", "\x00\x00\x00\x1c\x66\x74\x79\x70", decodeImage, decodeConfig)
 }
