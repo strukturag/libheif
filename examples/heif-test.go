@@ -20,32 +20,28 @@
 
 package main
 
-/*
-#cgo pkg-config: libheif
-#include <stdlib.h>
-#include <libheif/heif.h>
-*/
-import "C"
-
 import (
 	"fmt"
 	"os"
 	"runtime"
 	"time"
-)
 
-import . "heif"
+	"github.com/strukturag/libheif/go/heif"
+)
 
 // ==================================================
 //                      TEST
 // ==================================================
 
 func test_heif(filename string) {
-	var c *HeifContext = NewHeifContext()
+	c, err := heif.NewContext()
+	if err != nil {
+		fmt.Printf("Could not create context: %s\n", err)
+		return
+	}
 
-	var err = c.ReadFromFile(filename)
-	fmt.Printf("%s\n", err.Message)
-	if err.Code != 0 {
+	if err := c.ReadFromFile(filename); err != nil {
+		fmt.Printf("Could not read file %s: %s\n", filename, err)
 		return
 	}
 
@@ -55,27 +51,37 @@ func test_heif(filename string) {
 	var IDs = c.GetListOfTopLevelImageIDs()
 	fmt.Printf("List of top level image IDs %s\n", IDs)
 
-	var pID int
-	pID, err = c.GetPrimaryImageID()
+	if pID, err := c.GetPrimaryImageID(); err != nil {
+		fmt.Printf("Could not get primary image id: %s\n", err)
+	} else {
+		fmt.Printf("Primary image: %v\n", pID)
+	}
 
-	fmt.Printf("Primary image: %v\n", pID)
-
-	var handle *HeifImageHandle
-	handle, _ = c.GetPrimaryImageHandle()
+	handle, err := c.GetPrimaryImageHandle()
+	if err != nil {
+		fmt.Printf("Could not get primary image: %s\n", err)
+		return
+	}
 
 	fmt.Printf("image size: %v %v\n", handle.GetWidth(), handle.GetHeight())
 
-	var image, _ = handle.DecodeImage(C.heif_colorspace_RGB,
-		C.heif_chroma_444,
-		nil)
-
-	var access = image.GetPlane(C.heif_channel_R)
-
-	fmt.Printf("stride: %v\n", access.Stride)
+	if image, err := handle.DecodeImage(heif.ColorspaceRGB,
+		heif.Chroma444,
+		nil); err != nil {
+		fmt.Printf("Could not decode image: %s\n", err)
+	} else if access, err := image.GetPlane(heif.ChannelR); err != nil {
+		fmt.Printf("Could not get image plane: %s\n", err)
+	} else {
+		fmt.Printf("stride: %v\n", access.Stride)
+	}
 }
 
 func main() {
-	fmt.Printf("libheif version: %v\n", HeifGetVersion())
+	fmt.Printf("libheif version: %v\n", heif.GetVersion())
+	if len(os.Args) < 2 {
+		fmt.Printf("USAGE: %s <filename>\n", os.Args[0])
+		return
+	}
 
 	test_heif(os.Args[1])
 

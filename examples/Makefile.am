@@ -73,4 +73,5 @@ test_c_api_SOURCES = test_c_api.c
 
 EXTRA_DIST = \
     demo.html \
-    example.heic
+    example.heic \
+    heif-test.go
