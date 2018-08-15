@@ -93,6 +93,10 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         mkdir -p "$GOPATH/src/github.com/strukturag"
         ln -s "$BUILD_ROOT" "$GOPATH/src/github.com/strukturag/libheif"
         go run examples/heif-test.go examples/example.heic
+        echo "Checking first generated file ..."
+        [ -s "examples/example_lowlevel.png" ] || exit 1
+        echo "Checking second generated file ..."
+        [ -s "examples/example_highlevel.png" ] || exit 1
     fi
 fi
 
