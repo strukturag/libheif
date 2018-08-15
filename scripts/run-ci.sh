@@ -20,6 +20,8 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+BUILD_ROOT=$TRAVIS_BUILD_DIR
+
 if [ ! -z "$CHECK_LICENSES" ]; then
     echo "Checking licenses ..."
     ./scripts/check-licenses.sh
@@ -79,6 +81,18 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         [ -s "example-1.png" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "example-2.png" ] || exit 1
+    fi
+    if [ ! -z "$GO" ]; then
+        echo "Installing library ..."
+        make install
+
+        echo "Running golang example ..."
+        export GOPATH="$BUILD_ROOT/gopath"
+        export PKG_CONFIG_PATH="$BUILD_ROOT/dist/lib/pkgconfig"
+        export LD_LIBRARY_PATH="$BUILD_ROOT/dist/lib"
+        mkdir -p "$GOPATH/src/github.com/strukturag"
+        ln -s "$BUILD_ROOT" "$GOPATH/src/github.com/strukturag/libheif"
+        go run examples/heif-test.go examples/example.heic
     fi
 fi
 

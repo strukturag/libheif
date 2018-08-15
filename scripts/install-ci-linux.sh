@@ -97,6 +97,12 @@ elif [ ! -z "$MINGW64" ]; then
         "
 fi
 
+if [ ! -z "$GO" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        golang \
+        "
+fi
+
 if [ ! -z "$UPDATE_APT" ]; then
     echo "Updating package lists ..."
     sudo apt-get update -qq
