@@ -24,6 +24,8 @@ env:
   - WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
   - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
+  - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
+  - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
   - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
   - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
@@ -49,6 +51,10 @@ matrix:
     - compiler: clang
       env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
     - compiler: clang
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
+    - compiler: clang
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
+    - compiler: clang
       env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
     - compiler: clang
       env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
@@ -62,6 +68,13 @@ matrix:
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
     - compiler: clang
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
+    # Don't build various targets with gcc on Linux.
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
     # Don't build various targets on OSX.
     - os: osx
       env: CHECK_LICENSES=1
@@ -77,6 +90,10 @@ matrix:
       env: WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
     - os: osx
       env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
+    - os: osx
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
+    - os: osx
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
     - os: osx
       env: EMSCRIPTEN_VERSION=1.37.26
     - os: osx

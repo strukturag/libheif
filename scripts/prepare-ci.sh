@@ -35,18 +35,21 @@ fi
 
 if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     ./autogen.sh
+    CONFIGURE_ARGS=
     if [ -z "$CONFIGURE_HOST" ]; then
         if [ ! -z "$FUZZER" ]; then
             export CC="$BUILD_ROOT/clang/bin/clang"
             export CXX="$BUILD_ROOT/clang/bin/clang++"
-            ./configure --enable-libfuzzer
-        else
-            ./configure
+            CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-libfuzzer"
         fi
     else
         # Make sure the correct compiler will be used.
         unset CC
         unset CXX
-        ./configure --host=$CONFIGURE_HOST
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --host=$CONFIGURE_HOST"
     fi
+    if [ ! -z "$GO" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist"
+    fi
+    ./configure $CONFIGURE_ARGS
 fi

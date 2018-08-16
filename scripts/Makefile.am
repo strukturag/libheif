@@ -1,6 +1,7 @@
 EXTRA_DIST = \
     pre-commit.hook \
     check-emscripten-enums.sh \
+    check-go-enums.sh \
     check-gofmt.sh \
     check-licenses.sh \
     install-clang.sh \
