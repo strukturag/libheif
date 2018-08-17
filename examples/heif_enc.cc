@@ -760,6 +760,13 @@ int main(int argc, char** argv)
     }
 
 
+    if (heif_image_get_colorspace(image.get()) == heif_colorspace_RGB &&
+        lossless) {
+      std::cerr << "Warning: input image is in RGB colorspace, but encoding is currently\n"
+                << "  always done in YCbCr colorspace. Hence, even though you specified lossless\n"
+                << "  compression, there will be differences because of the color conversion.\n";
+    }
+
 
     heif_encoder_set_lossy_quality(encoder, quality);
     heif_encoder_set_lossless(encoder, lossless);
