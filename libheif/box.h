@@ -755,6 +755,20 @@ namespace heif {
     std::string m_location;
   };
 
+  class Box_pixi : public Box {
+  public:
+  Box_pixi() { set_short_type(fourcc("pixi")); set_is_full_box(true); }
+  Box_pixi(const BoxHeader& hdr) : Box(hdr) { }
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+  protected:
+    Error parse(BitstreamRange& range) override;
+  private:
+    std::vector<uint8_t> m_bits_per_channel;
+  };
+
   class Box_colr : public Box {
   public:
   Box_colr() { set_short_type(fourcc("colr")); set_is_full_box(false); }

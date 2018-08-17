@@ -455,6 +455,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_colr>(hdr);
     break;
 
+  case fourcc("pixi"):
+    box = std::make_shared<Box_pixi>(hdr);
+    break;
+
   default:
     box = std::make_shared<Box>(hdr);
     break;
@@ -1644,6 +1648,70 @@ Error Box_colr::write(StreamWriter& writer) const
 
   return Error::Ok;
 }
+
+
+
+Error Box_pixi::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  StreamReader::grow_status status;
+  uint8_t num_channels = range.read8();
+  printf("%d\n",num_channels);
+  status = range.wait_for_available_bytes(num_channels);
+  if (status != StreamReader::size_reached) {
+    // TODO: return recoverable error at timeout
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
+
+  m_bits_per_channel.resize(num_channels);
+  for (int i=0;i<num_channels;i++) {
+    m_bits_per_channel[i] = range.read8();
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_pixi::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "bits_per_channel: ";
+
+  for (size_t i=0;i<m_bits_per_channel.size();i++) {
+    if (i>0) sstr << ",";
+    sstr << ((int)m_bits_per_channel[i]);
+  }
+
+  sstr << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_pixi::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_bits_per_channel.size() > 255 ||
+      m_bits_per_channel.empty()) {
+    // TODO: error
+    assert(false);
+  }
+
+  writer.write8((uint8_t)(m_bits_per_channel.size()));
+  for (size_t i=0;i<m_bits_per_channel.size();i++) {
+    writer.write8(m_bits_per_channel[i]);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
 
 Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                                            const std::shared_ptr<class Box_ipma>& ipma,
