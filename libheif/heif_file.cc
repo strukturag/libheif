@@ -164,15 +164,10 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   for (;;) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::Ok) {
-      return error;
-    }
 
-    if (range.error()) {
-      return range.get_error();
-    }
-
-    if (range.eof()) {
+    // When an EOF error is returned, this is not really a fatal exception,
+    // but simply the indication that we reached the end of the file.
+    if (error != Error::Ok || range.error() || range.eof()) {
       break;
     }
 
