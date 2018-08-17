@@ -1610,12 +1610,17 @@ std::string Box_colr::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "colour_type: " << to_fourcc(m_colour_type) << "\n"
-       << indent << "colour_primaries: " << m_colour_primaries << "\n"
-       << indent << "transfer_characteristics: " << m_transfer_characteristics << "\n"
-       << indent << "matrix_coefficients: " << m_matrix_coefficients << "\n"
-       << indent << "full_range_flag: " << m_full_range_flag << "\n"
-       << indent << "profile size: " << m_color_profile.size() << "\n";
+  sstr << indent << "colour_type: " << to_fourcc(m_colour_type) << "\n";
+
+  if (m_colour_type == fourcc("nclx")) {
+    sstr << indent << "colour_primaries: " << m_colour_primaries << "\n"
+         << indent << "transfer_characteristics: " << m_transfer_characteristics << "\n"
+         << indent << "matrix_coefficients: " << m_matrix_coefficients << "\n"
+         << indent << "full_range_flag: " << m_full_range_flag << "\n";
+  }
+  else {
+    sstr << indent << "profile size: " << m_color_profile.size() << "\n";
+  }
 
   return sstr.str();
 }
