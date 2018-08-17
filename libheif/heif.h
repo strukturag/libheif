@@ -180,6 +180,8 @@ enum heif_suberror_code {
 
   heif_suberror_No_infe_box = 125,
 
+  heif_suberror_Unknown_color_profile_type = 126,
+
 
   // --- Memory_allocation_error ---
 

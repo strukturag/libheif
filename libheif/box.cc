@@ -1591,7 +1591,8 @@ Error Box_colr::parse(BitstreamRange& range)
     m_transfer_characteristics = range.read16();
     m_matrix_coefficients = range.read16();
     m_full_range_flag = (range.read8() & 0x80 ? true : false);
-  } else if (m_colour_type == fourcc("prof")) {
+  } else if (m_colour_type == fourcc("prof") ||
+             m_colour_type == fourcc("rICC")) {
     auto profile_size = get_box_size() - get_header_size() - 4;
     status = range.wait_for_available_bytes(profile_size);
     if (status != StreamReader::size_reached) {
@@ -1605,6 +1606,11 @@ Error Box_colr::parse(BitstreamRange& range)
       m_color_profile.at(i) = range.read8();
     }
   }
+  else {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unknown_color_profile_type);
+  }
+
   return range.get_error();
 }
 

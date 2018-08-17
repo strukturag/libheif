@@ -96,6 +96,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Overlay_image_outside_of_canvas: return "Overlay image outside of canvas area";
   case heif_suberror_Auxiliary_image_type_unspecified: return "Type of auxiliary image unspecified";
   case heif_suberror_No_or_invalid_primary_item: return "No or invalid primary item";
+  case heif_suberror_Unknown_color_profile_type: return "Unknown color profile type";
 
     // --- Memory_allocation_error ---
 
