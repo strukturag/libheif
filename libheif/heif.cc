@@ -586,15 +586,29 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
   return Error::Ok.error_struct(input->image.get());
 }
 
-struct heif_error heif_image_set_color_profile(struct heif_image* image,
-                                               const void* profile_data,
-                                               const size_t profile_size)
+struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
+                                                   const char* color_profile_type_fourcc,
+                                                   const void* profile_data,
+                                                   const size_t profile_size)
 {
+  if (strlen(color_profile_type_fourcc) != 4) {
+    heif_error err = { heif_error_Usage_error,
+                       heif_suberror_Unspecified,
+                       "Invalid color_profile_type (must be 4 characters)" };
+    return err;
+  }
+
+  uint32_t color_profile_type = fourcc(color_profile_type_fourcc);
+
   std::vector<uint8_t> data;
   data.insert(data.end(),
               (const uint8_t*)profile_data,
               (const uint8_t*)profile_data + profile_size);
-  image->image->copy_color_profile_from(data);
+
+  auto color_profile = std::make_shared<color_profile_raw>(color_profile_type, data);
+
+  image->image->set_color_profile(color_profile);
+
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
   return err;
 }
@@ -713,13 +727,25 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
   return err.error_struct(handle->image.get());
 }
 
-size_t heif_image_handle_get_color_profile_size(const struct heif_image_handle* handle)
+uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
 {
-  return handle->image->get_color_profile().size();
+  return handle->image->get_color_profile()->get_type();
 }
 
-struct heif_error heif_image_handle_get_color_profile(const struct heif_image_handle* handle,
-                                                      void* out_data)
+size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle)
+{
+  auto profile = handle->image->get_color_profile();
+  auto raw_profile = std::dynamic_pointer_cast<color_profile_raw>(profile);
+  if (raw_profile) {
+    return raw_profile->get_data().size();
+  }
+  else {
+    return 0;
+  }
+}
+
+struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
+                                                          void* out_data)
 {
   if (out_data==nullptr) {
     Error err(heif_error_Usage_error,
@@ -727,11 +753,13 @@ struct heif_error heif_image_handle_get_color_profile(const struct heif_image_ha
     return err.error_struct(handle->image.get());
   }
 
-  auto color_profile = handle->image->get_color_profile();
-
-  memcpy(out_data,
-         color_profile.data(),
-         color_profile.size());
+  auto profile = handle->image->get_color_profile();
+  auto raw_profile = std::dynamic_pointer_cast<color_profile_raw>(profile);
+  if (raw_profile) {
+    memcpy(out_data,
+           raw_profile->get_data().data(),
+           raw_profile->get_data().size());
+  }
 
   return Error::Ok.error_struct(handle->image.get());
 }

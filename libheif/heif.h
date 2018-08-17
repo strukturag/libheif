@@ -523,11 +523,14 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 
 
 LIBHEIF_API
-size_t heif_image_handle_get_color_profile_size(const struct heif_image_handle* handle);
+uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
 
 LIBHEIF_API
-struct heif_error heif_image_handle_get_color_profile(const struct heif_image_handle* handle,
-                                                      void* out_data);
+size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
+                                                          void* out_data);
 
 // ========================= heif_image =========================
 
@@ -678,9 +681,10 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 
 
 LIBHEIF_API
-struct heif_error heif_image_set_color_profile(struct heif_image* image,
-                                               const void* profile_data,
-                                               const size_t profile_size);
+struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
+                                                   const char* profile_type_fourcc_string,
+                                                   const void* profile_data,
+                                                   const size_t profile_size);
 
 // Release heif_image.
 LIBHEIF_API

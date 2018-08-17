@@ -155,10 +155,10 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
     free(exifdata);
   }
 
-  size_t profile_size = heif_image_handle_get_color_profile_size(handle);
+  size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
   if (profile_size > 0){
     uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
-    heif_image_handle_get_color_profile(handle, profile_data);
+    heif_image_handle_get_raw_color_profile(handle, profile_data);
     jpeg_write_icc_profile(&cinfo, profile_data, (unsigned int)profile_size);
     free(profile_data);
   }

@@ -33,6 +33,8 @@
 #include "heif_plugin.h"
 #include "bitstream.h"
 
+#include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
+
 namespace heif {
 class HeifContext;
 }
@@ -152,9 +154,9 @@ namespace heif {
                                  const struct heif_encoding_options* options,
                                  enum heif_image_input_class input_class);
 
-      std::vector<uint8_t> get_color_profile() const { return m_color_profile; }
+      std::shared_ptr<color_profile> get_color_profile() const { return m_color_profile; }
 
-      void copy_color_profile_from(const std::vector<uint8_t> color_profile){ m_color_profile = color_profile; };
+      void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; };
 
       bool is_grid_item(){ return !m_is_primary && !m_is_primary && !m_is_alpha_channel && !m_is_depth_channel; };
     private:
@@ -182,7 +184,7 @@ namespace heif {
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
-      std::vector<uint8_t> m_color_profile;
+      std::shared_ptr<color_profile> m_color_profile;
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }

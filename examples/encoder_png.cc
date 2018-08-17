@@ -79,10 +79,10 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   png_set_IHDR(png_ptr, info_ptr, width, height, bitDepth, colorType,
       PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-  size_t profile_size = heif_image_handle_get_color_profile_size(handle);
+  size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
   if (profile_size > 0){
     uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
-    heif_image_handle_get_color_profile(handle, profile_data);
+    heif_image_handle_get_raw_color_profile(handle, profile_data);
     char profile_name[] = "unknown";
     png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
 #if PNG_LIBPNG_VER <= 10250

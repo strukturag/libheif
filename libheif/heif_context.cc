@@ -683,20 +683,17 @@ Error HeifContext::interpret_heif_file()
       }
 
       auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
-      if (colr && colr->get_color_profile_size() > 0) {
-        auto data = colr->get_color_profile();
+      if (colr) {
+        auto profile = colr->get_color_profile();
 
-        // @TODO: it might be wasteful to assign color profile for each of the
-        // grid items since they probably share it. might be better to use shared
-        // pointer here.
-        image->copy_color_profile_from(data);
+        image->set_color_profile(profile);
 
         // if this is a grid item we assign the first one's color profile
         // to the main image which is supposed to be a grid
         if (primary_is_grid &&
             !primary_colr_set &&
             image->is_grid_item()) {
-          m_primary_image->copy_color_profile_from(data);
+          m_primary_image->set_color_profile(profile);
           primary_colr_set = true;
         }
       }
@@ -1565,7 +1562,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
-  std::vector<uint8_t> color_profile = image->get_color_profile();
+  auto color_profile = image->get_color_profile();
 
   encoder->plugin->query_input_colorspace(&colorspace, &chroma);
 
@@ -1579,7 +1576,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width  = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  m_heif_context->m_heif_file->copy_color_profile_from(m_id, color_profile);
+  m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
 
   // --- if there is an alpha channel, add it as an additional image
 

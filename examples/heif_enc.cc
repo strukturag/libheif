@@ -491,7 +491,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
   }
 
   if (color_profile_valid && profile_length > 0){
-    heif_image_set_color_profile(image, profile_data, (size_t) profile_length);
+    heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
     free(profile_data);
   }
 
