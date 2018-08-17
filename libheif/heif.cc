@@ -587,11 +587,13 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 }
 
 struct heif_error heif_image_set_color_profile(struct heif_image* image,
-                                               const uint8_t* profile_data,
+                                               const void* profile_data,
                                                const size_t profile_size)
 {
   std::vector<uint8_t> data;
-  data.insert(data.end(), profile_data, profile_data + profile_size);
+  data.insert(data.end(),
+              (const uint8_t*)profile_data,
+              (const uint8_t*)profile_data + profile_size);
   image->image->copy_color_profile_from(data);
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
   return err;

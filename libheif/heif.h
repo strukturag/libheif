@@ -677,7 +677,7 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 
 LIBHEIF_API
 struct heif_error heif_image_set_color_profile(struct heif_image* image,
-                                               const uint8_t* profile_data,
+                                               const void* profile_data,
                                                const size_t profile_size);
 
 // Release heif_image.
