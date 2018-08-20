@@ -28,8 +28,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
-	"time"
 
 	"github.com/strukturag/libheif/go/heif"
 )
@@ -131,9 +129,5 @@ func main() {
 	testHeifLowlevel(filename)
 	fmt.Println()
 	testHeifHighlevel(filename)
-
-	runtime.GC()
-
-	time.Sleep(time.Second)
-	fmt.Println("done.")
+	fmt.Println("Done.")
 }

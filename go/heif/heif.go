@@ -268,15 +268,11 @@ func convertHeifError(cerror C.struct_heif_error) error {
 		return nil
 	}
 
-	err := &HeifError{
+	return &HeifError{
 		Code:    ErrorCode(cerror.code),
 		Subcode: ErrorSubcode(cerror.subcode),
 		Message: C.GoString(cerror.message),
 	}
-	if err.Code == ErrorUnsupportedFiletype {
-		fmt.Println("XXX")
-	}
-	return err
 }
 
 func convertItemIDs(ids []C.heif_item_id, count int) []int {
