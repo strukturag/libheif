@@ -85,10 +85,10 @@ func testHeifLowlevel(filename string) {
 	}
 
 	nImages := c.GetNumberOfTopLevelImages()
-	fmt.Printf("GetNumberOfTopLevelImages: %v\n", nImages)
+	fmt.Printf("Number of top level images: %v\n", nImages)
 
 	ids := c.GetListOfTopLevelImageIDs()
-	fmt.Printf("List of top level image IDs %s\n", ids)
+	fmt.Printf("List of top level image IDs: %#v\n", ids)
 
 	if pID, err := c.GetPrimaryImageID(); err != nil {
 		fmt.Printf("Could not get primary image id: %s\n", err)
@@ -102,7 +102,7 @@ func testHeifLowlevel(filename string) {
 		return
 	}
 
-	fmt.Printf("image size: %v %v\n", handle.GetWidth(), handle.GetHeight())
+	fmt.Printf("Image size: %v × %v\n", handle.GetWidth(), handle.GetHeight())
 
 	img, err := handle.DecodeImage(heif.ColorspaceUndefined, heif.ChromaUndefined, nil)
 	if err != nil {
