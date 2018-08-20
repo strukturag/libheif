@@ -38,7 +38,7 @@ import (
 //                      TEST
 // ==================================================
 
-func save_png(img image.Image, filename string) {
+func savePNG(img image.Image, filename string) {
 	var out bytes.Buffer
 	if err := png.Encode(&out, img); err != nil {
 		fmt.Printf("Could not encode image as PNG: %s\n", err)
@@ -51,7 +51,7 @@ func save_png(img image.Image, filename string) {
 	}
 }
 
-func test_heif_highlevel(filename string) {
+func testHeifHighlevel(filename string) {
 	fmt.Printf("Performing highlevel conversion of %s\n", filename)
 	file, err := os.Open(filename)
 	if err != nil {
@@ -69,11 +69,11 @@ func test_heif_highlevel(filename string) {
 	fmt.Printf("Decoded image of type %s: %s\n", magic, img.Bounds())
 
 	ext := filepath.Ext(filename)
-	out_filename := filename[0:len(filename)-len(ext)] + "_highlevel.png"
-	save_png(img, out_filename)
+	outFilename := filename[0:len(filename)-len(ext)] + "_highlevel.png"
+	savePNG(img, outFilename)
 }
 
-func test_heif_lowlevel(filename string) {
+func testHeifLowlevel(filename string) {
 	fmt.Printf("Performing lowlevel conversion of %s\n", filename)
 	c, err := heif.NewContext()
 	if err != nil {
@@ -86,11 +86,11 @@ func test_heif_lowlevel(filename string) {
 		return
 	}
 
-	var nImages = c.GetNumberofTopLevelImages()
-	fmt.Printf("GetNumberofTopLevelImages: %v\n", nImages)
+	nImages := c.GetNumberOfTopLevelImages()
+	fmt.Printf("GetNumberOfTopLevelImages: %v\n", nImages)
 
-	var IDs = c.GetListOfTopLevelImageIDs()
-	fmt.Printf("List of top level image IDs %s\n", IDs)
+	ids := c.GetListOfTopLevelImageIDs()
+	fmt.Printf("List of top level image IDs %s\n", ids)
 
 	if pID, err := c.GetPrimaryImageID(); err != nil {
 		fmt.Printf("Could not get primary image id: %s\n", err)
@@ -106,9 +106,8 @@ func test_heif_lowlevel(filename string) {
 
 	fmt.Printf("image size: %v %v\n", handle.GetWidth(), handle.GetHeight())
 
-	if img, err := handle.DecodeImage(heif.ColorspaceUndefined,
-		heif.ChromaUndefined,
-		nil); err != nil {
+	img, err := handle.DecodeImage(heif.ColorspaceUndefined, heif.ChromaUndefined, nil)
+	if err != nil {
 		fmt.Printf("Could not decode image: %s\n", err)
 	} else if i, err := img.GetImage(); err != nil {
 		fmt.Printf("Could not get image: %s\n", err)
@@ -116,8 +115,8 @@ func test_heif_lowlevel(filename string) {
 		fmt.Printf("Rectangle: %v\n", i.Bounds())
 
 		ext := filepath.Ext(filename)
-		out_filename := filename[0:len(filename)-len(ext)] + "_lowlevel.png"
-		save_png(i, out_filename)
+		outFilename := filename[0:len(filename)-len(ext)] + "_lowlevel.png"
+		savePNG(i, outFilename)
 	}
 }
 
@@ -128,9 +127,10 @@ func main() {
 		return
 	}
 
-	test_heif_lowlevel(os.Args[1])
+	filename := os.Args[1]
+	testHeifLowlevel(filename)
 	fmt.Println()
-	test_heif_highlevel(os.Args[1])
+	testHeifHighlevel(filename)
 
 	runtime.GC()
 
