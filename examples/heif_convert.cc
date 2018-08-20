@@ -88,22 +88,30 @@ int main(int argc, char** argv)
   std::ifstream istr(input_filename.c_str());
 
   std::unique_ptr<Encoder> encoder;
-#if HAVE_LIBJPEG
   if (output_filename.size() > 4 &&
       output_filename.find(".jpg") == output_filename.size() - 4) {
+#if HAVE_LIBJPEG
     static const int kDefaultJpegQuality = 90;
     if (quality == -1) {
       quality = kDefaultJpegQuality;
     }
     encoder.reset(new JpegEncoder(quality));
-  }
+#else
+    fprintf(stderr, "JPEG support has not been compiled in.\n");
+    return 1;
 #endif  // HAVE_LIBJPEG
-#if HAVE_LIBPNG
+  }
+
   if (output_filename.size() > 4 &&
       output_filename.find(".png") == output_filename.size() - 4) {
+#if HAVE_LIBPNG
     encoder.reset(new PngEncoder());
-  }
+#else
+    fprintf(stderr, "PNG support has not been compiled in.\n");
+    return 1;
 #endif  // HAVE_LIBPNG
+  }
+
   if (!encoder) {
     fprintf(stderr, "Unknown file type in %s\n", output_filename.c_str());
     return 1;
