@@ -1576,7 +1576,9 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width  = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
+  if (color_profile) {
+    m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
+  }
 
   // --- if there is an alpha channel, add it as an additional image
 
