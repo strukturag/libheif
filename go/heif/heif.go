@@ -114,19 +114,19 @@ const (
 	ErrorUnsupportedFeature = C.heif_error_Unsupported_feature
 
 	// Library API has been used in an invalid way.
-	ErrorUsageError = C.heif_error_Usage_error
+	ErrorUsage = C.heif_error_Usage_error
 
 	// Could not allocate enough memory.
-	ErrorMemoryAllocationError = C.heif_error_Memory_allocation_error
+	ErrorMemoryAllocation = C.heif_error_Memory_allocation_error
 
 	// The decoder plugin generated an error
-	ErrorDecoderPluginError = C.heif_error_Decoder_plugin_error
+	ErrorDecoderPlugin = C.heif_error_Decoder_plugin_error
 
 	// The decoder plugin generated an error
-	ErrorEncoderPluginError = C.heif_error_Encoder_plugin_error
+	ErrorEncoderPlugin = C.heif_error_Encoder_plugin_error
 
 	// Error during encoding or when writing to the output
-	// ErrorEncodingError = C.heif_error_Encoding_error
+	// ErrorEncoding = C.heif_error_Encoding_error
 )
 
 type ErrorSubcode int
