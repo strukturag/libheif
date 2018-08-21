@@ -321,7 +321,12 @@ func (c *Context) ReadFromFile(filename string) error {
 
 func (c *Context) ReadFromMemory(data []byte) error {
 	// TODO: Use reader API internally.
-	err := C.heif_context_read_from_memory(c.context, unsafe.Pointer(&data[0]), C.size_t(len(data)), nil)
+	cData := C.CBytes(data)
+	runtime.SetFinalizer(&cData, func(p *unsafe.Pointer) {
+		C.free(*p)
+		runtime.SetFinalizer(cData, nil)
+	})
+	err := C.heif_context_read_from_memory_without_copy(c.context, cData, C.size_t(len(data)), nil)
 	return convertHeifError(err)
 }
 
