@@ -199,7 +199,7 @@ const (
 
 	SuberrorNoInfeBox = C.heif_suberror_No_infe_box
 
-        SuberrorUnknownColorProfileType = C.heif_suberror_Unknown_color_profile_type
+	SuberrorUnknownColorProfileType = C.heif_suberror_Unknown_color_profile_type
 
 	// --- Memory_allocation_error ---
 
