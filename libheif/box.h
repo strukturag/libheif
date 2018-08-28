@@ -816,11 +816,16 @@ namespace heif {
     uint16_t get_matrix_coefficients(){return m_matrix_coefficients;}
     bool get_full_range_flag(){return m_full_range_flag;}
 
+    void set_colour_primaries(uint16_t primaries) { m_colour_primaries = primaries; }
+    void set_transfer_characteristics(uint16_t characteristics) { m_transfer_characteristics = characteristics; }
+    void set_matrix_coefficients(uint16_t coefficients) { m_matrix_coefficients = coefficients; }
+    void set_full_range_flag(bool full_range) { m_full_range_flag=full_range; }
+
   private:
-    uint16_t m_colour_primaries;
-    uint16_t m_transfer_characteristics;
-    uint16_t m_matrix_coefficients;
-    bool m_full_range_flag;
+    uint16_t m_colour_primaries = 0;
+    uint16_t m_transfer_characteristics = 0;
+    uint16_t m_matrix_coefficients = 0;
+    bool m_full_range_flag = true;
   };
 
 

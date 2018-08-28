@@ -744,6 +744,10 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
                                                    const void* profile_data,
                                                    const size_t profile_size);
 
+LIBHEIF_API
+struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
+                                                    const struct heif_color_profile_nclx* color_profile);
+
 // Release heif_image.
 LIBHEIF_API
 void heif_image_release(const struct heif_image*);

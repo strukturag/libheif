@@ -614,6 +614,22 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
 }
 
 
+struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
+                                                    const struct heif_color_profile_nclx* color_profile)
+{
+  auto nclx = std::make_shared<color_profile_nclx>();
+
+  nclx->set_colour_primaries(color_profile->color_primaries);
+  nclx->set_transfer_characteristics(color_profile->transfer_characteristics);
+  nclx->set_matrix_coefficients(color_profile->matrix_coefficients);
+  nclx->set_full_range_flag(color_profile->full_range_flag);
+
+  image->image->set_color_profile(nclx);
+
+  return error_Ok;
+}
+
+
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
                                                     const char* type_filter)
 {
