@@ -532,6 +532,63 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
                                                           void* out_data);
 
+
+enum heif_color_primaries {
+  heif_color_primaries_ITU_R_BT_709_5 = 1, // g=0.3;0.6, b=0.15;0.06, r=0.64;0.33, w=0.3127,0.3290
+  heif_color_primaries_unspecified = 2,
+  heif_color_primaries_ITU_R_BT_470_6_System_M = 4,
+  heif_color_primaries_ITU_R_BT_470_6_System_B_G = 5,
+  heif_color_primaries_ITU_R_BT_601_6 = 6,
+  heif_color_primaries_SMPTE_240M = 7
+};
+
+enum heif_transfer_characteristics {
+  heif_transfer_characteristic_ITU_R_BT_709_5 = 1,
+  heif_transfer_characteristic_unspecified = 2,
+  heif_transfer_characteristic_ITU_R_BT_470_6_System_M = 4,
+  heif_transfer_characteristic_ITU_R_BT_470_6_System_B_G = 5,
+  heif_transfer_characteristic_ITU_R_BT_601_6 = 6,
+  heif_transfer_characteristic_SMPTE_240M = 7,
+  heif_transfer_characteristic_linear = 8,
+  heif_transfer_characteristic_IEC_61966_2_4 = 11,
+  heif_transfer_characteristic_ITU_R_BT_1361 = 12,
+  heif_transfer_characteristic_IEC_61966_2_1 = 13
+};
+
+enum heif_matrix_coefficients {
+  heif_matrix_coefficients_RGB_GBR = 0,
+  heif_matrix_coefficients_ITU_R_BT_709_5 = 1,
+  heif_matrix_coefficients_unspecified = 2,
+  heif_matrix_coefficients_US_FCC_T47 = 4,
+  heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G = 5,
+  heif_matrix_coefficients_ITU_R_BT_601_6 = 6,
+  heif_matrix_coefficients_SMPTE_240M = 7,
+  heif_matrix_coefficients_YCgCo = 8
+};
+
+struct heif_color_profile_nclx {
+  // version 1 fields
+
+  uint8_t version;
+
+  enum heif_color_primaries color_primaries;
+  enum heif_transfer_characteristics transfer_characteristics;
+  enum heif_matrix_coefficients matrix_coefficients;
+  uint8_t full_range_flag;
+
+  // --- decoded values
+
+  float color_primary_red_x, color_primary_red_y;
+  float color_primary_green_x, color_primary_green_y;
+  float color_primary_blue_x, color_primary_blue_y;
+  float color_primary_white_x, color_primary_white_y;
+};
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
+                                                           struct heif_color_profile_nclx** out_data);
+
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,

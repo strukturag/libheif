@@ -744,6 +744,70 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
   }
 }
 
+static struct color_primaries_table_entry {
+  int id;
+  float gx,gy, bx,by, rx,ry, wx,wy;
+} color_primaries_table[] = {
+  { 0,  0.000f,0.000f,  0.000f,0.000f,  0.000f,0.000f,  0.0000f,0.0000f },
+  { 1,  0.300f,0.600f,  0.150f,0.060f,  0.640f,0.330f,  0.3127f,0.3290f },
+  { 4,  0.210f,0.710f,  0.140f,0.080f,  0.670f,0.330f,  0.3100f,0.3160f },
+  { 5,  0.290f,0.600f,  0.150f,0.060f,  0.640f,0.330f,  0.3127f,0.3290f },
+  { 6,  0.310f,0.595f,  0.155f,0.070f,  0.630f,0.340f,  0.3127f,0.3290f },
+  { 7,  0.310f,0.595f,  0.155f,0.707f,  0.630f,0.340f,  0.3127f,0.3290f },
+  { -1 }
+};
+
+struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
+                                                           struct heif_color_profile_nclx** out_data)
+{
+  auto profile = handle->image->get_color_profile();
+  auto nclx_profile = std::dynamic_pointer_cast<color_profile_nclx>(profile);
+  if (nclx_profile) {
+    if (out_data==NULL) {
+      Error err(heif_error_Usage_error,
+                heif_suberror_Null_pointer_argument);
+    }
+
+    *out_data = (struct heif_color_profile_nclx*)malloc(sizeof(struct heif_color_profile_nclx));
+
+    struct heif_color_profile_nclx* nclx = *out_data;
+
+    nclx->version = 1;
+    nclx->color_primaries = (enum heif_color_primaries)nclx_profile->get_colour_primaries();
+    nclx->transfer_characteristics = (enum heif_transfer_characteristics)nclx_profile->get_transfer_characteristics();
+    nclx->matrix_coefficients = (enum heif_matrix_coefficients)nclx_profile->get_matrix_coefficients();
+    nclx->full_range_flag = nclx_profile->get_full_range_flag();
+
+    // fill color primaries
+
+    int tableIdx = 0;
+    for (int i=0; color_primaries_table[i].id >= 0; i++) {
+      const auto& c = color_primaries_table[i];
+      if (c.id == (*out_data)->color_primaries) {
+        tableIdx = i;
+        break;
+      }
+    }
+
+    const auto& c = color_primaries_table[tableIdx];
+    nclx->color_primary_red_x = c.rx;
+    nclx->color_primary_red_y = c.ry;
+    nclx->color_primary_green_x = c.gx;
+    nclx->color_primary_green_y = c.gy;
+    nclx->color_primary_blue_x = c.bx;
+    nclx->color_primary_blue_y = c.by;
+    nclx->color_primary_white_x = c.wx;
+    nclx->color_primary_white_y = c.wy;
+
+    return error_Ok;
+  }
+  else {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Unspecified);
+    return err.error_struct(handle->image.get());
+  }
+}
+
 struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
                                                           void* out_data)
 {
