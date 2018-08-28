@@ -33,11 +33,12 @@ extern "C" {
 
 // API versions table
 //
-// release    depth.rep   dec.options   enc.options   heif_reader   heif_writer
-// ------------------------------------------------------------------------------
-//  1.0          1             1           N/A           N/A           N/A
-//  1.1          1             1           N/A           N/A            1
-//  1.3          1             1            1             1             1
+// release    depth.rep   dec.options   enc.options   heif_reader   heif_writer  col.profile
+// -----------------------------------------------------------------------------------------
+//  1.0          1             1           N/A           N/A           N/A          N/A
+//  1.1          1             1           N/A           N/A            1           N/A
+//  1.3          1             1            1             1             1           N/A
+//  1.4          1             1            1             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -576,7 +577,7 @@ struct heif_color_profile_nclx {
   enum heif_matrix_coefficients matrix_coefficients;
   uint8_t full_range_flag;
 
-  // --- decoded values
+  // --- decoded values (not used when saving nclx)
 
   float color_primary_red_x, color_primary_red_y;
   float color_primary_green_x, color_primary_green_y;
