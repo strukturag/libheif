@@ -57,8 +57,13 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 Error HeifFile::read_from_file(const char* input_filename)
 {
   auto input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(input_filename, std::ios_base::binary));
-  auto input_stream = std::make_shared<StreamReader_istream>(std::move(input_stream_istr));
+  if (!input_stream_istr->good()) {
+    std::stringstream sstr;
+    sstr << "Error opening file: " << strerror(errno) << " (" << errno << ")\n";
+    return Error(heif_error_Input_does_not_exist, heif_suberror_Unspecified, sstr.str());
+  }
 
+  auto input_stream = std::make_shared<StreamReader_istream>(std::move(input_stream_istr));
   return read(input_stream);
 }
 
