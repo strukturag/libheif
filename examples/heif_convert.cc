@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 
   std::string input_filename(argv[optind++]);
   std::string output_filename(argv[optind++]);
-  std::ifstream istr(input_filename.c_str());
+  std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
 
   std::unique_ptr<Encoder> encoder;
   if (output_filename.size() > 4 &&

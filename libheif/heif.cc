@@ -908,7 +908,7 @@ static struct heif_error heif_file_writer_write(struct heif_context* ctx,
     const void* data, size_t size, void* userdata) {
   const char* filename = static_cast<const char*>(userdata);
 
-  std::ofstream ostr(filename);
+  std::ofstream ostr(filename, std::ios_base::binary);
   ostr.write(static_cast<const char*>(data), size);
   // TODO: handle write errors
   return Error::Ok.error_struct(ctx->context.get());
