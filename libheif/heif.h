@@ -57,6 +57,9 @@ extern "C" {
   #define LIBHEIF_API
 #endif
 
+#define heif_fourcc(a,b,c,d) ((a<<24) | (b<<16) | (c<<8) | d)
+
+
 /* === version numbers === */
 
 // Version string of linked libheif library.
@@ -522,10 +525,17 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  heif_item_id metadata_id,
                                                  void* out_data);
 
+enum heif_color_profile_type {
+  heif_color_profile_type_not_present = 0,
+  heif_color_profile_type_nclx = heif_fourcc('n','c','l','x'),
+  heif_color_profile_type_rICC = heif_fourcc('r','I','C','C'),
+  heif_color_profile_type_prof = heif_fourcc('p','r','o','f')
+};
+
 
 // Returns 0 if there is no color profile.
 LIBHEIF_API
-uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
+enum heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
 
 LIBHEIF_API
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle);

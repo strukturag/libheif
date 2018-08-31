@@ -743,14 +743,14 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
   return err.error_struct(handle->image.get());
 }
 
-uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
+heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
 {
   auto profile = handle->image->get_color_profile();
   if (!profile) {
-    return 0;
+    return heif_color_profile_type_not_present;
   }
   else {
-    return profile->get_type();
+    return (heif_color_profile_type)profile->get_type();
   }
 }
 
