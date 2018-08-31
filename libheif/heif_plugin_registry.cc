@@ -36,32 +36,24 @@
 #include "heif_encoder_x265.h"
 #endif
 
-
 using namespace heif;
-
 
 std::set<const struct heif_decoder_plugin*> heif::s_decoder_plugins;
 
-
-
-
-struct encoder_descriptor_priority_order
-{
-  bool operator() (const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                   const std::unique_ptr<struct heif_encoder_descriptor>& b) const {
+struct encoder_descriptor_priority_order {
+  bool operator()(
+      const std::unique_ptr<struct heif_encoder_descriptor>& a,
+      const std::unique_ptr<struct heif_encoder_descriptor>& b) const {
     return a->plugin->priority > b->plugin->priority;  // highest priority first
   }
 };
 
-
 std::set<std::unique_ptr<struct heif_encoder_descriptor>,
-         encoder_descriptor_priority_order> s_encoder_descriptors;
+         encoder_descriptor_priority_order>
+    s_encoder_descriptors;
 
-
-
-static class Register_Default_Plugins
-{
-public:
+static class Register_Default_Plugins {
+ public:
   Register_Default_Plugins() {
 #if HAVE_LIBDE265
     heif::register_decoder(get_decoder_plugin_libde265());
@@ -73,9 +65,7 @@ public:
   }
 } dummy;
 
-
-void heif::register_decoder(const heif_decoder_plugin* decoder_plugin)
-{
+void heif::register_decoder(const heif_decoder_plugin* decoder_plugin) {
   if (decoder_plugin->init_plugin) {
     (*decoder_plugin->init_plugin)();
   }
@@ -83,9 +73,8 @@ void heif::register_decoder(const heif_decoder_plugin* decoder_plugin)
   s_decoder_plugins.insert(decoder_plugin);
 }
 
-
-const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format type)
-{
+const struct heif_decoder_plugin* heif::get_decoder(
+    enum heif_compression_format type) {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
 
@@ -100,49 +89,47 @@ const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format
   return best_plugin;
 }
 
-void heif::register_encoder(const heif_encoder_plugin* encoder_plugin)
-{
+void heif::register_encoder(const heif_encoder_plugin* encoder_plugin) {
   if (encoder_plugin->init_plugin) {
     (*encoder_plugin->init_plugin)();
   }
 
-  auto descriptor = std::unique_ptr<struct heif_encoder_descriptor>(new heif_encoder_descriptor);
+  auto descriptor = std::unique_ptr<struct heif_encoder_descriptor>(
+      new heif_encoder_descriptor);
   descriptor->plugin = encoder_plugin;
 
   s_encoder_descriptors.insert(std::move(descriptor));
 }
 
-
-const struct heif_encoder_plugin* heif::get_encoder(enum heif_compression_format type)
-{
-  auto filtered_encoder_descriptors = get_filtered_encoder_descriptors(type, nullptr);
-  if (filtered_encoder_descriptors.size()>0) {
+const struct heif_encoder_plugin* heif::get_encoder(
+    enum heif_compression_format type) {
+  auto filtered_encoder_descriptors =
+      get_filtered_encoder_descriptors(type, nullptr);
+  if (filtered_encoder_descriptors.size() > 0) {
     return filtered_encoder_descriptors[0]->plugin;
-  }
-  else {
+  } else {
     return nullptr;
   }
 }
 
-
-std::vector<const struct heif_encoder_descriptor*>
-heif::get_filtered_encoder_descriptors(enum heif_compression_format format,
-                                       const char* name)
-{
+std::vector<const struct heif_encoder_descriptor*> heif::
+    get_filtered_encoder_descriptors(enum heif_compression_format format,
+                                     const char* name) {
   std::vector<const struct heif_encoder_descriptor*> filtered_descriptors;
 
   for (const auto& descr : s_encoder_descriptors) {
     const struct heif_encoder_plugin* plugin = descr->plugin;
 
-    if (plugin->compression_format == format || format==heif_compression_undefined) {
-      if (name == nullptr || strcmp(name, plugin->id_name)==0) {
+    if (plugin->compression_format == format ||
+        format == heif_compression_undefined) {
+      if (name == nullptr || strcmp(name, plugin->id_name) == 0) {
         filtered_descriptors.push_back(descr.get());
       }
     }
   }
 
-
-  // Note: since our std::set<> is ordered by priority, we do not have to sort our output
+  // Note: since our std::set<> is ordered by priority, we do not have to sort
+  // our output
 
   return filtered_descriptors;
 }

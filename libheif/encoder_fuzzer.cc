@@ -37,7 +37,9 @@ static void generate_plane(int width, int height, uint8_t* output, int stride) {
   }
 }
 
-static size_t create_image(const uint8_t* data, size_t size, struct heif_image** image) {
+static size_t create_image(const uint8_t* data,
+                           size_t size,
+                           struct heif_image** image) {
   if (size < 2) {
     return 0;
   }
@@ -50,7 +52,8 @@ static size_t create_image(const uint8_t* data, size_t size, struct heif_image**
   heif_colorspace colorspace = heif_colorspace_YCbCr;
   heif_chroma chroma = heif_chroma_420;
 
-  struct heif_error err = heif_image_create(width, height, colorspace, chroma, image);
+  struct heif_error err =
+      heif_image_create(width, height, colorspace, chroma, image);
   if (err.code != heif_error_Ok) {
     return 0;
   }
@@ -80,9 +83,7 @@ static size_t create_image(const uint8_t* data, size_t size, struct heif_image**
 class MemoryWriter {
  public:
   MemoryWriter() : data_(nullptr), size_(0), capacity_(0) {}
-  ~MemoryWriter() {
-    free(data_);
-  }
+  ~MemoryWriter() { free(data_); }
 
   const uint8_t* data() const { return data_; }
   size_t size() const { return size_; }
@@ -109,26 +110,33 @@ class MemoryWriter {
   size_t capacity_;
 };
 
-static struct heif_error writer_write(struct heif_context* ctx, const void* data, size_t size, void* userdata) {
+static struct heif_error writer_write(struct heif_context* ctx,
+                                      const void* data,
+                                      size_t size,
+                                      void* userdata) {
   MemoryWriter* writer = static_cast<MemoryWriter*>(userdata);
   writer->write(data, size);
-  struct heif_error err{heif_error_Ok, heif_suberror_Unspecified, nullptr};
+  struct heif_error err {
+    heif_error_Ok, heif_suberror_Unspecified, nullptr
+  };
   return err;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   struct heif_error err;
-  std::shared_ptr<heif_context> context(heif_context_alloc(),
-                                        [] (heif_context* c) { heif_context_free(c); });
+  std::shared_ptr<heif_context> context(
+      heif_context_alloc(), [](heif_context* c) { heif_context_free(c); });
   assert(context);
   static const size_t kMaxEncoders = 5;
   const heif_encoder_descriptor* encoder_descriptors[kMaxEncoders];
-  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_HEVC, nullptr,
-                                                   encoder_descriptors, kMaxEncoders);
+  int count = heif_context_get_encoder_descriptors(
+      context.get(), heif_compression_HEVC, nullptr, encoder_descriptors,
+      kMaxEncoders);
   assert(count > 0);
 
   heif_encoder* encoder;
-  err = heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
+  err =
+      heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
   if (err.code != heif_error_Ok) {
     return 0;
   }
@@ -137,7 +145,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     heif_encoder_release(encoder);
     return 0;
   }
-  int quality = data[0] % 101;;
+  int quality = data[0] % 101;
+  ;
   int lossless = (data[1] > 0x80);
   data += 2;
   size -= 2;

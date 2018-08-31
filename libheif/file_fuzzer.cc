@@ -27,7 +27,7 @@ static const enum heif_colorspace kFuzzColorSpace = heif_colorspace_YCbCr;
 static const enum heif_chroma kFuzzChroma = heif_chroma_420;
 
 static void TestDecodeImage(struct heif_context* ctx,
-    const struct heif_image_handle* handle) {
+                            const struct heif_image_handle* handle) {
   struct heif_image* image;
   struct heif_error err;
 
@@ -36,7 +36,8 @@ static void TestDecodeImage(struct heif_context* ctx,
   int height = heif_image_handle_get_height(handle);
   assert(width >= 0);
   assert(height >= 0);
-  err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma, nullptr);
+  err =
+      heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma, nullptr);
   if (err.code != heif_error_Ok) {
     return;
   }
@@ -79,7 +80,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   image_IDs = (heif_item_id*)malloc(images_count * sizeof(heif_item_id));
   assert(image_IDs);
-  images_count = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, images_count);
+  images_count = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs,
+                                                              images_count);
   if (!images_count) {
     // Could not get list of image ids.
     goto quit;

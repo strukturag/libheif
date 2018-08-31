@@ -31,31 +31,28 @@
 #include "box.h"
 #include "error.h"
 
-
 namespace heif {
 
-class SEIMessage
-{
-public:
-  virtual ~SEIMessage() { }
+class SEIMessage {
+ public:
+  virtual ~SEIMessage() {}
 };
 
-
-class SEIMessage_depth_representation_info : public SEIMessage,
-                                             public heif_depth_representation_info
-{
-public:
+class SEIMessage_depth_representation_info
+    : public SEIMessage,
+      public heif_depth_representation_info {
+ public:
 };
 
+Error decode_hevc_aux_sei_messages(
+    const std::vector<uint8_t>& data,
+    std::vector<std::shared_ptr<SEIMessage>>& msgs);
 
-Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
-                                   std::vector<std::shared_ptr<SEIMessage>>& msgs);
-
-
-Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
+Error parse_sps_for_hvcC_configuration(const uint8_t* sps,
+                                       size_t size,
                                        Box_hvcC::configuration* inout_config,
-                                       int* width, int* height);
-
+                                       int* width,
+                                       int* height);
 }
 
 #endif

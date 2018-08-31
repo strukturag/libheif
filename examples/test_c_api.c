@@ -18,12 +18,10 @@
  * along with heif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "libheif/heif.h"
 #include "libheif/heif_version.h"
 #include "libheif/heif_plugin.h"
 
-int main()
-{
+int main() {
   return 0;
 }

@@ -37,7 +37,6 @@
 #include <getopt.h>
 #include <assert.h>
 
-
 /*
   image: 20005 (1920x1080), primary
     thumbnail: 20010 (320x240)
@@ -54,38 +53,39 @@ info -d // dump
  */
 
 static struct option long_options[] = {
-  //{"write-raw", required_argument, 0, 'w' },
-  //{"output",    required_argument, 0, 'o' },
-  {"dump-boxes", no_argument,      0, 'd' },
-  {"help",       no_argument,      0, 'h' },
-  {0,         0,                 0,  0 }
-};
+    //{"write-raw", required_argument, 0, 'w' },
+    //{"output",    required_argument, 0, 'o' },
+    {"dump-boxes", no_argument, 0, 'd'},
+    {"help", no_argument, 0, 'h'},
+    {0, 0, 0, 0}};
 
 const char* fourcc_to_string(uint32_t fourcc) {
   static char fcc[5];
-  fcc[0] = (char)((fourcc>>24) & 0xFF);
-  fcc[1] = (char)((fourcc>>16) & 0xFF);
-  fcc[2] = (char)((fourcc>> 8) & 0xFF);
-  fcc[3] = (char)((fourcc>> 0) & 0xFF);
+  fcc[0] = (char)((fourcc >> 24) & 0xFF);
+  fcc[1] = (char)((fourcc >> 16) & 0xFF);
+  fcc[2] = (char)((fourcc >> 8) & 0xFF);
+  fcc[3] = (char)((fourcc >> 0) & 0xFF);
   fcc[4] = 0;
   return fcc;
 }
 
-void show_help(const char* argv0)
-{
-    fprintf(stderr," heif-info  libheif version: %s\n",heif_get_version());
-    fprintf(stderr,"------------------------------------\n");
-    fprintf(stderr,"usage: heif-info [options] image.heic\n");
-    fprintf(stderr,"\n");
-    fprintf(stderr,"options:\n");
-    //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
-    //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
-    fprintf(stderr,"  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
-    fprintf(stderr,"  -h, --help           show help\n");
+void show_help(const char* argv0) {
+  fprintf(stderr, " heif-info  libheif version: %s\n", heif_get_version());
+  fprintf(stderr, "------------------------------------\n");
+  fprintf(stderr, "usage: heif-info [options] image.heic\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "options:\n");
+  // fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image
+  // 'ID'\n");
+  // fprintf(stderr,"  -o, --output NAME    output file name for image selected
+  // by -w\n");
+  fprintf(
+      stderr,
+      "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
+  fprintf(stderr, "  -h, --help           show help\n");
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   bool dump_boxes = false;
 
   bool write_raw_image = false;
@@ -115,11 +115,10 @@ int main(int argc, char** argv)
     }
   }
 
-  if (optind != argc-1) {
+  if (optind != argc - 1) {
     show_help(argv[0]);
     return 0;
   }
-
 
   (void)raw_image_id;
   (void)write_raw_image;
@@ -128,8 +127,8 @@ int main(int argc, char** argv)
 
   // ==============================================================================
 
-  std::shared_ptr<heif_context> ctx(heif_context_alloc(),
-                                    [] (heif_context* c) { heif_context_free(c); });
+  std::shared_ptr<heif_context> ctx(
+      heif_context_alloc(), [](heif_context* c) { heif_context_free(c); });
   if (!ctx) {
     fprintf(stderr, "Could not create HEIF context\n");
     return 1;
@@ -139,7 +138,8 @@ int main(int argc, char** argv)
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
   if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+    heif_context_debug_dump_boxes_to_file(ctx.get(),
+                                          STDOUT_FILENO);  // dump to stdout
     return 0;
   }
 
@@ -148,17 +148,16 @@ int main(int argc, char** argv)
     return 1;
   }
 
-
   // ==============================================================================
 
-
   int numImages = heif_context_get_number_of_top_level_images(ctx.get());
-  heif_item_id* IDs = (heif_item_id*)alloca(numImages*sizeof(heif_item_id));
+  heif_item_id* IDs = (heif_item_id*)alloca(numImages * sizeof(heif_item_id));
   heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs, numImages);
 
-  for (int i=0;i<numImages;i++) {
+  for (int i = 0; i < numImages; i++) {
     struct heif_image_handle* handle;
-    struct heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
+    struct heif_error err =
+        heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
     if (err.code) {
       std::cerr << err.message << "\n";
       return 10;
@@ -169,19 +168,22 @@ int main(int argc, char** argv)
 
     int primary = heif_image_handle_is_primary_image(handle);
 
-    printf("image: %dx%d (id=%d)%s\n",width,height,IDs[i], primary ? ", primary" : "");
-
+    printf("image: %dx%d (id=%d)%s\n", width, height, IDs[i],
+           primary ? ", primary" : "");
 
     // --- thumbnails
 
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
-    heif_item_id* thumbnailIDs = (heif_item_id*)alloca(nThumbnails*sizeof(heif_item_id));
+    heif_item_id* thumbnailIDs =
+        (heif_item_id*)alloca(nThumbnails * sizeof(heif_item_id));
 
     heif_image_handle* thumbnail_handle;
-    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle,thumbnailIDs, nThumbnails);
+    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(
+        handle, thumbnailIDs, nThumbnails);
 
-    for (int thumbnailIdx=0 ; thumbnailIdx<nThumbnails ; thumbnailIdx++) {
-      err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx], &thumbnail_handle);
+    for (int thumbnailIdx = 0; thumbnailIdx < nThumbnails; thumbnailIdx++) {
+      err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx],
+                                            &thumbnail_handle);
       if (err.code) {
         std::cerr << err.message << "\n";
         return 10;
@@ -190,65 +192,91 @@ int main(int argc, char** argv)
       int th_width = heif_image_handle_get_width(thumbnail_handle);
       int th_height = heif_image_handle_get_height(thumbnail_handle);
 
-      printf("  thumbnail: %dx%d\n",th_width,th_height);
+      printf("  thumbnail: %dx%d\n", th_width, th_height);
 
       heif_image_handle_release(thumbnail_handle);
     }
 
-
     // --- color profile
 
     uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
-    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType) : "no");
-
+    printf("  color profile: %s\n",
+           profileType ? fourcc_to_string(profileType) : "no");
 
     // --- depth information
 
     bool has_depth = heif_image_handle_has_depth_image(handle);
 
-    printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
-    printf("  depth channel: %s", has_depth ? "yes":"no\n");
+    printf("  alpha channel: %s\n",
+           heif_image_handle_has_alpha_channel(handle) ? "yes" : "no");
+    printf("  depth channel: %s", has_depth ? "yes" : "no\n");
 
     heif_item_id depth_id;
-    int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
-    if (has_depth) { assert(nDepthImages==1); }
-    else { assert(nDepthImages==0); }
+    int nDepthImages =
+        heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+    if (has_depth) {
+      assert(nDepthImages == 1);
+    } else {
+      assert(nDepthImages == 0);
+    }
 
     if (has_depth) {
       struct heif_image_handle* depth_handle;
-      err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
+      err = heif_image_handle_get_depth_image_handle(handle, depth_id,
+                                                     &depth_handle);
       if (err.code) {
-        fprintf(stderr,"cannot get depth image: %s\n",err.message);
+        fprintf(stderr, "cannot get depth image: %s\n", err.message);
         return 1;
       }
 
-      printf(" (%dx%d)\n",
-             heif_image_handle_get_width(depth_handle),
+      printf(" (%dx%d)\n", heif_image_handle_get_width(depth_handle),
              heif_image_handle_get_height(depth_handle));
 
       const struct heif_depth_representation_info* depth_info;
-      if (heif_image_handle_get_depth_image_representation_info(depth_handle, depth_id, &depth_info)) {
-
+      if (heif_image_handle_get_depth_image_representation_info(
+              depth_handle, depth_id, &depth_info)) {
         printf("    z-near: ");
-        if (depth_info->has_z_near) printf("%f\n",depth_info->z_near); else printf("undefined\n");
+        if (depth_info->has_z_near)
+          printf("%f\n", depth_info->z_near);
+        else
+          printf("undefined\n");
         printf("    z-far:  ");
-        if (depth_info->has_z_far) printf("%f\n",depth_info->z_far); else printf("undefined\n");
+        if (depth_info->has_z_far)
+          printf("%f\n", depth_info->z_far);
+        else
+          printf("undefined\n");
         printf("    d-min:  ");
-        if (depth_info->has_d_min) printf("%f\n",depth_info->d_min); else printf("undefined\n");
+        if (depth_info->has_d_min)
+          printf("%f\n", depth_info->d_min);
+        else
+          printf("undefined\n");
         printf("    d-max:  ");
-        if (depth_info->has_d_max) printf("%f\n",depth_info->d_max); else printf("undefined\n");
+        if (depth_info->has_d_max)
+          printf("%f\n", depth_info->d_max);
+        else
+          printf("undefined\n");
 
         printf("    representation: ");
         switch (depth_info->depth_representation_type) {
-        case heif_depth_representation_type_uniform_inverse_Z: printf("inverse Z\n"); break;
-        case heif_depth_representation_type_uniform_disparity: printf("uniform disparity\n"); break;
-        case heif_depth_representation_type_uniform_Z: printf("uniform Z\n"); break;
-        case heif_depth_representation_type_nonuniform_disparity: printf("non-uniform disparity\n"); break;
-        default: printf("unknown\n");
+        case heif_depth_representation_type_uniform_inverse_Z:
+          printf("inverse Z\n");
+          break;
+        case heif_depth_representation_type_uniform_disparity:
+          printf("uniform disparity\n");
+          break;
+        case heif_depth_representation_type_uniform_Z:
+          printf("uniform Z\n");
+          break;
+        case heif_depth_representation_type_nonuniform_disparity:
+          printf("non-uniform disparity\n");
+          break;
+        default:
+          printf("unknown\n");
         }
 
         if (depth_info->has_d_min || depth_info->has_d_max) {
-          printf("    disparity_reference_view: %d\n", depth_info->disparity_reference_view);
+          printf("    disparity_reference_view: %d\n",
+                 depth_info->disparity_reference_view);
         }
 
         heif_depth_representation_info_free(depth_info);

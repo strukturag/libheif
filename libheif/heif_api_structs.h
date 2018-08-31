@@ -26,27 +26,20 @@
 
 #include <memory>
 
-struct heif_image_handle
-{
+struct heif_image_handle {
   std::shared_ptr<heif::HeifContext::Image> image;
-  //std::shared_ptr<heif::HeifContext> context;
+  // std::shared_ptr<heif::HeifContext> context;
 };
 
-
-struct heif_image
-{
+struct heif_image {
   std::shared_ptr<heif::HeifPixelImage> image;
 };
 
-
-struct heif_context
-{
+struct heif_context {
   std::shared_ptr<heif::HeifContext> context;
 };
 
-
-struct heif_encoder
-{
+struct heif_encoder {
   heif_encoder(std::shared_ptr<heif::HeifContext> context,
                const struct heif_encoder_plugin* plugin);
   ~heif_encoder();
@@ -54,11 +47,9 @@ struct heif_encoder
   struct heif_error alloc();
   void release();
 
-
-  //std::shared_ptr<heif::HeifContext> context;
+  // std::shared_ptr<heif::HeifContext> context;
   const struct heif_encoder_plugin* plugin;
   void* encoder = nullptr;
 };
-
 
 #endif
