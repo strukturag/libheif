@@ -71,6 +71,12 @@ test_c_api_LDFLAGS =
 test_c_api_LDADD = ../libheif/libheif.la
 test_c_api_SOURCES = test_c_api.c
 
+CLANG_FORMAT := clang-format
+
+format-local:
+	$(CLANG_FORMAT) --style=file -i \
+		$(wildcard *.c *.cc *.h)
+
 EXTRA_DIST = \
     demo.html \
     example.heic \

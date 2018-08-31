@@ -137,6 +137,7 @@ AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([---------------------------------------])
 
+AM_EXTRA_RECURSIVE_TARGETS([format])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
 AC_CONFIG_FILES([extra/Makefile])
