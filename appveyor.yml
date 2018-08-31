@@ -1,6 +1,6 @@
 # stats available at
 # https://ci.appveyor.com/project/strukturag/libheif
-version: #{build}
+version: 1.0.{build}
 
 os:
   - Windows Server 2012 R2
