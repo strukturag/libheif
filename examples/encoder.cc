@@ -37,18 +37,18 @@ static const char kMetadataTypeExif[] = "Exif";
 
 // static
 bool Encoder::HasExifMetaData(const struct heif_image_handle* handle) {
-
   heif_item_id metadata_id;
-  int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
-                                                               &metadata_id, 1);
+  int count = heif_image_handle_get_list_of_metadata_block_IDs(
+      handle, kMetadataTypeExif, &metadata_id, 1);
   return count > 0;
 }
 
 // static
-uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t* size) {
+uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle,
+                                  size_t* size) {
   heif_item_id metadata_id;
-  int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
-                                                               &metadata_id, 1);
+  int count = heif_image_handle_get_list_of_metadata_block_IDs(
+      handle, kMetadataTypeExif, &metadata_id, 1);
 
   for (int i = 0; i < count; i++) {
     size_t datasize = heif_image_handle_get_metadata_size(handle, metadata_id);
@@ -57,7 +57,8 @@ uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t
       continue;
     }
 
-    heif_error error = heif_image_handle_get_metadata(handle, metadata_id, data);
+    heif_error error =
+        heif_image_handle_get_metadata(handle, metadata_id, data);
     if (error.code != heif_error_Ok) {
       free(data);
       continue;

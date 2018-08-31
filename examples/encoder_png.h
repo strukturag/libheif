@@ -40,7 +40,8 @@ class PngEncoder : public Encoder {
   }
 
   bool Encode(const struct heif_image_handle* handle,
-      const struct heif_image* image, const std::string& filename) override;
+              const struct heif_image* image,
+              const std::string& filename) override;
 
  private:
 };

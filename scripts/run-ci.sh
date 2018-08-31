@@ -22,20 +22,62 @@ set -e
 
 BUILD_ROOT=$TRAVIS_BUILD_DIR
 
+# Check if clang-format is available.
+set +e
+CLANG_FORMAT=$(which clang-format)
+set -e
+if [ ! -z "${CLANG_FORMAT}" ]; then
+    # A version of the depot_tools could be in the path, check if "clang-format"
+    # is actually working.
+    set +e
+    version=$("${CLANG_FORMAT}" --version 2>/dev/null)
+    set -e
+    if [ -z "${version}" ]; then
+        # No, use clang-format from the system and assume the version from Trusty.
+        set +e
+        CLANG_FORMAT=$(which clang-format-3.9)
+        set -e
+    fi
+else
+    set +e
+    CLANG_FORMAT=$(which clang-format-3.9)
+    set -e
+fi
+
 if [ ! -z "$CHECK_LICENSES" ]; then
     echo "Checking licenses ..."
     ./scripts/check-licenses.sh
 fi
 
 if [ ! -z "$CPPLINT" ]; then
+    status=0
     echo "Running cpplint ..."
     find -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py
+
+    if [ ! -z "${CLANG_FORMAT}" ]; then
+        echo "Checking formatting with ${CLANG_FORMAT} ..."
+        FILES=$(find -name "*.cc" -o -name "*.h" | sort)
+        for filename in $FILES; do
+            set +e
+            FORMATTED=$("${CLANG_FORMAT}" --style=file "${filename}")
+            DIFF=$(diff -u -p --label "$filename" "$filename" --label "${filename} (formatted)" <(echo "${FORMATTED}"))
+            set -e
+            if [ ! -z "${DIFF}" ]; then
+                echo "${DIFF}"
+                status=1
+            fi
+        done
+    else
+        echo "Could not find clang-format, skip "
+    fi
+
+    echo "Check for missing enums ..."
     ./scripts/check-emscripten-enums.sh
     ./scripts/check-go-enums.sh
 
     echo "Running gofmt ..."
     ./scripts/check-gofmt.sh
-    exit 0
+    exit $status
 fi
 
 BIN_SUFFIX=

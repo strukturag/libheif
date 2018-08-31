@@ -55,19 +55,17 @@ static int usage(const char* command) {
 class ContextReleaser {
  public:
   ContextReleaser(struct heif_context* ctx) : ctx_(ctx) {}
-  ~ContextReleaser() {
-    heif_context_free(ctx_);
-  }
+  ~ContextReleaser() { heif_context_free(ctx_); }
 
  private:
   struct heif_context* ctx_;
 };
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   int opt;
   int quality = -1;  // Use default quality.
-  UNUSED(quality);  // The quality will only be used by encoders that support it.
+  UNUSED(
+      quality);  // The quality will only be used by encoders that support it.
   while ((opt = getopt(argc, argv, "q:")) != -1) {
     switch (opt) {
     case 'q':
@@ -139,16 +137,16 @@ int main(int argc, char** argv)
 
   printf("File contains %d images\n", num_images);
 
-  heif_item_id* image_IDs = (heif_item_id*)alloca(num_images * sizeof(heif_item_id));
-  num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, num_images);
-
+  heif_item_id* image_IDs =
+      (heif_item_id*)alloca(num_images * sizeof(heif_item_id));
+  num_images =
+      heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, num_images);
 
   std::string filename;
   size_t image_index = 1;  // Image filenames are "1" based.
 
   for (int idx = 0; idx < num_images; ++idx) {
-
-    if (num_images>1) {
+    if (num_images > 1) {
       std::ostringstream s;
       s << output_filename.substr(0, output_filename.find('.'));
       s << "-" << image_index;
@@ -161,47 +159,46 @@ int main(int argc, char** argv)
     struct heif_image_handle* handle;
     err = heif_context_get_image_handle(ctx, image_IDs[idx], &handle);
     if (err.code) {
-      std::cerr << "Could not read HEIF image " << idx << ": "
-          << err.message << "\n";
+      std::cerr << "Could not read HEIF image " << idx << ": " << err.message
+                << "\n";
       return 1;
     }
 
     int has_alpha = heif_image_handle_has_alpha_channel(handle);
-    struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
+    struct heif_decoding_options* decode_options =
+        heif_decoding_options_alloc();
     encoder->UpdateDecodingOptions(handle, decode_options);
 
     struct heif_image* image;
-    err = heif_decode_image(handle,
-                            &image,
-                            encoder->colorspace(has_alpha),
-                            encoder->chroma(has_alpha),
-                            decode_options);
+    err = heif_decode_image(handle, &image, encoder->colorspace(has_alpha),
+                            encoder->chroma(has_alpha), decode_options);
     heif_decoding_options_free(decode_options);
     if (err.code) {
       heif_image_handle_release(handle);
-      std::cerr << "Could not decode HEIF image: " << idx << ": "
-          << err.message << "\n";
+      std::cerr << "Could not decode HEIF image: " << idx << ": " << err.message
+                << "\n";
       return 1;
     }
 
     if (image) {
       bool written = encoder->Encode(handle, image, filename.c_str());
       if (!written) {
-        fprintf(stderr,"could not write image\n");
+        fprintf(stderr, "could not write image\n");
       } else {
         printf("Written to %s\n", filename.c_str());
       }
       heif_image_release(image);
 
-
       int has_depth = heif_image_handle_has_depth_image(handle);
       if (has_depth) {
         heif_item_id depth_id;
-        int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
-        assert(nDepthImages==1);
+        int nDepthImages =
+            heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+        assert(nDepthImages == 1);
 
         struct heif_image_handle* depth_handle;
-        err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
+        err = heif_image_handle_get_depth_image_handle(handle, depth_id,
+                                                       &depth_handle);
         if (err.code) {
           heif_image_handle_release(handle);
           std::cerr << "Could not read depth channel\n";
@@ -209,11 +206,9 @@ int main(int argc, char** argv)
         }
 
         struct heif_image* depth_image;
-        err = heif_decode_image(depth_handle,
-                                &depth_image,
+        err = heif_decode_image(depth_handle, &depth_image,
                                 encoder->colorspace(false),
-                                encoder->chroma(false),
-                                nullptr);
+                                encoder->chroma(false), nullptr);
         if (err.code) {
           heif_image_handle_release(depth_handle);
           heif_image_handle_release(handle);
@@ -228,7 +223,7 @@ int main(int argc, char** argv)
 
         written = encoder->Encode(depth_handle, depth_image, s.str());
         if (!written) {
-          fprintf(stderr,"could not write depth image\n");
+          fprintf(stderr, "could not write depth image\n");
         } else {
           printf("Depth image written to %s\n", s.str().c_str());
         }

@@ -38,22 +38,22 @@ class JpegEncoder : public Encoder {
     return heif_colorspace_YCbCr;
   }
 
-  heif_chroma chroma(bool has_alpha) const override {
-    return heif_chroma_420;
-  }
+  heif_chroma chroma(bool has_alpha) const override { return heif_chroma_420; }
 
-  void UpdateDecodingOptions(const struct heif_image_handle* handle,
-      struct heif_decoding_options *options) const override;
+  void UpdateDecodingOptions(
+      const struct heif_image_handle* handle,
+      struct heif_decoding_options* options) const override;
 
   bool Encode(const struct heif_image_handle* handle,
-      const struct heif_image* image, const std::string& filename) override;
+              const struct heif_image* image,
+              const std::string& filename) override;
 
  private:
   static const int kDefaultQuality = 90;
 
   struct ErrorHandler {
-    struct jpeg_error_mgr pub;  /* "public" fields */
-    jmp_buf setjmp_buffer;  /* for return to caller */
+    struct jpeg_error_mgr pub; /* "public" fields */
+    jmp_buf setjmp_buffer;     /* for return to caller */
   };
 
   static void OnJpegError(j_common_ptr cinfo);

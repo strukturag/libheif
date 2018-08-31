@@ -26,119 +26,154 @@
 const char heif::Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";
 
-
 heif::Error::Error()
-  : error_code(heif_error_Ok),
-    sub_error_code(heif_suberror_Unspecified)
-{
-}
+    : error_code(heif_error_Ok), sub_error_code(heif_suberror_Unspecified) {}
 
+heif::Error::Error(heif_error_code c, heif_suberror_code sc, std::string msg)
+    : error_code(c), sub_error_code(sc), message(msg) {}
 
-heif::Error::Error(heif_error_code c,
-                   heif_suberror_code sc,
-                   std::string msg)
-  : error_code(c),
-    sub_error_code(sc),
-    message(msg)
-{
-}
-
-
-const char* heif::Error::get_error_string(heif_error_code err)
-{
+const char* heif::Error::get_error_string(heif_error_code err) {
   switch (err) {
-  case heif_error_Ok: return "Success";
-  case heif_error_Input_does_not_exist: return "Input file does not exist";
-  case heif_error_Invalid_input: return "Invalid input";
-  case heif_error_Unsupported_filetype: return "Unsupported file-type";
-  case heif_error_Unsupported_feature: return "Unsupported feature";
-  case heif_error_Usage_error: return "Usage error";
-  case heif_error_Memory_allocation_error: return "Memory allocation error";
-  case heif_error_Decoder_plugin_error: return "Decoder plugin generated an error";
-  case heif_error_Encoder_plugin_error: return "Encoder plugin generated an error";
-  case heif_error_Encoding_error: return "Error during encoding or writing output file";
+  case heif_error_Ok:
+    return "Success";
+  case heif_error_Input_does_not_exist:
+    return "Input file does not exist";
+  case heif_error_Invalid_input:
+    return "Invalid input";
+  case heif_error_Unsupported_filetype:
+    return "Unsupported file-type";
+  case heif_error_Unsupported_feature:
+    return "Unsupported feature";
+  case heif_error_Usage_error:
+    return "Usage error";
+  case heif_error_Memory_allocation_error:
+    return "Memory allocation error";
+  case heif_error_Decoder_plugin_error:
+    return "Decoder plugin generated an error";
+  case heif_error_Encoder_plugin_error:
+    return "Encoder plugin generated an error";
+  case heif_error_Encoding_error:
+    return "Error during encoding or writing output file";
   }
 
   assert(false);
   return "Unknown error";
 }
 
-const char* heif::Error::get_error_string(heif_suberror_code err)
-{
+const char* heif::Error::get_error_string(heif_suberror_code err) {
   switch (err) {
-  case heif_suberror_Unspecified: return "Unspecified";
+  case heif_suberror_Unspecified:
+    return "Unspecified";
 
-    // --- Invalid_input ---
+  // --- Invalid_input ---
 
-  case heif_suberror_End_of_data: return "Unexpected end of file";
-  case heif_suberror_Invalid_box_size: return "Invalid box size";
-  case heif_suberror_Invalid_grid_data: return "Invalid grid data";
-  case heif_suberror_Missing_grid_images: return "Missing grid images";
-  case heif_suberror_No_ftyp_box: return "No 'ftyp' box";
-  case heif_suberror_No_idat_box: return "No 'idat' box";
-  case heif_suberror_No_meta_box: return "No 'meta' box";
-  case heif_suberror_No_hdlr_box: return "No 'hdlr' box";
-  case heif_suberror_No_hvcC_box: return "No 'hvcC' box";
-  case heif_suberror_No_pitm_box: return "No 'pitm' box";
-  case heif_suberror_No_ipco_box: return "No 'ipco' box";
-  case heif_suberror_No_ipma_box: return "No 'ipma' box";
-  case heif_suberror_No_iloc_box: return "No 'iloc' box";
-  case heif_suberror_No_iinf_box: return "No 'iinf' box";
-  case heif_suberror_No_iprp_box: return "No 'iprp' box";
-  case heif_suberror_No_iref_box: return "No 'iref' box";
-  case heif_suberror_No_infe_box: return "No 'infe' box";
-  case heif_suberror_No_pict_handler: return "Not a 'pict' handler";
-  case heif_suberror_Ipma_box_references_nonexisting_property: return "'ipma' box references a non-existing property";
-  case heif_suberror_No_properties_assigned_to_item: return "No properties assigned to item";
-  case heif_suberror_No_item_data: return "Item has no data";
-  case heif_suberror_Invalid_clean_aperture: return "Invalid clean-aperture specification";
-  case heif_suberror_Invalid_overlay_data: return "Invalid overlay data";
-  case heif_suberror_Overlay_image_outside_of_canvas: return "Overlay image outside of canvas area";
-  case heif_suberror_Auxiliary_image_type_unspecified: return "Type of auxiliary image unspecified";
-  case heif_suberror_No_or_invalid_primary_item: return "No or invalid primary item";
-  case heif_suberror_Unknown_color_profile_type: return "Unknown color profile type";
+  case heif_suberror_End_of_data:
+    return "Unexpected end of file";
+  case heif_suberror_Invalid_box_size:
+    return "Invalid box size";
+  case heif_suberror_Invalid_grid_data:
+    return "Invalid grid data";
+  case heif_suberror_Missing_grid_images:
+    return "Missing grid images";
+  case heif_suberror_No_ftyp_box:
+    return "No 'ftyp' box";
+  case heif_suberror_No_idat_box:
+    return "No 'idat' box";
+  case heif_suberror_No_meta_box:
+    return "No 'meta' box";
+  case heif_suberror_No_hdlr_box:
+    return "No 'hdlr' box";
+  case heif_suberror_No_hvcC_box:
+    return "No 'hvcC' box";
+  case heif_suberror_No_pitm_box:
+    return "No 'pitm' box";
+  case heif_suberror_No_ipco_box:
+    return "No 'ipco' box";
+  case heif_suberror_No_ipma_box:
+    return "No 'ipma' box";
+  case heif_suberror_No_iloc_box:
+    return "No 'iloc' box";
+  case heif_suberror_No_iinf_box:
+    return "No 'iinf' box";
+  case heif_suberror_No_iprp_box:
+    return "No 'iprp' box";
+  case heif_suberror_No_iref_box:
+    return "No 'iref' box";
+  case heif_suberror_No_infe_box:
+    return "No 'infe' box";
+  case heif_suberror_No_pict_handler:
+    return "Not a 'pict' handler";
+  case heif_suberror_Ipma_box_references_nonexisting_property:
+    return "'ipma' box references a non-existing property";
+  case heif_suberror_No_properties_assigned_to_item:
+    return "No properties assigned to item";
+  case heif_suberror_No_item_data:
+    return "Item has no data";
+  case heif_suberror_Invalid_clean_aperture:
+    return "Invalid clean-aperture specification";
+  case heif_suberror_Invalid_overlay_data:
+    return "Invalid overlay data";
+  case heif_suberror_Overlay_image_outside_of_canvas:
+    return "Overlay image outside of canvas area";
+  case heif_suberror_Auxiliary_image_type_unspecified:
+    return "Type of auxiliary image unspecified";
+  case heif_suberror_No_or_invalid_primary_item:
+    return "No or invalid primary item";
+  case heif_suberror_Unknown_color_profile_type:
+    return "Unknown color profile type";
 
-    // --- Memory_allocation_error ---
+  // --- Memory_allocation_error ---
 
-  case heif_suberror_Security_limit_exceeded: return "Security limit exceeded";
+  case heif_suberror_Security_limit_exceeded:
+    return "Security limit exceeded";
 
-    // --- Usage_error ---
+  // --- Usage_error ---
 
-  case heif_suberror_Nonexisting_item_referenced: return "Non-existing item ID referenced";
-  case heif_suberror_Null_pointer_argument: return "NULL argument received";
-  case heif_suberror_Nonexisting_image_channel_referenced: return "Non-existing image channel referenced";
-  case heif_suberror_Unsupported_plugin_version: return "The version of the passed plugin is not supported";
-  case heif_suberror_Unsupported_writer_version: return "The version of the passed writer is not supported";
-  case heif_suberror_Unsupported_parameter: return "Unsupported parameter";
-  case heif_suberror_Invalid_parameter_value: return "Invalid parameter value";
+  case heif_suberror_Nonexisting_item_referenced:
+    return "Non-existing item ID referenced";
+  case heif_suberror_Null_pointer_argument:
+    return "NULL argument received";
+  case heif_suberror_Nonexisting_image_channel_referenced:
+    return "Non-existing image channel referenced";
+  case heif_suberror_Unsupported_plugin_version:
+    return "The version of the passed plugin is not supported";
+  case heif_suberror_Unsupported_writer_version:
+    return "The version of the passed writer is not supported";
+  case heif_suberror_Unsupported_parameter:
+    return "Unsupported parameter";
+  case heif_suberror_Invalid_parameter_value:
+    return "Invalid parameter value";
 
-    // --- Unsupported_feature ---
+  // --- Unsupported_feature ---
 
-  case heif_suberror_Unsupported_codec: return "Unsupported codec";
-  case heif_suberror_Unsupported_image_type: return "Unsupported image type";
-  case heif_suberror_Unsupported_data_version: return "Unsupported data version";
-  case heif_suberror_Unsupported_color_conversion: return "Unsupported color conversion";
-  case heif_suberror_Unsupported_item_construction_method: return "Unsupported item construction method";
+  case heif_suberror_Unsupported_codec:
+    return "Unsupported codec";
+  case heif_suberror_Unsupported_image_type:
+    return "Unsupported image type";
+  case heif_suberror_Unsupported_data_version:
+    return "Unsupported data version";
+  case heif_suberror_Unsupported_color_conversion:
+    return "Unsupported color conversion";
+  case heif_suberror_Unsupported_item_construction_method:
+    return "Unsupported item construction method";
 
-    // --- Encoder_plugin_error --
+  // --- Encoder_plugin_error --
 
-    // --- Encoding_error --
+  // --- Encoding_error --
 
-  case heif_suberror_Cannot_write_output_data: return "Cannot write output data";
+  case heif_suberror_Cannot_write_output_data:
+    return "Cannot write output data";
   }
 
   assert(false);
   return cUnknownError;
 }
 
-
-heif_error heif::Error::error_struct(ErrorBuffer* error_buffer) const
-{
+heif_error heif::Error::error_struct(ErrorBuffer* error_buffer) const {
   if (error_buffer) {
     if (error_code == heif_error_Ok) {
       error_buffer->set_success();
-    }
-    else {
+    } else {
       std::stringstream sstr;
       sstr << get_error_string(error_code) << ": "
            << get_error_string(sub_error_code);
@@ -155,8 +190,7 @@ heif_error heif::Error::error_struct(ErrorBuffer* error_buffer) const
   err.subcode = sub_error_code;
   if (error_buffer) {
     err.message = error_buffer->get_error();
-  }
-  else {
+  } else {
     err.message = cUnknownError;
   }
   return err;

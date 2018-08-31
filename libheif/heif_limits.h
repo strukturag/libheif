@@ -34,17 +34,18 @@
 static const size_t MAX_CHILDREN_PER_BOX = 1024;
 static const int MAX_ILOC_ITEMS = 1024;
 static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
-static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
+static const int MAX_MEMORY_BLOCK_SIZE = 50 * 1024 * 1024;  // 50 MB
 
 // Artificial limit to avoid allocating too much memory.
 static const int MAX_IMAGE_WIDTH = 16384;
 static const int MAX_IMAGE_HEIGHT = 16384;
 
 // Maximum nesting level of boxes in input files.
-// We put a limit on this to avoid unlimited stack usage by malicious input files.
+// We put a limit on this to avoid unlimited stack usage by malicious input
+// files.
 static const int MAX_BOX_NESTING_LEVEL = 20;
 
-static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
+static const int MAX_BOX_SIZE = 0x7FFFFFFF;  // 2 GB
 static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 
 #endif  // LIBHEIF_HEIF_LIMITS_H

@@ -38,9 +38,10 @@ inline uint8_t clip(float value) {
 }
 
 bool PngEncoder::Encode(const struct heif_image_handle* handle,
-    const struct heif_image* image, const std::string& filename) {
-  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr,
-      nullptr, nullptr);
+                        const struct heif_image* image,
+                        const std::string& filename) {
+  png_structp png_ptr =
+      png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   if (!png_ptr) {
     fprintf(stderr, "libpng initialization failed (1)\n");
     return false;
@@ -69,7 +70,8 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   png_init_io(png_ptr, fp);
 
-  bool withAlpha = (heif_image_get_chroma_format(image) == heif_chroma_interleaved_32bit);
+  bool withAlpha =
+      (heif_image_get_chroma_format(image) == heif_chroma_interleaved_32bit);
 
   int width = heif_image_get_width(image, heif_channel_interleaved);
   int height = heif_image_get_height(image, heif_channel_interleaved);
@@ -77,10 +79,11 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   const int colorType = withAlpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB;
 
   png_set_IHDR(png_ptr, info_ptr, width, height, bitDepth, colorType,
-      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_BASE);
 
   size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
-  if (profile_size > 0){
+  if (profile_size > 0) {
     uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
     heif_image_handle_get_raw_color_profile(handle, profile_data);
     char profile_name[] = "unknown";
@@ -98,8 +101,8 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   uint8_t** row_pointers = new uint8_t*[height];
 
   int stride_rgb;
-  const uint8_t* row_rgb = heif_image_get_plane_readonly(image,
-      heif_channel_interleaved, &stride_rgb);
+  const uint8_t* row_rgb = heif_image_get_plane_readonly(
+      image, heif_channel_interleaved, &stride_rgb);
 
   for (int y = 0; y < height; ++y) {
     row_pointers[y] = const_cast<uint8_t*>(&row_rgb[y * stride_rgb]);

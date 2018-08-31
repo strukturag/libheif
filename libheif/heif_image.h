@@ -18,39 +18,40 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef LIBHEIF_HEIF_IMAGE_H
 #define LIBHEIF_HEIF_IMAGE_H
 
 #include "heif.h"
 #include "error.h"
-#include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
+#include "box.h"  // only for color_profile, TODO: maybe move the color_profiles to its own header
 
 #include <vector>
 #include <memory>
 #include <map>
 #include <set>
 
-
 namespace heif {
 
-  int chroma_h_subsampling(heif_chroma c);
-  int chroma_v_subsampling(heif_chroma c);
+int chroma_h_subsampling(heif_chroma c);
+int chroma_v_subsampling(heif_chroma c);
 
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
-                       public ErrorBuffer
-{
+                       public ErrorBuffer {
  public:
   explicit HeifPixelImage();
   ~HeifPixelImage();
 
-  void create(int width,int height, heif_colorspace colorspace, heif_chroma chroma);
+  void create(int width,
+              int height,
+              heif_colorspace colorspace,
+              heif_chroma chroma);
 
   void add_plane(heif_channel channel, int width, int height, int bit_depth);
 
   bool has_channel(heif_channel channel) const;
 
-  // Has alpha information either as a separate channel or in the interleaved format.
+  // Has alpha information either as a separate channel or in the interleaved
+  // format.
   bool has_alpha() const;
 
   int get_width() const { return m_width; }
@@ -75,7 +76,10 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   void copy_new_plane_from(const std::shared_ptr<HeifPixelImage> src_image,
                            heif_channel src_channel,
                            heif_channel dst_channel);
-  void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
+  void fill_new_plane(heif_channel dst_channel,
+                      uint8_t value,
+                      int width,
+                      int height);
 
   void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
                                     heif_channel src_channel,
@@ -84,21 +88,27 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
                                                      heif_chroma chroma) const;
 
-  Error rotate_ccw(int angle_degrees,
-                   std::shared_ptr<HeifPixelImage>& out_img);
+  Error rotate_ccw(int angle_degrees, std::shared_ptr<HeifPixelImage>& out_img);
 
   Error mirror_inplace(bool horizontal);
 
-  Error crop(int left,int right,int top,int bottom,
+  Error crop(int left,
+             int right,
+             int top,
+             int bottom,
              std::shared_ptr<HeifPixelImage>& out_img) const;
 
   Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
 
-  Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,int dy);
+  Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx, int dy);
 
-  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
+  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output,
+                               int width,
+                               int height) const;
 
-  void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; }
+  void set_color_profile(std::shared_ptr<color_profile> profile) {
+    m_color_profile = profile;
+  }
 
   std::shared_ptr<color_profile> get_color_profile() { return m_color_profile; }
 
@@ -128,8 +138,6 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<HeifPixelImage> convert_mono_to_YCbCr420() const;
   std::shared_ptr<HeifPixelImage> convert_RGB24_32_to_YCbCr420() const;
 };
-
-
 }
 
 #endif

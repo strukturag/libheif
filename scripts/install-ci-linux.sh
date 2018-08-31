@@ -65,6 +65,12 @@ if [ ! -z "$CHECK_LICENSES" ]; then
         "
 fi
 
+if [ ! -z "$CPPLINT" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        clang-format-3.9 \
+        "
+fi
+
 if [ -z "$WITH_GRAPHICS" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ]; then
     REMOVE_PACKAGES="$REMOVE_PACKAGES \
         libjpeg.*-dev \

@@ -118,3 +118,7 @@ file_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
 file_fuzzer_LDFLAGS = -fsanitize=fuzzer
 file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
+
+format-local:
+	$(CLANG_FORMAT) --style=file -i \
+		$(wildcard *.c *.cc *.h)

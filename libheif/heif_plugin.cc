@@ -21,12 +21,13 @@
 #include "heif_plugin.h"
 #include "heif.h"
 
-struct heif_error heif_error_ok = { heif_error_Ok, heif_suberror_Unspecified, "Success" };
+struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified,
+                                   "Success"};
 
-struct heif_error heif_error_unsupported_parameter = { heif_error_Usage_error,
-                                                       heif_suberror_Unsupported_parameter,
-                                                       "Unsupported encoder parameter" };
+struct heif_error heif_error_unsupported_parameter = {
+    heif_error_Usage_error, heif_suberror_Unsupported_parameter,
+    "Unsupported encoder parameter"};
 
-struct heif_error heif_error_invalid_parameter_value = { heif_error_Usage_error,
-                                                         heif_suberror_Invalid_parameter_value,
-                                                         "Invalid parameter value" };
+struct heif_error heif_error_invalid_parameter_value = {
+    heif_error_Usage_error, heif_suberror_Invalid_parameter_value,
+    "Invalid parameter value"};
