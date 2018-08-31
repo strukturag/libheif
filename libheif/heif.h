@@ -523,6 +523,7 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  void* out_data);
 
 
+// Returns 0 if there is no color profile.
 LIBHEIF_API
 uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
 

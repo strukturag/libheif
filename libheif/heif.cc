@@ -745,7 +745,13 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 
 uint32_t heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
 {
-  return handle->image->get_color_profile()->get_type();
+  auto profile = handle->image->get_color_profile();
+  if (!profile) {
+    return 0;
+  }
+  else {
+    return profile->get_type();
+  }
 }
 
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle)

@@ -61,6 +61,16 @@ static struct option long_options[] = {
   {0,         0,                 0,  0 }
 };
 
+const char* fourcc_to_string(uint32_t fourcc) {
+  static char fcc[5];
+  fcc[0] = (fourcc>>24) & 0xFF;
+  fcc[1] = (fourcc>>16) & 0xFF;
+  fcc[2] = (fourcc>> 8) & 0xFF;
+  fcc[3] = (fourcc>> 0) & 0xFF;
+  fcc[4] = 0;
+  return fcc;
+}
+
 void show_help(const char* argv0)
 {
     fprintf(stderr," heif-info  libheif version: %s\n",heif_get_version());
@@ -161,6 +171,9 @@ int main(int argc, char** argv)
 
     printf("image: %dx%d (id=%d)%s\n",width,height,IDs[i], primary ? ", primary" : "");
 
+
+    // --- thumbnails
+
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
     heif_item_id* thumbnailIDs = (heif_item_id*)alloca(nThumbnails*sizeof(heif_item_id));
 
@@ -181,6 +194,15 @@ int main(int argc, char** argv)
 
       heif_image_handle_release(thumbnail_handle);
     }
+
+
+    // --- color profile
+
+    uint32_t profileType = heif_image_handle_get_color_profile_type(handle);
+    printf("  color profile: %s\n", profileType ? fourcc_to_string(profileType) : "no");
+
+
+    // --- depth information
 
     bool has_depth = heif_image_handle_has_depth_image(handle);
 
