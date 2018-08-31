@@ -4,6 +4,8 @@ set (heif_convert_sources
   heif_convert.cc
 )
 
+set (additional_libraries)
+
 include (${CMAKE_ROOT}/Modules/FindJPEG.cmake)
 
 if(JPEG_FOUND)
@@ -12,6 +14,10 @@ set (heif_convert_sources
   ${heif_convert_sources}
   encoder_jpeg.cc
   encoder_jpeg.h
+)
+set (additional_libraries
+  ${additional_libraries}
+  ${JPEG_LIBRARIES}
 )
 endif()
 
@@ -24,6 +30,10 @@ if(UNIX)
       ${heif_convert_sources}
       encoder_png.cc
       encoder_png.h
+    )
+    set (additional_libraries
+      ${additional_libraries}
+      ${LIBPNG_LIBRARIES}
     )
   endif()
 endif()
@@ -69,13 +79,13 @@ if(MSVC)
 endif()
 
 add_executable (heif-convert ${heif_convert_sources})
-target_link_libraries (heif-convert ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES} ${LIBPNG_LIBRARIES})
+target_link_libraries (heif-convert ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
 
 add_executable (heif-info ${heif_info_sources})
 target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
 
 add_executable (heif-enc ${heif_enc_sources})
-target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${JPEG_LIBRARIES} ${LIBPNG_LIBRARIES})
+target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
 
 add_executable (heif-test ${heif_test_sources})
 target_link_libraries (heif-test ${LIBHEIF_LIBRARY_NAME})
