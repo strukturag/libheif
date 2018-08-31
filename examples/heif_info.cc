@@ -63,10 +63,10 @@ static struct option long_options[] = {
 
 const char* fourcc_to_string(uint32_t fourcc) {
   static char fcc[5];
-  fcc[0] = (fourcc>>24) & 0xFF;
-  fcc[1] = (fourcc>>16) & 0xFF;
-  fcc[2] = (fourcc>> 8) & 0xFF;
-  fcc[3] = (fourcc>> 0) & 0xFF;
+  fcc[0] = (char)((fourcc>>24) & 0xFF);
+  fcc[1] = (char)((fourcc>>16) & 0xFF);
+  fcc[2] = (char)((fourcc>> 8) & 0xFF);
+  fcc[3] = (char)((fourcc>> 0) & 0xFF);
   fcc[4] = 0;
   return fcc;
 }
