@@ -737,7 +737,8 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          int width, int height,
                                          const struct heif_scaling_options* options);
 
-
+// The color profile is not attached to the image handle, because we might need it
+// for color space transform and encoding.
 LIBHEIF_API
 struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
                                                    const char* profile_type_fourcc_string,
