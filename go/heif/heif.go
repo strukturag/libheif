@@ -99,7 +99,7 @@ const (
 type ErrorCode int
 
 const (
-	ErrorOk = C.heif_error_Ok
+	ErrorOK = C.heif_error_Ok
 
 	// Input file does not exist.
 	ErrorInputDoesNotExist = C.heif_error_Input_does_not_exist
@@ -114,19 +114,19 @@ const (
 	ErrorUnsupportedFeature = C.heif_error_Unsupported_feature
 
 	// Library API has been used in an invalid way.
-	ErrorUsageError = C.heif_error_Usage_error
+	ErrorUsage = C.heif_error_Usage_error
 
 	// Could not allocate enough memory.
-	ErrorMemoryAllocationError = C.heif_error_Memory_allocation_error
+	ErrorMemoryAllocation = C.heif_error_Memory_allocation_error
 
 	// The decoder plugin generated an error
-	ErrorDecoderPluginError = C.heif_error_Decoder_plugin_error
+	ErrorDecoderPlugin = C.heif_error_Decoder_plugin_error
 
 	// The decoder plugin generated an error
-	ErrorEncoderPluginError = C.heif_error_Encoder_plugin_error
+	ErrorEncoderPlugin = C.heif_error_Encoder_plugin_error
 
 	// Error during encoding or when writing to the output
-	// ErrorEncodingError = C.heif_error_Encoding_error
+	// ErrorEncoding = C.heif_error_Encoding_error
 )
 
 type ErrorSubcode int
@@ -264,22 +264,18 @@ func (e *HeifError) Error() string {
 }
 
 func convertHeifError(cerror C.struct_heif_error) error {
-	if cerror.code == C.heif_error_Ok {
+	if cerror.code == ErrorOK {
 		return nil
 	}
 
-	err := &HeifError{
+	return &HeifError{
 		Code:    ErrorCode(cerror.code),
 		Subcode: ErrorSubcode(cerror.subcode),
 		Message: C.GoString(cerror.message),
 	}
-	if err.Code == ErrorUnsupportedFiletype {
-		fmt.Println("XXX")
-	}
-	return err
 }
 
-func convertItemIds(ids []C.heif_item_id, count int) []int {
+func convertItemIDs(ids []C.heif_item_id, count int) []int {
 	result := make([]int, count)
 	for i := 0; i < count; i++ {
 		result[i] = int(ids[i])
@@ -301,11 +297,11 @@ func NewContext() (*Context, error) {
 		return nil, fmt.Errorf("Could not allocate context")
 	}
 
-	runtime.SetFinalizer(ctx, free_heif_context)
+	runtime.SetFinalizer(ctx, freeHeifContext)
 	return ctx, nil
 }
 
-func free_heif_context(c *Context) {
+func freeHeifContext(c *Context) {
 	C.heif_context_free(c.context)
 	c.context = nil
 	runtime.SetFinalizer(c, nil)
@@ -325,7 +321,7 @@ func (c *Context) ReadFromMemory(data []byte) error {
 	return convertHeifError(err)
 }
 
-func (c *Context) GetNumberofTopLevelImages() int {
+func (c *Context) GetNumberOfTopLevelImages() int {
 	return int(C.heif_context_get_number_of_top_level_images(c.context))
 }
 
@@ -334,24 +330,24 @@ func (c *Context) IsTopLevelImageID(ID int) bool {
 }
 
 func (c *Context) GetListOfTopLevelImageIDs() []int {
-	nToplevel := int(C.heif_context_get_number_of_top_level_images(c.context))
-	if nToplevel == 0 {
+	num := int(C.heif_context_get_number_of_top_level_images(c.context))
+	if num == 0 {
 		return []int{}
 	}
 
-	origIDs := make([]C.heif_item_id, nToplevel)
-	C.heif_context_get_list_of_top_level_image_IDs(c.context, &origIDs[0], C.int(nToplevel))
-	return convertItemIds(origIDs, nToplevel)
+	origIDs := make([]C.heif_item_id, num)
+	C.heif_context_get_list_of_top_level_image_IDs(c.context, &origIDs[0], C.int(num))
+	return convertItemIDs(origIDs, num)
 }
 
 func (c *Context) GetPrimaryImageID() (int, error) {
-	var c_id C.heif_item_id
-	err := C.heif_context_get_primary_image_ID(c.context, &c_id)
+	var id C.heif_item_id
+	err := C.heif_context_get_primary_image_ID(c.context, &id)
 	if err := convertHeifError(err); err != nil {
 		return 0, err
 	}
 
-	return int(c_id), nil
+	return int(id), nil
 }
 
 // --- ImageHandle
@@ -360,7 +356,7 @@ type ImageHandle struct {
 	handle *C.struct_heif_image_handle
 }
 
-func free_heif_image_handle(c *ImageHandle) {
+func freeHeifImageHandle(c *ImageHandle) {
 	C.heif_image_handle_release(c.handle)
 	c.handle = nil
 	runtime.SetFinalizer(c, nil)
@@ -372,17 +368,17 @@ func (c *Context) GetPrimaryImageHandle() (*ImageHandle, error) {
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-	runtime.SetFinalizer(&handle, free_heif_image_handle)
+	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, convertHeifError(err)
 }
 
 func (c *Context) GetImageHandle(id int) (*ImageHandle, error) {
 	var handle ImageHandle
-	var err = C.heif_context_get_image_handle(c.context, C.heif_item_id(id), &handle.handle)
+	err := C.heif_context_get_image_handle(c.context, C.heif_item_id(id), &handle.handle)
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-	runtime.SetFinalizer(&handle, free_heif_image_handle)
+	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, nil
 }
 
@@ -418,7 +414,7 @@ func (h *ImageHandle) GetListOfDepthImageIDs() []int {
 
 	origIDs := make([]C.heif_item_id, num)
 	C.heif_image_handle_get_list_of_depth_image_IDs(h.handle, &origIDs[0], C.int(num))
-	return convertItemIds(origIDs, num)
+	return convertItemIDs(origIDs, num)
 }
 
 func (h *ImageHandle) GetDepthImageHandle(depth_image_id int) (*ImageHandle, error) {
@@ -428,7 +424,7 @@ func (h *ImageHandle) GetDepthImageHandle(depth_image_id int) (*ImageHandle, err
 		return nil, err
 	}
 
-	runtime.SetFinalizer(&handle, free_heif_image_handle)
+	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, nil
 }
 
@@ -444,14 +440,14 @@ func (h *ImageHandle) GetListOfThumbnailIDs() []int {
 
 	origIDs := make([]C.heif_item_id, num)
 	C.heif_image_handle_get_list_of_thumbnail_IDs(h.handle, &origIDs[0], C.int(num))
-	return convertItemIds(origIDs, num)
+	return convertItemIDs(origIDs, num)
 }
 
 func (h *ImageHandle) GetThumbnail(thumbnail_id int) (*ImageHandle, error) {
 	var handle ImageHandle
-	var error = C.heif_image_handle_get_thumbnail(h.handle, C.heif_item_id(thumbnail_id), &handle.handle)
-	runtime.SetFinalizer(&handle, free_heif_image_handle)
-	return &handle, convertHeifError(error)
+	err := C.heif_image_handle_get_thumbnail(h.handle, C.heif_item_id(thumbnail_id), &handle.handle)
+	runtime.SetFinalizer(&handle, freeHeifImageHandle)
+	return &handle, convertHeifError(err)
 }
 
 // TODO: EXIF metadata
@@ -470,11 +466,11 @@ func NewDecodingOptions() (*DecodingOptions, error) {
 		return nil, fmt.Errorf("Could not allocate decoding options")
 	}
 
-	runtime.SetFinalizer(options, free_heif_decoding_options)
+	runtime.SetFinalizer(options, freeHeifDecodingOptions)
 	return options, nil
 }
 
-func free_heif_decoding_options(options *DecodingOptions) {
+func freeHeifDecodingOptions(options *DecodingOptions) {
 	C.heif_decoding_options_free(options.options)
 	options.options = nil
 	runtime.SetFinalizer(options, nil)
@@ -484,7 +480,7 @@ type Image struct {
 	image *C.struct_heif_image
 }
 
-func free_heif_image(image *Image) {
+func freeHeifImage(image *Image) {
 	C.heif_image_release(image.image)
 	image.image = nil
 	runtime.SetFinalizer(image, nil)
@@ -503,7 +499,7 @@ func (h *ImageHandle) DecodeImage(colorspace Colorspace, chroma Chroma, options 
 		return nil, err
 	}
 
-	runtime.SetFinalizer(&image, free_heif_image)
+	runtime.SetFinalizer(&image, freeHeifImage)
 	return &image, nil
 }
 
@@ -637,7 +633,7 @@ func (img *Image) ScaleImage(width int, height int) (*Image, error) {
 		return nil, err
 	}
 
-	runtime.SetFinalizer(&scaled_image, free_heif_image)
+	runtime.SetFinalizer(&scaled_image, freeHeifImage)
 	return &scaled_image, nil
 }
 
@@ -696,6 +692,8 @@ func decodeConfig(r io.Reader) (image.Config, error) {
 }
 
 func init() {
-	// Assume .heic images always start with "\x00\x00\x00\x1cftyp".
+	// Assume .heic images always start with
+	// "\x00\x00\x00\x18ftyp" or "\x00\x00\x00\x1cftyp".
+	image.RegisterFormat("heif", "\x00\x00\x00\x18\x66\x74\x79\x70", decodeImage, decodeConfig)
 	image.RegisterFormat("heif", "\x00\x00\x00\x1c\x66\x74\x79\x70", decodeImage, decodeConfig)
 }
