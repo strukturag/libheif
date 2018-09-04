@@ -148,6 +148,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size_t read = create_image(data, size, &image);
   assert(read <= size);
   if (!read) {
+    heif_image_release(image);
     heif_encoder_release(encoder);
     return 0;
   }
