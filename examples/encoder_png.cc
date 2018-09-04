@@ -47,7 +47,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   }
 
   png_infop info_ptr = png_create_info_struct(png_ptr);
-  if (!png_ptr) {
+  if (!info_ptr) {
     png_destroy_write_struct(&png_ptr, nullptr);
     fprintf(stderr, "libpng initialization failed (2)\n");
     return false;
