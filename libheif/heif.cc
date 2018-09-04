@@ -788,9 +788,10 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
   auto profile = handle->image->get_color_profile();
   auto nclx_profile = std::dynamic_pointer_cast<color_profile_nclx>(profile);
   if (nclx_profile) {
-    if (out_data==NULL) {
+    if (!out_data) {
       Error err(heif_error_Usage_error,
                 heif_suberror_Null_pointer_argument);
+      return err.error_struct(handle->image.get());
     }
 
     *out_data = (struct heif_color_profile_nclx*)malloc(sizeof(struct heif_color_profile_nclx));
