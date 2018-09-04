@@ -118,6 +118,7 @@ struct heif_error convert_libde265_image_to_heif_image(struct libde265_decoder* 
 
     err = heif_image_add_plane(out_img, channel2plane[c], w,h, bpp);
     if (err.code != heif_error_Ok) {
+      heif_image_release(out_img);
       return err;
     }
 
