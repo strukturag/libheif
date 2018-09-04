@@ -286,7 +286,9 @@ bool BitstreamRange::prepare_read(int64_t nBytes)
     // --- this is the normal case (m_remaining >= nBytes)
 
     if (m_parent_range) {
-      m_parent_range->prepare_read(nBytes);
+      if (!m_parent_range->prepare_read(nBytes)) {
+        return false;
+      }
     }
 
     m_remaining -= nBytes;
