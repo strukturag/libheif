@@ -60,6 +60,9 @@ static struct heif_error error_unsupported_parameter = { heif_error_Usage_error,
 static struct heif_error error_unsupported_plugin_version = { heif_error_Usage_error,
                                                               heif_suberror_Unsupported_plugin_version,
                                                               "Unsupported plugin version" };
+static struct heif_error error_null_parameter = { heif_error_Usage_error,
+                                                  heif_suberror_Null_pointer_argument,
+                                                  "NULL passed" };
 
 const char *heif_get_version(void) {
   return (LIBHEIF_VERSION);
@@ -853,7 +856,9 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
-  if (decoder_plugin && decoder_plugin->plugin_api_version != 1) {
+  if (!decoder_plugin) {
+    return error_null_parameter;
+  } else if (decoder_plugin->plugin_api_version != 1) {
     return error_unsupported_plugin_version;
   }
 
@@ -864,7 +869,9 @@ struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_p
 
 struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decoder_plugin)
 {
-  if (decoder_plugin && decoder_plugin->plugin_api_version != 1) {
+  if (!decoder_plugin) {
+    return error_null_parameter;
+  } else if (decoder_plugin->plugin_api_version != 1) {
     return error_unsupported_plugin_version;
   }
 
@@ -875,7 +882,9 @@ struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decode
 
 struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encoder_plugin)
 {
-  if (encoder_plugin && encoder_plugin->plugin_api_version != 1) {
+  if (!encoder_plugin) {
+    return error_null_parameter;
+  } else if (encoder_plugin->plugin_api_version != 1) {
     return error_unsupported_plugin_version;
   }
 
