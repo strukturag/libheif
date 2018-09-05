@@ -127,3 +127,8 @@ fi
 if [ ! -z "$FUZZER" ]; then
     ./scripts/install-clang.sh "$BUILD_ROOT/clang"
 fi
+
+if [ "$TRAVIS_BRANCH" = "coverity" ]; then
+    echo "Installing coverity build tool ..."
+    echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
+fi

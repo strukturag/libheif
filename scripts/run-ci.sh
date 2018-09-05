@@ -22,6 +22,12 @@ set -e
 
 BUILD_ROOT=$TRAVIS_BUILD_DIR
 
+# Don't run regular tests on Coverity scan builds.
+if [ ! -z "${COVERITY_SCAN_BRANCH}" ]; then
+    echo "Skipping tests on Coverity scan build ..."
+    exit 0
+fi
+
 if [ ! -z "$CHECK_LICENSES" ]; then
     echo "Checking licenses ..."
     ./scripts/check-licenses.sh
