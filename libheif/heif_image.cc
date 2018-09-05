@@ -1086,6 +1086,10 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
                        out_h,
                        plane.bit_depth);
 
+    if (!width || !height) {
+      continue;
+    }
+
     int in_stride = plane.stride;
     const uint8_t* in_data = plane.mem.data();
 
