@@ -161,21 +161,21 @@ namespace heif {
     private:
       HeifContext* m_heif_context;
 
-      heif_item_id m_id;
+      heif_item_id m_id = 0;
       uint32_t m_width=0, m_height=0;
       bool     m_is_primary = false;
 
       bool     m_is_thumbnail = false;
-      heif_item_id m_thumbnail_ref_id;
+      heif_item_id m_thumbnail_ref_id = 0;
 
       std::vector<std::shared_ptr<Image>> m_thumbnails;
 
       bool m_is_alpha_channel = false;
-      heif_item_id m_alpha_channel_ref_id;
+      heif_item_id m_alpha_channel_ref_id = 0;
       std::shared_ptr<Image> m_alpha_channel;
 
       bool m_is_depth_channel = false;
-      heif_item_id m_depth_channel_ref_id;
+      heif_item_id m_depth_channel_ref_id = 0;
       std::shared_ptr<Image> m_depth_channel;
 
       bool m_has_depth_representation_info = false;

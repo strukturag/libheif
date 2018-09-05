@@ -77,7 +77,8 @@ namespace heif {
     int round_up() const;
     int round() const;
 
-    int numerator, denominator;
+    int numerator = 0;
+    int denominator = 1;
   };
 
 
@@ -208,8 +209,8 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    uint32_t m_major_brand;
-    uint32_t m_minor_version;
+    uint32_t m_major_brand = 0;
+    uint32_t m_minor_version = 0;
     std::vector<uint32_t> m_compatible_brands;
   };
 
@@ -269,7 +270,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    heif_item_id m_item_ID;
+    heif_item_id m_item_ID = 0;
   };
 
 
@@ -346,8 +347,8 @@ namespace heif {
 
   class Box_infe : public Box {
   public:
-    Box_infe() { set_short_type(fourcc("infe")); set_is_full_box(true); m_item_protection_index = 0; }
-  Box_infe(const BoxHeader& hdr) : Box(hdr) { m_item_protection_index = 0; }
+    Box_infe() { set_short_type(fourcc("infe")); set_is_full_box(true); }
+    Box_infe(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
 
@@ -377,8 +378,8 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    heif_item_id m_item_ID;
-    uint16_t m_item_protection_index;
+    heif_item_id m_item_ID = 0;
+    uint16_t m_item_protection_index = 0;
 
     std::string m_item_type;
     std::string m_item_name;
@@ -467,8 +468,8 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    uint32_t m_image_width;
-    uint32_t m_image_height;
+    uint32_t m_image_width = 0;
+    uint32_t m_image_height = 0;
   };
 
 
@@ -539,7 +540,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    int m_rotation; // in degrees (CCW)
+    int m_rotation = 0; // in degrees (CCW)
   };
 
 
@@ -560,7 +561,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    MirrorAxis m_axis;
+    MirrorAxis m_axis = MirrorAxis::Vertical;
   };
 
 
