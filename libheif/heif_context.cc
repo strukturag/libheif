@@ -690,9 +690,14 @@ Error HeifContext::interpret_heif_file()
 
         // if this is a grid item we assign the first one's color profile
         // to the main image which is supposed to be a grid
+
+        // TODO: this condition is not correct. It would also classify a secondary image as a 'grid item'.
+        // We have to set the grid-image color profile in another way...
+        const bool is_grid_item = !image->is_primary() && !image->is_alpha_channel() && !image->is_depth_channel();
+
         if (primary_is_grid &&
             !primary_colr_set &&
-            image->is_grid_item()) {
+            is_grid_item) {
           m_primary_image->set_color_profile(profile);
           primary_colr_set = true;
         }

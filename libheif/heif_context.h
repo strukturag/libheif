@@ -158,7 +158,6 @@ namespace heif {
 
       void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; };
 
-      bool is_grid_item(){ return !m_is_primary && !m_is_primary && !m_is_alpha_channel && !m_is_depth_channel; };
     private:
       HeifContext* m_heif_context;
 
