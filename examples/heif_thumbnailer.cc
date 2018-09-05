@@ -148,9 +148,11 @@ int main(int argc, char** argv)
       thumbnail_height = input_height * size/input_width;
       thumbnail_width  = size;
     }
-    else {
+    else if (input_height > 0) {
       thumbnail_width  = input_width * size/input_height;
       thumbnail_height = size;
+    } else {
+      thumbnail_width  = thumbnail_height = 0;
     }
 
 
