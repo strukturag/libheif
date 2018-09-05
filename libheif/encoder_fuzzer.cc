@@ -144,7 +144,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   heif_encoder_set_lossy_quality(encoder, quality);
   heif_encoder_set_lossless(encoder, lossless);
 
-  struct heif_image* image;
+  struct heif_image* image = nullptr;
   size_t read = create_image(data, size, &image);
   assert(read <= size);
   if (!read) {
