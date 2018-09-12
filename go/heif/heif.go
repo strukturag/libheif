@@ -525,10 +525,11 @@ func (img *Image) GetBitsPerPixel(channel Channel) int {
 
 func (img *Image) GetImage() (image.Image, error) {
 	var i image.Image
-	switch img.GetColorspace() {
+	cf := img.GetChromaFormat()
+	switch cs := img.GetColorspace(); cs {
 	case ColorspaceYCbCr:
 		var subsample image.YCbCrSubsampleRatio
-		switch img.GetChromaFormat() {
+		switch cf {
 		case Chroma420:
 			subsample = image.YCbCrSubsampleRatio420
 		case Chroma422:
@@ -536,7 +537,7 @@ func (img *Image) GetImage() (image.Image, error) {
 		case Chroma444:
 			subsample = image.YCbCrSubsampleRatio444
 		default:
-			return nil, fmt.Errorf("Unsupported YCbCr chrome format: %v", img.GetChromaFormat())
+			return nil, fmt.Errorf("Unsupported YCbCr chrome format: %v", cf)
 		}
 		y, err := img.GetPlane(ChannelY)
 		if err != nil {
@@ -569,7 +570,7 @@ func (img *Image) GetImage() (image.Image, error) {
 			},
 		}
 	case ColorspaceRGB:
-		switch img.GetChromaFormat() {
+		switch cf {
 		case ChromaInterleavedRGBA:
 			rgba, err := img.GetPlane(ChannelInterleaved)
 			if err != nil {
@@ -590,10 +591,10 @@ func (img *Image) GetImage() (image.Image, error) {
 				},
 			}
 		default:
-			return nil, fmt.Errorf("Unsupported RGB chroma format: %v", img.GetChromaFormat())
+			return nil, fmt.Errorf("Unsupported RGB chroma format: %v", cf)
 		}
 	default:
-		return nil, fmt.Errorf("Unsupported colorspace: %v", img.GetColorspace())
+		return nil, fmt.Errorf("Unsupported colorspace: %v", cs)
 	}
 
 	return i, nil
