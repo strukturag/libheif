@@ -33,7 +33,6 @@ import (
 	"image/color"
 	"io"
 	"io/ioutil"
-	"runtime"
 	"unsafe"
 )
 
@@ -296,15 +295,15 @@ func NewContext() (*Context, error) {
 	if ctx.context == nil {
 		return nil, fmt.Errorf("Could not allocate context")
 	}
-
-	runtime.SetFinalizer(ctx, freeHeifContext)
 	return ctx, nil
 }
 
-func freeHeifContext(c *Context) {
+func (c *Context) Free() {
+	if c.context == nil {
+		return
+	}
 	C.heif_context_free(c.context)
 	c.context = nil
-	runtime.SetFinalizer(c, nil)
 }
 
 func (c *Context) ReadFromFile(filename string) error {
@@ -356,10 +355,12 @@ type ImageHandle struct {
 	handle *C.struct_heif_image_handle
 }
 
-func freeHeifImageHandle(c *ImageHandle) {
-	C.heif_image_handle_release(c.handle)
-	c.handle = nil
-	runtime.SetFinalizer(c, nil)
+func (h *ImageHandle) Free() {
+	if h.handle == nil {
+		return
+	}
+	C.heif_image_handle_release(h.handle)
+	h.handle = nil
 }
 
 func (c *Context) GetPrimaryImageHandle() (*ImageHandle, error) {
@@ -368,7 +369,6 @@ func (c *Context) GetPrimaryImageHandle() (*ImageHandle, error) {
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, convertHeifError(err)
 }
 
@@ -378,7 +378,6 @@ func (c *Context) GetImageHandle(id int) (*ImageHandle, error) {
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, nil
 }
 
@@ -423,8 +422,6 @@ func (h *ImageHandle) GetDepthImageHandle(depth_image_id int) (*ImageHandle, err
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-
-	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, nil
 }
 
@@ -446,7 +443,6 @@ func (h *ImageHandle) GetListOfThumbnailIDs() []int {
 func (h *ImageHandle) GetThumbnail(thumbnail_id int) (*ImageHandle, error) {
 	var handle ImageHandle
 	err := C.heif_image_handle_get_thumbnail(h.handle, C.heif_item_id(thumbnail_id), &handle.handle)
-	runtime.SetFinalizer(&handle, freeHeifImageHandle)
 	return &handle, convertHeifError(err)
 }
 
@@ -458,6 +454,14 @@ type DecodingOptions struct {
 	options *C.struct_heif_decoding_options
 }
 
+func (o *DecodingOptions) Free() {
+	if o.options == nil {
+		return
+	}
+	C.heif_decoding_options_free(o.options)
+	o.options = nil
+}
+
 func NewDecodingOptions() (*DecodingOptions, error) {
 	options := &DecodingOptions{
 		options: C.heif_decoding_options_alloc(),
@@ -465,25 +469,28 @@ func NewDecodingOptions() (*DecodingOptions, error) {
 	if options.options == nil {
 		return nil, fmt.Errorf("Could not allocate decoding options")
 	}
-
-	runtime.SetFinalizer(options, freeHeifDecodingOptions)
 	return options, nil
-}
-
-func freeHeifDecodingOptions(options *DecodingOptions) {
-	C.heif_decoding_options_free(options.options)
-	options.options = nil
-	runtime.SetFinalizer(options, nil)
 }
 
 type Image struct {
 	image *C.struct_heif_image
 }
 
-func freeHeifImage(image *Image) {
-	C.heif_image_release(image.image)
-	image.image = nil
-	runtime.SetFinalizer(image, nil)
+func (i *Image) Free() {
+	if i.image == nil {
+		return
+	}
+	C.heif_image_release(i.image)
+	i.image = nil
+}
+
+func NewImage(width, height int, colorspace Colorspace, chroma Chroma) (*Image, error) {
+	var image Image
+	err := C.heif_image_create(C.int(width), C.int(height), uint32(colorspace), uint32(chroma), &image.image)
+	if err := convertHeifError(err); err != nil {
+		return nil, err
+	}
+	return &image, nil
 }
 
 func (h *ImageHandle) DecodeImage(colorspace Colorspace, chroma Chroma, options *DecodingOptions) (*Image, error) {
@@ -499,7 +506,6 @@ func (h *ImageHandle) DecodeImage(colorspace Colorspace, chroma Chroma, options 
 		return nil, err
 	}
 
-	runtime.SetFinalizer(&image, freeHeifImage)
 	return &image, nil
 }
 
@@ -632,8 +638,6 @@ func (img *Image) ScaleImage(width int, height int) (*Image, error) {
 	if err := convertHeifError(err); err != nil {
 		return nil, err
 	}
-
-	runtime.SetFinalizer(&scaled_image, freeHeifImage)
 	return &scaled_image, nil
 }
 
@@ -644,6 +648,7 @@ func decodePrimaryImageFromReader(r io.Reader) (*ImageHandle, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer ctx.Free()
 
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -667,11 +672,13 @@ func decodeImage(r io.Reader) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer handle.Free()
 
 	img, err := handle.DecodeImage(ColorspaceUndefined, ChromaUndefined, nil)
 	if err != nil {
 		return nil, err
 	}
+	defer img.Free()
 
 	return img.GetImage()
 }
@@ -682,6 +689,7 @@ func decodeConfig(r io.Reader) (image.Config, error) {
 	if err != nil {
 		return config, err
 	}
+	defer handle.Free()
 
 	config = image.Config{
 		ColorModel: color.YCbCrModel,

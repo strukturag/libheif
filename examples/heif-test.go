@@ -78,6 +78,7 @@ func testHeifLowlevel(filename string) {
 		fmt.Printf("Could not create context: %s\n", err)
 		return
 	}
+	defer c.Free()
 
 	if err := c.ReadFromFile(filename); err != nil {
 		fmt.Printf("Could not read file %s: %s\n", filename, err)
@@ -101,13 +102,17 @@ func testHeifLowlevel(filename string) {
 		fmt.Printf("Could not get primary image: %s\n", err)
 		return
 	}
+	defer handle.Free()
 
 	fmt.Printf("Image size: %v × %v\n", handle.GetWidth(), handle.GetHeight())
 
 	img, err := handle.DecodeImage(heif.ColorspaceUndefined, heif.ChromaUndefined, nil)
 	if err != nil {
 		fmt.Printf("Could not decode image: %s\n", err)
-	} else if i, err := img.GetImage(); err != nil {
+	}
+	defer img.Free()
+
+	if i, err := img.GetImage(); err != nil {
 		fmt.Printf("Could not get image: %s\n", err)
 	} else {
 		fmt.Printf("Rectangle: %v\n", i.Bounds())
