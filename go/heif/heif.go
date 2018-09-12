@@ -29,7 +29,6 @@ package heif
 import "C"
 
 import (
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -96,17 +95,17 @@ const (
 	ProgressStepLoadTile = C.heif_progress_step_load_tile
 )
 
-type losslessMode int
+type LosslessMode int
 
 const (
-	LosslessModeDisabled losslessMode = iota
+	LosslessModeDisabled LosslessMode = iota
 	LosslessModeEnabled
 )
 
-type loggingLevel int
+type LoggingLevel int
 
 const (
-	LoggingLevelNone loggingLevel = iota
+	LoggingLevelNone LoggingLevel = iota
 	LoggingLevelBasic
 	LoggingLevelAdvanced
 	LoggingLevelFull
@@ -358,13 +357,12 @@ func (e *Encoder) SetQuality(q int) error {
 	return convertHeifError(err)
 }
 
-func (e *Encoder) SetLossless(o losslessMode) error {
-	i := int(o)
-	err := C.heif_encoder_set_lossless(e.encoder, C.int(i))
+func (e *Encoder) SetLossless(l LosslessMode) error {
+	err := C.heif_encoder_set_lossless(e.encoder, C.int(l))
 	return convertHeifError(err)
 }
 
-func (e *Encoder) SetLoggingLevel(l loggingLevel) error {
+func (e *Encoder) SetLoggingLevel(l LoggingLevel) error {
 	err := C.heif_encoder_set_logging_level(e.encoder, C.int(l))
 	return convertHeifError(err)
 }
@@ -697,18 +695,25 @@ type ImageAccess struct {
 	Plane    []byte
 	planePtr unsafe.Pointer
 	Stride   int
-	Height   int
+	height   int
 
 	image *Image // need this reference to make sure the image is not GC'ed while we access it
 }
 
-func (i *ImageAccess) SetData(data []byte, stride int) {
-	for y := 0; y < i.Height; y++ {
+func (i *ImageAccess) setData(data []byte, stride int) {
+	// Handle common case directly
+	if stride == i.Stride {
+		i.Plane = data
+		i.planePtr = unsafe.Pointer(&i.Plane[0])
+		return
+	}
+
+	for y := 0; y < i.height; y++ {
 		dstP := uintptr(i.planePtr) + uintptr(y*i.Stride)
 		srcP := uintptr(unsafe.Pointer(&data[0])) + uintptr(y*stride)
 		C.memcpy(unsafe.Pointer(dstP), unsafe.Pointer(srcP), C.size_t(stride))
 	}
-	i.Plane = C.GoBytes(i.planePtr, C.int(i.Height*i.Stride))
+	i.Plane = C.GoBytes(i.planePtr, C.int(i.height*i.Stride))
 }
 
 func (img *Image) GetPlane(channel Channel) (*ImageAccess, error) {
@@ -729,7 +734,7 @@ func (img *Image) GetPlane(channel Channel) (*ImageAccess, error) {
 		Plane:    C.GoBytes(ptr, size),
 		planePtr: ptr,
 		Stride:   int(stride),
-		Height:   int(height),
+		height:   int(height),
 		image:    img,
 	}
 	return access, nil
@@ -821,7 +826,7 @@ func imageFromNRGBA(i *image.NRGBA) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to add plane: %v", err)
 	}
-	p.SetData([]byte(i.Pix), stride)
+	p.setData([]byte(i.Pix), stride)
 
 	return out, nil
 }
@@ -840,7 +845,7 @@ func imageFromGray(i *image.Gray) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Y plane: %v", err)
 	}
-	pY.SetData([]byte(i.Pix), i.Stride)
+	pY.setData([]byte(i.Pix), i.Stride)
 
 	return out, nil
 }
@@ -850,15 +855,11 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 	w, h := max.X, max.Y
 
 	var cm Chroma
-	switch i.SubsampleRatio {
-	case image.YCbCrSubsampleRatio444:
-		cm = Chroma444
-	case image.YCbCrSubsampleRatio422:
-		cm = Chroma422
+	switch sr := i.SubsampleRatio; sr {
 	case image.YCbCrSubsampleRatio420:
-		fallthrough
-	default:
 		cm = Chroma420
+	default:
+		return nil, fmt.Errorf("unsupported subsample ratio: %s", sr.String())
 	}
 
 	out, err := NewImage(w, h, ColorspaceYCbCr, cm)
@@ -871,7 +872,7 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Y plane: %v", err)
 	}
-	pY.SetData([]byte(i.Y), i.YStride)
+	pY.setData([]byte(i.Y), i.YStride)
 
 	// TODO: Might need to be updated for other SubsampleRatio values.
 	halfW, halfH := (w+1)/2, (h+1)/2
@@ -879,26 +880,26 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Cb plane: %v", err)
 	}
-	pCb.SetData([]byte(i.Cb), i.CStride)
+	pCb.setData([]byte(i.Cb), i.CStride)
 	pCr, err := out.NewPlane(ChannelCr, halfW, halfH, depth)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add Cr plane: %v", err)
 	}
-	pCr.SetData([]byte(i.Cr), i.CStride)
+	pCr.setData([]byte(i.Cr), i.CStride)
 
 	return out, nil
 }
 
-func EncodeFromImage(img image.Image, compression Compression, quality int, lossless losslessMode, logging loggingLevel) (*Context, error) {
+func EncodeFromImage(img image.Image, compression Compression, quality int, lossless LosslessMode, logging LoggingLevel) (*Context, error) {
 	var out *Image
 
-	switch cm := img.ColorModel(); cm {
+	switch t := img.(type) {
 	default:
-		return nil, fmt.Errorf("color model %v not supported", cm)
-	case color.NRGBAModel:
+		return nil, fmt.Errorf("unsupported image type: %T", t)
+	case *image.NRGBA:
 		i, ok := img.(*image.NRGBA)
 		if !ok {
-			return nil, errors.New("failed to type assert to image.NRGBA")
+			panic("failed to type assert to image.NRGBA") // This will never happen
 		}
 
 		tmp, err := imageFromNRGBA(i)
@@ -906,10 +907,10 @@ func EncodeFromImage(img image.Image, compression Compression, quality int, loss
 			return nil, fmt.Errorf("failed to create image: %v", err)
 		}
 		out = tmp
-	case color.GrayModel:
+	case *image.Gray:
 		i, ok := img.(*image.Gray)
 		if !ok {
-			return nil, errors.New("failed to type assert to image.Gray")
+			panic("failed to type assert to image.Gray") // This will never happen
 		}
 
 		tmp, err := imageFromGray(i)
@@ -917,10 +918,10 @@ func EncodeFromImage(img image.Image, compression Compression, quality int, loss
 			return nil, fmt.Errorf("failed to create image: %v", err)
 		}
 		out = tmp
-	case color.YCbCrModel:
+	case *image.YCbCr:
 		i, ok := img.(*image.YCbCr)
 		if !ok {
-			return nil, errors.New("failed to type assert to image.YCbCr")
+			panic("failed to type assert to image.YCbCr") // This will never happen
 		}
 
 		tmp, err := imageFromYCbCr(i)
