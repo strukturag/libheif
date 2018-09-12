@@ -19,6 +19,8 @@ examples/heif-info
 examples/heif-test
 examples/heif-thumbnailer
 examples/test-c-api
+go/go
+go/src
 install-sh
 libtool
 libheif.js
