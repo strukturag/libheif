@@ -893,37 +893,22 @@ func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
 func EncodeFromImage(img image.Image, compression Compression, quality int, lossless LosslessMode, logging LoggingLevel) (*Context, error) {
 	var out *Image
 
-	switch t := img.(type) {
+	switch i := img.(type) {
 	default:
-		return nil, fmt.Errorf("unsupported image type: %T", t)
+		return nil, fmt.Errorf("unsupported image type: %T", i)
 	case *image.NRGBA:
-		i, ok := img.(*image.NRGBA)
-		if !ok {
-			panic("failed to type assert to image.NRGBA") // This will never happen
-		}
-
 		tmp, err := imageFromNRGBA(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create image: %v", err)
 		}
 		out = tmp
 	case *image.Gray:
-		i, ok := img.(*image.Gray)
-		if !ok {
-			panic("failed to type assert to image.Gray") // This will never happen
-		}
-
 		tmp, err := imageFromGray(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create image: %v", err)
 		}
 		out = tmp
 	case *image.YCbCr:
-		i, ok := img.(*image.YCbCr)
-		if !ok {
-			panic("failed to type assert to image.YCbCr") // This will never happen
-		}
-
 		tmp, err := imageFromYCbCr(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create image: %v", err)
