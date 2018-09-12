@@ -537,7 +537,7 @@ func (img *Image) GetImage() (image.Image, error) {
 		case Chroma444:
 			subsample = image.YCbCrSubsampleRatio444
 		default:
-			return nil, fmt.Errorf("Unsupported YCbCr chrome format: %v", cf)
+			return nil, fmt.Errorf("Unsupported YCbCr chroma format: %v", cf)
 		}
 		y, err := img.GetPlane(ChannelY)
 		if err != nil {
