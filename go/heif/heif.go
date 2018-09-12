@@ -23,6 +23,7 @@ package heif
 /*
 #cgo pkg-config: libheif
 #include <stdlib.h>
+#include <string.h> // We use 'memcpy'
 #include <libheif/heif.h>
 */
 import "C"
@@ -92,6 +93,22 @@ type ProgressStep int
 const (
 	ProgressStepTotal    = C.heif_progress_step_total
 	ProgressStepLoadTile = C.heif_progress_step_load_tile
+)
+
+type LosslessMode int
+
+const (
+	LosslessModeDisabled LosslessMode = iota
+	LosslessModeEnabled
+)
+
+type LoggingLevel int
+
+const (
+	LoggingLevelNone LoggingLevel = iota
+	LoggingLevelBasic
+	LoggingLevelAdvanced
+	LoggingLevelFull
 )
 
 // --- HeifError
@@ -321,6 +338,71 @@ func (c *Context) ReadFromMemory(data []byte) error {
 	return convertHeifError(err)
 }
 
+type Encoder struct {
+	encoder *C.struct_heif_encoder
+	id      string
+	name    string
+}
+
+func (e *Encoder) ID() string {
+	return e.id
+}
+
+func (e *Encoder) Name() string {
+	return e.name
+}
+
+func (e *Encoder) SetQuality(q int) error {
+	err := C.heif_encoder_set_lossy_quality(e.encoder, C.int(q))
+	return convertHeifError(err)
+}
+
+func (e *Encoder) SetLossless(l LosslessMode) error {
+	err := C.heif_encoder_set_lossless(e.encoder, C.int(l))
+	return convertHeifError(err)
+}
+
+func (e *Encoder) SetLoggingLevel(l LoggingLevel) error {
+	err := C.heif_encoder_set_logging_level(e.encoder, C.int(l))
+	return convertHeifError(err)
+}
+
+func freeHeifEncoder(enc *Encoder) {
+	C.heif_encoder_release(enc.encoder)
+	enc.encoder = nil
+	runtime.SetFinalizer(enc, nil)
+}
+
+func (c *Context) convertEncoderDescriptor(d *C.struct_heif_encoder_descriptor) (*Encoder, error) {
+	cid := C.heif_encoder_descriptor_get_id_name(d)
+	cname := C.heif_encoder_descriptor_get_name(d)
+	enc := &Encoder{
+		id:   C.GoString(cid),
+		name: C.GoString(cname),
+	}
+	err := C.heif_context_get_encoder(c.context, d, &enc.encoder)
+	if err := convertHeifError(err); err != nil {
+		return nil, err
+	}
+	runtime.SetFinalizer(enc, freeHeifEncoder)
+	return enc, nil
+}
+
+func (c *Context) NewEncoder(compression Compression) (*Encoder, error) {
+	const max = 1
+	descriptors := make([]*C.struct_heif_encoder_descriptor, max)
+	num := int(C.heif_context_get_encoder_descriptors(c.context, uint32(compression), nil, &descriptors[0], C.int(max)))
+	if num == 0 {
+		return nil, fmt.Errorf("no encoder for compression %v", compression)
+	}
+	return c.convertEncoderDescriptor(descriptors[0])
+}
+
+func (c *Context) WriteToFile(filename string) error {
+	err := C.heif_context_write_to_file(c.context, C.CString(filename))
+	return convertHeifError(err)
+}
+
 func (c *Context) GetNumberOfTopLevelImages() int {
 	return int(C.heif_context_get_number_of_top_level_images(c.context))
 }
@@ -480,6 +562,16 @@ type Image struct {
 	image *C.struct_heif_image
 }
 
+func NewImage(width, height int, colorspace Colorspace, chroma Chroma) (*Image, error) {
+	var image Image
+	err := C.heif_image_create(C.int(width), C.int(height), uint32(colorspace), uint32(chroma), &image.image)
+	if err := convertHeifError(err); err != nil {
+		return nil, err
+	}
+	runtime.SetFinalizer(&image, freeHeifImage)
+	return &image, nil
+}
+
 func freeHeifImage(image *Image) {
 	C.heif_image_release(image.image)
 	image.image = nil
@@ -600,30 +692,60 @@ func (img *Image) GetImage() (image.Image, error) {
 }
 
 type ImageAccess struct {
-	Plane  []byte
-	Stride int
+	Plane    []byte
+	planePtr unsafe.Pointer
+	Stride   int
+	height   int
 
 	image *Image // need this reference to make sure the image is not GC'ed while we access it
+}
+
+func (i *ImageAccess) setData(data []byte, stride int) {
+	// Handle common case directly
+	if stride == i.Stride {
+		i.Plane = data
+		i.planePtr = unsafe.Pointer(&i.Plane[0])
+		return
+	}
+
+	for y := 0; y < i.height; y++ {
+		dstP := uintptr(i.planePtr) + uintptr(y*i.Stride)
+		srcP := uintptr(unsafe.Pointer(&data[0])) + uintptr(y*stride)
+		C.memcpy(unsafe.Pointer(dstP), unsafe.Pointer(srcP), C.size_t(stride))
+	}
+	i.Plane = C.GoBytes(i.planePtr, C.int(i.height*i.Stride))
 }
 
 func (img *Image) GetPlane(channel Channel) (*ImageAccess, error) {
 	height := C.heif_image_get_height(img.image, uint32(channel))
 	if height == -1 {
-		return nil, fmt.Errorf("No such channel")
+		return nil, fmt.Errorf("No such channel %v", channel)
 	}
 
 	var stride C.int
 	plane := C.heif_image_get_plane(img.image, uint32(channel), &stride)
 	if plane == nil {
-		return nil, fmt.Errorf("No such channel")
+		return nil, fmt.Errorf("No such channel %v", channel)
 	}
 
+	ptr := unsafe.Pointer(plane)
+	size := stride * height
 	access := &ImageAccess{
-		Plane:  C.GoBytes(unsafe.Pointer(plane), stride*height),
-		Stride: int(stride),
-		image:  img,
+		Plane:    C.GoBytes(ptr, size),
+		planePtr: ptr,
+		Stride:   int(stride),
+		height:   int(height),
+		image:    img,
 	}
 	return access, nil
+}
+
+func (img *Image) NewPlane(channel Channel, width, height, depth int) (*ImageAccess, error) {
+	err := C.heif_image_add_plane(img.image, uint32(channel), C.int(width), C.int(height), C.int(depth))
+	if err := convertHeifError(err); err != nil {
+		return nil, err
+	}
+	return img.GetPlane(channel)
 }
 
 func (img *Image) ScaleImage(width int, height int) (*Image, error) {
@@ -635,6 +757,198 @@ func (img *Image) ScaleImage(width int, height int) (*Image, error) {
 
 	runtime.SetFinalizer(&scaled_image, freeHeifImage)
 	return &scaled_image, nil
+}
+
+// --- High-level encoding API.
+
+type EncodingOptions struct {
+	options *C.struct_heif_encoding_options
+}
+
+func NewEncodingOptions() (*EncodingOptions, error) {
+	options := &EncodingOptions{
+		options: C.heif_encoding_options_alloc(),
+	}
+	if options.options == nil {
+		return nil, fmt.Errorf("Could not allocate encoding options")
+	}
+
+	runtime.SetFinalizer(options, freeHeifEncodingOptions)
+	return options, nil
+}
+
+func freeHeifEncodingOptions(options *EncodingOptions) {
+	C.heif_encoding_options_free(options.options)
+	options.options = nil
+	runtime.SetFinalizer(options, nil)
+}
+
+func imageFromNRGBA(i *image.NRGBA) (*Image, error) {
+	max := i.Bounds().Max
+	w, h := max.X, max.Y
+
+	hasAlpha := func(i *image.NRGBA) bool {
+		rect := i.Rect
+		if rect.Empty() {
+			return true
+		}
+
+		for y := rect.Min.Y; y < rect.Max.Y; y++ {
+			for x := rect.Min.X; x < rect.Max.X; x++ {
+				o := i.PixOffset(x, y)
+				if i.Pix[o+3] == 0xff {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	var cm Chroma
+	var depth int
+	var stride int
+	if hasAlpha(i) {
+		cm = ChromaInterleavedRGBA
+		depth = 32
+		stride = w * 4
+	} else {
+		cm = ChromaInterleavedRGB
+		depth = 64
+		stride = w * 3
+	}
+
+	out, err := NewImage(w, h, ColorspaceRGB, cm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create image: %v", err)
+	}
+
+	p, err := out.NewPlane(ChannelInterleaved, w, h, depth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add plane: %v", err)
+	}
+	p.setData([]byte(i.Pix), stride)
+
+	return out, nil
+}
+
+func imageFromGray(i *image.Gray) (*Image, error) {
+	max := i.Bounds().Max
+	w, h := max.X, max.Y
+
+	out, err := NewImage(w, h, ColorspaceYCbCr, ChromaMonochrome)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create image: %v", err)
+	}
+
+	const depth = 8
+	pY, err := out.NewPlane(ChannelY, w, h, depth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add Y plane: %v", err)
+	}
+	pY.setData([]byte(i.Pix), i.Stride)
+
+	return out, nil
+}
+
+func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
+	max := i.Bounds().Max
+	w, h := max.X, max.Y
+
+	var cm Chroma
+	switch sr := i.SubsampleRatio; sr {
+	case image.YCbCrSubsampleRatio420:
+		cm = Chroma420
+	default:
+		return nil, fmt.Errorf("unsupported subsample ratio: %s", sr.String())
+	}
+
+	out, err := NewImage(w, h, ColorspaceYCbCr, cm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create image: %v", err)
+	}
+
+	const depth = 8
+	pY, err := out.NewPlane(ChannelY, w, h, depth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add Y plane: %v", err)
+	}
+	pY.setData([]byte(i.Y), i.YStride)
+
+	// TODO: Might need to be updated for other SubsampleRatio values.
+	halfW, halfH := (w+1)/2, (h+1)/2
+	pCb, err := out.NewPlane(ChannelCb, halfW, halfH, depth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add Cb plane: %v", err)
+	}
+	pCb.setData([]byte(i.Cb), i.CStride)
+	pCr, err := out.NewPlane(ChannelCr, halfW, halfH, depth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add Cr plane: %v", err)
+	}
+	pCr.setData([]byte(i.Cr), i.CStride)
+
+	return out, nil
+}
+
+func EncodeFromImage(img image.Image, compression Compression, quality int, lossless LosslessMode, logging LoggingLevel) (*Context, error) {
+	var out *Image
+
+	switch i := img.(type) {
+	default:
+		return nil, fmt.Errorf("unsupported image type: %T", i)
+	case *image.NRGBA:
+		tmp, err := imageFromNRGBA(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create image: %v", err)
+		}
+		out = tmp
+	case *image.Gray:
+		tmp, err := imageFromGray(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create image: %v", err)
+		}
+		out = tmp
+	case *image.YCbCr:
+		tmp, err := imageFromYCbCr(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create image: %v", err)
+		}
+		out = tmp
+	}
+
+	ctx, err := NewContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HEIF context: %v", err)
+	}
+
+	enc, err := ctx.NewEncoder(compression)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create encoder: %v", err)
+	}
+
+	if err := enc.SetQuality(quality); err != nil {
+		return nil, fmt.Errorf("failed to set quality: %v", err)
+	}
+	if err := enc.SetLossless(lossless); err != nil {
+		return nil, fmt.Errorf("failed to set lossless mode: %v", err)
+	}
+	if err := enc.SetLoggingLevel(logging); err != nil {
+		return nil, fmt.Errorf("failed to set logging level: %v", err)
+	}
+
+	encOpts, err := NewEncodingOptions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get encoding options: %v", err)
+	}
+
+	var handle ImageHandle
+	err2 := C.heif_context_encode_image(ctx.context, out.image, enc.encoder, encOpts.options, &handle.handle)
+	if err := convertHeifError(err2); err != nil {
+		return nil, fmt.Errorf("failed to encode image: %v", err)
+	}
+	runtime.SetFinalizer(&handle, freeHeifImageHandle)
+
+	return ctx, nil
 }
 
 // --- High-level decoding API, always decodes primary image (if present).

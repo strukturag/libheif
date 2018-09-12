@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	_ "image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"os"
@@ -118,6 +119,36 @@ func testHeifLowlevel(filename string) {
 	}
 }
 
+func testHeifEncode(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("failed to open file %v\n", file)
+		return
+	}
+	defer file.Close()
+
+	i, _, err := image.Decode(file)
+	if err != nil {
+		fmt.Printf("failed to decode image: %v\n", err)
+		return
+	}
+
+	const quality = 100
+	ctx, err := heif.EncodeFromImage(i, heif.CompressionHEVC, quality, heif.LosslessModeEnabled, heif.LoggingLevelFull)
+	if err != nil {
+		fmt.Printf("failed to heif encode image: %v\n", err)
+		return
+	}
+
+	ext := filepath.Ext(filename)
+	out := filename[0:len(filename)-len(ext)] + "_encoded.heif"
+	if err := ctx.WriteToFile(out); err != nil {
+		fmt.Printf("failed to write to file: %v\n", err)
+		return
+	}
+	fmt.Printf("Written to %s\n", out)
+}
+
 func main() {
 	fmt.Printf("libheif version: %v\n", heif.GetVersion())
 	if len(os.Args) < 2 {
@@ -129,5 +160,7 @@ func main() {
 	testHeifLowlevel(filename)
 	fmt.Println()
 	testHeifHighlevel(filename)
+	fmt.Println()
+	testHeifEncode(filename)
 	fmt.Println("Done.")
 }
