@@ -105,12 +105,12 @@ fi
 
 if [ ! -z "$UPDATE_APT" ]; then
     echo "Updating package lists ..."
-    sudo apt-get update -qq
+    sudo apt-get update
 fi
 
 if [ ! -z "$INSTALL_PACKAGES" ]; then
     echo "Installing packages $INSTALL_PACKAGES ..."
-    sudo apt-get install -qq $INSTALL_PACKAGES
+    sudo apt-get install $INSTALL_PACKAGES
 fi
 
 if [ ! -z "$REMOVE_PACKAGES" ]; then
