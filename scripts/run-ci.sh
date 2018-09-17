@@ -73,6 +73,10 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make
+    if [ "$TRAVIS_OS_NAME" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW32" ] && [ -z "$MINGW64" ] && [ -z "$FUZZER" ]; then
+        echo "Running tests ..."
+        make test
+    fi
     echo "Dumping information of sample file ..."
     ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
     if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_LIBDE265" ]; then
