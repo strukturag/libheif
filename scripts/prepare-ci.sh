@@ -50,6 +50,8 @@ if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     fi
     if [ ! -z "$GO" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist"
+    else
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
     fi
     ./configure $CONFIGURE_ARGS
 fi

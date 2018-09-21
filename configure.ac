@@ -31,10 +31,15 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_GREP
-AC_PATH_PROG([GO], [go], [no], [$PATH$PATH_SEPARATOR/usr/lib/go-1.10$PATH_SEPARATOR/usr/lib/go-1.9$PATH_SEPARATOR/usr/lib/go-1.8$PATH_SEPARATOR/usr/lib/go-1.7$PATH_SEPARATOR/usr/lib/go-1.6])
-AC_SUBST(GO)
-AM_CONDITIONAL([HAVE_GO], [test "x$GO" != xno])
+AC_ARG_ENABLE([go], AS_HELP_STRING([--disable-go],
+    [Disable building Go code / examples.]))
+if eval "test x$enable_go = x" ; then
+    AC_PATH_PROG([GO], [go], [no], [$PATH$PATH_SEPARATOR/usr/lib/go-1.10$PATH_SEPARATOR/usr/lib/go-1.9$PATH_SEPARATOR/usr/lib/go-1.8$PATH_SEPARATOR/usr/lib/go-1.7$PATH_SEPARATOR/usr/lib/go-1.6])
+    AC_SUBST(GO)
+fi
+AM_CONDITIONAL([HAVE_GO], [test "x$GO" != "xno" && test "x$GO" != "x"])
 AC_SUBST(HAVE_GO)
+
 AM_CONDITIONAL(MINGW, expr $host : '.*-mingw' >/dev/null 2>&1)
 
 AM_INIT_AUTOMAKE([foreign])
