@@ -321,7 +321,6 @@ func NewContext() (*Context, error) {
 func freeHeifContext(c *Context) {
 	C.heif_context_free(c.context)
 	c.context = nil
-	runtime.SetFinalizer(c, nil)
 }
 
 func (c *Context) ReadFromFile(filename string) error {
@@ -375,7 +374,6 @@ func (e *Encoder) SetLoggingLevel(l LoggingLevel) error {
 func freeHeifEncoder(enc *Encoder) {
 	C.heif_encoder_release(enc.encoder)
 	enc.encoder = nil
-	runtime.SetFinalizer(enc, nil)
 }
 
 func (c *Context) convertEncoderDescriptor(d *C.struct_heif_encoder_descriptor) (*Encoder, error) {
@@ -455,7 +453,6 @@ type ImageHandle struct {
 func freeHeifImageHandle(c *ImageHandle) {
 	C.heif_image_handle_release(c.handle)
 	c.handle = nil
-	runtime.SetFinalizer(c, nil)
 }
 
 func (c *Context) GetPrimaryImageHandle() (*ImageHandle, error) {
@@ -591,7 +588,6 @@ func NewDecodingOptions() (*DecodingOptions, error) {
 func freeHeifDecodingOptions(options *DecodingOptions) {
 	C.heif_decoding_options_free(options.options)
 	options.options = nil
-	runtime.SetFinalizer(options, nil)
 }
 
 type Image struct {
@@ -611,7 +607,6 @@ func NewImage(width, height int, colorspace Colorspace, chroma Chroma) (*Image, 
 func freeHeifImage(image *Image) {
 	C.heif_image_release(image.image)
 	image.image = nil
-	runtime.SetFinalizer(image, nil)
 }
 
 func (h *ImageHandle) DecodeImage(colorspace Colorspace, chroma Chroma, options *DecodingOptions) (*Image, error) {
@@ -832,7 +827,6 @@ func NewEncodingOptions() (*EncodingOptions, error) {
 func freeHeifEncodingOptions(options *EncodingOptions) {
 	C.heif_encoding_options_free(options.options)
 	options.options = nil
-	runtime.SetFinalizer(options, nil)
 }
 
 func imageFromNRGBA(i *image.NRGBA) (*Image, error) {
