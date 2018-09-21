@@ -143,7 +143,7 @@ const (
 	ErrorEncoderPlugin = C.heif_error_Encoder_plugin_error
 
 	// Error during encoding or when writing to the output
-	// ErrorEncoding = C.heif_error_Encoding_error
+	ErrorEncoding = C.heif_error_Encoding_error
 )
 
 type ErrorSubcode int
@@ -267,7 +267,7 @@ const (
 
 	// --- Encoding_error ---
 
-	// SuberrorCannotWriteOutputData = C.heif_suberror_Cannot_write_output_data
+	SuberrorCannotWriteOutputData = C.heif_suberror_Cannot_write_output_data
 )
 
 type HeifError struct {
