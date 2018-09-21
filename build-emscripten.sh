@@ -19,14 +19,16 @@ if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
     cd ..
 fi
 
-emconfigure ./configure --disable-multithreading \
+CONFIGURE_ARGS="--disable-multithreading --disable-go"
+
+emconfigure ./configure $CONFIGURE_ARGS \
     PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
     libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
     libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
 if [ ! -e "Makefile" ]; then
     # Most likely the first run of "emscripten" which will generate the
     # config file and terminate. Run "emconfigure" again.
-    emconfigure ./configure \
+    emconfigure ./configure $CONFIGURE_ARGS \
         PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
         libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
         libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
