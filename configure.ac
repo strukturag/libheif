@@ -43,7 +43,7 @@ AC_SUBST(HAVE_GO)
 AM_CONDITIONAL(MINGW, expr $host : '.*-mingw' >/dev/null 2>&1)
 
 AM_INIT_AUTOMAKE([foreign])
-AM_EXTRA_RECURSIVE_TARGETS([test])
+AM_EXTRA_RECURSIVE_TARGETS([format test])
 
 AX_CXX_COMPILE_STDCXX_11()
 
