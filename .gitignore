@@ -17,7 +17,9 @@ examples/heif-convert
 examples/heif-enc
 examples/heif-info
 examples/heif-test
+examples/heif-test-go
 examples/heif-thumbnailer
+examples/src
 examples/test-c-api
 go/go
 go/src

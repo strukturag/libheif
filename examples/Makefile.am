@@ -75,3 +75,15 @@ EXTRA_DIST = \
     demo.html \
     example.heic \
     heif-test.go
+
+if HAVE_GO
+noinst_PROGRAMS += \
+	heif-test-go
+
+gopath:
+	mkdir -p ${CURDIR}/src/github.com/strukturag/libheif
+	ln -sf ${CURDIR}/../go ${CURDIR}/src/github.com/strukturag/libheif/
+
+heif-test-go: gopath $(top_builddir)/libheif/libheif.la $(top_builddir)/libheif.pc heif-test.go
+	GOPATH=${CURDIR} PKG_CONFIG_PATH=$(abs_top_builddir) CGO_CFLAGS="-I$(abs_top_builddir)" CGO_LDFLAGS="-L$(abs_top_builddir)/libheif/.libs" LD_LIBRARY_PATH=$(abs_top_builddir)/libheif/.libs $(GO) build -o heif-test-go heif-test.go
+endif
