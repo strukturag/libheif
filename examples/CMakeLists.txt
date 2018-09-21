@@ -10,6 +10,24 @@ include (${CMAKE_ROOT}/Modules/FindJPEG.cmake)
 
 if(JPEG_FOUND)
 add_definitions(-DHAVE_LIBJPEG=1)
+
+include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
+
+set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
+check_cxx_source_compiles("
+#include <stddef.h>
+#include <stdio.h>
+#include <jpeglib.h>
+
+int main() {
+  jpeg_write_icc_profile(NULL, NULL, 0);
+  return 0;
+}
+" HAVE_JPEG_WRITE_ICC_PROFILE)
+if(HAVE_JPEG_WRITE_ICC_PROFILE)
+  add_definitions(-DHAVE_JPEG_WRITE_ICC_PROFILE=1)
+endif()
+
 set (heif_convert_sources
   ${heif_convert_sources}
   encoder_jpeg.cc

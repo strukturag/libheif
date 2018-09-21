@@ -105,6 +105,22 @@ AC_CHECK_LIB([jpeg], [jpeg_destroy_compress], [
 ], [have_libjpeg="no"])
 fi
 AM_CONDITIONAL([HAVE_LIBJPEG], [test "x$have_libjpeg" = "xyes"])
+if eval "test x$have_libjpeg = xyes"; then
+AC_MSG_CHECKING([for jpeg_write_icc_profile])
+AC_LANG_PUSH(C++)
+AC_TRY_COMPILE([
+    #include <stddef.h>
+    #include <stdio.h>
+    #include <jpeglib.h>
+],[
+    jpeg_write_icc_profile(NULL, NULL, 0);
+],[has_jpeg_write_icc_profile=yes],[has_jpeg_write_icc_profile=no]);
+AC_LANG_POP(C++)
+AC_MSG_RESULT([$has_jpeg_write_icc_profile])
+if eval "test x$has_jpeg_write_icc_profile = xyes"; then
+    AC_DEFINE(HAVE_JPEG_WRITE_ICC_PROFILE, 1, [Define to 1 if jpeg_write_icc_profile is available in libjpeg.])
+fi
+fi
 
 PKG_CHECK_MODULES([libpng], [libpng], [
     AC_DEFINE([HAVE_LIBPNG], [1], [Whether libpng was found.])
