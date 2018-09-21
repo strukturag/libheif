@@ -42,7 +42,7 @@ func GetVersion() string {
 	return C.GoString(C.heif_get_version())
 }
 
-type Compression int
+type Compression C.enum_heif_compression_format
 
 const (
 	CompressionUndefined = C.heif_compression_undefined
@@ -51,7 +51,7 @@ const (
 	CompressionJPEG      = C.heif_compression_JPEG
 )
 
-type Chroma int
+type Chroma C.enum_heif_chroma
 
 const (
 	ChromaUndefined       = C.heif_chroma_undefined
@@ -66,7 +66,7 @@ const (
 	ChromaInterleaved32Bit = C.heif_chroma_interleaved_32bit
 )
 
-type Colorspace int
+type Colorspace C.enum_heif_colorspace
 
 const (
 	ColorspaceUndefined  = C.heif_colorspace_undefined
@@ -75,7 +75,7 @@ const (
 	ColorspaceMonochrome = C.heif_colorspace_monochrome
 )
 
-type Channel int
+type Channel C.enum_heif_channel
 
 const (
 	ChannelY           = C.heif_channel_Y
@@ -88,7 +88,7 @@ const (
 	ChannelInterleaved = C.heif_channel_interleaved
 )
 
-type ProgressStep int
+type ProgressStep C.enum_heif_progress_step
 
 const (
 	ProgressStepTotal    = C.heif_progress_step_total
@@ -113,7 +113,7 @@ const (
 
 // --- HeifError
 
-type ErrorCode int
+type ErrorCode C.enum_heif_error_code
 
 const (
 	ErrorOK = C.heif_error_Ok
@@ -146,7 +146,7 @@ const (
 	ErrorEncoding = C.heif_error_Encoding_error
 )
 
-type ErrorSubcode int
+type ErrorSubcode C.enum_heif_suberror_code
 
 const (
 	// no further information available
