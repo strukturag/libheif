@@ -1056,8 +1056,12 @@ func decodeConfig(r io.Reader) (image.Config, error) {
 }
 
 func init() {
-	// Assume .heic images always start with
-	// "\x00\x00\x00\x18ftyp" or "\x00\x00\x00\x1cftyp".
-	image.RegisterFormat("heif", "\x00\x00\x00\x18\x66\x74\x79\x70", decodeImage, decodeConfig)
-	image.RegisterFormat("heif", "\x00\x00\x00\x1c\x66\x74\x79\x70", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftypheic", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftypheim", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftypheis", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftypheix", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftyphevc", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftyphevm", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftyphevs", decodeImage, decodeConfig)
+	image.RegisterFormat("heif", "????ftypmif1", decodeImage, decodeConfig)
 }
