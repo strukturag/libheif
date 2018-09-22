@@ -21,7 +21,10 @@
 package heif
 
 import (
+	"fmt"
+	"image"
 	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 )
@@ -116,4 +119,37 @@ func TestReadFromMemory(t *testing.T) {
 	data = nil // Make sure future processing works if "data" is GC'd
 
 	CheckHeifFile(t, ctx)
+}
+
+func TestReadImage(t *testing.T) {
+	filename := path.Join("..", "..", "examples", "example.heic")
+	fp, err := os.Open(filename)
+	if err != nil {
+		t.Fatalf("Could not open %s: %s", filename, err)
+	}
+	defer fp.Close()
+
+	config, format1, err := image.DecodeConfig(fp)
+	if err != nil {
+		t.Fatalf("Could not load image config from %s: %s", filename, err)
+	}
+	if format1 != "heif" {
+		t.Errorf("Expected format heif, got %s", format1)
+	}
+	if _, err := fp.Seek(0, 0); err != nil {
+		t.Fatalf("Could not seek to start of %s: %s", filename, err)
+	}
+
+	img, format2, err := image.Decode(fp)
+	if err != nil {
+		t.Fatalf("Could not load image from %s: %s", filename, err)
+	}
+	if format2 != "heif" {
+		t.Errorf("Expected format heif, got %s", format2)
+	}
+
+	r := img.Bounds()
+	if config.Width != (r.Max.X-r.Min.X) || config.Height != (r.Max.Y-r.Min.Y) {
+		fmt.Printf("Image size %+v does not match config %+v\n", r, config)
+	}
 }
