@@ -21,6 +21,8 @@
 package heif
 
 import (
+	"io/ioutil"
+	"path"
 	"testing"
 )
 
@@ -29,4 +31,89 @@ func TestGetVersion(t *testing.T) {
 	if version == "" {
 		t.Fatal("Version is missing")
 	}
+}
+
+func CheckHeifImage(t *testing.T, handle *ImageHandle, thumbnail bool) {
+	handle.GetWidth()
+	handle.GetHeight()
+	handle.HasAlphaChannel()
+	handle.HasDepthImage()
+	count := handle.GetNumberOfDepthImages()
+	if ids := handle.GetListOfDepthImageIDs(); len(ids) != count {
+		t.Errorf("Expected %d depth image ids, got %d", count, len(ids))
+	}
+	if !thumbnail {
+		count = handle.GetNumberOfThumbnails()
+		ids := handle.GetListOfThumbnailIDs()
+		if len(ids) != count {
+			t.Errorf("Expected %d thumbnail image ids, got %d", count, len(ids))
+		}
+		for _, id := range ids {
+			if thumb, err := handle.GetThumbnail(id); err != nil {
+				t.Errorf("Could not get thumbnail %d: %s", id, err)
+			} else {
+				CheckHeifImage(t, thumb, true)
+			}
+		}
+	}
+
+	if img, err := handle.DecodeImage(ColorspaceUndefined, ChromaUndefined, nil); err != nil {
+		t.Errorf("Could not decode image: %s", err)
+	} else {
+		img.GetColorspace()
+		img.GetChromaFormat()
+	}
+}
+
+func CheckHeifFile(t *testing.T, ctx *Context) {
+	if count := ctx.GetNumberOfTopLevelImages(); count != 2 {
+		t.Errorf("Expected %d top level images, got %d", 2, count)
+	}
+	if ids := ctx.GetListOfTopLevelImageIDs(); len(ids) != 2 {
+		t.Errorf("Expected %d top level image ids, got %+v", 2, ids)
+	}
+	if _, err := ctx.GetPrimaryImageID(); err != nil {
+		t.Errorf("Expected a primary image, got %s", err)
+	}
+	if handle, err := ctx.GetPrimaryImageHandle(); err != nil {
+		t.Errorf("Could not get primary image handle: %s", err)
+	} else {
+		if !handle.IsPrimaryImage() {
+			t.Error("Expected primary image")
+		}
+		CheckHeifImage(t, handle, false)
+	}
+}
+
+func TestReadFromFile(t *testing.T) {
+	ctx, err := NewContext()
+	if err != nil {
+		t.Fatalf("Can't create context: %s", err)
+	}
+
+	filename := path.Join("..", "..", "examples", "example.heic")
+	if err := ctx.ReadFromFile(filename); err != nil {
+		t.Fatalf("Can't read from %s: %s", filename, err)
+	}
+
+	CheckHeifFile(t, ctx)
+}
+
+func TestReadFromMemory(t *testing.T) {
+	ctx, err := NewContext()
+	if err != nil {
+		t.Fatalf("Can't create context: %s", err)
+	}
+
+	filename := path.Join("..", "..", "examples", "example.heic")
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		t.Fatalf("Can't read file %s: %s", filename, err)
+	}
+	if err := ctx.ReadFromMemory(data); err != nil {
+		t.Fatalf("Can't read from memory: %s", err)
+	}
+	data = nil // Make sure future processing works if "data" is GC'd
+
+	CheckHeifFile(t, ctx)
 }
