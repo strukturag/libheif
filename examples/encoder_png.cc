@@ -85,7 +85,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
     heif_image_handle_get_raw_color_profile(handle, profile_data);
     char profile_name[] = "unknown";
     png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
-#if PNG_LIBPNG_VER <= 10250
+#if PNG_LIBPNG_VER < 10500
                  (png_charp)profile_data,
 #else
                  (png_const_bytep)profile_data,
