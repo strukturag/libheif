@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     bool has_depth = heif_image_handle_has_depth_image(handle);
 
     printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes":"no");
-    printf("  depth channel: %s", has_depth ? "yes":"no\n");
+    printf("  depth channel: %s\n", has_depth ? "yes":"no");
 
     heif_item_id depth_id;
     int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
