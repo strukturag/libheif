@@ -52,6 +52,7 @@ struct x265_encoder_struct
   std::string tune;
   int tu_intra_depth;
   int logLevel = X265_LOG_NONE;
+  int bit_depth;
 };
 
 
@@ -128,7 +129,7 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_preset;
   p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "slow";
+  p->string.default_value = "veryslow";
   p->string.valid_values = kParam_preset_valid_values;
   d[i++] = p++;
 
@@ -144,7 +145,7 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_TU_intra_depth;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 2;
+  p->integer.default_value = 4;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
   p->integer.maximum = 4;
@@ -185,6 +186,7 @@ struct heif_error x265_new_encoder(void** enc)
   encoder->nals = nullptr;
   encoder->num_nals = 0;
   encoder->nal_output_counter = 0;
+  encoder->bit_depth = 8;
 
   *enc = encoder;
 
@@ -201,7 +203,8 @@ void x265_free_encoder(void* encoder_raw)
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
   if (encoder->encoder) {
-    x265_encoder_close(encoder->encoder);
+    const x265_api* api = x265_api_get(encoder->bit_depth);
+    api->encoder_close(encoder->encoder);
   }
 
   delete encoder;
@@ -425,54 +428,87 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
 {
   struct x265_encoder_struct* encoder = (struct x265_encoder_struct*)encoder_raw;
 
+  int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
 
-  x265_param* param = x265_param_alloc();
-  x265_param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
+  const x265_api* api = x265_api_get(bit_depth);
 
-  x265_param_apply_profile(param, "mainstillpicture");
+  x265_param* param = api->param_alloc();
+  api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
+
+  if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
+  else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
+  else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
+  else return heif_error_unsupported_parameter;
+
+
   param->fpsNum = 1;
   param->fpsDenom = 1;
-  param->sourceWidth = 0;
-  param->sourceHeight = 0;
 
   param->rc.rfConstant = (100 - encoder->quality)/2;
+
+// BPG uses CQP. It does not seem to be better though.
+//  param->rc.rateControlMode = X265_RC_CQP;
+//  param->rc.qp = (100 - encoder->quality)/2;
+  param->totalFrames = 1;
+  param->internalCsp = X265_CSP_I420;
+  api->param_parse(param, "info", "0");
+  api->param_parse(param, "limit-modes", "0");
+  api->param_parse(param, "limit-refs", "0");
+  api->param_parse(param, "wpp", "0");
+  api->param_parse(param, "rd", "6");
+  api->param_parse(param, "ctu", "64");
+  api->param_parse(param, "rskip", "0");
+  api->param_parse(param, "rect", "1");
+  api->param_parse(param, "amp", "1");
+  api->param_parse(param, "cu-lossless", "1");
+
+  api->param_parse(param, "aq-mode", "1");
+  api->param_parse(param, "rd-refine", "1");
+  api->param_parse(param, "psy-rd", "1.0");
+  api->param_parse(param, "psy-rdoq", "1.0");
+
+
   param->bLossless = encoder->lossless;
   param->logLevel = encoder->logLevel;
-  x265_param_parse(param, "range", "full");
+  api->param_parse(param, "range", "full");
 
   char buf[100];
   sprintf(buf, "%d", encoder->tu_intra_depth);
-  x265_param_parse(param, "tu-intra-depth", buf);
+  api->param_parse(param, "tu-intra-depth", buf);
 
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
+  param->internalBitDepth = bit_depth;
 
-  x265_picture* pic = x265_picture_alloc();
-  x265_picture_init(param, pic);
+
+
+  x265_picture* pic = api->picture_alloc();
+  api->picture_init(param, pic);
 
   pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
   pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
   pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
-  pic->bitDepth = 8;
+  pic->bitDepth = bit_depth;
 
 
-  // close encoder after all data has been extracted
-
+  // close previous encoder if there is still one hanging around
   if (encoder->encoder) {
-    x265_encoder_close(encoder->encoder);
+    const x265_api* api = x265_api_get(encoder->bit_depth);
+    api->encoder_close(encoder->encoder);
   }
 
-  encoder->encoder = x265_encoder_open(param);
+  encoder->bit_depth = bit_depth;
 
-  int result = x265_encoder_encode(encoder->encoder,
+  encoder->encoder = api->encoder_open(param);
+
+  api->encoder_encode(encoder->encoder,
                                    &encoder->nals,
                                    &encoder->num_nals,
                                    pic,
                                    NULL);
-  (void)result;
 
-  x265_picture_free(pic);
-  x265_param_free(param);
+  api->picture_free(pic);
+  api->param_free(param);
 
   encoder->nal_output_counter = 0;
 
@@ -493,6 +529,7 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
     return heif_error_ok;
   }
 
+  const x265_api* api = x265_api_get(encoder->bit_depth);
 
   for (;;) {
     while (encoder->nal_output_counter < encoder->num_nals) {
@@ -529,7 +566,8 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
 
     encoder->nal_output_counter = 0;
 
-    int result = x265_encoder_encode(encoder->encoder,
+
+    int result = api->encoder_encode(encoder->encoder,
                                      &encoder->nals,
                                      &encoder->num_nals,
                                      NULL,
