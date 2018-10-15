@@ -84,6 +84,87 @@ int heif_get_version_number_maintenance(void) {
   return ((LIBHEIF_NUMERIC_VERSION)>>8) & 0xFF;
 }
 
+
+heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
+{
+  if (len<8) {
+    return heif_filetype_maybe;
+  }
+
+  if (data[4] != 'f' ||
+      data[5] != 't' ||
+      data[6] != 'y' ||
+      data[7] != 'p') {
+    return heif_filetype_no;
+  }
+
+  if (len>=12) {
+    heif_brand brand = heif_main_brand(data, len);
+
+    if (brand == heif_heic) {
+      return heif_filetype_yes_supported;
+    }
+    else if (brand == heif_unknown_brand) {
+      return heif_filetype_no;
+    }
+    else if (brand == heif_mif1) {
+      return heif_filetype_maybe;
+    }
+    else {
+      return heif_filetype_yes_unsupported;
+    }
+  }
+
+  return heif_filetype_maybe;
+}
+
+
+heif_brand heif_main_brand(const uint8_t* data, int len)
+{
+  if (len<12) {
+    return heif_unknown_brand;
+  }
+
+  char brand[5];
+  brand[0]=data[8];
+  brand[1]=data[9];
+  brand[2]=data[10];
+  brand[3]=data[11];
+  brand[4]=0;
+
+  if (strcmp(brand, "heic")==0) {
+    return heif_heic;
+  }
+  else if (strcmp(brand, "heix")==0) {
+    return heif_heix;
+  }
+  else if (strcmp(brand, "hevc")==0) {
+    return heif_hevc;
+  }
+  else if (strcmp(brand, "hevx")==0) {
+    return heif_hevx;
+  }
+  else if (strcmp(brand, "heim")==0) {
+    return heif_heim;
+  }
+  else if (strcmp(brand, "heis")==0) {
+    return heif_heis;
+  }
+  else if (strcmp(brand, "hevm")==0) {
+    return heif_hevm;
+  }
+  else if (strcmp(brand, "hevs")==0) {
+    return heif_hevs;
+  }
+  else if (strcmp(brand, "mif1")==0) {
+    return heif_mif1;
+  }
+  else {
+    return heif_unknown_brand;
+  }
+}
+
+
 heif_context* heif_context_alloc()
 {
   struct heif_context* ctx = new heif_context;

@@ -261,6 +261,39 @@ struct heif_error
 typedef uint32_t heif_item_id;
 
 
+
+// ========================= file type check ======================
+
+enum heif_filetype_result {
+  heif_filetype_no,
+  heif_filetype_yes_supported,   // it is heif and can be read by libheif
+  heif_filetype_yes_unsupported, // it is heif, but cannot be read by libheif
+  heif_filetype_maybe // not sure whether it is an heif, try detection with more input data
+};
+
+// input data should be at least 12 bytes
+LIBHEIF_API
+enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
+
+
+enum heif_brand {
+  heif_unknown_brand,
+  heif_heic, // the usual HEIF images
+  heif_heix, // 10bit images, or anything that uses h265 with range extension
+  heif_hevc, heif_hevx, // brands for image sequences
+  heif_heim, // multiview
+  heif_heis, // scalable
+  heif_hevm, // multiview sequence
+  heif_hevs, // scalable sequence
+  heif_mif1
+};
+
+// input data should be at least 12 bytes
+LIBHEIF_API
+enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+
 // ========================= heif_context =========================
 // A heif_context represents a HEIF file that has been read.
 // In the future, you will also be able to add pictures to a heif_context
