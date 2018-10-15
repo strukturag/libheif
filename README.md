@@ -134,7 +134,7 @@ You may have to run `update-mime-database /usr/share/mime` to update the list of
 ## License
 
 The libheif is distributed under the terms of the GNU Lesser General Public License.
-The sample applications are distributed under the terms of the GNU General Public License.
+The sample applications are distributed under the terms of the MIT License.
 
 See COPYING for more details.
 
