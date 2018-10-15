@@ -246,7 +246,7 @@ namespace heif {
   private:
     uint32_t m_pre_defined = 0;
     uint32_t m_handler_type = fourcc("pict");
-    uint32_t m_reserved[3];
+    uint32_t m_reserved[3] = {0, };
     std::string m_name;
   };
 
