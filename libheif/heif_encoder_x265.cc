@@ -53,12 +53,15 @@ struct x265_encoder_struct
   std::string tune;
   int tu_intra_depth;
   int logLevel = X265_LOG_NONE;
+
+  int complexity = 50;
 };
 
 
 static const char* kParam_preset = "preset";
 static const char* kParam_tune = "tune";
 static const char* kParam_TU_intra_depth = "tu-intra-depth";
+static const char* kParam_complexity = "complexity";
 
 static const char*const kParam_preset_valid_values[] = {
   "ultrafast", "superfast", "veryfast", "faster", "fast", "medium",
@@ -129,7 +132,7 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_preset;
   p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "veryslow";  // increases computation time
+  p->string.default_value = "slow";  // increases computation time
   p->string.valid_values = kParam_preset_valid_values;
   d[i++] = p++;
 
@@ -145,10 +148,22 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_TU_intra_depth;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 4;  // increases computation time
+  p->integer.default_value = 2;  // increases computation time
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
   p->integer.maximum = 4;
+  p->integer.valid_values = NULL;
+  p->integer.num_valid_values = 0;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 1;
+  p->name = kParam_complexity;
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 50;
+  p->integer.have_minimum_maximum = true;
+  p->integer.minimum = 0;
+  p->integer.maximum = 100;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
@@ -294,6 +309,14 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
     encoder->tu_intra_depth = value;
     return heif_error_ok;
   }
+  else if (strcmp(name, kParam_complexity)==0) {
+    if (value < 0 || value > 100) {
+      return heif_error_invalid_parameter_value;
+    }
+
+    encoder->complexity = value;
+    return heif_error_ok;
+  }
 
   return heif_error_unsupported_parameter;
 }
@@ -310,6 +333,10 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     *value = encoder->tu_intra_depth;
+    return heif_error_ok;
+  }
+  else if (strcmp(name, kParam_complexity)==0) {
+    *value = encoder->complexity;
     return heif_error_ok;
   }
 
@@ -454,18 +481,27 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
-  api->param_parse(param, "rd", "6");
   api->param_parse(param, "ctu", "64");
   api->param_parse(param, "rskip", "0");
+
   api->param_parse(param, "rect", "1");
   api->param_parse(param, "amp", "1");
-  api->param_parse(param, "cu-lossless", "1"); // increases computation time
-
   api->param_parse(param, "aq-mode", "1");
-  api->param_parse(param, "rd-refine", "1"); // increases computation time
   api->param_parse(param, "psy-rd", "1.0");
   api->param_parse(param, "psy-rdoq", "1.0");
+
+  if (encoder->complexity >= 60) {
+    api->param_parse(param, "rd-refine", "1"); // increases computation time
+    api->param_parse(param, "rd", "6");
+  }
+
+  if (encoder->complexity >= 70) {
+    api->param_parse(param, "cu-lossless", "1"); // increases computation time
+  }
+
+  if (encoder->complexity >= 90) {
+    api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
+  }
 
   param->bLossless = encoder->lossless;
   param->logLevel = encoder->logLevel;
