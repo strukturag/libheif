@@ -150,9 +150,9 @@ int main(int argc, char** argv)
 
     if (num_images>1) {
       std::ostringstream s;
-      s << output_filename.substr(0, output_filename.find('.'));
+      s << output_filename.substr(0, output_filename.find_last_of('.'));
       s << "-" << image_index;
-      s << output_filename.substr(output_filename.find('.'));
+      s << output_filename.substr(output_filename.find_last_of('.'));
       filename.assign(s.str());
     } else {
       filename.assign(output_filename);
