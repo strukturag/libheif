@@ -43,6 +43,7 @@ struct x265_encoder_struct
   x265_nal* nals;
   uint32_t num_nals;
   uint32_t nal_output_counter;
+  int bit_depth;
 
   // --- parameters
 
@@ -52,7 +53,6 @@ struct x265_encoder_struct
   std::string tune;
   int tu_intra_depth;
   int logLevel = X265_LOG_NONE;
-  int bit_depth;
 };
 
 
