@@ -129,7 +129,7 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_preset;
   p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "veryslow";
+  p->string.default_value = "veryslow";  // increases computation time
   p->string.valid_values = kParam_preset_valid_values;
   d[i++] = p++;
 
@@ -145,7 +145,7 @@ static void x265_init_parameters()
   p->version = 1;
   p->name = kParam_TU_intra_depth;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 4;
+  p->integer.default_value = 4;  // increases computation time
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
   p->integer.maximum = 4;
@@ -454,19 +454,18 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "wpp", "0");
+  api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
   api->param_parse(param, "rd", "6");
   api->param_parse(param, "ctu", "64");
   api->param_parse(param, "rskip", "0");
   api->param_parse(param, "rect", "1");
   api->param_parse(param, "amp", "1");
-  api->param_parse(param, "cu-lossless", "1");
+  api->param_parse(param, "cu-lossless", "1"); // increases computation time
 
   api->param_parse(param, "aq-mode", "1");
-  api->param_parse(param, "rd-refine", "1");
+  api->param_parse(param, "rd-refine", "1"); // increases computation time
   api->param_parse(param, "psy-rd", "1.0");
   api->param_parse(param, "psy-rdoq", "1.0");
-
 
   param->bLossless = encoder->lossless;
   param->logLevel = encoder->logLevel;
