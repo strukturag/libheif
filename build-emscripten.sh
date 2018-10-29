@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CORES=$(nproc --all)
 echo "Build using ${CORES} CPU cores"
 
-LIBDE265_VERSION=1.0.2
+LIBDE265_VERSION=1.0.3
 [ -s "libde265-${LIBDE265_VERSION}.tar.gz" ] || curl \
     -L \
     -o libde265-${LIBDE265_VERSION}.tar.gz \
@@ -19,7 +19,7 @@ if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
     cd ..
 fi
 
-CONFIGURE_ARGS="--disable-multithreading --disable-go"
+CONFIGURE_ARGS="--disable-go"
 
 emconfigure ./configure $CONFIGURE_ARGS \
     PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
@@ -50,7 +50,7 @@ emcc libheif/.libs/libheif.so \
     -s PRECISE_I64_MATH=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s USE_CLOSURE_COMPILER=0 \
-    -s LEGACY_VM_SUPPORT=1 \
+    -s WASM=1 \
     --memory-init-file 0 \
     -O3 \
     -std=c++11 \
@@ -58,4 +58,4 @@ emcc libheif/.libs/libheif.so \
     -lde265 \
     --pre-js pre.js \
     --post-js post.js \
-    -o libheif.js
+    -o libheif.html
