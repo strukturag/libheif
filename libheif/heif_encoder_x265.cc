@@ -30,10 +30,22 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <vector>
 
 extern "C" {
 #include <x265.h>
 }
+
+
+enum parameter_type { UndefinedType, Int, Bool, String };
+
+struct parameter {
+  parameter_type type;
+  std::string name;
+
+  int value_int = 0;
+  std::string value_string;
+};
 
 
 struct encoder_struct_x265
@@ -47,15 +59,48 @@ struct encoder_struct_x265
 
   // --- parameters
 
-  int quality;
-  bool lossless;
+  std::vector<parameter> parameters;
+
+  void add_param(const parameter&);
+  parameter get_param(std::string name) const;
+
   std::string preset;
   std::string tune;
-  int tu_intra_depth;
-  int logLevel = X265_LOG_NONE;
 
-  int complexity = 50;
+  int logLevel = X265_LOG_NONE;
 };
+
+
+void encoder_struct_x265::add_param(const parameter& p)
+{
+  // if there is already a parameter of that name, remove it from list
+
+  for (size_t i=0;i<parameters.size();i++) {
+    if (parameters[i].name == p.name) {
+      for (size_t k=i+1;k<parameters.size();k++) {
+        parameters[k-1] = parameters[k];
+      }
+      parameters.pop_back();
+      break;
+    }
+  }
+
+  // and add the new parameter at the end of the list
+
+  parameters.push_back(p);
+}
+
+
+parameter encoder_struct_x265::get_param(std::string name) const
+{
+  for (size_t i=0;i<parameters.size();i++) {
+    if (parameters[i].name == name) {
+      return parameters[i];
+    }
+  }
+
+  return { UndefinedType };
+}
 
 
 static const char* kParam_preset = "preset";
@@ -233,10 +278,7 @@ struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
     return heif_error_invalid_parameter_value;
   }
 
-  // quality=0   -> crf=50
-  // quality=50  -> crf=25
-  // quality=100 -> crf=0
-  encoder->quality = quality;
+  encoder->add_param( { Int, heif_encoder_parameter_name_quality, quality } );
 
   return heif_error_ok;
 }
@@ -245,7 +287,8 @@ struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
-  *quality = encoder->quality;
+  parameter p = encoder->get_param(heif_encoder_parameter_name_quality);
+  *quality = p.value_int;
 
   return heif_error_ok;
 }
@@ -254,7 +297,7 @@ struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
-  encoder->lossless = enable;
+  encoder->add_param( { Bool, heif_encoder_parameter_name_lossless, enable } );
 
   return heif_error_ok;
 }
@@ -263,7 +306,8 @@ struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
-  *enable = encoder->lossless;
+  parameter p = encoder->get_param(heif_encoder_parameter_name_lossless);
+  *enable = p.value_int;
 
   return heif_error_ok;
 }
@@ -306,7 +350,7 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
       return heif_error_invalid_parameter_value;
     }
 
-    encoder->tu_intra_depth = value;
+    encoder->add_param( { Int, name, value } );
     return heif_error_ok;
   }
   else if (strcmp(name, kParam_complexity)==0) {
@@ -314,7 +358,7 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
       return heif_error_invalid_parameter_value;
     }
 
-    encoder->complexity = value;
+    encoder->add_param( { Int, name, value } );
     return heif_error_ok;
   }
 
@@ -332,11 +376,11 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
     return x265_get_parameter_lossless(encoder,value);
   }
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
-    *value = encoder->tu_intra_depth;
+    *value = encoder->get_param(name).value_int;
     return heif_error_ok;
   }
   else if (strcmp(name, kParam_complexity)==0) {
-    *value = encoder->complexity;
+    *value = encoder->get_param(name).value_int;
     return heif_error_ok;
   }
 
@@ -455,6 +499,15 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
+  // close previous encoder if there is still one hanging around
+  if (encoder->encoder) {
+    const x265_api* api = x265_api_get(encoder->bit_depth);
+    api->encoder_close(encoder->encoder);
+    encoder->encoder = nullptr;
+  }
+
+
+
   int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
 
   const x265_api* api = x265_api_get(bit_depth);
@@ -471,11 +524,9 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   param->fpsNum = 1;
   param->fpsDenom = 1;
 
-  param->rc.rfConstant = (100 - encoder->quality)/2;
-
-// BPG uses CQP. It does not seem to be better though.
-//  param->rc.rateControlMode = X265_RC_CQP;
-//  param->rc.qp = (100 - encoder->quality)/2;
+  // BPG uses CQP. It does not seem to be better though.
+  //  param->rc.rateControlMode = X265_RC_CQP;
+  //  param->rc.qp = (100 - encoder->quality)/2;
   param->totalFrames = 1;
   param->internalCsp = X265_CSP_I420;
   api->param_parse(param, "info", "0");
@@ -490,26 +541,44 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   api->param_parse(param, "psy-rd", "1.0");
   api->param_parse(param, "psy-rdoq", "1.0");
 
-  if (encoder->complexity >= 60) {
-    api->param_parse(param, "rd-refine", "1"); // increases computation time
-    api->param_parse(param, "rd", "6");
-  }
-
-  if (encoder->complexity >= 70) {
-    api->param_parse(param, "cu-lossless", "1"); // increases computation time
-  }
-
-  if (encoder->complexity >= 90) {
-    api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
-  }
-
-  param->bLossless = encoder->lossless;
-  param->logLevel = encoder->logLevel;
   api->param_parse(param, "range", "full");
 
-  char buf[100];
-  sprintf(buf, "%d", encoder->tu_intra_depth);
-  api->param_parse(param, "tu-intra-depth", buf);
+
+  for (const auto& p : encoder->parameters) {
+    if (p.name == heif_encoder_parameter_name_quality) {
+      // quality=0   -> crf=50
+      // quality=50  -> crf=25
+      // quality=100 -> crf=0
+
+      param->rc.rfConstant = (100 - p.value_int)/2;
+    }
+    else if (p.name == heif_encoder_parameter_name_lossless) {
+      param->bLossless = p.value_int;
+    }
+    else if (p.name == kParam_TU_intra_depth) {
+      char buf[100];
+      sprintf(buf, "%d", p.value_int);
+      api->param_parse(param, "tu-intra-depth", buf);
+    }
+    else if (p.name == kParam_complexity) {
+      const int complexity = p.value_int;
+
+      if (complexity >= 60) {
+        api->param_parse(param, "rd-refine", "1"); // increases computation time
+        api->param_parse(param, "rd", "6");
+      }
+
+      if (complexity >= 70) {
+        api->param_parse(param, "cu-lossless", "1"); // increases computation time
+      }
+
+      if (complexity >= 90) {
+        api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
+      }
+    }
+  }
+
+  param->logLevel = encoder->logLevel;
 
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
@@ -525,12 +594,6 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
   pic->bitDepth = bit_depth;
 
-
-  // close previous encoder if there is still one hanging around
-  if (encoder->encoder) {
-    const x265_api* api = x265_api_get(encoder->bit_depth);
-    api->encoder_close(encoder->encoder);
-  }
 
   encoder->bit_depth = bit_depth;
 
