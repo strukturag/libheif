@@ -206,7 +206,7 @@ struct heif_encoder_plugin
 // Application programs should use the access functions.
 struct heif_encoder_parameter
 {
-  int version; // current version: 1
+  int version; // current version: 2
 
   // --- version 1 fields ---
 
@@ -235,6 +235,10 @@ struct heif_encoder_parameter
       int default_value;
     } boolean;
   };
+
+  // --- version 2 fields
+
+  int has_default;
 };
 
 

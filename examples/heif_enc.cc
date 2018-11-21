@@ -537,11 +537,17 @@ void list_encoder_parameters(heif_encoder* encoder)
     switch (heif_encoder_parameter_get_type(params[i])) {
     case heif_encoder_parameter_type_integer:
       {
-        int value;
-        heif_error error = heif_encoder_get_parameter_integer(encoder, name, &value);
-        (void)error;
+        heif_error error;
 
-        std::cerr << "  " << name << ", default=" << value;
+        std::cerr << "  " << name;
+
+        if (heif_encoder_has_default(encoder, name)) {
+          int value;
+          error = heif_encoder_get_parameter_integer(encoder, name, &value);
+          (void)error;
+
+          std::cerr << ", default=" << value;
+        }
 
         int have_minmax, minimum, maximum;
         error = heif_encoder_parameter_integer_valid_range(encoder, name,
@@ -557,22 +563,34 @@ void list_encoder_parameters(heif_encoder* encoder)
 
     case heif_encoder_parameter_type_boolean:
       {
-        int value;
-        heif_error error = heif_encoder_get_parameter_boolean(encoder, name, &value);
-        (void)error;
+        heif_error error;
+        std::cerr << "  " << name;
 
-        std::cerr << "  " << name << ", default=" << (value ? "true":"false") << "\n";
+        if (heif_encoder_has_default(encoder, name)) {
+          int value;
+          error = heif_encoder_get_parameter_boolean(encoder, name, &value);
+          (void)error;
+
+          std::cerr << ", default=" << (value ? "true":"false");
+        }
+
+        std::cerr << "\n";
       }
       break;
 
     case heif_encoder_parameter_type_string:
       {
-        const int value_size = 50;
-        char value[value_size];
-        heif_error error = heif_encoder_get_parameter_string(encoder, name, value, value_size);
-        (void)error;
+        heif_error error;
+        std::cerr << "  " << name;
 
-        std::cerr << "  " << name << ", default=" << value;
+        if (heif_encoder_has_default(encoder, name)) {
+          const int value_size = 50;
+          char value[value_size];
+          error = heif_encoder_get_parameter_string(encoder, name, value, value_size);
+          (void)error;
+
+          std::cerr << ", default=" << value;
+        }
 
         const char*const* valid_options;
         error = heif_encoder_parameter_string_valid_values(encoder, name, &valid_options);

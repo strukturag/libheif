@@ -1319,7 +1319,9 @@ struct heif_error heif_encoder_set_parameter(struct heif_encoder* encoder,
     }
   }
 
-  return error_unsupported_parameter;
+  return heif_encoder_set_parameter_string(encoder, parameter_name, value);
+
+  //return error_unsupported_parameter;
 }
 
 
@@ -1374,6 +1376,27 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
   }
 
   return error_unsupported_parameter;
+}
+
+
+int heif_encoder_has_default(struct heif_encoder* encoder,
+                             const char* parameter_name)
+{
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name)==0) {
+
+      if ((*params)->version >= 2) {
+        return (*params)->has_default;
+      }
+      else {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 
