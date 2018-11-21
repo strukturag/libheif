@@ -155,10 +155,11 @@ static void x265_init_parameters()
   int i=0;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = heif_encoder_parameter_name_quality;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 50;
+  p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
   p->integer.maximum = 100;
@@ -167,33 +168,37 @@ static void x265_init_parameters()
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = heif_encoder_parameter_name_lossless;
   p->type = heif_encoder_parameter_type_boolean;
   p->boolean.default_value = false;
+  p->has_default = true;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = kParam_preset;
   p->type = heif_encoder_parameter_type_string;
   p->string.default_value = "slow";  // increases computation time
+  p->has_default = true;
   p->string.valid_values = kParam_preset_valid_values;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = kParam_tune;
   p->type = heif_encoder_parameter_type_string;
   p->string.default_value = "ssim";
+  p->has_default = true;
   p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = kParam_TU_intra_depth;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 2;  // increases computation time
+  p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
   p->integer.maximum = 4;
@@ -202,10 +207,11 @@ static void x265_init_parameters()
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
-  p->version = 1;
+  p->version = 2;
   p->name = kParam_complexity;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 50;
+  p->has_default = false;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
   p->integer.maximum = 100;
@@ -472,16 +478,18 @@ static void x265_set_default_parameters(void* encoder)
   for (const struct heif_encoder_parameter** p = x265_encoder_parameter_ptrs; *p; p++) {
     const struct heif_encoder_parameter* param = *p;
 
-    switch (param->type) {
-    case heif_encoder_parameter_type_integer:
-      x265_set_parameter_integer(encoder, param->name, param->integer.default_value);
-      break;
-    case heif_encoder_parameter_type_boolean:
-      x265_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
-      break;
-    case heif_encoder_parameter_type_string:
-      x265_set_parameter_string(encoder, param->name, param->string.default_value);
-      break;
+    if (param->has_default) {
+      switch (param->type) {
+      case heif_encoder_parameter_type_integer:
+        x265_set_parameter_integer(encoder, param->name, param->integer.default_value);
+        break;
+      case heif_encoder_parameter_type_boolean:
+        x265_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
+        break;
+      case heif_encoder_parameter_type_string:
+        x265_set_parameter_string(encoder, param->name, param->string.default_value);
+        break;
+      }
     }
   }
 }

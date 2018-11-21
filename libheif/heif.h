@@ -981,6 +981,10 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              const char* parameter_name,
                                              char* value_ptr, int value_size);
 
+LIBHEIF_API
+int heif_encoder_has_default(struct heif_encoder*,
+                             const char* parameter_name);
+
 
 struct heif_encoding_options {
   uint8_t version;

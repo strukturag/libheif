@@ -1377,6 +1377,27 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder* encoder,
 }
 
 
+int heif_encoder_has_default(struct heif_encoder* encoder,
+                             const char* parameter_name)
+{
+  for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name)==0) {
+
+      if ((*params)->version >= 2) {
+        return (*params)->has_default;
+      }
+      else {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+
 static void set_default_options(heif_encoding_options& options)
 {
   options.version = 1;
