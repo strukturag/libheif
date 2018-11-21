@@ -1077,8 +1077,8 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
 struct heif_error heif_context_assign_thumbnail(struct heif_context*,
-                                                const struct heif_image_handle* thumbnail_image,
-                                                const struct heif_image_handle* master_image);
+                                                const struct heif_image_handle* master_image,
+                                                const struct heif_image_handle* thumbnail_image);
 
 // Add EXIF metadata to an image.
 LIBHEIF_API

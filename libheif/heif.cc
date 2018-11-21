@@ -1549,8 +1549,8 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
 
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
-                                                const struct heif_image_handle* thumbnail_image,
-                                                const struct heif_image_handle* master_image)
+                                                const struct heif_image_handle* master_image,
+                                                const struct heif_image_handle* thumbnail_image)
 {
   Error error = ctx->context->assign_thumbnail(thumbnail_image->image, master_image->image);
   return error.error_struct(ctx->context.get());
