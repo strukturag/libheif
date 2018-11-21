@@ -1319,7 +1319,9 @@ struct heif_error heif_encoder_set_parameter(struct heif_encoder* encoder,
     }
   }
 
-  return error_unsupported_parameter;
+  return heif_encoder_set_parameter_string(encoder, parameter_name, value);
+
+  //return error_unsupported_parameter;
 }
 
 

@@ -478,6 +478,10 @@ struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name,
     encoder->tune = value;
     return heif_error_ok;
   }
+  else if (strncmp(name, "x265:", 5)==0) {
+    encoder->add_param(name, std::string(value));
+    return heif_error_ok;
+  }
 
   return heif_error_unsupported_parameter;
 }
@@ -616,6 +620,10 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
       if (complexity >= 90) {
         api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
       }
+    }
+    else if (strncmp(p.name.c_str(), "x265:", 5)==0) {
+      std::string x265p = p.name.substr(5);
+      api->param_parse(param, x265p.c_str(), p.value_string.c_str());
     }
   }
 
