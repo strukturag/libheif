@@ -969,6 +969,12 @@ struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder
 // Set a parameter of any type to the string value.
 // Integer values are parsed from the string.
 // Boolean values can be "true"/"false"/"1"/"0"
+//
+// x265 encoder specific note:
+// When using the x265 encoder, you may pass any of its parameters by
+// prefixing the parameter name with 'x265:'. Hence, to set the 'ctu' parameter,
+// you will have to set 'x265:ctu' in libheif.
+// Note that there is no checking for valid parameters when using the prefix.
 LIBHEIF_API
 struct heif_error heif_encoder_set_parameter(struct heif_encoder*,
                                              const char* parameter_name,
@@ -981,9 +987,11 @@ struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              const char* parameter_name,
                                              char* value_ptr, int value_size);
 
+// Query whether a specific parameter has a default value.
 LIBHEIF_API
 int heif_encoder_has_default(struct heif_encoder*,
                              const char* parameter_name);
+
 
 
 struct heif_encoding_options {
