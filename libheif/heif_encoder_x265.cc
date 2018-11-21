@@ -40,10 +40,12 @@ extern "C" {
 enum parameter_type { UndefinedType, Int, Bool, String };
 
 struct parameter {
-  parameter_type type;
+
+
+  parameter_type type = UndefinedType;
   std::string name;
 
-  int value_int = 0;
+  int value_int = 0; // also used for boolean
   std::string value_string;
 };
 
@@ -62,6 +64,9 @@ struct encoder_struct_x265
   std::vector<parameter> parameters;
 
   void add_param(const parameter&);
+  void add_param(std::string name, int value);
+  void add_param(std::string name, bool value);
+  void add_param(std::string name, std::string value);
   parameter get_param(std::string name) const;
 
   std::string preset;
@@ -91,6 +96,34 @@ void encoder_struct_x265::add_param(const parameter& p)
 }
 
 
+void encoder_struct_x265::add_param(std::string name, int value)
+{
+  parameter p;
+  p.type = Int;
+  p.name = name;
+  p.value_int = value;
+  add_param(p);
+}
+
+void encoder_struct_x265::add_param(std::string name, bool value)
+{
+  parameter p;
+  p.type = Bool;
+  p.name = name;
+  p.value_int = value;
+  add_param(p);
+}
+
+void encoder_struct_x265::add_param(std::string name, std::string value)
+{
+  parameter p;
+  p.type = String;
+  p.name = name;
+  p.value_string = value;
+  add_param(p);
+}
+
+
 parameter encoder_struct_x265::get_param(std::string name) const
 {
   for (size_t i=0;i<parameters.size();i++) {
@@ -99,7 +132,7 @@ parameter encoder_struct_x265::get_param(std::string name) const
     }
   }
 
-  return { UndefinedType };
+  return parameter();
 }
 
 
@@ -284,7 +317,7 @@ struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
     return heif_error_invalid_parameter_value;
   }
 
-  encoder->add_param( { Int, heif_encoder_parameter_name_quality, quality } );
+  encoder->add_param(heif_encoder_parameter_name_quality, quality);
 
   return heif_error_ok;
 }
@@ -303,7 +336,7 @@ struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
-  encoder->add_param( { Bool, heif_encoder_parameter_name_lossless, enable } );
+  encoder->add_param(heif_encoder_parameter_name_lossless, (bool)enable);
 
   return heif_error_ok;
 }
@@ -356,7 +389,7 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
       return heif_error_invalid_parameter_value;
     }
 
-    encoder->add_param( { Int, name, value } );
+    encoder->add_param(name, value);
     return heif_error_ok;
   }
   else if (strcmp(name, kParam_complexity)==0) {
@@ -364,7 +397,7 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
       return heif_error_invalid_parameter_value;
     }
 
-    encoder->add_param( { Int, name, value } );
+    encoder->add_param(name, value);
     return heif_error_ok;
   }
 
