@@ -71,6 +71,7 @@ static struct option long_options[] = {
   {"params",     no_argument,       0, 'P' },
   {"no-alpha",   no_argument, &master_alpha, 0 },
   {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
+  {"bit-depth",  required_argument, 0, 'b' },
   {0,         0,                 0,  0 }
 };
 
@@ -92,6 +93,7 @@ void show_help(const char* argv0)
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
+            << "  -b #            bit-depth of generated HEIF file when using 16-bit PNG input\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n";
 }
 
@@ -267,7 +269,7 @@ user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 } // user_read_data
 
 
-std::shared_ptr<heif_image> loadPNG(const char* filename)
+std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
   FILE* fh = fopen(filename,"rb");
   if (!fh) {
@@ -507,7 +509,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
                             &image);
     (void)err;
 
-    int output_bit_depth = 10;
     int bdShift = 16 - output_bit_depth;
 
     heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, output_bit_depth);
@@ -525,8 +526,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
       p_a = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &stride_a);
     }
 
-    printf("size: %d %d\n",width,height);
-
     for (uint32_t y = 0; y < height; y++) {
       uint8_t* p = row_pointers[y];
 
@@ -537,13 +536,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
           p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
           p_a[y*stride_a/2 + x] = (uint16_t)(((p[6]<<8) | p[7]) >> bdShift);
           p+=8;
-
-          if (0)
-          printf("%d %d : %d %d %d / %d\n", x,y,
-                 p_r[y*stride_r+x],
-                 p_g[y*stride_r+x],
-                 p_b[y*stride_r+x],
-                 p_a[y*stride_r+x]);
         }
       }
       else {
@@ -572,7 +564,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
                                     [] (heif_image* img) { heif_image_release(img); });
 }
 #else
-std::shared_ptr<heif_image> loadPNG(const char* filename)
+std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
   std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
   exit(1);
@@ -697,13 +689,14 @@ int main(int argc, char** argv)
   int logging_level = 0;
   bool option_show_parameters = false;
   int thumbnail_bbox_size = 0;
+  int output_bit_depth = 10;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -731,6 +724,9 @@ int main(int argc, char** argv)
       break;
     case 't':
       thumbnail_bbox_size = atoi(optarg);
+      break;
+    case 'b':
+      output_bit_depth = atoi(optarg);
       break;
     }
   }
@@ -838,7 +834,7 @@ int main(int argc, char** argv)
 
     std::shared_ptr<heif_image> image;
     if (filetype==PNG) {
-      image = loadPNG(input_filename.c_str());
+      image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else {
       image = loadJPEG(input_filename.c_str());
