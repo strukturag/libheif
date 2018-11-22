@@ -54,13 +54,17 @@ const (
 type Chroma C.enum_heif_chroma
 
 const (
-	ChromaUndefined       = C.heif_chroma_undefined
-	ChromaMonochrome      = C.heif_chroma_monochrome
-	Chroma420             = C.heif_chroma_420
-	Chroma422             = C.heif_chroma_422
-	Chroma444             = C.heif_chroma_444
-	ChromaInterleavedRGB  = C.heif_chroma_interleaved_RGB
-	ChromaInterleavedRGBA = C.heif_chroma_interleaved_RGBA
+	ChromaUndefined              = C.heif_chroma_undefined
+	ChromaMonochrome             = C.heif_chroma_monochrome
+	Chroma420                    = C.heif_chroma_420
+	Chroma422                    = C.heif_chroma_422
+	Chroma444                    = C.heif_chroma_444
+	ChromaInterleavedRGB         = C.heif_chroma_interleaved_RGB
+	ChromaInterleavedRGBA        = C.heif_chroma_interleaved_RGBA
+	ChromaInterleavedRRGGBBAA_BE = C.heif_chroma_interleaved_RRGGBBAA_BE
+	ChromaInterleavedRRGGBBAA_LE = C.heif_chroma_interleaved_RRGGBBAA_LE
+	ChromaInterleavedRRGGBB_BE   = C.heif_chroma_interleaved_RRGGBB_BE
+	ChromaInterleavedRRGGBB_LE   = C.heif_chroma_interleaved_RRGGBB_LE
 
 	ChromaInterleaved24Bit = C.heif_chroma_interleaved_24bit
 	ChromaInterleaved32Bit = C.heif_chroma_interleaved_32bit
@@ -264,6 +268,8 @@ const (
 	SuberrorUnsupportedItemConstructionMethod = C.heif_suberror_Unsupported_item_construction_method
 
 	// --- Encoder_plugin_error ---
+
+	SuberrorUnsupportedBitDepth = C.heif_suberror_Unsupported_bit_depth
 
 	// --- Encoding_error ---
 
