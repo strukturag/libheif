@@ -609,10 +609,10 @@ void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* 
   std::vector<uint8_t> nal;
   nal.resize(size + 4);
 
-  nal[0] = (size>>24) & 0xFF;
-  nal[1] = (size>>16) & 0xFF;
-  nal[2] = (size>> 8) & 0xFF;
-  nal[3] = (size>> 0) & 0xFF;
+  nal[0] = (uint8_t)((size>>24) & 0xFF);
+  nal[1] = (uint8_t)((size>>16) & 0xFF);
+  nal[2] = (uint8_t)((size>> 8) & 0xFF);
+  nal[3] = (uint8_t)((size>> 0) & 0xFF);
 
   memcpy(nal.data()+4, data, size);
 

@@ -989,7 +989,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_YCbCr420_HDR() co
     outimg->add_plane(heif_channel_Alpha, m_width, m_height, bit_depth);
   }
 
-  uint16_t *out_cb,*out_cr,*out_y, *out_a;
+  uint16_t *out_cb,*out_cr,*out_y, *out_a = nullptr;
   int out_cb_stride=0, out_cr_stride=0, out_y_stride=0, out_a_stride=0;
 
   const uint16_t *in_r;
