@@ -1073,7 +1073,7 @@ Error Box_iloc::read_data(const Item& item,
 
       bool success = istr->seek(extent.offset + item.base_offset);
       assert(success);
-      success = success;
+      (void)success;
 
 
       // --- read data
@@ -2700,7 +2700,7 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
   bool success;
   success = istr->seek(m_data_start_pos + (std::streampos)start);
   assert(success);
-  success = success;
+  (void)success;
 
   // reserve space for the data in the output array
 
