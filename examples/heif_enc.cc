@@ -507,9 +507,12 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
                             &image);
     (void)err;
 
-    heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, bit_depth);
-    heif_image_add_plane(image, heif_channel_G, (int)width, (int)height, bit_depth);
-    heif_image_add_plane(image, heif_channel_B, (int)width, (int)height, bit_depth);
+    int output_bit_depth = 10;
+    int bdShift = 16 - output_bit_depth;
+
+    heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_G, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_B, (int)width, (int)height, output_bit_depth);
 
     int stride_r, stride_g, stride_b, stride_a;
     uint16_t* p_r = (uint16_t*)heif_image_get_plane(image, heif_channel_R, &stride_r);
@@ -518,14 +521,11 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
 
     uint16_t* p_a;
     if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, bit_depth);
+      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, output_bit_depth);
       p_a = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &stride_a);
     }
 
     printf("size: %d %d\n",width,height);
-
-    int output_bit_depth = 10;
-    int bdShift = 16 - output_bit_depth;
 
     for (uint32_t y = 0; y < height; y++) {
       uint8_t* p = row_pointers[y];
