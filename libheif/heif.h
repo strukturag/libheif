@@ -657,7 +657,11 @@ enum heif_chroma {
   heif_chroma_422=2,
   heif_chroma_444=3,
   heif_chroma_interleaved_RGB =10,
-  heif_chroma_interleaved_RGBA=11
+  heif_chroma_interleaved_RGBA=11,
+  heif_chroma_interleaved_RRGGBB_BE  =12,
+  heif_chroma_interleaved_RRGGBBAA_BE=13,
+  heif_chroma_interleaved_RRGGBB_LE  =14,
+  heif_chroma_interleaved_RRGGBBAA_LE=15
 };
 
 // DEPRECTATED ENUM NAMES

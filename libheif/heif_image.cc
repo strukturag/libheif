@@ -323,11 +323,16 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
     }
   }
   else { // same colorspace
-
     if (target_colorspace == heif_colorspace_RGB) {
       if (get_chroma_format() == heif_chroma_444 &&
-          target_chroma == heif_chroma_interleaved_24bit) {
+          target_chroma == heif_chroma_interleaved_RGB) {
         out_img = convert_RGB_to_RGB24_32();
+      }
+
+      if (get_chroma_format() == heif_chroma_444 &&
+          (target_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+           target_chroma == heif_chroma_interleaved_RRGGBBAA_BE)) {
+        out_img = convert_RGB_to_RRGGBBaa_BE();
       }
     }
 
@@ -583,6 +588,81 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RGB24_32() const
         out_p[y*out_p_stride + 3*x + 0] = in_r[x + y*in_r_stride];
         out_p[y*out_p_stride + 3*x + 1] = in_g[x + y*in_g_stride];
         out_p[y*out_p_stride + 3*x + 2] = in_b[x + y*in_b_stride];
+      }
+    }
+  }
+
+  return outimg;
+}
+
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RRGGBBaa_BE() const
+{
+  bool has_alpha = has_channel(heif_channel_Alpha);
+
+  if (get_bits_per_pixel(heif_channel_R) == 8 ||
+      get_bits_per_pixel(heif_channel_G) == 8 ||
+      get_bits_per_pixel(heif_channel_B) == 8) {
+    return nullptr;
+  }
+
+  if (has_alpha && get_bits_per_pixel(heif_channel_Alpha) == 8) {
+    return nullptr;
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(m_width, m_height, heif_colorspace_RGB,
+                 has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
+
+  outimg->add_plane(heif_channel_interleaved, m_width, m_height, has_alpha ? 64 : 48);
+
+  const uint16_t *in_r,*in_g,*in_b,*in_a=nullptr;
+  int in_r_stride=0, in_g_stride=0, in_b_stride=0, in_a_stride=0;
+
+  uint8_t *out_p;
+  int out_p_stride=0;
+
+  in_r = (uint16_t*)get_plane(heif_channel_R, &in_r_stride);
+  in_g = (uint16_t*)get_plane(heif_channel_G, &in_g_stride);
+  in_b = (uint16_t*)get_plane(heif_channel_B, &in_b_stride);
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+
+  if (has_alpha) {
+    in_a = (uint16_t*)get_plane(heif_channel_Alpha, &in_a_stride);
+  }
+
+  int x,y;
+  for (y=0;y<m_height;y++) {
+
+    if (has_alpha) {
+      for (x=0;x<m_width;x++) {
+        uint16_t r = in_r[x + y*in_r_stride];
+        uint16_t g = in_g[x + y*in_g_stride];
+        uint16_t b = in_b[x + y*in_b_stride];
+        uint16_t a = in_a[x + y*in_a_stride];
+        out_p[y*out_p_stride + 8*x + 0] = (uint8_t)(r>>8);
+        out_p[y*out_p_stride + 8*x + 1] = (uint8_t)(r & 0xFF);
+        out_p[y*out_p_stride + 8*x + 2] = (uint8_t)(g>>8);
+        out_p[y*out_p_stride + 8*x + 3] = (uint8_t)(g & 0xFF);
+        out_p[y*out_p_stride + 8*x + 4] = (uint8_t)(b>>8);
+        out_p[y*out_p_stride + 8*x + 5] = (uint8_t)(b & 0xFF);
+        out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(a>>8);
+        out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
+      }
+    }
+    else {
+      for (x=0;x<m_width;x++) {
+        uint16_t r = in_r[x + y*in_r_stride];
+        uint16_t g = in_g[x + y*in_g_stride];
+        uint16_t b = in_b[x + y*in_b_stride];
+        out_p[y*out_p_stride + 6*x + 0] = (uint8_t)(r>>8);
+        out_p[y*out_p_stride + 6*x + 1] = (uint8_t)(r & 0xFF);
+        out_p[y*out_p_stride + 6*x + 2] = (uint8_t)(g>>8);
+        out_p[y*out_p_stride + 6*x + 3] = (uint8_t)(g & 0xFF);
+        out_p[y*out_p_stride + 6*x + 4] = (uint8_t)(b>>8);
+        out_p[y*out_p_stride + 6*x + 5] = (uint8_t)(b & 0xFF);
       }
     }
   }
