@@ -865,7 +865,7 @@ int main(int argc, char** argv)
                                       options,
                                       &handle);
     if (error.code != 0) {
-      std::cerr << "Could not read HEIF file: " << error.message << "\n";
+      std::cerr << "Could not encode HEIF file: " << error.message << "\n";
       return 1;
     }
 

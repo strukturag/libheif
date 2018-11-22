@@ -108,7 +108,7 @@ enum heif_error_code {
   // The decoder plugin generated an error
   heif_error_Decoder_plugin_error = 7,
 
-  // The decoder plugin generated an error
+  // The encoder plugin generated an error
   heif_error_Encoder_plugin_error = 8,
 
   // Error during encoding or when writing to the output
@@ -236,6 +236,8 @@ enum heif_suberror_code {
 
 
   // --- Encoder_plugin_error ---
+
+  heif_suberror_Unsupported_bit_depth = 4000,
 
 
   // --- Encoding_error ---
