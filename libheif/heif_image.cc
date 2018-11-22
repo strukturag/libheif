@@ -111,7 +111,9 @@ bool HeifPixelImage::has_channel(heif_channel channel) const
 bool HeifPixelImage::has_alpha() const
 {
   return has_channel(heif_channel_Alpha) ||
-    get_chroma_format() == heif_chroma_interleaved_RGBA;
+    get_chroma_format() == heif_chroma_interleaved_RGBA ||
+    get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+    get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE;
 }
 
 
@@ -265,29 +267,38 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
       // 4:2:0 input -> RGB 24bit
 
       if (get_chroma_format() == heif_chroma_420 &&
-          target_chroma == heif_chroma_interleaved_24bit) {
+          target_chroma == heif_chroma_interleaved_RGB) {
         out_img = convert_YCbCr420_to_RGB24();
       }
 
       // 4:2:0 input -> RGBA 32bit
 
       if (get_chroma_format() == heif_chroma_420 &&
-          target_chroma == heif_chroma_interleaved_32bit) {
+          target_chroma == heif_chroma_interleaved_RGBA) {
         out_img = convert_YCbCr420_to_RGB32();
+      }
+
+      // 4:2:0 input -> HDR RGB, big endian
+
+      if (get_chroma_format() == heif_chroma_420 &&
+          (target_chroma == heif_chroma_interleaved_RRGGBB_BE ||
+           target_chroma == heif_chroma_interleaved_RRGGBBAA_BE)) {
+        std::shared_ptr<HeifPixelImage> tmpImg = convert_YCbCr420_to_RGB_HDR();
+        out_img = tmpImg->convert_RGB_to_RRGGBBaa_BE();
       }
 
 
       // greyscale -> RGB 24bit
 
       if (get_chroma_format() == heif_chroma_monochrome &&
-          target_chroma == heif_chroma_interleaved_24bit) {
+          target_chroma == heif_chroma_interleaved_RGB) {
         out_img = convert_mono_to_RGB(3);
       }
 
       // greyscale -> RGB 32bit
 
       if (get_chroma_format() == heif_chroma_monochrome &&
-          target_chroma == heif_chroma_interleaved_32bit) {
+          target_chroma == heif_chroma_interleaved_RGBA) {
         out_img = convert_mono_to_RGB(4);
       }
     }
@@ -307,8 +318,8 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
         }
       }
 
-      if ((get_chroma_format() == heif_chroma_interleaved_24bit ||
-           get_chroma_format() == heif_chroma_interleaved_32bit) &&
+      if ((get_chroma_format() == heif_chroma_interleaved_RGB ||
+           get_chroma_format() == heif_chroma_interleaved_RGBA) &&
           target_chroma == heif_chroma_420) {
         out_img = convert_RGB24_32_to_YCbCr420();
       }
@@ -318,7 +329,9 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
         out_img = img_rgb->convert_RGB24_32_to_YCbCr420();
       }
     }
-    else {
+
+    if (get_bits_per_pixel(heif_channel_R) > 8 &&
+        target_chroma == heif_chroma_420) {
       out_img = convert_RGB_to_YCbCr420_HDR();
     }
   }
@@ -431,6 +444,97 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB() const
 
     if (has_alpha) {
       memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], m_width);
+    }
+  }
+
+  return outimg;
+}
+
+
+
+std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB_HDR() const
+{
+  if (get_bits_per_pixel(heif_channel_Y) == 8 ||
+      get_bits_per_pixel(heif_channel_Cb) == 8 ||
+      get_bits_per_pixel(heif_channel_Cr) == 8) {
+    return nullptr;
+  }
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  // TODO: how do we specify the output BPPs ?
+  int bpp = get_bits_per_pixel(heif_channel_Y);
+
+  outimg->create(m_width, m_height, heif_colorspace_RGB, heif_chroma_444);
+
+  outimg->add_plane(heif_channel_R, m_width, m_height, bpp);
+  outimg->add_plane(heif_channel_G, m_width, m_height, bpp);
+  outimg->add_plane(heif_channel_B, m_width, m_height, bpp);
+
+  bool has_alpha = has_channel(heif_channel_Alpha);
+  if (has_alpha) {
+    outimg->add_plane(heif_channel_Alpha, m_width, m_height, bpp);
+  }
+
+  const uint16_t *in_y,*in_cb,*in_cr,*in_a;
+  int in_y_stride=0, in_cb_stride=0, in_cr_stride=0, in_a_stride=0;
+
+  uint16_t *out_r,*out_g,*out_b,*out_a;
+  int out_r_stride=0, out_g_stride=0, out_b_stride=0, out_a_stride=0;
+
+  in_y  = (const uint16_t*)get_plane(heif_channel_Y,  &in_y_stride);
+  in_cb = (const uint16_t*)get_plane(heif_channel_Cb, &in_cb_stride);
+  in_cr = (const uint16_t*)get_plane(heif_channel_Cr, &in_cr_stride);
+  out_r = (uint16_t*)outimg->get_plane(heif_channel_R, &out_r_stride);
+  out_g = (uint16_t*)outimg->get_plane(heif_channel_G, &out_g_stride);
+  out_b = (uint16_t*)outimg->get_plane(heif_channel_B, &out_b_stride);
+
+  if (has_alpha) {
+    in_a = (const uint16_t*)get_plane(heif_channel_Alpha, &in_a_stride);
+    out_a = (uint16_t*)outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+  }
+  else {
+    in_a = nullptr;
+    out_a = nullptr;
+  }
+
+  in_y_stride /= 2;
+  in_cb_stride /= 2;
+  in_cr_stride /= 2;
+  in_a_stride /= 2;
+  out_r_stride /= 2;
+  out_g_stride /= 2;
+  out_b_stride /= 2;
+  out_a_stride /= 2;
+
+  uint16_t halfRange = (uint16_t)(1<<(bpp-1));
+  int32_t fullRange = (1<<bpp)-1;
+
+  int bdShift = 16-bpp;
+
+  int x,y;
+  for (y=0;y<m_height;y++) {
+    for (x=0;x<m_width;x++) {
+      float yv = static_cast<float>(in_y [y  *in_y_stride  + x] );
+      float cb = static_cast<float>(in_cb[y/2*in_cb_stride + x/2]-halfRange);
+      float cr = static_cast<float>(in_cr[y/2*in_cr_stride + x/2]-halfRange);
+
+      out_r[y*out_r_stride + x] = (uint16_t)(clip(yv + 1.402f*cr, fullRange) << bdShift);
+      out_g[y*out_g_stride + x] = (uint16_t)(clip(yv - 0.344136f*cb - 0.714136f*cr, fullRange) << bdShift);
+      out_b[y*out_b_stride + x] = (uint16_t)(clip(yv + 1.772f*cb, fullRange) << bdShift);
+
+      if (0)
+      printf("%d %d : %d %d %d\n",x,y,
+             out_r[y*out_r_stride+x],
+             out_g[y*out_r_stride+x],
+             out_b[y*out_r_stride+x]);
+    }
+
+    if (has_alpha) {
+      for (int x=0;x<m_width;x++) {
+        out_a[y*out_a_stride+x] = (uint16_t)(in_a[y*in_a_stride+x] << bdShift);
+      }
+      //memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], m_width *2);
     }
   }
 
@@ -633,6 +737,11 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RRGGBBaa_BE() con
     in_a = (uint16_t*)get_plane(heif_channel_Alpha, &in_a_stride);
   }
 
+  in_r_stride /= 2;
+  in_g_stride /= 2;
+  in_b_stride /= 2;
+  in_a_stride /= 2;
+
   int x,y;
   for (y=0;y<m_height;y++) {
 
@@ -650,6 +759,18 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RRGGBBaa_BE() con
         out_p[y*out_p_stride + 8*x + 5] = (uint8_t)(b & 0xFF);
         out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(a>>8);
         out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
+
+        if (0)
+        printf("%d %d : %d %d  %d %d  %d %d  %d %d\n",
+               x,y,
+               out_p[y*out_p_stride + 8*x + 0],
+               out_p[y*out_p_stride + 8*x + 1],
+               out_p[y*out_p_stride + 8*x + 2],
+               out_p[y*out_p_stride + 8*x + 3],
+               out_p[y*out_p_stride + 8*x + 4],
+               out_p[y*out_p_stride + 8*x + 5],
+               out_p[y*out_p_stride + 8*x + 6],
+               out_p[y*out_p_stride + 8*x + 7]);
       }
     }
     else {
@@ -906,7 +1027,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_YCbCr420_HDR() co
   assert(bit_depth<=16);
 
   uint16_t halfRange = (uint16_t)(1<<(bit_depth-1));
-  int32_t fullRange = 1<<bit_depth;
+  int32_t fullRange = (1<<bit_depth)-1;
 
   if (!has_alpha()) {
     for (int y=0;y<m_height;y++) {

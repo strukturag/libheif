@@ -93,6 +93,10 @@ namespace heif {
 
     heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const;
 
+    int get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const;
+
+    int get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const;
+
     std::string debug_dump_boxes() const;
 
 

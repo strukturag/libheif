@@ -358,6 +358,32 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 }
 
 
+int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const
+{
+  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
+  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_luma;
+  }
+
+  assert(false);
+  return 8;
+}
+
+
+int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const
+{
+  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
+  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_chroma;
+  }
+
+  assert(false);
+  return 8;
+}
+
+
 Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
 #if ENABLE_PARALLEL_TILE_DECODING

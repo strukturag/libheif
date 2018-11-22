@@ -428,6 +428,18 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 }
 
 
+int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle* handle)
+{
+  return handle->image->get_luma_bits_per_pixel();
+}
+
+
+int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle* handle)
+{
+  return handle->image->get_chroma_bits_per_pixel();
+}
+
+
 int heif_image_handle_has_depth_image(const struct heif_image_handle* handle)
 {
   return handle->image->get_depth_channel() != nullptr;

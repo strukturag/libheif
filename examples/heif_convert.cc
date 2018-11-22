@@ -200,11 +200,13 @@ int main(int argc, char** argv)
     struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
     encoder->UpdateDecodingOptions(handle, decode_options);
 
+    int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
+
     struct heif_image* image;
     err = heif_decode_image(handle,
                             &image,
                             encoder->colorspace(has_alpha),
-                            encoder->chroma(has_alpha),
+                            encoder->chroma(has_alpha, bit_depth),
                             decode_options);
     heif_decoding_options_free(decode_options);
     if (err.code) {
@@ -238,11 +240,13 @@ int main(int argc, char** argv)
           return 1;
         }
 
+        int bit_depth = 10; // TODO
+
         struct heif_image* depth_image;
         err = heif_decode_image(depth_handle,
                                 &depth_image,
                                 encoder->colorspace(false),
-                                encoder->chroma(false),
+                                encoder->chroma(false, bit_depth),
                                 nullptr);
         if (err.code) {
           heif_image_handle_release(depth_handle);

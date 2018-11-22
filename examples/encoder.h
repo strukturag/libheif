@@ -36,7 +36,7 @@ class Encoder {
   virtual ~Encoder() {}
 
   virtual heif_colorspace colorspace(bool has_alpha) const = 0;
-  virtual heif_chroma chroma(bool has_alpha) const = 0;
+  virtual heif_chroma chroma(bool has_alpha, int bit_depth) const = 0;
 
   virtual void UpdateDecodingOptions(const struct heif_image_handle* handle,
       struct heif_decoding_options *options) const {
