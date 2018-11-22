@@ -335,7 +335,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
   png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
                &interlace_type, NULL, NULL);
 
-  assert(bit_depth < 16); // , "cannot handle 16 bit images");
+  //assert(bit_depth < 16); // , "cannot handle 16 bit images");
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
     if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
@@ -478,7 +478,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
         }
     }
   }
-  else {
+  else if (bit_depth==8) {
     err = heif_image_create((int)width, (int)height,
                             heif_colorspace_RGB,
                             has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
@@ -497,6 +497,62 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
       }
       else {
         memcpy(p + y*stride, row_pointers[y], width*3);
+      }
+    }
+  }
+  else {
+    err = heif_image_create((int)width, (int)height,
+                            heif_colorspace_RGB,
+                            heif_chroma_444,
+                            &image);
+    (void)err;
+
+    heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, bit_depth);
+    heif_image_add_plane(image, heif_channel_G, (int)width, (int)height, bit_depth);
+    heif_image_add_plane(image, heif_channel_B, (int)width, (int)height, bit_depth);
+
+    int stride_r, stride_g, stride_b, stride_a;
+    uint16_t* p_r = (uint16_t*)heif_image_get_plane(image, heif_channel_R, &stride_r);
+    uint16_t* p_g = (uint16_t*)heif_image_get_plane(image, heif_channel_G, &stride_g);
+    uint16_t* p_b = (uint16_t*)heif_image_get_plane(image, heif_channel_B, &stride_b);
+
+    uint16_t* p_a;
+    if (has_alpha) {
+      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, bit_depth);
+      p_a = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &stride_a);
+    }
+
+    printf("size: %d %d\n",width,height);
+
+    int output_bit_depth = 10;
+    int bdShift = 16 - output_bit_depth;
+
+    for (uint32_t y = 0; y < height; y++) {
+      uint8_t* p = row_pointers[y];
+
+      if (has_alpha) {
+        for (uint32_t x = 0; x < width; x++) {
+          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
+          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
+          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
+          p_a[y*stride_a/2 + x] = (uint16_t)(((p[6]<<8) | p[7]) >> bdShift);
+          p+=8;
+
+          if (0)
+          printf("%d %d : %d %d %d / %d\n", x,y,
+                 p_r[y*stride_r+x],
+                 p_g[y*stride_r+x],
+                 p_b[y*stride_r+x],
+                 p_a[y*stride_r+x]);
+        }
+      }
+      else {
+        for (uint32_t x = 0; x < width; x++) {
+          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
+          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
+          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
+          p+=6;
+        }
       }
     }
   }
