@@ -177,14 +177,12 @@ static void x265_set_default_parameters(void* encoder);
 
 const char* aom_plugin_name()
 {
-  strcpy(plugin_name, "AOMedia AV1 encoder");
-#if 0
-  if (strlen(x265_version_str) + strlen(plugin_name) + 4 < MAX_PLUGIN_NAME_LENGTH) {
-    strcat(plugin_name," (");
-    strcat(plugin_name,x265_version_str);
-    strcat(plugin_name,")");
+  if (strlen(aom_codec_iface_name(aom_codec_av1_cx())) < MAX_PLUGIN_NAME_LENGTH) {
+    strcpy(plugin_name, aom_codec_iface_name(aom_codec_av1_cx()));
   }
-#endif
+  else {
+    strcpy(plugin_name, "AOMedia AV1 encoder");
+  }
 
   return plugin_name;
 }
@@ -300,6 +298,7 @@ struct heif_error aom_new_encoder(void** enc)
     assert(false);
     // TODO
   }
+
 
 
 #if 0
