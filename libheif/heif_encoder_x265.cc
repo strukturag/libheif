@@ -489,7 +489,7 @@ struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name,
   return heif_error_unsupported_parameter;
 }
 
-void save_strcpy(char* dst, int dst_size, const char* src)
+static void save_strcpy(char* dst, int dst_size, const char* src)
 {
   strncpy(dst, src, dst_size-1);
   dst[dst_size-1] = 0;

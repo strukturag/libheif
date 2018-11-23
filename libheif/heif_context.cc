@@ -1764,7 +1764,6 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
 
   encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
 
-#if 0
   for (;;) {
     uint8_t* data;
     int size;
@@ -1776,6 +1775,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     }
 
 
+#if 0
     const uint8_t NAL_SPS = 33;
 
     if ((data[0] >> 1) == NAL_SPS) {
@@ -1798,8 +1798,8 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     default:
       m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
     }
-  }
 #endif
+  }
 
   return Error::Ok;
 }

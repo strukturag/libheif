@@ -34,11 +34,13 @@
 
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
-//#include "common/tools_common.h"
+
+
+#include <iostream>  // TODO: remove me
 
 
 #if 0
-const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by x265";
+const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by AV1 encoder";
 
 
 enum parameter_type { UndefinedType, Int, Bool, String };
@@ -59,7 +61,10 @@ struct encoder_struct_aom
 {
   aom_codec_iface_t* iface;
   aom_codec_ctx_t codec;
-  aom_codec_enc_cfg_t cfg;
+
+  aom_codec_iter_t iter = NULL; // for extracting the compressed packets
+  bool got_packets = false;
+  bool flushed = false;
 
 #if 0
   x265_nal* nals;
@@ -170,9 +175,7 @@ static const int AOM_PLUGIN_PRIORITY = 80;
 static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 
 
-#if 0
-static void x265_set_default_parameters(void* encoder);
-#endif
+static void aom_set_default_parameters(void* encoder);
 
 
 const char* aom_plugin_name()
@@ -187,18 +190,23 @@ const char* aom_plugin_name()
   return plugin_name;
 }
 
-#if 0
+
 #define MAX_NPARAMETERS 10
 
-static struct heif_encoder_parameter x265_encoder_params[MAX_NPARAMETERS];
-static const struct heif_encoder_parameter* x265_encoder_parameter_ptrs[MAX_NPARAMETERS+1];
+#if 0
+static struct heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
+#endif
+static const struct heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS+1];
 
-static void x265_init_parameters()
+static void aom_init_parameters()
 {
-  struct heif_encoder_parameter* p = x265_encoder_params;
-  const struct heif_encoder_parameter** d = x265_encoder_parameter_ptrs;
+#if 0
+  struct heif_encoder_parameter* p = aom_encoder_params;
+#endif
+  const struct heif_encoder_parameter** d = aom_encoder_parameter_ptrs;
   int i=0;
 
+#if 0
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = heif_encoder_parameter_name_quality;
@@ -263,22 +271,20 @@ static void x265_init_parameters()
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
+#endif
 
   d[i++] = nullptr;
 }
 
 
-const struct heif_encoder_parameter** x265_list_parameters(void* encoder)
+const struct heif_encoder_parameter** aom_list_parameters(void* encoder)
 {
-  return x265_encoder_parameter_ptrs;
+  return aom_encoder_parameter_ptrs;
 }
-#endif
 
 void aom_init_plugin()
 {
-#if 0
-  x265_init_parameters();
-#endif
+  aom_init_parameters();
 }
 
 
@@ -313,11 +319,9 @@ struct heif_error aom_new_encoder(void** enc)
 
   *enc = encoder;
 
-#if 0
   // set default parameters
 
-  x265_set_default_parameters(encoder);
-#endif
+  aom_set_default_parameters(encoder);
 
   return err;
 }
@@ -326,12 +330,11 @@ void aom_free_encoder(void* encoder_raw)
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
-#if 0
-  if (encoder->encoder) {
-    const x265_api* api = x265_api_get(encoder->bit_depth);
-    api->encoder_close(encoder->encoder);
+  if (aom_codec_destroy(&encoder->codec)) {
+    printf("Failed to destroy codec.\n");
+    assert(0);
+    // TODO
   }
-#endif
 
   delete encoder;
 }
@@ -417,17 +420,17 @@ struct heif_error aom_get_parameter_logging_level(void* encoder_raw, int* loglev
   return heif_error_ok;
 }
 
-#if 0
-struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
+struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
-    return x265_set_parameter_quality(encoder,value);
+    return aom_set_parameter_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_set_parameter_lossless(encoder,value);
+    return aom_set_parameter_lossless(encoder,value);
   }
+#if 0
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     if (value < 1 || value > 4) {
       return heif_error_invalid_parameter_value;
@@ -444,20 +447,22 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
     encoder->add_param(name, value);
     return heif_error_ok;
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+struct heif_error aom_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
   if (strcmp(name, heif_encoder_parameter_name_quality)==0) {
-    return x265_get_parameter_quality(encoder,value);
+    return aom_get_parameter_quality(encoder,value);
   }
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_get_parameter_lossless(encoder,value);
+    return aom_get_parameter_lossless(encoder,value);
   }
+#if 0
   else if (strcmp(name, kParam_TU_intra_depth)==0) {
     *value = encoder->get_param(name).value_int;
     return heif_error_ok;
@@ -466,24 +471,25 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
     *value = encoder->get_param(name).value_int;
     return heif_error_ok;
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
 
-struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
+struct heif_error aom_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_set_parameter_lossless(encoder,value);
+    return aom_set_parameter_lossless(encoder,value);
   }
 
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, int* value)
+struct heif_error aom_get_parameter_boolean(void* encoder, const char* name, int* value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
-    return x265_get_parameter_lossless(encoder,value);
+    return aom_get_parameter_lossless(encoder,value);
   }
 
   return heif_error_unsupported_parameter;
@@ -502,9 +508,10 @@ bool string_list_contains(const char*const* values_list, const char* value)
 }
 
 
-struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+#if 0
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
   if (strcmp(name, kParam_preset)==0) {
     if (!string_list_contains(kParam_preset_valid_values, value)) {
@@ -526,20 +533,24 @@ struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name,
     encoder->add_param(name, std::string(value));
     return heif_error_ok;
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
-void save_strcpy(char* dst, int dst_size, const char* src)
+#if 0
+static void save_strcpy(char* dst, int dst_size, const char* src)
 {
   strncpy(dst, src, dst_size-1);
   dst[dst_size-1] = 0;
 }
+#endif
 
-struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
-                                            char* value, int value_size)
+struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
+                                           char* value, int value_size)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+#if 0
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
   if (strcmp(name, kParam_preset)==0) {
     save_strcpy(value, value_size, encoder->preset.c_str());
@@ -549,32 +560,33 @@ struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
     save_strcpy(value, value_size, encoder->tune.c_str());
     return heif_error_ok;
   }
+#endif
 
   return heif_error_unsupported_parameter;
 }
 
 
-static void x265_set_default_parameters(void* encoder)
+static void aom_set_default_parameters(void* encoder)
 {
-  for (const struct heif_encoder_parameter** p = x265_encoder_parameter_ptrs; *p; p++) {
+  for (const struct heif_encoder_parameter** p = aom_encoder_parameter_ptrs; *p; p++) {
     const struct heif_encoder_parameter* param = *p;
 
     if (param->has_default) {
       switch (param->type) {
       case heif_encoder_parameter_type_integer:
-        x265_set_parameter_integer(encoder, param->name, param->integer.default_value);
+        aom_set_parameter_integer(encoder, param->name, param->integer.default_value);
         break;
       case heif_encoder_parameter_type_boolean:
-        x265_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
+        aom_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
         break;
       case heif_encoder_parameter_type_string:
-        x265_set_parameter_string(encoder, param->name, param->string.default_value);
+        aom_set_parameter_string(encoder, param->name, param->string.default_value);
         break;
       }
     }
   }
 }
-#endif
+
 
 void aom_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
 {
@@ -582,9 +594,129 @@ void aom_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma
   *chroma = heif_chroma_420;
 }
 
+
+// TODO: encode as still frame (seq header)
+static int encode_frame(aom_codec_ctx_t *codec, aom_image_t *img)
+{
+  int got_pkts = 0;
+  //aom_codec_iter_t iter = NULL;
+  int frame_index = 0; // only encoding a single frame
+  int flags = 0; // no flags
+
+  //const aom_codec_cx_pkt_t *pkt = NULL;
+  const aom_codec_err_t res = aom_codec_encode(codec, img, frame_index, 1, flags);
+  if (res != AOM_CODEC_OK) {
+    printf("Failed to encode frame\n");
+    assert(0);
+  }
+
+  return got_pkts;
+}
+
+
 struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* image,
                                    heif_image_input_class input_class)
 {
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
+  const int source_width  = heif_image_get_width(image, heif_channel_Y) & ~1;
+  const int source_height = heif_image_get_height(image, heif_channel_Y) & ~1;
+
+  // --- copy libheif image to aom image
+
+  aom_image_t input_image;
+
+  if (!aom_img_alloc(&input_image, AOM_IMG_FMT_I420,
+                     source_width, source_height, 1)) {
+    printf("Failed to allocate image.\n");
+    assert(false);
+    // TODO
+  }
+
+
+  for (int plane=0; plane<3; plane++) {
+    unsigned char *buf = input_image.planes[plane];
+    const int stride = input_image.stride[plane];
+
+    /*
+    const int w = aom_img_plane_width(img, plane) *
+                  ((img->fmt & AOM_IMG_FMT_HIGHBITDEPTH) ? 2 : 1);
+    const int h = aom_img_plane_height(img, plane);
+    */
+
+    int in_stride=0;
+    const uint8_t* in_p = heif_image_get_plane_readonly(image, (heif_channel)plane, &in_stride);
+
+    int w = source_width;
+    int h = source_height;
+
+    if (plane != 0) {
+      w/=2;
+      h/=2;
+    }
+
+    for (int y=0; y<h; y++) {
+      memcpy(buf, &in_p[y*in_stride], w);
+      buf += stride;
+    }
+  }
+
+
+
+  // --- configure codec
+
+  aom_codec_enc_cfg_t cfg;
+  aom_codec_err_t res = aom_codec_enc_config_default(encoder->iface, &cfg, 0);
+  if (res) {
+    printf("Failed to get default codec config.\n");
+    assert(0);
+    // TODO
+  }
+
+  int bitrate=200;
+  cfg.g_w = source_width;
+  cfg.g_h = source_height;
+  //cfg.g_timebase.num = info.time_base.numerator;
+  //cfg.g_timebase.den = info.time_base.denominator;
+  cfg.rc_target_bitrate = bitrate;
+  cfg.g_error_resilient = 0; // (aom_codec_er_flags_t)strtoul(argv[7], NULL, 0);
+
+
+
+  // --- initialize codec
+
+  if (aom_codec_enc_init(&encoder->codec, encoder->iface, &cfg, 0)) {
+    printf("Failed to initialize encoder\n");
+    assert(0);
+    // TODO
+  }
+
+
+  // --- encode frame
+
+  /*
+    int flags = 0;
+    if (keyframe_interval > 0 && frame_count % keyframe_interval == 0)
+      flags |= AOM_EFLAG_FORCE_KF;
+  */
+
+  encode_frame(&encoder->codec, &input_image); //, frame_count++, flags, writer);
+  //frames_encoded++;
+  //if (max_frames > 0 && frames_encoded >= max_frames) break;
+
+
+  // Flush encoder.
+  //while (encode_frame(&encoder->codec, NULL)) continue; //, -1, 0, writer)) continue;
+
+  /*
+  printf("\n");
+  fclose(infile);
+  printf("Processed %d frames.\n", frame_count);
+  */
+
+  aom_img_free(&input_image);
+
+
 #if 0
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
@@ -716,13 +848,60 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 }
 
 
-#if 0
-struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                           enum heif_encoded_data_type* type)
+struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                          enum heif_encoded_data_type* type)
 {
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
+  const aom_codec_cx_pkt_t *pkt = NULL;
+
+  for (;;) {
+    if ((pkt = aom_codec_get_cx_data(&encoder->codec, &encoder->iter)) != NULL) {
+
+      if (pkt->kind == AOM_CODEC_CX_FRAME_PKT) {
+        //std::cerr.write((char*)pkt->data.frame.buf, pkt->data.frame.sz);
+
+        printf("packet of size: %d\n",(int)pkt->data.frame.sz);
 
 
+        // TODO: split the received data into separate OBUs
+        // This allows the libheif to easily extract the sequence header for the av1C header
+
+        *data = (uint8_t*)pkt->data.frame.buf;
+        *size = (int)pkt->data.frame.sz;
+
+        encoder->got_packets = true;
+
+        return heif_error_ok;
+      }
+    }
+
+
+    if (encoder->flushed && !encoder->got_packets) {
+      *data = nullptr;
+      *size = 0;
+
+      return heif_error_ok;
+    }
+
+
+    int flags = 0;
+    const aom_codec_err_t res = aom_codec_encode(&encoder->codec, NULL, -1, 0, flags);
+    if (res != AOM_CODEC_OK) {
+      printf("Failed to encode frame\n");
+      assert(0);
+    }
+
+    encoder->iter = NULL;
+    encoder->got_packets = false;
+    encoder->flushed = true;
+  }
+
+
+
+
+
+#if 0
   if (encoder->encoder == nullptr) {
     *data = nullptr;
     *size = 0;
@@ -780,8 +959,8 @@ struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, in
       return heif_error_ok;
     }
   }
-}
 #endif
+}
 
 
 static const struct heif_encoder_plugin encoder_plugin_aom
@@ -803,16 +982,16 @@ static const struct heif_encoder_plugin encoder_plugin_aom
   /* get_parameter_lossless */ aom_get_parameter_lossless,
   /* set_parameter_logging_level */ aom_set_parameter_logging_level,
   /* get_parameter_logging_level */ aom_get_parameter_logging_level,
-    /* list_parameters */ nullptr, //x265_list_parameters,
-    /* set_parameter_integer */ nullptr, //x265_set_parameter_integer,
-    /* get_parameter_integer */ nullptr, //x265_get_parameter_integer,
-    /* set_parameter_boolean */ nullptr, //x265_set_parameter_integer, // boolean also maps to integer function
-    /* get_parameter_boolean */ nullptr, //x265_get_parameter_integer, // boolean also maps to integer function
-    /* set_parameter_string */ nullptr, //x265_set_parameter_string,
-    /* get_parameter_string */ nullptr, //x265_get_parameter_string,
-    /* query_input_colorspace */ aom_query_input_colorspace,
-    /* encode_image */ aom_encode_image,
-    /* get_compressed_data */ nullptr, //x265_get_compressed_data
+  /* list_parameters */ aom_list_parameters,
+  /* set_parameter_integer */ aom_set_parameter_integer,
+  /* get_parameter_integer */ aom_get_parameter_integer,
+  /* set_parameter_boolean */ aom_set_parameter_integer, // boolean also maps to integer function
+  /* get_parameter_boolean */ aom_get_parameter_integer, // boolean also maps to integer function
+  /* set_parameter_string */ aom_set_parameter_string,
+  /* get_parameter_string */ aom_get_parameter_string,
+  /* query_input_colorspace */ aom_query_input_colorspace,
+  /* encode_image */ aom_encode_image,
+  /* get_compressed_data */ aom_get_compressed_data
 };
 
 const struct heif_encoder_plugin* get_encoder_plugin_aom()
