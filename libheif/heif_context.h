@@ -157,6 +157,11 @@ namespace heif {
                                  const struct heif_encoding_options* options,
                                  enum heif_image_input_class input_class);
 
+      Error encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options* options,
+                                enum heif_image_input_class input_class);
+
       std::shared_ptr<color_profile> get_color_profile() const { return m_color_profile; }
 
       void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; };

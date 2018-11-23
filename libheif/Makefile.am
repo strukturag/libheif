@@ -17,6 +17,8 @@ if HAVE_X265
 ADDITIONAL_LIBS += $(x265_LIBS)
 endif
 
+ADDITIONAL_LIBS += -laom
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -56,7 +58,11 @@ libheif_la_SOURCES = \
   heif_plugin_registry.cc \
   heif_plugin.h \
   heif_plugin.cc \
+  heif_encoder_aom.cc \
+  heif_encoder_aom.h \
   logging.h
+
+# TODO: add conditional compilation of AV1 (AOM) codec
 
 if HAVE_LIBDE265
 libheif_la_SOURCES += \

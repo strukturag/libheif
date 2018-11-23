@@ -655,7 +655,8 @@ enum heif_compression_format {
   heif_compression_undefined = 0,
   heif_compression_HEVC = 1,
   heif_compression_AVC = 2,
-  heif_compression_JPEG = 3
+  heif_compression_JPEG = 3,
+  heif_compression_AV1 = 4
 };
 
 enum heif_chroma {
