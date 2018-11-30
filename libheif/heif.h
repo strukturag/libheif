@@ -261,6 +261,39 @@ struct heif_error
 typedef uint32_t heif_item_id;
 
 
+
+// ========================= file type check ======================
+
+enum heif_filetype_result {
+  heif_filetype_no,
+  heif_filetype_yes_supported,   // it is heif and can be read by libheif
+  heif_filetype_yes_unsupported, // it is heif, but cannot be read by libheif
+  heif_filetype_maybe // not sure whether it is an heif, try detection with more input data
+};
+
+// input data should be at least 12 bytes
+LIBHEIF_API
+enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
+
+
+enum heif_brand {
+  heif_unknown_brand,
+  heif_heic, // the usual HEIF images
+  heif_heix, // 10bit images, or anything that uses h265 with range extension
+  heif_hevc, heif_hevx, // brands for image sequences
+  heif_heim, // multiview
+  heif_heis, // scalable
+  heif_hevm, // multiview sequence
+  heif_hevs, // scalable sequence
+  heif_mif1
+};
+
+// input data should be at least 12 bytes
+LIBHEIF_API
+enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+
 // ========================= heif_context =========================
 // A heif_context represents a HEIF file that has been read.
 // In the future, you will also be able to add pictures to a heif_context
@@ -969,6 +1002,12 @@ struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder
 // Set a parameter of any type to the string value.
 // Integer values are parsed from the string.
 // Boolean values can be "true"/"false"/"1"/"0"
+//
+// x265 encoder specific note:
+// When using the x265 encoder, you may pass any of its parameters by
+// prefixing the parameter name with 'x265:'. Hence, to set the 'ctu' parameter,
+// you will have to set 'x265:ctu' in libheif.
+// Note that there is no checking for valid parameters when using the prefix.
 LIBHEIF_API
 struct heif_error heif_encoder_set_parameter(struct heif_encoder*,
                                              const char* parameter_name,
@@ -980,6 +1019,12 @@ LIBHEIF_API
 struct heif_error heif_encoder_get_parameter(struct heif_encoder*,
                                              const char* parameter_name,
                                              char* value_ptr, int value_size);
+
+// Query whether a specific parameter has a default value.
+LIBHEIF_API
+int heif_encoder_has_default(struct heif_encoder*,
+                             const char* parameter_name);
+
 
 
 struct heif_encoding_options {
@@ -1032,8 +1077,8 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
 struct heif_error heif_context_assign_thumbnail(struct heif_context*,
-                                                const struct heif_image_handle* thumbnail_image,
-                                                const struct heif_image_handle* master_image);
+                                                const struct heif_image_handle* master_image,
+                                                const struct heif_image_handle* thumbnail_image);
 
 // Add EXIF metadata to an image.
 LIBHEIF_API

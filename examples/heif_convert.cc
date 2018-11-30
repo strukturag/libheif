@@ -91,7 +91,6 @@ int main(int argc, char** argv)
 
   std::string input_filename(argv[optind++]);
   std::string output_filename(argv[optind++]);
-  std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
 
   std::unique_ptr<Encoder> encoder;
   if (output_filename.size() > 4 &&
@@ -122,6 +121,31 @@ int main(int argc, char** argv)
     fprintf(stderr, "Unknown file type in %s\n", output_filename.c_str());
     return 1;
   }
+
+
+  // --- check whether input is a supported HEIF file
+
+  // TODO: when we are reading from named pipes, we probably should not consume any bytes
+  // just for file-type checking.
+  // TODO: check, whether reading from named pipes works at all.
+
+  std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
+  uint8_t magic[12];
+  istr.read((char*)magic,12);
+  enum heif_filetype_result filetype_check = heif_check_filetype(magic,12);
+  if (filetype_check == heif_filetype_no) {
+    fprintf(stderr, "Input file is not an HEIF file\n");
+    return 1;
+  }
+
+  if (filetype_check == heif_filetype_yes_unsupported) {
+    fprintf(stderr, "Input file is an unsupported HEIF file type\n");
+    return 1;
+  }
+
+
+
+  // --- read the HEIF file
 
   struct heif_context* ctx = heif_context_alloc();
   if (!ctx) {

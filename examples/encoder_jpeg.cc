@@ -23,6 +23,10 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -50,7 +54,7 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
   longjmp(handler->setjmp_buffer, 1);
 }
 
-
+#if !defined(HAVE_JPEG_WRITE_ICC_PROFILE)
 
 #define ICC_MARKER  (JPEG_APP0 + 2)     /* JPEG marker code for ICC */
 #define ICC_OVERHEAD_LEN  14            /* size of non-profile data in APP2 */
@@ -118,6 +122,8 @@ void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
     cur_marker++;
   }
 }
+
+#endif  // !defined(HAVE_JPEG_WRITE_ICC_PROFILE)
 
 bool JpegEncoder::Encode(const struct heif_image_handle* handle,
     const struct heif_image* image, const std::string& filename) {
