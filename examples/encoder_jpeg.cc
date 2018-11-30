@@ -66,7 +66,6 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
 
  /* This function is copied almost as is from libjpeg-turbo */
 
-static
 void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
                             unsigned int icc_data_len)
 {
