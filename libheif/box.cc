@@ -1712,7 +1712,6 @@ Error Box_pixi::parse(BitstreamRange& range)
 
   StreamReader::grow_status status;
   uint8_t num_channels = range.read8();
-  printf("%d\n",num_channels);
   status = range.wait_for_available_bytes(num_channels);
   if (status != StreamReader::size_reached) {
     // TODO: return recoverable error at timeout
