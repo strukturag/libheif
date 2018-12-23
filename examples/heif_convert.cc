@@ -229,6 +229,7 @@ int main(int argc, char** argv)
         heif_item_id depth_id;
         int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
         assert(nDepthImages==1);
+        (void)nDepthImages;
 
         struct heif_image_handle* depth_handle;
         err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
