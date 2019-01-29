@@ -63,3 +63,4 @@ endif()
 
 add_subdirectory (examples)
 add_subdirectory (libheif)
+add_subdirectory (gdk-pixbuf)
