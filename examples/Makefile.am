@@ -13,7 +13,7 @@ heif_convert_DEPENDENCIES = ../libheif/libheif.la
 heif_convert_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)/.
 heif_convert_LDFLAGS =
 heif_convert_LDADD = ../libheif/libheif.la
-heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc encoder_y4m.cc
+heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc encoder_y4m.cc encoder_y4m.h
 
 
 if HAVE_LIBPNG
