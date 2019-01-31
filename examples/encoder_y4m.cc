@@ -25,6 +25,7 @@
 */
 #include "encoder_y4m.h"
 
+#include <errno.h>
 #include <string.h>
 
 
