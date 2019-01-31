@@ -46,6 +46,7 @@
 #if HAVE_LIBPNG
 #include "encoder_png.h"
 #endif
+#include "encoder_y4m.h"
 
 #if defined(_MSC_VER)
 #include "getopt.h"
@@ -115,6 +116,11 @@ int main(int argc, char** argv)
     fprintf(stderr, "PNG support has not been compiled in.\n");
     return 1;
 #endif  // HAVE_LIBPNG
+  }
+
+  if (output_filename.size() > 4 &&
+      output_filename.find(".y4m") == output_filename.size() - 4) {
+    encoder.reset(new Y4MEncoder());
   }
 
   if (!encoder) {
