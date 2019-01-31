@@ -526,6 +526,105 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
 #endif
 
 
+
+std::shared_ptr<heif_image> loadY4M(const char* filename)
+{
+  struct heif_image* image = nullptr;
+
+
+  // open input file
+
+  std::ifstream istr(filename, std::ios_base::binary);
+  if (istr.fail()) {
+    std::cerr << "Can't open " << filename << "\n";
+    exit(1);
+  }
+
+
+  std::string header;
+  getline(istr, header);
+
+  if (header.find("YUV4MPEG2 ")!=0) {
+    std::cerr << "Input is not a Y4M file.\n";
+    exit(1);
+  }
+
+  int w=-1;
+  int h=-1;
+
+  size_t pos=0;
+  for (;;) {
+    pos = header.find(' ',pos+1)+1;
+    if (pos==std::string::npos) {
+      break;
+    }
+
+    size_t end = header.find_first_of(" \n",pos+1);
+    if (end==std::string::npos) {
+      break;
+    }
+
+    if (end-pos <= 1) {
+      std::cerr << "Header format error in Y4M file.\n";
+      exit(1);
+    }
+
+    char tag = header[pos];
+    std::string value = header.substr(pos+1,end-pos-1);
+    if (tag=='W') {
+      w = atoi(value.c_str());
+    }
+    else if (tag=='H') {
+      h = atoi(value.c_str());
+    }
+  }
+
+  std::string frameheader;
+  getline(istr, frameheader);
+
+  if (frameheader != "FRAME") {
+    std::cerr << "Y4M misses the frame header.\n";
+    exit(1);
+  }
+
+  if (w<0 || h<0) {
+    std::cerr << "Y4M has invalid frame size.\n";
+    exit(1);
+  }
+
+  struct heif_error err = heif_image_create(w,h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_420,
+                                            &image);
+  (void)err;
+  // TODO: handle error
+
+  heif_image_add_plane(image, heif_channel_Y, w,h, 8);
+  heif_image_add_plane(image, heif_channel_Cb, (w+1)/2,(h+1)/2, 8);
+  heif_image_add_plane(image, heif_channel_Cr, (w+1)/2,(h+1)/2, 8);
+
+  int y_stride, cb_stride, cr_stride;
+  uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+  uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+  uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+
+  for (int y=0;y<h;y++) {
+    istr.read((char*)(py+y*y_stride), w);
+  }
+
+  for (int y=0;y<(h+1)/2;y++) {
+    istr.read((char*)(pcb+y*cb_stride), (w+1)/2);
+  }
+
+  for (int y=0;y<(h+1)/2;y++) {
+    istr.read((char*)(pcr+y*cr_stride), (w+1)/2);
+  }
+
+  return std::shared_ptr<heif_image>(image,
+                                    [] (heif_image* img) { heif_image_release(img); });
+}
+
+
 void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
@@ -775,14 +874,19 @@ int main(int argc, char** argv)
       std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
     }
 
-    enum { PNG, JPEG } filetype = JPEG;
+    enum { PNG, JPEG, Y4M } filetype = JPEG;
     if (suffix == "png") {
       filetype = PNG;
+    } else if (suffix == "y4m") {
+      filetype = Y4M;
     }
 
     std::shared_ptr<heif_image> image;
     if (filetype==PNG) {
       image = loadPNG(input_filename.c_str());
+    }
+    else if (filetype==Y4M) {
+      image = loadY4M(input_filename.c_str());
     }
     else {
       image = loadJPEG(input_filename.c_str());
