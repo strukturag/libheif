@@ -60,6 +60,8 @@ libheif_la_SOURCES = \
   heif_plugin.cc \
   heif_encoder_aom.cc \
   heif_encoder_aom.h \
+  heif_decoder_aom.cc \
+  heif_decoder_aom.h \
   logging.h
 
 # TODO: add conditional compilation of AV1 (AOM) codec

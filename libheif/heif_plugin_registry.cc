@@ -40,6 +40,7 @@
 
 #if HAVE_AOM
 #include "heif_encoder_aom.h"
+#include "heif_decoder_aom.h"
 #endif
 
 
@@ -79,6 +80,7 @@ public:
 
 #if HAVE_AOM
     heif::register_encoder(get_encoder_plugin_aom());
+    heif::register_decoder(get_decoder_plugin_aom());
 #endif
   }
 } dummy;

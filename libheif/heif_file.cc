@@ -500,6 +500,41 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+  } else if (item_type == "av01") {
+    // --- --- --- HEVC
+
+    // --- get properties for this image
+
+    std::vector<Box_ipco::Property> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_av1C> av1C_box;
+    for (auto& prop : properties) {
+      if (prop.property->get_short_type() == fourcc("av1C")) {
+        av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop.property);
+        if (av1C_box) {
+          break;
+        }
+      }
+    }
+
+    if (!av1C_box) {
+      // Should always have an hvcC box, because we are checking this in
+      // heif_context::interpret_heif_file()
+      assert(false);
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_hvcC_box);
+    } else if (!av1C_box->get_headers(data)) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data);
+    }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   } else if (item_type == "grid" ||
              item_type == "iovl" ||
              item_type == "Exif" ||

@@ -178,7 +178,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 static void aom_set_default_parameters(void* encoder);
 
 
-const char* aom_plugin_name()
+static const char* aom_plugin_name()
 {
   if (strlen(aom_codec_iface_name(aom_codec_av1_cx())) < MAX_PLUGIN_NAME_LENGTH) {
     strcpy(plugin_name, aom_codec_iface_name(aom_codec_av1_cx()));
@@ -282,13 +282,13 @@ const struct heif_encoder_parameter** aom_list_parameters(void* encoder)
   return aom_encoder_parameter_ptrs;
 }
 
-void aom_init_plugin()
+static void aom_init_plugin()
 {
   aom_init_parameters();
 }
 
 
-void aom_cleanup_plugin()
+static void aom_cleanup_plugin()
 {
 }
 
