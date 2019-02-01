@@ -104,6 +104,9 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
     if (brand == heif_heic) {
       return heif_filetype_yes_supported;
     }
+    else if (brand == heif_avif) {
+      return heif_filetype_yes_supported;
+    }
     else if (brand == heif_unknown_brand) {
       return heif_filetype_no;
     }
@@ -158,6 +161,12 @@ heif_brand heif_main_brand(const uint8_t* data, int len)
   }
   else if (strcmp(brand, "mif1")==0) {
     return heif_mif1;
+  }
+  else if (strcmp(brand, "avif")==0) {
+    return heif_avif;
+  }
+  else if (strcmp(brand, "avis")==0) {
+    return heif_avis;
   }
   else {
     return heif_unknown_brand;

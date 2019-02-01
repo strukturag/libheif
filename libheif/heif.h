@@ -287,7 +287,9 @@ enum heif_brand {
   heif_heis, // scalable
   heif_hevm, // multiview sequence
   heif_hevs, // scalable sequence
-  heif_mif1
+  heif_mif1,
+  heif_avif,
+  heif_avis
 };
 
 // input data should be at least 12 bytes
