@@ -219,6 +219,7 @@ int main(int argc, char** argv)
     int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
     if (has_depth) { assert(nDepthImages==1); }
     else { assert(nDepthImages==0); }
+    (void)nDepthImages;
 
     if (has_depth) {
       struct heif_image_handle* depth_handle;
