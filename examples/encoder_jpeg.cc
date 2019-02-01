@@ -175,6 +175,14 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
     free(profile_data);
   }
 
+
+  if (heif_image_handle_get_luma_bits_per_pixel(handle) != 8 ||
+      heif_image_handle_get_chroma_bits_per_pixel(handle) != 8) {
+    fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
+    return false;
+  }
+
+
   int stride_y;
   const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
       &stride_y);
