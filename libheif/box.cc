@@ -431,6 +431,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     box = std::make_shared<Box_hvcC>(hdr);
     break;
 
+  case fourcc("av1C"):
+    box = std::make_shared<Box_av1C>(hdr);
+    break;
+
   case fourcc("idat"):
     box = std::make_shared<Box_idat>(hdr);
     break;
@@ -2642,6 +2646,72 @@ Error Box_hvcC::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+
+Error Box_av1C::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  uint8_t byte;
+
+  auto& c = m_configuration; // abbreviation
+
+  byte = range.read8();
+  if ((byte & 0x80) == 0) {
+    // error: marker bit not set
+  }
+
+  c.version = byte & 0x7F;
+
+  byte = range.read8();
+  c.seq_profile = (byte>>5) & 0x7;
+  c.seq_level_idx_0 = byte & 0x1f;
+
+  byte = range.read8();
+  c.seq_tier_0 = (byte >> 7) & 1;
+  c.high_bitdepth = (byte >> 6) & 1;
+  c.twelve_bit = (byte >> 5) & 1;
+  c.monochrome = (byte >> 4) & 1;
+  c.chroma_subsampling_x = (byte >> 3) & 1;
+  c.chroma_subsampling_y = (byte >> 2) & 1;
+  c.chroma_sample_position = byte & 3;
+
+  byte = range.read8();
+  c.initial_presentation_delay_present = (byte >> 4) & 1;
+  if (c.initial_presentation_delay_present) {
+    c.initial_presentation_delay_minus_one = byte & 0x0F;
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_av1C::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  const auto& c = m_configuration; // abbreviation
+
+  sstr << indent << "version: " << ((int)c.version) << "\n"
+       << indent << "seq_profile: " << ((int)c.seq_profile) << "\n"
+       << indent << "seq_level_idx_0: " << ((int)c.seq_level_idx_0) << "\n"
+       << indent << "high_bitdepth: " << ((int)c.high_bitdepth) << "\n"
+       << indent << "twelve_bit: " << ((int)c.twelve_bit) << "\n"
+       << indent << "chroma_subsampling_x: " << ((int)c.chroma_subsampling_x) << "\n"
+       << indent << "chroma_subsampling_y: " << ((int)c.chroma_subsampling_y) << "\n"
+       << indent << "chroma_sample_position: " << ((int)c.chroma_sample_position) << "\n"
+       << indent << "initial_presentation_delay: ";
+
+  if (c.initial_presentation_delay_present) {
+    sstr << c.initial_presentation_delay_minus_one+1 << "\n";
+  }
+  else {
+    sstr << "not present\n";
+  }
+
+  return sstr.str();
 }
 
 

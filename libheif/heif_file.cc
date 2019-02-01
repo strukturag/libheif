@@ -361,10 +361,29 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 
 int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const
 {
+  // HEVC
+
   auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
   if (hvcC_box) {
     return hvcC_box->get_configuration().bit_depth_luma;
+  }
+
+  // AV1
+
+  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("av1C"));
+  std::shared_ptr<Box_av1C> av1C_box = std::dynamic_pointer_cast<Box_av1C>(box);
+  if (av1C_box) {
+    Box_av1C::configuration config = av1C_box->get_configuration();
+    if (!config.high_bitdepth) {
+      return 8;
+    }
+    else if (config.twelve_bit) {
+      return 12;
+    }
+    else {
+      return 10;
+    }
   }
 
   assert(false);
@@ -374,10 +393,29 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
 
 int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const
 {
+  // HEVC
+
   auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
   if (hvcC_box) {
     return hvcC_box->get_configuration().bit_depth_chroma;
+  }
+
+  // AV1
+
+  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("av1C"));
+  std::shared_ptr<Box_av1C> av1C_box = std::dynamic_pointer_cast<Box_av1C>(box);
+  if (av1C_box) {
+    Box_av1C::configuration config = av1C_box->get_configuration();
+    if (!config.high_bitdepth) {
+      return 8;
+    }
+    else if (config.twelve_bit) {
+      return 12;
+    }
+    else {
+      return 10;
+    }
   }
 
   assert(false);

@@ -685,6 +685,53 @@ namespace heif {
   };
 
 
+  class Box_av1C : public Box {
+  public:
+    Box_av1C() { set_short_type(fourcc("av1C")); set_is_full_box(false); }
+  Box_av1C(const BoxHeader& hdr) : Box(hdr) { }
+
+    struct configuration {
+      //unsigned int (1) marker = 1;
+      uint8_t version;
+      uint8_t seq_profile;
+      uint8_t seq_level_idx_0;
+      uint8_t seq_tier_0;
+      uint8_t high_bitdepth;
+      uint8_t twelve_bit;
+      uint8_t monochrome;
+      uint8_t chroma_subsampling_x;
+      uint8_t chroma_subsampling_y;
+      uint8_t chroma_sample_position;
+      //uint8_t reserved = 0;
+
+      uint8_t initial_presentation_delay_present;
+      uint8_t initial_presentation_delay_minus_one = 0;
+
+      //unsigned int (8)[] configOBUs;
+    };
+
+
+    std::string dump(Indent&) const override;
+
+    //bool get_headers(std::vector<uint8_t>* dest) const;
+
+    //void set_configuration(const configuration& config) { m_configuration=config; }
+
+    configuration get_configuration() const { return m_configuration; }
+
+    //void append_nal_data(const std::vector<uint8_t>& nal);
+    //void append_nal_data(const uint8_t* data, size_t size);
+
+    //Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    configuration m_configuration;
+  };
+
+
   class Box_idat : public Box {
   public:
   Box_idat(const BoxHeader& hdr) : Box(hdr) { }
