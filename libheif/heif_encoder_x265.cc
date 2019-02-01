@@ -449,7 +449,7 @@ struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, in
 }
 
 
-bool string_list_contains(const char*const* values_list, const char* value)
+static bool string_list_contains(const char*const* values_list, const char* value)
 {
   for (int i=0; values_list[i]; i++) {
     if (strcmp(values_list[i], value)==0) {

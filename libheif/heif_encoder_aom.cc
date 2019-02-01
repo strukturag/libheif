@@ -496,18 +496,6 @@ struct heif_error aom_get_parameter_boolean(void* encoder, const char* name, int
 }
 
 
-bool string_list_contains(const char*const* values_list, const char* value)
-{
-  for (int i=0; values_list[i]; i++) {
-    if (strcmp(values_list[i], value)==0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-
 struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
 #if 0
