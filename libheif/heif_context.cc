@@ -835,8 +835,18 @@ Error HeifContext::decode_image(heif_item_id ID,
 
   // --- decode image, depending on its type
 
-  if (image_type == "hvc1") {
-    const struct heif_decoder_plugin* decoder_plugin = get_decoder(heif_compression_HEVC);
+  if (image_type == "hvc1" ||
+      image_type == "av01") {
+
+    heif_compression_format compression;
+    if (image_type == "hvc1") {
+      compression = heif_compression_HEVC;
+    }
+    else if (image_type == "av01") {
+      compression = heif_compression_AV1;
+    }
+
+    const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression);
     if (!decoder_plugin) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
     }
