@@ -77,6 +77,7 @@ namespace heif {
       ~Image();
 
       void set_resolution(int w,int h) { m_width=w; m_height=h; }
+      void set_ispe_resolution(int w,int h) { m_ispe_width=w; m_ispe_height=h; }
 
       void set_primary(bool flag=true) { m_is_primary=flag; }
 
@@ -86,6 +87,9 @@ namespace heif {
 
       int get_width() const { return m_width; }
       int get_height() const { return m_height; }
+
+      int get_ispe_width() const { return m_ispe_width; }
+      int get_ispe_height() const { return m_ispe_height; }
 
       int get_luma_bits_per_pixel() const;
       int get_chroma_bits_per_pixel() const;
@@ -166,6 +170,7 @@ namespace heif {
 
       heif_item_id m_id = 0;
       uint32_t m_width=0, m_height=0;
+      uint32_t m_ispe_width=0, m_ispe_height=0; // original image resolution
       bool     m_is_primary = false;
 
       bool     m_is_thumbnail = false;

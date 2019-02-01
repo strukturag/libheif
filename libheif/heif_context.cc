@@ -661,6 +661,7 @@ Error HeifContext::interpret_heif_file()
         }
 
         image->set_resolution(width, height);
+        image->set_ispe_resolution(width, height);
         ispe_read = true;
       }
 

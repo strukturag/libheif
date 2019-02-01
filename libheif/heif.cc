@@ -422,6 +422,28 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle)
 }
 
 
+int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_width();
+  }
+  else {
+    return 0;
+  }
+}
+
+
+int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_height();
+  }
+  else {
+    return 0;
+  }
+}
+
+
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 {
   return handle->image->get_alpha_channel() != nullptr;
