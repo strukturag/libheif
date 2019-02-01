@@ -87,6 +87,9 @@ namespace heif {
       int get_width() const { return m_width; }
       int get_height() const { return m_height; }
 
+      int get_luma_bits_per_pixel() const;
+      int get_chroma_bits_per_pixel() const;
+
       bool is_primary() const { return m_is_primary; }
 
       Error decode_image(std::shared_ptr<HeifPixelImage>& img,

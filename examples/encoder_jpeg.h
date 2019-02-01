@@ -49,7 +49,7 @@ class JpegEncoder : public Encoder {
     return heif_colorspace_YCbCr;
   }
 
-  heif_chroma chroma(bool has_alpha) const override {
+  heif_chroma chroma(bool has_alpha, int bit_depth) const override {
     return heif_chroma_420;
   }
 

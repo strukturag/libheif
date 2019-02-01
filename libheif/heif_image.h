@@ -127,6 +127,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<HeifPixelImage> convert_mono_to_RGB(int bpp) const;
   std::shared_ptr<HeifPixelImage> convert_mono_to_YCbCr420() const;
   std::shared_ptr<HeifPixelImage> convert_RGB24_32_to_YCbCr420() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB_to_YCbCr420_HDR() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB_to_RRGGBBaa_BE() const;
+  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB_HDR() const;
 };
 
 

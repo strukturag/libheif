@@ -358,6 +358,32 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 }
 
 
+int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const
+{
+  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
+  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_luma;
+  }
+
+  assert(false);
+  return 8;
+}
+
+
+int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const
+{
+  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
+  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_chroma;
+  }
+
+  assert(false);
+  return 8;
+}
+
+
 Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
 #if ENABLE_PARALLEL_TILE_DECODING
@@ -583,10 +609,10 @@ void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* 
   std::vector<uint8_t> nal;
   nal.resize(size + 4);
 
-  nal[0] = (size>>24) & 0xFF;
-  nal[1] = (size>>16) & 0xFF;
-  nal[2] = (size>> 8) & 0xFF;
-  nal[3] = (size>> 0) & 0xFF;
+  nal[0] = (uint8_t)((size>>24) & 0xFF);
+  nal[1] = (uint8_t)((size>>16) & 0xFF);
+  nal[2] = (uint8_t)((size>> 8) & 0xFF);
+  nal[3] = (uint8_t)((size>> 0) & 0xFF);
 
   memcpy(nal.data()+4, data, size);
 

@@ -75,6 +75,7 @@ static struct option long_options[] = {
   {"params",     no_argument,       0, 'P' },
   {"no-alpha",   no_argument, &master_alpha, 0 },
   {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
+  {"bit-depth",  required_argument, 0, 'b' },
   {0,         0,                 0,  0 }
 };
 
@@ -96,6 +97,7 @@ void show_help(const char* argv0)
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
+            << "  -b #            bit-depth of generated HEIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n";
 }
 
@@ -390,7 +392,7 @@ user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 } // user_read_data
 
 
-std::shared_ptr<heif_image> loadPNG(const char* filename)
+std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
   FILE* fh = fopen(filename,"rb");
   if (!fh) {
@@ -457,8 +459,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
 
   png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
                &interlace_type, NULL, NULL);
-
-  assert(bit_depth < 16); // , "cannot handle 16 bit images");
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
     if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
@@ -601,7 +601,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
         }
     }
   }
-  else {
+  else if (bit_depth==8) {
     err = heif_image_create((int)width, (int)height,
                             heif_colorspace_RGB,
                             has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
@@ -623,6 +623,52 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
       }
     }
   }
+  else {
+    err = heif_image_create((int)width, (int)height,
+                            heif_colorspace_RGB,
+                            heif_chroma_444,
+                            &image);
+    (void)err;
+
+    int bdShift = 16 - output_bit_depth;
+
+    heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_G, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_B, (int)width, (int)height, output_bit_depth);
+
+    int stride_r, stride_g, stride_b, stride_a;
+    uint16_t* p_r = (uint16_t*)heif_image_get_plane(image, heif_channel_R, &stride_r);
+    uint16_t* p_g = (uint16_t*)heif_image_get_plane(image, heif_channel_G, &stride_g);
+    uint16_t* p_b = (uint16_t*)heif_image_get_plane(image, heif_channel_B, &stride_b);
+
+    uint16_t* p_a;
+    if (has_alpha) {
+      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, output_bit_depth);
+      p_a = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &stride_a);
+    }
+
+    for (uint32_t y = 0; y < height; y++) {
+      uint8_t* p = row_pointers[y];
+
+      if (has_alpha) {
+        for (uint32_t x = 0; x < width; x++) {
+          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
+          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
+          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
+          p_a[y*stride_a/2 + x] = (uint16_t)(((p[6]<<8) | p[7]) >> bdShift);
+          p+=8;
+        }
+      }
+      else {
+        for (uint32_t x = 0; x < width; x++) {
+          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
+          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
+          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
+          p+=6;
+        }
+      }
+    }
+  }
 
   if (color_profile_valid && profile_length > 0){
     heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
@@ -639,7 +685,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename)
                                     [] (heif_image* img) { heif_image_release(img); });
 }
 #else
-std::shared_ptr<heif_image> loadPNG(const char* filename)
+std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
   std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
   exit(1);
@@ -863,13 +909,14 @@ int main(int argc, char** argv)
   int logging_level = 0;
   bool option_show_parameters = false;
   int thumbnail_bbox_size = 0;
+  int output_bit_depth = 10;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -897,6 +944,9 @@ int main(int argc, char** argv)
       break;
     case 't':
       thumbnail_bbox_size = atoi(optarg);
+      break;
+    case 'b':
+      output_bit_depth = atoi(optarg);
       break;
     }
   }
@@ -1006,7 +1056,7 @@ int main(int argc, char** argv)
 
     std::shared_ptr<heif_image> image;
     if (filetype==PNG) {
-      image = loadPNG(input_filename.c_str());
+      image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype==Y4M) {
       image = loadY4M(input_filename.c_str());
@@ -1040,7 +1090,7 @@ int main(int argc, char** argv)
                                       options,
                                       &handle);
     if (error.code != 0) {
-      std::cerr << "Could not read HEIF file: " << error.message << "\n";
+      std::cerr << "Could not encode HEIF file: " << error.message << "\n";
       return 1;
     }
 

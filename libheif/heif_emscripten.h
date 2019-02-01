@@ -234,6 +234,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_data_version",heif_suberror_Unsupported_data_version)
     .value("heif_suberror_Unsupported_color_conversion",heif_suberror_Unsupported_color_conversion)
     .value("heif_suberror_Unsupported_item_construction_method",heif_suberror_Unsupported_item_construction_method)
+    .value("heif_suberror_Unsupported_bit_depth",heif_suberror_Unsupported_bit_depth)
     ;
   emscripten::enum_<heif_compression_format>("heif_compression_format")
     .value("heif_compression_undefined", heif_compression_undefined)
@@ -249,6 +250,10 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_chroma_444", heif_chroma_444)
     .value("heif_chroma_interleaved_RGB", heif_chroma_interleaved_RGB)
     .value("heif_chroma_interleaved_RGBA", heif_chroma_interleaved_RGBA)
+    .value("heif_chroma_interleaved_RRGGBB_BE", heif_chroma_interleaved_RRGGBB_BE)
+    .value("heif_chroma_interleaved_RRGGBBAA_BE", heif_chroma_interleaved_RRGGBBAA_BE)
+    .value("heif_chroma_interleaved_RRGGBB_LE", heif_chroma_interleaved_RRGGBB_LE)
+    .value("heif_chroma_interleaved_RRGGBBAA_LE", heif_chroma_interleaved_RRGGBBAA_LE)
     // Aliases
     .value("heif_chroma_interleaved_24bit", heif_chroma_interleaved_24bit)
     .value("heif_chroma_interleaved_32bit", heif_chroma_interleaved_32bit)

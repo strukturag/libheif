@@ -128,11 +128,13 @@ int main(int argc, char** argv)
 
   std::unique_ptr<Encoder> encoder(new PngEncoder());
 
+  int bit_depth=8; // TODO
+
   struct heif_image* image = NULL;
   err = heif_decode_image(image_handle,
                           &image,
                           encoder->colorspace(false),
-                          encoder->chroma(false),
+                          encoder->chroma(false, bit_depth),
                           NULL);
   if (err.code) {
     std::cerr << "Could not decode HEIF image : " << err.message << "\n";

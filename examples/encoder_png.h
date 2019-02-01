@@ -38,11 +38,19 @@ class PngEncoder : public Encoder {
     return heif_colorspace_RGB;
   }
 
-  heif_chroma chroma(bool has_alpha) const override {
-    if (has_alpha)
-      return heif_chroma_interleaved_32bit;
-    else
-      return heif_chroma_interleaved_24bit;
+  heif_chroma chroma(bool has_alpha, int bit_depth) const override {
+    if (bit_depth==8) {
+      if (has_alpha)
+        return heif_chroma_interleaved_RGBA;
+      else
+        return heif_chroma_interleaved_RGB;
+    }
+    else {
+      if (has_alpha)
+        return heif_chroma_interleaved_RRGGBBAA_BE;
+      else
+        return heif_chroma_interleaved_RRGGBB_BE;
+    }
   }
 
   bool Encode(const struct heif_image_handle* handle,

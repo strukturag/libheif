@@ -108,7 +108,7 @@ enum heif_error_code {
   // The decoder plugin generated an error
   heif_error_Decoder_plugin_error = 7,
 
-  // The decoder plugin generated an error
+  // The encoder plugin generated an error
   heif_error_Encoder_plugin_error = 8,
 
   // Error during encoding or when writing to the output
@@ -236,6 +236,8 @@ enum heif_suberror_code {
 
 
   // --- Encoder_plugin_error ---
+
+  heif_suberror_Unsupported_bit_depth = 4000,
 
 
   // --- Encoding_error ---
@@ -437,6 +439,12 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle);
 
 LIBHEIF_API
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle*);
+
+LIBHEIF_API
+int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
+
+LIBHEIF_API
+int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
 
 
 // ------------------------- depth images -------------------------
@@ -657,10 +665,14 @@ enum heif_chroma {
   heif_chroma_422=2,
   heif_chroma_444=3,
   heif_chroma_interleaved_RGB =10,
-  heif_chroma_interleaved_RGBA=11
+  heif_chroma_interleaved_RGBA=11,
+  heif_chroma_interleaved_RRGGBB_BE  =12,
+  heif_chroma_interleaved_RRGGBBAA_BE=13,
+  heif_chroma_interleaved_RRGGBB_LE  =14,
+  heif_chroma_interleaved_RRGGBBAA_LE=15
 };
 
-// DEPRECTATED ENUM NAMES
+// DEPRECATED ENUM NAMES
 #define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
 #define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
 

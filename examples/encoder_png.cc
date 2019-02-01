@@ -75,11 +75,20 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   png_init_io(png_ptr, fp);
 
-  bool withAlpha = (heif_image_get_chroma_format(image) == heif_chroma_interleaved_32bit);
+  bool withAlpha = (heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA ||
+                    heif_image_get_chroma_format(image) == heif_chroma_interleaved_RRGGBBAA_BE);
 
   int width = heif_image_get_width(image, heif_channel_interleaved);
   int height = heif_image_get_height(image, heif_channel_interleaved);
-  const int bitDepth = 8;
+
+  int bitDepth;
+  if (heif_image_get_bits_per_pixel(image, heif_channel_interleaved)>32) {
+    bitDepth = 16;
+  }
+  else {
+    bitDepth = 8;
+  }
+
   const int colorType = withAlpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB;
 
   png_set_IHDR(png_ptr, info_ptr, width, height, bitDepth, colorType,

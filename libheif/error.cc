@@ -122,6 +122,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     // --- Encoder_plugin_error --
 
+  case heif_suberror_Unsupported_bit_depth: return "Unsupported bit depth";
+
     // --- Encoding_error --
 
   case heif_suberror_Cannot_write_output_data: return "Cannot write output data";

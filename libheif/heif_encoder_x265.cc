@@ -37,6 +37,9 @@ extern "C" {
 }
 
 
+const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by x265";
+
+
 enum parameter_type { UndefinedType, Int, Bool, String };
 
 struct parameter {
@@ -556,6 +559,14 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
   int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
 
   const x265_api* api = x265_api_get(bit_depth);
+  if (api==nullptr) {
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Unsupported_bit_depth,
+      kError_unsuppoerted_bit_depth
+    };
+    return err;
+  }
 
   x265_param* param = api->param_alloc();
   api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());

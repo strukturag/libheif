@@ -779,6 +779,19 @@ bool HeifContext::is_image(heif_item_id ID) const
   return false;
 }
 
+
+int HeifContext::Image::get_luma_bits_per_pixel() const
+{
+  return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(m_id);
+}
+
+
+int HeifContext::Image::get_chroma_bits_per_pixel() const
+{
+  return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(m_id);
+}
+
+
 Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
                                        heif_chroma chroma,
@@ -1623,7 +1636,12 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
 
   for (;;) {
     uint8_t* data;
