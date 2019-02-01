@@ -672,7 +672,7 @@ enum heif_chroma {
   heif_chroma_interleaved_RRGGBBAA_LE=15
 };
 
-// DEPRECTATED ENUM NAMES
+// DEPRECATED ENUM NAMES
 #define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
 #define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
 
