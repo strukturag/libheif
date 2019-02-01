@@ -3,6 +3,7 @@ AC_INIT([libheif], [1.4.0], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
+# Note: do not forget to set the version in the CMakeLists.txt file accordingly
 NUMERIC_VERSION=0x01040000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
 AC_SUBST(NUMERIC_VERSION)
 
