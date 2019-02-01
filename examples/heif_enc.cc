@@ -239,8 +239,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
   jpeg_stdio_src(&cinfo, infile);
 
   /* Adding this part to prepare for icc profile reading. */
-  for (int m = 0; m < 16; m++)
-    jpeg_save_markers(&cinfo, JPEG_APP0 + m, 0xFFFF);
+  jpeg_save_markers(&cinfo, JPEG_APP0 + 2, 0xFFFF);
 
   jpeg_read_header(&cinfo, TRUE);
 
