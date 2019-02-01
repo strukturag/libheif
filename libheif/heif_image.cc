@@ -522,12 +522,6 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_YCbCr420_to_RGB_HDR() co
       out_r[y*out_r_stride + x] = (uint16_t)(clip(yv + 1.402f*cr, fullRange) << bdShift);
       out_g[y*out_g_stride + x] = (uint16_t)(clip(yv - 0.344136f*cb - 0.714136f*cr, fullRange) << bdShift);
       out_b[y*out_b_stride + x] = (uint16_t)(clip(yv + 1.772f*cb, fullRange) << bdShift);
-
-      if (0)
-      printf("%d %d : %d %d %d\n",x,y,
-             out_r[y*out_r_stride+x],
-             out_g[y*out_r_stride+x],
-             out_b[y*out_r_stride+x]);
     }
 
     if (has_alpha) {
@@ -759,18 +753,6 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_RGB_to_RRGGBBaa_BE() con
         out_p[y*out_p_stride + 8*x + 5] = (uint8_t)(b & 0xFF);
         out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(a>>8);
         out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
-
-        if (0)
-        printf("%d %d : %d %d  %d %d  %d %d  %d %d\n",
-               x,y,
-               out_p[y*out_p_stride + 8*x + 0],
-               out_p[y*out_p_stride + 8*x + 1],
-               out_p[y*out_p_stride + 8*x + 2],
-               out_p[y*out_p_stride + 8*x + 3],
-               out_p[y*out_p_stride + 8*x + 4],
-               out_p[y*out_p_stride + 8*x + 5],
-               out_p[y*out_p_stride + 8*x + 6],
-               out_p[y*out_p_stride + 8*x + 7]);
       }
     }
     else {

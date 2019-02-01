@@ -93,7 +93,7 @@ void show_help(const char* argv0)
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
-            << "  -b #            bit-depth of generated HEIF file when using 16-bit PNG input\n"
+            << "  -b #            bit-depth of generated HEIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n";
 }
 
@@ -336,8 +336,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
                &interlace_type, NULL, NULL);
-
-  //assert(bit_depth < 16); // , "cannot handle 16 bit images");
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
     if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
