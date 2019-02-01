@@ -266,6 +266,23 @@ std::string BitstreamRange::read_string()
 }
 
 
+bool BitstreamRange::read(uint8_t* data, int n)
+{
+  if (!prepare_read(n)) {
+    return false;
+  }
+
+  auto istr = get_istream();
+  bool success = istr->read(data,n);
+
+  if (!success) {
+    set_eof_while_reading();
+  }
+
+  return success;
+}
+
+
 bool BitstreamRange::prepare_read(int64_t nBytes)
 {
   if (nBytes<0) {

@@ -2683,6 +2683,13 @@ Error Box_av1C::parse(BitstreamRange& range)
     c.initial_presentation_delay_minus_one = byte & 0x0F;
   }
 
+  int configOBUs_bytes = range.get_remaining_bytes();
+  m_config_OBUs.resize(configOBUs_bytes);
+
+  if (!range.read(m_config_OBUs.data(), configOBUs_bytes)) {
+    // error
+  }
+
   return range.get_error();
 }
 
@@ -2710,6 +2717,13 @@ std::string Box_av1C::dump(Indent& indent) const
   else {
     sstr << "not present\n";
   }
+
+  sstr << indent << "config OBUs:";
+  for (size_t i=0;i<m_config_OBUs.size();i++) {
+    sstr << " " << std::hex << std::setfill('0') << std::setw(2)
+         << ((int)m_config_OBUs[i]);
+  }
+  sstr << std::dec << "\n";
 
   return sstr.str();
 }
