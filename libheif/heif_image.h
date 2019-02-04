@@ -98,7 +98,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
 
-  void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; }
+  void set_color_profile(const std::shared_ptr<color_profile> profile) { m_color_profile = profile; }
 
   std::shared_ptr<color_profile> get_color_profile() { return m_color_profile; }
 
