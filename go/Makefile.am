@@ -1,5 +1,7 @@
 EXTRA_DIST = \
-	heif/heif.go
+	heif/heif.go \
+	heif/keepalive_16.go \
+	heif/keepalive_17.go
 
 gopath:
 	ln -sf ${CURDIR} ${CURDIR}/src
