@@ -18,6 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define GDK_PIXBUF_ENABLE_BACKEND
+
 #include <gdk-pixbuf/gdk-pixbuf-io.h>
 #include <libheif/heif.h>
 
