@@ -302,36 +302,39 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
         out_img = convert_mono_to_RGB(4);
       }
     }
+    else if (get_colorspace() == heif_colorspace_RGB &&
+	     target_colorspace == heif_colorspace_YCbCr) {
 
+      // --- RGB -> YCbCr
 
-    // --- RGB -> YCbCr
-
-    if (get_bits_per_pixel(heif_channel_R) == 8) {
-      if (get_bits_per_pixel(heif_channel_G) != get_bits_per_pixel(heif_channel_R) ||
-          get_bits_per_pixel(heif_channel_B) != get_bits_per_pixel(heif_channel_R)) {
-        assert(false); // TODO: different bit depths for each channel
-      }
-
-      if (has_alpha()) {
-        if (get_bits_per_pixel(heif_channel_Alpha) != get_bits_per_pixel(heif_channel_R)) {
-          assert(false); // TODO: different bit depths for each channel
-        }
+      if (get_chroma_format() == heif_chroma_444) {
+	if (get_bits_per_pixel(heif_channel_G) != get_bits_per_pixel(heif_channel_R) ||
+	    get_bits_per_pixel(heif_channel_B) != get_bits_per_pixel(heif_channel_R)) {
+	  assert(false); // TODO: different bit depths for each channel
+	}
+      
+	if (has_alpha()) {
+	  if (get_bits_per_pixel(heif_channel_Alpha) != get_bits_per_pixel(heif_channel_R)) {
+	    assert(false); // TODO: different bit depths for each channel
+	  }
+	}
       }
 
       if ((get_chroma_format() == heif_chroma_interleaved_RGB ||
-           get_chroma_format() == heif_chroma_interleaved_RGBA) &&
-          target_chroma == heif_chroma_420) {
-        out_img = convert_RGB24_32_to_YCbCr420();
+	   get_chroma_format() == heif_chroma_interleaved_RGBA) &&
+	  target_chroma == heif_chroma_420) {
+	out_img = convert_RGB24_32_to_YCbCr420();
       }
 
       if (get_chroma_format() == heif_chroma_444) {
-        std::shared_ptr<HeifPixelImage> img_rgb = convert_RGB_to_RGB24_32();
-        out_img = img_rgb->convert_RGB24_32_to_YCbCr420();
+	std::shared_ptr<HeifPixelImage> img_rgb = convert_RGB_to_RGB24_32();
+	out_img = img_rgb->convert_RGB24_32_to_YCbCr420();
       }
     }
 
-    if (get_bits_per_pixel(heif_channel_R) > 8 &&
-        target_chroma == heif_chroma_420) {
+    if (get_chroma_format() == heif_chroma_444 &&
+	get_bits_per_pixel(heif_channel_R) > 8 &&
+	target_chroma == heif_chroma_420) {
       out_img = convert_RGB_to_YCbCr420_HDR();
     }
   }
