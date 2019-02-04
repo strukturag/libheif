@@ -161,9 +161,9 @@ namespace heif {
                                  const struct heif_encoding_options* options,
                                  enum heif_image_input_class input_class);
 
-      std::shared_ptr<color_profile> get_color_profile() const { return m_color_profile; }
+      std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
 
-      void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; };
+      void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = profile; };
 
     private:
       HeifContext* m_heif_context;
@@ -191,7 +191,7 @@ namespace heif {
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
-      std::shared_ptr<color_profile> m_color_profile;
+      std::shared_ptr<const color_profile> m_color_profile;
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }

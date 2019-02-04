@@ -645,7 +645,7 @@ void HeifFile::set_auxC_property(heif_item_id id, std::string type)
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
 }
 
-void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<color_profile> profile)
+void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile> profile)
 {
   auto colr = std::make_shared<Box_colr>();
   colr->set_color_profile(profile);
