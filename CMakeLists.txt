@@ -63,8 +63,4 @@ endif()
 
 add_subdirectory (examples)
 add_subdirectory (libheif)
-
-option(WITH_GDK_PIXBUF_LOADER "Compile a gdk-pixbuf loader plugin" ON)
-if(WITH_GDK_PIXBUF_LOADER)
-  add_subdirectory (gdk-pixbuf)
-endif()
+add_subdirectory (gdk-pixbuf)
