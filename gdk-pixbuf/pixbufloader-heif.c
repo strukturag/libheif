@@ -168,5 +168,5 @@ void fill_info(GdkPixbufFormat* info)
 	info->extensions  = extensions;
 	info->flags       = GDK_PIXBUF_FORMAT_THREADSAFE;
 	info->disabled    = FALSE;
-	info->license     = "GPLv3";
+	info->license     = "LGPL3";
 }
