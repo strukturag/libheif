@@ -277,6 +277,8 @@ namespace heif {
     Error decode_overlay_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img,
                                const std::vector<uint8_t>& overlay_data) const;
+
+    heif_item_id get_id_of_non_virtual_child_image(heif_item_id) const;
   };
 }
 
