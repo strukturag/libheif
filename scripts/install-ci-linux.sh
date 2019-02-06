@@ -74,6 +74,7 @@ fi
 
 if [ ! -z "$WITH_GRAPHICS" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        libgdk-pixbuf2.0-dev \
         libjpeg-dev \
         libpng-dev \
         "

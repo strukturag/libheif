@@ -49,7 +49,7 @@ if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --host=$CONFIGURE_HOST"
     fi
     if [ ! -z "$GO" ]; then
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist"
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist --disable-gdk-pixbuf"
     else
         CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
     fi

@@ -5,6 +5,7 @@ SUBDIRS = \
     examples \
     extra \
     fuzzing \
+    gdk-pixbuf \
     gnome \
     go \
     scripts
