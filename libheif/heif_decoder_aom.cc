@@ -30,7 +30,7 @@
 #include <stdio.h>
 
 #include <aom/aom_decoder.h>
-#include <aom/aomcx.h>
+#include <aom/aomdx.h>
 
 
 struct aom_decoder
@@ -52,8 +52,8 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 
 static const char* aom_plugin_name()
 {
-  if (strlen(aom_codec_iface_name(aom_codec_av1_cx())) < MAX_PLUGIN_NAME_LENGTH) {
-    strcpy(plugin_name, aom_codec_iface_name(aom_codec_av1_cx()));
+  if (strlen(aom_codec_iface_name(aom_codec_av1_dx())) < MAX_PLUGIN_NAME_LENGTH) {
+    strcpy(plugin_name, aom_codec_iface_name(aom_codec_av1_dx()));
   }
   else {
     strcpy(plugin_name, "AOMedia AV1 decoder");
@@ -145,12 +145,15 @@ struct heif_error aom_new_decoder(void** dec)
   struct aom_decoder* decoder = new aom_decoder();
 
   //decoder->decoder = get_aom_decoder_by_fourcc(AV1_FOURCC);
-  decoder->iface = aom_codec_av1_cx();
-  if (aom_codec_dec_init(&decoder->codec, decoder->iface, NULL, 0)) {
-    //die_codec(&codec, "Failed to initialize decoder.");
-  }
 
-  //decoder->ctx = de265_new_decoder();
+  decoder->iface = aom_codec_av1_dx();
+
+  aom_codec_err_t aomerr = aom_codec_dec_init(&decoder->codec, decoder->iface, NULL, 0);
+  if (aomerr) {
+    //die_codec(&codec, "Failed to initialize decoder.");
+    printf("failed to initialize decoder %d\n", aomerr);
+    exit(10);
+  }
 
   *dec = decoder;
 
@@ -173,10 +176,23 @@ struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_
 {
   struct aom_decoder* decoder = (struct aom_decoder*)decoder_raw;
 
-  if (aom_codec_decode(&decoder->codec, (const uint8_t*)frame_data, frame_size, NULL)) {
-    //die_codec(&codec, "Failed to decode frame.");
+  printf("in: %d bytes\n", (int)frame_size);
+
+  for (int i=0;i<64;i++) {
+    printf("%02x ", ((uint8_t*)frame_data)[i]);
+    if ((i%16)==15) printf("\n");
   }
 
+  aom_codec_err_t aomerr;
+  aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*)frame_data, frame_size, NULL);
+  if (aomerr) {
+    printf("ierr: %d\n", aomerr);
+
+    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
+    return err;
+  }
+
+  printf("i0\n");
 
   /*
   const uint8_t* cdata = (const uint8_t*)data;
@@ -217,26 +233,72 @@ struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_
 
 struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
-  /*
-  struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
+  struct aom_decoder* decoder = (struct aom_decoder*)decoder_raw;
 
-  de265_push_end_of_stream(decoder->ctx);
+  aom_codec_iter_t iter = NULL;
+  aom_image_t* img = NULL;
 
-  int action = de265_get_action(decoder->ctx, 1);
+  img = aom_codec_get_frame(&decoder->codec, &iter);
 
-  // TODO(farindk): Set "err" if no image was decoded.
-  if (action==de265_action_get_image) {
-    const de265_image* img = de265_get_next_picture(decoder->ctx);
-    if (img) {
-      struct heif_error err = convert_libde265_image_to_heif_image(decoder, img, out_img);
-      de265_release_picture(img);
+  if (img==NULL) {
+    struct heif_error err = { heif_error_Decoder_plugin_error,
+                              heif_suberror_Unspecified,
+                              kEmptyString };
+    return err;
+  }
 
+
+
+  struct heif_image* heif_img;
+  struct heif_error err = heif_image_create(img->w, img->h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_420, // TODO
+                                            &heif_img);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+
+
+
+  // --- transfer data from de265_image to HeifPixelImage
+
+  heif_channel channel2plane[3] = {
+    heif_channel_Y,
+    heif_channel_Cb,
+    heif_channel_Cr
+  };
+
+
+  printf("wh: %d %d\n",img->w, img->h);
+
+  for (int c=0;c<3;c++) {
+    int bpp = img->bit_depth;
+
+    const uint8_t* data = img->planes[c];
+    int stride = img->stride[c];
+
+    int w = img->w;
+    int h = img->h;
+
+    err = heif_image_add_plane(heif_img, channel2plane[c], w,h, bpp);
+    if (err.code != heif_error_Ok) {
+      heif_image_release(heif_img);
       return err;
     }
-  }
-  */
 
-  struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kEmptyString };
+    int dst_stride;
+    uint8_t* dst_mem = heif_image_get_plane(heif_img, channel2plane[c], &dst_stride);
+
+    int bytes_per_pixel = (bpp+7)/8;
+
+    for (int y=0;y<h;y++) {
+      memcpy(dst_mem + y*dst_stride, data + y*stride, w * bytes_per_pixel);
+    }
+  }
+
+  printf("i1\n");
+
+  *out_img = heif_img;
   return err;
 }
 

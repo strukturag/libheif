@@ -713,7 +713,10 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    bool get_headers(std::vector<uint8_t>* dest) const { *dest = m_config_OBUs; return true; }
+    bool get_headers(std::vector<uint8_t>* dest) const {
+      *dest = m_config_OBUs;
+      return true;
+    }
 
     //void set_configuration(const configuration& config) { m_configuration=config; }
 

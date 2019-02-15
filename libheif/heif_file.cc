@@ -501,7 +501,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   } else if (item_type == "av01") {
-    // --- --- --- HEVC
+    // --- --- --- AV1
 
     // --- get properties for this image
 
