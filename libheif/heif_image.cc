@@ -1116,23 +1116,48 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
-    if (angle_degrees==270) {
-      for (int x=0;x<h;x++)
-        for (int y=0;y<w;y++) {
-          out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
-        }
+    if (plane.bit_depth==8) {
+      if (angle_degrees==270) {
+        for (int x=0;x<h;x++)
+          for (int y=0;y<w;y++) {
+            out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
+          }
+      }
+      else if (angle_degrees==180) {
+        for (int y=0;y<h;y++)
+          for (int x=0;x<w;x++) {
+            out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
+          }
+      }
+      else if (angle_degrees==90) {
+        for (int x=0;x<h;x++)
+          for (int y=0;y<w;y++) {
+            out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
+          }
+      }
     }
-    else if (angle_degrees==180) {
-      for (int y=0;y<h;y++)
-        for (int x=0;x<w;x++) {
-          out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
-        }
-    }
-    else if (angle_degrees==90) {
-      for (int x=0;x<h;x++)
-        for (int y=0;y<w;y++) {
-          out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
-        }
+    else { // 16 bit (TODO: unchecked code)
+      if (angle_degrees==270) {
+        for (int x=0;x<h;x++)
+          for (int y=0;y<w;y++) {
+            out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
+            out_data[y*out_stride + x+1] = in_data[(h-1-x)*in_stride + y+1];
+          }
+      }
+      else if (angle_degrees==180) {
+        for (int y=0;y<h;y++)
+          for (int x=0;x<w;x++) {
+            out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
+            out_data[y*out_stride + x+1] = in_data[(h-1-y)*in_stride + (w-1-x)+1];
+          }
+      }
+      else if (angle_degrees==90) {
+        for (int x=0;x<h;x++)
+          for (int y=0;y<w;y++) {
+            out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
+            out_data[y*out_stride + x+1] = in_data[x*in_stride + (w-1-y)+1];
+          }
+      }
     }
   }
 
@@ -1148,7 +1173,7 @@ Error HeifPixelImage::mirror_inplace(bool horizontal)
     if (plane.bit_depth != 8) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unspecified,
-                   "Can currently only rotate images with 8 bits per pixel");
+                   "Can currently only mirror images with 8 bits per pixel");
     }
 
 
@@ -1189,10 +1214,10 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    if (plane.bit_depth != 8) {
+    if (false && plane.bit_depth != 8) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unspecified,
-                   "Can currently only rotate images with 8 bits per pixel");
+                   "Can currently only crop images with 8 bits per pixel");
     }
 
 
@@ -1215,10 +1240,19 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
     int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
 
-    for (int y=plane_top;y<=plane_bottom;y++) {
-      memcpy( &out_data[(y-plane_top)*out_stride],
-              &in_data[y*in_stride + plane_left],
-              plane_right - plane_left + 1 );
+    if (plane.bit_depth==8) {
+      for (int y=plane_top;y<=plane_bottom;y++) {
+        memcpy( &out_data[(y-plane_top)*out_stride],
+                &in_data[y*in_stride + plane_left],
+                plane_right - plane_left + 1 );
+      }
+    }
+    else {
+      for (int y=plane_top;y<=plane_bottom;y++) {
+        memcpy( &out_data[(y-plane_top)*out_stride],
+                &in_data[y*in_stride + plane_left*2],
+                (plane_right - plane_left + 1)*2 );
+      }
     }
   }
 
