@@ -9,6 +9,10 @@ libheif_ladir = \
         $(includedir)/libheif
 
 ADDITIONAL_LIBS =
+if HAVE_AOM
+ADDITIONAL_LIBS += $(aom_LIBS)
+endif
+
 if HAVE_LIBDE265
 ADDITIONAL_LIBS += $(libde265_LIBS)
 endif
@@ -17,14 +21,13 @@ if HAVE_X265
 ADDITIONAL_LIBS += $(x265_LIBS)
 endif
 
-ADDITIONAL_LIBS += -laom
-
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
   -DLIBHEIF_EXPORTS
 libheif_la_CXXFLAGS = \
   $(CFLAG_VISIBILITY) \
+  $(aom_CFLAGS) \
   $(libde265_CFLAGS) \
   $(x265_CFLAGS) \
   -DLIBHEIF_EXPORTS -I$(top_srcdir)
@@ -58,13 +61,15 @@ libheif_la_SOURCES = \
   heif_plugin_registry.cc \
   heif_plugin.h \
   heif_plugin.cc \
+  logging.h
+
+if HAVE_AOM
+libheif_la_SOURCES += \
   heif_encoder_aom.cc \
   heif_encoder_aom.h \
   heif_decoder_aom.cc \
-  heif_decoder_aom.h \
-  logging.h
-
-# TODO: add conditional compilation of AV1 (AOM) codec
+  heif_decoder_aom.h
+endif
 
 if HAVE_LIBDE265
 libheif_la_SOURCES += \

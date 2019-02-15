@@ -36,8 +36,6 @@
 #include "heif_encoder_x265.h"
 #endif
 
-#define HAVE_AOM 1 // TODO: HACK
-
 #if HAVE_AOM
 #include "heif_encoder_aom.h"
 #include "heif_decoder_aom.h"

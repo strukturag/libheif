@@ -27,8 +27,26 @@ logging.h
 
 if(UNIX)
   include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
+  pkg_check_modules (AOM aom)
   pkg_check_modules (LIBDE265 libde265)
   pkg_check_modules (X265 x265)
+endif()
+
+if(AOM_FOUND)
+  add_definitions(-DAOM=1)
+  set (libheif_sources
+    ${libheif_sources}
+    heif_decoder_aom.cc
+    heif_decoder_aom.h
+    heif_encoder_aom.cc
+    heif_encoder_aom.h
+  )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${AOM_CFLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AOM_CFLAGS}")
+
+  if (NOT "${AOM_LIBRARY_DIRS}" STREQUAL "")
+    set(AOM_LINKDIR "-L${AOM_LIBRARY_DIRS}")
+  endif()
 endif()
 
 if(LIBDE265_FOUND)
@@ -67,6 +85,9 @@ add_definitions(-DHAVE_VISIBILITY)
 add_definitions(-DLIBHEIF_EXPORTS)
 
 add_library(${LIBHEIF_LIBRARY_NAME} SHARED ${libheif_sources})
+if(AOM_FOUND)
+  target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${AOM_LIBRARIES} ${AOM_LINKDIR})
+endif()
 if(LIBDE265_FOUND)
   target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 endif()

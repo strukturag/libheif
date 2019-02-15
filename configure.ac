@@ -68,6 +68,15 @@ AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
+PKG_CHECK_MODULES([aom], [aom], [
+    AC_DEFINE([HAVE_AOM], [1], [Whether aom was found.])
+    AC_SUBST(aom_CFLAGS)
+    AC_SUBST(aom_LIBS)
+    have_aom="yes"
+], [have_aom="no"])
+AM_CONDITIONAL([HAVE_AOM], [test "x$have_aom" = "xyes"])
+AC_SUBST([have_aom])
+
 PKG_CHECK_MODULES([libde265], [libde265], [
     AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
     AC_SUBST(libde265_CFLAGS)
@@ -183,6 +192,8 @@ CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
+AC_MSG_NOTICE([libaom decoder: $have_aom])
+AC_MSG_NOTICE([libaom encoder: $have_aom])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])

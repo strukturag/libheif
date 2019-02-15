@@ -24,6 +24,7 @@ INSTALL_PACKAGES=
 REMOVE_PACKAGES=
 BUILD_ROOT=$TRAVIS_BUILD_DIR
 UPDATE_APT=
+ADD_LIBHEIF_PPA=
 
 if [ "$WITH_LIBDE265" = "1" ]; then
     echo "Adding PPA strukturag/libde265 ..."
@@ -50,10 +51,15 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     popd
 fi
 
+if [ "$WITH_AOM" = "1" ]; then
+    ADD_LIBHEIF_PPA=1
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        libaom-dev \
+        "
+fi
+
 if [ "$WITH_X265" = "1" ]; then
-    echo "Adding PPA strukturag/libheif ..."
-    sudo add-apt-repository -y ppa:strukturag/libheif
-    UPDATE_APT=1
+    ADD_LIBHEIF_PPA=1
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libx265-dev \
         "
@@ -102,6 +108,12 @@ if [ ! -z "$GO" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         golang \
         "
+fi
+
+if [ ! -z "$ADD_LIBHEIF_PPA" ]; then
+    echo "Adding PPA strukturag/libheif ..."
+    sudo add-apt-repository -y ppa:strukturag/libheif
+    UPDATE_APT=1
 fi
 
 if [ ! -z "$UPDATE_APT" ]; then

@@ -15,113 +15,76 @@ addons:
 env:
   global:
     - secure: "Hp9bDdzdJ0OzMcUW2NjddPYeTBcuK/8oM9h8wH0HT2T8JtcJcLQQ80+MfzKstWeittvosT3sp9JAhSHWdwRUu2Km0dFH3tbsDxYM1MrkdjSOd8sVeKlrGiFno3o8ek8vSPOH1MRx9io7z0N5mka0kLp4pB6C4zfL6AcPw+yt7srdfu+gJkPyPU8EupmzmD6dQQFdiNHz4gUt9S/wO2SKZiZ1hFJwDClnnWPzOdAJ2moIaQl0aXK/6F/PBPdTcHlMEr400p22B8Febio4dtWbQakwHrEzEajI/QVzXJWYLqh/ZGmY8VhwyntlIOQiV9nz979X5gwNtqDk7FcCXtEKluLheI1LHMALOqN9Kf2hLDaP7u2LyUUfKqOn8/hKhZM4tBoK0+m0joG3ZthwJ2ZRtRv9BqWhSs/BiYM8+ZI9L6RU5eX+e7UeXUWTvfqVNFL/E9TlfGwbka216ndGoeCeP5i6K7gsr04ElSTSczpNihDcaaO0ZuhlPOctXTFi+9HMS133FlYQqpfyzK0zGVC0xjlbA7kUMHef0SCPDlpRZF4oPK/SunHcdTYtick8J9qz+cpjbTcYEyburDABoKoTYEZA41nb8gyvetJnMWL4AZBoIR+2x9u4Y0sD+mEaWn1KqVr7y0TQqN4sLhoOzwe9ncjSyl7vq6lsP/chCBpN838="
-  matrix:
-    - EMSCRIPTEN_VERSION=1.37.26
-    - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
-    - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
-    - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=
-    - WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
-    - WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=
-    - WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=1
-    - WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
-    - WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
-    - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
-    - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
-    - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
-    - WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
-    - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
-    - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
-    - CHECK_LICENSES=1
-    - CPPLINT=1
 
 matrix:
+  # Exclude defaults.
   exclude:
-    # Don't build various targets with clang.
-    - compiler: clang
-      env: CHECK_LICENSES=1
-    - compiler: clang
-      env: CPPLINT=1
-    - compiler: clang
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
-    - compiler: clang
-      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=
-    - compiler: clang
-      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=1
-    - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
-    - compiler: clang
-      env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
-    - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - compiler: clang
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
-    - compiler: clang
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
-    - compiler: clang
-      env: EMSCRIPTEN_VERSION=1.37.26
-    - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
-    - compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
-    - compiler: clang
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
-    - compiler: clang
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
-    # Don't build various targets with gcc on Linux.
     - os: linux
       compiler: gcc
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
     - os: linux
+      compiler: clang
+    - os: osx
       compiler: gcc
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
-    # Don't build various targets on OSX.
-    - os: osx
-      env: CHECK_LICENSES=1
-    - os: osx
-      env: CPPLINT=1
-    - os: osx
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
-    - os: osx
-      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=
-    - os: osx
-      env: WITH_LIBDE265= WITH_X265=1 WITH_GRAPHICS=1
-    - os: osx
-      env: WITH_LIBDE265=1 WITH_X265= WITH_GRAPHICS=1
-    - os: osx
-      env: WITH_LIBDE265=2 WITH_X265= WITH_GRAPHICS=1
-    - os: osx
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - os: osx
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 GO=1
-    - os: osx
-      env: EMSCRIPTEN_VERSION=1.37.26
-    - os: osx
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 TARBALL=1
-    - os: osx
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW32=1
-    - os: osx
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS= MINGW64=1
-    - os: osx
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
-    - os: osx
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1 FUZZER=1
     - os: osx
       compiler: clang
-      env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=
-    - os: osx
-      compiler: clang
-      env: WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
-    - os: osx
-      compiler: clang
-      env: WITH_LIBDE265=2 WITH_X265=1 WITH_GRAPHICS=1
   include:
+    # Generic checks.
+    - os: linux
+      compiler: gcc
+      env: CHECK_LICENSES=1
+    - os: linux
+      compiler: gcc
+      env: CPPLINT=1
+    - os: linux
+      compiler: gcc
+      env: EMSCRIPTEN_VERSION=1.37.26
+    # Build with none/all features on all compilers/platforms.
+    - env: WITH_LIBDE265= WITH_X265= WITH_AOM= WITH_GRAPHICS=
+    - env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1
+    - env: WITH_LIBDE265=2 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1
+    # Build with other compilers.
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265= WITH_X265= WITH_AOM= WITH_GRAPHICS= MINGW32=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265= WITH_X265= WITH_AOM= WITH_GRAPHICS= MINGW64=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 TARBALL=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 CMAKE=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 GO=1
+    # Build with fuzzing.
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 FUZZER=1
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=2 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 FUZZER=1
+    # Build with cmake on OSX.
+    - os: osx
+      env: WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1 CMAKE=1
+    # Build with single features enabled only.
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265=1 WITH_X265= WITH_AOM= WITH_GRAPHICS=
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265= WITH_X265=1 WITH_AOM= WITH_GRAPHICS=
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265= WITH_X265= WITH_AOM=1 WITH_GRAPHICS=
+    - os: linux
+      compiler: gcc
+      env: WITH_LIBDE265= WITH_X265= WITH_AOM= WITH_GRAPHICS=1
+    # Build for coverity.
     - os: linux
       env:
-        - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1
+        - WITH_LIBDE265=1 WITH_X265=1 WITH_AOM=1 WITH_GRAPHICS=1
       addons:
         coverity_scan:
           project:
