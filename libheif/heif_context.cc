@@ -859,7 +859,7 @@ Error HeifContext::decode_image(heif_item_id ID,
   if (image_type == "hvc1" ||
       image_type == "av01") {
 
-    heif_compression_format compression;
+    heif_compression_format compression = heif_compression_undefined;
     if (image_type == "hvc1") {
       compression = heif_compression_HEVC;
     }
