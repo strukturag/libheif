@@ -72,6 +72,8 @@ test_c_api_LDADD = ../libheif/libheif.la
 test_c_api_SOURCES = test_c_api.c
 
 EXTRA_DIST = \
+    CMakeLists.txt \
+    COPYING \
     demo.html \
     example.heic
 

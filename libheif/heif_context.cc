@@ -662,6 +662,7 @@ Error HeifContext::interpret_heif_file()
         }
 
         image->set_resolution(width, height);
+        image->set_ispe_resolution(width, height);
         ispe_read = true;
       }
 
@@ -781,15 +782,35 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
+heif_item_id HeifContext::get_id_of_non_virtual_child_image(heif_item_id id) const
+{
+  std::string image_type = m_heif_file->get_item_type(id);
+  if (image_type=="grid" ||
+      image_type=="iden" ||
+      image_type=="iovl") {
+    auto iref_box = m_heif_file->get_iref_box();
+    std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
+
+    // TODO: check whether this really can be recursive (e.g. overlay of grid images)
+    return get_id_of_non_virtual_child_image(image_references[0]);
+  }
+  else {
+    return id;
+  }
+}
+
+
 int HeifContext::Image::get_luma_bits_per_pixel() const
 {
-  return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(m_id);
+  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(id);
 }
 
 
 int HeifContext::Image::get_chroma_bits_per_pixel() const
 {
-  return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(m_id);
+  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
 }
 
 

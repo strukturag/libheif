@@ -165,7 +165,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 static void x265_set_default_parameters(void* encoder);
 
 
-const char* x265_plugin_name()
+static const char* x265_plugin_name()
 {
   strcpy(plugin_name, "x265 HEVC encoder");
 
@@ -265,18 +265,18 @@ const struct heif_encoder_parameter** x265_list_parameters(void* encoder)
 }
 
 
-void x265_init_plugin()
+static void x265_init_plugin()
 {
   x265_init_parameters();
 }
 
 
-void x265_cleanup_plugin()
+static void x265_cleanup_plugin()
 {
 }
 
 
-struct heif_error x265_new_encoder(void** enc)
+static struct heif_error x265_new_encoder(void** enc)
 {
   struct encoder_struct_x265* encoder = new encoder_struct_x265();
   struct heif_error err = heif_error_ok;
@@ -300,7 +300,7 @@ struct heif_error x265_new_encoder(void** enc)
   return err;
 }
 
-void x265_free_encoder(void* encoder_raw)
+static void x265_free_encoder(void* encoder_raw)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -312,7 +312,7 @@ void x265_free_encoder(void* encoder_raw)
   delete encoder;
 }
 
-struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
+static struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -325,7 +325,7 @@ struct heif_error x265_set_parameter_quality(void* encoder_raw, int quality)
   return heif_error_ok;
 }
 
-struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
+static struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -335,7 +335,7 @@ struct heif_error x265_get_parameter_quality(void* encoder_raw, int* quality)
   return heif_error_ok;
 }
 
-struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
+static struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -344,7 +344,7 @@ struct heif_error x265_set_parameter_lossless(void* encoder_raw, int enable)
   return heif_error_ok;
 }
 
-struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
+static struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -354,7 +354,7 @@ struct heif_error x265_get_parameter_lossless(void* encoder_raw, int* enable)
   return heif_error_ok;
 }
 
-struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
+static struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int logging)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -367,7 +367,7 @@ struct heif_error x265_set_parameter_logging_level(void* encoder_raw, int loggin
   return heif_error_ok;
 }
 
-struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
+static struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* loglevel)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -377,7 +377,7 @@ struct heif_error x265_get_parameter_logging_level(void* encoder_raw, int* logle
 }
 
 
-struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
+static struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -407,7 +407,7 @@ struct heif_error x265_set_parameter_integer(void* encoder_raw, const char* name
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
+static struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -430,7 +430,7 @@ struct heif_error x265_get_parameter_integer(void* encoder_raw, const char* name
 }
 
 
-struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
+static struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, int value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return x265_set_parameter_lossless(encoder,value);
@@ -439,7 +439,9 @@ struct heif_error x265_set_parameter_boolean(void* encoder, const char* name, in
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, int* value)
+// Unused, will use "x265_get_parameter_integer" instead.
+/*
+static struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, int* value)
 {
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return x265_get_parameter_lossless(encoder,value);
@@ -447,6 +449,7 @@ struct heif_error x265_get_parameter_boolean(void* encoder, const char* name, in
 
   return heif_error_unsupported_parameter;
 }
+*/
 
 
 static bool string_list_contains(const char*const* values_list, const char* value)
@@ -461,7 +464,7 @@ static bool string_list_contains(const char*const* values_list, const char* valu
 }
 
 
-struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
+static struct heif_error x265_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -495,8 +498,8 @@ static void save_strcpy(char* dst, int dst_size, const char* src)
   dst[dst_size-1] = 0;
 }
 
-struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
-                                            char* value, int value_size)
+static struct heif_error x265_get_parameter_string(void* encoder_raw, const char* name,
+                                                   char* value, int value_size)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -535,15 +538,15 @@ static void x265_set_default_parameters(void* encoder)
 }
 
 
-void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
+static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
 {
   *colorspace = heif_colorspace_YCbCr;
   *chroma = heif_chroma_420;
 }
 
 
-struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image,
-                                    heif_image_input_class input_class)
+static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image,
+                                           heif_image_input_class input_class)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 
@@ -674,8 +677,8 @@ struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* 
 }
 
 
-struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
-                                           enum heif_encoded_data_type* type)
+static struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** data, int* size,
+                                                  enum heif_encoded_data_type* type)
 {
   struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
 

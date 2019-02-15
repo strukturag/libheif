@@ -864,10 +864,10 @@ namespace heif {
     Error parse(BitstreamRange& range);
     Error write(StreamWriter& writer) const override;
 
-    uint16_t get_colour_primaries(){return m_colour_primaries;}
-    uint16_t get_transfer_characteristics(){return m_transfer_characteristics;}
-    uint16_t get_matrix_coefficients(){return m_matrix_coefficients;}
-    bool get_full_range_flag(){return m_full_range_flag;}
+    uint16_t get_colour_primaries() const {return m_colour_primaries;}
+    uint16_t get_transfer_characteristics() const {return m_transfer_characteristics;}
+    uint16_t get_matrix_coefficients() const {return m_matrix_coefficients;}
+    bool get_full_range_flag() const {return m_full_range_flag;}
 
     void set_colour_primaries(uint16_t primaries) { m_colour_primaries = primaries; }
     void set_transfer_characteristics(uint16_t characteristics) { m_transfer_characteristics = characteristics; }
@@ -890,8 +890,8 @@ namespace heif {
     std::string dump(Indent&) const override;
     uint32_t get_color_profile_type() const { return m_color_profile->get_type(); }
 
-    std::shared_ptr<color_profile> get_color_profile() const { return m_color_profile; }
-    void set_color_profile(std::shared_ptr<color_profile> prof) { m_color_profile = prof; }
+    std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
+    void set_color_profile(std::shared_ptr<const color_profile> prof) { m_color_profile = prof; }
 
 
     Error write(StreamWriter& writer) const override;
@@ -900,7 +900,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    std::shared_ptr<color_profile> m_color_profile;
+    std::shared_ptr<const color_profile> m_color_profile;
   };
 
 }

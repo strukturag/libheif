@@ -35,7 +35,7 @@ fi
 
 if [ ! -z "$CPPLINT" ]; then
     echo "Running cpplint ..."
-    find -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py
+    find -name "*.c" -o -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py --extensions=c,cc,h
     ./scripts/check-emscripten-enums.sh
     ./scripts/check-go-enums.sh
 

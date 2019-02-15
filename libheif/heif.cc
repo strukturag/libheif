@@ -431,6 +431,28 @@ int heif_image_handle_get_height(const struct heif_image_handle* handle)
 }
 
 
+int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_width();
+  }
+  else {
+    return 0;
+  }
+}
+
+
+int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
+{
+  if (handle && handle->image) {
+    return handle->image->get_ispe_height();
+  }
+  else {
+    return 0;
+  }
+}
+
+
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 {
   return handle->image->get_alpha_channel() != nullptr;
@@ -862,7 +884,7 @@ heif_color_profile_type heif_image_handle_get_color_profile_type(const struct he
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle)
 {
   auto profile = handle->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<color_profile_raw>(profile);
+  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
   if (raw_profile) {
     return raw_profile->get_data().size();
   }
@@ -888,7 +910,7 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
                                                            struct heif_color_profile_nclx** out_data)
 {
   auto profile = handle->image->get_color_profile();
-  auto nclx_profile = std::dynamic_pointer_cast<color_profile_nclx>(profile);
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
   if (nclx_profile) {
     if (!out_data) {
       Error err(heif_error_Usage_error,
@@ -946,7 +968,7 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
   }
 
   auto profile = handle->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<color_profile_raw>(profile);
+  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
   if (raw_profile) {
     memcpy(out_data,
            raw_profile->get_data().data(),

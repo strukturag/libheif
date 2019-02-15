@@ -448,6 +448,12 @@ int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 LIBHEIF_API
 int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
 
+LIBHEIF_API
+int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
+
 
 // ------------------------- depth images -------------------------
 
