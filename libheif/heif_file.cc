@@ -348,11 +348,38 @@ Error HeifFile::get_properties(heif_item_id imageID,
 
 heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) const
 {
+  // HEVC
+
   auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
   if (hvcC_box) {
     return (heif_chroma)(hvcC_box->get_configuration().chroma_format);
   }
+
+
+  // AV1
+
+  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("av1C"));
+  std::shared_ptr<Box_av1C> av1C_box = std::dynamic_pointer_cast<Box_av1C>(box);
+  if (av1C_box) {
+    Box_av1C::configuration config = av1C_box->get_configuration();
+    if (config.chroma_subsampling_x == 2 &&
+        config.chroma_subsampling_y == 2) {
+      return heif_chroma_420;
+    }
+    else if (config.chroma_subsampling_x == 2 &&
+             config.chroma_subsampling_y == 1) {
+      return heif_chroma_422;
+    }
+    else if (config.chroma_subsampling_x == 1 &&
+             config.chroma_subsampling_y == 1) {
+      return heif_chroma_444;
+    }
+    else {
+      return heif_chroma_undefined;
+    }
+  }
+
 
   assert(false);
   return heif_chroma_420;
