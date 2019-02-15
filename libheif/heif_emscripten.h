@@ -222,6 +222,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_infe_box",heif_suberror_No_infe_box)
     .value("heif_suberror_Security_limit_exceeded",heif_suberror_Security_limit_exceeded)
     .value("heif_suberror_Unknown_color_profile_type",heif_suberror_Unknown_color_profile_type)
+    .value("heif_suberror_Wrong_tile_image_chroma_format",heif_suberror_Wrong_tile_image_chroma_format)
     .value("heif_suberror_Nonexisting_item_referenced",heif_suberror_Nonexisting_item_referenced)
     .value("heif_suberror_Null_pointer_argument",heif_suberror_Null_pointer_argument)
     .value("heif_suberror_Nonexisting_image_channel_referenced",heif_suberror_Nonexisting_image_channel_referenced)
