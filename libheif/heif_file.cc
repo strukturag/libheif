@@ -363,16 +363,16 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   std::shared_ptr<Box_av1C> av1C_box = std::dynamic_pointer_cast<Box_av1C>(box);
   if (av1C_box) {
     Box_av1C::configuration config = av1C_box->get_configuration();
-    if (config.chroma_subsampling_x == 2 &&
-        config.chroma_subsampling_y == 2) {
+    if (config.chroma_subsampling_x == 1 &&
+        config.chroma_subsampling_y == 1) {
       return heif_chroma_420;
     }
-    else if (config.chroma_subsampling_x == 2 &&
-             config.chroma_subsampling_y == 1) {
+    else if (config.chroma_subsampling_x == 1 &&
+             config.chroma_subsampling_y == 0) {
       return heif_chroma_422;
     }
-    else if (config.chroma_subsampling_x == 1 &&
-             config.chroma_subsampling_y == 1) {
+    else if (config.chroma_subsampling_x == 0 &&
+             config.chroma_subsampling_y == 0) {
       return heif_chroma_444;
     }
     else {
