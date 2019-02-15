@@ -47,6 +47,7 @@ type Compression C.enum_heif_compression_format
 const (
 	CompressionUndefined = C.heif_compression_undefined
 	CompressionHEVC      = C.heif_compression_HEVC
+	CompressionAV1       = C.heif_compression_AV1
 	CompressionAVC       = C.heif_compression_AVC
 	CompressionJPEG      = C.heif_compression_JPEG
 )
