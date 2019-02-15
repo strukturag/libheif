@@ -150,17 +150,28 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
 
 
-  if (img->fmt != AOM_IMG_FMT_I420) {
+  if (img->fmt != AOM_IMG_FMT_I420 &&
+      img->fmt != AOM_IMG_FMT_I42016 &&
+      img->fmt != AOM_IMG_FMT_I444) {
     struct heif_error err = { heif_error_Decoder_plugin_error,
                               heif_suberror_Unsupported_image_type,
                               kEmptyString };
     return err;
   }
 
+
+  heif_chroma chroma;
+  if (img->fmt == AOM_IMG_FMT_I444) {
+    chroma = heif_chroma_444;
+  }
+  else {
+    chroma = heif_chroma_420;
+  }
+
   struct heif_image* heif_img;
   struct heif_error err = heif_image_create(img->w, img->h,
                                             heif_colorspace_YCbCr,
-                                            heif_chroma_420, // TODO
+                                            chroma,
                                             &heif_img);
   if (err.code != heif_error_Ok) {
     return err;
@@ -185,6 +196,14 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
     int w = img->w;
     int h = img->h;
+
+    if (c>0 && chroma == heif_chroma_420) {
+      w = (w+1)/2;
+      h = (h+1)/2;
+    }
+    else if (c>0 && chroma == heif_chroma_422) {
+      w = (w+1)/2;
+    }
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w,h, bpp);
     if (err.code != heif_error_Ok) {
