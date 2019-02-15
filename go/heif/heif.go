@@ -222,6 +222,8 @@ const (
 
 	SuberrorUnknownColorProfileType = C.heif_suberror_Unknown_color_profile_type
 
+	SuberrorWrongTileImageChromaFormat = C.heif_suberror_Wrong_tile_image_chroma_format
+
 	// --- Memory_allocation_error ---
 
 	// A security limit preventing unreasonable memory allocations was exceeded by the input file.

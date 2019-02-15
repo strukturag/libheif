@@ -186,6 +186,8 @@ enum heif_suberror_code {
 
   heif_suberror_Unknown_color_profile_type = 126,
 
+  heif_suberror_Wrong_tile_image_chroma_format = 127,
+
 
   // --- Memory_allocation_error ---
 

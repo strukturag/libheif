@@ -1272,6 +1272,12 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   heif_chroma chroma = img->get_chroma_format();
   std::set<enum heif_channel> channels = img->get_channel_set();
 
+  if (chroma != tile_img->get_chroma_format()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Wrong_tile_image_chroma_format,
+                   "Image tile has different chroma format than combined image");
+  }
+
   for (heif_channel channel : channels) {
     int tile_stride;
     uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
