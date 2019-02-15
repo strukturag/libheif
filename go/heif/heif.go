@@ -1073,4 +1073,6 @@ func init() {
 	image.RegisterFormat("heif", "????ftyphevm", decodeImage, decodeConfig)
 	image.RegisterFormat("heif", "????ftyphevs", decodeImage, decodeConfig)
 	image.RegisterFormat("heif", "????ftypmif1", decodeImage, decodeConfig)
+	image.RegisterFormat("avif", "????ftypavif", decodeImage, decodeConfig)
+	image.RegisterFormat("avif", "????ftypavis", decodeImage, decodeConfig)
 }
