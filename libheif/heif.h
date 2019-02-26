@@ -448,6 +448,9 @@ int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 LIBHEIF_API
 int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
 
+// Get the image width from the 'ispe' box. This is the original image size without
+// any transformations applied to it. Do not use this unless you know exactly what
+// you are doing.
 LIBHEIF_API
 int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle);
 
