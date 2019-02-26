@@ -365,7 +365,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
   }
 
   // cleanup
-
+  free(iccBuffer);
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
 
