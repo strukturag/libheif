@@ -956,12 +956,6 @@ int main(int argc, char** argv)
     }
   }
 
-  if (optind > argc-1) {
-    show_help(argv[0]);
-    return 0;
-  }
-
-
   if (quality<0 || quality>100) {
     std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
     return 5;
@@ -1017,6 +1011,12 @@ int main(int argc, char** argv)
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
+    return 0;
+  }
+
+
+  if (optind > argc-1) {
+    show_help(argv[0]);
     return 0;
   }
 
