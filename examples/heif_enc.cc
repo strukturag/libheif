@@ -421,9 +421,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 #else
   png_bytep png_profile_data;
 #endif
-  uint8_t * profile_data;
+  uint8_t * profile_data = nullptr;
   png_uint_32 profile_length = 5;
-  bool color_profile_valid = false;
 
   /* Create and initialize the png_struct with the desired error handler
    * functions.  If you want to use the default stderr and longjump method,
@@ -467,9 +466,10 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
     if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
-      color_profile_valid = 1;
       profile_data = (uint8_t*) malloc(profile_length);
-      memcpy(profile_data, png_profile_data, profile_length);
+      if (profile_data) {
+        memcpy(profile_data, png_profile_data, profile_length);
+      }
     }
   }
   /**** Set up the data transformations you want.  Note that these are all
@@ -675,11 +675,11 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     }
   }
 
-  if (color_profile_valid && profile_length > 0){
+  if (profile_data && profile_length > 0){
     heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
-    free(profile_data);
   }
 
+  free(profile_data);
   for (uint32_t y = 0; y < height; y++) {
     free(row_pointers[y]);
   } // for
