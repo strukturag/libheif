@@ -361,7 +361,6 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   if (embeddedIccFlag && iccLen > 0){
     heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
-    free(iccBuffer);
   }
 
   // cleanup
