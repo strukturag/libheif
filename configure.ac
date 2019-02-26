@@ -141,6 +141,8 @@ if eval "test x$enable_gdk_pixbuf != xno"; then
         AC_SUBST(gdkpixbuf_LIBS)
         have_gdkpixbuf2="yes"
     ], [have_gdkpixbuf2="no"])
+else
+    have_gdkpixbuf2="no"
 fi
 AM_CONDITIONAL([HAVE_GDKPIXBUF2], [test "x$have_gdkpixbuf2" = "xyes"])
 
@@ -187,6 +189,7 @@ AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
+AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
