@@ -140,7 +140,7 @@ std::string heif::BoxHeader::get_type_string() const
     sstr << std::setw(2);
 
     for (int i=0;i<16;i++) {
-      if (i==8 || i==12 || i==16 || i==20) {
+      if (i==4 || i==6 || i==8 || i==10) {
         sstr << '-';
       }
 

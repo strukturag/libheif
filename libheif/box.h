@@ -290,7 +290,7 @@ namespace heif {
     };
 
     struct Item {
-      heif_item_id item_ID;
+      heif_item_id item_ID = 0;
       uint8_t  construction_method = 0; // >= version 1
       uint16_t data_reference_index = 0;
       uint64_t base_offset = 0;

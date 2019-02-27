@@ -55,12 +55,12 @@ struct parameter {
 
 struct encoder_struct_x265
 {
-  x265_encoder* encoder;
+  x265_encoder* encoder = nullptr;
 
-  x265_nal* nals;
-  uint32_t num_nals;
-  uint32_t nal_output_counter;
-  int bit_depth;
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
+  uint32_t nal_output_counter = 0;
+  int bit_depth = 0;
 
   // --- parameters
 
@@ -609,7 +609,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
       // quality=50  -> crf=25
       // quality=100 -> crf=0
 
-      param->rc.rfConstant = (100 - p.value_int)/2;
+      param->rc.rfConstant = (100 - p.value_int)/2.0;
     }
     else if (p.name == heif_encoder_parameter_name_lossless) {
       param->bLossless = p.value_int;
