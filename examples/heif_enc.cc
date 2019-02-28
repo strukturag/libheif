@@ -1094,6 +1094,7 @@ int main(int argc, char** argv)
                                       options,
                                       &handle);
     if (error.code != 0) {
+      heif_encoding_options_free(options);
       std::cerr << "Could not encode HEIF file: " << error.message << "\n";
       return 1;
     }
@@ -1115,6 +1116,7 @@ int main(int argc, char** argv)
                                               thumbnail_bbox_size,
                                               &thumbnail_handle);
         if (error.code) {
+          heif_encoding_options_free(options);
           std::cerr << "Could not generate thumbnail: " << error.message << "\n";
           return 5;
         }
@@ -1125,6 +1127,7 @@ int main(int argc, char** argv)
       }
 
     heif_image_handle_release(handle);
+    heif_encoding_options_free(options);
   }
 
   heif_encoder_release(encoder);
