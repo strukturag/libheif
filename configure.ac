@@ -159,15 +159,19 @@ if eval "test x$have_gdkpixbuf2 = xyes"; then
 fi
 
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
-    [Enable fuzzing with libFuzzer.]))
-if eval "test x$enable_libfuzzer = xyes"; then
+    [Enable fuzzing with libFuzzer.]), [], [enable_libfuzzer=no])
+if eval "test x$enable_libfuzzer != xno"; then
     AC_MSG_NOTICE([Enable libFuzzer])
     AC_DEFINE([HAVE_LIBFUZZER], [1], [Whether building with libFuzzer.])
-    LIBFUZZER_FLAGS="-fsanitize=fuzzer-no-link,address,shift,integer -fno-sanitize-recover=shift,integer"
-    CFLAGS="$CFLAGS $LIBFUZZER_FLAGS"
-    CXXFLAGS="$CXXFLAGS $LIBFUZZER_FLAGS"
+
+    FUZZING_ENGINE="-lFuzzingEngine"
+    if eval "test x$enable_libfuzzer != xyes"; then
+        FUZZING_ENGINE="$enable_libfuzzer"
+    fi
+    AC_MSG_NOTICE([Fuzzing engine flags: $FUZZING_ENGINE])
+    AC_SUBST([FUZZING_ENGINE])
 fi
-AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" = "xyes"])
+AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" != "xno"])
 AC_SUBST(ENABLE_LIBFUZZER)
 
 AC_ARG_ENABLE([multithreading], AS_HELP_STRING([--disable-multithreading],
