@@ -781,7 +781,7 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
-heif_item_id HeifContext::get_id_of_non_virtual_child_image(heif_item_id id) const
+Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
 {
   std::string image_type = m_heif_file->get_item_type(id);
   if (image_type=="grid" ||
@@ -791,24 +791,43 @@ heif_item_id HeifContext::get_id_of_non_virtual_child_image(heif_item_id id) con
     std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
     // TODO: check whether this really can be recursive (e.g. overlay of grid images)
-    return get_id_of_non_virtual_child_image(image_references[0]);
+
+    if (image_references.empty()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data,
+                   "Derived image does not reference any other image items");
+    }
+    else {
+      return get_id_of_non_virtual_child_image(image_references[0], out);
+    }
   }
   else {
-    return id;
+    out = id;
+    return Error::Ok;
   }
 }
 
 
 int HeifContext::Image::get_luma_bits_per_pixel() const
 {
-  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return 0;
+  }
+
   return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(id);
 }
 
 
 int HeifContext::Image::get_chroma_bits_per_pixel() const
 {
-  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return 0;
+  }
+
   return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
 }
 

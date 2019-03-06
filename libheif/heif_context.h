@@ -278,7 +278,7 @@ namespace heif {
                                std::shared_ptr<HeifPixelImage>& img,
                                const std::vector<uint8_t>& overlay_data) const;
 
-    heif_item_id get_id_of_non_virtual_child_image(heif_item_id) const;
+    Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
   };
 }
 
