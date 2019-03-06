@@ -37,7 +37,8 @@ extern "C" {
 }
 
 
-const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by x265";
+const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
+const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
 
 
 enum parameter_type { UndefinedType, Int, Bool, String };
@@ -566,7 +567,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     struct heif_error err = {
       heif_error_Encoder_plugin_error,
       heif_suberror_Unsupported_bit_depth,
-      kError_unsuppoerted_bit_depth
+      kError_unsupported_bit_depth
     };
     return err;
   }
@@ -586,6 +587,31 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->fpsNum = 1;
   param->fpsDenom = 1;
 
+
+  // x265 cannot encode images smaller than one CTU size
+  // https://bitbucket.org/multicoreware/x265/issues/475/x265-does-not-allow-image-sizes-smaller
+  // -> use smaller CTU sizes for very small images
+
+  int ctuSize = 64;
+  while  (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
+          heif_image_get_height(image, heif_channel_Y) < ctuSize) {
+    ctuSize /= 2;
+  }
+
+  if (ctuSize < 16) {
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Invalid_parameter_value,
+      kError_unsupported_image_size
+    };
+    return err;
+  }
+
+  char ctu_buf[4];
+  int s = snprintf(ctu_buf,4,"%d",ctuSize);
+  assert(s<4);
+
+
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
@@ -594,7 +620,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "ctu", "64");
+  api->param_parse(param, "ctu", ctu_buf);
   api->param_parse(param, "rskip", "0");
 
   api->param_parse(param, "rect", "1");
