@@ -591,14 +591,16 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   // x265 cannot encode images smaller than one CTU size
   // https://bitbucket.org/multicoreware/x265/issues/475/x265-does-not-allow-image-sizes-smaller
   // -> use smaller CTU sizes for very small images
-
+  char ctu_buf[4];
   int ctuSize = 64;
+#if 0
   while  (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
           heif_image_get_height(image, heif_channel_Y) < ctuSize) {
     ctuSize /= 2;
   }
 
   if (ctuSize < 16) {
+    api->param_free(param);
     struct heif_error err = {
       heif_error_Encoder_plugin_error,
       heif_suberror_Invalid_parameter_value,
@@ -606,11 +608,25 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     };
     return err;
   }
+#else
+  // TODO: There seems to be a bug in x265 where increasing the CTU size between
+  // multiple encoding jobs causes a segmentation fault. E.g. encoding multiple
+  // times with a CTU of 16 works, the next encoding with a CTU of 32 crashes.
+  // Use hardcoded value of 64 and reject images that are too small.
+  if (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
+      heif_image_get_height(image, heif_channel_Y) < ctuSize) {
+    api->param_free(param);
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Invalid_parameter_value,
+      kError_unsupported_image_size
+    };
+    return err;
+  }
+#endif
 
-  char ctu_buf[4];
   int s = snprintf(ctu_buf,4,"%d",ctuSize);
   assert(s<4);
-
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
