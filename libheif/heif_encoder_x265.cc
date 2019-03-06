@@ -577,7 +577,10 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
   else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
   else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
-  else return heif_error_unsupported_parameter;
+  else {
+    api->param_free(param);
+    return heif_error_unsupported_parameter;
+  }
 
 
   param->fpsNum = 1;
@@ -646,7 +649,6 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
   param->internalBitDepth = bit_depth;
-
 
 
   x265_picture* pic = api->picture_alloc();
