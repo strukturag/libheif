@@ -367,7 +367,7 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   }
 
   assert(false);
-  return 0;
+  return -1;
 }
 
 
@@ -380,7 +380,7 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
   }
 
   assert(false);
-  return 0;
+  return -1;
 }
 
 

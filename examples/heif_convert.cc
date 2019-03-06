@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     encoder->UpdateDecodingOptions(handle, decode_options);
 
     int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
-    if (bit_depth == 0) {
+    if (bit_depth < 0) {
       std::cerr << "Input image has undefined bit-depth\n";
       return 1;
     }
