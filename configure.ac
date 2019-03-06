@@ -41,6 +41,11 @@ fi
 AM_CONDITIONAL([HAVE_GO], [test "x$GO" != "xno" && test "x$GO" != "x"])
 AC_SUBST(HAVE_GO)
 
+AC_ARG_ENABLE([examples], AS_HELP_STRING([--disable-examples],
+    [Disable building examples.]), [enable_examples=no], [enable_examples=yes])
+AM_CONDITIONAL([WITH_EXAMPLES], [test "x$enable_examples" = "xyes"])
+AC_SUBST(WITH_EXAMPLES)
+
 AM_CONDITIONAL(MINGW, expr $host : '.*-mingw' >/dev/null 2>&1)
 
 AM_INIT_AUTOMAKE([1.13 foreign])
@@ -194,6 +199,7 @@ AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
+AC_MSG_NOTICE([Examples: $enable_examples])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
