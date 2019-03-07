@@ -1391,14 +1391,10 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
                  "Number of image offsets does not match the number of image references");
   }
 
-  int w = overlay.get_canvas_width();
-  int h = overlay.get_canvas_height();
+  uint32_t w = overlay.get_canvas_width();
+  uint32_t h = overlay.get_canvas_height();
 
-  if (w < 0 || h < 0) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_overlay_data,
-                 "Overlay image may not have negative size");
-  } else if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
     std::stringstream sstr;
     sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
          << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
