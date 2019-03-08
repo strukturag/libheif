@@ -2687,6 +2687,13 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
 
 
   // move to start of data
+  if (start > (uint64_t)m_data_start_pos + get_box_size()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  } else if (length > get_box_size() || start + length > get_box_size()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
 
   StreamReader::grow_status status = istr->wait_for_file_size((int64_t)m_data_start_pos + start + length);
   if (status == StreamReader::size_beyond_eof ||
