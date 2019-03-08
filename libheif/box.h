@@ -77,6 +77,8 @@ namespace heif {
     int round_up() const;
     int round() const;
 
+    bool is_valid() const;
+
     int numerator = 0;
     int denominator = 1;
   };

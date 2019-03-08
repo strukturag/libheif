@@ -188,6 +188,7 @@ enum heif_suberror_code {
 
   heif_suberror_Wrong_tile_image_chroma_format = 127,
 
+  heif_suberror_Invalid_fractional_number = 128,
 
   // --- Memory_allocation_error ---
 

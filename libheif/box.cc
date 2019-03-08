@@ -87,6 +87,10 @@ int Fraction::round() const
   return (numerator + denominator/2)/denominator;
 }
 
+bool Fraction::is_valid() const
+{
+  return denominator != 0;
+}
 
 uint32_t from_fourcc(const char* string)
 {
@@ -2140,6 +2144,11 @@ Error Box_clap::parse(BitstreamRange& range)
   m_horizontal_offset.denominator = range.read32();
   m_vertical_offset.numerator   = range.read32();
   m_vertical_offset.denominator = range.read32();
+  if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
+      !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_fractional_number);
+  }
 
   return range.get_error();
 }

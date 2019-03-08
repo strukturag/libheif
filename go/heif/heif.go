@@ -224,6 +224,8 @@ const (
 
 	SuberrorWrongTileImageChromaFormat = C.heif_suberror_Wrong_tile_image_chroma_format
 
+	SuberrorInvalidFractionalNumber = C.heif_suberror_Invalid_fractional_number
+
 	// --- Memory_allocation_error ---
 
 	// A security limit preventing unreasonable memory allocations was exceeded by the input file.
