@@ -525,6 +525,11 @@ Error HeifContext::interpret_heif_file()
                          "Thumbnail references another thumbnail");
           }
 
+          if (image.get() == master_iter->second.get()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Recursive thumbnail image detected");
+          }
           master_iter->second->add_thumbnail(image);
 
           remove_top_level_image(image);
@@ -571,6 +576,11 @@ Error HeifContext::interpret_heif_file()
             image->set_is_alpha_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive alpha image detected");
+            }
             master_iter->second->set_alpha_channel(image);
           }
 
@@ -581,6 +591,11 @@ Error HeifContext::interpret_heif_file()
             image->set_is_depth_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive depth image detected");
+            }
             master_iter->second->set_depth_channel(image);
 
             auto subtypes = auxC_property->get_subtypes();
