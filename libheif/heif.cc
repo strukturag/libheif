@@ -1614,8 +1614,12 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                thumbnail_image);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
+  } else if (!thumbnail_image) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Invalid_parameter_value,
+              "Thumbnail images must be smaller than the original image.");
+    return err.error_struct(ctx->context.get());
   }
-
 
   error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
   if (error != Error::Ok) {
