@@ -115,6 +115,13 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
+    if (w < 0 || h < 0) {
+      heif_image_release(out_img);
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_Invalid_image_size,
+                                kEmptyString };
+      return err;
+    }
 
     err = heif_image_add_plane(out_img, channel2plane[c], w,h, bpp);
     if (err.code != heif_error_Ok) {
