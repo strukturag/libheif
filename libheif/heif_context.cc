@@ -596,6 +596,11 @@ Error HeifContext::interpret_heif_file()
             image->set_is_depth_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Non-existing depth image referenced");
+            }
             if (image.get() == master_iter->second.get()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Nonexisting_item_referenced,
