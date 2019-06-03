@@ -66,7 +66,7 @@ namespace heif {
   class Fraction {
   public:
     Fraction() { }
-  Fraction(int num,int den) : numerator(num), denominator(den) { }
+    Fraction(int num,int den);
 
     Fraction operator+(const Fraction&) const;
     Fraction operator-(const Fraction&) const;

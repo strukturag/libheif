@@ -47,5 +47,6 @@ static const int MAX_BOX_NESTING_LEVEL = 20;
 static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
 static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 static const int64_t MAX_FILE_POS = 0x007FFFFFFFFFFFFFLL; // maximum file position
+static const int MAX_FRACTION_DENOMINATOR = 0x10000;
 
 #endif  // LIBHEIF_HEIF_LIMITS_H

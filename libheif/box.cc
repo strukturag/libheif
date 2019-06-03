@@ -40,6 +40,39 @@ heif::Error heif::Error::Ok(heif_error_Ok);
 
 
 
+static int gcd(int a, int b)
+{
+  int h;
+  if (a == 0) return b;
+  if (b == 0) return a;
+
+  do {
+    h = a % b;
+    a = b;
+    b = h;
+  } while (b != 0);
+
+  return a;
+}
+
+
+Fraction::Fraction(int num,int den)
+{
+  int g = gcd(num, den);
+  numerator = num / g;
+  denominator = den / g;
+
+
+  // Reduce resolution of fraction until we are in a safe range.
+  // We need this as adding fractions may lead to very large denominators
+  // (e.g. 0x10000 * 0x10000 > 0x100000000 -> overflow, leading to integer 0)
+
+  while (denominator > MAX_FRACTION_DENOMINATOR) {
+    numerator >>= 1;
+    denominator >>= 1;
+  }
+}
+
 Fraction Fraction::operator+(const Fraction& b) const
 {
   if (denominator == b.denominator) {
