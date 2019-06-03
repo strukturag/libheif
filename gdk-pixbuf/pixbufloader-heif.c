@@ -57,8 +57,8 @@ static gboolean stop_load(gpointer context, GError** error)
 	HeifPixbufCtx* hpc;
 	struct heif_error err;
 	struct heif_context* hc;
-	struct heif_image_handle* hdl;
-	struct heif_image* img;
+	struct heif_image_handle* hdl = NULL;
+	struct heif_image* img = NULL;
 	int width, height, stride;
 	int requested_width, requested_height;
 	const uint8_t* data;
@@ -118,6 +118,10 @@ static gboolean stop_load(gpointer context, GError** error)
 	result = TRUE;
 
 cleanup:
+	if(img)
+		heif_image_release(img);
+	if(hdl)
+		heif_image_handle_release(hdl);
 	if(!result)
 		heif_context_free(hc);
 

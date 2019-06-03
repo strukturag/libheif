@@ -115,6 +115,13 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
+    if (w < 0 || h < 0) {
+      heif_image_release(out_img);
+      struct heif_error err = { heif_error_Decoder_plugin_error,
+                                heif_suberror_Invalid_image_size,
+                                kEmptyString };
+      return err;
+    }
 
     err = heif_image_add_plane(out_img, channel2plane[c], w,h, bpp);
     if (err.code != heif_error_Ok) {
@@ -281,6 +288,7 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif
   // TODO(farindk): Set "err" if no image was decoded.
   int more;
   de265_error decode_err;
+  *out_img = nullptr;
   do {
     more = 0;
     decode_err = de265_decode(decoder->ctx, &more);
@@ -291,6 +299,10 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif
 
     const struct de265_image* image = de265_get_next_picture(decoder->ctx);
     if (image) {
+      // TODO(farindk): Should we return the first image instead?
+      if (*out_img) {
+        heif_image_release(*out_img);
+      }
       err = convert_libde265_image_to_heif_image(decoder, image, out_img);
 
       de265_release_next_picture(decoder->ctx);

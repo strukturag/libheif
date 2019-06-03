@@ -66,7 +66,7 @@ namespace heif {
   class Fraction {
   public:
     Fraction() { }
-  Fraction(int num,int den) : numerator(num), denominator(den) { }
+    Fraction(int num,int den);
 
     Fraction operator+(const Fraction&) const;
     Fraction operator-(const Fraction&) const;
@@ -76,6 +76,8 @@ namespace heif {
     int round_down() const;
     int round_up() const;
     int round() const;
+
+    bool is_valid() const;
 
     int numerator = 0;
     int denominator = 1;
@@ -290,7 +292,7 @@ namespace heif {
     };
 
     struct Item {
-      heif_item_id item_ID;
+      heif_item_id item_ID = 0;
       uint8_t  construction_method = 0; // >= version 1
       uint16_t data_reference_index = 0;
       uint64_t base_offset = 0;

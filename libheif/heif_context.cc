@@ -526,6 +526,11 @@ Error HeifContext::interpret_heif_file()
                          "Thumbnail references another thumbnail");
           }
 
+          if (image.get() == master_iter->second.get()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Recursive thumbnail image detected");
+          }
           master_iter->second->add_thumbnail(image);
 
           remove_top_level_image(image);
@@ -572,6 +577,16 @@ Error HeifContext::interpret_heif_file()
             image->set_is_alpha_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Non-existing alpha image referenced");
+            }
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive alpha image detected");
+            }
             master_iter->second->set_alpha_channel(image);
           }
 
@@ -582,6 +597,16 @@ Error HeifContext::interpret_heif_file()
             image->set_is_depth_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Non-existing depth image referenced");
+            }
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive depth image detected");
+            }
             master_iter->second->set_depth_channel(image);
 
             auto subtypes = auxC_property->get_subtypes();
@@ -782,7 +807,7 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
-heif_item_id HeifContext::get_id_of_non_virtual_child_image(heif_item_id id) const
+Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
 {
   std::string image_type = m_heif_file->get_item_type(id);
   if (image_type=="grid" ||
@@ -792,24 +817,43 @@ heif_item_id HeifContext::get_id_of_non_virtual_child_image(heif_item_id id) con
     std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
     // TODO: check whether this really can be recursive (e.g. overlay of grid images)
-    return get_id_of_non_virtual_child_image(image_references[0]);
+
+    if (image_references.empty()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data,
+                   "Derived image does not reference any other image items");
+    }
+    else {
+      return get_id_of_non_virtual_child_image(image_references[0], out);
+    }
   }
   else {
-    return id;
+    out = id;
+    return Error::Ok;
   }
 }
 
 
 int HeifContext::Image::get_luma_bits_per_pixel() const
 {
-  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return -1;
+  }
+
   return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(id);
 }
 
 
 int HeifContext::Image::get_chroma_bits_per_pixel() const
 {
-  heif_item_id id = m_heif_context->get_id_of_non_virtual_child_image(m_id);
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return -1;
+  }
+
   return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
 }
 
@@ -1383,8 +1427,8 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
                  "Number of image offsets does not match the number of image references");
   }
 
-  int w = overlay.get_canvas_width();
-  int h = overlay.get_canvas_height();
+  uint32_t w = overlay.get_canvas_width();
+  uint32_t h = overlay.get_canvas_height();
 
   if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
     std::stringstream sstr;

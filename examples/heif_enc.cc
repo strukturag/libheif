@@ -84,11 +84,16 @@ void show_help(const char* argv0)
 {
   std::cerr << " heif-enc  libheif version: " << heif_get_version() << "\n"
             << "----------------------------------------\n"
-            << "usage: heif-enc [options] image.jpeg ...\n"
+            << "Usage: heif-enc [options] image.jpeg ...\n"
             << "\n"
             << "When specifying multiple source images, they will all be saved into the same HEIF file.\n"
             << "\n"
-            << "options:\n"
+            << "When using the x265 encoder, you may pass it any of its parameters by\n"
+            << "prefixing the parameter name with 'x265:'. Hence, to set the 'ctu' parameter,\n"
+            << "you will have to set 'x265:ctu' in libheif (e.g.: -p x265:ctu=64).\n"
+            << "Note that there is no checking for valid parameters when using the prefix.\n"
+            << "\n"
+            << "Options:\n"
             << "  -h, --help      show help\n"
             << "  -q, --quality   set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless  generate lossless output (-q has no effect)\n"
@@ -359,11 +364,10 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   if (embeddedIccFlag && iccLen > 0){
     heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
-    free(iccBuffer);
   }
 
   // cleanup
-
+  free(iccBuffer);
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
 
@@ -419,9 +423,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 #else
   png_bytep png_profile_data;
 #endif
-  uint8_t * profile_data;
+  uint8_t * profile_data = nullptr;
   png_uint_32 profile_length = 5;
-  bool color_profile_valid = false;
 
   /* Create and initialize the png_struct with the desired error handler
    * functions.  If you want to use the default stderr and longjump method,
@@ -465,9 +468,10 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
     if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
-      color_profile_valid = 1;
       profile_data = (uint8_t*) malloc(profile_length);
-      memcpy(profile_data, png_profile_data, profile_length);
+      if (profile_data) {
+        memcpy(profile_data, png_profile_data, profile_length);
+      }
     }
   }
   /**** Set up the data transformations you want.  Note that these are all
@@ -673,11 +677,11 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     }
   }
 
-  if (color_profile_valid && profile_length > 0){
+  if (profile_data && profile_length > 0){
     heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
-    free(profile_data);
   }
 
+  free(profile_data);
   for (uint32_t y = 0; y < height; y++) {
     free(row_pointers[y]);
   } // for
@@ -957,12 +961,6 @@ int main(int argc, char** argv)
     }
   }
 
-  if (optind > argc-1) {
-    show_help(argv[0]);
-    return 0;
-  }
-
-
   if (quality<0 || quality>100) {
     std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
     return 5;
@@ -1020,6 +1018,12 @@ int main(int argc, char** argv)
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
+    return 0;
+  }
+
+
+  if (optind > argc-1) {
+    show_help(argv[0]);
     return 0;
   }
 
@@ -1098,6 +1102,7 @@ int main(int argc, char** argv)
                                       options,
                                       &handle);
     if (error.code != 0) {
+      heif_encoding_options_free(options);
       std::cerr << "Could not encode HEIF file: " << error.message << "\n";
       return 1;
     }
@@ -1119,6 +1124,7 @@ int main(int argc, char** argv)
                                               thumbnail_bbox_size,
                                               &thumbnail_handle);
         if (error.code) {
+          heif_encoding_options_free(options);
           std::cerr << "Could not generate thumbnail: " << error.message << "\n";
           return 5;
         }
@@ -1129,6 +1135,7 @@ int main(int argc, char** argv)
       }
 
     heif_image_handle_release(handle);
+    heif_encoding_options_free(options);
   }
 
   heif_encoder_release(encoder);

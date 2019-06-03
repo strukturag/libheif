@@ -1,11 +1,11 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-bin_PROGRAMS = \
+examples = \
   heif-convert \
   heif-enc \
   heif-info
 
-noinst_PROGRAMS = \
+examples_noinst = \
   heif-test \
   test-c-api
 
@@ -17,7 +17,7 @@ heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc encoder_y4m.cc encod
 
 
 if HAVE_LIBPNG
-bin_PROGRAMS += heif-thumbnailer
+examples += heif-thumbnailer
 heif_thumbnailer_DEPENDENCIES = ../libheif/libheif.la
 heif_thumbnailer_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir) $(libpng_CFLAGS)
 heif_thumbnailer_LDFLAGS = $(libpng_LIBS)
@@ -78,7 +78,7 @@ EXTRA_DIST = \
     example.heic
 
 if HAVE_GO
-noinst_PROGRAMS += \
+examples_noinst += \
 	heif-test-go
 
 heif_test_go_SOURCES = heif-test.go
@@ -95,6 +95,11 @@ format-go: ${heif_test_go_SOURCES}
 else
 format-go:
 	echo ""go" not present in "${PATH}", skipping formatting"
+endif
+
+if WITH_EXAMPLES
+bin_PROGRAMS = $(examples)
+noinst_PROGRAMS = $(examples_noinst)
 endif
 
 format-local: format-go

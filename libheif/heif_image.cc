@@ -86,6 +86,8 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
 
 void HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
+  assert(width >= 0);
+  assert(height >= 0);
   assert(bit_depth >= 1);
 
   ImagePlane plane;

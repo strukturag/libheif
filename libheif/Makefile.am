@@ -116,19 +116,19 @@ endif
 
 box_fuzzer_DEPENDENCIES =
 box_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-box_fuzzer_LDFLAGS = -fsanitize=fuzzer
+box_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
 box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 box_fuzzer_SOURCES = $(libheif_la_SOURCES) box_fuzzer.cc
 
 encoder_fuzzer_DEPENDENCIES =
 encoder_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-encoder_fuzzer_LDFLAGS = -fsanitize=fuzzer
+encoder_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
 encoder_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 encoder_fuzzer_SOURCES = $(libheif_la_SOURCES) encoder_fuzzer.cc
 
 file_fuzzer_DEPENDENCIES =
 file_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-file_fuzzer_LDFLAGS = -fsanitize=fuzzer
+file_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
 file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
 

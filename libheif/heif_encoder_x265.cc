@@ -37,7 +37,8 @@ extern "C" {
 }
 
 
-const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by x265";
+const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
+const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
 
 
 enum parameter_type { UndefinedType, Int, Bool, String };
@@ -55,12 +56,12 @@ struct parameter {
 
 struct encoder_struct_x265
 {
-  x265_encoder* encoder;
+  x265_encoder* encoder = nullptr;
 
-  x265_nal* nals;
-  uint32_t num_nals;
-  uint32_t nal_output_counter;
-  int bit_depth;
+  x265_nal* nals = nullptr;
+  uint32_t num_nals = 0;
+  uint32_t nal_output_counter = 0;
+  int bit_depth = 0;
 
   // --- parameters
 
@@ -566,7 +567,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     struct heif_error err = {
       heif_error_Encoder_plugin_error,
       heif_suberror_Unsupported_bit_depth,
-      kError_unsuppoerted_bit_depth
+      kError_unsupported_bit_depth
     };
     return err;
   }
@@ -577,11 +578,55 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
   else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
   else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
-  else return heif_error_unsupported_parameter;
+  else {
+    api->param_free(param);
+    return heif_error_unsupported_parameter;
+  }
 
 
   param->fpsNum = 1;
   param->fpsDenom = 1;
+
+
+  // x265 cannot encode images smaller than one CTU size
+  // https://bitbucket.org/multicoreware/x265/issues/475/x265-does-not-allow-image-sizes-smaller
+  // -> use smaller CTU sizes for very small images
+  char ctu_buf[4];
+  int ctuSize = 64;
+#if 0
+  while  (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
+          heif_image_get_height(image, heif_channel_Y) < ctuSize) {
+    ctuSize /= 2;
+  }
+
+  if (ctuSize < 16) {
+    api->param_free(param);
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Invalid_parameter_value,
+      kError_unsupported_image_size
+    };
+    return err;
+  }
+#else
+  // TODO: There seems to be a bug in x265 where increasing the CTU size between
+  // multiple encoding jobs causes a segmentation fault. E.g. encoding multiple
+  // times with a CTU of 16 works, the next encoding with a CTU of 32 crashes.
+  // Use hardcoded value of 64 and reject images that are too small.
+  if (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
+      heif_image_get_height(image, heif_channel_Y) < ctuSize) {
+    api->param_free(param);
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Invalid_parameter_value,
+      kError_unsupported_image_size
+    };
+    return err;
+  }
+#endif
+
+  int s = snprintf(ctu_buf,4,"%d",ctuSize);
+  assert(s<4);
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
@@ -591,7 +636,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "ctu", "64");
+  api->param_parse(param, "ctu", ctu_buf);
   api->param_parse(param, "rskip", "0");
 
   api->param_parse(param, "rect", "1");
@@ -609,7 +654,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
       // quality=50  -> crf=25
       // quality=100 -> crf=0
 
-      param->rc.rfConstant = (100 - p.value_int)/2;
+      param->rc.rfConstant = (100 - p.value_int)/2.0;
     }
     else if (p.name == heif_encoder_parameter_name_lossless) {
       param->bLossless = p.value_int;
@@ -646,7 +691,6 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
   param->internalBitDepth = bit_depth;
-
 
 
   x265_picture* pic = api->picture_alloc();
