@@ -1052,6 +1052,14 @@ Error Box_iloc::read_data(const Item& item,
 
       // --- make sure that all data is available
 
+      if (extent.offset > MAX_FILE_POS ||
+          item.base_offset > MAX_FILE_POS ||
+          extent.length > MAX_FILE_POS) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Security_limit_exceeded,
+                     "iloc data pointers out of allowed range");
+      }
+
       StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
       if (status == StreamReader::size_beyond_eof) {
         // Out-of-bounds
