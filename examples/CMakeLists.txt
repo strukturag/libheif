@@ -1,6 +1,8 @@
 set (heif_convert_sources
   encoder.cc
   encoder.h
+  encoder_y4m.cc
+  encoder_y4m.h
   heif_convert.cc
 )
 

@@ -40,6 +40,39 @@ heif::Error heif::Error::Ok(heif_error_Ok);
 
 
 
+static int gcd(int a, int b)
+{
+  int h;
+  if (a == 0) return b;
+  if (b == 0) return a;
+
+  do {
+    h = a % b;
+    a = b;
+    b = h;
+  } while (b != 0);
+
+  return a;
+}
+
+
+Fraction::Fraction(int num,int den)
+{
+  int g = gcd(num, den);
+  numerator = num / g;
+  denominator = den / g;
+
+
+  // Reduce resolution of fraction until we are in a safe range.
+  // We need this as adding fractions may lead to very large denominators
+  // (e.g. 0x10000 * 0x10000 > 0x100000000 -> overflow, leading to integer 0)
+
+  while (denominator > MAX_FRACTION_DENOMINATOR) {
+    numerator >>= 1;
+    denominator >>= 1;
+  }
+}
+
 Fraction Fraction::operator+(const Fraction& b) const
 {
   if (denominator == b.denominator) {
@@ -87,6 +120,10 @@ int Fraction::round() const
   return (numerator + denominator/2)/denominator;
 }
 
+bool Fraction::is_valid() const
+{
+  return denominator != 0;
+}
 
 uint32_t from_fourcc(const char* string)
 {
@@ -140,7 +177,7 @@ std::string heif::BoxHeader::get_type_string() const
     sstr << std::setw(2);
 
     for (int i=0;i<16;i++) {
-      if (i==8 || i==12 || i==16 || i==20) {
+      if (i==4 || i==6 || i==8 || i==10) {
         sstr << '-';
       }
 
@@ -1048,6 +1085,14 @@ Error Box_iloc::read_data(const Item& item,
 
       // --- make sure that all data is available
 
+      if (extent.offset > MAX_FILE_POS ||
+          item.base_offset > MAX_FILE_POS ||
+          extent.length > MAX_FILE_POS) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Security_limit_exceeded,
+                     "iloc data pointers out of allowed range");
+      }
+
       StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
       if (status == StreamReader::size_beyond_eof) {
         // Out-of-bounds
@@ -1073,6 +1118,7 @@ Error Box_iloc::read_data(const Item& item,
 
       bool success = istr->seek(extent.offset + item.base_offset);
       assert(success);
+      (void)success;
 
 
       // --- read data
@@ -2139,6 +2185,11 @@ Error Box_clap::parse(BitstreamRange& range)
   m_horizontal_offset.denominator = range.read32();
   m_vertical_offset.numerator   = range.read32();
   m_vertical_offset.denominator = range.read32();
+  if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
+      !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_fractional_number);
+  }
 
   return range.get_error();
 }
@@ -2686,6 +2737,13 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
 
 
   // move to start of data
+  if (start > (uint64_t)m_data_start_pos + get_box_size()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  } else if (length > get_box_size() || start + length > get_box_size()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
 
   StreamReader::grow_status status = istr->wait_for_file_size((int64_t)m_data_start_pos + start + length);
   if (status == StreamReader::size_beyond_eof ||
@@ -2698,6 +2756,7 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
   bool success;
   success = istr->seek(m_data_start_pos + (std::streampos)start);
   assert(success);
+  (void)success;
 
   // reserve space for the data in the output array
 

@@ -3,7 +3,7 @@
 
   MIT License
 
-  Copyright (c) 2017 struktur AG, Joachim Bauch <bauch@struktur.de>
+  Copyright (c) 2019 struktur AG, Dirk Farin <farin@struktur.de>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -23,27 +23,16 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#ifndef EXAMPLE_ENCODER_JPEG_H
-#define EXAMPLE_ENCODER_JPEG_H
-
-#include <setjmp.h>
-#include <stddef.h>
-#include <stdio.h>
-
-// Prevent duplicate definition for libjpeg-turbo v2.0
-// Note: these 'undef's are only a workaround for a libjpeg-turbo-v2.0 bug and
-// should be removed again later. Bug has been fixed in libjpeg-turbo-v2.0.1.
-#undef HAVE_STDDEF_H
-#undef HAVE_STDLIB_H
-#include <jpeglib.h>
+#ifndef EXAMPLE_ENCODER_Y4M_H
+#define EXAMPLE_ENCODER_Y4M_H
 
 #include <string>
 
 #include "encoder.h"
 
-class JpegEncoder : public Encoder {
+class Y4MEncoder : public Encoder {
  public:
-  JpegEncoder(int quality);
+  Y4MEncoder();
 
   heif_colorspace colorspace(bool has_alpha) const override {
     return heif_colorspace_YCbCr;
@@ -60,16 +49,6 @@ class JpegEncoder : public Encoder {
       const struct heif_image* image, const std::string& filename) override;
 
  private:
-  static const int kDefaultQuality = 90;
-
-  struct ErrorHandler {
-    struct jpeg_error_mgr pub;  /* "public" fields */
-    jmp_buf setjmp_buffer;  /* for return to caller */
-  };
-
-  static void OnJpegError(j_common_ptr cinfo);
-
-  int quality_;
 };
 
-#endif  // EXAMPLE_ENCODER_JPEG_H
+#endif  // EXAMPLE_ENCODER_Y4M_H

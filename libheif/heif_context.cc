@@ -525,6 +525,11 @@ Error HeifContext::interpret_heif_file()
                          "Thumbnail references another thumbnail");
           }
 
+          if (image.get() == master_iter->second.get()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Recursive thumbnail image detected");
+          }
           master_iter->second->add_thumbnail(image);
 
           remove_top_level_image(image);
@@ -571,6 +576,16 @@ Error HeifContext::interpret_heif_file()
             image->set_is_alpha_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Non-existing alpha image referenced");
+            }
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive alpha image detected");
+            }
             master_iter->second->set_alpha_channel(image);
           }
 
@@ -581,6 +596,16 @@ Error HeifContext::interpret_heif_file()
             image->set_is_depth_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Non-existing depth image referenced");
+            }
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Recursive depth image detected");
+            }
             master_iter->second->set_depth_channel(image);
 
             auto subtypes = auxC_property->get_subtypes();
@@ -661,6 +686,7 @@ Error HeifContext::interpret_heif_file()
         }
 
         image->set_resolution(width, height);
+        image->set_ispe_resolution(width, height);
         ispe_read = true;
       }
 
@@ -778,6 +804,58 @@ bool HeifContext::is_image(heif_item_id ID) const
 
   return false;
 }
+
+
+Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
+{
+  std::string image_type = m_heif_file->get_item_type(id);
+  if (image_type=="grid" ||
+      image_type=="iden" ||
+      image_type=="iovl") {
+    auto iref_box = m_heif_file->get_iref_box();
+    std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
+
+    // TODO: check whether this really can be recursive (e.g. overlay of grid images)
+
+    if (image_references.empty()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data,
+                   "Derived image does not reference any other image items");
+    }
+    else {
+      return get_id_of_non_virtual_child_image(image_references[0], out);
+    }
+  }
+  else {
+    out = id;
+    return Error::Ok;
+  }
+}
+
+
+int HeifContext::Image::get_luma_bits_per_pixel() const
+{
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return -1;
+  }
+
+  return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(id);
+}
+
+
+int HeifContext::Image::get_chroma_bits_per_pixel() const
+{
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return -1;
+  }
+
+  return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
+}
+
 
 Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace colorspace,
@@ -1227,6 +1305,12 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   heif_chroma chroma = img->get_chroma_format();
   std::set<enum heif_channel> channels = img->get_channel_set();
 
+  if (chroma != tile_img->get_chroma_format()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Wrong_tile_image_chroma_format,
+                   "Image tile has different chroma format than combined image");
+  }
+
   for (heif_channel channel : channels) {
     int tile_stride;
     uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
@@ -1332,8 +1416,8 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
                  "Number of image offsets does not match the number of image references");
   }
 
-  int w = overlay.get_canvas_width();
-  int h = overlay.get_canvas_height();
+  uint32_t w = overlay.get_canvas_width();
+  uint32_t h = overlay.get_canvas_height();
 
   if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
     std::stringstream sstr;
@@ -1623,7 +1707,12 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_image c_api_image;
   c_api_image.image = image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
 
   for (;;) {
     uint8_t* data;

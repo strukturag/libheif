@@ -37,6 +37,8 @@ for filename in $FILES; do
 	rm "${newfile}"
 	if [ $r != 0 ] ; then
 		result=1
+	else
+		echo "Done processing ${filename}"
 	fi
 done
 

@@ -35,7 +35,7 @@ fi
 
 if [ ! -z "$CPPLINT" ]; then
     echo "Running cpplint ..."
-    find -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py
+    find -name "*.c" -o -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py --extensions=c,cc,h
     ./scripts/check-emscripten-enums.sh
     ./scripts/check-go-enums.sh
 
@@ -92,6 +92,25 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         [ -s "example-1.png" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "example-2.png" ] || exit 1
+        if [ ! -z "$WITH_X265" ]; then
+            echo "Converting single JPEG file to heif ..."
+            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-single.heic -v -v -v --thumb 320x240 example-1.jpg
+            echo "Checking generated file ..."
+            [ -s "output-single.heic" ] || exit 1
+            echo "Converting back generated heif to JPEG ..."
+            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-single.heic output-single.jpg
+            echo "Checking generated file ..."
+            [ -s "output-single.jpg" ] || exit 1
+            echo "Converting multiple JPEG files to heif ..."
+            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic -v -v -v --thumb 320x240 example-1.jpg example-2.jpg
+            echo "Checking generated file ..."
+            [ -s "output-multi.heic" ] || exit 1
+            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-multi.heic output-multi.jpg
+            echo "Checking first generated file ..."
+            [ -s "output-multi-1.jpg" ] || exit 1
+            echo "Checking second generated file ..."
+            [ -s "output-multi-2.jpg" ] || exit 1
+        fi
     fi
     if [ ! -z "$GO" ]; then
         echo "Installing library ..."

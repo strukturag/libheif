@@ -3,6 +3,7 @@ AC_INIT([libheif], [1.4.0], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
+# Note: do not forget to set the version in the CMakeLists.txt file accordingly
 NUMERIC_VERSION=0x01040000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
 AC_SUBST(NUMERIC_VERSION)
 
@@ -40,9 +41,14 @@ fi
 AM_CONDITIONAL([HAVE_GO], [test "x$GO" != "xno" && test "x$GO" != "x"])
 AC_SUBST(HAVE_GO)
 
+AC_ARG_ENABLE([examples], AS_HELP_STRING([--disable-examples],
+    [Disable building examples.]), [enable_examples=no], [enable_examples=yes])
+AM_CONDITIONAL([WITH_EXAMPLES], [test "x$enable_examples" = "xyes"])
+AC_SUBST(WITH_EXAMPLES)
+
 AM_CONDITIONAL(MINGW, expr $host : '.*-mingw' >/dev/null 2>&1)
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([1.13 foreign])
 AM_EXTRA_RECURSIVE_TARGETS([format test])
 
 AX_CXX_COMPILE_STDCXX_11()
@@ -130,16 +136,47 @@ PKG_CHECK_MODULES([libpng], [libpng], [
 ], [have_libpng="no"])
 AM_CONDITIONAL([HAVE_LIBPNG], [test "x$have_libpng" = "xyes"])
 
+AC_ARG_ENABLE([gdk-pixbuf], AS_HELP_STRING([--disable-gdk-pixbuf],
+    [Disable building of gdk-pixbuf plugin.]))
+if eval "test x$enable_gdk_pixbuf = x" ; then enable_gdk_pixbuf=yes ; fi
+if eval "test x$enable_gdk_pixbuf != xno"; then
+    PKG_CHECK_MODULES([gdkpixbuf], [gdk-pixbuf-2.0], [
+        AC_DEFINE([HAVE_GDKPIXBUF2], [1], [Whether gdk-pixbuf-2.0 was found.])
+        AC_SUBST(gdkpixbuf_CFLAGS)
+        AC_SUBST(gdkpixbuf_LIBS)
+        have_gdkpixbuf2="yes"
+    ], [have_gdkpixbuf2="no"])
+else
+    have_gdkpixbuf2="no"
+fi
+AM_CONDITIONAL([HAVE_GDKPIXBUF2], [test "x$have_gdkpixbuf2" = "xyes"])
+
+if eval "test x$have_gdkpixbuf2 = xyes"; then
+    gdk_pixbuf_binary_version="`$PKG_CONFIG --variable=gdk_pixbuf_binary_version gdk-pixbuf-2.0`"
+    gdk_pixbuf_binarydir="`$PKG_CONFIG --variable=gdk_pixbuf_binarydir gdk-pixbuf-2.0`"
+    gdk_pixbuf_moduledir=`$PKG_CONFIG --variable gdk_pixbuf_moduledir gdk-pixbuf-2.0`
+    gdk_pixbuf_cache_file=`$PKG_CONFIG --variable gdk_pixbuf_cache_file gdk-pixbuf-2.0`
+
+    AC_SUBST([gdk_pixbuf_binary_version])
+    AC_SUBST([gdk_pixbuf_binarydir])
+    AC_SUBST([gdk_pixbuf_moduledir])
+    AC_SUBST([gdk_pixbuf_cache_file])
+fi
+
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
-    [Enable fuzzing with libFuzzer.]))
-if eval "test x$enable_libfuzzer = xyes"; then
+    [Enable fuzzing with libFuzzer.]), [], [enable_libfuzzer=no])
+if eval "test x$enable_libfuzzer != xno"; then
     AC_MSG_NOTICE([Enable libFuzzer])
     AC_DEFINE([HAVE_LIBFUZZER], [1], [Whether building with libFuzzer.])
-    LIBFUZZER_FLAGS="-fsanitize=fuzzer-no-link,address,shift,integer -fno-sanitize-recover=shift,integer"
-    CFLAGS="$CFLAGS $LIBFUZZER_FLAGS"
-    CXXFLAGS="$CXXFLAGS $LIBFUZZER_FLAGS"
+
+    FUZZING_ENGINE="-lFuzzingEngine"
+    if eval "test x$enable_libfuzzer != xyes"; then
+        FUZZING_ENGINE="$enable_libfuzzer"
+    fi
+    AC_MSG_NOTICE([Fuzzing engine flags: $FUZZING_ENGINE])
+    AC_SUBST([FUZZING_ENGINE])
 fi
-AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" = "xyes"])
+AM_CONDITIONAL([ENABLE_LIBFUZZER], [test "x$enable_libfuzzer" != "xno"])
 AC_SUBST(ENABLE_LIBFUZZER)
 
 AC_ARG_ENABLE([multithreading], AS_HELP_STRING([--disable-multithreading],
@@ -161,12 +198,15 @@ AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
+AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
+AC_MSG_NOTICE([Examples: $enable_examples])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([examples/Makefile])
 AC_CONFIG_FILES([extra/Makefile])
 AC_CONFIG_FILES([fuzzing/Makefile])
+AC_CONFIG_FILES([gdk-pixbuf/Makefile])
 AC_CONFIG_FILES([go/Makefile])
 AC_CONFIG_FILES([gnome/Makefile])
 AC_CONFIG_FILES([scripts/Makefile])

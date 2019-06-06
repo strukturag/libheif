@@ -181,7 +181,7 @@ int main(int argc, char** argv)
     // --- thumbnails
 
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
-    heif_item_id* thumbnailIDs = (heif_item_id*)alloca(nThumbnails*sizeof(heif_item_id));
+    heif_item_id* thumbnailIDs = (heif_item_id*)calloc(nThumbnails,sizeof(heif_item_id));
 
     nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle,thumbnailIDs, nThumbnails);
 
@@ -190,6 +190,7 @@ int main(int argc, char** argv)
       err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx], &thumbnail_handle);
       if (err.code) {
         std::cerr << err.message << "\n";
+        free(thumbnailIDs);
         return 10;
       }
 
@@ -200,6 +201,8 @@ int main(int argc, char** argv)
 
       heif_image_handle_release(thumbnail_handle);
     }
+
+    free(thumbnailIDs);
 
 
     // --- color profile
@@ -219,6 +222,7 @@ int main(int argc, char** argv)
     int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
     if (has_depth) { assert(nDepthImages==1); }
     else { assert(nDepthImages==0); }
+    (void)nDepthImages;
 
     if (has_depth) {
       struct heif_image_handle* depth_handle;

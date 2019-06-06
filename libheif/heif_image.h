@@ -98,9 +98,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
 
-  void set_color_profile(std::shared_ptr<color_profile> profile) { m_color_profile = profile; }
+  void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = profile; }
 
-  std::shared_ptr<color_profile> get_color_profile() { return m_color_profile; }
+  std::shared_ptr<const color_profile> get_color_profile() { return m_color_profile; }
 
  private:
   struct ImagePlane {
@@ -116,7 +116,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   int m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
-  std::shared_ptr<color_profile> m_color_profile;
+  std::shared_ptr<const color_profile> m_color_profile;
 
   std::map<heif_channel, ImagePlane> m_planes;
 
@@ -127,6 +127,9 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<HeifPixelImage> convert_mono_to_RGB(int bpp) const;
   std::shared_ptr<HeifPixelImage> convert_mono_to_YCbCr420() const;
   std::shared_ptr<HeifPixelImage> convert_RGB24_32_to_YCbCr420() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB_to_YCbCr420_HDR() const;
+  std::shared_ptr<HeifPixelImage> convert_RGB_to_RRGGBBaa_BE() const;
+  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB_HDR() const;
 };
 
 
