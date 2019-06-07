@@ -46,7 +46,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   void create(int width,int height, heif_colorspace colorspace, heif_chroma chroma);
 
-  void add_plane(heif_channel channel, int width, int height, int bit_depth);
+  bool add_plane(heif_channel channel, int width, int height, int bit_depth);
 
   bool has_channel(heif_channel channel) const;
 

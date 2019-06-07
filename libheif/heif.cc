@@ -652,10 +652,16 @@ int heif_image_has_channel(const struct heif_image* img, enum heif_channel chann
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        heif_channel channel, int width, int height, int bit_depth)
 {
-  image->image->add_plane(channel, width, height, bit_depth);
-
-  struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
-  return err;
+  if (!image->image->add_plane(channel, width, height, bit_depth)) {
+    struct heif_error err = { heif_error_Memory_allocation_error,
+                              heif_suberror_Unspecified,
+                              "Cannot allocate memory for image plane" };
+    return err;
+  }
+  else {
+    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess };
+    return err;
+  }
 }
 
 
