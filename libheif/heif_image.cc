@@ -84,7 +84,7 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
   m_chroma = chroma;
 }
 
-void HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
+bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   assert(width >= 0);
   assert(height >= 0);
@@ -98,9 +98,16 @@ void HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   int bytes_per_pixel = (bit_depth+7)/8;
   plane.stride = width * bytes_per_pixel;
 
-  plane.mem.resize(width * height * bytes_per_pixel);
+  try {
+    plane.mem.resize(width * height * bytes_per_pixel);
 
-  m_planes.insert(std::make_pair(channel, std::move(plane)));
+    m_planes.insert(std::make_pair(channel, std::move(plane)));
+  }
+  catch (const std::bad_alloc& excpt) {
+    return false;
+  }
+
+  return true;
 }
 
 
@@ -314,7 +321,7 @@ std::shared_ptr<HeifPixelImage> HeifPixelImage::convert_colorspace(heif_colorspa
 	    get_bits_per_pixel(heif_channel_B) != get_bits_per_pixel(heif_channel_R)) {
 	  assert(false); // TODO: different bit depths for each channel
 	}
-      
+
 	if (has_alpha()) {
 	  if (get_bits_per_pixel(heif_channel_Alpha) != get_bits_per_pixel(heif_channel_R)) {
 	    assert(false); // TODO: different bit depths for each channel
