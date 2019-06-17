@@ -98,8 +98,11 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   int bytes_per_pixel = (bit_depth+7)/8;
   plane.stride = width * bytes_per_pixel;
 
+  // use 16 byte alignment
+  plane.stride = (plane.stride+15) & ~0x0F;
+
   try {
-    plane.mem.resize(width * height * bytes_per_pixel);
+    plane.mem.resize(height * plane.stride);
 
     m_planes.insert(std::make_pair(channel, std::move(plane)));
   }
