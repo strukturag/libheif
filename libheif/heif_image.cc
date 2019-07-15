@@ -83,12 +83,15 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
   m_colorspace = colorspace;
   m_chroma = chroma;
 }
-
+#include <iostream>
 bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   assert(width >= 0);
   assert(height >= 0);
   assert(bit_depth >= 1);
+
+  // use 16 byte alignment
+  int alignment = 16; // must be power of two
 
   ImagePlane plane;
   plane.width = width;
@@ -98,11 +101,19 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   int bytes_per_pixel = (bit_depth+7)/8;
   plane.stride = width * bytes_per_pixel;
 
-  // use 16 byte alignment
-  plane.stride = (plane.stride+15) & ~0x0F;
+  plane.stride = (plane.stride+alignment-1) & ~(alignment-1);
 
   try {
-    plane.mem.resize(height * plane.stride);
+    plane.unaligned_mem.resize(height * plane.stride + alignment-1);
+    plane.mem = plane.unaligned_mem.data();
+
+    // shift beginning of image data to aligned memory position
+
+    auto mem_start_addr = (uint64_t)plane.mem;
+    auto mem_start_offset = (mem_start_addr & (alignment-1));
+    if (mem_start_offset != 0) {
+      plane.mem += alignment - mem_start_offset;
+    }
 
     m_planes.insert(std::make_pair(channel, std::move(plane)));
   }
@@ -185,7 +196,7 @@ uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
     *out_stride = iter->second.stride;
   }
 
-  return iter->second.mem.data();
+  return iter->second.mem;
 }
 
 
@@ -200,7 +211,7 @@ const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_str
     *out_stride = iter->second.stride;
   }
 
-  return iter->second.mem.data();
+  return iter->second.mem;
 }
 
 
@@ -1168,7 +1179,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     int h = plane.height;
 
     int in_stride = plane.stride;
-    const uint8_t* in_data = plane.mem.data();
+    const uint8_t* in_data = plane.mem;
 
     int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
@@ -1238,7 +1249,7 @@ Error HeifPixelImage::mirror_inplace(bool horizontal)
     int h = plane.height;
 
     int stride = plane.stride;
-    uint8_t* data = plane.mem.data();
+    uint8_t* data = plane.mem;
 
     if (horizontal) {
       for (int y=0;y<h;y++) {
@@ -1292,7 +1303,7 @@ Error HeifPixelImage::crop(int left,int right,int top,int bottom,
                        plane.bit_depth);
 
     int in_stride = plane.stride;
-    const uint8_t* in_data = plane.mem.data();
+    const uint8_t* in_data = plane.mem;
 
     int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
@@ -1345,7 +1356,7 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
     int h = plane.height;
 
     int stride = plane.stride;
-    uint8_t* data = plane.mem.data();
+    uint8_t* data = plane.mem;
 
     uint16_t val16;
     switch (channel) {
@@ -1503,7 +1514,7 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     }
 
     int in_stride = plane.stride;
-    const uint8_t* in_data = plane.mem.data();
+    const uint8_t* in_data = plane.mem;
 
     int out_stride = 0;
     uint8_t* out_data = out_img->get_plane(channel, &out_stride);
