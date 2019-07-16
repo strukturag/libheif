@@ -20,7 +20,8 @@
 
 
 #include "heif_image.h"
-#include <tuple>
+#include <memory>
+#include <vector>
 
 
 namespace heif {

@@ -56,6 +56,8 @@ libheif_la_SOURCES = \
   heif_plugin_registry.cc \
   heif_plugin.h \
   heif_plugin.cc \
+  heif_colorconversion.h \
+  heif_colorconversion.cc \
   logging.h
 
 if HAVE_LIBDE265

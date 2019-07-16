@@ -82,6 +82,7 @@ struct heif_error encode_image(struct heif_image* img) {
 }
 
 
+#if 0
 TEST_CASE( "Create images", "[heif_image]" ) {
   auto img = createImage_RRGGBB_BE();
   REQUIRE( img != nullptr );
@@ -99,3 +100,4 @@ TEST_CASE( "Encode HDR", "[heif_encoder]" ) {
 
   heif_image_release(img);
 }
+#endif
