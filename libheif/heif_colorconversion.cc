@@ -21,6 +21,7 @@
 
 #include "heif_colorconversion.h"
 #include <typeinfo>
+#include <algorithm>
 #include <string.h>
 
 using namespace heif;
@@ -831,6 +832,147 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
 
 
+class Op_RRGGBBaa_swap_endianness : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(ColorState input_state,
+                         ColorState target_state,
+                         ColorConversionOptions options) override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     ColorState target_state,
+                     ColorConversionOptions options) override;
+};
+
+
+std::vector<ColorStateWithCost>
+Op_RRGGBBaa_swap_endianness::state_after_conversion(ColorState input_state,
+                                                    ColorState target_state,
+                                                    ColorConversionOptions options)
+{
+  // Note: no input alpha channel required. It will be filled up with 0xFF.
+
+  if (input_state.colorspace != heif_colorspace_RGB ||
+      (input_state.chroma != heif_chroma_interleaved_RRGGBB_LE &&
+       input_state.chroma != heif_chroma_interleaved_RRGGBB_BE &&
+       input_state.chroma != heif_chroma_interleaved_RRGGBBAA_LE &&
+       input_state.chroma != heif_chroma_interleaved_RRGGBBAA_BE) ||
+      input_state.bits_per_pixel == 8) {
+    return { };
+  }
+
+  std::vector<ColorStateWithCost> states;
+
+  ColorState output_state;
+  ColorConversionCosts costs;
+
+  // --- swap RRGGBB
+
+  if (input_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
+      input_state.chroma == heif_chroma_interleaved_RRGGBB_BE) {
+    output_state.colorspace = heif_colorspace_RGB;
+
+    if (input_state.chroma == heif_chroma_interleaved_RRGGBB_LE) {
+      output_state.chroma = heif_chroma_interleaved_RRGGBB_BE;
+    }
+    else {
+      output_state.chroma = heif_chroma_interleaved_RRGGBB_LE;
+    }
+
+    output_state.has_alpha = false;
+    output_state.bits_per_pixel = 48;
+
+    costs = { 0.1f, 0.0f, 0.0f };
+
+    states.push_back({ output_state, costs });
+  }
+
+
+  // --- swap RRGGBBAA
+
+  if (input_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
+      input_state.chroma == heif_chroma_interleaved_RRGGBBAA_BE) {
+    output_state.colorspace = heif_colorspace_RGB;
+
+    if (input_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) {
+      output_state.chroma = heif_chroma_interleaved_RRGGBBAA_BE;
+    }
+    else {
+      output_state.chroma = heif_chroma_interleaved_RRGGBBAA_LE;
+    }
+
+    output_state.has_alpha = true;
+    output_state.bits_per_pixel = 64;
+
+    costs = { 0.1f, 0.0f, 0.0f };
+
+    states.push_back({ output_state, costs });
+  }
+
+
+  return states;
+}
+
+
+std::shared_ptr<HeifPixelImage>
+Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                ColorState target_state,
+                                                ColorConversionOptions options)
+{
+  bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
+                    input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE);
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  int width = input->get_width();
+  int height = input->get_height();
+
+  switch (input->get_chroma_format()) {
+  case heif_chroma_interleaved_RRGGBB_LE:
+    outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_BE);
+    break;
+  case heif_chroma_interleaved_RRGGBB_BE:
+    outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE);
+    break;
+  case heif_chroma_interleaved_RRGGBBAA_LE:
+    outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_BE);
+    break;
+  case heif_chroma_interleaved_RRGGBBAA_BE:
+    outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_LE);
+    break;
+  default:
+    return nullptr;
+  }
+
+  outimg->add_plane(heif_channel_interleaved, width, height, has_alpha ? 64 : 48);
+
+  const uint8_t *in_p=nullptr;
+  int in_p_stride=0;
+
+  uint8_t *out_p;
+  int out_p_stride=0;
+
+  in_p = input->get_plane(heif_channel_interleaved, &in_p_stride);
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+
+  int n_bytes = std::min(in_p_stride, out_p_stride);
+
+  int x,y;
+  for (y=0;y<height;y++) {
+    for (x=0;x<n_bytes;x+=2) {
+      out_p[y*out_p_stride + x + 0] = in_p[y*in_p_stride + x + 1];
+      out_p[y*out_p_stride + x + 1] = in_p[y*in_p_stride + x + 0];
+    }
+  }
+
+  return outimg;
+}
+
+
+
+
 class Op_mono_to_YCbCr420 : public ColorConversionOperation
 {
 public:
@@ -1083,6 +1225,13 @@ Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelIma
 
 
 struct Node {
+  Node() = default;
+  Node(int prev, const std::shared_ptr<ColorConversionOperator>& _op, ColorStateWithCost state) {
+    prev_processed_idx = prev;
+    op = _op;
+    color_state = state;
+  }
+
   int prev_processed_idx = -1;
   std::shared_ptr<ColorConversionOperation> op;
   ColorStateWithCost color_state;
@@ -1108,6 +1257,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   ops.push_back(std::make_shared<Op_RGB_HDR_to_RRGGBBaa_BE>());
   ops.push_back(std::make_shared<Op_mono_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_mono_to_RGB24_32>());
+  ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
 
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
