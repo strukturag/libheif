@@ -1226,7 +1226,7 @@ Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelIma
 
 struct Node {
   Node() = default;
-  Node(int prev, const std::shared_ptr<ColorConversionOperator>& _op, ColorStateWithCost state) {
+  Node(int prev, const std::shared_ptr<ColorConversionOperation>& _op, ColorStateWithCost state) {
     prev_processed_idx = prev;
     op = _op;
     color_state = state;
