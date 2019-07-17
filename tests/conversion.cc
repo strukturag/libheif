@@ -45,6 +45,11 @@ TEST_CASE( "Color conversion", "[heif_image]" ) {
   success = pipeline.construct_pipeline( { heif_colorspace_YCbCr, heif_chroma_420, false, 8 },
                                          { heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 24 } );
 
+  printf("---\n");
+
+  success = pipeline.construct_pipeline( { heif_colorspace_YCbCr, heif_chroma_420, false, 8 },
+                                         { heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 32 } );
+
   REQUIRE( success );
 
   printf("---\n");
