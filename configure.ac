@@ -197,8 +197,10 @@ if eval "test x$enable_multithreading != xno"; then
 fi
 AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
 
-CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter -Wno-potentially-evaluated-expression"
-CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter -Wno-potentially-evaluated-expression"
+AC_C_CXX_COMPILE_FLAGS([-Wno-potentially-evaluated-expression])
+
+CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
+CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
 
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
