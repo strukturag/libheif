@@ -831,6 +831,119 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
 
 
+class Op_mono_to_YCbCr420 : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(ColorState input_state,
+                         ColorState target_state,
+                         ColorConversionOptions options) override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     ColorState target_state,
+                     ColorConversionOptions options) override;
+};
+
+
+std::vector<ColorStateWithCost>
+Op_mono_to_YCbCr420::state_after_conversion(ColorState input_state,
+                                            ColorState target_state,
+                                            ColorConversionOptions options)
+{
+  // Note: no input alpha channel required. It will be filled up with 0xFF.
+
+  if (input_state.colorspace != heif_colorspace_monochrome ||
+      input_state.chroma != heif_chroma_monochrome ||
+      input_state.bits_per_pixel != 8) {
+    return { };
+  }
+
+  std::vector<ColorStateWithCost> states;
+
+  ColorState output_state;
+  ColorConversionCosts costs;
+
+  // --- convert to YCbCr420
+
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = heif_chroma_420;
+  output_state.has_alpha = input_state.has_alpha;
+  output_state.bits_per_pixel = 8;
+
+  costs = { 0.1f, 0.0f, 0.0f };
+
+  states.push_back({ output_state, costs });
+
+  return states;
+}
+
+
+std::shared_ptr<HeifPixelImage>
+Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                        ColorState target_state,
+                                        ColorConversionOptions options)
+{
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  int width = input->get_width();
+  int height = input->get_height();
+
+  outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
+
+  int chroma_width  = (width+1)/2;
+  int chroma_height = (height+1)/2;
+
+  outimg->add_plane(heif_channel_Y,  width, height, 8);
+  outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8);
+  outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, 8);
+
+  bool has_alpha = input->has_channel(heif_channel_Alpha);
+  if (has_alpha) {
+    outimg->add_plane(heif_channel_Alpha, width, height, 8);
+  }
+
+
+  uint8_t *out_cb,*out_cr,*out_y;
+  int out_cb_stride=0, out_cr_stride=0, out_y_stride=0;
+
+  const uint8_t *in_y;
+  int in_y_stride=0;
+
+  in_y  = input->get_plane(heif_channel_Y,  &in_y_stride);
+
+  out_y  = outimg->get_plane(heif_channel_Y,  &out_y_stride);
+  out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
+  out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
+
+  memset(out_cb, 128, out_cb_stride*chroma_height);
+  memset(out_cr, 128, out_cr_stride*chroma_height);
+
+  for (int y=0;y<height;y++) {
+    memcpy(out_y + y*out_y_stride,
+           in_y + y*in_y_stride,
+           width);
+  }
+
+  if (has_alpha) {
+    const uint8_t *in_a;
+    uint8_t *out_a;
+    int in_a_stride=0;
+    int out_a_stride=0;
+
+    in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
+    out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+
+    for (int y=0;y<height;y++) {
+      memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], width);
+    }
+  }
+
+  return outimg;
+}
+
+
+
 
 
 struct Node {
@@ -857,6 +970,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   ops.push_back(std::make_shared<Op_YCbCr420_to_RGB24>());
   ops.push_back(std::make_shared<Op_YCbCr420_to_RGB32>());
   ops.push_back(std::make_shared<Op_RGB_HDR_to_RRGGBBaa_BE>());
+  ops.push_back(std::make_shared<Op_mono_to_YCbCr420>());
 
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
