@@ -46,6 +46,12 @@ enum class ColorConversionCriterion {
 
 
 struct ColorConversionCosts {
+  ColorConversionCosts(float _speed, float _quality, float _memory) {
+    speed = _speed;
+    quality = _quality;
+    memory = _memory;
+  }
+
   float speed = 0;
   float quality = 0;
   float memory = 0;

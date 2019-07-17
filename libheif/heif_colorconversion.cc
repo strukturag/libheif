@@ -76,10 +76,10 @@ Op_RGB_to_RGB24_32::state_after_conversion(ColorState input_state,
 
   if (input_state.has_alpha == false &&
       target_state.has_alpha == false) {
-    costs = { 0.1f, 0.0f, 0.25f };
+    costs = ColorConversionCosts(0.1f, 0.0f, 0.25f);
   }
   else {
-    costs = { 0.1f, 0.0f, 0.0f };
+    costs = ColorConversionCosts(0.1f, 0.0f, 0.0f);
   }
 
   states.push_back({ output_state, costs });
@@ -97,7 +97,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(ColorState input_state,
     // do not use this conversion because we would lose the alpha channel
   }
   else {
-    costs = { 0.2f, 0.0f, 0.0f };
+    costs = ColorConversionCosts(0.2f, 0.0f, 0.0f);
   }
 
   states.push_back({ output_state, costs });
