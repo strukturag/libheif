@@ -1,5 +1,6 @@
 AC_DEFUN([AC_C_CXX_COMPILE_FLAGS],[
 NEW_CFLAGS="$CFLAGS"
+NEW_CXXFLAGS="$CXXFLAGS"
 for ac_flag in $1
 do
  AC_MSG_CHECKING(whether compiler supports $ac_flag)
@@ -8,9 +9,14 @@ do
   void f() {};
  ],[
   NEW_CFLAGS="$CFLAGS"
+
+  NEW_CFLAGS="$NEW_CFLAGS $ac_flag"
+  NEW_CXXFLAGS="$NEW_CXXFLAGS $ac_flag"
+
   AC_MSG_RESULT(yes)
  ],AC_MSG_RESULT(no))
 done
-CFLAGS="$CFLAGS $NEW_CFLAGS"
-CXXFLAGS="$CXXFLAGS $NEW_CFLAGS"
+
+CFLAGS=$NEW_CFLAGS
+CXXFLAGS=$NEW_CXXFLAGS
 ])
