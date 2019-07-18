@@ -4,11 +4,11 @@ NEW_CXXFLAGS="$CXXFLAGS"
 for ac_flag in $1
 do
  AC_MSG_CHECKING(whether compiler supports $ac_flag)
- CFLAGS="$NEW_CFLAGS $ac_flag"
+ CXXFLAGS="$NEW_CXXFLAGS $ac_flag"
+ AC_LANG(C++)
  AC_TRY_COMPILE(,[
-  void f() {};
+  ;
  ],[
-  NEW_CFLAGS="$CFLAGS"
 
   NEW_CFLAGS="$NEW_CFLAGS $ac_flag"
   NEW_CXXFLAGS="$NEW_CXXFLAGS $ac_flag"
