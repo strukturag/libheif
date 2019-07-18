@@ -41,7 +41,7 @@ struct heif_image* createImage_RRGGBB_BE() {
 
   err = heif_image_add_plane(image,
                              heif_channel_interleaved,
-                             256,256, 24);
+                             256,256, 10);
   if (err.code) {
     heif_image_release(image);
     return nullptr;
@@ -82,7 +82,7 @@ struct heif_error encode_image(struct heif_image* img) {
 }
 
 
-#if 0
+#if 1
 TEST_CASE( "Create images", "[heif_image]" ) {
   auto img = createImage_RRGGBB_BE();
   REQUIRE( img != nullptr );

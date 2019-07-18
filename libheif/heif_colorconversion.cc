@@ -23,6 +23,7 @@
 #include <typeinfo>
 #include <algorithm>
 #include <string.h>
+#include <assert.h>
 
 using namespace heif;
 
@@ -1861,6 +1862,9 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 {
   m_operations.clear();
 
+  m_target_state = target_state;
+  m_options = options;
+
   if (input_state == target_state) {
     return true;
   }
@@ -1985,4 +1989,20 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   }
 
   return false;
+}
+
+
+std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std::shared_ptr<HeifPixelImage>& input)
+{
+  std::shared_ptr<HeifPixelImage> in = input;
+  std::shared_ptr<HeifPixelImage> out = in;
+
+  for (const auto& op : m_operations) {
+    out = op->convert_colorspace(in, m_target_state, m_options);
+    assert(out);
+
+    in = out;
+  }
+
+  return out;
 }

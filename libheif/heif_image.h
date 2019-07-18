@@ -81,9 +81,6 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                                     heif_channel src_channel,
                                     heif_channel dst_channel);
 
-  std::shared_ptr<HeifPixelImage> convert_colorspace(heif_colorspace colorspace,
-                                                     heif_chroma chroma) const;
-
   Error rotate_ccw(int angle_degrees,
                    std::shared_ptr<HeifPixelImage>& out_img);
 
@@ -120,20 +117,12 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   std::shared_ptr<const color_profile> m_color_profile;
 
   std::map<heif_channel, ImagePlane> m_planes;
-
-  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB() const;
-  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB24() const;
-  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB32() const;
-  std::shared_ptr<HeifPixelImage> convert_RGB_to_RGB24_32() const;
-  std::shared_ptr<HeifPixelImage> convert_mono_to_RGB(int bpp) const;
-  std::shared_ptr<HeifPixelImage> convert_mono_to_YCbCr420() const;
-  std::shared_ptr<HeifPixelImage> convert_RGB24_32_to_YCbCr420() const;
-  std::shared_ptr<HeifPixelImage> convert_RGB_to_YCbCr420_HDR() const;
-  std::shared_ptr<HeifPixelImage> convert_RGB_to_RRGGBBaa_BE() const;
-  std::shared_ptr<HeifPixelImage> convert_YCbCr420_to_RGB_HDR() const;
 };
 
 
+ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
+                                                    heif_colorspace colorspace,
+                                                    heif_chroma chroma);
 }
 
 #endif

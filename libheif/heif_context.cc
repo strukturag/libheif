@@ -878,7 +878,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
   if (different_chroma || different_colorspace) {
-    img = img->convert_colorspace(target_colorspace, target_chroma);
+    img = convert_colorspace(img, target_colorspace, target_chroma);
     if (!img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1454,7 +1454,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
       return err;
     }
 
-    overlay_img = overlay_img->convert_colorspace(heif_colorspace_RGB, heif_chroma_444);
+    overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444);
     if (!overlay_img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1659,7 +1659,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    image = image->convert_colorspace(colorspace, chroma);
+    image = convert_colorspace(image, colorspace, chroma);
   }
 
 
