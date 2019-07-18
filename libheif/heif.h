@@ -1149,6 +1149,11 @@ struct heif_error heif_image_create(int width, int height,
                                     enum heif_chroma chroma,
                                     struct heif_image** out_image);
 
+// The indicated bit_depth corresponds to the bit depth per channel.
+// I.e. for interleaved formats like RRGGBB, the bit_depth would be, e.g., 10 bit instead
+// of 30 bits or 3*16=48 bits.
+// For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
+// instead of the preferred 8 bits.
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,

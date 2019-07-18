@@ -76,6 +76,31 @@ HeifPixelImage::~HeifPixelImage()
 {
 }
 
+static int num_interleaved_pixels_per_plane(heif_chroma chroma) {
+  switch (chroma) {
+  case heif_chroma_undefined:
+  case heif_chroma_monochrome:
+  case heif_chroma_420:
+  case heif_chroma_422:
+  case heif_chroma_444:
+    return 1;
+
+  case heif_chroma_interleaved_RGB:
+  case heif_chroma_interleaved_RRGGBB_BE:
+  case heif_chroma_interleaved_RRGGBB_LE:
+    return 3;
+
+  case heif_chroma_interleaved_RGBA:
+  case heif_chroma_interleaved_RRGGBBAA_BE:
+  case heif_chroma_interleaved_RRGGBBAA_LE:
+    return 4;
+  }
+
+  assert(false);
+  return 0;
+}
+
+
 void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, heif_chroma chroma)
 {
   m_width = width;
@@ -96,9 +121,24 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   ImagePlane plane;
   plane.width = width;
   plane.height = height;
+
+
+  // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
+
+  if (m_chroma == heif_chroma_interleaved_RGB && bit_depth==24) {
+    bit_depth = 8;
+  }
+
+  if (m_chroma == heif_chroma_interleaved_RGBA && bit_depth==32) {
+    bit_depth = 8;
+  }
+
   plane.bit_depth = bit_depth;
 
-  int bytes_per_pixel = (bit_depth+7)/8;
+
+  int bytes_per_component = (bit_depth+7)/8;
+  int bytes_per_pixel = num_interleaved_pixels_per_plane(m_chroma) * bytes_per_component;
+
   plane.stride = width * bytes_per_pixel;
 
   plane.stride = (plane.stride+alignment-1) & ~(alignment-1);
