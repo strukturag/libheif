@@ -97,5 +97,5 @@ TEST_CASE( "Color conversion", "[heif_image]" ) {
   success = pipeline.construct_pipeline( { heif_colorspace_RGB, heif_chroma_444, false, 8 },
                                          { heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 48 } );
 
-  //  REQUIRE( success );
+  REQUIRE( success );
 }

@@ -72,7 +72,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
   uint8_t* get_plane(enum heif_channel channel, int* out_stride);
   const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
 
-  void copy_new_plane_from(const std::shared_ptr<HeifPixelImage> src_image,
+  void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                            heif_channel src_channel,
                            heif_channel dst_channel);
   void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);

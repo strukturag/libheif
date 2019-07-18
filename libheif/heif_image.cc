@@ -215,7 +215,7 @@ const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_str
 }
 
 
-void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<HeifPixelImage> src_image,
+void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                                          heif_channel src_channel,
                                          heif_channel dst_channel)
 {
