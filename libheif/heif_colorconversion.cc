@@ -600,8 +600,8 @@ Op_RGB_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixel
       float g = in_g[y*in_g_stride + x];
       float b = in_b[y*in_b_stride + x];
 
-      out_cb[(y/2)*out_y_stride + (x/2)] = clip(halfRange + (uint16_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
-      out_cr[(y/2)*out_y_stride + (x/2)] = clip(halfRange + (uint16_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
+      out_cb[(y/2)*out_cb_stride + (x/2)] = clip(halfRange + (uint16_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
+      out_cr[(y/2)*out_cr_stride + (x/2)] = clip(halfRange + (uint16_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
     }
   }
 
@@ -900,9 +900,9 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
                                               ColorState target_state,
                                               ColorConversionOptions options)
 {
-  if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
-      input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
-      input->get_bits_per_pixel(heif_channel_Cr) != 8) {
+  if (input->get_bits_per_pixel(heif_channel_R) == 8 ||
+      input->get_bits_per_pixel(heif_channel_G) == 8 ||
+      input->get_bits_per_pixel(heif_channel_B) == 8) {
     return nullptr;
   }
 
@@ -920,7 +920,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   outimg->create(width, height, heif_colorspace_RGB,
                  target_state.has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
 
-  outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_Y));
+  outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R));
 
   const uint16_t *in_r,*in_g,*in_b,*in_a=nullptr;
   int in_r_stride=0, in_g_stride=0, in_b_stride=0, in_a_stride=0;
