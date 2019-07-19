@@ -131,8 +131,8 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
           uint8_t* p = (&row_pointers[y][x]);
           int v = (p[0]<<8) | p[1];
           v = (v<<shift) | (v>>(16-shift));
-          p[0] = v>>8;
-          p[1] = v&0xFF;
+          p[0] = (uint8_t)(v>>8);
+          p[1] = (uint8_t)(v&0xFF);
         }
       }
     }
