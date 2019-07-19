@@ -24,8 +24,11 @@
 #include <algorithm>
 #include <string.h>
 #include <assert.h>
+#include <iostream>
 
 using namespace heif;
+
+#define DEBUG_ME 0
 
 
 bool ColorState::operator==(const ColorState& b) const
@@ -1930,9 +1933,9 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
         step++;
       }
 
-      for (const auto& op : m_operations) {
-        printf("> %s\n",typeid(*op).name());
-      }
+#if DEBUG_ME
+      debug_dump_pipeline();
+#endif
 
       return true;
     }
@@ -1988,6 +1991,14 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   }
 
   return false;
+}
+
+
+void ColorConversionPipeline::debug_dump_pipeline() const
+{
+  for (const auto& op : m_operations) {
+    std::cerr << "> " << typeid(*op).name() << "\n";
+  }
 }
 
 

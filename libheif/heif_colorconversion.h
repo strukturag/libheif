@@ -114,6 +114,8 @@ class ColorConversionPipeline
   std::shared_ptr<HeifPixelImage>
     convert_image(const std::shared_ptr<HeifPixelImage>& input);
 
+  void debug_dump_pipeline() const;
+
  private:
   std::vector<std::shared_ptr<ColorConversionOperation>> m_operations;
   ColorState m_target_state;
