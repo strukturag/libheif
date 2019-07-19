@@ -441,8 +441,6 @@ Op_YCbCr420_to_RGB_16bit::convert_colorspace(const std::shared_ptr<const HeifPix
   uint16_t halfRange = (uint16_t)(1<<(bpp-1));
   int32_t fullRange = (1<<bpp)-1;
 
-  int bdShift = 16-bpp;
-
   int x,y;
   for (y=0;y<height;y++) {
     for (x=0;x<width;x++) {
@@ -456,10 +454,7 @@ Op_YCbCr420_to_RGB_16bit::convert_colorspace(const std::shared_ptr<const HeifPix
     }
 
     if (has_alpha) {
-      for (int x=0;x<width;x++) {
-        out_a[y*out_a_stride+x] = (uint16_t)(in_a[y*in_a_stride+x] << bdShift);
-      }
-      //memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], m_width *2);
+      memcpy(&out_a[y*out_a_stride], &in_a[y*in_a_stride], width *2);
     }
   }
 
@@ -590,7 +585,7 @@ Op_RGB_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixel
       float g = in_g[y*in_g_stride + x];
       float b = in_b[y*in_b_stride + x];
 
-      out_y[y*out_y_stride + x] = clip((uint16_t)(r*0.299f + g*0.587f + b*0.114f), fullRange);
+      out_y[y*out_y_stride + x] = clip((int32_t)(r*0.299f + g*0.587f + b*0.114f), fullRange);
     }
   }
 
@@ -600,8 +595,8 @@ Op_RGB_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixel
       float g = in_g[y*in_g_stride + x];
       float b = in_b[y*in_b_stride + x];
 
-      out_cb[(y/2)*out_cb_stride + (x/2)] = clip(halfRange + (uint16_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
-      out_cr[(y/2)*out_cr_stride + (x/2)] = clip(halfRange + (uint16_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
+      out_cb[(y/2)*out_cb_stride + (x/2)] = clip(halfRange + (int32_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
+      out_cr[(y/2)*out_cr_stride + (x/2)] = clip(halfRange + (int32_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
     }
   }
 
@@ -906,6 +901,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
     return nullptr;
   }
 
+  int bpp = input->get_bits_per_pixel(heif_channel_R);
+
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
   if (has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) == 8) {
@@ -945,6 +942,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   int x,y;
   for (y=0;y<height;y++) {
 
+    const uint8_t high_byte_mask = (uint8_t)((1<<(bpp-8))-1);
+
     if (has_alpha) {
       for (x=0;x<width;x++) {
         uint16_t r = in_r[x + y*in_r_stride];
@@ -963,7 +962,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
           out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
         }
         else {
-          out_p[y*out_p_stride + 8*x + 6] = 0xFF;
+          out_p[y*out_p_stride + 8*x + 6] = high_byte_mask;
           out_p[y*out_p_stride + 8*x + 7] = 0xFF;
         }
       }
