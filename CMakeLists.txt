@@ -53,6 +53,12 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 endif()
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
+if (has_potentially_evaluated_expression)
+  set(CMAKE_CXX_FLAGS "-Wno-error=potentially-evaluated-expression ${CMAKE_CXX_FLAGS}")
+endif()
+
 include_directories ("${PROJECT_SOURCE_DIR}")
 
 if(UNIX)

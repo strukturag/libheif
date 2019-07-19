@@ -1996,11 +1996,9 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 
 void ColorConversionPipeline::debug_dump_pipeline() const
 {
-#if DEBUG_ME
   for (const auto& op : m_operations) {
     std::cerr << "> " << typeid(*op).name() << "\n";
   }
-#endif
 }
 
 
