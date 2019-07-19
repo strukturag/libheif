@@ -945,29 +945,20 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   int x,y;
   for (y=0;y<height;y++) {
 
-    const uint8_t high_byte_mask = (uint8_t)((1<<(bpp-8))-1);
-
     if (has_alpha) {
       for (x=0;x<width;x++) {
         uint16_t r = in_r[x + y*in_r_stride];
         uint16_t g = in_g[x + y*in_g_stride];
         uint16_t b = in_b[x + y*in_b_stride];
+        uint16_t a = in_a[x + y*in_a_stride];
         out_p[y*out_p_stride + 8*x + 0] = (uint8_t)(r>>8);
         out_p[y*out_p_stride + 8*x + 1] = (uint8_t)(r & 0xFF);
         out_p[y*out_p_stride + 8*x + 2] = (uint8_t)(g>>8);
         out_p[y*out_p_stride + 8*x + 3] = (uint8_t)(g & 0xFF);
         out_p[y*out_p_stride + 8*x + 4] = (uint8_t)(b>>8);
         out_p[y*out_p_stride + 8*x + 5] = (uint8_t)(b & 0xFF);
-
-        if (has_alpha) {
-          uint16_t a = in_a[x + y*in_a_stride];
-          out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(a>>8);
-          out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
-        }
-        else {
-          out_p[y*out_p_stride + 8*x + 6] = high_byte_mask;
-          out_p[y*out_p_stride + 8*x + 7] = 0xFF;
-        }
+        out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(a>>8);
+        out_p[y*out_p_stride + 8*x + 7] = (uint8_t)(a & 0xFF);
       }
     }
     else {
