@@ -267,7 +267,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
       // create destination image
 
       struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                                heif_colorspace_YCbCr,
+                                                heif_colorspace_monochrome,
                                                 heif_chroma_monochrome,
                                                 &image);
       (void)err;
@@ -284,9 +284,8 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
       while (cinfo.output_scanline < cinfo.output_height) {
         (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
-        memcpy(py + (cinfo.output_scanline-1)*y_stride, buffer, cinfo.output_width);
+        memcpy(py + (cinfo.output_scanline-1)*y_stride, *buffer, cinfo.output_width);
       }
-
     }
   else
     {
@@ -570,7 +569,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   if (band==1) {
     err = heif_image_create((int)width, (int)height,
-                            heif_colorspace_YCbCr,
+                            heif_colorspace_monochrome,
                             heif_chroma_monochrome,
                             &image);
     (void)err;

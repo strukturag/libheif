@@ -82,7 +82,8 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   int height = heif_image_get_height(image, heif_channel_interleaved);
 
   int bitDepth;
-  if (heif_image_get_bits_per_pixel(image, heif_channel_interleaved)>32) {
+  int input_bpp = heif_image_get_bits_per_pixel(image, heif_channel_interleaved);
+  if (input_bpp>8) {
     bitDepth = 16;
   }
   else {
@@ -119,6 +120,24 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   for (int y = 0; y < height; ++y) {
     row_pointers[y] = const_cast<uint8_t*>(&row_rgb[y * stride_rgb]);
   }
+
+  if (bitDepth==16) {
+    // shift image data to full 16bit range
+
+    int shift = 16-input_bpp;
+    if (shift>0) {
+      for (int y = 0; y < height; ++y) {
+        for (int x=0; x < stride_rgb; x+= 2) {
+          uint8_t* p = (&row_pointers[y][x]);
+          int v = (p[0]<<8) | p[1];
+          v = (v<<shift) | (v>>(16-shift));
+          p[0] = (uint8_t)(v>>8);
+          p[1] = (uint8_t)(v&0xFF);
+        }
+      }
+    }
+  }
+
 
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, nullptr);

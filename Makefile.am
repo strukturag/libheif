@@ -8,7 +8,8 @@ SUBDIRS = \
     gdk-pixbuf \
     gnome \
     go \
-    scripts
+    scripts \
+    tests
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libheif.pc

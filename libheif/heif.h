@@ -656,6 +656,22 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
                                                            struct heif_color_profile_nclx** out_data);
 
 
+LIBHEIF_API
+enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image);
+
+LIBHEIF_API
+size_t heif_image_get_raw_color_profile_size(const struct heif_image* image);
+
+LIBHEIF_API
+struct heif_error heif_image_get_raw_color_profile(const struct heif_image* image,
+                                                   void* out_data);
+
+LIBHEIF_API
+struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
+                                                    struct heif_color_profile_nclx** out_data);
+
+
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
@@ -818,6 +834,10 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
 LIBHEIF_API
 struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
                                                     const struct heif_color_profile_nclx* color_profile);
+
+
+LIBHEIF_API
+void heif_image_remove_color_profile(struct heif_image* image);
 
 // Release heif_image.
 LIBHEIF_API
@@ -1129,6 +1149,11 @@ struct heif_error heif_image_create(int width, int height,
                                     enum heif_chroma chroma,
                                     struct heif_image** out_image);
 
+// The indicated bit_depth corresponds to the bit depth per channel.
+// I.e. for interleaved formats like RRGGBB, the bit_depth would be, e.g., 10 bit instead
+// of 30 bits or 3*16=48 bits.
+// For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
+// instead of the preferred 8 bits.
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,

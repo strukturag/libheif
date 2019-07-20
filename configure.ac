@@ -73,6 +73,15 @@ AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
+
+AC_ARG_ENABLE([tests], AS_HELP_STRING([--enable-tests],
+    [Enable compiling tests ('visibility' must be disabled).]))
+AS_IF([test "x$enable_tests" = "xyes"], [
+    HAVE_TESTS=1
+])
+AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
+
+
 PKG_CHECK_MODULES([libde265], [libde265], [
     AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
     AC_SUBST(libde265_CFLAGS)
@@ -191,6 +200,8 @@ AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
 CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
 CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
 
+AC_C_CXX_COMPILE_FLAGS([-Wno-error=potentially-evaluated-expression])
+
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
@@ -200,6 +211,7 @@ AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
 AC_MSG_NOTICE([Examples: $enable_examples])
+AC_MSG_NOTICE([Tests: $enable_tests (tests require that 'visibility' is turned off)])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
@@ -210,6 +222,7 @@ AC_CONFIG_FILES([gdk-pixbuf/Makefile])
 AC_CONFIG_FILES([go/Makefile])
 AC_CONFIG_FILES([gnome/Makefile])
 AC_CONFIG_FILES([scripts/Makefile])
+AC_CONFIG_FILES([tests/Makefile])
 AC_CONFIG_FILES([libheif/Makefile])
 AC_CONFIG_FILES([libheif/heif_version.h])
 AC_CONFIG_FILES([libheif.pc])

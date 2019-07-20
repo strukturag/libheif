@@ -754,6 +754,12 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 }
 
 
+void heif_image_remove_color_profile(struct heif_image* image)
+{
+  image->image->set_color_profile(nullptr);
+}
+
+
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
                                                     const char* type_filter)
 {
@@ -903,18 +909,11 @@ static struct color_primaries_table_entry {
   { -1 }
 };
 
-struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
-                                                           struct heif_color_profile_nclx** out_data)
-{
-  auto profile = handle->image->get_color_profile();
-  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
-  if (nclx_profile) {
-    if (!out_data) {
-      Error err(heif_error_Usage_error,
-                heif_suberror_Null_pointer_argument);
-      return err.error_struct(handle->image.get());
-    }
 
+static Error get_nclx_color_profile(std::shared_ptr<const color_profile_nclx> nclx_profile,
+                                    struct heif_color_profile_nclx** out_data)
+{
+  if (nclx_profile) {
     *out_data = (struct heif_color_profile_nclx*)malloc(sizeof(struct heif_color_profile_nclx));
 
     struct heif_color_profile_nclx* nclx = *out_data;
@@ -946,14 +945,30 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
     nclx->color_primary_white_x = c.wx;
     nclx->color_primary_white_y = c.wy;
 
-    return error_Ok;
+    return Error::Ok;
   }
   else {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Unspecified);
-    return err.error_struct(handle->image.get());
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Unspecified);
   }
 }
+
+struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
+                                                           struct heif_color_profile_nclx** out_data)
+{
+  if (!out_data) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto profile = handle->image->get_color_profile();
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+  Error err = get_nclx_color_profile(nclx_profile, out_data);
+
+  return err.error_struct(handle->image.get());
+}
+
 
 struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
                                                           void* out_data)
@@ -974,6 +989,74 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
 
   return Error::Ok.error_struct(handle->image.get());
 }
+
+
+
+enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image)
+{
+  auto profile = image->image->get_color_profile();
+  if (!profile) {
+    return heif_color_profile_type_not_present;
+  }
+  else {
+    return (heif_color_profile_type)profile->get_type();
+  }
+}
+
+
+size_t heif_image_get_raw_color_profile_size(const struct heif_image* image)
+{
+  auto profile = image->image->get_color_profile();
+  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+  if (raw_profile) {
+    return raw_profile->get_data().size();
+  }
+  else {
+    return 0;
+  }
+}
+
+
+struct heif_error heif_image_get_raw_color_profile(const struct heif_image* image,
+                                                   void* out_data)
+{
+  if (out_data==nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(image->image.get());
+  }
+
+  auto profile = image->image->get_color_profile();
+  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+  if (raw_profile) {
+    memcpy(out_data,
+           raw_profile->get_data().data(),
+           raw_profile->get_data().size());
+  }
+
+  return Error::Ok.error_struct(image->image.get());
+}
+
+
+struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
+                                                    struct heif_color_profile_nclx** out_data)
+{
+  if (!out_data) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(image->image.get());
+  }
+
+  auto profile = image->image->get_color_profile();
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+  Error err = get_nclx_color_profile(nclx_profile, out_data);
+
+  return err.error_struct(image->image.get());
+}
+
+
+
+
 
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)

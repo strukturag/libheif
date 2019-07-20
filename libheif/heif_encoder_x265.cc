@@ -541,8 +541,14 @@ static void x265_set_default_parameters(void* encoder)
 
 static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  *colorspace = heif_colorspace_YCbCr;
-  *chroma = heif_chroma_420;
+  if (*colorspace == heif_colorspace_monochrome) {
+    *colorspace = heif_colorspace_monochrome;
+    *chroma = heif_chroma_monochrome;
+  }
+  else {
+    *colorspace = heif_colorspace_YCbCr;
+    *chroma = heif_chroma_420;
+  }
 }
 
 
@@ -561,6 +567,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
 
   int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+  bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   const x265_api* api = x265_api_get(bit_depth);
   if (api==nullptr) {
@@ -632,7 +639,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
   param->totalFrames = 1;
-  param->internalCsp = X265_CSP_I420;
+  param->internalCsp = isGreyscale ? X265_CSP_I400 : X265_CSP_I420;
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
@@ -696,9 +703,15 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   x265_picture* pic = api->picture_alloc();
   api->picture_init(param, pic);
 
-  pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
-  pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
-  pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
+  if (isGreyscale) {
+    pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
+  }
+  else {
+    pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
+    pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
+    pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
+  }
+
   pic->bitDepth = bit_depth;
 
 

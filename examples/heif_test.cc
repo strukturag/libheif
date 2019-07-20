@@ -161,7 +161,7 @@ int main(int argc, char** argv)
       fwrite(data.data(), data.size(),1, stdout);
     }
   }
-  catch (heif::Error err) {
+  catch (const heif::Error& err) {
     std::cerr << err.get_message() << "\n";
   }
 

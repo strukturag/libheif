@@ -87,7 +87,7 @@ namespace heif {
   class BoxHeader {
   public:
     BoxHeader();
-    ~BoxHeader() { }
+    virtual ~BoxHeader() { }
 
     constexpr static uint64_t size_until_end_of_file = 0;
 
@@ -150,8 +150,7 @@ namespace heif {
   class Box : public BoxHeader {
   public:
     Box() { }
-  Box(const BoxHeader& hdr) : BoxHeader(hdr) { }
-    virtual ~Box() { }
+    Box(const BoxHeader& hdr) : BoxHeader(hdr) { }
 
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
