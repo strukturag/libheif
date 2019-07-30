@@ -904,7 +904,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
     return nullptr;
   }
 
-  int bpp = input->get_bits_per_pixel(heif_channel_R);
+  //  int bpp = input->get_bits_per_pixel(heif_channel_R);
 
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
