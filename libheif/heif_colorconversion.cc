@@ -28,7 +28,7 @@
 
 using namespace heif;
 
-#define DEBUG_ME 1
+#define DEBUG_ME 0
 
 
 bool ColorState::operator==(const ColorState& b) const
@@ -1881,10 +1881,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(ColorState input_state,
 
   output_state.colorspace = heif_colorspace_YCbCr;
   output_state.chroma = heif_chroma_420;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+  output_state.has_alpha = input_state.has_alpha;  // we generate an alpha plane if the source contains data
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = { 0.75f, 0.5f, 0.0f };
+  costs = { 0.5f, 0.0f, 0.0f };
 
   states.push_back({ output_state, costs });
 
@@ -1902,18 +1902,14 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
 
   int bpp = input->get_bits_per_pixel(heif_channel_interleaved);
 
-  bool has_alpha = input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
-          input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE;
-
-  if (has_alpha && input->get_bits_per_pixel(heif_channel_interleaved) != bpp) {
-    return nullptr;
-  }
+  bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+                    input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE);
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
 
-  int step = has_alpha ? 8 : 6;
+  int bytesPerPixel = has_alpha ? 8 : 6;
 
   int cwidth = (width+1)/2;
   int cheight = (height+1)/2;
@@ -1929,10 +1925,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   const uint8_t *in_p;
   int in_p_stride=0;
 
-  uint16_t *out_y,*out_cb,*out_cr,*out_a;
+  uint16_t *out_y,*out_cb,*out_cr,*out_a = nullptr;
   int out_y_stride=0, out_cb_stride=0, out_cr_stride=0, out_a_stride=0;
 
-  in_p = (const uint8_t*)input->get_plane(heif_channel_interleaved, &in_p_stride);
+  in_p = input->get_plane(heif_channel_interleaved, &in_p_stride);
   out_y  = (uint16_t*)outimg->get_plane(heif_channel_Y,  &out_y_stride);
   out_cb = (uint16_t*)outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   out_cr = (uint16_t*)outimg->get_plane(heif_channel_Cr, &out_cr_stride);
@@ -1940,10 +1936,9 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   if (has_alpha) {
     out_a = (uint16_t*)outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
-  else {
-    out_a = nullptr;
-  }
 
+
+  // adapt stride as we are pointing to 16bit integers
   out_y_stride /= 2;
   out_cb_stride /= 2;
   out_cr_stride /= 2;
@@ -1952,49 +1947,43 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   uint16_t halfRange = (uint16_t)(1<<(bpp-1));
   int32_t fullRange = (1<<bpp)-1;
 
-  int x,y;
-
+  // le=1 for little endian, le=0 for big endian
   int le = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
-            input->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE);
+            input->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ? 1 : 0;
 
-  for (y=0;y<height;y++) {
-    for (x=0;x<width;x++) {
+  for (int y=0;y<height;y++) {
+    for (int x=0;x<width;x++) {
 
-      int r = (in_p[y*in_p_stride + step*x + 0+le]<<step) | (in_p[y*in_p_stride + step*x + 1-le]);
-      int g = (in_p[y*in_p_stride + step*x + 2+le]<<step) | (in_p[y*in_p_stride + step*x + 3-le]);
-      int b = (in_p[y*in_p_stride + step*x + 4+le]<<step) | (in_p[y*in_p_stride + step*x + 5-le]);
+      const uint8_t* in = &in_p[y*in_p_stride + bytesPerPixel*x];
 
-      if(has_alpha) {
-          u_int16_t a = (u_int16_t)(in_p[y * in_p_stride + step * x + 6+le] << step) + (in_p[y * in_p_stride + step * x + 7-le]);
-          out_a[y*out_a_stride + x] = a;
+      int r = (in[0+le]<<8) | in[1-le];
+      int g = (in[2+le]<<8) | in[3-le];
+      int b = (in[4+le]<<8) | in[5-le];
+
+      out_y[y * out_y_stride + x] = clip((r*4899 + g*9617 + b*1868)>>14, fullRange);
+
+      if (has_alpha) {
+        uint16_t a = (uint16_t)((in[6+le]<<8) | in[7-le]);
+        out_a[y*out_a_stride + x] = a;
       }
-
-      out_y[y * out_y_stride + x] = clip((int32_t)(r*0.299f + g*0.587f + b*0.114f), fullRange);
     }
   }
 
-  for (y=0;y<height;y+=2) {
-    for (x=0;x<width;x+=2) {
-        int r = (in_p[y*in_p_stride + step*x + 0+le]<<step) | (in_p[y*in_p_stride + step*x + 1-le]);
-        int g = (in_p[y*in_p_stride + step*x + 2+le]<<step) | (in_p[y*in_p_stride + step*x + 3-le]);
-        int b = (in_p[y*in_p_stride + step*x + 4+le]<<step) | (in_p[y*in_p_stride + step*x + 5-le]);
+  for (int y=0;y<height;y+=2) {
+    for (int x=0;x<width;x+=2) {
+      const uint8_t* in = &in_p[y*in_p_stride + bytesPerPixel*x];
 
-        out_cb[(y/2)*out_cb_stride + (x/2)] = clip(halfRange + (int32_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
-        out_cr[(y/2)*out_cr_stride + (x/2)] = clip(halfRange + (int32_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
+      int r = (in[0+le]<<8) | in[1-le];
+      int g = (in[2+le]<<8) | in[3-le];
+      int b = (in[4+le]<<8) | in[5-le];
+
+      out_cb[(y/2)*out_cb_stride + (x/2)] = clip(halfRange + ((-r*2765 - g*5427 + (b<<13))>>14), fullRange);
+      out_cr[(y/2)*out_cr_stride + (x/2)] = clip(halfRange + (((r<<13) - g*6860 - b*1332)>>14), fullRange);
     }
   }
 
 
   return outimg;
-}
-
-
-static inline uint16_t clip_bigger(float fx)
-{
-    int x = static_cast<int>(fx);
-    if (x<0) return 0;
-    if (x>255) return 255;
-    return static_cast<uint8_t>(x);
 }
 
 
@@ -2015,16 +2004,14 @@ public:
 
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RRGGBBaa::state_after_conversion(ColorState input_state,
-                                                    ColorState target_state,
-                                                    ColorConversionOptions options)
+                                                ColorState target_state,
+                                                ColorConversionOptions options)
 {
-    if (input_state.colorspace != heif_colorspace_YCbCr ||
-        input_state.chroma != heif_chroma_420 ||
-        input_state.bits_per_pixel == 8) {
-        std::cout << "a\n";
+  if (input_state.colorspace != heif_colorspace_YCbCr ||
+      input_state.chroma != heif_chroma_420 ||
+      input_state.bits_per_pixel == 8) {
     return { };
   }
-    std::cout << "b\n";
 
   std::vector<ColorStateWithCost> states;
 
@@ -2034,26 +2021,27 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(ColorState input_state,
   // --- convert to YCbCr
 
   output_state.colorspace = heif_colorspace_RGB;
-  output_state.chroma = input_state.has_alpha ? heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+  output_state.chroma = (input_state.has_alpha ?
+                         heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RRGGBB_LE);
+  output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = { 0.075f, 0.05f, 0.0f };
+  costs = { 0.5f, 0.0f, 0.0f };
 
   states.push_back({ output_state, costs });
 
 
-    output_state.colorspace = heif_colorspace_RGB;
-    output_state.chroma = input_state.has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE
-                                                : heif_chroma_interleaved_RRGGBB_BE;
-    output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-    output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.colorspace = heif_colorspace_RGB;
+  output_state.chroma = (input_state.has_alpha ?
+                         heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
+  output_state.has_alpha = input_state.has_alpha;
+  output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-    costs = {0.075f, 0.05f, 0.0f};
+  costs = {0.5f, 0.0f, 0.0f};
 
-    states.push_back({output_state, costs});
+  states.push_back({output_state, costs});
 
-    return states;
+  return states;
 }
 
 
@@ -2065,20 +2053,18 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   int width = input->get_width();
   int height = input->get_height();
 
-  int bpp = input->get_bits_per_pixel(heif_channel_Cb);
-
+  int bpp = input->get_bits_per_pixel(heif_channel_Y);
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
+  int le = (target_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
+            target_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) ? 1 : 0;
+
   auto outimg = std::make_shared<HeifPixelImage>();
+  outimg->create(width, height, heif_colorspace_RGB, target_state.chroma);
 
-  outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_BE);
-
-  int step = has_alpha ? 8 : 6;
-
+  int bytesPerPixel = has_alpha ? 8 : 6;
 
   outimg->add_plane(heif_channel_interleaved, width, height, bpp);
-
-
 
   if (has_alpha) {
     outimg->add_plane(heif_channel_Alpha, width, height, bpp);
@@ -2087,10 +2073,10 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   uint8_t *out_p;
   int out_p_stride=0;
 
-  const uint16_t *in_y,*in_cb,*in_cr,*in_a;
+  const uint16_t *in_y,*in_cb,*in_cr,*in_a = nullptr;
   int in_y_stride=0, in_cb_stride=0, in_cr_stride=0, in_a_stride=0;
 
-  out_p = (uint8_t*)outimg->get_plane(heif_channel_interleaved, &out_p_stride);
+  out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
   in_y  = (uint16_t*)input->get_plane(heif_channel_Y,  &in_y_stride);
   in_cb = (uint16_t*)input->get_plane(heif_channel_Cb, &in_cb_stride);
   in_cr = (uint16_t*)input->get_plane(heif_channel_Cr, &in_cr_stride);
@@ -2098,19 +2084,14 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   if (has_alpha) {
     in_a = (uint16_t*)input->get_plane(heif_channel_Alpha, &in_a_stride);
   }
-  else {
-    in_a = nullptr;
-  }
-
-  int x,y;
 
   int maxval = (1<<bpp)-1;
 
-  for (y=0;y<height;y++) {
-    for (x=0;x<width;x++) {
+  for (int y=0;y<height;y++) {
+    for (int x=0;x<width;x++) {
 
         int y_ = in_y[y*in_y_stride/2 + x];
-        int cb = in_cb[y/2*in_cb_stride/2 + x/2]-(1<<(bpp-1));
+        int cb = in_cb[y/2*in_cb_stride/2 + x/2] - (1<<(bpp-1));
         int cr = in_cr[y/2*in_cr_stride/2 + x/2] - (1<<(bpp-1));
 
         int r = clip((int16_t)(y_ + 1.40200 * cr), maxval);
@@ -2118,23 +2099,18 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
         int b = clip(int16_t(y_ + 1.77200 * cb), maxval);
 
 
-        out_p[y*out_p_stride + step*x + 0] = r >> 8;
-        out_p[y*out_p_stride + step*x + 2] = g >> 8;
-        out_p[y*out_p_stride + step*x + 4] = b >> 8;
+        out_p[y*out_p_stride + bytesPerPixel*x + 0+le] = (uint8_t)(r >> 8);
+        out_p[y*out_p_stride + bytesPerPixel*x + 2+le] = (uint8_t)(g >> 8);
+        out_p[y*out_p_stride + bytesPerPixel*x + 4+le] = (uint8_t)(b >> 8);
 
-        out_p[y*out_p_stride + step*x + 1] = r & 0xff;
-        out_p[y*out_p_stride + step*x + 3] = g & 0xff;
-        out_p[y*out_p_stride + step*x + 5] = b & 0xff;
+        out_p[y*out_p_stride + bytesPerPixel*x + 1-le] = (uint8_t)(r & 0xff);
+        out_p[y*out_p_stride + bytesPerPixel*x + 3-le] = (uint8_t)(g & 0xff);
+        out_p[y*out_p_stride + bytesPerPixel*x + 5-le] = (uint8_t)(b & 0xff);
 
         if(has_alpha) {
-
-
-            out_p[y*out_p_stride + 8*x + 6] = (uint8_t)(in_a[y*in_a_stride/2+x] / 256);
-            out_p[y*out_p_stride + 8*x + 7] = in_a[y*in_a_stride/2+x] % 256;
-
-
+          out_p[y*out_p_stride + 8*x + 6+le] = (uint8_t)(in_a[y*in_a_stride/2+x] >> 8);
+          out_p[y*out_p_stride + 8*x + 7-le] = (uint8_t)(in_a[y*in_a_stride/2+x] & 0xff);
         }
-
     }
   }
 
@@ -2189,6 +2165,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
   ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_YCbCr420_to_RRGGBBaa>());
+
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
 
