@@ -40,54 +40,20 @@ heif::Error heif::Error::Ok(heif_error_Ok);
 
 
 
-static int32_t gcd(int a, int b)
-{
-  if (a == 0 && b == 0) {
-    return 1;
-  }
-
-  if (a == 0) return b;
-  if (b == 0) return a;
-
-  int32_t h;
-
-  do {
-    h = a % b;
-    a = b;
-    b = h;
-  } while (b != 0);
-
-  return a;
-}
-
-
 Fraction::Fraction(int32_t num,int32_t den)
 {
-  int32_t g = gcd(num, den);
-
-  // these strange tests are for catching the case that we divide -2147483648 by -1,
-  // which would exceed the maximum positive value by one.
-
-  if (num == std::numeric_limits<int32_t>::min() && g == -1) {
-    num++;
-  }
-
-  if (den == std::numeric_limits<int32_t>::min() && g == -1) {
-    den++;
-  }
-
-
-  numerator = num / g;
-  denominator = den / g;
-
-
   // Reduce resolution of fraction until we are in a safe range.
   // We need this as adding fractions may lead to very large denominators
   // (e.g. 0x10000 * 0x10000 > 0x100000000 -> overflow, leading to integer 0)
 
-  while (denominator > MAX_FRACTION_DENOMINATOR) {
-    numerator >>= 1;
-    denominator >>= 1;
+  while (denominator > MAX_FRACTION_VALUE || denominator < -MAX_FRACTION_VALUE) {
+    numerator /= 2;
+    denominator /= 2;
+  }
+
+  while (numerator > MAX_FRACTION_VALUE || numerator < -MAX_FRACTION_VALUE) {
+    numerator /= 2;
+    denominator /= 2;
   }
 }
 
