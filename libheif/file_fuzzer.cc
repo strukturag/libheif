@@ -52,7 +52,7 @@ static void TestDecodeImage(struct heif_context* ctx,
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   struct heif_context* ctx;
   struct heif_error err;
-  struct heif_image_handle* handle;
+  struct heif_image_handle* primary_handle;
   int images_count;
   heif_item_id* image_IDs = NULL;
 
@@ -64,11 +64,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     goto quit;
   }
 
-  err = heif_context_get_primary_image_handle(ctx, &handle);
+  err = heif_context_get_primary_image_handle(ctx, &primary_handle);
   if (err.code == heif_error_Ok) {
-    assert(heif_image_handle_is_primary_image(handle));
-    TestDecodeImage(ctx, handle);
-    heif_image_handle_release(handle);
+    assert(heif_image_handle_is_primary_image(primary_handle));
+    TestDecodeImage(ctx, primary_handle);
+    heif_image_handle_release(primary_handle);
   }
 
   images_count = heif_context_get_number_of_top_level_images(ctx);
@@ -86,25 +86,26 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
 
   for (int i = 0; i < images_count; ++i) {
-    err = heif_context_get_image_handle(ctx, image_IDs[i], &handle);
+    struct heif_image_handle* image_handle;
+    err = heif_context_get_image_handle(ctx, image_IDs[i], &image_handle);
     if (err.code != heif_error_Ok) {
       // Ignore, we are only interested in crashes here.
       continue;
     }
 
-    TestDecodeImage(ctx, handle);
+    TestDecodeImage(ctx, image_handle);
 
-    int num_thumbnails = heif_image_handle_get_number_of_thumbnails(handle);
+    int num_thumbnails = heif_image_handle_get_number_of_thumbnails(image_handle);
     for (int t = 0; t < num_thumbnails; ++t) {
       struct heif_image_handle* thumbnail_handle = nullptr;
-      heif_image_handle_get_thumbnail(handle, t, &thumbnail_handle);
+      heif_image_handle_get_thumbnail(image_handle, t, &thumbnail_handle);
       if (thumbnail_handle) {
         TestDecodeImage(ctx, thumbnail_handle);
         heif_image_handle_release(thumbnail_handle);
       }
     }
 
-    heif_image_handle_release(handle);
+    heif_image_handle_release(image_handle);
   }
 
 quit:
