@@ -629,46 +629,29 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   else {
     err = heif_image_create((int)width, (int)height,
                             heif_colorspace_RGB,
-                            heif_chroma_444,
+                            has_alpha ?
+                            heif_chroma_interleaved_RRGGBBAA_BE :
+                            heif_chroma_interleaved_RRGGBB_BE,
                             &image);
     (void)err;
 
     int bdShift = 16 - output_bit_depth;
 
-    heif_image_add_plane(image, heif_channel_R, (int)width, (int)height, output_bit_depth);
-    heif_image_add_plane(image, heif_channel_G, (int)width, (int)height, output_bit_depth);
-    heif_image_add_plane(image, heif_channel_B, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height, output_bit_depth);
 
-    int stride_r, stride_g, stride_b, stride_a;
-    uint16_t* p_r = (uint16_t*)heif_image_get_plane(image, heif_channel_R, &stride_r);
-    uint16_t* p_g = (uint16_t*)heif_image_get_plane(image, heif_channel_G, &stride_g);
-    uint16_t* p_b = (uint16_t*)heif_image_get_plane(image, heif_channel_B, &stride_b);
-
-    uint16_t* p_a;
-    if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, output_bit_depth);
-      p_a = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &stride_a);
-    }
+    int stride;
+    uint8_t* p_out = (uint8_t*)heif_image_get_plane(image, heif_channel_interleaved, &stride);
 
     for (uint32_t y = 0; y < height; y++) {
       uint8_t* p = row_pointers[y];
 
-      if (has_alpha) {
-        for (uint32_t x = 0; x < width; x++) {
-          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
-          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
-          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
-          p_a[y*stride_a/2 + x] = (uint16_t)(((p[6]<<8) | p[7]) >> bdShift);
-          p+=8;
-        }
-      }
-      else {
-        for (uint32_t x = 0; x < width; x++) {
-          p_r[y*stride_r/2 + x] = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
-          p_g[y*stride_g/2 + x] = (uint16_t)(((p[2]<<8) | p[3]) >> bdShift);
-          p_b[y*stride_b/2 + x] = (uint16_t)(((p[4]<<8) | p[5]) >> bdShift);
-          p+=6;
-        }
+      uint32_t nVal = (has_alpha ? 4 : 3) * width;
+
+      for (uint32_t x = 0; x < nVal ; x++) {
+        uint16_t v = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
+        p_out[2*x + y*stride + 0] = (v>>8);
+        p_out[2*x + y*stride + 1] = (v & 0xFF);
+        p += 2;
       }
     }
   }

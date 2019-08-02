@@ -66,21 +66,21 @@ namespace heif {
   class Fraction {
   public:
     Fraction() { }
-    Fraction(int num,int den);
+    Fraction(int32_t num,int32_t den);
 
     Fraction operator+(const Fraction&) const;
     Fraction operator-(const Fraction&) const;
     Fraction operator-(int) const;
     Fraction operator/(int) const;
 
-    int round_down() const;
-    int round_up() const;
-    int round() const;
+    int32_t round_down() const;
+    int32_t round_up() const;
+    int32_t round() const;
 
     bool is_valid() const;
 
-    int numerator = 0;
-    int denominator = 1;
+    int32_t numerator = 0;
+    int32_t denominator = 1;
   };
 
 

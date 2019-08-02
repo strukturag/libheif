@@ -327,6 +327,13 @@ HeifContext::HeifContext()
 
 HeifContext::~HeifContext()
 {
+  // Break circular references
+  for (auto& it : m_all_images) {
+    std::shared_ptr<Image> image = it.second;
+    image->get_thumbnails().clear();
+    image->set_alpha_channel(nullptr);
+    image->set_depth_channel(nullptr);
+  }
 }
 
 Error HeifContext::read(std::shared_ptr<StreamReader> reader)
@@ -813,6 +820,12 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
       image_type=="iden" ||
       image_type=="iovl") {
     auto iref_box = m_heif_file->get_iref_box();
+    if (!iref_box) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data,
+                   "Derived image does not reference any other image items");
+    }
+
     std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
     // TODO: check whether this really can be recursive (e.g. overlay of grid images)
