@@ -82,7 +82,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   int height = heif_image_get_height(image, heif_channel_interleaved);
 
   int bitDepth;
-  int input_bpp = heif_image_get_bits_per_pixel(image, heif_channel_interleaved);
+  int input_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_interleaved);
   if (input_bpp>8) {
     bitDepth = 16;
   }

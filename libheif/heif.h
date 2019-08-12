@@ -793,8 +793,21 @@ int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 // Get the number of bits per pixel in the given image channel. Returns -1 if
 // a non-existing channel was given.
 // Note that the number of bits per pixel may be different for each color channel.
+// This function returns the number of bits used for storage of each pixel.
+// Especially for HDR images, this is probably not what you want. Have a look at
+// heif_image_get_bits_per_pixel_range() instead.
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
+
+
+// Get the number of bits per pixel in the given image channel. This function returns
+// the number of bits used for representing the pixel value, which might be smaller
+// than the number of bits used in memory.
+// For example, in 12bit HDR images, this function returns '12', while still 16 bits
+// are reserved for storage. For interleaved RGBA with 12 bit, this function also returns
+// '12', not '48' or '64' (heif_image_get_bits_per_pixel returns 64 in this case).
+LIBHEIF_API
+int heif_image_get_bits_per_pixel_range(const struct heif_image*,enum heif_channel channel);
 
 LIBHEIF_API
 int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);

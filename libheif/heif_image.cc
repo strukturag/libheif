@@ -109,7 +109,7 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
   m_colorspace = colorspace;
   m_chroma = chroma;
 }
-#include <iostream>
+
 bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   assert(width >= 0);
