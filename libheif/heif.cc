@@ -639,26 +639,7 @@ int heif_image_get_height(const struct heif_image* img,enum heif_channel channel
 
 int heif_image_get_bits_per_pixel(const struct heif_image* img,enum heif_channel channel)
 {
-  if (channel == heif_channel_interleaved) {
-    auto chroma = img->image->get_chroma_format();
-    switch (chroma) {
-    case heif_chroma_interleaved_RGB:
-      return 24;
-    case heif_chroma_interleaved_RGBA:
-      return 32;
-    case heif_chroma_interleaved_RRGGBB_BE:
-    case heif_chroma_interleaved_RRGGBB_LE:
-      return 48;
-    case heif_chroma_interleaved_RRGGBBAA_BE:
-    case heif_chroma_interleaved_RRGGBBAA_LE:
-      return 64;
-    default:
-      return -1; // invalid channel/chroma specification
-    }
-  }
-  else {
-    return (img->image->get_bits_per_pixel(channel) + 7) & ~7;
-  }
+  return img->image->get_storage_bits_per_pixel(channel);
 }
 
 

@@ -67,6 +67,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   std::set<enum heif_channel> get_channel_set() const;
 
+  int get_storage_bits_per_pixel(enum heif_channel channel) const;
+
   int get_bits_per_pixel(enum heif_channel channel) const;
 
   uint8_t* get_plane(enum heif_channel channel, int* out_stride);
