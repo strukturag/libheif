@@ -292,12 +292,31 @@ enum heif_brand {
   heif_heis, // scalable
   heif_hevm, // multiview sequence
   heif_hevs, // scalable sequence
-  heif_mif1
+  heif_mif1, // image, any coding algorithm
+  heif_msf1  // sequence, any coding algorithm
 };
 
 // input data should be at least 12 bytes
 LIBHEIF_API
 enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+// Returns one of these MIME types:
+// - image/heic           HEIF file using h265 compression
+// - image/heif           HEIF file using any other compression
+// - image/heic-sequence  HEIF image sequence using h265 compression
+// - image/heif-sequence  HEIF image sequence using any other compression
+// - image/jpeg    JPEG image
+// - image/png     PNG image
+// If the format could not be detected, an empty string is returned.
+//
+// Provide at least 12 bytes of input. With less input, its format might not
+// be detected. You may also provide more input to increase detection accuracy.
+//
+// Note that JPEG and PNG images cannot be decoded by libheif even though the
+// formats are detected by this function.
+LIBHEIF_API
+const char* heif_get_file_mime_type(const uint8_t* data, int len);
 
 
 

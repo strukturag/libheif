@@ -159,8 +159,85 @@ heif_brand heif_main_brand(const uint8_t* data, int len)
   else if (strcmp(brand, "mif1")==0) {
     return heif_mif1;
   }
+  else if (strcmp(brand, "msf1")==0) {
+    return heif_msf1;
+  }
   else {
     return heif_unknown_brand;
+  }
+}
+
+
+enum class TriBool {
+  No, Yes, Unknown
+};
+
+TriBool is_jpeg(const uint8_t* data, int len) {
+  if (len < 12) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE0 &&
+      data[4] == 0x00 && data[5] == 0x10 && data[6] == 0x4A && data[7] == 0x46 &&
+      data[8] == 0x49 && data[9] == 0x46 && data[10] == 0x00 && data[11] == 0x01) {
+    return TriBool::Yes;
+  }
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE1 &&
+      data[6] == 0x45 && data[7] == 0x78 && data[8] == 0x69 && data[9] == 0x66 &&
+      data[10] == 0x00 && data[11] == 0x00) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+TriBool is_png(const uint8_t* data, int len) {
+  if (len < 8) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0x89 && data[1]==0x50 && data[2]==0x4E && data[3]==0x47 &&
+      data[4] == 0x0D && data[5]==0x0A && data[6]==0x1A && data[7]==0x0A) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+const char* heif_get_file_mime_type(const uint8_t* data, int len)
+{
+  heif_brand mainBrand = heif_main_brand(data,len);
+
+  if (mainBrand == heif_heic ||
+      mainBrand == heif_heix ||
+      mainBrand == heif_heim ||
+      mainBrand == heif_heis) {
+    return "image/heic";
+  }
+  else if (mainBrand == heif_mif1) {
+    return "image/heif";
+  }
+  if (mainBrand == heif_hevc ||
+      mainBrand == heif_hevx ||
+      mainBrand == heif_hevm ||
+      mainBrand == heif_hevs) {
+    return "image/heic-sequence";
+  }
+  else if (mainBrand == heif_msf1) {
+    return "image/heif-sequence";
+  }
+  else if (is_jpeg(data,len)==TriBool::Yes) {
+    return "image/jpeg";
+  }
+  else if (is_png(data,len)==TriBool::Yes) {
+    return "image/png";
+  }
+  else {
+    return "";
   }
 }
 
