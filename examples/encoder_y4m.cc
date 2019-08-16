@@ -27,6 +27,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 
 
 Y4MEncoder::Y4MEncoder() {
