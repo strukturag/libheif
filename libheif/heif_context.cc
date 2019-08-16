@@ -128,8 +128,8 @@ public:
 
   uint32_t get_width() const { return m_output_width; }
   uint32_t get_height() const { return m_output_height; }
-  uint16_t get_rows() const { return m_rows; }
-  uint16_t get_columns() const { return m_columns; }
+  uint16_t get_rows() const { assert(m_rows<=256); return m_rows; }
+  uint16_t get_columns() const { assert(m_columns<=256); return m_columns; }
 
 private:
   uint16_t m_rows;
@@ -309,7 +309,7 @@ void ImageOverlay::get_background_color(uint16_t col[4]) const
 
 void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 {
-  assert(image_index>=0 && image_index<m_offsets.size());
+  assert(image_index<m_offsets.size());
   assert(x && y);
 
   *x = m_offsets[image_index].x;

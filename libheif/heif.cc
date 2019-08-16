@@ -159,8 +159,85 @@ heif_brand heif_main_brand(const uint8_t* data, int len)
   else if (strcmp(brand, "mif1")==0) {
     return heif_mif1;
   }
+  else if (strcmp(brand, "msf1")==0) {
+    return heif_msf1;
+  }
   else {
     return heif_unknown_brand;
+  }
+}
+
+
+enum class TriBool {
+  No, Yes, Unknown
+};
+
+TriBool is_jpeg(const uint8_t* data, int len) {
+  if (len < 12) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE0 &&
+      data[4] == 0x00 && data[5] == 0x10 && data[6] == 0x4A && data[7] == 0x46 &&
+      data[8] == 0x49 && data[9] == 0x46 && data[10] == 0x00 && data[11] == 0x01) {
+    return TriBool::Yes;
+  }
+  if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF && data[3] == 0xE1 &&
+      data[6] == 0x45 && data[7] == 0x78 && data[8] == 0x69 && data[9] == 0x66 &&
+      data[10] == 0x00 && data[11] == 0x00) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+TriBool is_png(const uint8_t* data, int len) {
+  if (len < 8) {
+    return TriBool::Unknown;
+  }
+
+  if (data[0] == 0x89 && data[1]==0x50 && data[2]==0x4E && data[3]==0x47 &&
+      data[4] == 0x0D && data[5]==0x0A && data[6]==0x1A && data[7]==0x0A) {
+    return TriBool::Yes;
+  }
+  else {
+    return TriBool::No;
+  }
+}
+
+
+const char* heif_get_file_mime_type(const uint8_t* data, int len)
+{
+  heif_brand mainBrand = heif_main_brand(data,len);
+
+  if (mainBrand == heif_heic ||
+      mainBrand == heif_heix ||
+      mainBrand == heif_heim ||
+      mainBrand == heif_heis) {
+    return "image/heic";
+  }
+  else if (mainBrand == heif_mif1) {
+    return "image/heif";
+  }
+  if (mainBrand == heif_hevc ||
+      mainBrand == heif_hevx ||
+      mainBrand == heif_hevm ||
+      mainBrand == heif_hevs) {
+    return "image/heic-sequence";
+  }
+  else if (mainBrand == heif_msf1) {
+    return "image/heif-sequence";
+  }
+  else if (is_jpeg(data,len)==TriBool::Yes) {
+    return "image/jpeg";
+  }
+  else if (is_png(data,len)==TriBool::Yes) {
+    return "image/png";
+  }
+  else {
+    return "";
   }
 }
 
@@ -315,9 +392,9 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
 
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
-                                                struct heif_image_handle** img)
+                                                struct heif_image_handle** imgHdl)
 {
-  if (!img) {
+  if (!imgHdl) {
     Error err(heif_error_Usage_error,
               heif_suberror_Null_pointer_argument);
     return err.error_struct(ctx->context.get());
@@ -338,9 +415,9 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
     return err.error_struct(ctx->context.get());
   }
 
-  *img = new heif_image_handle();
-  (*img)->image = image;
-  // (*img)->context = ctx->context;
+  *imgHdl = new heif_image_handle();
+  (*imgHdl)->image = image;
+  // (*imgHdl)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -530,13 +607,15 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 {
   auto depth_image = handle->image->get_depth_channel();
 
-  *out_depth_handle = new heif_image_handle();
-  (*out_depth_handle)->image = depth_image;
-
   if (depth_image->get_id() != depth_id) {
+    *out_depth_handle = nullptr;
+
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
     return err.error_struct(handle->image.get());
   }
+
+  *out_depth_handle = new heif_image_handle();
+  (*out_depth_handle)->image = depth_image;
 
   return Error::Ok.error_struct(handle->image.get());
 }
@@ -638,6 +717,12 @@ int heif_image_get_height(const struct heif_image* img,enum heif_channel channel
 
 
 int heif_image_get_bits_per_pixel(const struct heif_image* img,enum heif_channel channel)
+{
+  return img->image->get_storage_bits_per_pixel(channel);
+}
+
+
+int heif_image_get_bits_per_pixel_range(const struct heif_image* img,enum heif_channel channel)
 {
   return img->image->get_bits_per_pixel(channel);
 }
@@ -754,10 +839,12 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 }
 
 
+/*
 void heif_image_remove_color_profile(struct heif_image* image)
 {
   image->image->set_color_profile(nullptr);
 }
+*/
 
 
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,

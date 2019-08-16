@@ -27,6 +27,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 
 
 Y4MEncoder::Y4MEncoder() {
@@ -51,6 +52,10 @@ bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
   const uint8_t* yp = heif_image_get_plane_readonly(image, heif_channel_Y, &y_stride);
   const uint8_t* cbp = heif_image_get_plane_readonly(image, heif_channel_Cb, &cb_stride);
   const uint8_t* crp = heif_image_get_plane_readonly(image, heif_channel_Cr, &cr_stride);
+
+  assert(y_stride > 0);
+  assert(cb_stride > 0);
+  assert(cr_stride > 0);
 
   int yw = heif_image_get_width(image, heif_channel_Y);
   int yh = heif_image_get_height(image, heif_channel_Y);

@@ -38,6 +38,7 @@ The encoder supports:
 * save EXIF and XMP metadata
 * writing color profiles
 * 10 and 12 bit images
+* monochrome images
 
 ## API
 

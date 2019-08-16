@@ -133,6 +133,27 @@ int main(int argc, char** argv)
   const char* input_filename = argv[optind];
 
   // ==============================================================================
+  //   show MIME type
+
+  {
+    uint8_t buf[20];
+    FILE* fh = fopen(input_filename,"rb");
+    if (fh) {
+      std::cout << "MIME type: ";
+      int n = (int)fread(buf,1,20,fh);
+      const char* mime_type = heif_get_file_mime_type(buf,n);
+      if (*mime_type==0) {
+        std::cout << "unknown\n";
+      }
+      else {
+        std::cout << mime_type << "\n";
+      }
+
+      fclose(fh);
+    }
+  }
+
+  // ==============================================================================
 
   std::shared_ptr<heif_context> ctx(heif_context_alloc(),
                                     [] (heif_context* c) { heif_context_free(c); });

@@ -109,7 +109,7 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
   m_colorspace = colorspace;
   m_chroma = chroma;
 }
-#include <iostream>
+
 bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   assert(width >= 0);
@@ -215,6 +215,31 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
 }
 
 
+int HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) const
+{
+  if (channel == heif_channel_interleaved) {
+    auto chroma = get_chroma_format();
+    switch (chroma) {
+    case heif_chroma_interleaved_RGB:
+      return 24;
+    case heif_chroma_interleaved_RGBA:
+      return 32;
+    case heif_chroma_interleaved_RRGGBB_BE:
+    case heif_chroma_interleaved_RRGGBB_LE:
+      return 48;
+    case heif_chroma_interleaved_RRGGBBAA_BE:
+    case heif_chroma_interleaved_RRGGBBAA_LE:
+      return 64;
+    default:
+      return -1; // invalid channel/chroma specification
+    }
+  }
+  else {
+    return (get_bits_per_pixel(channel) + 7) & ~7;
+  }
+}
+
+
 int HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
@@ -274,7 +299,7 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
   src = src_image->get_plane(src_channel, &src_stride);
   dst = get_plane(dst_channel, &dst_stride);
 
-  int bpl = width * ((src_image->get_bits_per_pixel(src_channel)+7)/8);
+  int bpl = width * src_image->get_storage_bits_per_pixel(src_channel);
 
   for (int y=0;y<height;y++) {
     memcpy(dst+y*dst_stride, src+y*src_stride, bpl);

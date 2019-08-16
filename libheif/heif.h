@@ -292,12 +292,31 @@ enum heif_brand {
   heif_heis, // scalable
   heif_hevm, // multiview sequence
   heif_hevs, // scalable sequence
-  heif_mif1
+  heif_mif1, // image, any coding algorithm
+  heif_msf1  // sequence, any coding algorithm
 };
 
 // input data should be at least 12 bytes
 LIBHEIF_API
 enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+// Returns one of these MIME types:
+// - image/heic           HEIF file using h265 compression
+// - image/heif           HEIF file using any other compression
+// - image/heic-sequence  HEIF image sequence using h265 compression
+// - image/heif-sequence  HEIF image sequence using any other compression
+// - image/jpeg    JPEG image
+// - image/png     PNG image
+// If the format could not be detected, an empty string is returned.
+//
+// Provide at least 12 bytes of input. With less input, its format might not
+// be detected. You may also provide more input to increase detection accuracy.
+//
+// Note that JPEG and PNG images cannot be decoded by libheif even though the
+// formats are detected by this function.
+LIBHEIF_API
+const char* heif_get_file_mime_type(const uint8_t* data, int len);
 
 
 
@@ -793,8 +812,21 @@ int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 // Get the number of bits per pixel in the given image channel. Returns -1 if
 // a non-existing channel was given.
 // Note that the number of bits per pixel may be different for each color channel.
+// This function returns the number of bits used for storage of each pixel.
+// Especially for HDR images, this is probably not what you want. Have a look at
+// heif_image_get_bits_per_pixel_range() instead.
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
+
+
+// Get the number of bits per pixel in the given image channel. This function returns
+// the number of bits used for representing the pixel value, which might be smaller
+// than the number of bits used in memory.
+// For example, in 12bit HDR images, this function returns '12', while still 16 bits
+// are reserved for storage. For interleaved RGBA with 12 bit, this function also returns
+// '12', not '48' or '64' (heif_image_get_bits_per_pixel returns 64 in this case).
+LIBHEIF_API
+int heif_image_get_bits_per_pixel_range(const struct heif_image*,enum heif_channel channel);
 
 LIBHEIF_API
 int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
@@ -836,8 +868,9 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
                                                     const struct heif_color_profile_nclx* color_profile);
 
 
-LIBHEIF_API
-void heif_image_remove_color_profile(struct heif_image* image);
+// TODO: this function does not make any sense yet, since we currently cannot modify existing HEIF files.
+//LIBHEIF_API
+//void heif_image_remove_color_profile(struct heif_image* image);
 
 // Release heif_image.
 LIBHEIF_API
