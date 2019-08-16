@@ -392,9 +392,9 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
 
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
-                                                struct heif_image_handle** img)
+                                                struct heif_image_handle** imgHdl)
 {
-  if (!img) {
+  if (!imgHdl) {
     Error err(heif_error_Usage_error,
               heif_suberror_Null_pointer_argument);
     return err.error_struct(ctx->context.get());
@@ -415,9 +415,9 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
     return err.error_struct(ctx->context.get());
   }
 
-  *img = new heif_image_handle();
-  (*img)->image = image;
-  // (*img)->context = ctx->context;
+  *imgHdl = new heif_image_handle();
+  (*imgHdl)->image = image;
+  // (*imgHdl)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }
