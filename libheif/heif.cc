@@ -839,10 +839,12 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 }
 
 
+/*
 void heif_image_remove_color_profile(struct heif_image* image)
 {
   image->image->set_color_profile(nullptr);
 }
+*/
 
 
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,

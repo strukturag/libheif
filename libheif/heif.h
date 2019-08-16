@@ -868,8 +868,9 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
                                                     const struct heif_color_profile_nclx* color_profile);
 
 
-LIBHEIF_API
-void heif_image_remove_color_profile(struct heif_image* image);
+// TODO: this function does not make any sense yet, since we currently cannot modify existing HEIF files.
+//LIBHEIF_API
+//void heif_image_remove_color_profile(struct heif_image* image);
 
 // Release heif_image.
 LIBHEIF_API
