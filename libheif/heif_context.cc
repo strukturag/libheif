@@ -128,8 +128,8 @@ public:
 
   uint32_t get_width() const { return m_output_width; }
   uint32_t get_height() const { return m_output_height; }
-  uint16_t get_rows() const { return m_rows; }
-  uint16_t get_columns() const { return m_columns; }
+  uint16_t get_rows() const { assert(m_rows<=256); return m_rows; }
+  uint16_t get_columns() const { assert(m_columns<=256); return m_columns; }
 
 private:
   uint16_t m_rows;
