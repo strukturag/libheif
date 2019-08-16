@@ -607,13 +607,15 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 {
   auto depth_image = handle->image->get_depth_channel();
 
-  *out_depth_handle = new heif_image_handle();
-  (*out_depth_handle)->image = depth_image;
-
   if (depth_image->get_id() != depth_id) {
+    *out_depth_handle = nullptr;
+
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
     return err.error_struct(handle->image.get());
   }
+
+  *out_depth_handle = new heif_image_handle();
+  (*out_depth_handle)->image = depth_image;
 
   return Error::Ok.error_struct(handle->image.get());
 }
