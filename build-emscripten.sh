@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CORES=$(nproc --all)
 echo "Build using ${CORES} CPU cores"
 
-LIBDE265_VERSION=1.0.2
+LIBDE265_VERSION=1.0.3
 [ -s "libde265-${LIBDE265_VERSION}.tar.gz" ] || curl \
     -L \
     -o libde265-${LIBDE265_VERSION}.tar.gz \
@@ -47,10 +47,10 @@ emcc libheif/.libs/libheif.so \
     -s INVOKE_RUN=0 \
     -s DOUBLE_MODE=0 \
     -s PRECISE_F32=0 \
-    -s PRECISE_I64_MATH=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s USE_CLOSURE_COMPILER=0 \
     -s LEGACY_VM_SUPPORT=1 \
+    -s WASM=0 \
     --memory-init-file 0 \
     -O3 \
     -std=c++11 \
