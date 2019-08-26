@@ -95,7 +95,8 @@ int main(int argc, char** argv)
 
   std::unique_ptr<Encoder> encoder;
   if (output_filename.size() > 4 &&
-      output_filename.find(".jpg") == output_filename.size() - 4) {
+      (output_filename.find(".jpg") == output_filename.size() - 4 ||
+       output_filename.find(".jpeg") == output_filename.size() - 5)) {
 #if HAVE_LIBJPEG
     static const int kDefaultJpegQuality = 90;
     if (quality == -1) {
