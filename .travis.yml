@@ -36,6 +36,7 @@ env:
     - WITH_LIBDE265=1 WITH_X265=1 WITH_GRAPHICS=1 CMAKE=1
     - CHECK_LICENSES=1
     - CPPLINT=1
+    - TESTS=1
 
 matrix:
   exclude:
@@ -44,6 +45,8 @@ matrix:
       env: CHECK_LICENSES=1
     - compiler: clang
       env: CPPLINT=1
+    - compiler: clang
+      env: TESTS=1
     - compiler: clang
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
     - compiler: clang
@@ -84,6 +87,8 @@ matrix:
       env: CHECK_LICENSES=1
     - os: osx
       env: CPPLINT=1
+    - os: osx
+      env: TESTS=1
     - os: osx
       env: WITH_LIBDE265= WITH_X265= WITH_GRAPHICS=1
     - os: osx

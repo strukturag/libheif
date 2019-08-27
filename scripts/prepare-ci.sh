@@ -56,5 +56,8 @@ if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     else
         CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
     fi
+    if [ ! -z "$TESTS" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests"
+    fi
     ./configure $CONFIGURE_ARGS
 fi
