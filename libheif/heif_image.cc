@@ -75,6 +75,9 @@ HeifPixelImage::HeifPixelImage()
 
 HeifPixelImage::~HeifPixelImage()
 {
+  for (auto& iter : m_planes) {
+    delete[] iter.second.allocated_mem;
+  }
 }
 
 static int num_interleaved_pixels_per_plane(heif_chroma chroma) {
@@ -145,8 +148,8 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   plane.stride = (plane.stride+alignment-1) & ~(alignment-1);
 
   try {
-    plane.unaligned_mem.resize(height * plane.stride + alignment-1);
-    plane.mem = plane.unaligned_mem.data();
+    plane.allocated_mem = new uint8_t[height * plane.stride + alignment-1];
+    plane.mem = plane.allocated_mem;
 
     // shift beginning of image data to aligned memory position
 

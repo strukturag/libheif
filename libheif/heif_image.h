@@ -108,7 +108,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
     int bit_depth;
 
     uint8_t* mem; // aligned memory start
-    std::vector<uint8_t> unaligned_mem;
+    uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
     int stride;
   };
 
