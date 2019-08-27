@@ -70,17 +70,19 @@ AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
     [Disable visibility definitions.]),
     [HAVE_VISIBILITY=0],
     [gl_VISIBILITY])
-AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
-if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
-
 
 AC_ARG_ENABLE([tests], AS_HELP_STRING([--enable-tests],
-    [Enable compiling tests ('visibility' must be disabled).]))
+    [Enable compiling tests ('visibility' will be disabled).]))
 AS_IF([test "x$enable_tests" = "xyes"], [
     HAVE_TESTS=1
+    enable_visibility=no
+    HAVE_VISIBILITY=0
+    CFLAG_VISIBILITY=
 ])
 AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
 
+AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
+if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
 PKG_CHECK_MODULES([libde265], [libde265], [
     AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
@@ -213,7 +215,7 @@ AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
 AC_MSG_NOTICE([Examples: $enable_examples])
-AC_MSG_NOTICE([Tests: $enable_tests (tests require that 'visibility' is turned off)])
+AC_MSG_NOTICE([Tests: $enable_tests (tests will cause 'visibility' to be turned off)])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
