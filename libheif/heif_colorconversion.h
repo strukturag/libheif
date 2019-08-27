@@ -33,6 +33,10 @@ struct ColorState
   bool has_alpha = false;
   int  bits_per_pixel = 8;
 
+  ColorState() = default;
+  ColorState(heif_colorspace colorspace, heif_chroma chroma, bool has_alpha, int  bits_per_pixel)
+    : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel) {}
+
   bool operator==(const ColorState&) const;
 };
 
