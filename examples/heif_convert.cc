@@ -254,7 +254,7 @@ int main(int argc, char** argv)
           return 1;
         }
 
-        int bit_depth = 10; // TODO
+        int bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
 
         struct heif_image* depth_image;
         err = heif_decode_image(depth_handle,
