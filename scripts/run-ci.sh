@@ -127,6 +127,8 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         [ -s "examples/example_lowlevel.png" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "examples/example_highlevel.png" ] || exit 1
+        echo "Checking race tester ..."
+        go run tests/test-race.go examples/example.heic
     fi
 fi
 
