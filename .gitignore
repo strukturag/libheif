@@ -39,3 +39,4 @@ libheif/encoder-fuzzer
 libheif/file-fuzzer
 libheif/heif_version.h
 stamp-h1
+tests/test-race
