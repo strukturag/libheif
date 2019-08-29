@@ -324,7 +324,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
 
   *img = new heif_image_handle();
   (*img)->image = std::move(primary_image);
-  //(*img)->context = ctx->context;
+  (*img)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -417,7 +417,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 
   *imgHdl = new heif_image_handle();
   (*imgHdl)->image = image;
-  // (*imgHdl)->context = ctx->context;
+  (*imgHdl)->context = ctx->context;
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -467,6 +467,7 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
     if (thumb->get_id() == thumbnail_id) {
       *out_thumbnail_handle = new heif_image_handle();
       (*out_thumbnail_handle)->image = thumb;
+      (*out_thumbnail_handle)->context = handle->context;
 
       return Error::Ok.error_struct(handle->image.get());
     }
@@ -616,6 +617,7 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 
   *out_depth_handle = new heif_image_handle();
   (*out_depth_handle)->image = depth_image;
+  (*out_depth_handle)->context = handle->context;
 
   return Error::Ok.error_struct(handle->image.get());
 }
@@ -1752,6 +1754,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;
     (*out_image_handle)->image = image;
+    (*out_image_handle)->context = ctx->context;
   }
 
   return error_Ok;
@@ -1807,6 +1810,7 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
     if (thumbnail_image) {
       *out_image_handle = new heif_image_handle;
       (*out_image_handle)->image = thumbnail_image;
+      (*out_image_handle)->context = ctx->context;
     }
     else {
       *out_image_handle = nullptr;
