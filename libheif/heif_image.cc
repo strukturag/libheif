@@ -302,7 +302,7 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
   src = src_image->get_plane(src_channel, &src_stride);
   dst = get_plane(dst_channel, &dst_stride);
 
-  int bpl = width * src_image->get_storage_bits_per_pixel(src_channel);
+  int bpl = width * (src_image->get_storage_bits_per_pixel(src_channel) / 8);
 
   for (int y=0;y<height;y++) {
     memcpy(dst+y*dst_stride, src+y*src_stride, bpl);
