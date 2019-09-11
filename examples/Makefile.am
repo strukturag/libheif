@@ -9,11 +9,14 @@ examples_noinst = \
   heif-test \
   test-c-api
 
+dist_man_MANS =
+
 heif_convert_DEPENDENCIES = ../libheif/libheif.la
 heif_convert_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)/.
 heif_convert_LDFLAGS =
 heif_convert_LDADD = ../libheif/libheif.la
 heif_convert_SOURCES = encoder.cc encoder.h heif_convert.cc encoder_y4m.cc encoder_y4m.h
+dist_man_MANS += heif-convert.1
 
 
 if HAVE_LIBPNG
@@ -23,6 +26,7 @@ heif_thumbnailer_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir) $(libpng_CFLAGS)
 heif_thumbnailer_LDFLAGS = $(libpng_LIBS)
 heif_thumbnailer_LDADD = ../libheif/libheif.la
 heif_thumbnailer_SOURCES = encoder.cc encoder.h heif_thumbnailer.cc encoder_png.cc encoder_png.h
+dist_man_MANS += heif-thumbnailer.1
 endif
 
 if HAVE_LIBJPEG
@@ -42,12 +46,14 @@ heif_info_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)
 heif_info_LDFLAGS =
 heif_info_LDADD = ../libheif/libheif.la
 heif_info_SOURCES = heif_info.cc
+dist_man_MANS += heif-info.1
 
 heif_enc_DEPENDENCIES = ../libheif/libheif.la
 heif_enc_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)
 heif_enc_LDFLAGS =
 heif_enc_LDADD = ../libheif/libheif.la
 heif_enc_SOURCES = heif_enc.cc
+dist_man_MANS += heif-enc.1
 
 if HAVE_LIBJPEG
 heif_enc_CXXFLAGS += $(libjpeg_CFLAGS)
