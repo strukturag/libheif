@@ -57,7 +57,7 @@ heif_context_get_primary_image_handle(ctx, &handle);
 
 // decode the image and convert colorspace to RGB, saved as 24bit interleaved
 heif_image* img;
-heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_24bit, nullptr);
+heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
 
 int stride;
 const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
