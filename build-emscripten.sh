@@ -47,7 +47,6 @@ emcc libheif/.libs/libheif.so \
     -s INVOKE_RUN=0 \
     -s DOUBLE_MODE=0 \
     -s PRECISE_F32=0 \
-    -s PRECISE_I64_MATH=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s USE_CLOSURE_COMPILER=0 \
     -s LEGACY_VM_SUPPORT=1 \
