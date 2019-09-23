@@ -37,8 +37,9 @@ static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
 static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 
 // Artificial limit to avoid allocating too much memory.
-static const int MAX_IMAGE_WIDTH = 16384;
-static const int MAX_IMAGE_HEIGHT = 16384;
+// 32768^2 = 2 GB as YUV-4:2:0 or 4 GB as RGB32
+static const int MAX_IMAGE_WIDTH = 32768;
+static const int MAX_IMAGE_HEIGHT = 32768;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.
