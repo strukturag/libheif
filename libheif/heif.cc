@@ -1856,3 +1856,9 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
     return error_Ok;
   }
 }
+
+
+void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width)
+{
+  ctx->context->set_maximum_image_size_limit(maximum_width);
+}

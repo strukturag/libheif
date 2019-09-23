@@ -67,6 +67,11 @@ namespace heif {
 
     void set_max_decoding_threads(int max_threads) { m_max_decoding_threads = max_threads; }
 
+    void set_maximum_image_size_limit(int maximum_size) {
+      m_maximum_image_width_limit = maximum_size;
+      m_maximum_image_height_limit = maximum_size;
+    }
+
     Error read(std::shared_ptr<StreamReader> reader);
     Error read_from_file(const char* input_filename);
     Error read_from_memory(const void* data, size_t size, bool copy);
@@ -258,6 +263,9 @@ namespace heif {
     std::shared_ptr<HeifFile> m_heif_file;
 
     int m_max_decoding_threads = 4;
+
+    uint32_t m_maximum_image_width_limit;
+    uint32_t m_maximum_image_height_limit;
 
     Error interpret_heif_file();
 

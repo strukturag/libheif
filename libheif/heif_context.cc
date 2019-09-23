@@ -322,6 +322,9 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
 HeifContext::HeifContext()
 {
+  m_maximum_image_width_limit = MAX_IMAGE_WIDTH;
+  m_maximum_image_height_limit = MAX_IMAGE_HEIGHT;
+
   reset_to_empty_heif();
 }
 
@@ -681,11 +684,11 @@ Error HeifContext::interpret_heif_file()
 
         // --- check whether the image size is "too large"
 
-        if (width  >= static_cast<uint32_t>(MAX_IMAGE_WIDTH) ||
-            height >= static_cast<uint32_t>(MAX_IMAGE_HEIGHT)) {
+        if (width  >= m_maximum_image_width_limit ||
+            height >= m_maximum_image_height_limit) {
           std::stringstream sstr;
           sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-               << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+               << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
           return Error(heif_error_Memory_allocation_error,
                        heif_suberror_Security_limit_exceeded,
@@ -1146,8 +1149,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   }
 
 
-  const int w = grid.get_width();
-  const int h = grid.get_height();
+  const uint32_t w = grid.get_width();
+  const uint32_t h = grid.get_height();
   const int bpp = 8; // TODO: how do we know ?
 
 
@@ -1171,10 +1174,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   // --- generate image of full output size
 
-  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
     std::stringstream sstr;
     sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -1432,10 +1435,10 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   uint32_t w = overlay.get_canvas_width();
   uint32_t h = overlay.get_canvas_height();
 
-  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
     std::stringstream sstr;
     sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
