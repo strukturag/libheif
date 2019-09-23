@@ -42,7 +42,7 @@ AM_CONDITIONAL([HAVE_GO], [test "x$GO" != "xno" && test "x$GO" != "x"])
 AC_SUBST(HAVE_GO)
 
 AC_ARG_ENABLE([examples], AS_HELP_STRING([--disable-examples],
-    [Disable building examples.]), [enable_examples=no], [enable_examples=yes])
+    [Disable building examples.]), [], [enable_examples=yes])
 AM_CONDITIONAL([WITH_EXAMPLES], [test "x$enable_examples" = "xyes"])
 AC_SUBST(WITH_EXAMPLES)
 
