@@ -104,6 +104,23 @@ Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
+### macOS
+
+1. Install dependencies with Homebrew
+
+    ```
+    brew install automake make pkg-config x265 libde265 libjpeg
+    ```
+
+
+1. Configure and build project
+
+    ```
+    ./autogen.sh
+    ./configure
+    make
+    ```
+
 
 ## Compiling to JavaScript
 
@@ -124,6 +141,14 @@ Some example programs are provided in the `examples` directory.
 The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
 `heif-enc` lets you convert JPEG files to HEIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
+
+For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
+
+```
+cd examples/
+./heif-convert example.heic example.jpeg
+./heif-enc example-1.jpeg -o example.heif
+```
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
 
