@@ -1175,6 +1175,15 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
                                                 const struct heif_image_handle* image_handle,
                                                 const void* data, int size);
 
+// Add generic, proprietary metadata to an image. You have to specify an 'item_type' that will
+// identify your metadata. 'content_type' can be an additional type, or it can be NULL.
+// For example, this function can be used to add IPTC metadata (IIM stream, not XMP) to an image.
+// Even not standard, we propose to store IPTC data with item type="iptc", content_type=NULL.
+struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_type, const char* content_type);
+
 // --- heif_image allocation
 
 // Create a new image of the specified resolution and colorspace.

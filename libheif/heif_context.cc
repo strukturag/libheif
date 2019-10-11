@@ -1882,23 +1882,6 @@ Error HeifContext::add_exif_metadata(std::shared_ptr<Image> master_image, const 
                  "Could not find location of TIFF header in Exif metadata.");
   }
 
-  // create an infe box describing what kind of data we are storing (this also creates a new ID)
-
-  auto metadata_infe_box = m_heif_file->add_new_infe_box("Exif");
-  metadata_infe_box->set_hidden_item(true);
-
-  heif_item_id metadata_id = metadata_infe_box->get_item_ID();
-
-
-  // we assign this data to the image
-
-  m_heif_file->add_iref_reference(metadata_id,
-                                  fourcc("cdsc"), { master_image->get_id() });
-
-
-  // copy the Exif data into the file, store the pointer to it in an iloc box entry
-
-
 
   std::vector<uint8_t> data_array;
   data_array.resize(size+4);
@@ -1908,20 +1891,31 @@ Error HeifContext::add_exif_metadata(std::shared_ptr<Image> master_image, const 
   data_array[3] = (uint8_t) ((offset) & 0xFF);
   memcpy(data_array.data()+4, data, size);
 
-  m_heif_file->append_iloc_data(metadata_id, data_array);
 
-  return Error::Ok;
+  return add_generic_metadata(master_image,
+                              data_array.data(), (int)data_array.size(),
+                              "Exif", nullptr);
 }
 
 
 
 Error HeifContext::add_XMP_metadata(std::shared_ptr<Image> master_image, const void* data, int size)
 {
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml");
+}
+
+
+
+Error HeifContext::add_generic_metadata(std::shared_ptr<Image> master_image, const void* data, int size,
+                                        const char* item_type, const char* content_type)
+{
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto metadata_infe_box = m_heif_file->add_new_infe_box("mime");
-  metadata_infe_box->set_content_type("application/rdf+xml");
+  auto metadata_infe_box = m_heif_file->add_new_infe_box(item_type);
   metadata_infe_box->set_hidden_item(true);
+  if (content_type != nullptr) {
+    metadata_infe_box->set_content_type(content_type);
+  }
 
   heif_item_id metadata_id = metadata_infe_box->get_item_ID();
 
