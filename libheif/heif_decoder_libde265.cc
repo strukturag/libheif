@@ -184,7 +184,7 @@ static struct heif_error libde265_v2_push_data(void* decoder_raw, const void* da
 
   size_t ptr=0;
   while (ptr < size) {
-    if (ptr+4 > size) {
+    if (4 > size - ptr) {
       struct heif_error err = { heif_error_Decoder_plugin_error,
                                 heif_suberror_End_of_data,
                                 kEmptyString };
@@ -196,7 +196,7 @@ static struct heif_error libde265_v2_push_data(void* decoder_raw, const void* da
     uint32_t nal_size = (cdata[ptr]<<24) | (cdata[ptr+1]<<16) | (cdata[ptr+2]<<8) | (cdata[ptr+3]);
     ptr+=4;
 
-    if (ptr+nal_size > size) {
+    if (nal_size > size - ptr) {
       //sstr << "NAL size (" << size32 << ") exceeds available data in file ("
       //<< data_bytes_left_to_read << ")";
 
@@ -249,7 +249,7 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
 
   size_t ptr=0;
   while (ptr < size) {
-    if (ptr+4 > size) {
+    if (4 > size - ptr) {
       struct heif_error err = { heif_error_Decoder_plugin_error,
                                 heif_suberror_End_of_data,
                                 kEmptyString };
@@ -259,7 +259,7 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
     uint32_t nal_size = (cdata[ptr]<<24) | (cdata[ptr+1]<<16) | (cdata[ptr+2]<<8) | (cdata[ptr+3]);
     ptr+=4;
 
-    if (ptr+nal_size > size) {
+    if (nal_size > size - ptr) {
       struct heif_error err = { heif_error_Decoder_plugin_error,
                                 heif_suberror_End_of_data,
                                 kEmptyString };
