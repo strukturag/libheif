@@ -42,6 +42,13 @@ add_library(${PROJECT_NAME} SHARED
 # Needed to find libheif/heif_version.h while compiling the library
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_BINARY_DIR})
 
+# Propagate include/libheif to consume the headers from other projects
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC 
         LIBHEIF_EXPORTS
