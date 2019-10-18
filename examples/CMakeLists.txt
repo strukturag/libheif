@@ -1,3 +1,6 @@
+# Needed to find libheif/heif_version.h while compiling the library
+include_directories(${PROJECT_BINARY_DIR})
+
 set (heif_convert_sources
   encoder.cc
   encoder.h
