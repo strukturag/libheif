@@ -63,7 +63,7 @@ if(LIBDE265_FOUND)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 
-    install(FILES heif_decoder_libde265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/heif)
+    install(FILES heif_decoder_libde265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
 if(X265_FOUND)
@@ -80,19 +80,20 @@ if(X265_FOUND)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
 
-    install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/heif)
+    install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
-write_basic_package_version_file(heifConfigVersion.cmake COMPATIBILITY ExactVersion)
+write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY ExactVersion)
 
-install(TARGETS ${PROJECT_NAME} EXPORT heifConfig
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Config
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(FILES ${libheif_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/heif)
+install(FILES ${libheif_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
-install(EXPORT heifConfig DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/heif")
+install(EXPORT ${PROJECT_NAME}Config DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/heifConfigVersion.cmake DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/heif")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake DESTINATION
+    "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
