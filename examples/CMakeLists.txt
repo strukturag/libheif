@@ -99,16 +99,16 @@ if(MSVC)
 endif()
 
 add_executable (heif-convert ${heif_convert_sources})
-target_link_libraries (heif-convert ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
+target_link_libraries (heif-convert ${PROJECT_NAME} ${additional_libraries})
 
 add_executable (heif-info ${heif_info_sources})
-target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
+target_link_libraries (heif-info ${PROJECT_NAME})
 
 add_executable (heif-enc ${heif_enc_sources})
-target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
+target_link_libraries (heif-enc ${PROJECT_NAME} ${additional_libraries})
 
 add_executable (heif-test ${heif_test_sources})
-target_link_libraries (heif-test ${LIBHEIF_LIBRARY_NAME})
+target_link_libraries (heif-test ${PROJECT_NAME})
 
 
 if(LIBPNG_FOUND)
@@ -121,5 +121,5 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_libraries (heif-thumbnailer ${LIBHEIF_LIBRARY_NAME} ${LIBPNG_LIBRARIES})
+  target_link_libraries (heif-thumbnailer ${PROJECT_NAME} ${LIBPNG_LIBRARIES})
 endif()

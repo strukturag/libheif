@@ -68,12 +68,14 @@ endif()
 add_definitions(-DHAVE_VISIBILITY)
 add_definitions(-DLIBHEIF_EXPORTS)
 
-add_library(${LIBHEIF_LIBRARY_NAME} SHARED ${libheif_sources})
+add_library(${PROJECT_NAME} SHARED ${libheif_sources})
+
 if(LIBDE265_FOUND)
-  target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
+    target_link_libraries(${PROJECT_NAME} ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 endif()
+
 if(X265_FOUND)
-  target_link_libraries(${LIBHEIF_LIBRARY_NAME} ${X265_LIBRARIES} ${X265_LINKDIR})
+    target_link_libraries(${PROJECT_NAME} ${X265_LIBRARIES} ${X265_LINKDIR})
 endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
   set_target_properties(${LIBHEIF_LIBRARY_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)

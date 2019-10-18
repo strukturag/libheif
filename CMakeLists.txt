@@ -59,12 +59,6 @@ endif()
 
 include_directories ("${PROJECT_SOURCE_DIR}")
 
-if(UNIX)
-  set(LIBHEIF_LIBRARY_NAME heif)
-else()
-  set(LIBHEIF_LIBRARY_NAME libheif)
-endif()
-
 add_subdirectory (examples)
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
