@@ -1,5 +1,6 @@
+cmake_minimum_required (VERSION 3.3.2)
+
 project (libheif)
-cmake_minimum_required (VERSION 2.8.8)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
