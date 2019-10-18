@@ -1,28 +1,33 @@
+include(CMakePackageConfigHelpers)
+
 set (libheif_sources
-bitstream.h
 bitstream.cc
 box.cc
-box.h
 error.cc
-error.h
-heif_api_structs.h
 heif.cc
 heif_context.cc
-heif_context.h
 heif_file.cc
+heif_image.cc
+heif_hevc.cc
+heif_colorconversion.cc
+heif_plugin_registry.cc
+heif_plugin.cc
+)
+
+set (libheif_headers
+bitstream.h
+box.h
+error.h
+heif_api_structs.h
+heif_context.h
 heif_file.h
 heif.h
-heif_image.cc
 heif_image.h
 heif_hevc.h
-heif_hevc.cc
 heif_colorconversion.h
-heif_colorconversion.cc
 heif_plugin_registry.h
-heif_plugin_registry.cc
 heif_limits.h
 heif_plugin.h
-heif_plugin.cc
 heif_version.h
 logging.h
 )
@@ -38,6 +43,9 @@ if(LIBDE265_FOUND)
   set (libheif_sources
     ${libheif_sources}
     heif_decoder_libde265.cc
+  )
+  set (libheif_headers
+    ${libheif_headers}
     heif_decoder_libde265.h
   )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBDE265_CFLAGS}")
@@ -53,6 +61,9 @@ if(X265_FOUND)
   set (libheif_sources
     ${libheif_sources}
     heif_encoder_x265.cc
+  )
+  set (libheif_headers
+    ${libheif_headers}
     heif_encoder_x265.h
   )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${X265_CFLAGS}")
@@ -68,7 +79,7 @@ endif()
 add_definitions(-DHAVE_VISIBILITY)
 add_definitions(-DLIBHEIF_EXPORTS)
 
-add_library(${PROJECT_NAME} SHARED ${libheif_sources})
+add_library(${PROJECT_NAME} SHARED ${libheif_sources} ${libheif_headers})
 
 if(LIBDE265_FOUND)
     target_link_libraries(${PROJECT_NAME} ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
