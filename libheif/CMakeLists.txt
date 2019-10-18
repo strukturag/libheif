@@ -89,3 +89,20 @@ if(X265_FOUND)
     target_link_libraries(${PROJECT_NAME} ${X265_LIBRARIES} ${X265_LINKDIR})
 endif()
 
+# Install commands
+# --------------------------
+write_basic_package_version_file(heifConfigVersion.cmake COMPATIBILITY ExactVersion)
+
+install(TARGETS ${PROJECT_NAME} EXPORT heifConfig
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(FILES ${libheif_headers}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/heif)
+
+install(EXPORT heifConfig DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/heif")
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/heifConfigVersion.cmake DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/heif")
+# --------------------------
