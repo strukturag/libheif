@@ -28,7 +28,7 @@ heif_colorconversion.h
 heif_plugin_registry.h
 heif_limits.h
 heif_plugin.h
-heif_version.h
+${PROJECT_BINARY_DIR}/libheif/heif_version.h
 logging.h
 )
 

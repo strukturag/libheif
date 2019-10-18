@@ -2,11 +2,12 @@ cmake_minimum_required (VERSION 3.3.2)
 
 project (libheif
     LANGUAGES C CXX
-    VERSION 1.5.1
+    VERSION 1.6.0
 )
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
+include(GNUInstallDirs)
 
 # The version number.
 set (NUMERIC_VERSION 0x01060000)
@@ -33,10 +34,7 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
-configure_file (
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h.in"
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h"
-)
+configure_file ("libheif/heif_version.h.in" "libheif/heif_version.h")
 
 if(NOT MSVC)
   add_definitions(-Wall)
