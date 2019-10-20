@@ -112,15 +112,30 @@ Also install x265 and its development files if you want to use HEIF encoding.
     brew install automake make pkg-config x265 libde265 libjpeg
     ```
 
+1. Create temporary installation directory for architecture-independent files
 
-1. Configure and build project
+    ```
+    mkdir -p /tmp/libheif
+    ```
+
+1. Configure
 
     ```
     ./autogen.sh
-    ./configure
-    make
+    ./configure --prefix="/tmp/libheif"
     ```
 
+    See `./configure --help` for more options.
+
+1. Build and install
+
+    ```
+    make install
+    ```
+
+For example execute fresh compilation `/tmp/libheif/bin/heif-enc`.
+
+For an other compilation description see the [libheif Formula in Homebrew Core](https://github.com/Homebrew/homebrew-core/blob/master/Formula/libheif.rb).
 
 ## Compiling to JavaScript
 
