@@ -376,6 +376,16 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   output_state.colorspace = target_colorspace;
   output_state.chroma = target_chroma;
 
+  // If we convert to an interleaved format, we want alpha only if present in the
+  // interleaved output format.
+  // For planar formats, we include an alpha plane when included in the input.
+
+  if (num_interleaved_pixels_per_plane(target_chroma)>1) {
+    output_state.has_alpha = is_chroma_with_alpha(target_chroma);
+  }
+  else {
+    output_state.has_alpha = input_state.has_alpha;
+  }
 
   ColorConversionPipeline pipeline;
   bool success = pipeline.construct_pipeline(input_state, output_state);
