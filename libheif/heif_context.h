@@ -245,6 +245,9 @@ namespace heif {
 
     Error add_XMP_metadata(std::shared_ptr<Image> master_image, const void* data, int size);
 
+    Error add_generic_metadata(std::shared_ptr<Image> master_image, const void* data, int size,
+                               const char* item_type, const char* content_type);
+
     void write(StreamWriter& writer);
 
   private:

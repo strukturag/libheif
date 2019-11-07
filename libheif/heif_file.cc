@@ -461,7 +461,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-  } else if (item_type == "grid" ||
+  } else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
+	     item_type == "grid" ||
              item_type == "iovl" ||
              item_type == "Exif" ||
              (item_type == "mime" && content_type=="application/rdf+xml")) {

@@ -1858,6 +1858,22 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
 }
 
 
+struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_type, const char* content_type)
+{
+  Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
+                                                   item_type, content_type);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+  else {
+    return error_Ok;
+  }
+}
+
+
 void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width)
 {
   ctx->context->set_maximum_image_size_limit(maximum_width);
