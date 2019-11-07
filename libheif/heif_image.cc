@@ -752,7 +752,7 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    const int bpp = (plane.bit_depth + 7)/8;
+    const int bpp = get_storage_bits_per_pixel(channel)/8;
 
     int in_w = plane.width;
     int in_h = plane.height;
