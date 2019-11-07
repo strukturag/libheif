@@ -57,7 +57,7 @@
 #define UNUSED(x) (void)x
 
 static int usage(const char* command) {
-  fprintf(stderr, "USAGE: %s [-q quality] <filename> <output>\n", command);
+  fprintf(stderr, "USAGE: %s [-q quality 0..100] <filename> <output>\n", command);
   return 1;
 }
 
