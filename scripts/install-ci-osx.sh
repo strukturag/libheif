@@ -49,6 +49,12 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
+if [ ! -z "$REMOVE_PACKAGES" ] || [ ! -z "$INSTALL_PACKAGES" ]; then
+    # Need to update homebrew before installing / removing packages to make sure
+    # the correct version of ruby is used.
+    brew update
+fi
+
 if [ ! -z "$REMOVE_PACKAGES" ]; then
     echo "Removing packages $REMOVE_PACKAGES ..."
     for package in $REMOVE_PACKAGES; do
