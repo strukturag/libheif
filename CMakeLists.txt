@@ -5,8 +5,8 @@ cmake_minimum_required (VERSION 2.8.8)
 cmake_policy(SET CMP0054 NEW)
 
 # The version number.
-set (NUMERIC_VERSION 0x01050100)
-set (PACKAGE_VERSION 1.5.1)
+set (NUMERIC_VERSION 0x01060000)
+set (PACKAGE_VERSION 1.6.0)
 
 include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
