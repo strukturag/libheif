@@ -1676,6 +1676,9 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
     image = convert_colorspace(image, colorspace, chroma);
+    if (!image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
   }
 
 
