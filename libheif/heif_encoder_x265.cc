@@ -566,7 +566,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
 
 
-  int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
+  int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
 
   const x265_api* api = x265_api_get(bit_depth);
