@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3.2)
 
-project (libheif
+project (heif
     LANGUAGES C CXX
     VERSION 1.6.0
 )
