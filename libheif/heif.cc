@@ -1569,7 +1569,7 @@ struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder
 
 
 
-bool parse_boolean(const char* value)
+static bool parse_boolean(const char* value)
 {
   if (strcmp(value,"true")==0) {
     return true;
