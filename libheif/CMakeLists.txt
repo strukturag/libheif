@@ -24,7 +24,7 @@ set(libheif_headers
     ${PROJECT_BINARY_DIR}/libheif/heif_version.h
 )
 
-add_library(${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME}
     bitstream.cc
     box.cc
     error.cc

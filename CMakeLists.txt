@@ -56,6 +56,8 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
 if (has_potentially_evaluated_expression)
