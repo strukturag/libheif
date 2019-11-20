@@ -134,8 +134,8 @@ fi
 
 if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
     echo "Building with emscripten $EMSCRIPTEN_VERSION ..."
-    source ./emscripten/emsdk-portable/emsdk_env.sh && ./build-emscripten.sh
-    source ./emscripten/emsdk-portable/emsdk_env.sh && node scripts/test-javascript.js
+    source ./emscripten/emsdk/emsdk_env.sh && ./build-emscripten.sh
+    source ./emscripten/emsdk/emsdk_env.sh && node scripts/test-javascript.js
 fi
 
 if [ ! -z "$TARBALL" ]; then
