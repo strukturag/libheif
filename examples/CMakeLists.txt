@@ -74,26 +74,7 @@ set (heif_test_sources
 )
 
 if(MSVC)
-  set (heif_convert_sources
-    ${heif_convert_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_info_sources
-    ${heif_info_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_enc_sources
-    ${heif_enc_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_test_sources
-    ${heif_test_sources}
+  set (getopt_sources
     ../extra/getopt.c
     ../extra/getopt.h
     ../extra/getopt_long.c
@@ -101,16 +82,16 @@ if(MSVC)
   include_directories ("../extra")
 endif()
 
-add_executable (heif-convert ${heif_convert_sources})
+add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
 target_link_libraries (heif-convert ${PROJECT_NAME} ${additional_libraries})
 
-add_executable (heif-info ${heif_info_sources})
+add_executable (heif-info ${heif_info_sources} ${getopt_sources})
 target_link_libraries (heif-info ${PROJECT_NAME})
 
-add_executable (heif-enc ${heif_enc_sources})
+add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
 target_link_libraries (heif-enc ${PROJECT_NAME} ${additional_libraries})
 
-add_executable (heif-test ${heif_test_sources})
+add_executable (heif-test ${heif_test_sources} ${getopt_sources})
 target_link_libraries (heif-test ${PROJECT_NAME})
 
 
