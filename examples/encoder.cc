@@ -30,15 +30,7 @@
 
 #include <stdlib.h>
 
-#if defined(HAVE_STRINGS_H)
-#include <strings.h>
-#endif
-
 #include "encoder.h"
-
-#if defined(_MSC_VER)
-#define strcasecmp _stricmp
-#endif
 
 static const char kMetadataTypeExif[] = "Exif";
 
