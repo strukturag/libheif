@@ -10,8 +10,7 @@ cmake_policy(SET CMP0054 NEW)
 include(GNUInstallDirs)
 
 # The version number.
-set (NUMERIC_VERSION 0x01060000)
-set (PACKAGE_VERSION 1.6.0)
+set (PACKAGE_VERSION ${PROJECT_VERSION})
 
 include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
