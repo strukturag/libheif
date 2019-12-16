@@ -12,7 +12,6 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION})
 
-include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
 CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
