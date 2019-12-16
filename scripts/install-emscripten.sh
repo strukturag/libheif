@@ -36,7 +36,7 @@ echo "Updating SDK ..."
 git pull --verbose
 
 echo "Installing SDK version ${VERSION} ..."
-./emsdk install sdk-${VERSION}-64bit
+./emsdk install sdk-fastcomp-${VERSION}-64bit
 
 echo "Activating SDK version ${VERSION} ..."
-./emsdk activate sdk-${VERSION}-64bit
+./emsdk activate sdk-fastcomp-${VERSION}-64bit
