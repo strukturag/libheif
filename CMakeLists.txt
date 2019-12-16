@@ -12,6 +12,11 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
+configure_file ("libheif/heif_version.h.in" "libheif/heif_version.h")
+
+
+# Check for unistd.h
+
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
 CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
@@ -20,7 +25,6 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
-configure_file ("libheif/heif_version.h.in" "libheif/heif_version.h")
 
 if(NOT MSVC)
   add_definitions(-Wall)
@@ -47,7 +51,6 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
 if (has_potentially_evaluated_expression)
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=potentially-evaluated-expression")
   add_definitions(-Wno-error=potentially-evaluated-expression)
 endif()
 
