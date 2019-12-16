@@ -24,12 +24,8 @@
 #include "config.h"
 #endif
 
-#if defined(HAVE_INTTYPES_H)
-#include <inttypes.h>
-#endif
-#if defined(HAVE_STDDEF_H)
-#include <stddef.h>
-#endif
+#include <cinttypes>
+#include <cstddef>
 
 static const size_t MAX_CHILDREN_PER_BOX = 20000;
 static const int MAX_ILOC_ITEMS = 20000;
