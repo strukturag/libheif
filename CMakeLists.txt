@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.3.2)
 
 project (heif
     LANGUAGES C CXX
-    VERSION 1.6.0
+    VERSION 1.6.0.0
 )
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
@@ -10,7 +10,7 @@ cmake_policy(SET CMP0054 NEW)
 include(GNUInstallDirs)
 
 # The version number.
-set (PACKAGE_VERSION ${PROJECT_VERSION})
+set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
