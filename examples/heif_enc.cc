@@ -545,7 +545,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   // OK, now we should have the png image in some way in
   // row_pointers, have fun with it
 
-  int band;
+  int band = 0;
   switch (color_type) {
   case PNG_COLOR_TYPE_GRAY:
   case PNG_COLOR_TYPE_GRAY_ALPHA:
