@@ -749,7 +749,7 @@ Error HeifContext::interpret_heif_file()
     std::string content_type = m_heif_file->get_content_type(id);
 
     // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
-    
+
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
     metadata->item_type = item_type;
@@ -1160,8 +1160,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   heif_item_id some_tile_id = image_references[0];
   heif_chroma tile_chroma = m_heif_file->get_image_chroma_from_configuration(some_tile_id);
 
-  const int cw = w/chroma_h_subsampling(tile_chroma);
-  const int ch = h/chroma_v_subsampling(tile_chroma);
+  const int cw = (w+chroma_h_subsampling(tile_chroma)-1)/chroma_h_subsampling(tile_chroma);
+  const int ch = (h+chroma_v_subsampling(tile_chroma)-1)/chroma_v_subsampling(tile_chroma);
 
   for (heif_item_id tile_id : image_references) {
     if (m_heif_file->get_image_chroma_from_configuration(tile_id) != tile_chroma) {
