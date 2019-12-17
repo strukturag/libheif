@@ -47,9 +47,9 @@ static gpointer begin_load(GdkPixbufModuleSizeFunc size_func, GdkPixbufModulePre
 	return hpc;
 }
 
-static void cleanup_heif_context(guchar* pixels, gpointer data)
+static void release_heif_image(guchar* pixels, gpointer data)
 {
-	heif_context_free((struct heif_context*) data);
+	heif_image_release((struct heif_image*) data);
 }
 
 static gboolean stop_load(gpointer context, GError** error)
@@ -92,8 +92,9 @@ static gboolean stop_load(gpointer context, GError** error)
 	height = heif_image_get_height(img, heif_channel_interleaved);
 	requested_width = 0;
 	requested_height = 0;
-	if(hpc->size_func)
+	if(hpc->size_func) {
 		(*hpc->size_func)(&requested_width, &requested_height, hpc->user_data);
+        }
 
 	if(requested_width == 0 || requested_height == 0) {
 		width = heif_image_get_width(img, heif_channel_interleaved);
@@ -107,23 +108,34 @@ static gboolean stop_load(gpointer context, GError** error)
 
 	data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 
-	pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8, width, height, stride, cleanup_heif_context, hc);
+	pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8, width, height, stride, release_heif_image, img);
 
-	if(hpc->prepare_func)
+	if(hpc->prepare_func) {
 		(*hpc->prepare_func)(pixbuf, NULL, hpc->user_data);
+        }
 
-	if(hpc->update_func != NULL)
+	if(hpc->update_func != NULL) {
 		(*hpc->update_func)(pixbuf, 0, 0, gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), hpc->user_data);
+        }
 
 	result = TRUE;
 
 cleanup:
-	if(img)
-		heif_image_release(img);
-	if(hdl)
+	if (img) {
+          // Do not free the image here when we pass it to gdk-pixbuf, as its memory will still be used by gdk-pixbuf.
+
+          if (!result) {
+            heif_image_release(img);
+          }
+        }
+
+	if(hdl) {
 		heif_image_handle_release(hdl);
-	if(!result)
-		heif_context_free(hc);
+        }
+
+        if (hc) {
+                heif_context_free(hc);
+        }
 
 	g_byte_array_free(hpc->data, TRUE);
 	g_free(hpc);
