@@ -25,12 +25,9 @@
 #include "config.h"
 #endif
 
-#if defined(HAVE_INTTYPES_H)
-#include <inttypes.h>
-#endif
-#if defined(HAVE_STDDEF_H)
-#include <stddef.h>
-#endif
+#include <cinttypes>
+#include <cstddef>
+
 #include <vector>
 #include <string>
 #include <memory>

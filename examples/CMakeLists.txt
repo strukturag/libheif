@@ -1,3 +1,6 @@
+# Needed to find libheif/heif_version.h while compiling the library
+include_directories(${PROJECT_BINARY_DIR})
+
 set (heif_convert_sources
   encoder.cc
   encoder.h
@@ -71,26 +74,7 @@ set (heif_test_sources
 )
 
 if(MSVC)
-  set (heif_convert_sources
-    ${heif_convert_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_info_sources
-    ${heif_info_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_enc_sources
-    ${heif_enc_sources}
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  set (heif_test_sources
-    ${heif_test_sources}
+  set (getopt_sources
     ../extra/getopt.c
     ../extra/getopt.h
     ../extra/getopt_long.c
@@ -98,17 +82,17 @@ if(MSVC)
   include_directories ("../extra")
 endif()
 
-add_executable (heif-convert ${heif_convert_sources})
-target_link_libraries (heif-convert ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
+add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
+target_link_libraries (heif-convert ${PROJECT_NAME} ${additional_libraries})
 
-add_executable (heif-info ${heif_info_sources})
-target_link_libraries (heif-info ${LIBHEIF_LIBRARY_NAME})
+add_executable (heif-info ${heif_info_sources} ${getopt_sources})
+target_link_libraries (heif-info ${PROJECT_NAME})
 
-add_executable (heif-enc ${heif_enc_sources})
-target_link_libraries (heif-enc ${LIBHEIF_LIBRARY_NAME} ${additional_libraries})
+add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
+target_link_libraries (heif-enc ${PROJECT_NAME} ${additional_libraries})
 
-add_executable (heif-test ${heif_test_sources})
-target_link_libraries (heif-test ${LIBHEIF_LIBRARY_NAME})
+add_executable (heif-test ${heif_test_sources} ${getopt_sources})
+target_link_libraries (heif-test ${PROJECT_NAME})
 
 
 if(LIBPNG_FOUND)
@@ -121,5 +105,5 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_libraries (heif-thumbnailer ${LIBHEIF_LIBRARY_NAME} ${LIBPNG_LIBRARIES})
+  target_link_libraries (heif-thumbnailer ${PROJECT_NAME} ${LIBPNG_LIBRARIES})
 endif()

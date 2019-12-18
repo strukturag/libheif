@@ -1,38 +1,30 @@
-project (libheif)
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 3.3.2)
+
+project (heif
+    LANGUAGES C CXX
+    VERSION 1.6.0.0
+)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
+include(GNUInstallDirs)
 
 # The version number.
-set (NUMERIC_VERSION 0x01060000)
-set (PACKAGE_VERSION 1.6.0)
+set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
+configure_file ("libheif/heif_version.h.in" "libheif/heif_version.h")
+
+
+# Check for unistd.h
+
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
-CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
-CHECK_INCLUDE_FILE(stddef.h HAVE_STDDEF_H)
-CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
 
-if (HAVE_INTTYPES_H)
-  add_definitions(-DHAVE_INTTYPES_H)
-endif()
-if (HAVE_STDDEF_H)
-  add_definitions(-DHAVE_STDDEF_H)
-endif()
-if (HAVE_STRINGS_H)
-  add_definitions(-DHAVE_STRINGS_H)
-endif()
 if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
-configure_file (
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h.in"
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h"
-)
 
 if(NOT MSVC)
   add_definitions(-Wall)
@@ -45,27 +37,24 @@ if(NOT MSVC)
   add_definitions(-Wno-error=deprecated-declarations)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-  set(GCC 1)
-  set(CMAKE_CXX_FLAGS "-std=gnu++0x ${CMAKE_CXX_FLAGS}")
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
 if (has_potentially_evaluated_expression)
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=potentially-evaluated-expression")
   add_definitions(-Wno-error=potentially-evaluated-expression)
 endif()
 
 include_directories ("${PROJECT_SOURCE_DIR}")
-
-if(UNIX)
-  set(LIBHEIF_LIBRARY_NAME heif)
-else()
-  set(LIBHEIF_LIBRARY_NAME libheif)
-endif()
 
 add_subdirectory (examples)
 add_subdirectory (libheif)
