@@ -2175,7 +2175,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   border_states.push_back({ -1, nullptr, { input_state, ColorConversionCosts() }});
 
   while (!border_states.empty()) {
-    size_t minIdx;
+    size_t minIdx = -1;
     float minCost;
     for (size_t i=0;i<border_states.size();i++) {
       float cost = border_states[i].color_state.costs.total(options.criterion);
@@ -2184,6 +2184,8 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
         minCost = cost;
       }
     }
+
+    assert(minIdx>=0);
 
 
     // move minimum-cost border_state into processed_states
