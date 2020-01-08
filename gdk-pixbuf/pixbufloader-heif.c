@@ -99,19 +99,19 @@ static gboolean stop_load(gpointer context, GError** error)
 
   width = heif_image_get_width(img, heif_channel_interleaved);
   height = heif_image_get_height(img, heif_channel_interleaved);
-  requested_width = 0;
-  requested_height = 0;
+  requested_width = width;
+  requested_height = height;
+
   if (hpc->size_func) {
     (*hpc->size_func)(&requested_width, &requested_height, hpc->user_data);
   }
 
-  if (requested_width == 0 || requested_height == 0) {
-    width = heif_image_get_width(img, heif_channel_interleaved);
-    height = heif_image_get_height(img, heif_channel_interleaved);
-  } else {
+  if (requested_width && requested_height) {
     struct heif_image* resized;
     heif_image_scale_image(img, &resized, requested_width, requested_height, NULL);
     heif_image_release(img);
+    width = requested_width;
+    height = requested_height;
     img = resized;
   }
 
