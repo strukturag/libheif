@@ -40,6 +40,9 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Create the compile command database for clang by default
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 include(CheckCXXCompilerFlag)
