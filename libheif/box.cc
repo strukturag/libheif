@@ -514,7 +514,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 
   // Security check: make sure that box size does not exceed int64 size.
 
-  if (hdr.get_box_size() > std::numeric_limits<int64_t>::max()) {
+  if (hdr.get_box_size() > (uint64_t)std::numeric_limits<int64_t>::max()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size);
   }
