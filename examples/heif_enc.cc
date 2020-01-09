@@ -649,8 +649,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
       for (uint32_t x = 0; x < nVal ; x++) {
         uint16_t v = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
-        p_out[2*x + y*stride + 0] = (v>>8);
-        p_out[2*x + y*stride + 1] = (v & 0xFF);
+        p_out[2*x + y*stride + 0] = (uint8_t)(v >> 8);
+        p_out[2*x + y*stride + 1] = (uint8_t)(v & 0xFF);
         p += 2;
       }
     }
