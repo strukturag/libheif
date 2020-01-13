@@ -6,6 +6,8 @@ if(UNIX)
   pkg_check_modules (X265 x265)
 endif()
 
+configure_file(heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
+
 set(libheif_headers
     bitstream.h
     box.h
@@ -21,7 +23,7 @@ set(libheif_headers
     heif_limits.h
     heif_plugin.h
     logging.h
-    ${PROJECT_BINARY_DIR}/libheif/heif_version.h
+    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h
 )
 
 add_library(${PROJECT_NAME}

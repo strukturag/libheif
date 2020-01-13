@@ -7,7 +7,7 @@ if(UNIX)
 
     add_library(pixbufloader-heif MODULE pixbufloader-heif.c)
 
-    target_include_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_INCLUDE_DIRS})
+    target_include_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_INCLUDE_DIRS} ${PROJECT_BINARY_DIR})
     target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} ${LIBHEIF_LIBRARY_NAME})
 
     install(TARGETS pixbufloader-heif LIBRARY DESTINATION ${GDKPIXBUF2_MODULE_DIR})

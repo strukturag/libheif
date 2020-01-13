@@ -12,9 +12,6 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-configure_file ("libheif/heif_version.h.in" "libheif/heif_version.h")
-
-
 # Check for unistd.h
 
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
