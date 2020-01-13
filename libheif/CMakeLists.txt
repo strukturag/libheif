@@ -1,11 +1,5 @@
 include(CMakePackageConfigHelpers)
 
-if(UNIX)
-  include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
-  pkg_check_modules (LIBDE265 libde265)
-  pkg_check_modules (X265 x265)
-endif()
-
 configure_file(heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_headers
