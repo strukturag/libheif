@@ -1,6 +1,6 @@
 if(UNIX)
-  include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
-  pkg_check_modules (GDKPIXBUF2 gdk-pixbuf-2.0)
+  find_package(PkgConfig)
+  pkg_check_modules(GDKPIXBUF2 gdk-pixbuf-2.0)
 
   if(GDKPIXBUF2_FOUND)
     execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} gdk-pixbuf-2.0 --variable gdk_pixbuf_moduledir OUTPUT_VARIABLE GDKPIXBUF2_MODULE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
