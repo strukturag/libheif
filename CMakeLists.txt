@@ -1,9 +1,6 @@
 cmake_minimum_required (VERSION 3.3.2)
 
-project (heif
-    LANGUAGES C CXX
-    VERSION 1.6.1.0
-)
+project(libheif LANGUAGES C CXX VERSION 1.6.1.0)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
@@ -50,8 +47,6 @@ CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentia
 if (has_potentially_evaluated_expression)
   add_definitions(-Wno-error=potentially-evaluated-expression)
 endif()
-
-include_directories ("${PROJECT_SOURCE_DIR}")
 
 add_subdirectory (examples)
 add_subdirectory (libheif)

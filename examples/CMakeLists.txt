@@ -1,5 +1,5 @@
 # Needed to find libheif/heif_version.h while compiling the library
-include_directories(${PROJECT_BINARY_DIR})
+include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
 
 set (heif_convert_sources
   encoder.cc
@@ -83,16 +83,16 @@ if(MSVC)
 endif()
 
 add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
-target_link_libraries (heif-convert ${PROJECT_NAME} ${additional_libraries})
+target_link_libraries (heif-convert heif ${additional_libraries})
 
 add_executable (heif-info ${heif_info_sources} ${getopt_sources})
-target_link_libraries (heif-info ${PROJECT_NAME})
+target_link_libraries (heif-info heif)
 
 add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
-target_link_libraries (heif-enc ${PROJECT_NAME} ${additional_libraries})
+target_link_libraries (heif-enc heif ${additional_libraries})
 
 add_executable (heif-test ${heif_test_sources} ${getopt_sources})
-target_link_libraries (heif-test ${PROJECT_NAME})
+target_link_libraries (heif-test heif)
 
 
 if(LIBPNG_FOUND)
@@ -105,5 +105,5 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_libraries (heif-thumbnailer ${PROJECT_NAME} ${LIBPNG_LIBRARIES})
+  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LIBRARIES})
 endif()
