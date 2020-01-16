@@ -1,10 +1,6 @@
 include(CMakePackageConfigHelpers)
 
-if(UNIX)
-  include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
-  pkg_check_modules (LIBDE265 libde265)
-  pkg_check_modules (X265 x265)
-endif()
+configure_file(heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_headers
     bitstream.h
@@ -21,10 +17,10 @@ set(libheif_headers
     heif_limits.h
     heif_plugin.h
     logging.h
-    ${PROJECT_BINARY_DIR}/libheif/heif_version.h
+    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h
 )
 
-add_library(${PROJECT_NAME}
+add_library(heif
     bitstream.cc
     box.cc
     error.cc
@@ -40,27 +36,31 @@ add_library(${PROJECT_NAME}
 )
 
 # Needed to find libheif/heif_version.h while compiling the library
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_BINARY_DIR})
+target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
 
 # Propagate include/libheif to consume the headers from other projects
-target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+target_include_directories(heif
+                           PUBLIC
+                               $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}>
+                               $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                               $<INSTALL_INTERFACE:include>)
 
-target_compile_definitions(${PROJECT_NAME}
-    PUBLIC 
-        LIBHEIF_EXPORTS
-        HAVE_VISIBILITY
-)
+set_target_properties(heif
+                      PROPERTIES
+                          VERSION ${PROJECT_VERSION}
+                          SOVERSION ${PROJECT_VERSION_MAJOR})
+
+target_compile_definitions(heif
+                           PUBLIC
+                               LIBHEIF_EXPORTS
+                               HAVE_VISIBILITY)
 
 if(LIBDE265_FOUND)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_LIBDE265=1)
-    target_sources(${PROJECT_NAME} PRIVATE
-        heif_decoder_libde265.cc
-        heif_decoder_libde265.h
-    )
+    target_compile_definitions(heif PRIVATE HAVE_LIBDE265=1)
+    target_sources(heif
+                   PRIVATE
+                       heif_decoder_libde265.cc
+                       heif_decoder_libde265.h)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBDE265_CFLAGS}")
 
@@ -68,14 +68,14 @@ if(LIBDE265_FOUND)
         set(LIBDE265_LINKDIR "-L${LIBDE265_LIBRARY_DIRS}")
     endif()
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
+    target_link_libraries(heif PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 
     install(FILES heif_decoder_libde265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
 if(X265_FOUND)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_X265=1)
-    target_sources(${PROJECT_NAME} PRIVATE
+    target_compile_definitions(heif PRIVATE HAVE_X265=1)
+    target_sources(heif PRIVATE
         heif_encoder_x265.cc
         heif_encoder_x265.h
     )
@@ -85,14 +85,14 @@ if(X265_FOUND)
         set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
     endif()
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
+    target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
 
     install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
-install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-config
+install(TARGETS heif EXPORT ${PROJECT_NAME}-config
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

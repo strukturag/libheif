@@ -598,7 +598,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   // x265 cannot encode images smaller than one CTU size
   // https://bitbucket.org/multicoreware/x265/issues/475/x265-does-not-allow-image-sizes-smaller
   // -> use smaller CTU sizes for very small images
-  char ctu_buf[4];
+  const char *ctu = NULL;
   int ctuSize = 64;
 #if 0
   while  (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
@@ -632,8 +632,25 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   }
 #endif
 
-  int s = snprintf(ctu_buf,4,"%d",ctuSize);
-  assert(s<4);
+  // ctuSize should be a power of 2 in [16;64]
+  switch (ctuSize) {
+  case 64:
+      ctu = "64";
+      break;
+  case 32:
+      ctu = "32";
+      break;
+  case 16:
+      ctu = "16";
+      break;
+  default:
+    struct heif_error err = {
+      heif_error_Encoder_plugin_error,
+      heif_suberror_Invalid_parameter_value,
+      kError_unsupported_image_size
+    };
+    return err;
+  }
 
   // BPG uses CQP. It does not seem to be better though.
   //  param->rc.rateControlMode = X265_RC_CQP;
@@ -643,7 +660,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "ctu", ctu_buf);
+  api->param_parse(param, "ctu", ctu);
   api->param_parse(param, "rskip", "0");
 
   api->param_parse(param, "rect", "1");
