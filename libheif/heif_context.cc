@@ -1813,7 +1813,10 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    image = image->convert_colorspace(colorspace, chroma);
+    image = convert_colorspace(image, colorspace, chroma);
+    if (!image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
   }
 
 

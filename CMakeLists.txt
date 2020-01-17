@@ -55,6 +55,7 @@ if (UNIX)
   find_package(PkgConfig)
   pkg_check_modules(LIBDE265 libde265)
   pkg_check_modules(X265 x265)
+  pkg_check_modules(AOM aom)
 endif()
 
 # Create libheif pkgconfig file
