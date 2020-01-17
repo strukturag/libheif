@@ -61,6 +61,8 @@ libheif_la_SOURCES = \
   heif_plugin_registry.cc \
   heif_plugin.h \
   heif_plugin.cc \
+  heif_colorconversion.h \
+  heif_colorconversion.cc \
   logging.h
 
 if HAVE_AOM
@@ -99,7 +101,8 @@ libheif_la_CXXFLAGS += -DHAVE_VISIBILITY
 endif
 
 if ENABLE_LIBFUZZER
-bin_PROGRAMS += box-fuzzer
+bin_PROGRAMS += box-fuzzer \
+  color-conversion-fuzzer
 if HAVE_LIBDE265
 bin_PROGRAMS += file-fuzzer
 endif
@@ -110,6 +113,7 @@ else
 noinst_LIBRARIES = libfuzzers.a
 libfuzzers_a_SOURCES = \
   box_fuzzer.cc \
+  color_conversion_fuzzer.cc \
   encoder_fuzzer.cc \
   file_fuzzer.cc
 endif
@@ -119,6 +123,12 @@ box_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
 box_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
 box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 box_fuzzer_SOURCES = $(libheif_la_SOURCES) box_fuzzer.cc
+
+color_conversion_fuzzer_DEPENDENCIES =
+color_conversion_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
+color_conversion_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
+color_conversion_fuzzer_LDADD = $(ADDITIONAL_LIBS)
+color_conversion_fuzzer_SOURCES = $(libheif_la_SOURCES) color_conversion_fuzzer.cc
 
 encoder_fuzzer_DEPENDENCIES =
 encoder_fuzzer_CXXFLAGS = $(libde265_CFLAGS)

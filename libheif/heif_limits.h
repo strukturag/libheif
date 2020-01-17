@@ -24,21 +24,18 @@
 #include "config.h"
 #endif
 
-#if defined(HAVE_INTTYPES_H)
-#include <inttypes.h>
-#endif
-#if defined(HAVE_STDDEF_H)
-#include <stddef.h>
-#endif
+#include <cinttypes>
+#include <cstddef>
 
-static const size_t MAX_CHILDREN_PER_BOX = 1024;
-static const int MAX_ILOC_ITEMS = 1024;
+static const size_t MAX_CHILDREN_PER_BOX = 20000;
+static const int MAX_ILOC_ITEMS = 20000;
 static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
 static const int MAX_MEMORY_BLOCK_SIZE = 50*1024*1024; // 50 MB
 
 // Artificial limit to avoid allocating too much memory.
-static const int MAX_IMAGE_WIDTH = 16384;
-static const int MAX_IMAGE_HEIGHT = 16384;
+// 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
+static const int MAX_IMAGE_WIDTH = 32768;
+static const int MAX_IMAGE_HEIGHT = 32768;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.
@@ -47,6 +44,6 @@ static const int MAX_BOX_NESTING_LEVEL = 20;
 static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
 static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 static const int64_t MAX_FILE_POS = 0x007FFFFFFFFFFFFFLL; // maximum file position
-static const int MAX_FRACTION_DENOMINATOR = 0x10000;
+static const int MAX_FRACTION_VALUE = 0x10000;
 
 #endif  // LIBHEIF_HEIF_LIMITS_H

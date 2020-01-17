@@ -10,7 +10,7 @@ if [ -z "$VERSION" ] || [ -z "$TARGET" ]; then
 fi
 
 LIBSTDC_BASE=http://de.archive.ubuntu.com/ubuntu/pool/main/g/gcc-5
-EMSDK_DOWNLOAD=https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
+EMSDK_DOWNLOAD=https://github.com/emscripten-core/emsdk.git
 
 CODENAME=$(/usr/bin/lsb_release --codename --short)
 if [ "$CODENAME" = "trusty" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21" ]; then
@@ -26,18 +26,17 @@ if [ "$CODENAME" = "trusty" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.
 fi
 
 cd "$TARGET"
-if [ ! -e emsdk-portable.tar.gz ]; then
-    echo "Downloading SDK base system ..."
-    curl "$EMSDK_DOWNLOAD" > emsdk-portable.tar.gz
-    tar xf emsdk-portable.tar.gz
+if [ ! -d emsdk ]; then
+    echo "Cloning SDK base system ..."
+    git clone --verbose --recursive "$EMSDK_DOWNLOAD" emsdk
 fi
 
-cd emsdk-portable
+cd emsdk
 echo "Updating SDK ..."
-./emsdk update
+git pull --verbose
 
 echo "Installing SDK version ${VERSION} ..."
-./emsdk install sdk-${VERSION}-64bit
+./emsdk install sdk-fastcomp-${VERSION}-64bit
 
 echo "Activating SDK version ${VERSION} ..."
-./emsdk activate sdk-${VERSION}-64bit
+./emsdk activate sdk-fastcomp-${VERSION}-64bit

@@ -34,8 +34,7 @@ Makefile.in
 m4/libtool.m4
 missing
 out.bin
-libheif/box-fuzzer
-libheif/encoder-fuzzer
-libheif/file-fuzzer
+libheif/*-fuzzer
 libheif/heif_version.h
 stamp-h1
+tests/test-race

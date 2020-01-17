@@ -1,7 +1,7 @@
-thumbnailer_dir = $(prefix)/share/thumbnailers
+thumbnailer_dir = $(datadir)/thumbnailers
 thumbnailer__DATA = heif.thumbnailer
 
-mime_dir = $(prefix)/share/mime/packages
+mime_dir = $(datadir)/mime/packages
 mime__DATA = heif.xml
 
 EXTRA_DIST = \

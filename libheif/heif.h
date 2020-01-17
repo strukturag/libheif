@@ -292,7 +292,8 @@ enum heif_brand {
   heif_heis, // scalable
   heif_hevm, // multiview sequence
   heif_hevs, // scalable sequence
-  heif_mif1,
+  heif_mif1, // image, any coding algorithm
+  heif_msf1, // sequence, any coding algorithm
   heif_avif,
   heif_avis
 };
@@ -300,6 +301,24 @@ enum heif_brand {
 // input data should be at least 12 bytes
 LIBHEIF_API
 enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+// Returns one of these MIME types:
+// - image/heic           HEIF file using h265 compression
+// - image/heif           HEIF file using any other compression
+// - image/heic-sequence  HEIF image sequence using h265 compression
+// - image/heif-sequence  HEIF image sequence using any other compression
+// - image/jpeg    JPEG image
+// - image/png     PNG image
+// If the format could not be detected, an empty string is returned.
+//
+// Provide at least 12 bytes of input. With less input, its format might not
+// be detected. You may also provide more input to increase detection accuracy.
+//
+// Note that JPEG and PNG images cannot be decoded by libheif even though the
+// formats are detected by this function.
+LIBHEIF_API
+const char* heif_get_file_mime_type(const uint8_t* data, int len);
 
 
 
@@ -417,6 +436,10 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 // the output having a specific format. At best, you should not use this at all.
 LIBHEIF_API
 void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
+
+
+LIBHEIF_API
+void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
 
 
 // ========================= heif_image_handle =========================
@@ -658,6 +681,22 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
                                                            struct heif_color_profile_nclx** out_data);
 
 
+LIBHEIF_API
+enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image);
+
+LIBHEIF_API
+size_t heif_image_get_raw_color_profile_size(const struct heif_image* image);
+
+LIBHEIF_API
+struct heif_error heif_image_get_raw_color_profile(const struct heif_image* image,
+                                                   void* out_data);
+
+LIBHEIF_API
+struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
+                                                    struct heif_color_profile_nclx** out_data);
+
+
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
@@ -780,8 +819,21 @@ int heif_image_get_height(const struct heif_image*,enum heif_channel channel);
 // Get the number of bits per pixel in the given image channel. Returns -1 if
 // a non-existing channel was given.
 // Note that the number of bits per pixel may be different for each color channel.
+// This function returns the number of bits used for storage of each pixel.
+// Especially for HDR images, this is probably not what you want. Have a look at
+// heif_image_get_bits_per_pixel_range() instead.
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*,enum heif_channel channel);
+
+
+// Get the number of bits per pixel in the given image channel. This function returns
+// the number of bits used for representing the pixel value, which might be smaller
+// than the number of bits used in memory.
+// For example, in 12bit HDR images, this function returns '12', while still 16 bits
+// are reserved for storage. For interleaved RGBA with 12 bit, this function also returns
+// '12', not '48' or '64' (heif_image_get_bits_per_pixel returns 64 in this case).
+LIBHEIF_API
+int heif_image_get_bits_per_pixel_range(const struct heif_image*,enum heif_channel channel);
 
 LIBHEIF_API
 int heif_image_has_channel(const struct heif_image*, enum heif_channel channel);
@@ -821,6 +873,11 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
 LIBHEIF_API
 struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
                                                     const struct heif_color_profile_nclx* color_profile);
+
+
+// TODO: this function does not make any sense yet, since we currently cannot modify existing HEIF files.
+//LIBHEIF_API
+//void heif_image_remove_color_profile(struct heif_image* image);
 
 // Release heif_image.
 LIBHEIF_API
@@ -1121,6 +1178,16 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
                                                 const struct heif_image_handle* image_handle,
                                                 const void* data, int size);
 
+// Add generic, proprietary metadata to an image. You have to specify an 'item_type' that will
+// identify your metadata. 'content_type' can be an additional type, or it can be NULL.
+// For example, this function can be used to add IPTC metadata (IIM stream, not XMP) to an image.
+// Even not standard, we propose to store IPTC data with item type="iptc", content_type=NULL.
+LIBHEIF_API
+struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_type, const char* content_type);
+
 // --- heif_image allocation
 
 // Create a new image of the specified resolution and colorspace.
@@ -1132,6 +1199,11 @@ struct heif_error heif_image_create(int width, int height,
                                     enum heif_chroma chroma,
                                     struct heif_image** out_image);
 
+// The indicated bit_depth corresponds to the bit depth per channel.
+// I.e. for interleaved formats like RRGGBB, the bit_depth would be, e.g., 10 bit instead
+// of 30 bits or 3*16=48 bits.
+// For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
+// instead of the preferred 8 bits.
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,

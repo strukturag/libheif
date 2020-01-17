@@ -38,6 +38,7 @@ The encoder supports:
 * save EXIF and XMP metadata
 * writing color profiles
 * 10 and 12 bit images
+* monochrome images
 
 ## API
 
@@ -56,7 +57,7 @@ heif_context_get_primary_image_handle(ctx, &handle);
 
 // decode the image and convert colorspace to RGB, saved as 24bit interleaved
 heif_image* img;
-heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_24bit, nullptr);
+heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
 
 int stride;
 const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
@@ -103,6 +104,23 @@ Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
+### macOS
+
+1. Install dependencies with Homebrew
+
+    ```
+    brew install automake make pkg-config x265 libde265 libjpeg
+    ```
+
+
+1. Configure and build project
+
+    ```
+    ./autogen.sh
+    ./configure
+    make
+    ```
+
 
 ## Compiling to JavaScript
 
@@ -123,6 +141,14 @@ Some example programs are provided in the `examples` directory.
 The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
 `heif-enc` lets you convert JPEG files to HEIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
+
+For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
+
+```
+cd examples/
+./heif-convert example.heic example.jpeg
+./heif-enc example-1.jpeg -o example.heif
+```
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
 

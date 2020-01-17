@@ -128,8 +128,8 @@ public:
 
   uint32_t get_width() const { return m_output_width; }
   uint32_t get_height() const { return m_output_height; }
-  uint16_t get_rows() const { return m_rows; }
-  uint16_t get_columns() const { return m_columns; }
+  uint16_t get_rows() const { assert(m_rows<=256); return m_rows; }
+  uint16_t get_columns() const { assert(m_columns<=256); return m_columns; }
 
 private:
   uint16_t m_rows;
@@ -309,7 +309,7 @@ void ImageOverlay::get_background_color(uint16_t col[4]) const
 
 void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 {
-  assert(image_index>=0 && image_index<m_offsets.size());
+  assert(image_index<m_offsets.size());
   assert(x && y);
 
   *x = m_offsets[image_index].x;
@@ -322,11 +322,21 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
 HeifContext::HeifContext()
 {
+  m_maximum_image_width_limit = MAX_IMAGE_WIDTH;
+  m_maximum_image_height_limit = MAX_IMAGE_HEIGHT;
+
   reset_to_empty_heif();
 }
 
 HeifContext::~HeifContext()
 {
+  // Break circular references
+  for (auto& it : m_all_images) {
+    std::shared_ptr<Image> image = it.second;
+    image->get_thumbnails().clear();
+    image->set_alpha_channel(nullptr);
+    image->set_depth_channel(nullptr);
+  }
 }
 
 Error HeifContext::read(std::shared_ptr<StreamReader> reader)
@@ -675,11 +685,11 @@ Error HeifContext::interpret_heif_file()
 
         // --- check whether the image size is "too large"
 
-        if (width  >= static_cast<uint32_t>(MAX_IMAGE_WIDTH) ||
-            height >= static_cast<uint32_t>(MAX_IMAGE_HEIGHT)) {
+        if (width  > m_maximum_image_width_limit ||
+            height > m_maximum_image_height_limit) {
           std::stringstream sstr;
           sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-               << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+               << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
           return Error(heif_error_Memory_allocation_error,
                        heif_suberror_Security_limit_exceeded,
@@ -738,45 +748,45 @@ Error HeifContext::interpret_heif_file()
   for (heif_item_id id : image_IDs) {
     std::string item_type    = m_heif_file->get_item_type(id);
     std::string content_type = m_heif_file->get_content_type(id);
-    if (item_type == "Exif" ||
-        (item_type=="mime" && content_type=="application/rdf+xml")) {
-      std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
-      metadata->item_id = id;
-      metadata->item_type = item_type;
-      metadata->content_type = content_type;
 
-      Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
-      if (err) {
-        return err;
-      }
+    // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
 
-      //std::cerr.write((const char*)data.data(), data.size());
+    std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
+    metadata->item_id = id;
+    metadata->item_type = item_type;
+    metadata->content_type = content_type;
+
+    Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
+    if (err) {
+      return err;
+    }
+
+    //std::cerr.write((const char*)data.data(), data.size());
 
 
-      // --- assign metadata to the image
+    // --- assign metadata to the image
 
-      if (iref_box) {
-        std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
-        for (const auto& ref : references) {
-          if (ref.header.get_short_type() == fourcc("cdsc")) {
-            std::vector<uint32_t> refs = ref.to_item_ID;
-            if (refs.size() != 1) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Unspecified,
-                           "Exif data not correctly assigned to image");
-            }
+    if (iref_box) {
+      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+      for (const auto& ref : references) {
+	if (ref.header.get_short_type() == fourcc("cdsc")) {
+	  std::vector<uint32_t> refs = ref.to_item_ID;
+	  if (refs.size() != 1) {
+	    return Error(heif_error_Invalid_input,
+			 heif_suberror_Unspecified,
+			 "Metadata not correctly assigned to image");
+	  }
 
-            uint32_t exif_image_id = refs[0];
-            auto img_iter = m_all_images.find(exif_image_id);
-            if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Exif data assigned to non-existing image");
-            }
+	  uint32_t exif_image_id = refs[0];
+	  auto img_iter = m_all_images.find(exif_image_id);
+	  if (img_iter == m_all_images.end()) {
+	    return Error(heif_error_Invalid_input,
+			 heif_suberror_Nonexisting_item_referenced,
+			 "Metadata assigned to non-existing image");
+	  }
 
-            img_iter->second->add_metadata(metadata);
-          }
-        }
+	  img_iter->second->add_metadata(metadata);
+	}
       }
     }
   }
@@ -814,6 +824,12 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
       image_type=="iden" ||
       image_type=="iovl") {
     auto iref_box = m_heif_file->get_iref_box();
+    if (!iref_box) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data,
+                   "Derived image does not reference any other image items");
+    }
+
     std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
     // TODO: check whether this really can be recursive (e.g. overlay of grid images)
@@ -879,7 +895,7 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
   if (different_chroma || different_colorspace) {
-    img = img->convert_colorspace(target_colorspace, target_chroma);
+    img = convert_colorspace(img, target_colorspace, target_chroma);
     if (!img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1144,8 +1160,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   }
 
 
-  const int w = grid.get_width();
-  const int h = grid.get_height();
+  const uint32_t w = grid.get_width();
+  const uint32_t h = grid.get_height();
   const int bpp = 8; // TODO: how do we know ?
 
 
@@ -1155,8 +1171,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   heif_item_id some_tile_id = image_references[0];
   heif_chroma tile_chroma = m_heif_file->get_image_chroma_from_configuration(some_tile_id);
 
-  const int cw = w/chroma_h_subsampling(tile_chroma);
-  const int ch = h/chroma_v_subsampling(tile_chroma);
+  const int cw = (w+chroma_h_subsampling(tile_chroma)-1)/chroma_h_subsampling(tile_chroma);
+  const int ch = (h+chroma_v_subsampling(tile_chroma)-1)/chroma_v_subsampling(tile_chroma);
 
   for (heif_item_id tile_id : image_references) {
     if (m_heif_file->get_image_chroma_from_configuration(tile_id) != tile_chroma) {
@@ -1169,10 +1185,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   // --- generate image of full output size
 
-  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
     std::stringstream sstr;
     sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -1430,10 +1446,10 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   uint32_t w = overlay.get_canvas_width();
   uint32_t h = overlay.get_canvas_height();
 
-  if (w >= MAX_IMAGE_WIDTH || h >= MAX_IMAGE_HEIGHT) {
+  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
     std::stringstream sstr;
     sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << MAX_IMAGE_WIDTH << "x" << MAX_IMAGE_HEIGHT << "\n";
+         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -1465,7 +1481,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
       return err;
     }
 
-    overlay_img = overlay_img->convert_colorspace(heif_colorspace_RGB, heif_chroma_444);
+    overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444);
     if (!overlay_img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1684,7 +1700,10 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    image = image->convert_colorspace(colorspace, chroma);
+    image = convert_colorspace(image, colorspace, chroma);
+    if (!image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
   }
 
 
@@ -2000,23 +2019,6 @@ Error HeifContext::add_exif_metadata(std::shared_ptr<Image> master_image, const 
                  "Could not find location of TIFF header in Exif metadata.");
   }
 
-  // create an infe box describing what kind of data we are storing (this also creates a new ID)
-
-  auto metadata_infe_box = m_heif_file->add_new_infe_box("Exif");
-  metadata_infe_box->set_hidden_item(true);
-
-  heif_item_id metadata_id = metadata_infe_box->get_item_ID();
-
-
-  // we assign this data to the image
-
-  m_heif_file->add_iref_reference(metadata_id,
-                                  fourcc("cdsc"), { master_image->get_id() });
-
-
-  // copy the Exif data into the file, store the pointer to it in an iloc box entry
-
-
 
   std::vector<uint8_t> data_array;
   data_array.resize(size+4);
@@ -2026,20 +2028,31 @@ Error HeifContext::add_exif_metadata(std::shared_ptr<Image> master_image, const 
   data_array[3] = (uint8_t) ((offset) & 0xFF);
   memcpy(data_array.data()+4, data, size);
 
-  m_heif_file->append_iloc_data(metadata_id, data_array);
 
-  return Error::Ok;
+  return add_generic_metadata(master_image,
+                              data_array.data(), (int)data_array.size(),
+                              "Exif", nullptr);
 }
 
 
 
 Error HeifContext::add_XMP_metadata(std::shared_ptr<Image> master_image, const void* data, int size)
 {
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml");
+}
+
+
+
+Error HeifContext::add_generic_metadata(std::shared_ptr<Image> master_image, const void* data, int size,
+                                        const char* item_type, const char* content_type)
+{
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto metadata_infe_box = m_heif_file->add_new_infe_box("mime");
-  metadata_infe_box->set_content_type("application/rdf+xml");
+  auto metadata_infe_box = m_heif_file->add_new_infe_box(item_type);
   metadata_infe_box->set_hidden_item(true);
+  if (content_type != nullptr) {
+    metadata_infe_box->set_content_type(content_type);
+  }
 
   heif_item_id metadata_id = metadata_infe_box->get_item_ID();
 

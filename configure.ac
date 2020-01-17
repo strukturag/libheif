@@ -1,11 +1,17 @@
 AC_PREREQ([2.68])
-AC_INIT([libheif], [1.4.0], [opensource@struktur.de])
+AC_INIT([libheif], [1.6.1], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
 # Note: do not forget to set the version in the CMakeLists.txt file accordingly
-NUMERIC_VERSION=0x01040000 # Numeric representation of the version (A.B.C[.D] = 0xAABBCCDD)
-AC_SUBST(NUMERIC_VERSION)
+PROJECT_VERSION_MAJOR=1
+PROJECT_VERSION_MINOR=6
+PROJECT_VERSION_PATCH=1
+PROJECT_VERSION_TWEAK=0
+AC_SUBST(PROJECT_VERSION_MAJOR)
+AC_SUBST(PROJECT_VERSION_MINOR)
+AC_SUBST(PROJECT_VERSION_PATCH)
+AC_SUBST(PROJECT_VERSION_TWEAK)
 
 # From https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html:
 # If the library source code has changed at all since the last update, then increment revision (‘c:r:a’ becomes ‘c:r+1:a’).
@@ -13,9 +19,9 @@ AC_SUBST(NUMERIC_VERSION)
 # If any interfaces have been added since the last public release, then increment age.
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 
-LIBHEIF_CURRENT=5
-LIBHEIF_REVISION=0
-LIBHEIF_AGE=4
+LIBHEIF_CURRENT=7
+LIBHEIF_REVISION=1
+LIBHEIF_AGE=6
 AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
 AC_SUBST(LIBHEIF_AGE)
@@ -42,7 +48,7 @@ AM_CONDITIONAL([HAVE_GO], [test "x$GO" != "xno" && test "x$GO" != "x"])
 AC_SUBST(HAVE_GO)
 
 AC_ARG_ENABLE([examples], AS_HELP_STRING([--disable-examples],
-    [Disable building examples.]), [enable_examples=no], [enable_examples=yes])
+    [Disable building examples.]), [], [enable_examples=yes])
 AM_CONDITIONAL([WITH_EXAMPLES], [test "x$enable_examples" = "xyes"])
 AC_SUBST(WITH_EXAMPLES)
 
@@ -70,6 +76,17 @@ AC_ARG_ENABLE([visibility], AS_HELP_STRING([--disable-visibility],
     [Disable visibility definitions.]),
     [HAVE_VISIBILITY=0],
     [gl_VISIBILITY])
+
+AC_ARG_ENABLE([tests], AS_HELP_STRING([--enable-tests],
+    [Enable compiling tests ('visibility' will be disabled).]))
+AS_IF([test "x$enable_tests" = "xyes"], [
+    HAVE_TESTS=1
+    enable_visibility=no
+    HAVE_VISIBILITY=0
+    CFLAG_VISIBILITY=
+])
+AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
+
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
@@ -197,8 +214,12 @@ if eval "test x$enable_multithreading != xno"; then
 fi
 AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
 
-CXXFLAGS="$CXXFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
-CFLAGS="$CFLAGS -Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter"
+WARNING_FLAGS="-Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter -Wno-error=deprecated-declarations"
+
+CXXFLAGS="$CXXFLAGS $WARNING_FLAGS"
+CFLAGS="$CFLAGS $WARNING_FLAGS"
+
+AC_C_CXX_COMPILE_FLAGS([-Wno-error=potentially-evaluated-expression])
 
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
@@ -211,6 +232,7 @@ AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
 AC_MSG_NOTICE([Examples: $enable_examples])
+AC_MSG_NOTICE([Tests: $enable_tests (tests will cause 'visibility' to be turned off)])
 AC_MSG_NOTICE([---------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
@@ -221,6 +243,7 @@ AC_CONFIG_FILES([gdk-pixbuf/Makefile])
 AC_CONFIG_FILES([go/Makefile])
 AC_CONFIG_FILES([gnome/Makefile])
 AC_CONFIG_FILES([scripts/Makefile])
+AC_CONFIG_FILES([tests/Makefile])
 AC_CONFIG_FILES([libheif/Makefile])
 AC_CONFIG_FILES([libheif/heif_version.h])
 AC_CONFIG_FILES([libheif.pc])

@@ -36,6 +36,8 @@
 #include <iostream>
 #include <sstream>
 #include <assert.h>
+#include <algorithm>
+#include <cctype>
 
 #include <libheif/heif.h>
 
@@ -55,7 +57,7 @@
 #define UNUSED(x) (void)x
 
 static int usage(const char* command) {
-  fprintf(stderr, "USAGE: %s [-q quality] <filename> <output>\n", command);
+  fprintf(stderr, "USAGE: %s [-q quality 0..100] <filename> <output>\n", command);
   return 1;
 }
 
@@ -94,33 +96,39 @@ int main(int argc, char** argv)
   std::string output_filename(argv[optind++]);
 
   std::unique_ptr<Encoder> encoder;
-  if (output_filename.size() > 4 &&
-      output_filename.find(".jpg") == output_filename.size() - 4) {
+
+  size_t dot_pos = output_filename.rfind('.');
+  if (dot_pos != std::string::npos) {
+    std::string suffix_lowercase = output_filename.substr(dot_pos+1);
+
+    std::transform(suffix_lowercase.begin(), suffix_lowercase.end(),
+                   suffix_lowercase.begin(), ::tolower);
+
+    if (suffix_lowercase == "jpg" || suffix_lowercase == "jpeg") {
 #if HAVE_LIBJPEG
-    static const int kDefaultJpegQuality = 90;
-    if (quality == -1) {
-      quality = kDefaultJpegQuality;
-    }
-    encoder.reset(new JpegEncoder(quality));
+      static const int kDefaultJpegQuality = 90;
+      if (quality == -1) {
+        quality = kDefaultJpegQuality;
+      }
+      encoder.reset(new JpegEncoder(quality));
 #else
-    fprintf(stderr, "JPEG support has not been compiled in.\n");
-    return 1;
+      fprintf(stderr, "JPEG support has not been compiled in.\n");
+      return 1;
 #endif  // HAVE_LIBJPEG
-  }
+    }
 
-  if (output_filename.size() > 4 &&
-      output_filename.find(".png") == output_filename.size() - 4) {
+    if (suffix_lowercase == "png") {
 #if HAVE_LIBPNG
-    encoder.reset(new PngEncoder());
+      encoder.reset(new PngEncoder());
 #else
-    fprintf(stderr, "PNG support has not been compiled in.\n");
-    return 1;
+      fprintf(stderr, "PNG support has not been compiled in.\n");
+      return 1;
 #endif  // HAVE_LIBPNG
-  }
+    }
 
-  if (output_filename.size() > 4 &&
-      output_filename.find(".y4m") == output_filename.size() - 4) {
-    encoder.reset(new Y4MEncoder());
+    if (suffix_lowercase == "y4m") {
+      encoder.reset(new Y4MEncoder());
+    }
   }
 
   if (!encoder) {
@@ -198,7 +206,7 @@ int main(int argc, char** argv)
     err = heif_context_get_image_handle(ctx, image_IDs[idx], &handle);
     if (err.code) {
       std::cerr << "Could not read HEIF image " << idx << ": "
-          << err.message << "\n";
+                << err.message << "\n";
       return 1;
     }
 
@@ -208,6 +216,8 @@ int main(int argc, char** argv)
 
     int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
     if (bit_depth < 0) {
+      heif_decoding_options_free(decode_options);
+      heif_image_handle_release(handle);
       std::cerr << "Input image has undefined bit-depth\n";
       return 1;
     }
@@ -222,7 +232,7 @@ int main(int argc, char** argv)
     if (err.code) {
       heif_image_handle_release(handle);
       std::cerr << "Could not decode HEIF image: " << idx << ": "
-          << err.message << "\n";
+                << err.message << "\n";
       return 1;
     }
 
@@ -251,7 +261,7 @@ int main(int argc, char** argv)
           return 1;
         }
 
-        int bit_depth = 10; // TODO
+        int bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
 
         struct heif_image* depth_image;
         err = heif_decode_image(depth_handle,

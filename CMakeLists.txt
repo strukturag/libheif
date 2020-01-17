@@ -1,65 +1,83 @@
-project (libheif)
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 3.3.2)
+
+project(libheif LANGUAGES C CXX VERSION 1.6.1.0)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
+include(GNUInstallDirs)
 
 # The version number.
-set (NUMERIC_VERSION 0x01040000)
-set (PACKAGE_VERSION 1.4.0)
+set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-include (${CMAKE_ROOT}/Modules/CheckCCompilerFlag.cmake)
+# Check for unistd.h
+
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
-CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
-CHECK_INCLUDE_FILE(stddef.h HAVE_STDDEF_H)
-CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
 
-if (HAVE_INTTYPES_H)
-  add_definitions(-DHAVE_INTTYPES_H)
-endif()
-if (HAVE_STDDEF_H)
-  add_definitions(-DHAVE_STDDEF_H)
-endif()
-if (HAVE_STRINGS_H)
-  add_definitions(-DHAVE_STRINGS_H)
-endif()
 if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
-configure_file (
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h.in"
-  "${PROJECT_SOURCE_DIR}/libheif/heif_version.h"
-)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-  set(GCC 1)
+if(NOT MSVC)
   add_definitions(-Wall)
   add_definitions(-Werror)
   add_definitions(-Wsign-compare)
   add_definitions(-Wconversion)
   add_definitions(-Wno-sign-conversion)
   add_definitions(-Wno-error=conversion)
-  set(CMAKE_CXX_FLAGS "-std=gnu++0x ${CMAKE_CXX_FLAGS}")
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  add_definitions(-Wall)
-  add_definitions(-Werror)
-  add_definitions(-Wsign-compare)
-  add_definitions(-Wconversion)
-  add_definitions(-Wno-sign-conversion)
-  add_definitions(-Wno-error=conversion)
-  set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+  add_definitions(-Wno-error=unused-parameter)
+  add_definitions(-Wno-error=deprecated-declarations)
 endif()
 
-include_directories ("${PROJECT_SOURCE_DIR}")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(UNIX)
-  set(LIBHEIF_LIBRARY_NAME heif)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Create the compile command database for clang by default
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG(-Wno-error=potentially-evaluated-expression has_potentially_evaluated_expression)
+if (has_potentially_evaluated_expression)
+  add_definitions(-Wno-error=potentially-evaluated-expression)
+endif()
+
+if (UNIX)
+  find_package(PkgConfig)
+  pkg_check_modules(LIBDE265 libde265)
+  pkg_check_modules(X265 x265)
+endif()
+
+# Create libheif pkgconfig file
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+set(libdir ${CMAKE_INSTALL_FULL_LIBDIR})
+set(includedir ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+if (LIBDE265_FOUND)
+    set(have_libde265 yes)
 else()
-  set(LIBHEIF_LIBRARY_NAME libheif)
+    set(have_libde265 no)
 endif()
+if (X265_FOUND)
+    set(have_x265 yes)
+else()
+    set(have_x265 no)
+endif()
+set(VERSION ${PROJECT_VERSION})
+
+configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 add_subdirectory (examples)
 add_subdirectory (libheif)
