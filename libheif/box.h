@@ -759,6 +759,10 @@ namespace heif {
     Box_pixi() { set_short_type(fourcc("pixi")); set_is_full_box(true); }
   Box_pixi(const BoxHeader& hdr) : Box(hdr) { }
 
+    int get_num_channels() const { return (int)m_bits_per_channel.size(); }
+
+    int get_bits_per_channel(int channel) const { return m_bits_per_channel[channel]; }
+
     std::string dump(Indent&) const override;
 
     Error write(StreamWriter& writer) const override;

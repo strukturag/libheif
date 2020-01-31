@@ -192,6 +192,9 @@ enum heif_suberror_code {
 
   heif_suberror_Invalid_image_size = 129,
 
+  heif_suberror_Invalid_pixi_box = 130,
+
+
   // --- Memory_allocation_error ---
 
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.

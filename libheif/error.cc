@@ -100,6 +100,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
   case heif_suberror_Wrong_tile_image_chroma_format: return "Wrong tile image chroma format";
   case heif_suberror_Invalid_fractional_number: return "Invalid fractional number";
   case heif_suberror_Invalid_image_size: return "Invalid image size";
+  case heif_suberror_Invalid_pixi_box: return "Invalid pixi box";
+
 
     // --- Memory_allocation_error ---
 

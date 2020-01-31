@@ -199,9 +199,10 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                  heif_suberror_No_ftyp_box);
   }
 
-  if (!m_ftyp_box->has_compatible_brand(fourcc("heic"))) {
+  if (!m_ftyp_box->has_compatible_brand(fourcc("heic")) &&
+      !m_ftyp_box->has_compatible_brand(fourcc("heix"))) {
     std::stringstream sstr;
-    sstr << "File does not support the 'heic' brand.\n";
+    sstr << "File does not include any supported brands.\n";
 
     return Error(heif_error_Unsupported_filetype,
                  heif_suberror_Unspecified,
