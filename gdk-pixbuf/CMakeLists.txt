@@ -12,7 +12,7 @@ if(UNIX)
                                    ${GDKPIXBUF2_INCLUDE_DIRS}
                                    ${libheif_BINARY_DIR}
                                    ${libheif_SOURCE_DIR})
-    target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} ${LIBHEIF_LIBRARY_NAME})
+    target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} heif)
 
     install(TARGETS pixbufloader-heif LIBRARY DESTINATION ${GDKPIXBUF2_MODULE_DIR})
   endif()
