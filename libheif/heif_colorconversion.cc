@@ -2443,6 +2443,13 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
   std::shared_ptr<HeifPixelImage> out = in;
 
   for (const auto& op : m_operations) {
+
+#if DEBUG_ME
+    std::cerr << "in colorspace:" << in->get_colorspace()
+              << " chroma: " << in->get_chroma_format()
+              << "\n";
+#endif
+
     out = op->convert_colorspace(in, m_target_state, m_options);
     assert(out);
 

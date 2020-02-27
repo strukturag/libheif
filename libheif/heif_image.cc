@@ -811,3 +811,20 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
   return Error::Ok;
 }
+
+
+void HeifPixelImage::debug_dump() const
+{
+  auto channels = get_channel_set();
+  for (auto c : channels) {
+    int stride;
+    const uint8_t* p = get_plane(c, &stride);
+
+    for (int y=0;y<8;y++) {
+      for (int x=0;x<8;x++) {
+        printf("%02x ", p[y*stride+x]);
+      }
+      printf("\n");
+    }
+  }
+}

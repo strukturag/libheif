@@ -101,6 +101,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   std::shared_ptr<const color_profile> get_color_profile() { return m_color_profile; }
 
+  void debug_dump() const;
+
  private:
   struct ImagePlane {
     int width;

@@ -1022,7 +1022,7 @@ Error HeifContext::decode_image(heif_item_id ID,
       // TODO: check that sizes are the same and that we have an Y channel
       // BUT: is there any indication in the standard that the alpha channel should have the same size?
 
-      img->transfer_plane_from_image_as(alpha, heif_channel_Y, heif_channel_Alpha);
+      img->transfer_plane_from_image_as(alpha, heif_channel_R, heif_channel_Alpha);
     }
   }
 
@@ -1098,8 +1098,7 @@ Error HeifContext::decode_image(heif_item_id ID,
 }
 
 
-// TODO: this function only works with YCbCr images, chroma 4:2:0, and 8 bpp at the moment
-// It will crash badly if we get anything else.
+// This function only works with RGB images.
 Error HeifContext::decode_full_grid_image(heif_item_id ID,
                                           std::shared_ptr<HeifPixelImage>& img,
                                           const std::vector<uint8_t>& grid_data) const
@@ -1161,20 +1160,14 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   // --- determine output image chroma size and make sure all tiles have same chroma
 
   assert(!image_references.empty());
-  heif_item_id some_tile_id = image_references[0];
+
+  heif_chroma tile_chroma = heif_chroma_444;
+  /* TODO: in the future, we might support RGB and mono as intermediate formats
   heif_chroma tile_chroma = m_heif_file->get_image_chroma_from_configuration(some_tile_id);
-
-  const int cw = (w+chroma_h_subsampling(tile_chroma)-1)/chroma_h_subsampling(tile_chroma);
-  const int ch = (h+chroma_v_subsampling(tile_chroma)-1)/chroma_v_subsampling(tile_chroma);
-
-  for (heif_item_id tile_id : image_references) {
-    if (m_heif_file->get_image_chroma_from_configuration(tile_id) != tile_chroma) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_grid_data,
-                   "Images in grid do not all have the same chroma format.");
-    }
+  if (tile_chroma != heif_chroma_monochrome) {
+    tile_chroma = heif_chroma_RGB;
   }
-
+  */
 
   // --- generate image of full output size
 
@@ -1191,8 +1184,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   img = std::make_shared<HeifPixelImage>();
   img->create(w,h,
-              heif_colorspace_YCbCr, // TODO: how do we know ?
-              tile_chroma);
+              heif_colorspace_RGB,
+              heif_chroma_444);
 
   int bpp = 8;
   if (pixi) {
@@ -1205,7 +1198,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     bpp = pixi->get_bits_per_channel(0);
   }
 
-  img->add_plane(heif_channel_Y,  w,h, bpp);
+  img->add_plane(heif_channel_R,  w,h, bpp);
 
 
   if (tile_chroma != heif_chroma_monochrome) {
@@ -1222,10 +1215,16 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
       bpp_c1 = pixi->get_bits_per_channel(1);
       bpp_c2 = pixi->get_bits_per_channel(2);
+
+      if (bpp_c1 != bpp || bpp_c2 != bpp) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Invalid_pixi_box,
+                     "Different number of bits per pixel in each channel.");
+      }
     }
 
-    img->add_plane(heif_channel_Cb, cw,ch, bpp_c1);
-    img->add_plane(heif_channel_Cr, cw,ch, bpp_c2);
+    img->add_plane(heif_channel_G, w,h, bpp);
+    img->add_plane(heif_channel_B, w,h, bpp);
   }
 
 
@@ -1337,7 +1336,6 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     return err;
   }
 
-
   const int w = img->get_width();
   const int h = img->get_height();
 
@@ -1359,6 +1357,7 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   }
 
   for (heif_channel channel : channels) {
+
     int tile_stride;
     uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
 
@@ -1373,19 +1372,10 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     int copy_width  = std::min(src_width, w - x0);
     int copy_height = std::min(src_height, h - y0);
 
-    copy_width *= tile_img->get_storage_bits_per_pixel(heif_channel_Y)/8;
+    copy_width *= tile_img->get_storage_bits_per_pixel(heif_channel_R)/8;
 
     int xs=x0, ys=y0;
-    xs *= tile_img->get_storage_bits_per_pixel(heif_channel_Y)/8;
-
-    if (channel != heif_channel_Y) {
-      int subH = chroma_h_subsampling(chroma);
-      int subV = chroma_v_subsampling(chroma);
-      copy_width /= subH;
-      copy_height /= subV;
-      xs /= subH;
-      ys /= subV;
-    }
+    xs *= tile_img->get_storage_bits_per_pixel(heif_channel_R)/8;
 
     for (int py=0;py<copy_height;py++) {
       memcpy(out_data + xs + (ys+py)*out_stride,
@@ -1575,8 +1565,6 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
       state=0;
     }
 
-    //printf("read c=%02x\n",c);
-
     if (c==0 && state<=1) {
       state++;
     }
@@ -1591,8 +1579,6 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
     else {
       state=0;
     }
-
-    //printf("-> state= %d\n",state);
 
     if (ptr == (int)data.size()) {
       start_code_start = (int)data.size();
