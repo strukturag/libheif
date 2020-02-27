@@ -45,6 +45,7 @@ void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
     struct heif_decoding_options *options) const {
   if (HasExifMetaData(handle)) {
     options->ignore_transformations = 1;
+    options->convert_hdr_to_8bit = 1;
   }
 }
 
@@ -176,8 +177,7 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   }
 
 
-  if (heif_image_handle_get_luma_bits_per_pixel(handle) != 8 ||
-      heif_image_handle_get_chroma_bits_per_pixel(handle) != 8) {
+  if (heif_image_get_bits_per_pixel(image, heif_channel_Y) != 8) {
     fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
     return false;
   }

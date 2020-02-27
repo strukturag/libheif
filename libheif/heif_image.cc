@@ -361,7 +361,8 @@ static bool is_chroma_with_alpha(heif_chroma chroma) {
 
 std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                          heif_colorspace target_colorspace,
-                                                         heif_chroma target_chroma)
+                                                         heif_chroma target_chroma,
+                                                         int output_bpp)
 {
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
@@ -385,6 +386,10 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   }
   else {
     output_state.has_alpha = input_state.has_alpha;
+  }
+
+  if (output_bpp) {
+    output_state.bits_per_pixel = output_bpp;
   }
 
   ColorConversionPipeline pipeline;

@@ -1995,6 +1995,109 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
 
 
 
+class Op_to_sdr_planes : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(ColorState input_state,
+                         ColorState target_state,
+                         ColorConversionOptions options) override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     ColorState target_state,
+                     ColorConversionOptions options) override;
+};
+
+
+std::vector<ColorStateWithCost>
+Op_to_sdr_planes::state_after_conversion(ColorState input_state,
+                                         ColorState target_state,
+                                         ColorConversionOptions options)
+{
+  if ((input_state.chroma != heif_chroma_monochrome &&
+       input_state.chroma != heif_chroma_420 &&
+       input_state.chroma != heif_chroma_422 &&
+       input_state.chroma != heif_chroma_444) ||
+      input_state.bits_per_pixel == 8) {
+    return { };
+  }
+
+  std::vector<ColorStateWithCost> states;
+
+  ColorState output_state;
+  ColorConversionCosts costs;
+
+  // --- decrease bit depth
+
+  output_state = input_state;
+  output_state.bits_per_pixel = 8;
+
+  costs = { 0.2f, 0.0f, 0.5f };
+
+  states.push_back({ output_state, costs });
+
+  return states;
+}
+
+
+std::shared_ptr<HeifPixelImage>
+Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                     ColorState target_state,
+                                     ColorConversionOptions options)
+{
+  int width = input->get_width();
+  int height = input->get_height();
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(width, height,
+                 input->get_colorspace(),
+                 input->get_chroma_format());
+
+  for (heif_channel channel : { heif_channel_Y,
+        heif_channel_Cb,
+        heif_channel_Cr,
+        heif_channel_R,
+        heif_channel_G,
+        heif_channel_B,
+        heif_channel_Alpha }) {
+    if (input->has_channel(channel)) {
+      int width = input->get_width(channel);
+      int height = input->get_height(channel);
+      outimg->add_plane(channel, width, height, 8);
+
+      int input_bits = input->get_bits_per_pixel(channel);
+
+      int shift = input_bits-8;
+
+      const uint16_t* p_in;
+      int stride_in;
+      p_in = (uint16_t*)input->get_plane(channel, &stride_in);
+      stride_in /= 2;
+
+      uint8_t* p_out;
+      int stride_out;
+      p_out = outimg->get_plane(channel, &stride_out);
+
+      for (int y=0;y<height;y++)
+        for (int x=0;x<width;x++) {
+          int in = p_in[y*stride_in+x];
+          p_out[y*stride_out+x] = (uint8_t)(in>>shift);
+        }
+    }
+  }
+
+  return outimg;
+}
+
+
+
+
+
+
+
+
 class Op_RRGGBBxx_HDR_to_YCbCr420 : public ColorConversionOperation
 {
 public:
@@ -2316,6 +2419,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   ops.push_back(std::make_shared<Op_RGB_HDR_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
+  ops.push_back(std::make_shared<Op_to_sdr_planes>());
   ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_YCbCr420_to_RRGGBBaa>());
 

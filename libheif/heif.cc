@@ -630,7 +630,7 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
-  options->version = 1;
+  options->version = 2;
 
   options->ignore_transformations = false;
 
@@ -638,6 +638,10 @@ heif_decoding_options* heif_decoding_options_alloc()
   options->on_progress = NULL;
   options->end_progress = NULL;
   options->progress_user_data = NULL;
+
+  // version 2
+
+  options->convert_hdr_to_8bit = false;
 
   return options;
 }

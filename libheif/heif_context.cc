@@ -895,8 +895,10 @@ Error HeifContext::decode_image_user(heif_item_id ID,
   bool different_chroma = (target_chroma != img->get_chroma_format());
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
+  int bpp = (options && options->convert_hdr_to_8bit) ? 8 : 0;
+
   if (different_chroma || different_colorspace) {
-    img = convert_colorspace(img, target_colorspace, target_chroma);
+    img = convert_colorspace(img, target_colorspace, target_chroma, bpp);
     if (!img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
