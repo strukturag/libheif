@@ -1059,6 +1059,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
         channel = heif_channel_R;
         break;
       case heif_colorspace_undefined:
+      default:
         return Error(heif_error_Invalid_input,
                      heif_suberror_Unsupported_color_conversion);
       }
