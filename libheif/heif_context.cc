@@ -872,22 +872,25 @@ int HeifContext::Image::get_chroma_bits_per_pixel() const
 }
 
 
-Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
-                                       heif_colorspace colorspace,
-                                       heif_chroma chroma,
-                                       const struct heif_decoding_options* options) const
+Error HeifContext::decode_image_user(heif_item_id ID,
+                                     std::shared_ptr<HeifPixelImage>& img,
+                                     heif_colorspace out_colorspace,
+                                     heif_chroma out_chroma,
+                                     const struct heif_decoding_options* options) const
 {
-  Error err = m_heif_context->decode_image(m_id, img, options);
+  Error err = decode_image_planar(ID, img, out_colorspace);
   if (err) {
     return err;
   }
 
-  heif_chroma target_chroma = (chroma == heif_chroma_undefined ?
-                               img->get_chroma_format() :
-                               chroma);
-  heif_colorspace target_colorspace = (colorspace == heif_colorspace_undefined ?
+  // --- convert to output chroma format
+
+  heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                        img->get_colorspace() :
-                                       colorspace);
+                                       out_colorspace);
+
+  heif_chroma target_chroma = (out_chroma == heif_chroma_undefined ?
+                               img->get_chroma_format() : out_chroma);
 
   bool different_chroma = (target_chroma != img->get_chroma_format());
   bool different_colorspace = (target_colorspace != img->get_colorspace());
@@ -899,13 +902,14 @@ Error HeifContext::Image::decode_image(std::shared_ptr<HeifPixelImage>& img,
     }
   }
 
-  return err;
+  return Error::Ok;
 }
 
 
-Error HeifContext::decode_image(heif_item_id ID,
-                                std::shared_ptr<HeifPixelImage>& img,
-                                const struct heif_decoding_options* options) const
+Error HeifContext::decode_image_planar(heif_item_id ID,
+                                       std::shared_ptr<HeifPixelImage>& img,
+                                       heif_colorspace out_colorspace,
+                                       const struct heif_decoding_options* options) const
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
@@ -941,6 +945,7 @@ Error HeifContext::decode_image(heif_item_id ID,
     //std::shared_ptr<HeifPixelImage>* decoded_img;
 
     heif_image* decoded_img = nullptr;
+
     err = decoder_plugin->decode_image(decoder, &decoded_img);
     if (err.code != heif_error_Ok) {
       decoder_plugin->free_decoder(decoder);
@@ -958,11 +963,30 @@ Error HeifContext::decode_image(heif_item_id ID,
 
     decoder_plugin->free_decoder(decoder);
 
-#if 0
-    FILE* fh = fopen("out.bin", "wb");
-    fwrite(data.data(), 1, data.size(), fh);
-    fclose(fh);
-#endif
+
+
+    // --- convert to output chroma format
+
+    heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
+                                         img->get_colorspace() :
+                                         out_colorspace);
+
+    if (target_colorspace==heif_colorspace_YCbCr) {
+      target_colorspace = heif_colorspace_RGB;
+    }
+
+    heif_chroma target_chroma = (target_colorspace == heif_colorspace_monochrome ?
+                                 heif_chroma_monochrome : heif_chroma_444);
+
+    bool different_chroma = (target_chroma != img->get_chroma_format());
+    bool different_colorspace = (target_colorspace != img->get_colorspace());
+
+    if (different_chroma || different_colorspace) {
+      img = convert_colorspace(img, target_colorspace, target_chroma);
+      if (!img) {
+        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+      }
+    }
   }
   else if (image_type == "grid") {
     std::vector<uint8_t> data;
@@ -1014,7 +1038,8 @@ Error HeifContext::decode_image(heif_item_id ID,
     std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
     if (alpha_image) {
       std::shared_ptr<HeifPixelImage> alpha;
-      Error err = alpha_image->decode_image(alpha);
+      Error err = decode_image_planar(alpha_image->get_id(), alpha,
+                                      heif_colorspace_undefined);
       if (err) {
         return err;
       }
@@ -1022,7 +1047,21 @@ Error HeifContext::decode_image(heif_item_id ID,
       // TODO: check that sizes are the same and that we have an Y channel
       // BUT: is there any indication in the standard that the alpha channel should have the same size?
 
-      img->transfer_plane_from_image_as(alpha, heif_channel_R, heif_channel_Alpha);
+      heif_channel channel;
+      switch (alpha->get_colorspace()) {
+      case heif_colorspace_YCbCr:
+      case heif_colorspace_monochrome:
+        channel = heif_channel_Y;
+        break;
+      case heif_colorspace_RGB:
+        channel = heif_channel_R;
+        break;
+      case heif_colorspace_undefined:
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unsupported_color_conversion);
+      }
+
+      img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
     }
   }
 
@@ -1331,7 +1370,7 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 
-  Error err = decode_image(tileID, tile_img);
+  Error err = decode_image_planar(tileID, tile_img, img->get_colorspace());
   if (err != Error::Ok) {
     return err;
   }
@@ -1413,7 +1452,8 @@ Error HeifContext::decode_derived_image(heif_item_id ID,
   heif_item_id reference_image_id = image_references[0];
 
 
-  Error error = decode_image(reference_image_id, img);
+  Error error = decode_image_planar(reference_image_id, img,
+                                    heif_colorspace_RGB); // TODO: always RGB ?
   return error;
 }
 
@@ -1489,7 +1529,8 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
 
   for (size_t i=0;i<image_references.size();i++) {
     std::shared_ptr<HeifPixelImage> overlay_img;
-    err = decode_image(image_references[i], overlay_img);
+    err = decode_image_planar(image_references[i], overlay_img,
+                              heif_colorspace_RGB); // TODO: always RGB? Probably yes, because of RGB background color.
     if (err != Error::Ok) {
       return err;
     }

@@ -40,7 +40,6 @@ extern "C" {
 //  1.1          1         1          1
 
 
-
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
@@ -82,13 +81,19 @@ struct heif_decoder_plugin
 
   // --- After pushing the data into the decoder, the decode functions may be called only once.
 
-  // Decode data into a full image. All data has to be pushed into the decoder before calling this.
   struct heif_error (*decode_image)(void* decoder, struct heif_image** out_img);
 
 
   // --- version 2 functions will follow below ... ---
 
+  // If not NULL, this can provide a specialized function to convert YCbCr to sRGB, because
+  // only the codec itself knows how to interpret the chroma samples and their locations.
+  /*
+  struct heif_error (*convert_YCbCr_to_sRGB)(void* decoder,
+                                             struct heif_image* in_YCbCr_img,
+                                             struct heif_image** out_sRGB_img);
 
+  */
 
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);

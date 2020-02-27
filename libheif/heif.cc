@@ -657,10 +657,12 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 {
   std::shared_ptr<HeifPixelImage> img;
 
-  Error err = in_handle->image->decode_image(img,
-                                             colorspace,
-                                             chroma,
-                                             options);
+  heif_item_id id = in_handle->image->get_id();
+
+  Error err = in_handle->context->decode_image_user(id, img,
+                                                    colorspace,
+                                                    chroma,
+                                                    options);
   if (err.error_code != heif_error_Ok) {
     return err.error_struct(in_handle->image.get());
   }

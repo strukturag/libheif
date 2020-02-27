@@ -109,6 +109,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
   int bpp = de265_get_bits_per_pixel(de265img, 0);
 
+  // TODO: what about monochrome images ?
   for (int c=0;c<3;c++) {
     if (de265_get_bits_per_pixel(de265img, c) != bpp) {
       struct heif_error err = { heif_error_Unsupported_feature,
@@ -147,31 +148,8 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
   }
 
 
-  // --- convert to RGB
-
-  ColorState inputState;
-  inputState.colorspace = heif_colorspace_YCbCr;
-  inputState.chroma = (heif_chroma)de265_get_chroma_format(de265img);
-  inputState.has_alpha = false;
-  inputState.bits_per_pixel = bpp;
-
-  ColorState outputState = inputState;
-  outputState.colorspace = heif_colorspace_RGB;
-  outputState.chroma = heif_chroma_444;
-
-  ColorConversionPipeline conversion;
-  bool success = conversion.construct_pipeline(inputState, outputState);
-  if (!success) {
-    struct heif_error err = { heif_error_Unsupported_feature,
-                              heif_suberror_Unsupported_color_conversion,
-                              kEmptyString };
-    return err;
-  }
-
-  std::shared_ptr<HeifPixelImage> rgbImg = conversion.convert_image(yuv_img);
-
   *image = new heif_image;
-  (*image)->image = rgbImg;
+  (*image)->image = yuv_img;
 
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
   return err;
@@ -250,7 +228,8 @@ static struct heif_error libde265_v2_push_data(void* decoder_raw, const void* da
 }
 
 
-static struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif_image** out_img)
+static struct heif_error libde265_v2_decode_image(void* decoder_raw,
+                                                  struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
 
@@ -262,7 +241,9 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw, struct heif
   if (action==de265_action_get_image) {
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
-      struct heif_error err = convert_libde265_image_to_heif_image(decoder, img, out_img);
+      struct heif_error err = convert_libde265_image_to_heif_image(decoder, img,
+                                                                   decoder_output_colorspace,
+                                                                   out_img);
       de265_release_picture(img);
 
       return err;
@@ -312,7 +293,8 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
 }
 
 
-static struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif_image** out_img)
+static struct heif_error libde265_v1_decode_image(void* decoder_raw,
+                                                  struct heif_image** out_img)
 {
   struct libde265_decoder* decoder = (struct libde265_decoder*)decoder_raw;
   struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
@@ -345,6 +327,7 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw, struct heif
 
   return err;
 }
+
 
 #endif
 
