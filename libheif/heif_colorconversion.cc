@@ -1976,6 +1976,7 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       uint16_t* p_out;
       int stride_out;
       p_out = (uint16_t*)outimg->get_plane(channel, &stride_out);
+      stride_out /= 2;
 
       for (int y=0;y<height;y++)
         for (int x=0;x<width;x++) {
