@@ -242,7 +242,6 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw,
     const de265_image* img = de265_get_next_picture(decoder->ctx);
     if (img) {
       struct heif_error err = convert_libde265_image_to_heif_image(decoder, img,
-                                                                   decoder_output_colorspace,
                                                                    out_img);
       de265_release_picture(img);
 
