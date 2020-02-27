@@ -822,7 +822,7 @@ void HeifPixelImage::debug_dump() const
 {
   auto channels = get_channel_set();
   for (auto c : channels) {
-    int stride;
+    int stride = 0;
     const uint8_t* p = get_plane(c, &stride);
 
     for (int y=0;y<8;y++) {
