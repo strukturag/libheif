@@ -424,12 +424,13 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
+    /*
     if (plane.bit_depth != 8) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unspecified,
                    "Can currently only rotate images with 8 bits per pixel");
     }
-
+    */
 
     int out_plane_width = plane.width;
     int out_plane_height = plane.height;
@@ -474,22 +475,22 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
       if (angle_degrees==270) {
         for (int x=0;x<h;x++)
           for (int y=0;y<w;y++) {
-            out_data[y*out_stride + x] = in_data[(h-1-x)*in_stride + y];
-            out_data[y*out_stride + x+1] = in_data[(h-1-x)*in_stride + y+1];
+            out_data[y*out_stride + 2*x] = in_data[(h-1-x)*in_stride + 2*y];
+            out_data[y*out_stride + 2*x+1] = in_data[(h-1-x)*in_stride + 2*y+1];
           }
       }
       else if (angle_degrees==180) {
         for (int y=0;y<h;y++)
           for (int x=0;x<w;x++) {
-            out_data[y*out_stride + x] = in_data[(h-1-y)*in_stride + (w-1-x)];
-            out_data[y*out_stride + x+1] = in_data[(h-1-y)*in_stride + (w-1-x)+1];
+            out_data[y*out_stride + 2*x] = in_data[(h-1-y)*in_stride + 2*(w-1-x)];
+            out_data[y*out_stride + 2*x+1] = in_data[(h-1-y)*in_stride + 2*(w-1-x)+1];
           }
       }
       else if (angle_degrees==90) {
         for (int x=0;x<h;x++)
           for (int y=0;y<w;y++) {
-            out_data[y*out_stride + x] = in_data[x*in_stride + (w-1-y)];
-            out_data[y*out_stride + x+1] = in_data[x*in_stride + (w-1-y)+1];
+            out_data[y*out_stride + 2*x]   = in_data[x*in_stride + 2*(w-1-y)];
+            out_data[y*out_stride + 2*x+1] = in_data[x*in_stride + 2*(w-1-y)+1];
           }
       }
     }
