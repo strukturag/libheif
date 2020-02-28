@@ -50,7 +50,8 @@
 
 
 static int usage(const char* command) {
-  fprintf(stderr, "usage: %s [-s size] <filename> <output>\n", command);
+  fprintf(stderr, "usage: %s [-s size] [-p] <filename> <output>\n", command);
+  fprintf(stderr, " -p   Render thumbnail from primary image, even if thumbnail is stored in image.\n");
   return 1;
 }
 
@@ -59,11 +60,15 @@ int main(int argc, char** argv)
 {
   int opt;
   int size = 512; // default thumbnail size
+  bool thumbnail_from_primary_image_only = false;
 
-  while ((opt = getopt(argc, argv, "s:h")) != -1) {
+  while ((opt = getopt(argc, argv, "s:hp")) != -1) {
     switch (opt) {
     case 's':
       size = atoi(optarg);
+      break;
+    case 'p':
+      thumbnail_from_primary_image_only = true;
       break;
     case 'h':
     default:
@@ -106,20 +111,22 @@ int main(int argc, char** argv)
 
   // --- if image has a thumbnail, use that instead
 
-  heif_item_id thumbnail_ID;
-  int nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(image_handle, &thumbnail_ID, 1);
-  if (nThumbnails > 0) {
-    struct heif_image_handle* thumbnail_handle;
-    err = heif_image_handle_get_thumbnail(image_handle, thumbnail_ID, &thumbnail_handle);
-    if (err.code) {
-      std::cerr << "Could not read HEIF image : " << err.message << "\n";
-      return 1;
+  if (!thumbnail_from_primary_image_only) {
+    heif_item_id thumbnail_ID;
+    int nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(image_handle, &thumbnail_ID, 1);
+    if (nThumbnails > 0) {
+      struct heif_image_handle* thumbnail_handle;
+      err = heif_image_handle_get_thumbnail(image_handle, thumbnail_ID, &thumbnail_handle);
+      if (err.code) {
+        std::cerr << "Could not read HEIF image : " << err.message << "\n";
+        return 1;
+      }
+
+      // replace image handle with thumbnail handle
+
+      heif_image_handle_release(image_handle);
+      image_handle = thumbnail_handle;
     }
-
-    // replace image handle with thumbnail handle
-
-    heif_image_handle_release(image_handle);
-    image_handle = thumbnail_handle;
   }
 
 
@@ -128,14 +135,18 @@ int main(int argc, char** argv)
 
   std::unique_ptr<Encoder> encoder(new PngEncoder());
 
-  int bit_depth=8; // TODO
+  struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
+  encoder->UpdateDecodingOptions(image_handle, decode_options);
+  decode_options->convert_hdr_to_8bit = true;
+
+  int bit_depth = 8;
 
   struct heif_image* image = NULL;
   err = heif_decode_image(image_handle,
                           &image,
                           encoder->colorspace(false),
                           encoder->chroma(false, bit_depth),
-                          NULL);
+                          decode_options);
   if (err.code) {
     std::cerr << "Could not decode HEIF image : " << err.message << "\n";
     return 1;
