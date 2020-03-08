@@ -51,11 +51,9 @@ if (has_potentially_evaluated_expression)
   add_definitions(-Wno-error=potentially-evaluated-expression)
 endif()
 
-if (UNIX)
-  find_package(PkgConfig)
-  pkg_check_modules(LIBDE265 libde265)
-  pkg_check_modules(X265 x265)
-endif()
+LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+find_package(Libde265 REQUIRED)
+find_package(X265 REQUIRED)
 
 # Create libheif pkgconfig file
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -79,6 +77,10 @@ configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-add_subdirectory (examples)
+option(WITH_EXAMPLES "Build examples" ON)
+
+if(WITH_EXAMPLES)
+    add_subdirectory (examples)
+endif()
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)

@@ -15,10 +15,12 @@ include (${CMAKE_ROOT}/Modules/FindJPEG.cmake)
 
 if(JPEG_FOUND)
 add_definitions(-DHAVE_LIBJPEG=1)
+include_directories(SYSTEM ${JPEG_INCLUDE_DIR})
 
 include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
 
 set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
+set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIR})
 check_cxx_source_compiles("
 #include <stddef.h>
 #include <stdio.h>
@@ -42,6 +44,7 @@ set (additional_libraries
   ${additional_libraries}
   ${JPEG_LIBRARIES}
 )
+
 endif()
 
 if(UNIX)
