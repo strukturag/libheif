@@ -1634,6 +1634,8 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 {
   Error error;
 
+  m_heif_file->set_brand(encoder->plugin->compression_format);
+
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC:
       {
@@ -1858,9 +1860,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   }
 #endif
 
-#if 0
-  m_heif_context->m_heif_file->add_hvcC_property(m_id);
-#endif
+  m_heif_context->m_heif_file->add_av1C_property(m_id);
 
 
   heif_image c_api_image;
@@ -1873,6 +1873,8 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     int size;
 
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
+
+    printf("get avif data size=%d\n",size);
 
     if (data==NULL) {
       break;
@@ -1900,10 +1902,24 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
       break;
 
     default:
-      m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
     }
 #endif
+
+    Box_hvcC::configuration config;
+
+    m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
+
+
+    int width,height;
+    width = image->get_width();
+    height = image->get_height();
+    m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
+
+
+    m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
   }
+
+  printf("end avif write\n");
 
   return Error::Ok;
 }

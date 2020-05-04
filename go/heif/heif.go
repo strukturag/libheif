@@ -207,6 +207,8 @@ const (
 	// Tile-images in a grid image are missing
 	SuberrorMissingGridImages = C.heif_suberror_Missing_grid_images
 
+	SuberrorNoAV1CBox = C.heif_suberror_No_av1C_box
+
 	SuberrorInvalidCleanAperture = C.heif_suberror_Invalid_clean_aperture
 
 	// Invalid specification of overlay image

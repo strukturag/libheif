@@ -716,7 +716,7 @@ namespace heif {
       return true;
     }
 
-    //void set_configuration(const configuration& config) { m_configuration=config; }
+    void set_configuration(const configuration& config) { m_configuration=config; }
 
     configuration get_configuration() const { return m_configuration; }
 

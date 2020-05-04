@@ -55,6 +55,8 @@ namespace heif {
 
     void new_empty_file();
 
+    void set_brand(heif_compression_format format);
+
     void write(StreamWriter& writer);
 
     int get_num_images() const { return static_cast<int>(m_infe_boxes.size()); }
@@ -111,6 +113,9 @@ namespace heif {
     Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
     Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
     Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
+
+    void add_av1C_property(heif_item_id id);
+    Error set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config);
 
     void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height);
 

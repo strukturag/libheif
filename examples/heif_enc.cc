@@ -1089,7 +1089,6 @@ int main(int argc, char** argv)
       return 1;
     }
 
-
     if (thumbnail_bbox_size > 0)
       {
         // encode thumbnail

@@ -117,13 +117,29 @@ void HeifFile::new_empty_file()
 
   m_top_level_boxes.push_back(m_ftyp_box);
   m_top_level_boxes.push_back(m_meta_box);
+}
 
 
+void HeifFile::set_brand(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_HEVC:
+      m_ftyp_box->set_major_brand(fourcc("heic"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(fourcc("heic"));
+      break;
 
-  m_ftyp_box->set_major_brand(fourcc("heic"));
-  m_ftyp_box->set_minor_version(0);
-  m_ftyp_box->add_compatible_brand(fourcc("mif1"));
-  m_ftyp_box->add_compatible_brand(fourcc("heic"));
+    case heif_compression_AV1:
+      m_ftyp_box->set_major_brand(fourcc("avif"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("avif"));
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      break;
+
+  default:
+    break;
+  }
 }
 
 
@@ -700,6 +716,33 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_
                  heif_suberror_No_hvcC_box);
   }
 }
+
+
+void HeifFile::add_av1C_property(heif_item_id id)
+{
+  auto av1C = std::make_shared<Box_av1C>();
+  int index = m_ipco_box->append_child_box(av1C);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+}
+
+
+Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config)
+{
+  auto av1C = std::dynamic_pointer_cast<Box_av1C>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("av1C")));
+
+  if (av1C) {
+    av1C->set_configuration(config);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_av1C_box);
+  }
+}
+
 
 void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets)
 {
