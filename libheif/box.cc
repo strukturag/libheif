@@ -2728,6 +2728,33 @@ Error Box_av1C::parse(BitstreamRange& range)
 }
 
 
+Error Box_av1C::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  const auto& c = m_configuration; // abbreviation
+
+  writer.write8(c.version | 0x80);
+
+  writer.write8((uint8_t)(((c.seq_profile & 0x7) << 5) |
+                          (c.seq_level_idx_0 & 0x1f)));
+
+  writer.write8((uint8_t)((c.seq_tier_0 ? 0x80 : 0) |
+                          (c.high_bitdepth ? 0x40 : 0) |
+                          (c.twelve_bit ? 0x20 : 0) |
+                          (c.monochrome ? 0x10 : 0) |
+                          (c.chroma_subsampling_x ? 0x08 : 0) |
+                          (c.chroma_subsampling_y ? 0x04 : 0) |
+                          (c.chroma_sample_position & 0x03)));
+
+  writer.write8(0); // TODO initial_presentation_delay
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_av1C::dump(Indent& indent) const
 {
   std::ostringstream sstr;

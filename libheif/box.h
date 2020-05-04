@@ -690,19 +690,19 @@ namespace heif {
 
     struct configuration {
       //unsigned int (1) marker = 1;
-      uint8_t version;
-      uint8_t seq_profile;
-      uint8_t seq_level_idx_0;
-      uint8_t seq_tier_0;
-      uint8_t high_bitdepth;
-      uint8_t twelve_bit;
-      uint8_t monochrome;
-      uint8_t chroma_subsampling_x;
-      uint8_t chroma_subsampling_y;
-      uint8_t chroma_sample_position;
+      uint8_t version = 1;
+      uint8_t seq_profile = 0;
+      uint8_t seq_level_idx_0 = 0;
+      uint8_t seq_tier_0 = 0;
+      uint8_t high_bitdepth = 0;
+      uint8_t twelve_bit = 0;
+      uint8_t monochrome = 0;
+      uint8_t chroma_subsampling_x = 0;
+      uint8_t chroma_subsampling_y = 0;
+      uint8_t chroma_sample_position = 0;
       //uint8_t reserved = 0;
 
-      uint8_t initial_presentation_delay_present;
+      uint8_t initial_presentation_delay_present = 0;
       uint8_t initial_presentation_delay_minus_one = 0;
 
       //unsigned int (8)[] configOBUs;
@@ -723,7 +723,7 @@ namespace heif {
     //void append_nal_data(const std::vector<uint8_t>& nal);
     //void append_nal_data(const uint8_t* data, size_t size);
 
-    //Error write(StreamWriter& writer) const override;
+    Error write(StreamWriter& writer) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;
