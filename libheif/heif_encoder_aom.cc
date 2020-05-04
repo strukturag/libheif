@@ -67,11 +67,6 @@ struct encoder_struct_aom
   bool flushed = false;
 
 #if 0
-  x265_nal* nals;
-  uint32_t num_nals;
-  uint32_t nal_output_counter;
-  int bit_depth;
-
   // --- parameters
 
   std::vector<parameter> parameters;
@@ -81,11 +76,6 @@ struct encoder_struct_aom
   void add_param(std::string name, bool value);
   void add_param(std::string name, std::string value);
   parameter get_param(std::string name) const;
-
-  std::string preset;
-  std::string tune;
-
-  int logLevel = X265_LOG_NONE;
 #endif
 };
 
@@ -664,12 +654,14 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     // TODO
   }
 
-  int bitrate=200;
+  int bitrate=20000;
   cfg.g_w = source_width;
   cfg.g_h = source_height;
   //cfg.g_timebase.num = info.time_base.numerator;
   //cfg.g_timebase.den = info.time_base.denominator;
   cfg.rc_target_bitrate = bitrate;
+  cfg.rc_min_quantizer = 1;
+  cfg.rc_max_quantizer = 60;
   cfg.g_error_resilient = 0; // (aom_codec_er_flags_t)strtoul(argv[7], NULL, 0);
 
 
@@ -692,155 +684,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- encode frame
 
-  /*
-    int flags = 0;
-    if (keyframe_interval > 0 && frame_count % keyframe_interval == 0)
-      flags |= AOM_EFLAG_FORCE_KF;
-  */
-
   encode_frame(&encoder->codec, &input_image); //, frame_count++, flags, writer);
-  //frames_encoded++;
-  //if (max_frames > 0 && frames_encoded >= max_frames) break;
-
-
-  // Flush encoder.
-  //while (encode_frame(&encoder->codec, NULL)) continue; //, -1, 0, writer)) continue;
-
-  /*
-  printf("\n");
-  fclose(infile);
-  printf("Processed %d frames.\n", frame_count);
-  */
 
   aom_img_free(&input_image);
 
-
-#if 0
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
-
-  // close previous encoder if there is still one hanging around
-  if (encoder->encoder) {
-    const x265_api* api = x265_api_get(encoder->bit_depth);
-    api->encoder_close(encoder->encoder);
-    encoder->encoder = nullptr;
-  }
-
-
-
-  int bit_depth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
-
-  const x265_api* api = x265_api_get(bit_depth);
-  if (api==nullptr) {
-    struct heif_error err = {
-      heif_error_Encoder_plugin_error,
-      heif_suberror_Unsupported_bit_depth,
-      kError_unsuppoerted_bit_depth
-    };
-    return err;
-  }
-
-  x265_param* param = api->param_alloc();
-  api->param_default_preset(param, encoder->preset.c_str(), encoder->tune.c_str());
-
-  if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
-  else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
-  else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
-  else return heif_error_unsupported_parameter;
-
-
-  param->fpsNum = 1;
-  param->fpsDenom = 1;
-
-  // BPG uses CQP. It does not seem to be better though.
-  //  param->rc.rateControlMode = X265_RC_CQP;
-  //  param->rc.qp = (100 - encoder->quality)/2;
-  param->totalFrames = 1;
-  param->internalCsp = X265_CSP_I420;
-  api->param_parse(param, "info", "0");
-  api->param_parse(param, "limit-modes", "0");
-  api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "ctu", "64");
-  api->param_parse(param, "rskip", "0");
-
-  api->param_parse(param, "rect", "1");
-  api->param_parse(param, "amp", "1");
-  api->param_parse(param, "aq-mode", "1");
-  api->param_parse(param, "psy-rd", "1.0");
-  api->param_parse(param, "psy-rdoq", "1.0");
-
-  api->param_parse(param, "range", "full");
-
-
-  for (const auto& p : encoder->parameters) {
-    if (p.name == heif_encoder_parameter_name_quality) {
-      // quality=0   -> crf=50
-      // quality=50  -> crf=25
-      // quality=100 -> crf=0
-
-      param->rc.rfConstant = (100 - p.value_int)/2;
-    }
-    else if (p.name == heif_encoder_parameter_name_lossless) {
-      param->bLossless = p.value_int;
-    }
-    else if (p.name == kParam_TU_intra_depth) {
-      char buf[100];
-      sprintf(buf, "%d", p.value_int);
-      api->param_parse(param, "tu-intra-depth", buf);
-    }
-    else if (p.name == kParam_complexity) {
-      const int complexity = p.value_int;
-
-      if (complexity >= 60) {
-        api->param_parse(param, "rd-refine", "1"); // increases computation time
-        api->param_parse(param, "rd", "6");
-      }
-
-      if (complexity >= 70) {
-        api->param_parse(param, "cu-lossless", "1"); // increases computation time
-      }
-
-      if (complexity >= 90) {
-        api->param_parse(param, "wpp", "0"); // setting to 0 significantly increases computation time
-      }
-    }
-    else if (strncmp(p.name.c_str(), "x265:", 5)==0) {
-      std::string x265p = p.name.substr(5);
-      api->param_parse(param, x265p.c_str(), p.value_string.c_str());
-    }
-  }
-
-  param->logLevel = encoder->logLevel;
-
-  param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
-  param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
-  param->internalBitDepth = bit_depth;
-
-
-
-  x265_picture* pic = api->picture_alloc();
-  api->picture_init(param, pic);
-
-  pic->planes[0] = (void*)heif_image_get_plane_readonly(image, heif_channel_Y,  &pic->stride[0]);
-  pic->planes[1] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cb, &pic->stride[1]);
-  pic->planes[2] = (void*)heif_image_get_plane_readonly(image, heif_channel_Cr, &pic->stride[2]);
-  pic->bitDepth = bit_depth;
-
-
-  encoder->bit_depth = bit_depth;
-
-  encoder->encoder = api->encoder_open(param);
-
-  api->encoder_encode(encoder->encoder,
-                                   &encoder->nals,
-                                   &encoder->num_nals,
-                                   pic,
-                                   NULL);
-
-  api->picture_free(pic);
-  api->param_free(param);
-
-  encoder->nal_output_counter = 0;
-#endif
 
   return heif_error_ok;
 }
