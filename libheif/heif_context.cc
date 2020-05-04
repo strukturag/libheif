@@ -1874,8 +1874,6 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
 
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
 
-    printf("get avif data size=%d\n",size);
-
     if (data==NULL) {
       break;
     }
@@ -1916,10 +1914,12 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
 
 
-    m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
-  }
+    std::vector<uint8_t> vec;
+    vec.resize(size);
+    memcpy(vec.data(), data, size);
 
-  printf("end avif write\n");
+    m_heif_context->m_heif_file->append_iloc_data(m_id, vec);
+  }
 
   return Error::Ok;
 }
