@@ -653,8 +653,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- configure codec
 
+  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
+
+
   aom_codec_enc_cfg_t cfg;
-  aom_codec_err_t res = aom_codec_enc_config_default(encoder->iface, &cfg, 0);
+  aom_codec_err_t res = aom_codec_enc_config_default(encoder->iface, &cfg, aomUsage);
   if (res) {
     printf("Failed to get default codec config.\n");
     assert(0);
@@ -677,6 +680,13 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     printf("Failed to initialize encoder\n");
     assert(0);
     // TODO
+  }
+
+
+  int aomCpuUsed = 5;
+
+  if (aomCpuUsed != -1) {
+    aom_codec_control(&encoder->codec, AOME_SET_CPUUSED, aomCpuUsed);
   }
 
 
