@@ -104,6 +104,9 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
     if (brand == heif_heic) {
       return heif_filetype_yes_supported;
     }
+    else if (brand == heif_heix) {
+      return heif_filetype_yes_supported;
+    }
     else if (brand == heif_avif) {
       return heif_filetype_yes_supported;
     }
@@ -636,7 +639,7 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
-  options->version = 1;
+  options->version = 2;
 
   options->ignore_transformations = false;
 
@@ -644,6 +647,10 @@ heif_decoding_options* heif_decoding_options_alloc()
   options->on_progress = NULL;
   options->end_progress = NULL;
   options->progress_user_data = NULL;
+
+  // version 2
+
+  options->convert_hdr_to_8bit = false;
 
   return options;
 }
@@ -663,10 +670,12 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 {
   std::shared_ptr<HeifPixelImage> img;
 
-  Error err = in_handle->image->decode_image(img,
-                                             colorspace,
-                                             chroma,
-                                             options);
+  heif_item_id id = in_handle->image->get_id();
+
+  Error err = in_handle->context->decode_image_user(id, img,
+                                                    colorspace,
+                                                    chroma,
+                                                    options);
   if (err.error_code != heif_error_Ok) {
     return err.error_struct(in_handle->image.get());
   }

@@ -192,7 +192,11 @@ enum heif_suberror_code {
 
   heif_suberror_Invalid_image_size = 129,
 
-  heif_suberror_No_av1C_box = 130,
+  heif_suberror_Invalid_pixi_box = 130,
+
+  heif_suberror_No_av1C_box = 131,
+
+
 
   // --- Memory_allocation_error ---
 
@@ -774,6 +778,10 @@ struct heif_decoding_options
   void (*on_progress)(enum heif_progress_step step, int progress, void* progress_user_data);
   void (*end_progress)(enum heif_progress_step step, void* progress_user_data);
   void* progress_user_data;
+
+  // version 2 options
+
+  uint8_t convert_hdr_to_8bit;
 };
 
 

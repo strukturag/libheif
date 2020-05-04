@@ -27,7 +27,7 @@ libheif has support for decoding
 * plugin interface to add decoders for additional formats (AV1, AVC, JPEG)
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 * reading color profiles
-* 10 and 12 bit images
+* heix images (10 and 12 bit, chroma 4:2:2)
 
 The encoder supports:
 * lossy compression with adjustable quality

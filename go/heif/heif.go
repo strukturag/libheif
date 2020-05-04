@@ -261,6 +261,8 @@ const (
 	// The value for the given parameter is not in the valid range.
 	SuberrorInvalidParameterValue = C.heif_suberror_Invalid_parameter_value
 
+	SuberrorInvalidPixiBox = C.heif_suberror_Invalid_pixi_box
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.

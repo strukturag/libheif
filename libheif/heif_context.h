@@ -101,11 +101,6 @@ namespace heif {
 
       bool is_primary() const { return m_is_primary; }
 
-      Error decode_image(std::shared_ptr<HeifPixelImage>& img,
-                         heif_colorspace colorspace = heif_colorspace_undefined,
-                         heif_chroma chroma = heif_chroma_undefined,
-                         const struct heif_decoding_options* options = nullptr) const;
-
 
       // -- thumbnails
 
@@ -212,8 +207,14 @@ namespace heif {
 
     bool is_image(heif_item_id ID) const;
 
-    Error decode_image(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
-                       const struct heif_decoding_options* options = nullptr) const;
+    Error decode_image_user(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
+                            heif_colorspace out_colorspace,
+                            heif_chroma out_chroma,
+                            const struct heif_decoding_options* options = nullptr) const;
+
+    Error decode_image_planar(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
+                              heif_colorspace out_colorspace,
+                              const struct heif_decoding_options* options = nullptr) const;
 
     std::string debug_dump_boxes() const;
 
