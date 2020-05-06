@@ -3,28 +3,28 @@
 [![Build Status](https://travis-ci.org/strukturag/libheif.svg?branch=master)](https://travis-ci.org/strukturag/libheif) [![Build Status](https://ci.appveyor.com/api/projects/status/github/strukturag/libheif?svg=true)](https://ci.appveyor.com/project/strukturag/libheif) [![Coverity Scan Build Status](https://scan.coverity.com/projects/16641/badge.svg)](https://scan.coverity.com/projects/strukturag-libheif)
 
 
-libheif is an ISO/IEC 23008-12:2017 HEIF file format decoder and encoder.
+libheif is an ISO/IEC 23008-12:2017 HEIF and AVIF (AV1 Image File Format) file format decoder and encoder.
 
-HEIF is a new image file format employing HEVC (h.265) image coding for the
+HEIF and AVIF are new image file formats employing HEVC (h.265) or AV1 image coding, respectively, for the
 best compression ratios currently possible.
 
-libheif makes use of [libde265](https://github.com/strukturag/libde265) for
-the actual image decoding and x265 for encoding. Alternative codecs for, e.g., AVC and JPEG can be
-provided as plugins. There is experimental code for an AV1 plugin (for AVIF format support) in the 'avif' branch.
+libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
+For AVIF, libaom is used as encoder and decoder.
+Alternative codecs for, e.g., AVC and JPEG can be provided as plugins.
 
 
 ## Supported features
 
 libheif has support for decoding
 * tiled images
-* alpha channels
+* alpha channels (currently HEIF only)
 * thumbnails
 * reading EXIF and XMP metadata
 * reading the depth channel
-* multiple images in an HEIF file
+* multiple images in a file
 * image transformations (crop, mirror, rotate)
 * overlay images
-* plugin interface to add decoders for additional formats (AV1, AVC, JPEG)
+* plugin interface to add alternative codecs for additional formats (AVC, JPEG)
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 * reading color profiles
 * heix images (10 and 12 bit, chroma 4:2:2)
@@ -32,18 +32,22 @@ libheif has support for decoding
 The encoder supports:
 * lossy compression with adjustable quality
 * lossless compression
-* alpha channels
+* alpha channels (currently HEIF only)
 * thumbnails
-* save multiple images to an HEIF file
+* save multiple images to a file
 * save EXIF and XMP metadata
 * writing color profiles
-* 10 and 12 bit images
-* monochrome images
+* 10 and 12 bit images (currently HEIF only)
+* monochrome images (currently HEIF only)
 
 ## API
 
 The library has a C API for easy integration and wide language support.
 Note that the API is still work in progress and may still change.
+
+The decoder automatically supports both HEIF and AVIF through the same API. No changes are required to existing code to support AVIF.
+The encoder can be switched between HEIF and AVIF simply by setting `heif_compression_HEVC` or `heif_compression_AV1`
+to `heif_context_get_encoder_for_format()`.
 
 Loading the primary image in an HEIF file is as easy as this:
 
@@ -104,6 +108,8 @@ Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
+For AVIF support, make sure that libaom is installed.
+
 ### macOS
 
 1. Install dependencies with Homebrew
@@ -138,8 +144,8 @@ This is `libheif` running in JavaScript in your browser.
 ## Example programs
 
 Some example programs are provided in the `examples` directory.
-The program `heif-convert` converts all images stored in an HEIF file to JPEG or PNG.
-`heif-enc` lets you convert JPEG files to HEIF.
+The program `heif-convert` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
+`heif-enc` lets you convert JPEG files to HEIF/AVIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
 For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
@@ -150,12 +156,17 @@ cd examples/
 ./heif-enc example-1.jpeg -o example.heif
 ```
 
+In order to convert `example-1.jpeg` to AVIF use:
+```
+./heif-enc example-1.jpeg -A -o example.avif
+```
+
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
 
 
-## HEIF thumbnails for the Gnome desktop
+## HEIF/AVIF thumbnails for the Gnome desktop
 
-The program `heif-thumbnailer` can be used as a HEIF thumbnailer for the Gnome desktop.
+The program `heif-thumbnailer` can be used as an HEIF/AVIF thumbnailer for the Gnome desktop.
 The matching Gnome configuration files are in the `gnome` directory.
 Place the file `heif.xml` into `/usr/share/mime/packages` and `heif.thumbnailer` into `/usr/share/thumbnailers`.
 You may have to run `update-mime-database /usr/share/mime` to update the list of known MIME types.
