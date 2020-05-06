@@ -1943,35 +1943,6 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     }
 
 
-#if 0
-    const uint8_t NAL_SPS = 33;
-
-    if ((data[0] >> 1) == NAL_SPS) {
-      int width,height;
-      Box_hvcC::configuration config;
-
-      parse_sps_for_hvcC_configuration(data, size, &config, &width, &height);
-
-      m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
-      m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
-    }
-
-    switch (data[0] >> 1) {
-    case 0x20:
-    case 0x21:
-    case 0x22:
-      m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, data, size);
-      break;
-
-    default:
-    }
-#endif
-
-    Box_hvcC::configuration config;
-
-    m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
-
-
     int width,height;
     width = image->get_width();
     height = image->get_height();
