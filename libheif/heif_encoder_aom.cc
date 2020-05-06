@@ -25,6 +25,7 @@
 #include "config.h"
 #endif
 
+#include <math.h>
 #include <memory>
 #include <string>
 #include <string.h>
@@ -39,24 +40,6 @@
 #include <iostream>  // TODO: remove me
 
 
-#if 0
-const char* kError_unsuppoerted_bit_depth = "Bit depth not supported by AV1 encoder";
-
-
-enum parameter_type { UndefinedType, Int, Bool, String };
-
-struct parameter {
-
-
-  parameter_type type = UndefinedType;
-  std::string name;
-
-  int value_int = 0; // also used for boolean
-  std::string value_string;
-};
-#endif
-
-
 struct encoder_struct_aom
 {
   aom_codec_iface_t* iface;
@@ -66,99 +49,21 @@ struct encoder_struct_aom
   bool got_packets = false;
   bool flushed = false;
 
-#if 0
   // --- parameters
 
-  std::vector<parameter> parameters;
-
-  void add_param(const parameter&);
-  void add_param(std::string name, int value);
-  void add_param(std::string name, bool value);
-  void add_param(std::string name, std::string value);
-  parameter get_param(std::string name) const;
-#endif
+  int quality;
+  int min_q;
+  int max_q;
+  int threads;
 };
 
 
-#if 0
-void encoder_struct_x265::add_param(const parameter& p)
-{
-  // if there is already a parameter of that name, remove it from list
-
-  for (size_t i=0;i<parameters.size();i++) {
-    if (parameters[i].name == p.name) {
-      for (size_t k=i+1;k<parameters.size();k++) {
-        parameters[k-1] = parameters[k];
-      }
-      parameters.pop_back();
-      break;
-    }
-  }
-
-  // and add the new parameter at the end of the list
-
-  parameters.push_back(p);
-}
+static const char* kParam_min_q = "min-q";
+static const char* kParam_max_q = "max-q";
+static const char* kParam_threads = "threads";
 
 
-void encoder_struct_x265::add_param(std::string name, int value)
-{
-  parameter p;
-  p.type = Int;
-  p.name = name;
-  p.value_int = value;
-  add_param(p);
-}
-
-void encoder_struct_x265::add_param(std::string name, bool value)
-{
-  parameter p;
-  p.type = Bool;
-  p.name = name;
-  p.value_int = value;
-  add_param(p);
-}
-
-void encoder_struct_x265::add_param(std::string name, std::string value)
-{
-  parameter p;
-  p.type = String;
-  p.name = name;
-  p.value_string = value;
-  add_param(p);
-}
-
-
-parameter encoder_struct_x265::get_param(std::string name) const
-{
-  for (size_t i=0;i<parameters.size();i++) {
-    if (parameters[i].name == name) {
-      return parameters[i];
-    }
-  }
-
-  return parameter();
-}
-
-
-static const char* kParam_preset = "preset";
-static const char* kParam_tune = "tune";
-static const char* kParam_TU_intra_depth = "tu-intra-depth";
-static const char* kParam_complexity = "complexity";
-
-static const char*const kParam_preset_valid_values[] = {
-  "ultrafast", "superfast", "veryfast", "faster", "fast", "medium",
-  "slow", "slower", "veryslow", "placebo", nullptr
-};
-
-static const char*const kParam_tune_valid_values[] = {
-  "psnr", "ssim", "grain", "fastdecode", nullptr
-  // note: zerolatency is missing, because we do not need it for single images
-};
-#endif
-
-
-static const int AOM_PLUGIN_PRIORITY = 80;
+static const int AOM_PLUGIN_PRIORITY = 40;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 
@@ -183,20 +88,15 @@ static const char* aom_plugin_name()
 
 #define MAX_NPARAMETERS 10
 
-#if 0
 static struct heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
-#endif
 static const struct heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS+1];
 
 static void aom_init_parameters()
 {
-#if 0
   struct heif_encoder_parameter* p = aom_encoder_params;
-#endif
   const struct heif_encoder_parameter** d = aom_encoder_parameter_ptrs;
   int i=0;
 
-#if 0
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = heif_encoder_parameter_name_quality;
@@ -220,48 +120,42 @@ static void aom_init_parameters()
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = kParam_preset;
-  p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "slow";  // increases computation time
-  p->has_default = true;
-  p->string.valid_values = kParam_preset_valid_values;
-  d[i++] = p++;
-
-  assert(i < MAX_NPARAMETERS);
-  p->version = 2;
-  p->name = kParam_tune;
-  p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "ssim";
-  p->has_default = true;
-  p->string.valid_values = kParam_tune_valid_values;
-  d[i++] = p++;
-
-  assert(i < MAX_NPARAMETERS);
-  p->version = 2;
-  p->name = kParam_TU_intra_depth;
+  p->name = "threads";
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 2;  // increases computation time
+  p->integer.default_value = 4;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
-  p->integer.maximum = 4;
+  p->integer.maximum = 16;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = kParam_complexity;
+  p->name = "min-q";
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 50;
-  p->has_default = false;
+  p->integer.default_value = 0;
+  p->has_default = true;
   p->integer.have_minimum_maximum = true;
-  p->integer.minimum = 0;
-  p->integer.maximum = 100;
+  p->integer.minimum = 1;
+  p->integer.maximum = 62;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
-#endif
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = "max-q";
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 63;
+  p->has_default = true;
+  p->integer.have_minimum_maximum = true;
+  p->integer.minimum = 0;
+  p->integer.maximum = 63;
+  p->integer.valid_values = NULL;
+  p->integer.num_valid_values = 0;
+  d[i++] = p++;
 
   d[i++] = nullptr;
 }
@@ -332,52 +226,43 @@ void aom_free_encoder(void* encoder_raw)
 
 struct heif_error aom_set_parameter_quality(void* encoder_raw, int quality)
 {
-#if 0
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
   if (quality<0 || quality>100) {
     return heif_error_invalid_parameter_value;
   }
 
-  encoder->add_param(heif_encoder_parameter_name_quality, quality);
-#endif
+  encoder->quality = quality;
+
   return heif_error_ok;
 }
 
 struct heif_error aom_get_parameter_quality(void* encoder_raw, int* quality)
 {
-#if 0
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
-  parameter p = encoder->get_param(heif_encoder_parameter_name_quality);
-  *quality = p.value_int;
-#else
-  *quality = 50;
-#endif
+  *quality = encoder->quality;
 
   return heif_error_ok;
 }
 
 struct heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
 {
-#if 0
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
-  encoder->add_param(heif_encoder_parameter_name_lossless, (bool)enable);
-#endif
+  if (enable) {
+    encoder->min_q = 0;
+    encoder->max_q = 0;
+  }
+
   return heif_error_ok;
 }
 
 struct heif_error aom_get_parameter_lossless(void* encoder_raw, int* enable)
 {
-#if 0
-  struct encoder_struct_x265* encoder = (struct encoder_struct_x265*)encoder_raw;
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
-  parameter p = encoder->get_param(heif_encoder_parameter_name_lossless);
-  *enable = p.value_int;
-#else
-  *enable = false;
-#endif
+  *enable = (encoder->min_q == 0 && encoder->max_q == 0);
 
   return heif_error_ok;
 }
@@ -410,6 +295,10 @@ struct heif_error aom_get_parameter_logging_level(void* encoder_raw, int* loglev
   return heif_error_ok;
 }
 
+#define set_value(paramname, paramvar) if (strcmp(name, paramname)==0) { encoder->paramvar = value; return heif_error_ok; }
+#define get_value(paramname, paramvar) if (strcmp(name, paramname)==0) { *value = encoder->paramvar; return heif_error_ok; }
+
+
 struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
@@ -420,24 +309,10 @@ struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name,
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return aom_set_parameter_lossless(encoder,value);
   }
-#if 0
-  else if (strcmp(name, kParam_TU_intra_depth)==0) {
-    if (value < 1 || value > 4) {
-      return heif_error_invalid_parameter_value;
-    }
 
-    encoder->add_param(name, value);
-    return heif_error_ok;
-  }
-  else if (strcmp(name, kParam_complexity)==0) {
-    if (value < 0 || value > 100) {
-      return heif_error_invalid_parameter_value;
-    }
-
-    encoder->add_param(name, value);
-    return heif_error_ok;
-  }
-#endif
+  set_value(kParam_min_q, min_q);
+  set_value(kParam_max_q, max_q);
+  set_value(kParam_threads, threads);
 
   return heif_error_unsupported_parameter;
 }
@@ -452,16 +327,10 @@ struct heif_error aom_get_parameter_integer(void* encoder_raw, const char* name,
   else if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return aom_get_parameter_lossless(encoder,value);
   }
-#if 0
-  else if (strcmp(name, kParam_TU_intra_depth)==0) {
-    *value = encoder->get_param(name).value_int;
-    return heif_error_ok;
-  }
-  else if (strcmp(name, kParam_complexity)==0) {
-    *value = encoder->get_param(name).value_int;
-    return heif_error_ok;
-  }
-#endif
+
+  get_value(kParam_min_q, min_q);
+  get_value(kParam_max_q, max_q);
+  get_value(kParam_threads, threads);
 
   return heif_error_unsupported_parameter;
 }
@@ -488,58 +357,13 @@ struct heif_error aom_get_parameter_boolean(void* encoder, const char* name, int
 
 struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-#if 0
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
-
-  if (strcmp(name, kParam_preset)==0) {
-    if (!string_list_contains(kParam_preset_valid_values, value)) {
-      return heif_error_invalid_parameter_value;
-    }
-
-    encoder->preset = value;
-    return heif_error_ok;
-  }
-  else if (strcmp(name, kParam_tune)==0) {
-    if (!string_list_contains(kParam_tune_valid_values, value)) {
-      return heif_error_invalid_parameter_value;
-    }
-
-    encoder->tune = value;
-    return heif_error_ok;
-  }
-  else if (strncmp(name, "x265:", 5)==0) {
-    encoder->add_param(name, std::string(value));
-    return heif_error_ok;
-  }
-#endif
-
   return heif_error_unsupported_parameter;
 }
 
-#if 0
-static void save_strcpy(char* dst, int dst_size, const char* src)
-{
-  strncpy(dst, src, dst_size-1);
-  dst[dst_size-1] = 0;
-}
-#endif
 
 struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
                                            char* value, int value_size)
 {
-#if 0
-  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
-
-  if (strcmp(name, kParam_preset)==0) {
-    save_strcpy(value, value_size, encoder->preset.c_str());
-    return heif_error_ok;
-  }
-  else if (strcmp(name, kParam_tune)==0) {
-    save_strcpy(value, value_size, encoder->tune.c_str());
-    return heif_error_ok;
-  }
-#endif
-
   return heif_error_unsupported_parameter;
 }
 
@@ -654,16 +478,19 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     // TODO
   }
 
-  int bitrate=20000;
   cfg.g_w = source_width;
   cfg.g_h = source_height;
   //cfg.g_timebase.num = info.time_base.numerator;
   //cfg.g_timebase.den = info.time_base.denominator;
-  cfg.rc_target_bitrate = bitrate;
-  cfg.rc_min_quantizer = 1;
-  cfg.rc_max_quantizer = 60;
-  cfg.g_error_resilient = 0; // (aom_codec_er_flags_t)strtoul(argv[7], NULL, 0);
 
+  int bitrate = (int)(12 * pow(6.26, encoder->quality*0.01) * 1000);
+  printf("bitrate: %d\n",bitrate);
+  
+  cfg.rc_target_bitrate = bitrate;
+  cfg.rc_min_quantizer = encoder->min_q;
+  cfg.rc_max_quantizer = encoder->max_q;
+  cfg.g_error_resilient = 0;
+  cfg.g_threads = encoder->threads;
 
 
   // --- initialize codec
@@ -681,6 +508,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     aom_codec_control(&encoder->codec, AOME_SET_CPUUSED, aomCpuUsed);
   }
 
+  if (encoder->threads > 1) {
+    aom_codec_control(&encoder->codec, AV1E_SET_ROW_MT, 1);
+  }  
 
   // --- encode frame
 
