@@ -41,6 +41,7 @@
 #include "heif_api_structs.h"
 #include "heif_limits.h"
 #include "heif_hevc.h"
+#include "heif_avif.h"
 #include "heif_plugin_registry.h"
 
 using namespace heif;
@@ -1924,8 +1925,13 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   }
 #endif
 
-  m_heif_context->m_heif_file->add_av1C_property(m_id);
+  Box_av1C::configuration config;
+  fill_av1C_configuration(&config, image);
 
+  m_heif_context->m_heif_file->add_av1C_property(m_id);
+  m_heif_context->m_heif_file->set_av1C_configuration(m_id, config);
+
+  
 
   heif_image c_api_image;
   c_api_image.image = image;

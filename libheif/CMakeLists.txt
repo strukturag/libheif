@@ -12,6 +12,7 @@ set(libheif_headers
     heif.h
     heif_image.h
     heif_hevc.h
+    heif_avif.h
     heif_colorconversion.h
     heif_plugin_registry.h
     heif_limits.h
@@ -29,6 +30,7 @@ add_library(heif
     heif_file.cc
     heif_image.cc
     heif_hevc.cc
+    heif_avif.cc
     heif_colorconversion.cc
     heif_plugin_registry.cc
     heif_plugin.cc

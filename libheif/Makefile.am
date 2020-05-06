@@ -57,6 +57,8 @@ libheif_la_SOURCES = \
   heif_context.cc \
   heif_hevc.h \
   heif_hevc.cc \
+  heif_avif.h \
+  heif_avif.cc \
   heif_plugin_registry.h \
   heif_plugin_registry.cc \
   heif_plugin.h \
