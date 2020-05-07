@@ -51,6 +51,9 @@ struct encoder_struct_aom
 
   // --- parameters
 
+  bool realtime_mode;
+  int  cpu_used;  // = parameter 'speed'. I guess this is a better name than 'cpu_used'.
+
   int quality;
   int min_q;
   int max_q;
@@ -61,6 +64,8 @@ struct encoder_struct_aom
 static const char* kParam_min_q = "min-q";
 static const char* kParam_max_q = "max-q";
 static const char* kParam_threads = "threads";
+static const char* kParam_realtime = "realtime";
+static const char* kParam_speed = "speed";
 
 
 static const int AOM_PLUGIN_PRIORITY = 40;
@@ -99,6 +104,40 @@ static void aom_init_parameters()
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
+  p->name = kParam_realtime;
+  p->type = heif_encoder_parameter_type_boolean;
+  p->boolean.default_value = false;
+  p->has_default = true;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_speed;
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 5;
+  p->has_default = true;
+  p->integer.have_minimum_maximum = true;
+  p->integer.minimum = 0;
+  p->integer.maximum = 8;
+  p->integer.valid_values = NULL;
+  p->integer.num_valid_values = 0;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_threads;
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 4;
+  p->has_default = true;
+  p->integer.have_minimum_maximum = true;
+  p->integer.minimum = 1;
+  p->integer.maximum = 16;
+  p->integer.valid_values = NULL;
+  p->integer.num_valid_values = 0;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
   p->name = heif_encoder_parameter_name_quality;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 50;
@@ -120,20 +159,7 @@ static void aom_init_parameters()
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = "threads";
-  p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 4;
-  p->has_default = true;
-  p->integer.have_minimum_maximum = true;
-  p->integer.minimum = 1;
-  p->integer.maximum = 16;
-  p->integer.valid_values = NULL;
-  p->integer.num_valid_values = 0;
-  d[i++] = p++;
-
-  assert(i < MAX_NPARAMETERS);
-  p->version = 2;
-  p->name = "min-q";
+  p->name = kParam_min_q;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 0;
   p->has_default = true;
@@ -146,7 +172,7 @@ static void aom_init_parameters()
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = "max-q";
+  p->name = kParam_max_q;
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 63;
   p->has_default = true;
@@ -313,6 +339,7 @@ struct heif_error aom_set_parameter_integer(void* encoder_raw, const char* name,
   set_value(kParam_min_q, min_q);
   set_value(kParam_max_q, max_q);
   set_value(kParam_threads, threads);
+  set_value(kParam_speed, cpu_used);
 
   return heif_error_unsupported_parameter;
 }
@@ -331,25 +358,34 @@ struct heif_error aom_get_parameter_integer(void* encoder_raw, const char* name,
   get_value(kParam_min_q, min_q);
   get_value(kParam_max_q, max_q);
   get_value(kParam_threads, threads);
+  get_value(kParam_speed, cpu_used);
 
   return heif_error_unsupported_parameter;
 }
 
 
-struct heif_error aom_set_parameter_boolean(void* encoder, const char* name, int value)
+struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name, int value)
 {
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return aom_set_parameter_lossless(encoder,value);
   }
 
+  set_value(kParam_realtime, realtime_mode);
+
   return heif_error_unsupported_parameter;
 }
 
-struct heif_error aom_get_parameter_boolean(void* encoder, const char* name, int* value)
+struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name, int* value)
 {
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
   if (strcmp(name, heif_encoder_parameter_name_lossless)==0) {
     return aom_get_parameter_lossless(encoder,value);
   }
+
+  get_value(kParam_realtime, realtime_mode);
 
   return heif_error_unsupported_parameter;
 }
@@ -467,7 +503,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- configure codec
 
-  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
+  unsigned int aomUsage = (encoder->realtime_mode ? AOM_USAGE_REALTIME : AOM_USAGE_GOOD_QUALITY);
 
 
   aom_codec_enc_cfg_t cfg;
@@ -485,7 +521,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   int bitrate = (int)(12 * pow(6.26, encoder->quality*0.01) * 1000);
   printf("bitrate: %d\n",bitrate);
-  
+
   cfg.rc_target_bitrate = bitrate;
   cfg.rc_min_quantizer = encoder->min_q;
   cfg.rc_max_quantizer = encoder->max_q;
@@ -501,16 +537,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     // TODO
   }
 
-
-  int aomCpuUsed = 5;
-
-  if (aomCpuUsed != -1) {
-    aom_codec_control(&encoder->codec, AOME_SET_CPUUSED, aomCpuUsed);
-  }
+  aom_codec_control(&encoder->codec, AOME_SET_CPUUSED, encoder->cpu_used);
 
   if (encoder->threads > 1) {
     aom_codec_control(&encoder->codec, AV1E_SET_ROW_MT, 1);
-  }  
+  }
 
   // --- encode frame
 
@@ -660,8 +691,8 @@ static const struct heif_encoder_plugin encoder_plugin_aom
   /* list_parameters */ aom_list_parameters,
   /* set_parameter_integer */ aom_set_parameter_integer,
   /* get_parameter_integer */ aom_get_parameter_integer,
-  /* set_parameter_boolean */ aom_set_parameter_integer, // boolean also maps to integer function
-  /* get_parameter_boolean */ aom_get_parameter_integer, // boolean also maps to integer function
+  /* set_parameter_boolean */ aom_set_parameter_boolean,
+  /* get_parameter_boolean */ aom_get_parameter_boolean,
   /* set_parameter_string */ aom_set_parameter_string,
   /* get_parameter_string */ aom_get_parameter_string,
   /* query_input_colorspace */ aom_query_input_colorspace,
