@@ -520,7 +520,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   //cfg.g_timebase.den = info.time_base.denominator;
 
   int bitrate = (int)(12 * pow(6.26, encoder->quality*0.01) * 1000);
-  printf("bitrate: %d\n",bitrate);
+  //printf("bitrate: %d\n",bitrate);
 
   cfg.rc_target_bitrate = bitrate;
   cfg.rc_min_quantizer = encoder->min_q;
@@ -567,7 +567,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
       if (pkt->kind == AOM_CODEC_CX_FRAME_PKT) {
         //std::cerr.write((char*)pkt->data.frame.buf, pkt->data.frame.sz);
 
-        printf("packet of size: %d\n",(int)pkt->data.frame.sz);
+        //printf("packet of size: %d\n",(int)pkt->data.frame.sz);
 
 
         // TODO: split the received data into separate OBUs
