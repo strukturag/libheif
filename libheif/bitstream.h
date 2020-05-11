@@ -146,7 +146,7 @@ namespace heif {
     uint16_t read16();
     uint32_t read32();
     std::string read_string();
-    bool read(uint8_t* data, int n);
+    bool read(uint8_t* data, int64_t n);
 
     bool prepare_read(int64_t nBytes);
 
