@@ -4,6 +4,8 @@ libdir=@libdir@
 includedir=@includedir@
 builtin_h265_decoder=@have_libde265@
 builtin_h265_encoder=@have_x265@
+builtin_avif_decoder=@have_aom@
+builtin_avif_encoder=@have_aom@
 
 Name: libheif
 Description: HEIF image codec.
