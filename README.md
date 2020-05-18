@@ -64,7 +64,7 @@ heif_image* img;
 heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB, nullptr);
 
 int stride;
-const uint8_t* data = heif_pixel_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 ```
 
 Writing an HEIF file can be done like this:
