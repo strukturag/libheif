@@ -266,7 +266,7 @@ std::string BitstreamRange::read_string()
 }
 
 
-bool BitstreamRange::read(uint8_t* data, int n)
+bool BitstreamRange::read(uint8_t* data, int64_t n)
 {
   if (!prepare_read(n)) {
     return false;

@@ -2717,7 +2717,7 @@ Error Box_av1C::parse(BitstreamRange& range)
     c.initial_presentation_delay_minus_one = byte & 0x0F;
   }
 
-  int configOBUs_bytes = range.get_remaining_bytes();
+  const int64_t configOBUs_bytes = range.get_remaining_bytes();
   m_config_OBUs.resize(configOBUs_bytes);
 
   if (!range.read(m_config_OBUs.data(), configOBUs_bytes)) {
