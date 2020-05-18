@@ -127,6 +127,15 @@ For AVIF support, make sure that libaom is installed.
     make
     ```
 
+### Adding rav1e encoder for AVIF
+
+* Install `cargo`.
+* Install `cbindgen` by executing
+```
+cargo install --force cbindgen
+```
+* Make sure that the `cbindgen` executable is found. You probably have to add `~/.cargo/bin` to your `$PATH`.
+* Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
 
 ## Compiling to JavaScript
 
