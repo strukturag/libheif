@@ -217,6 +217,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   if (!m_ftyp_box->has_compatible_brand(fourcc("heic")) &&
       !m_ftyp_box->has_compatible_brand(fourcc("heix")) &&
+      !m_ftyp_box->has_compatible_brand(fourcc("mif1")) &&
       !m_ftyp_box->has_compatible_brand(fourcc("avif"))) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
