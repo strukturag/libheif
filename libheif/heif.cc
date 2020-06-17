@@ -233,14 +233,20 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
   else if (mainBrand == heif_mif1) {
     return "image/heif";
   }
-  if (mainBrand == heif_hevc ||
-      mainBrand == heif_hevx ||
-      mainBrand == heif_hevm ||
-      mainBrand == heif_hevs) {
+  else if (mainBrand == heif_hevc ||
+           mainBrand == heif_hevx ||
+           mainBrand == heif_hevm ||
+           mainBrand == heif_hevs) {
     return "image/heic-sequence";
   }
   else if (mainBrand == heif_msf1) {
     return "image/heif-sequence";
+  }
+  else if (mainBrand == heif_avif) {
+    return "image/avif";
+  }
+  else if (mainBrand == heif_avis) {
+    return "image/avif-sequence";
   }
   else if (is_jpeg(data,len)==TriBool::Yes) {
     return "image/jpeg";
