@@ -67,6 +67,7 @@ namespace heif {
 
     Fraction operator+(const Fraction&) const;
     Fraction operator-(const Fraction&) const;
+    Fraction operator+(int) const;
     Fraction operator-(int) const;
     Fraction operator/(int) const;
 
@@ -79,6 +80,12 @@ namespace heif {
     int32_t numerator = 0;
     int32_t denominator = 1;
   };
+
+
+  inline std::ostream& operator<<(std::ostream& str, const Fraction& f) {
+    str << f.numerator << "/" << f.denominator;
+    return str;
+  }
 
 
   class BoxHeader {

@@ -46,6 +46,9 @@ Fraction::Fraction(int32_t num,int32_t den)
   // We need this as adding fractions may lead to very large denominators
   // (e.g. 0x10000 * 0x10000 > 0x100000000 -> overflow, leading to integer 0)
 
+  numerator = num;
+  denominator = den;
+
   while (denominator > MAX_FRACTION_VALUE || denominator < -MAX_FRACTION_VALUE) {
     numerator /= 2;
     denominator /= 2;
@@ -77,6 +80,11 @@ Fraction Fraction::operator-(const Fraction& b) const
     return Fraction { numerator * b.denominator - b.numerator * denominator,
         denominator * b.denominator };
   }
+}
+
+Fraction Fraction::operator+(int v) const
+{
+  return Fraction { numerator + v * denominator, denominator };
 }
 
 Fraction Fraction::operator-(int v) const
@@ -2211,13 +2219,12 @@ int Box_clap::left_rounded(int image_width) const
   Fraction pcX  = m_horizontal_offset + Fraction(image_width-1, 2);
   Fraction left = pcX - (m_clean_aperture_width-1)/2;
 
-  return left.round();
+  return left.round_down();
 }
 
 int Box_clap::right_rounded(int image_width) const
 {
-  Fraction pcX  = m_horizontal_offset + Fraction(image_width-1, 2);
-  Fraction right = pcX + (m_clean_aperture_width-1)/2;
+  Fraction right = m_clean_aperture_width-1 + left_rounded(image_width);
 
   return right.round();
 }
@@ -2232,8 +2239,7 @@ int Box_clap::top_rounded(int image_height) const
 
 int Box_clap::bottom_rounded(int image_height) const
 {
-  Fraction pcY  = m_vertical_offset + Fraction(image_height-1, 2);
-  Fraction bottom = pcY + (m_clean_aperture_height-1)/2;
+  Fraction bottom = m_clean_aperture_height-1 + top_rounded(image_height);
 
   return bottom.round();
 }
