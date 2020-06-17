@@ -161,7 +161,7 @@ static void aom_init_parameters()
   p->version = 2;
   p->name = kParam_min_q;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 0;
+  p->integer.default_value = 1;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
