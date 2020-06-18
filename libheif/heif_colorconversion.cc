@@ -411,7 +411,8 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(ColorState input_state,
     return { };
   }
 
-  if (input_state.colorspace != heif_colorspace_RGB) {
+  if (input_state.colorspace != heif_colorspace_RGB ||
+      input_state.chroma != heif_chroma_444) {
     return { };
   }
 

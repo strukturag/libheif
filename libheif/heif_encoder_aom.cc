@@ -460,11 +460,36 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   const int source_width  = heif_image_get_width(image, heif_channel_Y) & ~1;
   const int source_height = heif_image_get_height(image, heif_channel_Y) & ~1;
 
+  const heif_chroma chroma = heif_image_get_chroma_format(image);
+
   // --- copy libheif image to aom image
 
   aom_image_t input_image;
 
-  if (!aom_img_alloc(&input_image, AOM_IMG_FMT_I420,
+  aom_img_fmt_t img_format;
+
+  switch (chroma) {
+  case heif_chroma_420:
+    img_format = AOM_IMG_FMT_I420;
+    break;
+  case heif_chroma_422:
+    img_format = AOM_IMG_FMT_I422;
+    break;
+  case heif_chroma_444:
+    img_format = AOM_IMG_FMT_I444;
+    break;
+  default:
+    assert(false);
+    break;
+  }
+
+  /*
+    if (bpp > 8) {
+        img_format |= AOM_IMG_FMT_HIGHBITDEPTH;
+    }
+  */
+
+  if (!aom_img_alloc(&input_image, img_format,
                      source_width, source_height, 1)) {
     printf("Failed to allocate image.\n");
     assert(false);
@@ -489,8 +514,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     int h = source_height;
 
     if (plane != 0) {
-      w/=2;
-      h/=2;
+      if (chroma!=heif_chroma_444) { w/=2; }
+      if (chroma==heif_chroma_420) { h/=2; }
     }
 
     for (int y=0; y<h; y++) {
