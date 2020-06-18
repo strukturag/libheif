@@ -37,6 +37,8 @@ namespace heif {
   int chroma_h_subsampling(heif_chroma c);
   int chroma_v_subsampling(heif_chroma c);
 
+  heif_chroma chroma_from_subsampling(int h,int v);
+
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ErrorBuffer
 {

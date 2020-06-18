@@ -68,6 +68,24 @@ int heif::chroma_v_subsampling(heif_chroma c)
   }
 }
 
+heif_chroma heif::chroma_from_subsampling(int h,int v)
+{
+  if (h==2 && v==2) {
+    return heif_chroma_420;
+  }
+  else if (h==2 && v==1) {
+    return heif_chroma_422;
+  }
+  else if (h==1 && v==1) {
+    return heif_chroma_444;
+  }
+  else {
+    assert(false);
+    return heif_chroma_undefined;
+  }
+}
+
+
 
 HeifPixelImage::HeifPixelImage()
 {
