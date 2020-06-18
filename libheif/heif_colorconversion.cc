@@ -278,10 +278,19 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
   }
 
-  if (bpp_y != 8 ||
-      bpp_cb != 8 ||
-      bpp_cr != 8) {
-    return nullptr;
+  if (!hdr) {
+    if (bpp_y != 8 ||
+        bpp_cb != 8 ||
+        bpp_cr != 8) {
+      return nullptr;
+    }
+  }
+  else {
+    if (bpp_y == 8 ||
+        bpp_cb == 8 ||
+        bpp_cr == 8) {
+      return nullptr;
+    }
   }
 
 
