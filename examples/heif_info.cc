@@ -158,7 +158,7 @@ int main(int argc, char** argv)
   std::shared_ptr<heif_context> ctx(heif_context_alloc(),
                                     [] (heif_context* c) { heif_context_free(c); });
   if (!ctx) {
-    fprintf(stderr, "Could not create HEIF context\n");
+    fprintf(stderr, "Could not create context object\n");
     return 1;
   }
 
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
   }
 
   if (err.code != 0) {
-    std::cerr << "Could not read HEIF file: " << err.message << "\n";
+    std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
   }
 

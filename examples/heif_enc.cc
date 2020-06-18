@@ -86,7 +86,7 @@ void show_help(const char* argv0)
             << "----------------------------------------\n"
             << "Usage: heif-enc [options] image.jpeg ...\n"
             << "\n"
-            << "When specifying multiple source images, they will all be saved into the same HEIF file.\n"
+            << "When specifying multiple source images, they will all be saved into the same HEIF/AVIF file.\n"
             << "\n"
             << "When using the x265 encoder, you may pass it any of its parameters by\n"
             << "prefixing the parameter name with 'x265:'. Hence, to set the 'ctu' parameter,\n"
@@ -103,7 +103,7 @@ void show_help(const char* argv0)
             << "  -o, --output    output filename (optional)\n"
             << "  -v, --verbose   enable logging output (more -v will increase logging level)\n"
             << "  -P, --params    show all encoder parameters\n"
-            << "  -b #            bit-depth of generated HEIF file when using 16-bit PNG input (default: 10 bit)\n"
+            << "  -b #            bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif      encode as AVIF\n"
     ;
@@ -963,7 +963,7 @@ int main(int argc, char** argv)
   std::shared_ptr<heif_context> context(heif_context_alloc(),
                                         [] (heif_context* c) { heif_context_free(c); });
   if (!context) {
-    std::cerr << "Could not create HEIF context\n";
+    std::cerr << "Could not create context object\n";
     return 1;
   }
 
@@ -1085,7 +1085,7 @@ int main(int argc, char** argv)
                                       &handle);
     if (error.code != 0) {
       heif_encoding_options_free(options);
-      std::cerr << "Could not encode HEIF file: " << error.message << "\n";
+      std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
 

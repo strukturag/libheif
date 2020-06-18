@@ -148,12 +148,12 @@ int main(int argc, char** argv)
   istr.read((char*)magic,12);
   enum heif_filetype_result filetype_check = heif_check_filetype(magic,12);
   if (filetype_check == heif_filetype_no) {
-    fprintf(stderr, "Input file is not an HEIF file\n");
+    fprintf(stderr, "Input file is not an HEIF/AVIF file\n");
     return 1;
   }
 
   if (filetype_check == heif_filetype_yes_unsupported) {
-    fprintf(stderr, "Input file is an unsupported HEIF file type\n");
+    fprintf(stderr, "Input file is an unsupported HEIF/AVIF file type\n");
     return 1;
   }
 
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
   struct heif_context* ctx = heif_context_alloc();
   if (!ctx) {
-    fprintf(stderr, "Could not create HEIF context\n");
+    fprintf(stderr, "Could not create context object\n");
     return 1;
   }
 
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
   struct heif_error err;
   err = heif_context_read_from_file(ctx, input_filename.c_str(), nullptr);
   if (err.code != 0) {
-    std::cerr << "Could not read HEIF file: " << err.message << "\n";
+    std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
   }
 
@@ -205,7 +205,7 @@ int main(int argc, char** argv)
     struct heif_image_handle* handle;
     err = heif_context_get_image_handle(ctx, image_IDs[idx], &handle);
     if (err.code) {
-      std::cerr << "Could not read HEIF image " << idx << ": "
+      std::cerr << "Could not read HEIF/AVIF image " << idx << ": "
                 << err.message << "\n";
       return 1;
     }
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
     heif_decoding_options_free(decode_options);
     if (err.code) {
       heif_image_handle_release(handle);
-      std::cerr << "Could not decode HEIF image: " << idx << ": "
+      std::cerr << "Could not decode image: " << idx << ": "
                 << err.message << "\n";
       return 1;
     }
