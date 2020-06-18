@@ -20,6 +20,8 @@
 
 #include "heif.h"
 #include "heif_plugin.h"
+#include "heif_avif.h"
+#include "heif_api_structs.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -539,8 +541,14 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     // TODO
   }
 
+  heif::Box_av1C::configuration inout_config;
+  heif::Error err = heif::fill_av1C_configuration(&inout_config, image->image);
+
   cfg.g_w = source_width;
   cfg.g_h = source_height;
+
+  cfg.g_profile = inout_config.seq_profile;
+
   //cfg.g_timebase.num = info.time_base.numerator;
   //cfg.g_timebase.den = info.time_base.denominator;
 
