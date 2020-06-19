@@ -10,6 +10,7 @@ set (heif_convert_sources
 )
 
 set (additional_libraries)
+set (additional_includes)
 
 include (${CMAKE_ROOT}/Modules/FindJPEG.cmake)
 
@@ -19,6 +20,7 @@ add_definitions(-DHAVE_LIBJPEG=1)
 include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
 
 set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
+set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS})
 check_cxx_source_compiles("
 #include <stddef.h>
 #include <stdio.h>
@@ -42,6 +44,10 @@ set (additional_libraries
   ${additional_libraries}
   ${JPEG_LIBRARIES}
 )
+set (additional_includes
+  ${additional_includes}
+  ${JPEG_INCLUDE_DIRS}
+)
 endif()
 
 if(UNIX)
@@ -56,7 +62,11 @@ if(UNIX)
     )
     set (additional_libraries
       ${additional_libraries}
-      ${LIBPNG_LIBRARIES}
+      ${LIBPNG_LINK_LIBRARIES}
+    )
+    set (additional_includes
+      ${additional_includes}
+      ${LIBPNG_INCLUDE_DIRS}
     )
   endif()
 endif()
@@ -84,12 +94,14 @@ endif()
 
 add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
 target_link_libraries (heif-convert heif ${additional_libraries})
+target_include_directories(heif-convert PRIVATE ${additional_includes})
 
 add_executable (heif-info ${heif_info_sources} ${getopt_sources})
 target_link_libraries (heif-info heif)
 
 add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
 target_link_libraries (heif-enc heif ${additional_libraries})
+target_include_directories(heif-enc PRIVATE ${additional_includes})
 
 add_executable (heif-test ${heif_test_sources} ${getopt_sources})
 target_link_libraries (heif-test heif)
@@ -105,5 +117,6 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LIBRARIES})
+  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LINK_LIBRARIES})
+  target_include_directories(heif-thumbnailer PRIVATE ${LIBPNG_INCLUDE_DIRS})
 endif()
