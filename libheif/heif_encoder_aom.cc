@@ -60,6 +60,8 @@ struct encoder_struct_aom
   int min_q;
   int max_q;
   int threads;
+
+  heif_chroma chroma;
 };
 
 
@@ -69,6 +71,10 @@ static const char* kParam_threads = "threads";
 static const char* kParam_realtime = "realtime";
 static const char* kParam_speed = "speed";
 
+static const char* kParam_chroma = "chroma";
+static const char*const kParam_chroma_valid_values[] = {
+  "420","422","444"
+};
 
 static const int AOM_PLUGIN_PRIORITY = 40;
 
@@ -157,6 +163,15 @@ static void aom_init_parameters()
   p->type = heif_encoder_parameter_type_boolean;
   p->boolean.default_value = false;
   p->has_default = true;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_chroma;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "420";
+  p->has_default = true;
+  p->string.valid_values = kParam_chroma_valid_values;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
@@ -395,13 +410,57 @@ struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name,
 
 struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
+  if (strcmp(name, kParam_chroma)==0) {
+    if (strcmp(value, "420")==0) {
+      encoder->chroma = heif_chroma_420;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "422")==0) {
+      encoder->chroma = heif_chroma_422;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "444")==0) {
+      encoder->chroma = heif_chroma_444;
+      return heif_error_ok;
+    }
+    else {
+      return heif_error_invalid_parameter_value;
+    }
+  }
+
   return heif_error_unsupported_parameter;
+}
+
+
+static void save_strcpy(char* dst, int dst_size, const char* src)
+{
+  strncpy(dst, src, dst_size-1);
+  dst[dst_size-1] = 0;
 }
 
 
 struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
                                            char* value, int value_size)
 {
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
+  switch (encoder->chroma) {
+  case heif_chroma_420:
+    save_strcpy(value, value_size, "420");
+    break;
+  case heif_chroma_422:
+    save_strcpy(value, value_size, "422");
+    break;
+  case heif_chroma_444:
+    save_strcpy(value, value_size, "444");
+    break;
+  default:
+    assert(false);
+    return heif_error_invalid_parameter_value;
+  }
+  
   return heif_error_unsupported_parameter;
 }
 
@@ -432,6 +491,15 @@ void aom_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma
 {
   *colorspace = heif_colorspace_YCbCr;
   *chroma = heif_chroma_420;
+}
+
+
+void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
+{
+  struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
+
+  *colorspace = heif_colorspace_YCbCr;
+  *chroma = encoder->chroma;
 }
 
 
@@ -704,7 +772,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
 
 static const struct heif_encoder_plugin encoder_plugin_aom
 {
-  /* plugin_api_version */ 1,
+  /* plugin_api_version */ 2,
   /* compression_format */ heif_compression_AV1,
   /* id_name */ "aom",
   /* priority */ AOM_PLUGIN_PRIORITY,
@@ -730,7 +798,8 @@ static const struct heif_encoder_plugin encoder_plugin_aom
   /* get_parameter_string */ aom_get_parameter_string,
   /* query_input_colorspace */ aom_query_input_colorspace,
   /* encode_image */ aom_encode_image,
-  /* get_compressed_data */ aom_get_compressed_data
+  /* get_compressed_data */ aom_get_compressed_data,
+  /* query_input_colorspace (v2) */ aom_query_input_colorspace2
 };
 
 const struct heif_encoder_plugin* get_encoder_plugin_aom()

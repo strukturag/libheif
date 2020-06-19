@@ -38,6 +38,8 @@ extern "C" {
 // -----------------------------------------
 //  1.0          1        N/A        N/A
 //  1.1          1         1          1
+//  1.4          1         1          2
+//  1.8          1         2          2
 
 
 // ====================================================================================================
@@ -124,7 +126,7 @@ enum heif_image_input_class
 struct heif_encoder_plugin
 {
   // API version supported by this plugin
-  int plugin_api_version; // current version: 1
+  int plugin_api_version; // current version: 2
 
 
   // --- version 1 functions ---
@@ -196,9 +198,13 @@ struct heif_encoder_plugin
                                            enum heif_encoded_data_type* type);
 
 
-  // --- version 2 functions will follow below ... ---
+  // --- version 2 ---
 
+  void (*query_input_colorspace2)(void* encoder,
+				  enum heif_colorspace* inout_colorspace,
+				  enum heif_chroma* inout_chroma);
 
+  // --- version 3 functions will follow below ... ---
 
 };
 
