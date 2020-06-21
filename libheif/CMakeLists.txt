@@ -94,8 +94,7 @@ endif()
 
 if(AOM_FOUND)
   add_definitions(-DAOM=1)
-  set (libheif_sources
-    ${libheif_sources}
+  target_sources(heif PRIVATE
     heif_decoder_aom.cc
     heif_decoder_aom.h
     heif_encoder_aom.cc
