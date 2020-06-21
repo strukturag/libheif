@@ -93,7 +93,7 @@ if(X265_FOUND)
 endif()
 
 if(AOM_FOUND)
-  add_definitions(-DAOM=1)
+  target_compile_definitions(heif PRIVATE HAVE_AOM=1)
   target_sources(heif PRIVATE
     heif_decoder_aom.cc
     heif_decoder_aom.h
