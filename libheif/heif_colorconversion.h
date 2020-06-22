@@ -105,6 +105,7 @@ class ColorConversionOperation
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options = ColorConversionOptions()) = 0;
+  virtual const char* name() const = 0;
 };
 
 

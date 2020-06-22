@@ -558,9 +558,8 @@ Error HeifContext::interpret_heif_file()
 
           std::shared_ptr<Box_auxC> auxC_property;
           for (const auto& property : properties) {
-            auto auxC = std::dynamic_pointer_cast<Box_auxC>(property.property);
-            if (auxC) {
-              auxC_property = auxC;
+            if (property.property->get_short_type() == fourcc("auxC")) {
+              auxC_property = std::static_pointer_cast<Box_auxC>(property.property);
             }
           }
 
@@ -625,8 +624,8 @@ Error HeifContext::interpret_heif_file()
             Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
 
             for (auto& msg : sei_messages) {
-              auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
-              if (depth_msg) {
+              if (msg->is_depth_representation_info()) {
+                auto depth_msg = std::static_pointer_cast<SEIMessage_depth_representation_info>(msg);
                 image->set_depth_representation_info(*depth_msg);
               }
             }
@@ -677,8 +676,8 @@ Error HeifContext::interpret_heif_file()
     bool ispe_read = false;
     bool primary_colr_set = false;
     for (const auto& prop : properties) {
-      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
-      if (ispe) {
+      if (prop.property->get_short_type() == fourcc("ispe")) {
+        auto ispe = std::static_pointer_cast<Box_ispe>(prop.property);
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
 
@@ -702,14 +701,14 @@ Error HeifContext::interpret_heif_file()
       }
 
       if (ispe_read) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
-        if (clap) {
+        if (prop.property->get_short_type() == fourcc("clap")) {
+          auto clap = std::static_pointer_cast<Box_clap>(prop.property);
           image->set_resolution( clap->get_width_rounded(),
                                  clap->get_height_rounded() );
         }
 
-        auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);
-        if (irot) {
+        if (prop.property->get_short_type() == fourcc("irot")) {
+          auto irot = std::static_pointer_cast<Box_irot>(prop.property);
           if (irot->get_rotation()==90 ||
               irot->get_rotation()==270) {
             // swap width and height
@@ -719,8 +718,8 @@ Error HeifContext::interpret_heif_file()
         }
       }
 
-      auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
-      if (colr) {
+      if (prop.property->get_short_type() == fourcc("colr")) {
+        auto colr = std::static_pointer_cast<Box_colr>(prop.property);
         auto profile = colr->get_color_profile();
 
         image->set_color_profile(profile);
@@ -1090,8 +1089,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     error = ipco_box->get_properties_for_item_ID(ID, ipma_box, properties);
 
     for (const auto& property : properties) {
-      auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
-      if (rot) {
+      if (property.property->get_short_type() == fourcc("irot")) {
+        auto rot = std::static_pointer_cast<Box_irot>(property.property);
         std::shared_ptr<HeifPixelImage> rotated_img;
         error = img->rotate_ccw(rot->get_rotation(), rotated_img);
         if (error) {
@@ -1102,8 +1101,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
-      if (mirror) {
+      if (property.property->get_short_type() == fourcc("imir")) {
+        auto mirror = std::static_pointer_cast<Box_imir>(property.property);
         error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
         if (error) {
           return error;
@@ -1111,8 +1110,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
-      if (clap) {
+      if (property.property->get_short_type() == fourcc("clap")) {
+        auto clap = std::static_pointer_cast<Box_clap>(property.property);
         std::shared_ptr<HeifPixelImage> clap_img;
 
         int img_width = img->get_width();
@@ -1205,7 +1204,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   auto ipma = m_heif_file->get_ipma_box();
   auto ipco = m_heif_file->get_ipco_box();
   auto pixi_box = ipco->get_property_for_item_ID(ID, ipma, fourcc("pixi"));
-  auto pixi = std::dynamic_pointer_cast<Box_pixi>(pixi_box);
+  auto pixi = pixi_box->get_short_type() == fourcc("pixi") ?
+          std::static_pointer_cast<Box_pixi>(pixi_box) : nullptr;
 
   const uint32_t w = grid.get_width();
   const uint32_t h = grid.get_height();
@@ -1931,7 +1931,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   m_heif_context->m_heif_file->add_av1C_property(m_id);
   m_heif_context->m_heif_file->set_av1C_configuration(m_id, config);
 
-  
+
 
   heif_image c_api_image;
   c_api_image.image = image;

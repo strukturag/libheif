@@ -38,6 +38,7 @@ class SEIMessage
 {
 public:
   virtual ~SEIMessage() { }
+  virtual bool is_depth_representation_info() const { return false; }
 };
 
 
@@ -45,6 +46,7 @@ class SEIMessage_depth_representation_info : public SEIMessage,
                                              public heif_depth_representation_info
 {
 public:
+  bool is_depth_representation_info() const override { return true; }
 };
 
 
