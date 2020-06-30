@@ -302,6 +302,8 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   }
 
 
+  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+
   int width = input->get_width();
   int height = input->get_height();
 
@@ -363,13 +365,20 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
       int cx = (x>>shiftH);
       int cy = (y>>shiftV);
 
-      float yv = static_cast<float>(in_y [y*in_y_stride  + x] );
-      float cb = static_cast<float>(in_cb[cy*in_cb_stride + cx]-halfRange);
-      float cr = static_cast<float>(in_cr[cy*in_cr_stride + cx]-halfRange);
+      if (colorProfile && colorProfile->get_matrix_coefficients()==0) {
+        out_r[y * out_r_stride + x] = in_cr[cy * in_y_stride + cx];
+        out_g[y * out_g_stride + x] = in_y[y * in_y_stride + x];
+        out_b[y * out_b_stride + x] = in_cb[cy * in_y_stride + cx];
+      }
+      else {
+        float yv = static_cast<float>(in_y[y * in_y_stride + x] );
+        float cb = static_cast<float>(in_cb[cy * in_cb_stride + cx] - halfRange);
+        float cr = static_cast<float>(in_cr[cy * in_cr_stride + cx] - halfRange);
 
-      out_r[y*out_r_stride + x] = (Pixel)(clip(yv + 1.402f*cr, fullRange));
-      out_g[y*out_g_stride + x] = (Pixel)(clip(yv - 0.344136f*cb - 0.714136f*cr, fullRange));
-      out_b[y*out_b_stride + x] = (Pixel)(clip(yv + 1.772f*cb, fullRange));
+        out_r[y * out_r_stride + x] = (Pixel) (clip(yv + 1.402f * cr, fullRange));
+        out_g[y * out_g_stride + x] = (Pixel) (clip(yv - 0.344136f * cb - 0.714136f * cr, fullRange));
+        out_b[y * out_b_stride + x] = (Pixel) (clip(yv + 1.772f * cb, fullRange));
+      }
     }
 
     if (has_alpha) {
@@ -2358,6 +2367,7 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
   input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_chroma_with_alpha(input->get_chroma_format());
+  input_state.nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
 
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
