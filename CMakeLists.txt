@@ -53,14 +53,29 @@ endif()
 
 if (UNIX)
   find_package(PkgConfig)
+
   pkg_check_modules(LIBDE265 libde265)
+  if (LIBDE265_FOUND)
+      message("HEIF decoder, libde265: found")
+  else ()
+      message("HEIF decoder, libde265: not found")
+  endif ()
+
   pkg_check_modules(X265 x265)
+  if (X265_FOUND)
+      message("HEIF encoder, x265: found")
+  else ()
+      message("HEIF encoder, x265: not found")
+  endif ()
+
   pkg_check_modules(AOM aom)
+  if (AOM_FOUND)
+      message("AVIF decoder/encoder, aom: found")
+  else ()
+      message("AVIF decoder/encoder, aom: not found")
+  endif ()
 endif()
 
-message("libde265: ${LIBDE265_FOUND}")
-message("x265: ${X265_FOUND}")
-message("aom: ${AOM_FOUND}")
 
 # Create libheif pkgconfig file
 set(prefix ${CMAKE_INSTALL_PREFIX})
