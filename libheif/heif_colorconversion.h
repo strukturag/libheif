@@ -126,4 +126,9 @@ class ColorConversionPipeline
   ColorConversionOptions m_options;
 };
 
+
+ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
+                                                    heif_colorspace colorspace,
+                                                    heif_chroma chroma,
+                                                    int output_bpp = 0);
 }

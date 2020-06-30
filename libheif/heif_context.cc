@@ -43,6 +43,7 @@
 #include "heif_hevc.h"
 #include "heif_avif.h"
 #include "heif_plugin_registry.h"
+#include "heif_colorconversion.h"
 
 using namespace heif;
 
@@ -1768,7 +1769,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   else {
     encoder->plugin->query_input_colorspace(&colorspace, &chroma);
   }
-  
+
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
@@ -1886,7 +1887,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   else {
     encoder->plugin->query_input_colorspace(&colorspace, &chroma);
   }
-  
+
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
@@ -1941,7 +1942,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   m_heif_context->m_heif_file->add_av1C_property(m_id);
   m_heif_context->m_heif_file->set_av1C_configuration(m_id, config);
 
-  
+
 
   heif_image c_api_image;
   c_api_image.image = image;

@@ -98,7 +98,8 @@ HeifPixelImage::~HeifPixelImage()
   }
 }
 
-static int num_interleaved_pixels_per_plane(heif_chroma chroma) {
+
+int heif::num_interleaved_pixels_per_plane(heif_chroma chroma) {
   switch (chroma) {
   case heif_chroma_undefined:
   case heif_chroma_monochrome:
@@ -353,7 +354,7 @@ void HeifPixelImage::transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage
 }
 
 
-static bool is_chroma_with_alpha(heif_chroma chroma) {
+bool heif::is_chroma_with_alpha(heif_chroma chroma) {
   switch (chroma) {
   case heif_chroma_undefined:
   case heif_chroma_monochrome:
@@ -373,49 +374,6 @@ static bool is_chroma_with_alpha(heif_chroma chroma) {
 
   assert(false);
   return false;
-}
-
-
-std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
-                                                         heif_colorspace target_colorspace,
-                                                         heif_chroma target_chroma,
-                                                         int output_bpp)
-{
-  ColorState input_state;
-  input_state.colorspace = input->get_colorspace();
-  input_state.chroma = input->get_chroma_format();
-  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_chroma_with_alpha(input->get_chroma_format());
-
-  std::set<enum heif_channel> channels = input->get_channel_set();
-  assert(!channels.empty());
-  input_state.bits_per_pixel = input->get_bits_per_pixel(*(channels.begin()));
-
-  ColorState output_state = input_state;
-  output_state.colorspace = target_colorspace;
-  output_state.chroma = target_chroma;
-
-  // If we convert to an interleaved format, we want alpha only if present in the
-  // interleaved output format.
-  // For planar formats, we include an alpha plane when included in the input.
-
-  if (num_interleaved_pixels_per_plane(target_chroma)>1) {
-    output_state.has_alpha = is_chroma_with_alpha(target_chroma);
-  }
-  else {
-    output_state.has_alpha = input_state.has_alpha;
-  }
-
-  if (output_bpp) {
-    output_state.bits_per_pixel = output_bpp;
-  }
-
-  ColorConversionPipeline pipeline;
-  bool success = pipeline.construct_pipeline(input_state, output_state);
-  if (!success) {
-    return nullptr;
-  }
-
-  return pipeline.convert_image(input);
 }
 
 
