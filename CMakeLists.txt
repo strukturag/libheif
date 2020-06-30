@@ -58,6 +58,10 @@ if (UNIX)
   pkg_check_modules(AOM aom)
 endif()
 
+message("libde265: ${LIBDE265_FOUND}")
+message("x265: ${X265_FOUND}")
+message("aom: ${AOM_FOUND}")
+
 # Create libheif pkgconfig file
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix ${CMAKE_INSTALL_PREFIX})

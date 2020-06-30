@@ -92,10 +92,12 @@ if(X265_FOUND)
     install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
+message("subdir AOM: ${AOM_FOUND}")
+
 if(AOM_FOUND)
-  add_definitions(-DAOM=1)
-  set (libheif_sources
-    ${libheif_sources}
+  message("add aom")
+  target_compile_definitions(heif PRIVATE HAVE_AOM=1)
+  target_sources(heif PRIVATE
     heif_decoder_aom.cc
     heif_decoder_aom.h
     heif_encoder_aom.cc
