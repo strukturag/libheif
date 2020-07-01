@@ -125,15 +125,11 @@ heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
   return coeffs;
 }
 
-#include <stdio.h>
-
 heif::YCbCr_to_RGB_coefficients
 heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
   YCbCr_to_RGB_coefficients coeffs;
 
   Kr_Kb k = get_Kr_Kb(matrix_coefficients_idx, primaries_idx);
-
-  printf("matrix:%d prim:%d kr:%f kb:%f\n", matrix_coefficients_idx, primaries_idx, k.Kr, k.Kb);
 
   if (k.Kb != 0 || k.Kr != 0) { // both will be != 0 when valid
     coeffs.defined = true;
@@ -141,6 +137,9 @@ heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
     coeffs.g_cb = 2 * k.Kb * (-k.Kb + 1) / (k.Kb + k.Kr - 1);
     coeffs.g_cr = 2 * k.Kr * (-k.Kr + 1) / (k.Kb + k.Kr - 1);
     coeffs.b_cb = 2 * (-k.Kb + 1);
+  }
+  else {
+    coeffs = YCbCr_to_RGB_coefficients::defaults();
   }
 
   return coeffs;
