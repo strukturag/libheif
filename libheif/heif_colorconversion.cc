@@ -789,7 +789,7 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
       int cr = (in_cr[y/2*in_cr_stride + x/2]-128);
 
       out_p[y*out_p_stride + 4*x + 0] = clip(yv + ((r_cr*cr)>>8));
-      out_p[y*out_p_stride + 4*x + 1] = clip(yv + ((g_cb*cb + r_cr*cr)>>8));
+      out_p[y*out_p_stride + 4*x + 1] = clip(yv + ((g_cb*cb + g_cr*cr)>>8));
       out_p[y*out_p_stride + 4*x + 2] = clip(yv + ((b_cb*cb)>>8));
 
 
