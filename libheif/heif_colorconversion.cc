@@ -361,11 +361,14 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     out_a_stride /= 2;
   }
 
+  int matrix_coeffs = 2;
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (colorProfile) {
+    matrix_coeffs = colorProfile->get_matrix_coefficients();
     coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
                                                  colorProfile->get_colour_primaries());
   }
+
 
   int x,y;
   for (y=0;y<height;y++) {
@@ -373,10 +376,21 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
       int cx = (x>>shiftH);
       int cy = (y>>shiftV);
 
-      if (colorProfile && colorProfile->get_matrix_coefficients()==0) {
+      if (matrix_coeffs==0) {
         out_r[y * out_r_stride + x] = in_cr[cy * in_y_stride + cx];
         out_g[y * out_g_stride + x] = in_y[y * in_y_stride + x];
         out_b[y * out_b_stride + x] = in_cb[cy * in_y_stride + cx];
+      }
+      else if (matrix_coeffs==8) {
+        // TODO: check this. I have no input image yet which is known to be correct.
+
+        int yv = in_y[y * in_y_stride + x];
+        int cb = in_cb[cy * in_cb_stride + cx] - halfRange;
+        int cr = in_cr[cy * in_cr_stride + cx] - halfRange;
+
+        out_r[y * out_r_stride + x] = (Pixel) (clip(yv - cb + cr));
+        out_g[y * out_g_stride + x] = (Pixel) (clip(yv + cb));
+        out_b[y * out_b_stride + x] = (Pixel) (clip(yv - cb - cr));
       }
       else {
         auto yv = static_cast<float>(in_y[y * in_y_stride + x] );
