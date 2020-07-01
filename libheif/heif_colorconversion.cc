@@ -20,12 +20,14 @@
 
 
 #include "heif_colorconversion.h"
+#include "nclx.h"
 #include <typeinfo>
 #include <algorithm>
 #include <string.h>
 #include <assert.h>
 #include <iostream>
 #include <set>
+#include <cmath>
 
 using namespace heif;
 
@@ -359,6 +361,12 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     out_a_stride /= 2;
   }
 
+  YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
+  if (colorProfile) {
+    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                                 colorProfile->get_colour_primaries());
+  }
+
   int x,y;
   for (y=0;y<height;y++) {
     for (x=0;x<width;x++) {
@@ -371,13 +379,13 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         out_b[y * out_b_stride + x] = in_cb[cy * in_y_stride + cx];
       }
       else {
-        float yv = static_cast<float>(in_y[y * in_y_stride + x] );
-        float cb = static_cast<float>(in_cb[cy * in_cb_stride + cx] - halfRange);
-        float cr = static_cast<float>(in_cr[cy * in_cr_stride + cx] - halfRange);
+        auto yv = static_cast<float>(in_y[y * in_y_stride + x] );
+        auto cb = static_cast<float>(in_cb[cy * in_cb_stride + cx] - halfRange);
+        auto cr = static_cast<float>(in_cr[cy * in_cr_stride + cx] - halfRange);
 
-        out_r[y * out_r_stride + x] = (Pixel) (clip(yv + 1.402f * cr, fullRange));
-        out_g[y * out_g_stride + x] = (Pixel) (clip(yv - 0.344136f * cb - 0.714136f * cr, fullRange));
-        out_b[y * out_b_stride + x] = (Pixel) (clip(yv + 1.772f * cb, fullRange));
+        out_r[y * out_r_stride + x] = (Pixel) (clip(yv + coeffs.r_cr * cr, fullRange));
+        out_g[y * out_g_stride + x] = (Pixel) (clip(yv + coeffs.g_cb * cb + coeffs.g_cr * cr, fullRange));
+        out_b[y * out_b_stride + x] = (Pixel) (clip(yv + coeffs.b_cb * cb, fullRange));
       }
     }
 
@@ -627,6 +635,18 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
+  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
+  if (colorProfile) {
+    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                                 colorProfile->get_colour_primaries());
+  }
+
+  int r_cr = static_cast<int>(lround(256*coeffs.r_cr));
+  int g_cr = static_cast<int>(lround(256*coeffs.g_cr));
+  int g_cb = static_cast<int>(lround(256*coeffs.g_cb));
+  int b_cb = static_cast<int>(lround(256*coeffs.b_cb));
+
   const uint8_t *in_y,*in_cb,*in_cr;
   int in_y_stride=0, in_cb_stride=0, in_cr_stride=0;
 
@@ -645,9 +665,9 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
       int cb = (in_cb[y/2*in_cb_stride + x/2]-128);
       int cr = (in_cr[y/2*in_cr_stride + x/2]-128);
 
-      out_p[y*out_p_stride + 3*x + 0] = clip(yv + ((359*cr)>>8));
-      out_p[y*out_p_stride + 3*x + 1] = clip(yv - ((88*cb + 183*cr)>>8));
-      out_p[y*out_p_stride + 3*x + 2] = clip(yv + ((454*cb)>>8));
+      out_p[y*out_p_stride + 3*x + 0] = clip(yv + ((r_cr*cr)>>8));
+      out_p[y*out_p_stride + 3*x + 1] = clip(yv + ((g_cb*cb + g_cr*cr)>>8));
+      out_p[y*out_p_stride + 3*x + 2] = clip(yv + ((b_cb*cb)>>8));
     }
   }
 
@@ -727,6 +747,22 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
+
+  // --- get conversion coefficients
+
+  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
+  if (colorProfile) {
+    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                                 colorProfile->get_colour_primaries());
+  }
+
+  int r_cr = static_cast<int>(lround(256*coeffs.r_cr));
+  int g_cr = static_cast<int>(lround(256*coeffs.g_cr));
+  int g_cb = static_cast<int>(lround(256*coeffs.g_cb));
+  int b_cb = static_cast<int>(lround(256*coeffs.b_cb));
+
+
   const bool with_alpha = input->has_channel(heif_channel_Alpha);
 
   const uint8_t *in_y,*in_cb,*in_cr,*in_a = nullptr;
@@ -752,9 +788,9 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
       int cb = (in_cb[y/2*in_cb_stride + x/2]-128);
       int cr = (in_cr[y/2*in_cr_stride + x/2]-128);
 
-      out_p[y*out_p_stride + 4*x + 0] = clip(yv + ((359*cr)>>8));
-      out_p[y*out_p_stride + 4*x + 1] = clip(yv - ((88*cb + 183*cr)>>8));
-      out_p[y*out_p_stride + 4*x + 2] = clip(yv + ((454*cb)>>8));
+      out_p[y*out_p_stride + 4*x + 0] = clip(yv + ((r_cr*cr)>>8));
+      out_p[y*out_p_stride + 4*x + 1] = clip(yv + ((g_cb*cb + r_cr*cr)>>8));
+      out_p[y*out_p_stride + 4*x + 2] = clip(yv + ((b_cb*cb)>>8));
 
 
       if (with_alpha) {

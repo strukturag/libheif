@@ -46,6 +46,19 @@ namespace heif {
 
   Kr_Kb get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
 
+  struct YCbCr_to_RGB_coefficients {
+    bool defined=false;
+
+    float r_cr=0;
+    float g_cb=0;
+    float g_cr=0;
+    float b_cb=0;
+
+    static YCbCr_to_RGB_coefficients defaults();
+  };
+
+  YCbCr_to_RGB_coefficients get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
+
 //  uint16_t get_transfer_characteristics() const {return m_transfer_characteristics;}
 // uint16_t get_matrix_coefficients() const {return m_matrix_coefficients;}
 //  bool get_full_range_flag() const {return m_full_range_flag;}

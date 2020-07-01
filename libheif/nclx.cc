@@ -88,23 +88,60 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
       case 1:
         result.Kr = 0.2126f;
         result.Kb = 0.0722f;
+        break;
       case 4:
         result.Kr = 0.30f;
         result.Kb = 0.11f;
+        break;
       case 5:
       case 6:
         result.Kr = 0.299f;
         result.Kb = 0.114f;
+        break;
       case 7:
         result.Kr = 0.212f;
         result.Kb = 0.087f;
+        break;
       case 9:
       case 10:
         result.Kr = 0.2627f;
         result.Kb = 0.0593f;
-    default:
-      ;
+        break;
+      default:;
     }
 
   return result;
+}
+
+
+heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
+{
+  YCbCr_to_RGB_coefficients coeffs;
+  coeffs.defined=true;
+  coeffs.r_cr = 1.402f;
+  coeffs.g_cb = -0.344136f;
+  coeffs.g_cr = -0.714136f;
+  coeffs.b_cb = 1.772f;
+  return coeffs;
+}
+
+#include <stdio.h>
+
+heif::YCbCr_to_RGB_coefficients
+heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
+  YCbCr_to_RGB_coefficients coeffs;
+
+  Kr_Kb k = get_Kr_Kb(matrix_coefficients_idx, primaries_idx);
+
+  printf("matrix:%d prim:%d kr:%f kb:%f\n", matrix_coefficients_idx, primaries_idx, k.Kr, k.Kb);
+
+  if (k.Kb != 0 || k.Kr != 0) { // both will be != 0 when valid
+    coeffs.defined = true;
+    coeffs.r_cr = 2 * (-k.Kr + 1);
+    coeffs.g_cb = 2 * k.Kb * (-k.Kb + 1) / (k.Kb + k.Kr - 1);
+    coeffs.g_cr = 2 * k.Kr * (-k.Kr + 1) / (k.Kb + k.Kr - 1);
+    coeffs.b_cb = 2 * (-k.Kb + 1);
+  }
+
+  return coeffs;
 }
