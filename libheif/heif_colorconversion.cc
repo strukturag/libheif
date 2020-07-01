@@ -1734,12 +1734,10 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                      ColorState target_state,
                                      ColorConversionOptions options)
 {
-  int width = input->get_width();
-  int height = input->get_height();
-
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  outimg->create(width, height,
+  outimg->create(input->get_width(),
+                 input->get_height(),
                  input->get_colorspace(),
                  input->get_chroma_format());
 
@@ -1839,12 +1837,11 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                      ColorState target_state,
                                      ColorConversionOptions options)
 {
-  int width = input->get_width();
-  int height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  outimg->create(width, height,
+  outimg->create(input->get_width(),
+                 input->get_height(),
                  input->get_colorspace(),
                  input->get_chroma_format());
 
