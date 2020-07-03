@@ -918,6 +918,13 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
+  std::shared_ptr<Image> imginfo;
+  if (m_all_images.find(ID) != m_all_images.end()) {
+    imginfo = m_all_images.find(ID)->second;
+  }
+
+  assert(imginfo);
+
   Error error;
 
 
@@ -981,6 +988,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
 
     // --- convert to output chroma format
+
+    // transfer color profile to output image
+    img->set_color_profile(imginfo->get_color_profile());
 
     heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                          img->get_colorspace() :

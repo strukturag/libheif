@@ -17,9 +17,9 @@ set(libheif_headers
     heif_plugin_registry.h
     heif_limits.h
     heif_plugin.h
+    nclx.h
     logging.h
-    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h
-)
+    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 add_library(heif
     bitstream.cc
@@ -34,6 +34,7 @@ add_library(heif
     heif_colorconversion.cc
     heif_plugin_registry.cc
     heif_plugin.cc
+    nclx.cc
     ${libheif_headers}
 )
 

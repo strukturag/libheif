@@ -29,6 +29,7 @@
 #include "heif_plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
+#include "nclx.h"
 
 #if defined(__EMSCRIPTEN__)
 #include "heif_emscripten.h"
@@ -1009,19 +1010,6 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
   }
 }
 
-static struct color_primaries_table_entry {
-  int id;
-  float gx,gy, bx,by, rx,ry, wx,wy;
-} color_primaries_table[] = {
-  { 0,  0.000f,0.000f,  0.000f,0.000f,  0.000f,0.000f,  0.0000f,0.0000f },
-  { 1,  0.300f,0.600f,  0.150f,0.060f,  0.640f,0.330f,  0.3127f,0.3290f },
-  { 4,  0.210f,0.710f,  0.140f,0.080f,  0.670f,0.330f,  0.3100f,0.3160f },
-  { 5,  0.290f,0.600f,  0.150f,0.060f,  0.640f,0.330f,  0.3127f,0.3290f },
-  { 6,  0.310f,0.595f,  0.155f,0.070f,  0.630f,0.340f,  0.3127f,0.3290f },
-  { 7,  0.310f,0.595f,  0.155f,0.707f,  0.630f,0.340f,  0.3127f,0.3290f },
-  { -1 }
-};
-
 
 static Error get_nclx_color_profile(std::shared_ptr<const color_profile_nclx> nclx_profile,
                                     struct heif_color_profile_nclx** out_data)
@@ -1039,24 +1027,16 @@ static Error get_nclx_color_profile(std::shared_ptr<const color_profile_nclx> nc
 
     // fill color primaries
 
-    int tableIdx = 0;
-    for (int i=0; color_primaries_table[i].id >= 0; i++) {
-      const auto& c = color_primaries_table[i];
-      if (c.id == (*out_data)->color_primaries) {
-        tableIdx = i;
-        break;
-      }
-    }
+    auto primaries = get_colour_primaries(nclx->color_primaries);
 
-    const auto& c = color_primaries_table[tableIdx];
-    nclx->color_primary_red_x = c.rx;
-    nclx->color_primary_red_y = c.ry;
-    nclx->color_primary_green_x = c.gx;
-    nclx->color_primary_green_y = c.gy;
-    nclx->color_primary_blue_x = c.bx;
-    nclx->color_primary_blue_y = c.by;
-    nclx->color_primary_white_x = c.wx;
-    nclx->color_primary_white_y = c.wy;
+    nclx->color_primary_red_x = primaries.redX;
+    nclx->color_primary_red_y = primaries.redY;
+    nclx->color_primary_green_x = primaries.greenX;
+    nclx->color_primary_green_y = primaries.greenY;
+    nclx->color_primary_blue_x = primaries.blueX;
+    nclx->color_primary_blue_y = primaries.blueY;
+    nclx->color_primary_white_x = primaries.whiteX;
+    nclx->color_primary_white_y = primaries.whiteY;
 
     return Error::Ok;
   }

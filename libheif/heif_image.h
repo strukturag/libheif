@@ -105,7 +105,7 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = profile; }
 
-  std::shared_ptr<const color_profile> get_color_profile() { return m_color_profile; }
+  std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
 
   void debug_dump() const;
 
