@@ -65,7 +65,9 @@ libheif_la_SOURCES = \
   heif_plugin.cc \
   heif_colorconversion.h \
   heif_colorconversion.cc \
-  logging.h
+  logging.h \
+  nclx.cc \
+  nclx.h
 
 if HAVE_AOM
 libheif_la_SOURCES += \
