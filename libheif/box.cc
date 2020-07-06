@@ -2859,13 +2859,14 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
   assert(success);
   (void)success;
 
-  // reserve space for the data in the output array
+  if (length > 0) {
+    // reserve space for the data in the output array
+    out_data.resize(static_cast<size_t>(curr_size + length));
+    uint8_t* data = &out_data[curr_size];
 
-  out_data.resize(static_cast<size_t>(curr_size + length));
-  uint8_t* data = &out_data[curr_size];
-
-  success = istr->read((char*)data, static_cast<size_t>(length));
-  assert(success);
+    success = istr->read((char*)data, static_cast<size_t>(length));
+    assert(success);
+  }
 
   return Error::Ok;
 }
