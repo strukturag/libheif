@@ -598,8 +598,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- configure codec
 
-  unsigned int aomUsage = (encoder->realtime_mode ? AOM_USAGE_REALTIME : AOM_USAGE_GOOD_QUALITY);
-
+  unsigned int aomUsage = 0;
+#if defined(AOM_USAGE_REALTIME)
+  // aom 2.0
+  aomUsage = (encoder->realtime_mode ? AOM_USAGE_REALTIME : AOM_USAGE_GOOD_QUALITY);
+#endif
 
   aom_codec_enc_cfg_t cfg;
   aom_codec_err_t res = aom_codec_enc_config_default(encoder->iface, &cfg, aomUsage);
@@ -641,7 +644,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_codec_control(&encoder->codec, AOME_SET_CPUUSED, encoder->cpu_used);
 
   if (encoder->threads > 1) {
+#if defined(AV1E_SET_ROW_MT)
+    // aom 2.0
     aom_codec_control(&encoder->codec, AV1E_SET_ROW_MT, 1);
+#endif
   }
 
   // --- encode frame
