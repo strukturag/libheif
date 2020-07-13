@@ -190,6 +190,14 @@ namespace heif {
 
     bool has_alpha_channel() const noexcept;
 
+    int get_luma_bits_per_pixel() const noexcept;
+
+    int get_chroma_bits_per_pixel() const noexcept;
+
+    int get_ispe_width() const noexcept;
+
+    int get_ispe_height() const noexcept;
+
     // ------------------------- depth images -------------------------
 
     // TODO
@@ -256,6 +264,8 @@ namespace heif {
     int get_height(enum heif_channel channel) const noexcept;
 
     int get_bits_per_pixel(enum heif_channel channel) const noexcept;
+
+    int get_bits_per_pixel_range(enum heif_channel channel) const noexcept;
 
     bool has_channel(enum heif_channel channel) const noexcept;
 
@@ -549,6 +559,22 @@ namespace heif {
     return heif_image_handle_has_alpha_channel(m_image_handle.get()) != 0;
   }
 
+  inline int ImageHandle::get_luma_bits_per_pixel() const noexcept {
+    return heif_image_handle_get_luma_bits_per_pixel(m_image_handle.get());
+  }
+
+  inline int ImageHandle::get_chroma_bits_per_pixel() const noexcept {
+    return heif_image_handle_get_chroma_bits_per_pixel(m_image_handle.get());
+  }
+
+  inline int ImageHandle::get_ispe_width() const noexcept {
+    return heif_image_handle_get_ispe_width(m_image_handle.get());
+  }
+
+  inline int ImageHandle::get_ispe_height() const noexcept {
+    return heif_image_handle_get_ispe_height(m_image_handle.get());
+  }
+
   // ------------------------- depth images -------------------------
 
   // TODO
@@ -677,6 +703,10 @@ namespace heif {
 
   inline int Image::get_bits_per_pixel(enum heif_channel channel) const noexcept {
     return heif_image_get_bits_per_pixel(m_image.get(), channel);
+  }
+
+  inline int Image::get_bits_per_pixel_range(enum heif_channel channel) const noexcept {
+    return heif_image_get_bits_per_pixel_range(m_image.get(), channel);
   }
 
   inline bool Image::has_channel(enum heif_channel channel) const noexcept {
