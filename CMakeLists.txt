@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.3.2)
 
 project(libheif LANGUAGES C CXX VERSION 1.7.0.0)
 
+option(USE_LOCAL_RAV1E "Include rav1e support from local rav1e source" FALSE)
+
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
 include(GNUInstallDirs)
@@ -75,6 +77,12 @@ if (UNIX)
       message("AVIF decoder/encoder, aom: not found")
   endif ()
 endif()
+
+if (USE_LOCAL_RAV1E)
+    message("AVIF encoder, use local rav1e: yes")
+else ()
+    message("AVIF encoder, use local rav1e: no")
+endif ()
 
 
 # Create libheif pkgconfig file

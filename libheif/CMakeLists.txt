@@ -111,6 +111,16 @@ if(AOM_FOUND)
   target_link_libraries(heif PRIVATE ${AOM_LIBRARIES} ${AOM_LINKDIR})
 endif()
 
+if(USE_LOCAL_RAV1E)
+    target_compile_definitions(heif PRIVATE HAVE_RAV1E=1)
+    target_sources(heif PRIVATE
+            heif_encoder_rav1e.cc
+            heif_encoder_rav1e.h
+            )
+    target_include_directories(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/include)
+    target_link_libraries(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/librav1e.a)
+endif()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config
