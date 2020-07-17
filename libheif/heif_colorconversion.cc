@@ -55,6 +55,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RGB_to_RGB24_32";  }
 };
 
 
@@ -221,6 +223,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_YCbCr_to_RGB";  }
 };
 
 
@@ -428,6 +432,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RGB_to_YCbCr";  }
 };
 
 
@@ -594,6 +600,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_YCbCr420_to_RGB24";  }
 };
 
 
@@ -712,6 +720,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_YCbCr420_to_RGB32";  }
 };
 
 
@@ -849,6 +859,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RGB_HDR_to_RRGGBBaa_BE";  }
 };
 
 
@@ -1001,6 +1013,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RRGGBBaa_BE_to_RGB_HDR";  }
 };
 
 
@@ -1126,6 +1140,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RRGGBBaa_swap_endianness";  }
 };
 
 
@@ -1265,6 +1281,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_mono_to_YCbCr420";  }
 };
 
 
@@ -1379,6 +1397,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_mono_to_RGB24_32";  }
 };
 
 
@@ -1515,6 +1535,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RGB24_32_to_YCbCr420";  }
 };
 
 
@@ -1681,6 +1703,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_drop_alpha_plane";  }
 };
 
 
@@ -1759,6 +1783,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_to_hdr_planes";  }
 };
 
 
@@ -1862,6 +1888,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_to_sdr_planes";  }
 };
 
 
@@ -1964,6 +1992,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_RRGGBBxx_HDR_to_YCbCr420";  }
 };
 
 
@@ -2108,6 +2138,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      ColorState target_state,
                      ColorConversionOptions options) override;
+
+  const char* name() const override { return "Op_YCbCr420_to_RRGGBBaa";  }
 };
 
 
@@ -2390,7 +2422,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 void ColorConversionPipeline::debug_dump_pipeline() const
 {
   for (const auto& op : m_operations) {
-    std::cerr << "> " << typeid(*op).name() << "\n";
+    std::cerr << "> " << op->name() << "\n";
   }
 }
 
