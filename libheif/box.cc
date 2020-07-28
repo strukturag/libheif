@@ -23,6 +23,7 @@
 
 #include "box.h"
 #include "heif_limits.h"
+#include "nclx.h"
 
 #include <sstream>
 #include <iomanip>
@@ -1636,6 +1637,44 @@ Error color_profile_nclx::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
+{
+  *out_data = (struct heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
+
+  struct heif_color_profile_nclx* nclx = *out_data;
+
+  nclx->version = 1;
+  nclx->color_primaries = (enum heif_color_primaries) get_colour_primaries();
+  nclx->transfer_characteristics = (enum heif_transfer_characteristics) get_transfer_characteristics();
+  nclx->matrix_coefficients = (enum heif_matrix_coefficients) get_matrix_coefficients();
+  nclx->full_range_flag = get_full_range_flag();
+
+  // fill color primaries
+
+  auto primaries = ::get_colour_primaries(nclx->color_primaries);
+
+  nclx->color_primary_red_x = primaries.redX;
+  nclx->color_primary_red_y = primaries.redY;
+  nclx->color_primary_green_x = primaries.greenX;
+  nclx->color_primary_green_y = primaries.greenY;
+  nclx->color_primary_blue_x = primaries.blueX;
+  nclx->color_primary_blue_y = primaries.blueY;
+  nclx->color_primary_white_x = primaries.whiteX;
+  nclx->color_primary_white_y = primaries.whiteY;
+
+  return Error::Ok;
+}
+
+
+void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
+{
+  m_colour_primaries = nclx->color_primaries;
+  m_transfer_characteristics = nclx->transfer_characteristics;
+  m_matrix_coefficients = nclx->matrix_coefficients;
+  m_full_range_flag = nclx->full_range_flag;
+}
+
+
 Error Box_colr::parse(BitstreamRange& range)
 {
   StreamReader::grow_status status;
@@ -1745,7 +1784,6 @@ Error Box_colr::write(StreamWriter& writer) const
 
   return Error::Ok;
 }
-
 
 
 Error Box_pixi::parse(BitstreamRange& range)

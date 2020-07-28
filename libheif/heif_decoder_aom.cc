@@ -182,6 +182,13 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
   }
 
 
+  heif_color_profile_nclx nclx;
+  nclx.color_primaries = (heif_color_primaries)img->cp;
+  nclx.transfer_characteristics = (heif_transfer_characteristics)img->tc;
+  nclx.matrix_coefficients = (heif_matrix_coefficients)img->mc;
+  nclx.full_range_flag = (img->range == AOM_CR_FULL_RANGE);
+  heif_image_set_nclx_color_profile(heif_img, &nclx);
+
 
   // --- transfer data from aom_image_t to HeifPixelImage
 

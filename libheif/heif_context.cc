@@ -989,8 +989,13 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
     // --- convert to output chroma format
 
-    // transfer color profile to output image
-    img->set_color_profile(imginfo->get_color_profile());
+    // If there is an NCLX profile in the HEIF/AVIF metadata, use this for the color conversion.
+    // Otherwise, use the profile the is stored in the image stream itself and then set the
+    // (non-NCLX) profile later.
+    auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
+    if (nclx) {
+      img->set_color_profile(nclx);
+    }
 
     heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                          img->get_colorspace() :
@@ -1012,6 +1017,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
         return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
       }
     }
+
+    auto colorProfileInMetadata = imginfo->get_color_profile();
+    img->set_color_profile(colorProfileInMetadata);
   }
   else if (image_type == "grid") {
     std::vector<uint8_t> data;

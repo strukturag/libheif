@@ -1011,41 +1011,6 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
 }
 
 
-static Error get_nclx_color_profile(std::shared_ptr<const color_profile_nclx> nclx_profile,
-                                    struct heif_color_profile_nclx** out_data)
-{
-  if (nclx_profile) {
-    *out_data = (struct heif_color_profile_nclx*)malloc(sizeof(struct heif_color_profile_nclx));
-
-    struct heif_color_profile_nclx* nclx = *out_data;
-
-    nclx->version = 1;
-    nclx->color_primaries = (enum heif_color_primaries)nclx_profile->get_colour_primaries();
-    nclx->transfer_characteristics = (enum heif_transfer_characteristics)nclx_profile->get_transfer_characteristics();
-    nclx->matrix_coefficients = (enum heif_matrix_coefficients)nclx_profile->get_matrix_coefficients();
-    nclx->full_range_flag = nclx_profile->get_full_range_flag();
-
-    // fill color primaries
-
-    auto primaries = get_colour_primaries(nclx->color_primaries);
-
-    nclx->color_primary_red_x = primaries.redX;
-    nclx->color_primary_red_y = primaries.redY;
-    nclx->color_primary_green_x = primaries.greenX;
-    nclx->color_primary_green_y = primaries.greenY;
-    nclx->color_primary_blue_x = primaries.blueX;
-    nclx->color_primary_blue_y = primaries.blueY;
-    nclx->color_primary_white_x = primaries.whiteX;
-    nclx->color_primary_white_y = primaries.whiteY;
-
-    return Error::Ok;
-  }
-  else {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Unspecified);
-  }
-}
-
 struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
                                                            struct heif_color_profile_nclx** out_data)
 {
@@ -1057,7 +1022,7 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
 
   auto profile = handle->image->get_color_profile();
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
-  Error err = get_nclx_color_profile(nclx_profile, out_data);
+  Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(handle->image.get());
 }
@@ -1142,7 +1107,7 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
 
   auto profile = image->image->get_color_profile();
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
-  Error err = get_nclx_color_profile(nclx_profile, out_data);
+  Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(image->image.get());
 }

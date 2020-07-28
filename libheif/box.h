@@ -883,6 +883,10 @@ namespace heif {
     void set_matrix_coefficients(uint16_t coefficients) { m_matrix_coefficients = coefficients; }
     void set_full_range_flag(bool full_range) { m_full_range_flag=full_range; }
 
+    Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
+
+    void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
+
   private:
     uint16_t m_colour_primaries = 0;
     uint16_t m_transfer_characteristics = 0;
