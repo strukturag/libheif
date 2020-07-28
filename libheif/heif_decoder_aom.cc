@@ -153,7 +153,9 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
   if (img->fmt != AOM_IMG_FMT_I420 &&
       img->fmt != AOM_IMG_FMT_I42016 &&
       img->fmt != AOM_IMG_FMT_I422 &&
-      img->fmt != AOM_IMG_FMT_I444) {
+      img->fmt != AOM_IMG_FMT_I42216 &&
+      img->fmt != AOM_IMG_FMT_I444 &&
+      img->fmt != AOM_IMG_FMT_I44416) {
     struct heif_error err = { heif_error_Decoder_plugin_error,
                               heif_suberror_Unsupported_image_type,
                               kEmptyString };
@@ -162,10 +164,12 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
 
   heif_chroma chroma;
-  if (img->fmt == AOM_IMG_FMT_I444) {
+  if (img->fmt == AOM_IMG_FMT_I444 ||
+      img->fmt == AOM_IMG_FMT_I44416) {
     chroma = heif_chroma_444;
   }
-  else if (img->fmt == AOM_IMG_FMT_I422) {
+  else if (img->fmt == AOM_IMG_FMT_I422 ||
+           img->fmt == AOM_IMG_FMT_I42216) {
     chroma = heif_chroma_422;
   }
   else {
