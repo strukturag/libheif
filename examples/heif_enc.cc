@@ -993,7 +993,7 @@ int main(int argc, char** argv)
     }
   }
   else {
-    std::cerr << "No HEVC encoder available.\n";
+    std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
     return 5;
   }
 
@@ -1026,7 +1026,7 @@ int main(int argc, char** argv)
         filename_without_suffix = input_filename;
       }
 
-      output_filename = filename_without_suffix + ".heic";
+      output_filename = filename_without_suffix + (enc_av1f ? ".avif" : ".heic");
     }
 
 
