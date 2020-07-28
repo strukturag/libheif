@@ -41,6 +41,10 @@
 #include "heif_decoder_aom.h"
 #endif
 
+#if HAVE_RAV1E
+#include "heif_encoder_rav1e.h"
+#endif
+
 
 using namespace heif;
 
@@ -79,6 +83,10 @@ public:
 #if HAVE_AOM
     heif::register_encoder(get_encoder_plugin_aom());
     heif::register_decoder(get_decoder_plugin_aom());
+#endif
+
+#if HAVE_RAV1E
+    heif::register_encoder(get_encoder_plugin_rav1e());
 #endif
   }
 } dummy;
