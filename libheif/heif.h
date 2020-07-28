@@ -957,10 +957,10 @@ enum heif_compression_format
 heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor*);
 
 LIBHEIF_API
-int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor*);
+int heif_encoder_descriptor_supports_lossy_compression(const struct heif_encoder_descriptor*);
 
 LIBHEIF_API
-int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
+int heif_encoder_descriptor_supports_lossless_compression(const struct heif_encoder_descriptor*);
 
 
 // Get an encoder instance that can be used to actually encode images from a descriptor.
@@ -1236,6 +1236,16 @@ struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*
 
 LIBHEIF_API
 struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
+
+
+
+// DEPRECATED, typo in function name
+LIBHEIF_API
+int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor*);
+
+// DEPRECATED, typo in function name
+LIBHEIF_API
+int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
 
 #ifdef __cplusplus
 }

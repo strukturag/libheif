@@ -1251,12 +1251,26 @@ const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descri
 }
 
 
+int heif_encoder_descriptor_supports_lossy_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossy_compression;
+}
+
+
+int heif_encoder_descriptor_supports_lossless_compression(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->supports_lossless_compression;
+}
+
+
+// DEPRECATED: typo in functino name
 int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->supports_lossy_compression;
 }
 
 
+// DEPRECATED: typo in functino name
 int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->supports_lossless_compression;
