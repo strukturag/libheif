@@ -136,7 +136,7 @@ static void rav1e_init_parameters()
   p->version = 2;
   p->name = "tile-rows";
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 1;
+  p->integer.default_value = 4;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.valid_values = valid_tile_num_values;
@@ -147,7 +147,7 @@ static void rav1e_init_parameters()
   p->version = 2;
   p->name = "tile-cols";
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 1;
+  p->integer.default_value = 4;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.valid_values = valid_tile_num_values;
@@ -346,8 +346,8 @@ struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* nam
   set_value(kParam_max_q, max_q);
   set_value(kParam_threads, threads);
   set_value(kParam_speed, speed);
-  set_value("tile_rows", tile_rows);
-  set_value("tile_cols", tile_cols);
+  set_value("tile-rows", tile_rows);
+  set_value("tile-cols", tile_cols);
 
   return heif_error_unsupported_parameter;
 }
@@ -367,8 +367,8 @@ struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* nam
   get_value(kParam_max_q, max_q);
   get_value(kParam_threads, threads);
   get_value(kParam_speed, speed);
-  get_value("tile_rows", tile_rows);
-  get_value("tile_cols", tile_cols);
+  get_value("tile-rows", tile_rows);
+  get_value("tile-cols", tile_cols);
 
   return heif_error_unsupported_parameter;
 }
