@@ -1251,6 +1251,12 @@ const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descri
 }
 
 
+enum heif_compression_format heif_encoder_descriptor_get_compression_format(const struct heif_encoder_descriptor* descriptor)
+{
+  return descriptor->plugin->compression_format;
+}
+
+
 int heif_encoder_descriptor_supports_lossy_compression(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->supports_lossy_compression;
