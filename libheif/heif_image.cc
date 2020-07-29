@@ -132,6 +132,16 @@ void HeifPixelImage::create(int width,int height, heif_colorspace colorspace, he
   m_chroma = chroma;
 }
 
+static int rounded_size(int s)
+{
+  s = (s+1) & ~1;
+  if (s<16) {
+    s=16;
+  }
+
+  return s;
+}
+
 bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   assert(width >= 0);
@@ -145,8 +155,8 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   plane.width = width;
   plane.height = height;
 
-  int rounded_width  = (width+1) & ~1;
-  int rounded_height = (height+1) & ~1;
+  int rounded_width  = rounded_size(width);
+  int rounded_height = rounded_size(height);
 
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
@@ -194,23 +204,27 @@ void HeifPixelImage::extend_to_aligned_border()
 {
   for (auto& planeIter : m_planes) {
     auto& plane = planeIter.second;
-    int rounded_width  = (plane.width+1) & ~1;
-    int rounded_height = (plane.height+1) & ~1;
+    int rounded_width  = rounded_size(plane.width);
+    int rounded_height = rounded_size(plane.height);
 
     int nbytes = (plane.bit_depth + 7)/8;
 
     if (rounded_width != plane.width) {
       for (int y=0;y<plane.height;y++) {
-        memcpy(&plane.mem[y * plane.stride + (rounded_width - 1) * nbytes],
-               &plane.mem[y * plane.stride + (plane.width - 1) * nbytes],
-               nbytes);
+        for (int x=plane.width;x<rounded_width;x++) {
+          memcpy(&plane.mem[y * plane.stride + x * nbytes],
+                 &plane.mem[y * plane.stride + (plane.width - 1) * nbytes],
+                 nbytes);
+        }
       }
     }
 
     if (rounded_height != plane.height) {
-      memcpy(&plane.mem[(rounded_height - 1) * plane.stride],
-             &plane.mem[(plane.height - 1) * plane.stride],
-             rounded_width * nbytes);
+      for (int y=plane.height;y<rounded_height;y++) {
+        memcpy(&plane.mem[y * plane.stride],
+               &plane.mem[(plane.height - 1) * plane.stride],
+               rounded_width * nbytes);
+      }
     }
   }
 }

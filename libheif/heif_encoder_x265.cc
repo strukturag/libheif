@@ -553,6 +553,17 @@ static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma
 }
 
 
+static int rounded_size(int s)
+{
+  s = (s+1) & ~1;
+  if (s<16) {
+    s=16;
+  }
+
+  return s;
+}
+
+
 static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_image* image,
                                            heif_image_input_class input_class)
 {
@@ -601,9 +612,11 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   // -> use smaller CTU sizes for very small images
   const char *ctu = NULL;
   int ctuSize = 64;
-#if 0
-  while  (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
-          heif_image_get_height(image, heif_channel_Y) < ctuSize) {
+
+  #if 1
+  while (ctuSize > 16 &&
+         (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
+          heif_image_get_height(image, heif_channel_Y) < ctuSize)) {
     ctuSize /= 2;
   }
 
@@ -621,6 +634,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   // multiple encoding jobs causes a segmentation fault. E.g. encoding multiple
   // times with a CTU of 16 works, the next encoding with a CTU of 32 crashes.
   // Use hardcoded value of 64 and reject images that are too small.
+
   if (heif_image_get_width(image, heif_channel_Y) < ctuSize ||
       heif_image_get_height(image, heif_channel_Y) < ctuSize) {
     api->param_free(param);
@@ -718,8 +732,9 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y);
   param->internalBitDepth = bit_depth;
 
-  param->sourceWidth  = (param->sourceWidth + 1) & ~1;
-  param->sourceHeight = (param->sourceHeight + 1) & ~1;
+  param->sourceWidth  = rounded_size(param->sourceWidth);
+  param->sourceHeight = rounded_size(param->sourceHeight);
+
   image->image->extend_to_aligned_border();
 
 

@@ -1874,8 +1874,8 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
       // if image size was rounded up to even size, add a 'clap' box to crop the
       // padding border away
 
-      if ((m_width & 1) ||
-          (m_height & 1)) {
+      if (m_width != (uint32_t)encoded_width ||
+          m_height != (uint32_t)encoded_height) {
         m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
                                                        encoded_width, encoded_height);;
       }
