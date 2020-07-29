@@ -109,6 +109,8 @@ class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
 
   void debug_dump() const;
 
+  void extend_to_aligned_border();
+
  private:
   struct ImagePlane {
     int width;

@@ -20,6 +20,7 @@
 
 #include "heif.h"
 #include "heif_plugin.h"
+#include "heif_api_structs.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -712,9 +713,14 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
   param->logLevel = encoder->logLevel;
 
-  param->sourceWidth  = heif_image_get_width(image, heif_channel_Y) & ~1;
-  param->sourceHeight = heif_image_get_height(image, heif_channel_Y) & ~1;
+  
+  param->sourceWidth  = heif_image_get_width(image, heif_channel_Y);
+  param->sourceHeight = heif_image_get_height(image, heif_channel_Y);
   param->internalBitDepth = bit_depth;
+
+  param->sourceWidth  = (param->sourceWidth + 1) & ~1;
+  param->sourceHeight = (param->sourceHeight + 1) & ~1;
+  image->image->extend_to_aligned_border();
 
 
   x265_picture* pic = api->picture_alloc();

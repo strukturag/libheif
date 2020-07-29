@@ -145,6 +145,8 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   plane.width = width;
   plane.height = height;
 
+  int rounded_width  = (width+1) & ~1;
+  int rounded_height = (height+1) & ~1;
 
   // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
 
@@ -162,11 +164,11 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   int bytes_per_component = (bit_depth+7)/8;
   int bytes_per_pixel = num_interleaved_pixels_per_plane(m_chroma) * bytes_per_component;
 
-  plane.stride = width * bytes_per_pixel;
+  plane.stride = rounded_width * bytes_per_pixel;
   plane.stride = (plane.stride+alignment-1) & ~(alignment-1);
 
   try {
-    plane.allocated_mem = new uint8_t[height * plane.stride + alignment-1];
+    plane.allocated_mem = new uint8_t[rounded_height * plane.stride + alignment-1];
     plane.mem = plane.allocated_mem;
 
     // shift beginning of image data to aligned memory position
@@ -184,6 +186,33 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   }
 
   return true;
+}
+
+
+// When image width or height is odd, copy the last column/row into the padded border.
+void HeifPixelImage::extend_to_aligned_border()
+{
+  for (auto& planeIter : m_planes) {
+    auto& plane = planeIter.second;
+    int rounded_width  = (plane.width+1) & ~1;
+    int rounded_height = (plane.height+1) & ~1;
+
+    int nbytes = (plane.bit_depth + 7)/8;
+
+    if (rounded_width != plane.width) {
+      for (int y=0;y<plane.height;y++) {
+        memcpy(&plane.mem[y * plane.stride + (rounded_width - 1) * nbytes],
+               &plane.mem[y * plane.stride + (plane.width - 1) * nbytes],
+               nbytes);
+      }
+    }
+
+    if (rounded_height != plane.height) {
+      memcpy(&plane.mem[(rounded_height - 1) * plane.stride],
+             &plane.mem[(plane.height - 1) * plane.stride],
+             rounded_width * nbytes);
+    }
+  }
 }
 
 
