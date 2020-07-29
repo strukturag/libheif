@@ -1977,19 +1977,17 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
       break;
     }
 
-
-    int width,height;
-    width = image->get_width();
-    height = image->get_height();
-    m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
-
-
     std::vector<uint8_t> vec;
     vec.resize(size);
     memcpy(vec.data(), data, size);
 
     m_heif_context->m_heif_file->append_iloc_data(m_id, vec);
   }
+
+  int width,height;
+  width = image->get_width();
+  height = image->get_height();
+  m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
 
   return Error::Ok;
 }
