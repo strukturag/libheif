@@ -713,7 +713,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
   param->logLevel = encoder->logLevel;
 
-  
+
   param->sourceWidth  = heif_image_get_width(image, heif_channel_Y);
   param->sourceHeight = heif_image_get_height(image, heif_channel_Y);
   param->internalBitDepth = bit_depth;

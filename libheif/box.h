@@ -572,6 +572,7 @@ namespace heif {
 
   class Box_clap : public Box {
   public:
+  Box_clap() { set_short_type(fourcc("clap")); set_is_full_box(true); }
   Box_clap(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
@@ -583,6 +584,9 @@ namespace heif {
 
     int get_width_rounded() const;
     int get_height_rounded() const;
+
+    void set(uint32_t clap_width, uint32_t clap_height,
+             uint32_t image_width, uint32_t image_height);
 
   protected:
     Error parse(BitstreamRange& range) override;

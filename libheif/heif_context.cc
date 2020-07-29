@@ -1863,13 +1863,20 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
     const uint8_t NAL_SPS = 33;
 
     if ((data[0] >> 1) == NAL_SPS) {
-      int width,height;
+      int encoded_width,encoded_height;
       Box_hvcC::configuration config;
 
-      parse_sps_for_hvcC_configuration(data, size, &config, &width, &height);
+      parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
       m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
-      m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
+      m_heif_context->m_heif_file->add_ispe_property(m_id, m_width, m_height);
+#if 0
+      if ((m_width & 1) ||
+          (m_height & 1)) {
+        m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
+                                                       encoded_width, encoded_height);;
+      }
+#endif
     }
 
     switch (data[0] >> 1) {
