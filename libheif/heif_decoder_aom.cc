@@ -177,7 +177,7 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
   }
 
   struct heif_image* heif_img;
-  struct heif_error err = heif_image_create(img->w, img->h,
+  struct heif_error err = heif_image_create(img->d_w, img->d_h,
                                             heif_colorspace_YCbCr,
                                             chroma,
                                             &heif_img);
