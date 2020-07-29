@@ -2229,6 +2229,25 @@ Error Box_clap::parse(BitstreamRange& range)
 }
 
 
+Error Box_clap::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_clean_aperture_width.numerator);
+  writer.write32(m_clean_aperture_width.denominator);
+  writer.write32(m_clean_aperture_height.numerator);
+  writer.write32(m_clean_aperture_height.denominator);
+  writer.write32(m_horizontal_offset.numerator);
+  writer.write32(m_horizontal_offset.denominator);
+  writer.write32(m_vertical_offset.numerator);
+  writer.write32(m_vertical_offset.denominator);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_clap::dump(Indent& indent) const
 {
   std::ostringstream sstr;

@@ -572,7 +572,7 @@ namespace heif {
 
   class Box_clap : public Box {
   public:
-  Box_clap() { set_short_type(fourcc("clap")); set_is_full_box(true); }
+  Box_clap() { set_short_type(fourcc("clap")); set_is_full_box(false); }
   Box_clap(const BoxHeader& hdr) : Box(hdr) { }
 
     std::string dump(Indent&) const override;
@@ -590,6 +590,8 @@ namespace heif {
 
   protected:
     Error parse(BitstreamRange& range) override;
+
+    Error write(StreamWriter& writer) const override;
 
   private:
     Fraction m_clean_aperture_width;

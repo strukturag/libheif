@@ -1870,13 +1870,15 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
       m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
       m_heif_context->m_heif_file->add_ispe_property(m_id, m_width, m_height);
-#if 0
+
+      // if image size was rounded up to even size, add a 'clap' box to crop the
+      // padding border away
+
       if ((m_width & 1) ||
           (m_height & 1)) {
         m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
                                                        encoded_width, encoded_height);;
       }
-#endif
     }
 
     switch (data[0] >> 1) {
