@@ -209,8 +209,8 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
     const uint8_t* data = img->planes[c];
     int stride = img->stride[c];
 
-    int w = img->w;
-    int h = img->h;
+    int w = img->d_w;
+    int h = img->d_h;
 
     if (c>0 && chroma == heif_chroma_420) {
       w = (w+1)/2;
