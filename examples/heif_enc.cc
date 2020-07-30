@@ -65,6 +65,10 @@ extern "C" {
 int master_alpha = 1;
 int thumb_alpha = 1;
 
+int nclx_matrix_coefficients = 6;
+int nclx_colour_primaries = 0;
+int nclx_transfer_characteristic = 0;
+
 static struct option long_options[] = {
   {"help",       no_argument,       0, 'h' },
   {"quality",    required_argument, 0, 'q' },
@@ -77,6 +81,9 @@ static struct option long_options[] = {
   {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
   {"bit-depth",  required_argument, 0, 'b' },
   {"avif",       no_argument,       0, 'A' },
+  {"matrix_coefficients",     no_argument, &nclx_matrix_coefficients, 0},
+  {"colour_primaries",        no_argument, &nclx_colour_primaries, 0},
+  {"transfer_characteristic", no_argument, &nclx_transfer_characteristic, 0},
   {0,         0,                 0,  0 }
 };
 
@@ -106,6 +113,9 @@ void show_help(const char* argv0)
             << "  -b #            bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif      encode as AVIF\n"
+            << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients (see h.273)\n"
+            << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
+            << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
     ;
 }
 
@@ -1060,7 +1070,9 @@ int main(int argc, char** argv)
     }
 
     heif_color_profile_nclx nclx;
-    nclx.matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+    nclx.matrix_coefficients = (heif_matrix_coefficients)nclx_matrix_coefficients;
+    nclx.transfer_characteristics = (heif_transfer_characteristics)nclx_transfer_characteristic;
+    nclx.color_primaries = (heif_color_primaries)nclx_colour_primaries;
 
     heif_image_set_nclx_color_profile(image.get(), &nclx);
 

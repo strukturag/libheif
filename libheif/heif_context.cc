@@ -990,7 +990,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     // --- convert to output chroma format
 
     // If there is an NCLX profile in the HEIF/AVIF metadata, use this for the color conversion.
-    // Otherwise, use the profile the is stored in the image stream itself and then set the
+    // Otherwise, use the profile that is stored in the image stream itself and then set the
     // (non-NCLX) profile later.
     auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
     if (nclx) {
@@ -1780,6 +1780,11 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
   auto color_profile = image->get_color_profile();
+  if (!color_profile) {
+    auto nclx = std::make_shared<color_profile_nclx>();
+    nclx->set_default();
+    color_profile = nclx;
+  }
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
@@ -1802,7 +1807,8 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width  = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  if (color_profile) {
+  if (color_profile &&
+      (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail)) {
     m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
   }
 
@@ -1908,6 +1914,11 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
   auto color_profile = image->get_color_profile();
+  if (!color_profile) {
+    auto nclx = std::make_shared<color_profile_nclx>();
+    nclx->set_default();
+    color_profile = nclx;
+  }
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
@@ -1930,7 +1941,8 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   m_width  = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  if (color_profile) {
+  if (color_profile &&
+      (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail)) {
     m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
   }
 
