@@ -91,7 +91,11 @@ static gboolean stop_load(gpointer context, GError** error)
     goto cleanup;
   }
 
-  err = heif_decode_image(hdl, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, NULL);
+  int has_alpha = heif_image_handle_has_alpha_channel(hdl);
+
+  err = heif_decode_image(hdl, &img, heif_colorspace_RGB,
+      has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
+      NULL);
   if (err.code != heif_error_Ok) {
     g_warning("%s", err.message);
     goto cleanup;
@@ -117,7 +121,7 @@ static gboolean stop_load(gpointer context, GError** error)
 
   data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 
-  pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8, width, height, stride, release_heif_image, img);
+  pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, has_alpha, 8, width, height, stride, release_heif_image, img);
 
   if (hpc->prepare_func) {
     (*hpc->prepare_func)(pixbuf, NULL, hpc->user_data);
