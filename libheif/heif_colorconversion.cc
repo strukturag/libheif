@@ -31,7 +31,7 @@
 
 using namespace heif;
 
-#define DEBUG_ME 1
+#define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
 
 std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
@@ -215,6 +215,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
                                        ColorConversionOptions options)
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
+  bool want_alpha = target_state.has_alpha;
 
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
       input->get_bits_per_pixel(heif_channel_G) != 8 ||
@@ -232,7 +233,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   int height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
-                 has_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
+                 want_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
@@ -254,7 +255,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   int x,y;
   for (y=0;y<height;y++) {
 
-    if (has_alpha) {
+    if (has_alpha && want_alpha) {
       for (x=0;x<width;x++) {
         out_p[y*out_p_stride + 4*x + 0] = in_r[x + y*in_r_stride];
         out_p[y*out_p_stride + 4*x + 1] = in_g[x + y*in_g_stride];
@@ -262,11 +263,21 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
         out_p[y*out_p_stride + 4*x + 3] = in_a[x + y*in_a_stride];
       }
     }
-    else {
+    else if (!want_alpha) {
       for (x=0;x<width;x++) {
         out_p[y*out_p_stride + 3*x + 0] = in_r[x + y*in_r_stride];
         out_p[y*out_p_stride + 3*x + 1] = in_g[x + y*in_g_stride];
         out_p[y*out_p_stride + 3*x + 2] = in_b[x + y*in_b_stride];
+      }
+    }
+    else {
+      assert(want_alpha && !has_alpha);
+
+      for (x=0;x<width;x++) {
+        out_p[y*out_p_stride + 4*x + 0] = in_r[x + y*in_r_stride];
+        out_p[y*out_p_stride + 4*x + 1] = in_g[x + y*in_g_stride];
+        out_p[y*out_p_stride + 4*x + 2] = in_b[x + y*in_b_stride];
+        out_p[y*out_p_stride + 4*x + 3] = 0xFF;
       }
     }
   }
