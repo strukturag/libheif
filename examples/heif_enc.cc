@@ -81,9 +81,9 @@ static struct option long_options[] = {
   {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
   {"bit-depth",  required_argument, 0, 'b' },
   {"avif",       no_argument,       0, 'A' },
-  {"matrix_coefficients",     no_argument, &nclx_matrix_coefficients, 0},
-  {"colour_primaries",        no_argument, &nclx_colour_primaries, 0},
-  {"transfer_characteristic", no_argument, &nclx_transfer_characteristic, 0},
+  {"matrix_coefficients",     required_argument, &nclx_matrix_coefficients, 0},
+  {"colour_primaries",        required_argument, &nclx_colour_primaries, 0},
+  {"transfer_characteristic", required_argument, &nclx_transfer_characteristic, 0},
   {0,         0,                 0,  0 }
 };
 

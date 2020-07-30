@@ -64,6 +64,9 @@ struct encoder_struct_x265
   uint32_t nal_output_counter = 0;
   int bit_depth = 0;
 
+  heif_chroma chroma;
+
+
   // --- parameters
 
   std::vector<parameter> parameters;
@@ -154,6 +157,11 @@ static const char*const kParam_preset_valid_values[] = {
 static const char*const kParam_tune_valid_values[] = {
   "psnr", "ssim", "grain", "fastdecode", nullptr
   // note: zerolatency is missing, because we do not need it for single images
+};
+
+static const char* kParam_chroma = "chroma";
+static const char* const kParam_chroma_valid_values[] = {
+    "420", "422", "444"
 };
 
 
@@ -255,6 +263,15 @@ static void x265_init_parameters()
   p->integer.maximum = 100;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_chroma;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "420";
+  p->has_default = true;
+  p->string.valid_values = kParam_chroma_valid_values;
   d[i++] = p++;
 
   d[i++] = nullptr;
@@ -490,6 +507,24 @@ static struct heif_error x265_set_parameter_string(void* encoder_raw, const char
     encoder->add_param(name, std::string(value));
     return heif_error_ok;
   }
+  else if (strcmp(name, kParam_chroma) == 0) {
+    if (strcmp(value, "420") == 0) {
+      encoder->chroma = heif_chroma_420;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "422") == 0) {
+      encoder->chroma = heif_chroma_422;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "444") == 0) {
+      encoder->chroma = heif_chroma_444;
+      return heif_error_ok;
+    }
+    else {
+      return heif_error_invalid_parameter_value;
+    }
+  }
+
 
   return heif_error_unsupported_parameter;
 }
@@ -512,6 +547,22 @@ static struct heif_error x265_get_parameter_string(void* encoder_raw, const char
   else if (strcmp(name, kParam_tune)==0) {
     save_strcpy(value, value_size, encoder->tune.c_str());
     return heif_error_ok;
+  }
+  else if (strcmp(name, kParam_chroma)==0) {
+    switch (encoder->chroma) {
+      case heif_chroma_420:
+        save_strcpy(value, value_size, "420");
+        break;
+      case heif_chroma_422:
+        save_strcpy(value, value_size, "422");
+        break;
+      case heif_chroma_444:
+        save_strcpy(value, value_size, "444");
+        break;
+      default:
+        assert(false);
+        return heif_error_invalid_parameter_value;
+    }
   }
 
   return heif_error_unsupported_parameter;
@@ -549,6 +600,21 @@ static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma
   else {
     *colorspace = heif_colorspace_YCbCr;
     *chroma = heif_chroma_420;
+  }
+}
+
+
+static void x265_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
+{
+  auto* encoder = (struct encoder_struct_x265*)encoder_raw;
+
+  if (*colorspace == heif_colorspace_monochrome) {
+    *colorspace = heif_colorspace_monochrome;
+    *chroma = heif_chroma_monochrome;
+  }
+  else {
+    *colorspace = heif_colorspace_YCbCr;
+    *chroma = encoder->chroma;
   }
 }
 
@@ -671,7 +737,20 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   //  param->rc.rateControlMode = X265_RC_CQP;
   //  param->rc.qp = (100 - encoder->quality)/2;
   param->totalFrames = 1;
-  param->internalCsp = isGreyscale ? X265_CSP_I400 : X265_CSP_I420;
+
+  if (isGreyscale) {
+    param->internalCsp = X265_CSP_I400;
+  }
+  else if (encoder->chroma == heif_chroma_420) {
+    param->internalCsp = X265_CSP_I420;
+  }
+  else if (encoder->chroma == heif_chroma_422) {
+    param->internalCsp = X265_CSP_I422;
+  }
+  else if (encoder->chroma == heif_chroma_444) {
+    param->internalCsp = X265_CSP_I444;
+  }
+
   api->param_parse(param, "info", "0");
   api->param_parse(param, "limit-modes", "0");
   api->param_parse(param, "limit-refs", "0");
@@ -840,7 +919,7 @@ static struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** d
 
 static const struct heif_encoder_plugin encoder_plugin_x265
 {
-  /* plugin_api_version */ 1,
+  /* plugin_api_version */ 2,
   /* compression_format */ heif_compression_HEVC,
   /* id_name */ "x265",
   /* priority */ X265_PLUGIN_PRIORITY,
@@ -866,7 +945,8 @@ static const struct heif_encoder_plugin encoder_plugin_x265
   /* get_parameter_string */ x265_get_parameter_string,
   /* query_input_colorspace */ x265_query_input_colorspace,
   /* encode_image */ x265_encode_image,
-  /* get_compressed_data */ x265_get_compressed_data
+  /* get_compressed_data */ x265_get_compressed_data,
+  /* query_input_colorspace (v2) */ x265_query_input_colorspace2
 };
 
 const struct heif_encoder_plugin* get_encoder_plugin_x265()
