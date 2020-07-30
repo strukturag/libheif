@@ -901,7 +901,7 @@ Error HeifContext::decode_image_user(heif_item_id ID,
   int bpp = (options && options->convert_hdr_to_8bit) ? 8 : 0;
 
   if (different_chroma || different_colorspace) {
-    img = convert_colorspace(img, target_colorspace, target_chroma, bpp);
+    img = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp);
     if (!img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1012,7 +1012,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     bool different_colorspace = (target_colorspace != img->get_colorspace());
 
     if (different_chroma || different_colorspace) {
-      img = convert_colorspace(img, target_colorspace, target_chroma);
+      img = convert_colorspace(img, target_colorspace, target_chroma, nullptr);
       if (!img) {
         return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
       }
@@ -1569,7 +1569,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
       return err;
     }
 
-    overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444);
+    overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr);
     if (!overlay_img) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1780,6 +1780,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
   auto color_profile = image->get_color_profile();
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -1791,7 +1792,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    image = convert_colorspace(image, colorspace, chroma);
+    image = convert_colorspace(image, colorspace, chroma, nclx_profile);
     if (!image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1907,6 +1908,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
   auto color_profile = image->get_color_profile();
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -1918,7 +1920,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    image = convert_colorspace(image, colorspace, chroma);
+    image = convert_colorspace(image, colorspace, chroma, nclx_profile);
     if (!image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }

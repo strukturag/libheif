@@ -1059,6 +1059,10 @@ int main(int argc, char** argv)
       image = loadJPEG(input_filename.c_str());
     }
 
+    heif_color_profile_nclx nclx;
+    nclx.matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+
+    heif_image_set_nclx_color_profile(image.get(), &nclx);
 
     if (heif_image_get_colorspace(image.get()) == heif_colorspace_RGB &&
         lossless) {

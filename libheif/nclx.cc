@@ -144,3 +144,49 @@ heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
 
   return coeffs;
 }
+
+
+heif::RGB_to_YCbCr_coefficients
+heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
+  RGB_to_YCbCr_coefficients coeffs;
+
+  Kr_Kb k = get_Kr_Kb(matrix_coefficients_idx, primaries_idx);
+
+  if (k.Kb != 0 || k.Kr != 0) { // both will be != 0 when valid
+    coeffs.defined = true;
+    coeffs.c[0][0] = k.Kr;
+    coeffs.c[0][1] = 1-k.Kr-k.Kb;
+    coeffs.c[0][2] = k.Kb;
+    coeffs.c[1][0] = -k.Kr/(1-k.Kb)/2;
+    coeffs.c[1][1] = -(1-k.Kr-k.Kb)/(1-k.Kb)/2;
+    coeffs.c[1][2] = 0.5f;
+    coeffs.c[2][0] = 0.5f;
+    coeffs.c[2][1] = -(1-k.Kr-k.Kb)/(1-k.Kr)/2;
+    coeffs.c[2][2] = -k.Kb/(1-k.Kr)/2;
+  }
+  else {
+    coeffs = RGB_to_YCbCr_coefficients::defaults();
+  }
+
+  return coeffs;
+}
+
+
+heif::RGB_to_YCbCr_coefficients heif::RGB_to_YCbCr_coefficients::defaults()
+{
+  RGB_to_YCbCr_coefficients coeffs;
+  coeffs.defined=true;
+
+  coeffs.c[0][0] = 0.299f;
+  coeffs.c[0][1] = 0.587f;
+  coeffs.c[0][2] = 0.114f;
+  coeffs.c[1][0] = -0.168735f;
+  coeffs.c[1][1] = -0.331264f;
+  coeffs.c[1][2] = 0.5f;
+  coeffs.c[2][0] = 0.5f;
+  coeffs.c[2][1] = -0.418688f;
+  coeffs.c[2][2] = -0.081312f;
+
+  return coeffs;
+}
+

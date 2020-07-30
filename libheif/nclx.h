@@ -59,6 +59,16 @@ namespace heif {
 
   YCbCr_to_RGB_coefficients get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
 
+  struct RGB_to_YCbCr_coefficients {
+    bool defined = false;
+
+    float c[3][3];   // e.g. y = c[0][0]*r + c[0][1]*g + c[0][2]*b
+
+    static RGB_to_YCbCr_coefficients defaults();
+  };
+
+  RGB_to_YCbCr_coefficients get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
+
 //  uint16_t get_transfer_characteristics() const {return m_transfer_characteristics;}
 // uint16_t get_matrix_coefficients() const {return m_matrix_coefficients;}
 //  bool get_full_range_flag() const {return m_full_range_flag;}

@@ -483,9 +483,9 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
       int cy = (y>>shiftV);
 
       if (matrix_coeffs==0) {
-        out_r[y * out_r_stride + x] = in_cr[cy * in_y_stride + cx];
+        out_r[y * out_r_stride + x] = in_cr[cy * in_cr_stride + cx];
         out_g[y * out_g_stride + x] = in_y[y * in_y_stride + x];
-        out_b[y * out_b_stride + x] = in_cb[cy * in_y_stride + cx];
+        out_b[y * out_b_stride + x] = in_cb[cy * in_cb_stride + cx];
       }
       else if (matrix_coeffs==8) {
         // TODO: check this. I have no input image yet which is known to be correct.
@@ -651,28 +651,51 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   uint16_t halfRange = (uint16_t)(1<<(bpp-1));
   int32_t fullRange = (1<<bpp)-1;
 
+  int matrix_coeffs = 2;
+  RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
+  if (target_state.nclx_profile) {
+    matrix_coeffs = target_state.nclx_profile->get_matrix_coefficients();
+    coeffs = heif::get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
+                                                 target_state.nclx_profile->get_colour_primaries());
+  }
+
   int x,y;
 
   for (y=0;y<height;y++) {
     for (x=0;x<width;x++) {
-      float r = in_r[y*in_r_stride + x];
-      float g = in_g[y*in_g_stride + x];
-      float b = in_b[y*in_b_stride + x];
+      if (matrix_coeffs == 0) {
+        out_y[y * out_y_stride + x] = in_g[y*in_g_stride + x];
+      }
+      else {
+        float r = in_r[y*in_r_stride + x];
+        float g = in_g[y*in_g_stride + x];
+        float b = in_b[y*in_b_stride + x];
 
-      out_y[y*out_y_stride + x] = (Pixel)clip((int32_t)(r*0.299f + g*0.587f + b*0.114f), fullRange);
+        out_y[y * out_y_stride + x] = (Pixel) clip(
+            (int32_t) (r * coeffs.c[0][0] + g * coeffs.c[0][1] + b * coeffs.c[0][2]), fullRange);
+      }
     }
   }
 
   for (y=0;y<height;y+=subV) {
     for (x=0;x<width;x+=subH) {
-      float r = in_r[y*in_r_stride + x];
-      float g = in_g[y*in_g_stride + x];
-      float b = in_b[y*in_b_stride + x];
+      if (matrix_coeffs==0) {
+        out_cb[(y / subV) * out_cb_stride + (x / subH)] = in_b[y*in_b_stride + x];
+        out_cr[(y / subV) * out_cb_stride + (x / subH)] = in_r[y*in_b_stride + x];
+      }
+      else {
+        float r = in_r[y*in_r_stride + x];
+        float g = in_g[y*in_g_stride + x];
+        float b = in_b[y*in_b_stride + x];
 
-      out_cb[(y/subV)*out_cb_stride + (x/subH)] = (Pixel)clip(halfRange + (int32_t)(-r*0.168736f - g*0.331264f + b*0.5f), fullRange);
-      out_cr[(y/subV)*out_cr_stride + (x/subH)] = (Pixel)clip(halfRange + (int32_t)(r*0.5f - g*0.418688f - b*0.081312f), fullRange);
+        out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip(
+            halfRange + (int32_t) (r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2]), fullRange);
+        out_cr[(y / subV) * out_cr_stride + (x / subH)] = (Pixel) clip(
+            halfRange + (int32_t) (r * coeffs.c[2][0] + g * coeffs.c[2][1] + b * coeffs.c[2][2]), fullRange);
+      }
     }
   }
+
 
   if (has_alpha) {
     for (y=0;y<height;y++) {
@@ -1769,7 +1792,12 @@ Op_RGB24_32_to_YCbCr420::state_after_conversion(ColorState input_state,
   if (input_state.colorspace != heif_colorspace_RGB ||
       (input_state.chroma != heif_chroma_interleaved_RGB &&
        input_state.chroma != heif_chroma_interleaved_RGBA)) {
-    return { };
+    return {};
+  }
+
+  if (target_state.nclx_profile &&
+      target_state.nclx_profile->get_matrix_coefficients() == 0) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
@@ -1859,13 +1887,20 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
   }
 
 
+  RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
+  if (target_state.nclx_profile) {
+    coeffs = heif::get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
+                                                 target_state.nclx_profile->get_colour_primaries());
+  }
+
+
   if (!has_alpha) {
     for (int y=0;y<height;y++) {
       for (int x=0;x<width;x++) {
         uint8_t r = in_p[y*in_stride + x*3 +0];
         uint8_t g = in_p[y*in_stride + x*3 +1];
         uint8_t b = in_p[y*in_stride + x*3 +2];
-        out_y[y*out_y_stride + x] = clip(r*0.299f + g*0.587f + b*0.114f);
+        out_y[y*out_y_stride + x] = clip(r*coeffs.c[0][0] + g*coeffs.c[0][1] + b*coeffs.c[0][2]);
       }
     }
 
@@ -1874,8 +1909,8 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
         uint8_t r = in_p[y*in_stride + x*3 +0];
         uint8_t g = in_p[y*in_stride + x*3 +1];
         uint8_t b = in_p[y*in_stride + x*3 +2];
-        out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 - r*0.168736f - g*0.331264f + b*0.5f);
-        out_cr[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*0.5f - g*0.418688f - b*0.081312f);
+        out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*coeffs.c[1][0] + g*coeffs.c[1][1] + b*coeffs.c[1][2]);
+        out_cr[(y/2)*out_cr_stride + (x/2)] = clip(128 + r*coeffs.c[2][0] + g*coeffs.c[2][1] + b*coeffs.c[2][2]);
       }
     }
   }
@@ -1886,7 +1921,7 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
         uint8_t g = in_p[y*in_stride + x*4 +1];
         uint8_t b = in_p[y*in_stride + x*4 +2];
         uint8_t a = in_p[y*in_stride + x*4 +3];
-        out_y[y*out_y_stride + x] = clip(r*0.299f + g*0.587f + b*0.114f);
+        out_y[y*out_y_stride + x] = clip(r*coeffs.c[0][0] + g*coeffs.c[0][1] + b*coeffs.c[0][2]);
 
         // alpha
         out_a[y*out_a_stride + x] = a;
@@ -1898,8 +1933,157 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
         uint8_t r = in_p[y*in_stride + x*4 +0];
         uint8_t g = in_p[y*in_stride + x*4 +1];
         uint8_t b = in_p[y*in_stride + x*4 +2];
-        out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 - r*0.168736f - g*0.331264f + b*0.5f);
-        out_cr[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*0.5f - g*0.418688f - b*0.081312f);
+        out_cb[(y/2)*out_cb_stride + (x/2)] = clip(128 + r*coeffs.c[1][0] + g*coeffs.c[1][1] + b*coeffs.c[1][2]);
+        out_cr[(y/2)*out_cr_stride + (x/2)] = clip(128 + r*coeffs.c[2][0] + g*coeffs.c[2][1] + b*coeffs.c[2][2]);
+      }
+    }
+  }
+
+  return outimg;
+}
+
+
+
+
+class Op_RGB24_32_to_YCbCr444_GBR : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(ColorState input_state,
+                         ColorState target_state,
+                         ColorConversionOptions options) override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     ColorState target_state,
+                     ColorConversionOptions options) override;
+};
+
+
+std::vector<ColorStateWithCost>
+Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
+                                                ColorState target_state,
+                                                ColorConversionOptions options)
+{
+  // Note: no input alpha channel required. It will be filled up with 0xFF.
+
+  if (input_state.colorspace != heif_colorspace_RGB ||
+      (input_state.chroma != heif_chroma_interleaved_RGB &&
+       input_state.chroma != heif_chroma_interleaved_RGBA)) {
+    return {};
+  }
+
+  if (!target_state.nclx_profile ||
+      target_state.nclx_profile->get_matrix_coefficients() != 0) {
+    return {};
+  }
+
+  std::vector<ColorStateWithCost> states;
+
+  ColorState output_state;
+  ColorConversionCosts costs;
+
+  // --- convert RGB24
+
+  if (input_state.chroma == heif_chroma_interleaved_RGB) {
+    output_state.colorspace = heif_colorspace_YCbCr;
+    output_state.chroma = heif_chroma_444;
+    output_state.has_alpha = false;
+    output_state.bits_per_pixel = 8;
+
+    costs = { 0.75f, 0.5f, 0.0f };  // quality not good since we subsample chroma without filtering
+
+    states.push_back({ output_state, costs });
+  }
+
+
+  // --- convert RGB32
+
+  if (input_state.chroma == heif_chroma_interleaved_RGBA) {
+    output_state.colorspace = heif_colorspace_YCbCr;
+    output_state.chroma = heif_chroma_444;
+    output_state.has_alpha = true;
+    output_state.bits_per_pixel = 8;
+
+    costs = { 0.75f, 0.5f, 0.0f };  // quality not good since we subsample chroma without filtering
+
+    states.push_back({ output_state, costs });
+  }
+
+  return states;
+}
+
+
+std::shared_ptr<HeifPixelImage>
+Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                            ColorState target_state,
+                                            ColorConversionOptions options)
+{
+  int width = input->get_width();
+  int height = input->get_height();
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+
+  const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+
+  outimg->add_plane(heif_channel_Y,  width, height, 8);
+  outimg->add_plane(heif_channel_Cb, width, height, 8);
+  outimg->add_plane(heif_channel_Cr, width, height, 8);
+
+  if (has_alpha) {
+    outimg->add_plane(heif_channel_Alpha, width, height, 8);
+  }
+
+  uint8_t *out_cb,*out_cr,*out_y, *out_a;
+  int out_cb_stride=0, out_cr_stride=0, out_y_stride=0, out_a_stride=0;
+
+  const uint8_t *in_p;
+  int in_stride=0;
+
+  in_p  = input->get_plane(heif_channel_interleaved,  &in_stride);
+
+  out_y  = outimg->get_plane(heif_channel_Y,  &out_y_stride);
+  out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
+  out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
+
+  if (has_alpha) {
+    out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+  }
+
+
+  assert(target_state.nclx_profile);
+  assert(target_state.nclx_profile->get_matrix_coefficients()==0);
+
+
+  if (!has_alpha) {
+    for (int y=0;y<height;y++) {
+      for (int x=0;x<width;x++) {
+        uint8_t r = in_p[y*in_stride + x*3 +0];
+        uint8_t g = in_p[y*in_stride + x*3 +1];
+        uint8_t b = in_p[y*in_stride + x*3 +2];
+
+        out_y[y*out_y_stride + x] = g;
+        out_cb[y*out_cb_stride + x] = b;
+        out_cr[y*out_cr_stride + x] = r;
+      }
+    }
+  }
+  else {
+    for (int y=0;y<height;y++) {
+      for (int x=0;x<width;x++) {
+        uint8_t r = in_p[y*in_stride + x*4 +0];
+        uint8_t g = in_p[y*in_stride + x*4 +1];
+        uint8_t b = in_p[y*in_stride + x*4 +2];
+        uint8_t a = in_p[y*in_stride + x*4 +3];
+
+        out_y[y*out_y_stride + x] = g;
+        out_cb[y*out_cb_stride + x] = b;
+        out_cr[y*out_cr_stride + x] = r;
+
+        // alpha
+        out_a[y*out_a_stride + x] = a;
       }
     }
   }
@@ -2520,6 +2704,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
   ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
   ops.push_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
   ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr420>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
   ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
   ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());
@@ -2686,6 +2871,7 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
 std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                          heif_colorspace target_colorspace,
                                                          heif_chroma target_chroma,
+                                                         std::shared_ptr<const color_profile_nclx> target_profile,
                                                          int output_bpp)
 {
   ColorState input_state;
@@ -2701,6 +2887,7 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   ColorState output_state = input_state;
   output_state.colorspace = target_colorspace;
   output_state.chroma = target_chroma;
+  output_state.nclx_profile = target_profile;
 
   // If we convert to an interleaved format, we want alpha only if present in the
   // interleaved output format.
