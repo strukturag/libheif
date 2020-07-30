@@ -676,8 +676,8 @@ enum heif_matrix_coefficients {
   heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance = 9,
   heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance = 10,
   heif_matrix_coefficients_SMPTE_ST_2085 = 11,
-  heif_matrix_coefficients_Chromaticity_derived_non_constant_luminance = 12,
-  heif_matrix_coefficients_Chromaticity_derived_constant_luminance = 13,
+  heif_matrix_coefficients_chromaticity_derived_non_constant_luminance = 12,
+  heif_matrix_coefficients_chromaticity_derived_constant_luminance = 13,
   heif_matrix_coefficients_ICtCp = 14
 };
 
