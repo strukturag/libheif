@@ -92,10 +92,12 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
                                                               const struct de265_image* de265img,
                                                               struct heif_image** image)
 {
+  bool is_mono = (de265_get_chroma_format(de265img) == de265_chroma_mono);
+
   std::shared_ptr<HeifPixelImage> yuv_img = std::make_shared<HeifPixelImage>();
   yuv_img->create( de265_get_image_width(de265img, 0),
                    de265_get_image_height(de265img, 0),
-                   heif_colorspace_YCbCr, // TODO
+                   is_mono ? heif_colorspace_monochrome : heif_colorspace_YCbCr,
                    (heif_chroma)de265_get_chroma_format(de265img) );
 
   // --- transfer data from de265_image to HeifPixelImage
@@ -109,8 +111,9 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
   int bpp = de265_get_bits_per_pixel(de265img, 0);
 
-  // TODO: what about monochrome images ?
-  for (int c=0;c<3;c++) {
+  int nPlanes = (is_mono ? 1 : 3);
+
+  for (int c=0;c<nPlanes;c++) {
     if (de265_get_bits_per_pixel(de265img, c) != bpp) {
       struct heif_error err = { heif_error_Unsupported_feature,
                                 heif_suberror_Unsupported_color_conversion,
