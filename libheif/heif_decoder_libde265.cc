@@ -126,7 +126,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
-    if (w < 0 || h < 0) {
+    if (w <= 0 || h <= 0) {
       struct heif_error err = { heif_error_Decoder_plugin_error,
                                 heif_suberror_Invalid_image_size,
                                 kEmptyString };
