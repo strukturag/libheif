@@ -31,7 +31,8 @@
 
 using namespace heif;
 
-#define DEBUG_ME 0
+#define DEBUG_ME 1
+#define DEBUG_PIPELINE_CREATION 0
 
 std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
 {
@@ -98,8 +99,8 @@ std::ostream& operator<<(std::ostream& ostr, heif_chroma c)
   return ostr;
 }
 
-#if 0
-static void print_spec(std::ostream& ostr, const std::shared_ptr<HeifPixelImage>& img)
+#if DEBUG_ME
+static void __attribute__ ((unused)) print_spec(std::ostream& ostr, const std::shared_ptr<HeifPixelImage>& img)
 {
   ostr << "colorspace=" << img->get_colorspace()
        << " chroma=" << img->get_chroma_format();
@@ -116,7 +117,7 @@ static void print_spec(std::ostream& ostr, const std::shared_ptr<HeifPixelImage>
 }
 
 
-static void print_state(std::ostream& ostr, const ColorState& state)
+static void __attribute__ ((unused)) print_state(std::ostream& ostr, const ColorState& state)
 {
   ostr << "colorspace=" << state.colorspace
        << " chroma=" << state.chroma;
@@ -124,6 +125,8 @@ static void print_state(std::ostream& ostr, const ColorState& state)
   ostr << " bpp(R)=" << state.bits_per_pixel;
   ostr << " alpha=" << (state.has_alpha ? "yes" : "no");
   ostr << " nclx=" << (state.nclx_profile ? "yes" : "no");
+  ostr << "\n";
+}
 #endif
 
 
@@ -2541,7 +2544,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
     border_states[minIdx] = border_states.back();
     border_states.pop_back();
 
-#if DEBUG_ME
+#if DEBUG_PIPELINE_CREATION
     std::cerr << "- expand node: ";
     print_state(std::cerr, processed_states.back().color_state.color_state);
 #endif
@@ -2579,7 +2582,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 
     for (size_t i = 0; i < ops.size(); i++) {
 
-#if DEBUG_ME
+#if DEBUG_PIPELINE_CREATION
       std::cerr << "-- apply op: " << typeid(*(ops[i])).name() << "\n";
 #endif
 
@@ -2587,7 +2590,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
                                                        target_state,
                                                        options);
       for (const auto& out_state : out_states) {
-#if DEBUG_ME
+#if DEBUG_PIPELINE_CREATION
         std::cerr << "--- ";
         print_state(std::cerr, out_state.color_state);
 #endif
