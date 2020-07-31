@@ -18,9 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
-#include <math.h>
-
 #include "heif_image.h"
 #include "heif_avif.h"
 #include "bitstream.h"

@@ -22,15 +22,15 @@
 #include "heif_image.h"
 #include "heif_colorconversion.h"
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
 #include <utility>
 
 using namespace heif;
 
 
-int heif::chroma_h_subsampling(heif_chroma c)
+uint8_t heif::chroma_h_subsampling(heif_chroma c)
 {
   switch (c) {
     case heif_chroma_monochrome:
@@ -49,7 +49,7 @@ int heif::chroma_h_subsampling(heif_chroma c)
   }
 }
 
-int heif::chroma_v_subsampling(heif_chroma c)
+uint8_t heif::chroma_v_subsampling(heif_chroma c)
 {
   switch (c) {
     case heif_chroma_monochrome:
@@ -85,10 +85,6 @@ heif_chroma heif::chroma_from_subsampling(int h, int v)
   }
 }
 
-
-HeifPixelImage::HeifPixelImage()
-{
-}
 
 HeifPixelImage::~HeifPixelImage()
 {
@@ -132,9 +128,9 @@ void HeifPixelImage::create(int width, int height, heif_colorspace colorspace, h
   m_chroma = chroma;
 }
 
-static int rounded_size(int s)
+static uint32_t rounded_size(uint32_t s)
 {
-  s = (s + 1) & ~1;
+  s = (s + 1U) & ~1U;
   if (s < 16) {
     s = 16;
   }
@@ -147,9 +143,10 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   assert(width >= 0);
   assert(height >= 0);
   assert(bit_depth >= 1);
+  assert(bit_depth <= 16);
 
   // use 16 byte alignment
-  int alignment = 16; // must be power of two
+  uint16_t alignment = 16; // must be power of two
 
   ImagePlane plane;
   plane.width = width;
@@ -168,14 +165,14 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
     bit_depth = 8;
   }
 
-  plane.bit_depth = bit_depth;
+  plane.bit_depth = static_cast<uint8_t>(bit_depth);
 
 
   int bytes_per_component = (bit_depth + 7) / 8;
   int bytes_per_pixel = num_interleaved_pixels_per_plane(m_chroma) * bytes_per_component;
 
   plane.stride = rounded_width * bytes_per_pixel;
-  plane.stride = (plane.stride + alignment - 1) & ~(alignment - 1);
+  plane.stride = (plane.stride + alignment - 1U) & ~(alignment - 1U);
 
   try {
     plane.allocated_mem = new uint8_t[rounded_height * plane.stride + alignment - 1];
@@ -184,12 +181,12 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
     // shift beginning of image data to aligned memory position
 
     auto mem_start_addr = (uint64_t) plane.mem;
-    auto mem_start_offset = (mem_start_addr & (alignment - 1));
+    auto mem_start_offset = (mem_start_addr & (alignment - 1U));
     if (mem_start_offset != 0) {
       plane.mem += alignment - mem_start_offset;
     }
 
-    m_planes.insert(std::make_pair(channel, std::move(plane)));
+    m_planes.insert(std::make_pair(channel, plane));
   }
   catch (const std::bad_alloc& excpt) {
     return false;
@@ -279,7 +276,7 @@ std::set<heif_channel> HeifPixelImage::get_channel_set() const
 }
 
 
-int HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) const
+uint8_t HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) const
 {
   if (channel == heif_channel_interleaved) {
     auto chroma = get_chroma_format();
@@ -299,12 +296,14 @@ int HeifPixelImage::get_storage_bits_per_pixel(enum heif_channel channel) const
     }
   }
   else {
-    return (get_bits_per_pixel(channel) + 7) & ~7;
+    uint32_t bpp = (get_bits_per_pixel(channel) + 7U) & ~7U;
+    assert(bpp<=255);
+    return static_cast<uint8_t>(bpp);
   }
 }
 
 
-int HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
+uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
   if (iter == m_planes.end()) {
@@ -384,7 +383,7 @@ void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint8_t value, int
 }
 
 
-void HeifPixelImage::transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
+void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                                   heif_channel src_channel,
                                                   heif_channel dst_channel)
 {
@@ -670,7 +669,7 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
         assert(false);
     }
 
-    uint8_t val8 = static_cast<uint8_t>(val16 >> 8);
+    auto val8 = static_cast<uint8_t>(val16 >> 8U);
 
     memset(data, val8, stride * h);
   }

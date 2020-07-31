@@ -26,6 +26,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "error.h"
 
@@ -139,7 +140,7 @@ namespace heif {
         m_thumbnail_ref_id = id;
       }
 
-      void add_thumbnail(std::shared_ptr<Image> img)
+      void add_thumbnail(const std::shared_ptr<Image>& img)
       { m_thumbnails.push_back(img); }
 
       bool is_thumbnail() const
@@ -158,7 +159,7 @@ namespace heif {
       }
 
       void set_alpha_channel(std::shared_ptr<Image> img)
-      { m_alpha_channel = img; }
+      { m_alpha_channel = std::move(img); }
 
       bool is_alpha_channel() const
       { return m_is_alpha_channel; }
@@ -176,7 +177,7 @@ namespace heif {
       }
 
       void set_depth_channel(std::shared_ptr<Image> img)
-      { m_depth_channel = img; }
+      { m_depth_channel = std::move(img); }
 
       bool is_depth_channel() const
       { return m_is_depth_channel; }
@@ -206,7 +207,7 @@ namespace heif {
 
       void add_metadata(std::shared_ptr<ImageMetadata> metadata)
       {
-        m_metadata.push_back(metadata);
+        m_metadata.push_back(std::move(metadata));
       }
 
       std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const
@@ -231,7 +232,7 @@ namespace heif {
       { return m_color_profile; }
 
       void set_color_profile(std::shared_ptr<const color_profile> profile)
-      { m_color_profile = profile; };
+      { m_color_profile = std::move(profile); };
 
     private:
       HeifContext* m_heif_context;
@@ -302,7 +303,7 @@ namespace heif {
     Error set_primary_item(heif_item_id id);
 
     bool is_primary_image_set() const
-    { return !!m_primary_image; }
+    { return m_primary_image != nullptr; }
 
     Error assign_thumbnail(std::shared_ptr<Image> master_image,
                            std::shared_ptr<Image> thumbnail_image);

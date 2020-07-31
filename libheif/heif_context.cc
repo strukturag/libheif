@@ -22,13 +22,12 @@
 #include "config.h"
 #endif
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include <algorithm>
 #include <iostream>
 #include <limits>
-#include <utility>
-#include <math.h>
+#include <cmath>
 #include <deque>
 
 #if ENABLE_PARALLEL_TILE_DECODING

@@ -33,10 +33,10 @@ namespace heif {
 
     bool defined = false;
 
-    float greenX, greenY;
-    float blueX, blueY;
-    float redX, redY;
-    float whiteX, whiteY;
+    float greenX=0, greenY=0;
+    float blueX=0, blueY=0;
+    float redX=0, redY=0;
+    float whiteX=0, whiteY=0;
   };
 
   primaries get_colour_primaries(uint16_t primaries_idx);
@@ -67,7 +67,7 @@ namespace heif {
   {
     bool defined = false;
 
-    float c[3][3];   // e.g. y = c[0][0]*r + c[0][1]*g + c[0][2]*b
+    float c[3][3] = {{0,0,0},{0,0,0},{0,0,0}};   // e.g. y = c[0][0]*r + c[0][1]*g + c[0][2]*b
 
     static RGB_to_YCbCr_coefficients defaults();
   };

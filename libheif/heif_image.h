@@ -34,9 +34,9 @@
 
 namespace heif {
 
-  int chroma_h_subsampling(heif_chroma c);
+  uint8_t chroma_h_subsampling(heif_chroma c);
 
-  int chroma_v_subsampling(heif_chroma c);
+  uint8_t chroma_v_subsampling(heif_chroma c);
 
   heif_chroma chroma_from_subsampling(int h, int v);
 
@@ -49,7 +49,7 @@ namespace heif {
                          public ErrorBuffer
   {
   public:
-    explicit HeifPixelImage();
+    explicit HeifPixelImage() = default;
 
     ~HeifPixelImage();
 
@@ -80,9 +80,9 @@ namespace heif {
 
     std::set<enum heif_channel> get_channel_set() const;
 
-    int get_storage_bits_per_pixel(enum heif_channel channel) const;
+    uint8_t get_storage_bits_per_pixel(enum heif_channel channel) const;
 
-    int get_bits_per_pixel(enum heif_channel channel) const;
+    uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
     uint8_t* get_plane(enum heif_channel channel, int* out_stride);
 
@@ -94,7 +94,7 @@ namespace heif {
 
     void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
 
-    void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
+    void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                       heif_channel src_channel,
                                       heif_channel dst_channel);
 
@@ -125,13 +125,13 @@ namespace heif {
   private:
     struct ImagePlane
     {
-      int width;
-      int height;
-      int bit_depth;
+      int width = 0;
+      int height = 0;
+      uint8_t bit_depth = 0;
 
-      uint8_t* mem; // aligned memory start
+      uint8_t* mem = nullptr; // aligned memory start
       uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
-      int stride;
+      uint32_t stride = 0;
     };
 
     int m_width = 0;
