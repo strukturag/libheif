@@ -237,7 +237,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   auto out_image = convert_colorspace(in_image,
       static_cast<heif_colorspace>(out_colorspace),
-      static_cast<heif_chroma>(out_chroma));
+      static_cast<heif_chroma>(out_chroma),
+      nullptr);
   if (!out_image) {
     // Conversion is not supported.
     return 0;

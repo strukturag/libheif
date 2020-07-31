@@ -183,19 +183,21 @@ void fill_info(GdkPixbufFormat* info)
   static gchar *mime_types[] = {
     "image/heif",
     "image/heic",
+    "image/avif",
     NULL
   };
 
   static gchar *extensions[] = {
     "heif",
     "heic",
+    "avif",
     NULL
   };
 
-  info->name        = "heif";
+  info->name        = "heif/avif";
   info->signature   = signature;
   info->domain      = "pixbufloader-heif";
-  info->description = "HEIF Image";
+  info->description = "HEIF/AVIF Image";
   info->mime_types  = mime_types;
   info->extensions  = extensions;
   info->flags       = GDK_PIXBUF_FORMAT_THREADSAFE;
