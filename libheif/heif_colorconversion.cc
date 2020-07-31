@@ -1044,8 +1044,15 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   bool has_alpha = input->has_channel(heif_channel_Alpha);
 
-  if (has_alpha && input->get_bits_per_pixel(heif_channel_Alpha) == 8) {
-    return nullptr;
+  if (has_alpha) {
+    if (input->get_bits_per_pixel(heif_channel_Alpha) == 8) {
+      return nullptr;
+    }
+
+    if (input->get_width(heif_channel_Alpha) != input->get_width(heif_channel_G) ||
+        input->get_height(heif_channel_Alpha) != input->get_height(heif_channel_G)) {
+      return nullptr;
+    }
   }
 
   auto outimg = std::make_shared<HeifPixelImage>();
@@ -2858,7 +2865,9 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
 #endif
 
     out = op->convert_colorspace(in, m_target_state, m_options);
-    assert(out);
+    if (!out) {
+      return nullptr; // TODO: we should return a proper error
+    }
 
     in = out;
   }
