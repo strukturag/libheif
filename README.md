@@ -181,6 +181,13 @@ Place the files `heif.xml` and 'avif.xml' into `/usr/share/mime/packages` and `h
 You may have to run `update-mime-database /usr/share/mime` to update the list of known MIME types.
 
 
+## gdk-pixbuf loader
+
+libheif also includes a gdk-pixbuf loader for HEIF/AVIF images. 'make install' will copy the plugin
+into the system directories. However, you will still have to run `gdk-pixbuf-query-loaders --update-cache`
+to update the gdk-pixbuf loader database.
+
+
 ## License
 
 The libheif is distributed under the terms of the GNU Lesser General Public License.
