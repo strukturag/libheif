@@ -583,8 +583,9 @@ Error HeifContext::interpret_heif_file()
 
           // alpha channel
 
-          if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||
-              auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1") {
+          if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||   // HEIF (avc)
+              auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
+              auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // AVIF
             image->set_is_alpha_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
@@ -604,7 +605,8 @@ Error HeifContext::interpret_heif_file()
 
           // depth channel
 
-          if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2") {
+          if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2" || // HEIF
+              auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:depth") { // AVIF
             image->set_is_depth_channel_of(refs[0]);
 
             auto master_iter = m_all_images.find(refs[0]);
