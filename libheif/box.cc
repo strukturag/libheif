@@ -1668,9 +1668,10 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 
 void color_profile_nclx::set_default()
 {
-  m_colour_primaries = 0;
-  m_transfer_characteristics = 0;
+  m_colour_primaries = 2;
+  m_transfer_characteristics = 2;
   m_matrix_coefficients = 6;
+  m_full_range_flag = true;
 }
 
 
