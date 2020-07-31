@@ -571,9 +571,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     if (!av1C_box) {
       // Should always have an hvcC box, because we are checking this in
       // heif_context::interpret_heif_file()
-      assert(false);
       return Error(heif_error_Invalid_input,
-                   heif_suberror_No_hvcC_box);
+                   heif_suberror_No_av1C_box);
     } else if (!av1C_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
