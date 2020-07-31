@@ -24,24 +24,22 @@
   SOFTWARE.
 */
 #if defined(HAVE_CONFIG_H)
-#include "config.h"
+#  include "config.h"
 #endif
 
-#include "string.h"
 
 #if defined(HAVE_UNISTD_H)
-#include <unistd.h>
+#  include <unistd.h>
 #endif
-#include <fstream>
+
+#include <string>
 #include <iostream>
-#include <sstream>
-#include <assert.h>
-
+#include <cassert>
 #include <libheif/heif.h>
-
 #include "encoder.h"
+
 #if HAVE_LIBPNG
-#include "encoder_png.h"
+#  include "encoder_png.h"
 #endif
 
 #if defined(_MSC_VER)
@@ -49,7 +47,8 @@
 #endif
 
 
-static int usage(const char* command) {
+static int usage(const char* command)
+{
   fprintf(stderr, "usage: %s [-s size] [-p] <filename> <output>\n", command);
   fprintf(stderr, " -p   Render thumbnail from primary image, even if thumbnail is stored in image.\n");
   return 1;
@@ -64,15 +63,15 @@ int main(int argc, char** argv)
 
   while ((opt = getopt(argc, argv, "s:hp")) != -1) {
     switch (opt) {
-    case 's':
-      size = atoi(optarg);
-      break;
-    case 'p':
-      thumbnail_from_primary_image_only = true;
-      break;
-    case 'h':
-    default:
-      return usage(argv[0]);
+      case 's':
+        size = atoi(optarg);
+        break;
+      case 'p':
+        thumbnail_from_primary_image_only = true;
+        break;
+      case 'h':
+      default:
+        return usage(argv[0]);
     }
   }
 
@@ -88,7 +87,7 @@ int main(int argc, char** argv)
   // --- read heif file
 
   std::shared_ptr<heif_context> context(heif_context_alloc(),
-                                        [] (heif_context* c) { heif_context_free(c); });
+                                        [](heif_context* c) { heif_context_free(c); });
 
   struct heif_error err;
   err = heif_context_read_from_file(context.get(), input_filename.c_str(), nullptr);
@@ -156,22 +155,23 @@ int main(int argc, char** argv)
 
   // --- compute output thumbnail size
 
-  int input_width  = heif_image_handle_get_width(image_handle);
+  int input_width = heif_image_handle_get_width(image_handle);
   int input_height = heif_image_handle_get_height(image_handle);
 
   int thumbnail_width = input_width;
   int thumbnail_height = input_height;
 
-  if (input_width>size || input_height>size) {
-    if (input_width>input_height) {
-      thumbnail_height = input_height * size/input_width;
-      thumbnail_width  = size;
+  if (input_width > size || input_height > size) {
+    if (input_width > input_height) {
+      thumbnail_height = input_height * size / input_width;
+      thumbnail_width = size;
     }
     else if (input_height > 0) {
-      thumbnail_width  = input_width * size/input_height;
+      thumbnail_width = input_width * size / input_height;
       thumbnail_height = size;
-    } else {
-      thumbnail_width  = thumbnail_height = 0;
+    }
+    else {
+      thumbnail_width = thumbnail_height = 0;
     }
 
 
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 
   bool written = encoder->Encode(image_handle, image, output_filename.c_str());
   if (!written) {
-    fprintf(stderr,"could not write image\n");
+    fprintf(stderr, "could not write image\n");
     return 1;
   }
 

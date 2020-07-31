@@ -26,11 +26,13 @@
 
 #include "heif.h"
 
-static void generate_plane(int width, int height, uint8_t* output, int stride) {
+static void generate_plane(int width, int height, uint8_t* output, int stride)
+{
   // TODO(fancycode): Fill with random data.
   if (width == stride) {
     memset(output, 0, width * height);
-  } else {
+  }
+  else {
     for (int y = 0; y < height; y++) {
       memset(output, 0, width);
       output += stride;
@@ -38,7 +40,8 @@ static void generate_plane(int width, int height, uint8_t* output, int stride) {
   }
 }
 
-static size_t create_image(const uint8_t* data, size_t size, struct heif_image** image) {
+static size_t create_image(const uint8_t* data, size_t size, struct heif_image** image)
+{
   if (size < 2) {
     return 0;
   }
@@ -78,17 +81,25 @@ static size_t create_image(const uint8_t* data, size_t size, struct heif_image**
   return 2;
 }
 
-class MemoryWriter {
- public:
-  MemoryWriter() : data_(nullptr), size_(0), capacity_(0) {}
-  ~MemoryWriter() {
+class MemoryWriter
+{
+public:
+  MemoryWriter() : data_(nullptr), size_(0), capacity_(0)
+  {}
+
+  ~MemoryWriter()
+  {
     free(data_);
   }
 
-  const uint8_t* data() const { return data_; }
-  size_t size() const { return size_; }
+  const uint8_t* data() const
+  { return data_; }
 
-  void write(const void* data, size_t size) {
+  size_t size() const
+  { return size_; }
+
+  void write(const void* data, size_t size)
+  {
     if (capacity_ - size_ < size) {
       size_t new_capacity = capacity_ + size;
       uint8_t* new_data = static_cast<uint8_t*>(malloc(new_capacity));
@@ -104,23 +115,25 @@ class MemoryWriter {
     size_ += size;
   }
 
- public:
+public:
   uint8_t* data_;
   size_t size_;
   size_t capacity_;
 };
 
-static struct heif_error writer_write(struct heif_context* ctx, const void* data, size_t size, void* userdata) {
+static struct heif_error writer_write(struct heif_context* ctx, const void* data, size_t size, void* userdata)
+{
   MemoryWriter* writer = static_cast<MemoryWriter*>(userdata);
   writer->write(data, size);
   struct heif_error err{heif_error_Ok, heif_suberror_Unspecified, nullptr};
   return err;
 }
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
   struct heif_error err;
   std::shared_ptr<heif_context> context(heif_context_alloc(),
-                                        [] (heif_context* c) { heif_context_free(c); });
+                                        [](heif_context* c) { heif_context_free(c); });
   assert(context);
   static const size_t kMaxEncoders = 5;
   const heif_encoder_descriptor* encoder_descriptors[kMaxEncoders];

@@ -35,7 +35,8 @@
 static const char kMetadataTypeExif[] = "Exif";
 
 // static
-bool Encoder::HasExifMetaData(const struct heif_image_handle* handle) {
+bool Encoder::HasExifMetaData(const struct heif_image_handle* handle)
+{
 
   heif_item_id metadata_id;
   int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
@@ -44,7 +45,8 @@ bool Encoder::HasExifMetaData(const struct heif_image_handle* handle) {
 }
 
 // static
-uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t* size) {
+uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t* size)
+{
   heif_item_id metadata_id;
   int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, kMetadataTypeExif,
                                                                &metadata_id, 1);

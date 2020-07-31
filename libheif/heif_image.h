@@ -35,101 +35,113 @@
 namespace heif {
 
   int chroma_h_subsampling(heif_chroma c);
+
   int chroma_v_subsampling(heif_chroma c);
 
-  heif_chroma chroma_from_subsampling(int h,int v);
+  heif_chroma chroma_from_subsampling(int h, int v);
 
   bool is_chroma_with_alpha(heif_chroma chroma);
+
   int num_interleaved_pixels_per_plane(heif_chroma chroma);
 
 
-class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
-                       public ErrorBuffer
-{
- public:
-  explicit HeifPixelImage();
-  ~HeifPixelImage();
+  class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
+                         public ErrorBuffer
+  {
+  public:
+    explicit HeifPixelImage();
 
-  void create(int width,int height, heif_colorspace colorspace, heif_chroma chroma);
+    ~HeifPixelImage();
 
-  bool add_plane(heif_channel channel, int width, int height, int bit_depth);
+    void create(int width, int height, heif_colorspace colorspace, heif_chroma chroma);
 
-  bool has_channel(heif_channel channel) const;
+    bool add_plane(heif_channel channel, int width, int height, int bit_depth);
 
-  // Has alpha information either as a separate channel or in the interleaved format.
-  bool has_alpha() const;
+    bool has_channel(heif_channel channel) const;
 
-  int get_width() const { return m_width; }
+    // Has alpha information either as a separate channel or in the interleaved format.
+    bool has_alpha() const;
 
-  int get_height() const { return m_height; }
+    int get_width() const
+    { return m_width; }
 
-  int get_width(enum heif_channel channel) const;
+    int get_height() const
+    { return m_height; }
 
-  int get_height(enum heif_channel channel) const;
+    int get_width(enum heif_channel channel) const;
 
-  heif_chroma get_chroma_format() const { return m_chroma; }
+    int get_height(enum heif_channel channel) const;
 
-  heif_colorspace get_colorspace() const { return m_colorspace; }
+    heif_chroma get_chroma_format() const
+    { return m_chroma; }
 
-  std::set<enum heif_channel> get_channel_set() const;
+    heif_colorspace get_colorspace() const
+    { return m_colorspace; }
 
-  int get_storage_bits_per_pixel(enum heif_channel channel) const;
+    std::set<enum heif_channel> get_channel_set() const;
 
-  int get_bits_per_pixel(enum heif_channel channel) const;
+    int get_storage_bits_per_pixel(enum heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, int* out_stride);
-  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
+    int get_bits_per_pixel(enum heif_channel channel) const;
 
-  void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
-                           heif_channel src_channel,
-                           heif_channel dst_channel);
-  void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
+    uint8_t* get_plane(enum heif_channel channel, int* out_stride);
 
-  void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
-                                    heif_channel src_channel,
-                                    heif_channel dst_channel);
+    const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
 
-  Error rotate_ccw(int angle_degrees,
-                   std::shared_ptr<HeifPixelImage>& out_img);
+    void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
+                             heif_channel src_channel,
+                             heif_channel dst_channel);
 
-  Error mirror_inplace(bool horizontal);
+    void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
 
-  Error crop(int left,int right,int top,int bottom,
-             std::shared_ptr<HeifPixelImage>& out_img) const;
+    void transfer_plane_from_image_as(std::shared_ptr<HeifPixelImage> source,
+                                      heif_channel src_channel,
+                                      heif_channel dst_channel);
 
-  Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
+    Error rotate_ccw(int angle_degrees,
+                     std::shared_ptr<HeifPixelImage>& out_img);
 
-  Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx,int dy);
+    Error mirror_inplace(bool horizontal);
 
-  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width,int height) const;
+    Error crop(int left, int right, int top, int bottom,
+               std::shared_ptr<HeifPixelImage>& out_img) const;
 
-  void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = profile; }
+    Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
 
-  std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
+    Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx, int dy);
 
-  void debug_dump() const;
+    Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width, int height) const;
 
-  void extend_to_aligned_border();
+    void set_color_profile(std::shared_ptr<const color_profile> profile)
+    { m_color_profile = profile; }
 
- private:
-  struct ImagePlane {
-    int width;
-    int height;
-    int bit_depth;
+    std::shared_ptr<const color_profile> get_color_profile() const
+    { return m_color_profile; }
 
-    uint8_t* mem; // aligned memory start
-    uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
-    int stride;
+    void debug_dump() const;
+
+    void extend_to_aligned_border();
+
+  private:
+    struct ImagePlane
+    {
+      int width;
+      int height;
+      int bit_depth;
+
+      uint8_t* mem; // aligned memory start
+      uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
+      int stride;
+    };
+
+    int m_width = 0;
+    int m_height = 0;
+    heif_colorspace m_colorspace = heif_colorspace_undefined;
+    heif_chroma m_chroma = heif_chroma_undefined;
+    std::shared_ptr<const color_profile> m_color_profile;
+
+    std::map<heif_channel, ImagePlane> m_planes;
   };
-
-  int m_width = 0;
-  int m_height = 0;
-  heif_colorspace m_colorspace = heif_colorspace_undefined;
-  heif_chroma m_chroma = heif_chroma_undefined;
-  std::shared_ptr<const color_profile> m_color_profile;
-
-  std::map<heif_channel, ImagePlane> m_planes;
-};
 
 }
 

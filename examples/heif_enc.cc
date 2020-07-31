@@ -60,7 +60,7 @@ extern "C" {
 #include <assert.h>
 
 #define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
-#define JPEG_ICC_OVERHEAD_LEN  14		/* size of non-profile data in APP2 */
+#define JPEG_ICC_OVERHEAD_LEN  14        /* size of non-profile data in APP2 */
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -71,22 +71,22 @@ int nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
 
 static struct option long_options[] = {
-  {"help",       no_argument,       0, 'h' },
-  {"quality",    required_argument, 0, 'q' },
-  {"output",     required_argument, 0, 'o' },
-  {"lossless",   no_argument,       0, 'L' },
-  {"thumb",      required_argument, 0, 't' },
-  {"verbose",    no_argument,       0, 'v' },
-  {"params",     no_argument,       0, 'P' },
-  {"no-alpha",   no_argument, &master_alpha, 0 },
-  {"no-thumb-alpha",   no_argument, &thumb_alpha, 0 },
-  {"bit-depth",  required_argument, 0, 'b' },
-  {"avif",       no_argument,       0, 'A' },
-  {"matrix_coefficients",     required_argument, &nclx_matrix_coefficients, 0},
-  {"colour_primaries",        required_argument, &nclx_colour_primaries, 0},
-  {"transfer_characteristic", required_argument, &nclx_transfer_characteristic, 0},
-  {"full_range_flag",         required_argument, &nclx_full_range, 0},
-  {0,         0,                 0,  0 }
+    {"help",                    no_argument,       0,                             'h'},
+    {"quality",                 required_argument, 0,                             'q'},
+    {"output",                  required_argument, 0,                             'o'},
+    {"lossless",                no_argument,       0,                             'L'},
+    {"thumb",                   required_argument, 0,                             't'},
+    {"verbose",                 no_argument,       0,                             'v'},
+    {"params",                  no_argument,       0,                             'P'},
+    {"no-alpha",                no_argument,       &master_alpha,                 0},
+    {"no-thumb-alpha",          no_argument,       &thumb_alpha,                  0},
+    {"bit-depth",               required_argument, 0,                             'b'},
+    {"avif",                    no_argument,       0,                             'A'},
+    {"matrix_coefficients",     required_argument, &nclx_matrix_coefficients,     0},
+    {"colour_primaries",        required_argument, &nclx_colour_primaries,        0},
+    {"transfer_characteristic", required_argument, &nclx_transfer_characteristic, 0},
+    {"full_range_flag",         required_argument, &nclx_full_range,              0},
+    {0, 0,                                         0,                             0}
 };
 
 void show_help(const char* argv0)
@@ -118,49 +118,47 @@ void show_help(const char* argv0)
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
-            << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
-    ;
+            << "  --full_range_flag         nclx profile: full range flag, default: 1\n";
 }
-
 
 
 #if HAVE_LIBJPEG
 
-static bool JPEGMarkerIsIcc (jpeg_saved_marker_ptr marker)
+static bool JPEGMarkerIsIcc(jpeg_saved_marker_ptr marker)
 {
   return
-    marker->marker == JPEG_ICC_MARKER &&
-    marker->data_length >= JPEG_ICC_OVERHEAD_LEN &&
-    /* verify the identifying string */
-    GETJOCTET(marker->data[0]) == 0x49 &&
-    GETJOCTET(marker->data[1]) == 0x43 &&
-    GETJOCTET(marker->data[2]) == 0x43 &&
-    GETJOCTET(marker->data[3]) == 0x5F &&
-    GETJOCTET(marker->data[4]) == 0x50 &&
-    GETJOCTET(marker->data[5]) == 0x52 &&
-    GETJOCTET(marker->data[6]) == 0x4F &&
-    GETJOCTET(marker->data[7]) == 0x46 &&
-    GETJOCTET(marker->data[8]) == 0x49 &&
-    GETJOCTET(marker->data[9]) == 0x4C &&
-    GETJOCTET(marker->data[10]) == 0x45 &&
-    GETJOCTET(marker->data[11]) == 0x0;
+      marker->marker == JPEG_ICC_MARKER &&
+      marker->data_length >= JPEG_ICC_OVERHEAD_LEN &&
+      /* verify the identifying string */
+      GETJOCTET(marker->data[0]) == 0x49 &&
+      GETJOCTET(marker->data[1]) == 0x43 &&
+      GETJOCTET(marker->data[2]) == 0x43 &&
+      GETJOCTET(marker->data[3]) == 0x5F &&
+      GETJOCTET(marker->data[4]) == 0x50 &&
+      GETJOCTET(marker->data[5]) == 0x52 &&
+      GETJOCTET(marker->data[6]) == 0x4F &&
+      GETJOCTET(marker->data[7]) == 0x46 &&
+      GETJOCTET(marker->data[8]) == 0x49 &&
+      GETJOCTET(marker->data[9]) == 0x4C &&
+      GETJOCTET(marker->data[10]) == 0x45 &&
+      GETJOCTET(marker->data[11]) == 0x0;
 }
 
-boolean ReadICCProfileFromJPEG (j_decompress_ptr cinfo,
-		  JOCTET **icc_data_ptr,
-		  unsigned int *icc_data_len)
+boolean ReadICCProfileFromJPEG(j_decompress_ptr cinfo,
+                               JOCTET** icc_data_ptr,
+                               unsigned int* icc_data_len)
 {
   jpeg_saved_marker_ptr marker;
   int num_markers = 0;
   int seq_no;
-  JOCTET *icc_data;
+  JOCTET* icc_data;
   unsigned int total_length;
-#define MAX_SEQ_NO  255		/* sufficient since marker numbers are bytes */
-  char marker_present[MAX_SEQ_NO+1];	  /* 1 if marker found */
-  unsigned int data_length[MAX_SEQ_NO+1]; /* size of profile data in marker */
-  unsigned int data_offset[MAX_SEQ_NO+1]; /* offset for data in marker */
+#define MAX_SEQ_NO  255        /* sufficient since marker numbers are bytes */
+  char marker_present[MAX_SEQ_NO + 1];      /* 1 if marker found */
+  unsigned int data_length[MAX_SEQ_NO + 1]; /* size of profile data in marker */
+  unsigned int data_offset[MAX_SEQ_NO + 1]; /* offset for data in marker */
 
-  *icc_data_ptr = NULL;		/* avoid confusion if FALSE return */
+  *icc_data_ptr = NULL;        /* avoid confusion if FALSE return */
   *icc_data_len = 0;
 
   /* This first pass over the saved markers discovers whether there are
@@ -173,14 +171,14 @@ boolean ReadICCProfileFromJPEG (j_decompress_ptr cinfo,
   for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
     if (JPEGMarkerIsIcc(marker)) {
       if (num_markers == 0)
-	num_markers = GETJOCTET(marker->data[13]);
+        num_markers = GETJOCTET(marker->data[13]);
       else if (num_markers != GETJOCTET(marker->data[13]))
-	return FALSE;		/* inconsistent num_markers fields */
+        return FALSE;        /* inconsistent num_markers fields */
       seq_no = GETJOCTET(marker->data[12]);
       if (seq_no <= 0 || seq_no > num_markers)
-	return FALSE;		/* bogus sequence number */
+        return FALSE;        /* bogus sequence number */
       if (marker_present[seq_no])
-	return FALSE;		/* duplicate sequence numbers */
+        return FALSE;        /* duplicate sequence numbers */
       marker_present[seq_no] = 1;
       data_length[seq_no] = marker->data_length - JPEG_ICC_OVERHEAD_LEN;
     }
@@ -196,31 +194,31 @@ boolean ReadICCProfileFromJPEG (j_decompress_ptr cinfo,
   total_length = 0;
   for (seq_no = 1; seq_no <= num_markers; seq_no++) {
     if (marker_present[seq_no] == 0)
-      return FALSE;		/* missing sequence number */
+      return FALSE;        /* missing sequence number */
     data_offset[seq_no] = total_length;
     total_length += data_length[seq_no];
   }
 
   if (total_length <= 0)
-    return FALSE;		/* found only empty markers? */
+    return FALSE;        /* found only empty markers? */
 
   /* Allocate space for assembled data */
-  icc_data = (JOCTET *) malloc(total_length * sizeof(JOCTET));
+  icc_data = (JOCTET*) malloc(total_length * sizeof(JOCTET));
   if (icc_data == NULL)
-    return FALSE;		/* oops, out of memory */
+    return FALSE;        /* oops, out of memory */
 
   /* and fill it in */
   for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
     if (JPEGMarkerIsIcc(marker)) {
-      JOCTET FAR *src_ptr;
-      JOCTET *dst_ptr;
+      JOCTET FAR* src_ptr;
+      JOCTET* dst_ptr;
       unsigned int length;
       seq_no = GETJOCTET(marker->data[12]);
       dst_ptr = icc_data + data_offset[seq_no];
       src_ptr = marker->data + JPEG_ICC_OVERHEAD_LEN;
       length = data_length[seq_no];
       while (length--) {
-	*dst_ptr++ = *src_ptr++;
+        *dst_ptr++ = *src_ptr++;
       }
     }
   }
@@ -248,7 +246,7 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   // open input file
 
-  FILE * infile;
+  FILE* infile;
   if ((infile = fopen(filename, "rb")) == NULL) {
     std::cerr << "Can't open " << filename << "\n";
     exit(1);
@@ -269,112 +267,110 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   boolean embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
 
-  if (cinfo.jpeg_color_space == JCS_GRAYSCALE)
-    {
-      cinfo.out_color_space = JCS_GRAYSCALE;
+  if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+    cinfo.out_color_space = JCS_GRAYSCALE;
 
-      jpeg_start_decompress(&cinfo);
+    jpeg_start_decompress(&cinfo);
 
-      JSAMPARRAY buffer;
-      buffer = (*cinfo.mem->alloc_sarray)
+    JSAMPARRAY buffer;
+    buffer = (*cinfo.mem->alloc_sarray)
         ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
 
 
-      // create destination image
+    // create destination image
 
-      struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                                heif_colorspace_monochrome,
-                                                heif_chroma_monochrome,
-                                                &image);
-      (void)err;
-      // TODO: handle error
+    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                              heif_colorspace_monochrome,
+                                              heif_chroma_monochrome,
+                                              &image);
+    (void) err;
+    // TODO: handle error
 
-      heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
 
-      int y_stride;
-      uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    int y_stride;
+    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
 
 
-      // read the image
+    // read the image
 
-      while (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+    while (cinfo.output_scanline < cinfo.output_height) {
+      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
-        memcpy(py + (cinfo.output_scanline-1)*y_stride, *buffer, cinfo.output_width);
-      }
+      memcpy(py + (cinfo.output_scanline - 1) * y_stride, *buffer, cinfo.output_width);
     }
-  else
-    {
-      cinfo.out_color_space = JCS_YCbCr;
+  }
+  else {
+    cinfo.out_color_space = JCS_YCbCr;
 
-      jpeg_start_decompress(&cinfo);
+    jpeg_start_decompress(&cinfo);
 
-      JSAMPARRAY buffer;
-      buffer = (*cinfo.mem->alloc_sarray)
+    JSAMPARRAY buffer;
+    buffer = (*cinfo.mem->alloc_sarray)
         ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
 
 
-      // create destination image
+    // create destination image
 
-      struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                                heif_colorspace_YCbCr,
-                                                heif_chroma_420,
-                                                &image);
-      (void)err;
+    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
+                                              heif_colorspace_YCbCr,
+                                              heif_chroma_420,
+                                              &image);
+    (void) err;
 
-      heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-      heif_image_add_plane(image, heif_channel_Cb, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
-      heif_image_add_plane(image, heif_channel_Cr, (cinfo.output_width+1)/2, (cinfo.output_height+1)/2, 8);
+    heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    heif_image_add_plane(image, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
+    heif_image_add_plane(image, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
 
-      int y_stride;
-      int cb_stride;
-      int cr_stride;
-      uint8_t* py  = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-      uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-      uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+    int y_stride;
+    int cb_stride;
+    int cr_stride;
+    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-      // read the image
+    // read the image
 
-      //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
+    //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
 
-      while (cinfo.output_scanline < cinfo.output_height) {
-        JOCTET* bufp;
+    while (cinfo.output_scanline < cinfo.output_height) {
+      JOCTET* bufp;
 
+      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+      bufp = buffer[0];
+
+      int y = cinfo.output_scanline - 1;
+
+      for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
+        py[y * y_stride + x] = *bufp++;
+        pcb[y / 2 * cb_stride + x / 2] = *bufp++;
+        pcr[y / 2 * cr_stride + x / 2] = *bufp++;
+
+        if (x + 1 < cinfo.output_width) {
+          py[y * y_stride + x + 1] = *bufp++;
+        }
+
+        bufp += 2;
+      }
+
+
+      if (cinfo.output_scanline < cinfo.output_height) {
         (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
         bufp = buffer[0];
 
-        int y = cinfo.output_scanline-1;
+        y = cinfo.output_scanline - 1;
 
-        for (unsigned int x=0;x<cinfo.output_width;x+=2) {
-          py[y*y_stride + x] = *bufp++;
-          pcb[y/2*cb_stride + x/2] = *bufp++;
-          pcr[y/2*cr_stride + x/2] = *bufp++;
-
-          if (x+1 < cinfo.output_width) {
-            py[y*y_stride + x+1] = *bufp++;
-          }
-
-          bufp+=2;
-        }
-
-
-        if (cinfo.output_scanline < cinfo.output_height) {
-          (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-          bufp = buffer[0];
-
-          y = cinfo.output_scanline-1;
-
-          for (unsigned int x=0;x<cinfo.output_width;x++) {
-            py[y*y_stride + x] = *bufp++;
-            bufp+=2;
-          }
+        for (unsigned int x = 0; x < cinfo.output_width; x++) {
+          py[y * y_stride + x] = *bufp++;
+          bufp += 2;
         }
       }
     }
+  }
 
-  if (embeddedIccFlag && iccLen > 0){
+  if (embeddedIccFlag && iccLen > 0) {
     heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
   }
 
@@ -386,8 +382,9 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
   fclose(infile);
 
   return std::shared_ptr<heif_image>(image,
-                                    [] (heif_image* img) { heif_image_release(img); });
+                                     [](heif_image* img) { heif_image_release(img); });
 }
+
 #else
 std::shared_ptr<heif_image> loadJPEG(const char* filename)
 {
@@ -399,21 +396,20 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 #endif
 
 
-
-
 #if HAVE_LIBPNG
+
 static void
 user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-  FILE* fh = (FILE*)png_get_io_ptr(png_ptr);
-  size_t n = fread((char*)data,length,1,fh);
-  (void)n;
+  FILE* fh = (FILE*) png_get_io_ptr(png_ptr);
+  size_t n = fread((char*) data, length, 1, fh);
+  (void) n;
 } // user_read_data
 
 
 std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
-  FILE* fh = fopen(filename,"rb");
+  FILE* fh = fopen(filename, "rb");
   if (!fh) {
     std::cerr << "Can't open " << filename << "\n";
     exit(1);
@@ -435,7 +431,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 #else
   png_bytep png_profile_data;
 #endif
-  uint8_t * profile_data = nullptr;
+  uint8_t* profile_data = nullptr;
   png_uint_32 profile_length = 5;
 
   /* Create and initialize the png_struct with the desired error handler
@@ -450,24 +446,24 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   /* Allocate/initialize the memory for image information.  REQUIRED. */
   info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == NULL) {
-    png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
+    png_destroy_read_struct(&png_ptr, (png_infopp) NULL, (png_infopp) NULL);
     assert(false); // , "could not create info_ptr");
   } // if
 
-    /* Set error handling if you are using the setjmp/longjmp method (this is
-     * the normal method of doing things with libpng).  REQUIRED unless you
-     * set up your own error handlers in the png_create_read_struct() earlier.
-     */
+  /* Set error handling if you are using the setjmp/longjmp method (this is
+   * the normal method of doing things with libpng).  REQUIRED unless you
+   * set up your own error handlers in the png_create_read_struct() earlier.
+   */
   if (setjmp(png_jmpbuf(png_ptr))) {
     /* Free all of the memory associated with the png_ptr and info_ptr */
-    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
+    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
     /* If we get here, we had a problem reading the file */
     assert(false); // , "fatal error in png library");
   } // if
 
   /* If you are using replacement read functions, instead of calling
    * png_init_io() here you would call: */
-  png_set_read_fn(png_ptr, (void *)fh, user_read_fn);
+  png_set_read_fn(png_ptr, (void*) fh, user_read_fn);
   /* where user_io_ptr is a structure you want available to the callbacks */
 
   /* The call to png_read_info() gives us all of the information from the
@@ -479,7 +475,9 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
                &interlace_type, NULL, NULL);
 
   if (png_get_valid(png_ptr, info_ptr, PNG_INFO_iCCP)) {
-    if (PNG_INFO_iCCP == png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) && profile_length > 0) {
+    if (PNG_INFO_iCCP ==
+        png_get_iCCP(png_ptr, info_ptr, &name, &compression_type, &png_profile_data, &profile_length) &&
+        profile_length > 0) {
       profile_data = (uint8_t*) malloc(profile_length);
       if (profile_data) {
         memcpy(profile_data, png_profile_data, profile_length);
@@ -544,7 +542,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   assert(row_pointers != NULL);
 
   for (uint32_t y = 0; y < height; y++) {
-    row_pointers[y] = (png_bytep)malloc(png_get_rowbytes(png_ptr, info_ptr));
+    row_pointers[y] = (png_bytep) malloc(png_get_rowbytes(png_ptr, info_ptr));
     assert(row_pointers[y] != NULL);
   } // for
 
@@ -555,7 +553,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   png_read_end(png_ptr, info_ptr);
 
   /* clean up after the read, and free any memory allocated - REQUIRED */
-  png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
+  png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
 
 
   // OK, now we should have the png image in some way in
@@ -563,17 +561,17 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   int band = 0;
   switch (color_type) {
-  case PNG_COLOR_TYPE_GRAY:
-  case PNG_COLOR_TYPE_GRAY_ALPHA:
-    band = 1;
-    break;
-  case PNG_COLOR_TYPE_PALETTE:
-  case PNG_COLOR_TYPE_RGB:
-  case PNG_COLOR_TYPE_RGB_ALPHA:
-    band = 3;
-    break;
-  default:
-    assert(false); // , "unknown color type in png image.");
+    case PNG_COLOR_TYPE_GRAY:
+    case PNG_COLOR_TYPE_GRAY_ALPHA:
+      band = 1;
+      break;
+    case PNG_COLOR_TYPE_PALETTE:
+    case PNG_COLOR_TYPE_RGB:
+    case PNG_COLOR_TYPE_RGB_ALPHA:
+      band = 3;
+      break;
+    default:
+      assert(false); // , "unknown color type in png image.");
   } // switch
 
 
@@ -583,22 +581,22 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
 
-  if (band==1) {
-    err = heif_image_create((int)width, (int)height,
+  if (band == 1) {
+    err = heif_image_create((int) width, (int) height,
                             heif_colorspace_monochrome,
                             heif_chroma_monochrome,
                             &image);
-    (void)err;
+    (void) err;
 
-    heif_image_add_plane(image, heif_channel_Y, (int)width, (int)height, 8);
+    heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, 8);
 
     int y_stride;
     int a_stride;
-    uint8_t* py  = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-    uint8_t* pa  = nullptr;
+    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint8_t* pa = nullptr;
 
     if (has_alpha) {
-      heif_image_add_plane(image, heif_channel_Alpha, (int)width, (int)height, 8);
+      heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, 8);
 
       pa = heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
     }
@@ -607,27 +605,25 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     for (uint32_t y = 0; y < height; y++) {
       uint8_t* p = row_pointers[y];
 
-      if (has_alpha)
-        {
-          for (uint32_t x = 0; x < width; x++) {
-            py[y*y_stride + x] = *p++;
-            pa[y*a_stride + x] = *p++;
-          }
+      if (has_alpha) {
+        for (uint32_t x = 0; x < width; x++) {
+          py[y * y_stride + x] = *p++;
+          pa[y * a_stride + x] = *p++;
         }
-      else
-        {
-          memcpy(&py[y*y_stride],p, width);
-        }
+      }
+      else {
+        memcpy(&py[y * y_stride], p, width);
+      }
     }
   }
-  else if (bit_depth==8) {
-    err = heif_image_create((int)width, (int)height,
+  else if (bit_depth == 8) {
+    err = heif_image_create((int) width, (int) height,
                             heif_colorspace_RGB,
                             has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
                             &image);
-    (void)err;
+    (void) err;
 
-    heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height,
+    heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height,
                          has_alpha ? 32 : 24);
 
     int stride;
@@ -635,44 +631,44 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
     for (uint32_t y = 0; y < height; y++) {
       if (has_alpha) {
-        memcpy(p + y*stride, row_pointers[y], width*4);
+        memcpy(p + y * stride, row_pointers[y], width * 4);
       }
       else {
-        memcpy(p + y*stride, row_pointers[y], width*3);
+        memcpy(p + y * stride, row_pointers[y], width * 3);
       }
     }
   }
   else {
-    err = heif_image_create((int)width, (int)height,
+    err = heif_image_create((int) width, (int) height,
                             heif_colorspace_RGB,
                             has_alpha ?
                             heif_chroma_interleaved_RRGGBBAA_BE :
                             heif_chroma_interleaved_RRGGBB_BE,
                             &image);
-    (void)err;
+    (void) err;
 
     int bdShift = 16 - output_bit_depth;
 
-    heif_image_add_plane(image, heif_channel_interleaved, (int)width, (int)height, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_interleaved, (int) width, (int) height, output_bit_depth);
 
     int stride;
-    uint8_t* p_out = (uint8_t*)heif_image_get_plane(image, heif_channel_interleaved, &stride);
+    uint8_t* p_out = (uint8_t*) heif_image_get_plane(image, heif_channel_interleaved, &stride);
 
     for (uint32_t y = 0; y < height; y++) {
       uint8_t* p = row_pointers[y];
 
       uint32_t nVal = (has_alpha ? 4 : 3) * width;
 
-      for (uint32_t x = 0; x < nVal ; x++) {
-        uint16_t v = (uint16_t)(((p[0]<<8) | p[1]) >> bdShift);
-        p_out[2*x + y*stride + 0] = (uint8_t)(v >> 8);
-        p_out[2*x + y*stride + 1] = (uint8_t)(v & 0xFF);
+      for (uint32_t x = 0; x < nVal; x++) {
+        uint16_t v = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
+        p_out[2 * x + y * stride + 0] = (uint8_t) (v >> 8);
+        p_out[2 * x + y * stride + 1] = (uint8_t) (v & 0xFF);
         p += 2;
       }
     }
   }
 
-  if (profile_data && profile_length > 0){
+  if (profile_data && profile_length > 0) {
     heif_image_set_raw_color_profile(image, "prof", profile_data, (size_t) profile_length);
   }
 
@@ -684,8 +680,9 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   delete[] row_pointers;
 
   return std::shared_ptr<heif_image>(image,
-                                    [] (heif_image* img) { heif_image_release(img); });
+                                     [](heif_image* img) { heif_image_release(img); });
 }
+
 #else
 std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 {
@@ -695,7 +692,6 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
   return nullptr;
 }
 #endif
-
 
 
 std::shared_ptr<heif_image> loadY4M(const char* filename)
@@ -715,37 +711,37 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
   std::string header;
   getline(istr, header);
 
-  if (header.find("YUV4MPEG2 ")!=0) {
+  if (header.find("YUV4MPEG2 ") != 0) {
     std::cerr << "Input is not a Y4M file.\n";
     exit(1);
   }
 
-  int w=-1;
-  int h=-1;
+  int w = -1;
+  int h = -1;
 
-  size_t pos=0;
+  size_t pos = 0;
   for (;;) {
-    pos = header.find(' ',pos+1)+1;
-    if (pos==std::string::npos) {
+    pos = header.find(' ', pos + 1) + 1;
+    if (pos == std::string::npos) {
       break;
     }
 
-    size_t end = header.find_first_of(" \n",pos+1);
-    if (end==std::string::npos) {
+    size_t end = header.find_first_of(" \n", pos + 1);
+    if (end == std::string::npos) {
       break;
     }
 
-    if (end-pos <= 1) {
+    if (end - pos <= 1) {
       std::cerr << "Header format error in Y4M file.\n";
       exit(1);
     }
 
     char tag = header[pos];
-    std::string value = header.substr(pos+1,end-pos-1);
-    if (tag=='W') {
+    std::string value = header.substr(pos + 1, end - pos - 1);
+    if (tag == 'W') {
       w = atoi(value.c_str());
     }
-    else if (tag=='H') {
+    else if (tag == 'H') {
       h = atoi(value.c_str());
     }
   }
@@ -758,41 +754,41 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
     exit(1);
   }
 
-  if (w<0 || h<0) {
+  if (w < 0 || h < 0) {
     std::cerr << "Y4M has invalid frame size.\n";
     exit(1);
   }
 
-  struct heif_error err = heif_image_create(w,h,
+  struct heif_error err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_420,
                                             &image);
-  (void)err;
+  (void) err;
   // TODO: handle error
 
-  heif_image_add_plane(image, heif_channel_Y, w,h, 8);
-  heif_image_add_plane(image, heif_channel_Cb, (w+1)/2,(h+1)/2, 8);
-  heif_image_add_plane(image, heif_channel_Cr, (w+1)/2,(h+1)/2, 8);
+  heif_image_add_plane(image, heif_channel_Y, w, h, 8);
+  heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
+  heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
 
   int y_stride, cb_stride, cr_stride;
   uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
   uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
   uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-  for (int y=0;y<h;y++) {
-    istr.read((char*)(py+y*y_stride), w);
+  for (int y = 0; y < h; y++) {
+    istr.read((char*) (py + y * y_stride), w);
   }
 
-  for (int y=0;y<(h+1)/2;y++) {
-    istr.read((char*)(pcb+y*cb_stride), (w+1)/2);
+  for (int y = 0; y < (h + 1) / 2; y++) {
+    istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
   }
 
-  for (int y=0;y<(h+1)/2;y++) {
-    istr.read((char*)(pcr+y*cr_stride), (w+1)/2);
+  for (int y = 0; y < (h + 1) / 2; y++) {
+    istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
   }
 
   return std::shared_ptr<heif_image>(image,
-                                    [] (heif_image* img) { heif_image_release(img); });
+                                     [](heif_image* img) { heif_image_release(img); });
 }
 
 
@@ -800,13 +796,12 @@ void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
 
-  const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(encoder);
-  for (int i=0;params[i];i++) {
+  const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+  for (int i = 0; params[i]; i++) {
     const char* name = heif_encoder_parameter_get_name(params[i]);
 
     switch (heif_encoder_parameter_get_type(params[i])) {
-    case heif_encoder_parameter_type_integer:
-      {
+      case heif_encoder_parameter_type_integer: {
         heif_error error;
 
         std::cerr << "  " << name;
@@ -814,7 +809,7 @@ void list_encoder_parameters(heif_encoder* encoder)
         if (heif_encoder_has_default(encoder, name)) {
           int value;
           error = heif_encoder_get_parameter_integer(encoder, name, &value);
-          (void)error;
+          (void) error;
 
           std::cerr << ", default=" << value;
         }
@@ -829,27 +824,25 @@ void list_encoder_parameters(heif_encoder* encoder)
 
         std::cerr << "\n";
       }
-      break;
+        break;
 
-    case heif_encoder_parameter_type_boolean:
-      {
+      case heif_encoder_parameter_type_boolean: {
         heif_error error;
         std::cerr << "  " << name;
 
         if (heif_encoder_has_default(encoder, name)) {
           int value;
           error = heif_encoder_get_parameter_boolean(encoder, name, &value);
-          (void)error;
+          (void) error;
 
-          std::cerr << ", default=" << (value ? "true":"false");
+          std::cerr << ", default=" << (value ? "true" : "false");
         }
 
         std::cerr << "\n";
       }
-      break;
+        break;
 
-    case heif_encoder_parameter_type_string:
-      {
+      case heif_encoder_parameter_type_string: {
         heif_error error;
         std::cerr << "  " << name;
 
@@ -857,18 +850,18 @@ void list_encoder_parameters(heif_encoder* encoder)
           const int value_size = 50;
           char value[value_size];
           error = heif_encoder_get_parameter_string(encoder, name, value, value_size);
-          (void)error;
+          (void) error;
 
           std::cerr << ", default=" << value;
         }
 
-        const char*const* valid_options;
+        const char* const* valid_options;
         error = heif_encoder_parameter_string_valid_values(encoder, name, &valid_options);
 
         if (valid_options) {
           std::cerr << ", { ";
-          for (int i=0;valid_options[i];i++) {
-            if (i>0) { std::cerr << ","; }
+          for (int i = 0; valid_options[i]; i++) {
+            if (i > 0) { std::cerr << ","; }
             std::cerr << valid_options[i];
           }
           std::cerr << " }";
@@ -876,7 +869,7 @@ void list_encoder_parameters(heif_encoder* encoder)
 
         std::cerr << "\n";
       }
-      break;
+        break;
     }
   }
 }
@@ -886,13 +879,13 @@ void set_params(struct heif_encoder* encoder, std::vector<std::string> params)
 {
   for (std::string p : params) {
     auto pos = p.find_first_of('=');
-    if (pos == std::string::npos || pos==0 || pos==p.size()-1) {
+    if (pos == std::string::npos || pos == 0 || pos == p.size() - 1) {
       std::cerr << "Encoder parameter must be in the format 'name=value'\n";
       exit(5);
     }
 
-    std::string name = p.substr(0,pos);
-    std::string value = p.substr(pos+1);
+    std::string name = p.substr(0, pos);
+    std::string value = p.substr(pos + 1);
 
     struct heif_error error = heif_encoder_set_parameter(encoder, name.c_str(), value.c_str());
     if (error.code) {
@@ -924,44 +917,44 @@ int main(int argc, char** argv)
       break;
 
     switch (c) {
-    case 'h':
-      show_help(argv[0]);
-      return 0;
-    case 'q':
-      quality = atoi(optarg);
-      break;
-    case 'L':
-      lossless = true;
-      break;
-    case 'o':
-      output_filename = optarg;
-      break;
-    case 'v':
-      logging_level++;
-      break;
-    case 'P':
-      option_show_parameters = true;
-      break;
-    case 'p':
-      raw_params.push_back(optarg);
-      break;
-    case 't':
-      thumbnail_bbox_size = atoi(optarg);
-      break;
-    case 'b':
-      output_bit_depth = atoi(optarg);
-    case 'A':
-      enc_av1f = true;
-      break;
+      case 'h':
+        show_help(argv[0]);
+        return 0;
+      case 'q':
+        quality = atoi(optarg);
+        break;
+      case 'L':
+        lossless = true;
+        break;
+      case 'o':
+        output_filename = optarg;
+        break;
+      case 'v':
+        logging_level++;
+        break;
+      case 'P':
+        option_show_parameters = true;
+        break;
+      case 'p':
+        raw_params.push_back(optarg);
+        break;
+      case 't':
+        thumbnail_bbox_size = atoi(optarg);
+        break;
+      case 'b':
+        output_bit_depth = atoi(optarg);
+      case 'A':
+        enc_av1f = true;
+        break;
     }
   }
 
-  if (quality<0 || quality>100) {
+  if (quality < 0 || quality > 100) {
     std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
     return 5;
   }
 
-  if (logging_level>0) {
+  if (logging_level > 0) {
     logging_level += 2;
 
     if (logging_level > 4) {
@@ -974,7 +967,7 @@ int main(int argc, char** argv)
   // ==============================================================================
 
   std::shared_ptr<heif_context> context(heif_context_alloc(),
-                                        [] (heif_context* c) { heif_context_free(c); });
+                                        [](heif_context* c) { heif_context_free(c); });
   if (!context) {
     std::cerr << "Could not create context object\n";
     return 1;
@@ -990,8 +983,8 @@ int main(int argc, char** argv)
                                                    nullptr,
                                                    encoder_descriptors, MAX_ENCODERS);
 
-  if (count>0) {
-    if (logging_level>0) {
+  if (count > 0) {
+    if (logging_level > 0) {
       std::cerr << "Encoder: "
                 << heif_encoder_descriptor_get_id_name(encoder_descriptors[0])
                 << " = "
@@ -1017,23 +1010,22 @@ int main(int argc, char** argv)
   }
 
 
-  if (optind > argc-1) {
+  if (optind > argc - 1) {
     show_help(argv[0]);
     return 0;
   }
 
 
-
   struct heif_error error;
 
-  for ( ; optind<argc ; optind++) {
+  for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
     if (output_filename.empty()) {
       std::string filename_without_suffix;
       std::string::size_type dot_position = input_filename.find_last_of('.');
       if (dot_position != std::string::npos) {
-        filename_without_suffix = input_filename.substr(0 , dot_position);
+        filename_without_suffix = input_filename.substr(0, dot_position);
       }
       else {
         filename_without_suffix = input_filename;
@@ -1050,22 +1042,26 @@ int main(int argc, char** argv)
     std::string suffix;
     auto suffix_pos = input_filename.find_last_of('.');
     if (suffix_pos != std::string::npos) {
-      suffix = input_filename.substr(suffix_pos+1);
+      suffix = input_filename.substr(suffix_pos + 1);
       std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
     }
 
-    enum { PNG, JPEG, Y4M } filetype = JPEG;
+    enum
+    {
+      PNG, JPEG, Y4M
+    } filetype = JPEG;
     if (suffix == "png") {
       filetype = PNG;
-    } else if (suffix == "y4m") {
+    }
+    else if (suffix == "y4m") {
       filetype = Y4M;
     }
 
     std::shared_ptr<heif_image> image;
-    if (filetype==PNG) {
+    if (filetype == PNG) {
       image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
-    else if (filetype==Y4M) {
+    else if (filetype == Y4M) {
       image = loadY4M(input_filename.c_str());
     }
     else {
@@ -1073,10 +1069,10 @@ int main(int argc, char** argv)
     }
 
     heif_color_profile_nclx nclx;
-    nclx.matrix_coefficients = (heif_matrix_coefficients)nclx_matrix_coefficients;
-    nclx.transfer_characteristics = (heif_transfer_characteristics)nclx_transfer_characteristic;
-    nclx.color_primaries = (heif_color_primaries)nclx_colour_primaries;
-    nclx.full_range_flag = (uint8_t)nclx_full_range;
+    nclx.matrix_coefficients = (heif_matrix_coefficients) nclx_matrix_coefficients;
+    nclx.transfer_characteristics = (heif_transfer_characteristics) nclx_transfer_characteristic;
+    nclx.color_primaries = (heif_color_primaries) nclx_colour_primaries;
+    nclx.full_range_flag = (uint8_t) nclx_full_range;
 
     heif_image_set_nclx_color_profile(image.get(), &nclx);
 
@@ -1095,7 +1091,7 @@ int main(int argc, char** argv)
     set_params(encoder, raw_params);
 
     struct heif_encoding_options* options = heif_encoding_options_alloc();
-    options->save_alpha_channel = (uint8_t)master_alpha;
+    options->save_alpha_channel = (uint8_t) master_alpha;
 
     struct heif_image_handle* handle;
     error = heif_context_encode_image(context.get(),
@@ -1109,31 +1105,30 @@ int main(int argc, char** argv)
       return 1;
     }
 
-    if (thumbnail_bbox_size > 0)
-      {
-        // encode thumbnail
+    if (thumbnail_bbox_size > 0) {
+      // encode thumbnail
 
-        struct heif_image_handle* thumbnail_handle;
+      struct heif_image_handle* thumbnail_handle;
 
-        options->save_alpha_channel = master_alpha && thumb_alpha;
+      options->save_alpha_channel = master_alpha && thumb_alpha;
 
-        error = heif_context_encode_thumbnail(context.get(),
-                                              image.get(),
-                                              handle,
-                                              encoder,
-                                              options,
-                                              thumbnail_bbox_size,
-                                              &thumbnail_handle);
-        if (error.code) {
-          heif_encoding_options_free(options);
-          std::cerr << "Could not generate thumbnail: " << error.message << "\n";
-          return 5;
-        }
-
-        if (thumbnail_handle) {
-          heif_image_handle_release(thumbnail_handle);
-        }
+      error = heif_context_encode_thumbnail(context.get(),
+                                            image.get(),
+                                            handle,
+                                            encoder,
+                                            options,
+                                            thumbnail_bbox_size,
+                                            &thumbnail_handle);
+      if (error.code) {
+        heif_encoding_options_free(options);
+        std::cerr << "Could not generate thumbnail: " << error.message << "\n";
+        return 5;
       }
+
+      if (thumbnail_handle) {
+        heif_image_handle_release(thumbnail_handle);
+      }
+    }
 
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);

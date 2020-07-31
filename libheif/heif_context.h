@@ -36,14 +36,16 @@
 #include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
 
 namespace heif {
-class HeifContext;
+  class HeifContext;
 }
 
 
 namespace heif {
 
   class HeifFile;
+
   class HeifPixelImage;
+
   class StreamWriter;
 
 
@@ -60,96 +62,155 @@ namespace heif {
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
   // The class also handles automatic color-space conversion.
-  class HeifContext : public ErrorBuffer {
+  class HeifContext : public ErrorBuffer
+  {
   public:
     HeifContext();
+
     ~HeifContext();
 
-    void set_max_decoding_threads(int max_threads) { m_max_decoding_threads = max_threads; }
+    void set_max_decoding_threads(int max_threads)
+    { m_max_decoding_threads = max_threads; }
 
-    void set_maximum_image_size_limit(int maximum_size) {
+    void set_maximum_image_size_limit(int maximum_size)
+    {
       m_maximum_image_width_limit = maximum_size;
       m_maximum_image_height_limit = maximum_size;
     }
 
     Error read(std::shared_ptr<StreamReader> reader);
+
     Error read_from_file(const char* input_filename);
+
     Error read_from_memory(const void* data, size_t size, bool copy);
 
-    class Image : public ErrorBuffer {
+    class Image : public ErrorBuffer
+    {
     public:
       Image(HeifContext* file, heif_item_id id);
+
       ~Image();
 
-      void set_resolution(int w,int h) { m_width=w; m_height=h; }
-      void set_ispe_resolution(int w,int h) { m_ispe_width=w; m_ispe_height=h; }
+      void set_resolution(int w, int h)
+      {
+        m_width = w;
+        m_height = h;
+      }
 
-      void set_primary(bool flag=true) { m_is_primary=flag; }
+      void set_ispe_resolution(int w, int h)
+      {
+        m_ispe_width = w;
+        m_ispe_height = h;
+      }
 
-      heif_item_id get_id() const { return m_id; }
+      void set_primary(bool flag = true)
+      { m_is_primary = flag; }
+
+      heif_item_id get_id() const
+      { return m_id; }
 
       //void set_id(heif_item_id id) { m_id=id; }  (already set in constructor)
 
-      int get_width() const { return m_width; }
-      int get_height() const { return m_height; }
+      int get_width() const
+      { return m_width; }
 
-      int get_ispe_width() const { return m_ispe_width; }
-      int get_ispe_height() const { return m_ispe_height; }
+      int get_height() const
+      { return m_height; }
+
+      int get_ispe_width() const
+      { return m_ispe_width; }
+
+      int get_ispe_height() const
+      { return m_ispe_height; }
 
       int get_luma_bits_per_pixel() const;
+
       int get_chroma_bits_per_pixel() const;
 
-      bool is_primary() const { return m_is_primary; }
+      bool is_primary() const
+      { return m_is_primary; }
 
 
       // -- thumbnails
 
-      void set_is_thumbnail_of(heif_item_id id) { m_is_thumbnail=true; m_thumbnail_ref_id=id; }
-      void add_thumbnail(std::shared_ptr<Image> img) { m_thumbnails.push_back(img); }
+      void set_is_thumbnail_of(heif_item_id id)
+      {
+        m_is_thumbnail = true;
+        m_thumbnail_ref_id = id;
+      }
 
-      bool is_thumbnail() const { return m_is_thumbnail; }
-      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
+      void add_thumbnail(std::shared_ptr<Image> img)
+      { m_thumbnails.push_back(img); }
+
+      bool is_thumbnail() const
+      { return m_is_thumbnail; }
+
+      std::vector<std::shared_ptr<Image>> get_thumbnails() const
+      { return m_thumbnails; }
 
 
       // --- alpha channel
 
-      void set_is_alpha_channel_of(heif_item_id id) { m_is_alpha_channel=true; m_alpha_channel_ref_id=id; }
-      void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel=img; }
+      void set_is_alpha_channel_of(heif_item_id id)
+      {
+        m_is_alpha_channel = true;
+        m_alpha_channel_ref_id = id;
+      }
 
-      bool is_alpha_channel() const { return m_is_alpha_channel; }
-      std::shared_ptr<Image> get_alpha_channel() const { return m_alpha_channel; }
+      void set_alpha_channel(std::shared_ptr<Image> img)
+      { m_alpha_channel = img; }
+
+      bool is_alpha_channel() const
+      { return m_is_alpha_channel; }
+
+      std::shared_ptr<Image> get_alpha_channel() const
+      { return m_alpha_channel; }
 
 
       // --- depth channel
 
-      void set_is_depth_channel_of(heif_item_id id) { m_is_depth_channel=true; m_depth_channel_ref_id=id; }
-      void set_depth_channel(std::shared_ptr<Image> img) { m_depth_channel=img; }
+      void set_is_depth_channel_of(heif_item_id id)
+      {
+        m_is_depth_channel = true;
+        m_depth_channel_ref_id = id;
+      }
 
-      bool is_depth_channel() const { return m_is_depth_channel; }
-      std::shared_ptr<Image> get_depth_channel() const { return m_depth_channel; }
+      void set_depth_channel(std::shared_ptr<Image> img)
+      { m_depth_channel = img; }
+
+      bool is_depth_channel() const
+      { return m_is_depth_channel; }
+
+      std::shared_ptr<Image> get_depth_channel() const
+      { return m_depth_channel; }
 
 
-      void set_depth_representation_info(struct heif_depth_representation_info& info) {
+      void set_depth_representation_info(struct heif_depth_representation_info& info)
+      {
         m_has_depth_representation_info = true;
         m_depth_representation_info = info;
       }
 
-      bool has_depth_representation_info() const {
+      bool has_depth_representation_info() const
+      {
         return m_has_depth_representation_info;
       }
 
-      const struct heif_depth_representation_info& get_depth_representation_info() const {
+      const struct heif_depth_representation_info& get_depth_representation_info() const
+      {
         return m_depth_representation_info;
       }
 
 
       // --- metadata
 
-      void add_metadata(std::shared_ptr<ImageMetadata> metadata) {
+      void add_metadata(std::shared_ptr<ImageMetadata> metadata)
+      {
         m_metadata.push_back(metadata);
       }
 
-      std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const { return m_metadata; }
+      std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const
+      { return m_metadata; }
 
 
       // === writing ===
@@ -166,19 +227,21 @@ namespace heif {
                                 const struct heif_encoding_options* options,
                                 enum heif_image_input_class input_class);
 
-      std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
+      std::shared_ptr<const color_profile> get_color_profile() const
+      { return m_color_profile; }
 
-      void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = profile; };
+      void set_color_profile(std::shared_ptr<const color_profile> profile)
+      { m_color_profile = profile; };
 
     private:
       HeifContext* m_heif_context;
 
       heif_item_id m_id = 0;
-      uint32_t m_width=0, m_height=0;
-      uint32_t m_ispe_width=0, m_ispe_height=0; // original image resolution
-      bool     m_is_primary = false;
+      uint32_t m_width = 0, m_height = 0;
+      uint32_t m_ispe_width = 0, m_ispe_height = 0; // original image resolution
+      bool m_is_primary = false;
 
-      bool     m_is_thumbnail = false;
+      bool m_is_thumbnail = false;
       heif_item_id m_thumbnail_ref_id = 0;
 
       std::vector<std::shared_ptr<Image>> m_thumbnails;
@@ -199,9 +262,11 @@ namespace heif {
       std::shared_ptr<const color_profile> m_color_profile;
     };
 
-    std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
+    std::vector<std::shared_ptr<Image>> get_top_level_images()
+    { return m_top_level_images; }
 
-    std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
+    std::shared_ptr<Image> get_primary_image()
+    { return m_primary_image; }
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
@@ -236,7 +301,8 @@ namespace heif {
 
     Error set_primary_item(heif_item_id id);
 
-    bool  is_primary_image_set() const { return !!m_primary_image; }
+    bool is_primary_image_set() const
+    { return !!m_primary_image; }
 
     Error assign_thumbnail(std::shared_ptr<Image> master_image,
                            std::shared_ptr<Image> thumbnail_image);
@@ -286,7 +352,7 @@ namespace heif {
 
     Error decode_and_paste_tile_image(heif_item_id tileID,
                                       std::shared_ptr<HeifPixelImage> out_image,
-                                      int x0,int y0) const;
+                                      int x0, int y0) const;
 
     Error decode_derived_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img) const;

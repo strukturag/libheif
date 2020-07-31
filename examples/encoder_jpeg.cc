@@ -35,14 +35,16 @@
 
 #include "encoder_jpeg.h"
 
-JpegEncoder::JpegEncoder(int quality) : quality_(quality) {
+JpegEncoder::JpegEncoder(int quality) : quality_(quality)
+{
   if (quality_ < 0 || quality_ > 100) {
     quality_ = kDefaultQuality;
   }
 }
 
 void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
-    struct heif_decoding_options *options) const {
+                                        struct heif_decoding_options* options) const
+{
   if (HasExifMetaData(handle)) {
     options->ignore_transformations = 1;
     options->convert_hdr_to_8bit = 1;
@@ -50,7 +52,8 @@ void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
 }
 
 // static
-void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
+void JpegEncoder::OnJpegError(j_common_ptr cinfo)
+{
   ErrorHandler* handler = reinterpret_cast<ErrorHandler*>(cinfo->err);
   longjmp(handler->setjmp_buffer, 1);
 }
@@ -62,17 +65,17 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo) {
 #define MAX_BYTES_IN_MARKER  65533      /* maximum data len of a JPEG marker */
 #define MAX_DATA_BYTES_IN_MARKER (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
 
- /*
- * This routine writes the given ICC profile data into a JPEG file.  It *must*
- * be called AFTER calling jpeg_start_compress() and BEFORE the first call to
- * jpeg_write_scanlines().  (This ordering ensures that the APP2 marker(s) will
- * appear after the SOI and JFIF or Adobe markers, but before all else.)
- */
+/*
+* This routine writes the given ICC profile data into a JPEG file.  It *must*
+* be called AFTER calling jpeg_start_compress() and BEFORE the first call to
+* jpeg_write_scanlines().  (This ordering ensures that the APP2 marker(s) will
+* appear after the SOI and JFIF or Adobe markers, but before all else.)
+*/
 
- /* This function is copied almost as is from libjpeg-turbo */
+/* This function is copied almost as is from libjpeg-turbo */
 
 static
-void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
+void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET* icc_data_ptr,
                             unsigned int icc_data_len)
 {
   unsigned int num_markers;     /* total number of markers we'll write */
@@ -93,7 +96,7 @@ void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
 
     /* Write the JPEG marker header (APP2 code and marker length) */
     jpeg_write_m_header(cinfo, ICC_MARKER,
-                        (unsigned int)(length + ICC_OVERHEAD_LEN));
+                        (unsigned int) (length + ICC_OVERHEAD_LEN));
 
     /* Write the marker identifying string "ICC_PROFILE" (null-terminated).  We
      * code it in this less-than-transparent way so that the code works even if
@@ -114,7 +117,7 @@ void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
 
     /* Add the sequencing info */
     jpeg_write_m_byte(cinfo, cur_marker);
-    jpeg_write_m_byte(cinfo, (int)num_markers);
+    jpeg_write_m_byte(cinfo, (int) num_markers);
 
     /* Add the profile data */
     while (length--) {
@@ -128,7 +131,8 @@ void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr,
 #endif  // !defined(HAVE_JPEG_WRITE_ICC_PROFILE)
 
 bool JpegEncoder::Encode(const struct heif_image_handle* handle,
-    const struct heif_image* image, const std::string& filename) {
+                         const struct heif_image* image, const std::string& filename)
+{
   FILE* fp = fopen(filename.c_str(), "wb");
   if (!fp) {
     fprintf(stderr, "Can't open %s: %s\n", filename.c_str(), strerror(errno));
@@ -164,15 +168,15 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   if (exifdata && exifsize > 4) {
     static const uint8_t kExifMarker = JPEG_APP0 + 1;
     jpeg_write_marker(&cinfo, kExifMarker, exifdata + 4,
-        static_cast<unsigned int>(exifsize - 4));
+                      static_cast<unsigned int>(exifsize - 4));
     free(exifdata);
   }
 
   size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
-  if (profile_size > 0){
+  if (profile_size > 0) {
     uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
     heif_image_handle_get_raw_color_profile(handle, profile_data);
-    jpeg_write_icc_profile(&cinfo, profile_data, (unsigned int)profile_size);
+    jpeg_write_icc_profile(&cinfo, profile_data, (unsigned int) profile_size);
     free(profile_data);
   }
 
@@ -185,18 +189,18 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
   int stride_y;
   const uint8_t* row_y = heif_image_get_plane_readonly(image, heif_channel_Y,
-      &stride_y);
+                                                       &stride_y);
   int stride_u;
   const uint8_t* row_u = heif_image_get_plane_readonly(image, heif_channel_Cb,
-      &stride_u);
+                                                       &stride_u);
   int stride_v;
   const uint8_t* row_v = heif_image_get_plane_readonly(image, heif_channel_Cr,
-      &stride_v);
+                                                       &stride_v);
 
   JSAMPARRAY buffer = cinfo.mem->alloc_sarray(
       reinterpret_cast<j_common_ptr>(&cinfo), JPOOL_IMAGE,
       cinfo.image_width * cinfo.input_components, 1);
-  JSAMPROW row[1] = { buffer[0] };
+  JSAMPROW row[1] = {buffer[0]};
 
   while (cinfo.next_scanline < cinfo.image_height) {
     size_t offset_y = cinfo.next_scanline * stride_y;

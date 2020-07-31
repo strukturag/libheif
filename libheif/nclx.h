@@ -25,41 +25,46 @@
 
 namespace heif {
 
-  struct primaries {
+  struct primaries
+  {
     primaries() = default;
-    primaries(float gx,float gy, float bx,float by, float rx,float ry, float wx,float wy);
 
-    bool defined=false;
+    primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy);
 
-    float greenX,greenY;
-    float blueX,blueY;
-    float redX,redY;
-    float whiteX,whiteY;
+    bool defined = false;
+
+    float greenX, greenY;
+    float blueX, blueY;
+    float redX, redY;
+    float whiteX, whiteY;
   };
 
   primaries get_colour_primaries(uint16_t primaries_idx);
 
 
-  struct Kr_Kb {
-    float Kr=0, Kb=0;
+  struct Kr_Kb
+  {
+    float Kr = 0, Kb = 0;
   };
 
   Kr_Kb get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
 
-  struct YCbCr_to_RGB_coefficients {
-    bool defined=false;
+  struct YCbCr_to_RGB_coefficients
+  {
+    bool defined = false;
 
-    float r_cr=0;
-    float g_cb=0;
-    float g_cr=0;
-    float b_cb=0;
+    float r_cr = 0;
+    float g_cb = 0;
+    float g_cr = 0;
+    float b_cb = 0;
 
     static YCbCr_to_RGB_coefficients defaults();
   };
 
   YCbCr_to_RGB_coefficients get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);
 
-  struct RGB_to_YCbCr_coefficients {
+  struct RGB_to_YCbCr_coefficients
+  {
     bool defined = false;
 
     float c[3][3];   // e.g. y = c[0][0]*r + c[0][1]*g + c[0][2]*b

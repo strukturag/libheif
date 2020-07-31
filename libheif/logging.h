@@ -37,22 +37,32 @@
 
 namespace heif {
 
-  class Indent {
+  class Indent
+  {
   public:
-  Indent() : m_indent(0) { }
+    Indent() : m_indent(0)
+    {}
 
-    int get_indent() const { return m_indent; }
+    int get_indent() const
+    { return m_indent; }
 
-    void operator++(int) { m_indent++; }
-    void operator--(int) { m_indent--; if (m_indent<0) m_indent=0; }
+    void operator++(int)
+    { m_indent++; }
+
+    void operator--(int)
+    {
+      m_indent--;
+      if (m_indent < 0) m_indent = 0;
+    }
 
   private:
     int m_indent;
   };
 
 
-  inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent) {
-    for (int i=0;i<indent.get_indent();i++) {
+  inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent)
+  {
+    for (int i = 0; i < indent.get_indent(); i++) {
       ostr << "| ";
     }
 

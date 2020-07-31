@@ -35,25 +35,31 @@ namespace heif {
   class Error
   {
   public:
-    Error() {
+    Error()
+    {
       m_code = heif_error_Ok;
       m_subcode = heif_suberror_Unspecified;
       m_message = "Ok";
     }
 
-    Error(const heif_error& err) {
+    Error(const heif_error& err)
+    {
       m_code = err.code;
       m_subcode = err.subcode;
       m_message = err.message;
     }
 
-    std::string get_message() const { return m_message; }
+    std::string get_message() const
+    { return m_message; }
 
-    heif_error_code get_code() const { return m_code; }
+    heif_error_code get_code() const
+    { return m_code; }
 
-    heif_suberror_code get_subcode() const { return m_subcode; }
+    heif_suberror_code get_subcode() const
+    { return m_subcode; }
 
-    operator bool() const { return m_code != heif_error_Ok; }
+    operator bool() const
+    { return m_code != heif_error_Ok; }
 
   private:
     heif_error_code m_code;
@@ -63,10 +69,13 @@ namespace heif {
 
 
   class ImageHandle;
+
   class Image;
 
   class Encoder;
+
   class EncoderParameter;
+
   class EncoderDescriptor;
 
 
@@ -75,7 +84,9 @@ namespace heif {
   public:
     Context();
 
-    class ReadingOptions { };
+    class ReadingOptions
+    {
+    };
 
     // throws Error
     void read_from_file(std::string filename, const ReadingOptions& opts = ReadingOptions());
@@ -87,13 +98,18 @@ namespace heif {
     // throws Error
     void read_from_memory_without_copy(const void* mem, size_t size, const ReadingOptions& opts = ReadingOptions());
 
-    class Reader {
+    class Reader
+    {
     public:
-      virtual ~Reader() { }
+      virtual ~Reader()
+      {}
 
       virtual int64_t get_position() const = 0;
+
       virtual int read(void* data, size_t size) = 0;
+
       virtual int seek(int64_t position) = 0;
+
       virtual heif_reader_grow_status wait_for_file_size(int64_t target_size) = 0;
     };
 
@@ -115,8 +131,8 @@ namespace heif {
     ImageHandle get_image_handle(heif_item_id id) const;
 
 
-
-    class EncodingOptions : public heif_encoding_options {
+    class EncodingOptions : public heif_encoding_options
+    {
     public:
       EncodingOptions();
     };
@@ -147,9 +163,11 @@ namespace heif {
     void add_XMP_metadata(const ImageHandle& master_image,
                           const void* data, int size);
 
-    class Writer {
+    class Writer
+    {
     public:
-      virtual ~Writer() { }
+      virtual ~Writer()
+      {}
 
       virtual heif_error write(const void* data, size_t size) = 0;
     };
@@ -172,15 +190,16 @@ namespace heif {
   };
 
 
-
   class ImageHandle
   {
   public:
-    ImageHandle() { }
+    ImageHandle()
+    {}
 
     ImageHandle(heif_image_handle* handle);
 
-    bool empty() const noexcept { return !m_image_handle; }
+    bool empty() const noexcept
+    { return !m_image_handle; }
 
     bool is_primary_image() const noexcept;
 
@@ -224,15 +243,20 @@ namespace heif {
     std::vector<uint8_t> get_metadata(heif_item_id) const;
 
 
-    class DecodingOptions { };
+    class DecodingOptions
+    {
+    };
 
     // throws Error
     Image decode_image(heif_colorspace colorspace, heif_chroma chroma,
                        const DecodingOptions& options = DecodingOptions());
 
 
-    heif_image_handle* get_raw_image_handle() noexcept { return m_image_handle.get(); }
-    const heif_image_handle* get_raw_image_handle() const noexcept { return m_image_handle.get(); }
+    heif_image_handle* get_raw_image_handle() noexcept
+    { return m_image_handle.get(); }
+
+    const heif_image_handle* get_raw_image_handle() const noexcept
+    { return m_image_handle.get(); }
 
   private:
     std::shared_ptr<heif_image_handle> m_image_handle;
@@ -242,7 +266,9 @@ namespace heif {
   class Image
   {
   public:
-    Image() { }
+    Image()
+    {}
+
     Image(heif_image* image);
 
 
@@ -273,7 +299,9 @@ namespace heif {
 
     uint8_t* get_plane(enum heif_channel channel, int* out_stride) noexcept;
 
-    class ScalingOptions { };
+    class ScalingOptions
+    {
+    };
 
     // throws Error
     Image scale_image(int width, int height,
@@ -286,13 +314,12 @@ namespace heif {
   };
 
 
-
   class EncoderDescriptor
   {
   public:
     static std::vector<EncoderDescriptor>
-      get_encoder_descriptors(enum heif_compression_format format_filter,
-                              const char* name_filter) noexcept;
+    get_encoder_descriptors(enum heif_compression_format format_filter,
+                            const char* name_filter) noexcept;
 
     std::string get_name() const noexcept;
 
@@ -310,11 +337,11 @@ namespace heif {
 
 
   private:
-  EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr) { }
+    EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr)
+    {}
 
     const struct heif_encoder_descriptor* m_descriptor = nullptr;
   };
-
 
 
   class EncoderParameter
@@ -325,12 +352,14 @@ namespace heif {
     enum heif_encoder_parameter_type get_type() const noexcept;
 
     bool is_integer() const noexcept;
+
     // Returns 'true' if the integer range is limited.
     bool get_valid_integer_range(int& out_minimum, int& out_maximum);
 
     bool is_boolean() const noexcept;
 
     bool is_string() const noexcept;
+
     std::vector<std::string> get_valid_string_values() const;
 
   private:
@@ -357,15 +386,19 @@ namespace heif {
     std::vector<EncoderParameter> list_parameters() const noexcept;
 
     void set_integer_parameter(std::string parameter_name, int value);
-    int  get_integer_parameter(std::string parameter_name) const;
+
+    int get_integer_parameter(std::string parameter_name) const;
 
     void set_boolean_parameter(std::string parameter_name, bool value);
+
     bool get_boolean_parameter(std::string parameter_name) const;
 
-    void        set_string_parameter(std::string parameter_name, std::string value);
+    void set_string_parameter(std::string parameter_name, std::string value);
+
     std::string get_string_parameter(std::string parameter_name) const;
 
-    void        set_parameter(std::string parameter_name, std::string parameter_value);
+    void set_parameter(std::string parameter_name, std::string parameter_value);
+
     std::string get_parameter(std::string parameter_name) const;
 
   private:
@@ -374,6 +407,7 @@ namespace heif {
     std::shared_ptr<heif_encoder> m_encoder;
 
     friend class EncoderDescriptor;
+
     friend class Context;
   };
 
@@ -382,27 +416,31 @@ namespace heif {
   //                                     IMPLEMENTATION
   // ==========================================================================================
 
-  inline Context::Context() {
+  inline Context::Context()
+  {
     heif_context* ctx = heif_context_alloc();
     m_context = std::shared_ptr<heif_context>(ctx,
-                                              [] (heif_context* c) { heif_context_free(c); });
+                                              [](heif_context* c) { heif_context_free(c); });
   }
 
-  inline void Context::read_from_file(std::string filename, const ReadingOptions& /*opts*/) {
+  inline void Context::read_from_file(std::string filename, const ReadingOptions& /*opts*/)
+  {
     Error err = Error(heif_context_read_from_file(m_context.get(), filename.c_str(), NULL));
     if (err) {
       throw err;
     }
   }
 
-  inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& /*opts*/) {
+  inline void Context::read_from_memory(const void* mem, size_t size, const ReadingOptions& /*opts*/)
+  {
     Error err = Error(heif_context_read_from_memory(m_context.get(), mem, size, NULL));
     if (err) {
       throw err;
     }
   }
 
-  inline void Context::read_from_memory_without_copy(const void* mem, size_t size, const ReadingOptions& /*opts*/) {
+  inline void Context::read_from_memory_without_copy(const void* mem, size_t size, const ReadingOptions& /*opts*/)
+  {
     Error err = Error(heif_context_read_from_memory_without_copy(m_context.get(), mem, size, NULL));
     if (err) {
       throw err;
@@ -410,37 +448,42 @@ namespace heif {
   }
 
 
-  inline int64_t heif_reader_trampoline_get_position(void* userdata) {
-    Context::Reader* reader = (Context::Reader*)userdata;
+  inline int64_t heif_reader_trampoline_get_position(void* userdata)
+  {
+    Context::Reader* reader = (Context::Reader*) userdata;
     return reader->get_position();
   }
 
-  inline int heif_reader_trampoline_read(void* data, size_t size, void* userdata) {
-    Context::Reader* reader = (Context::Reader*)userdata;
-    return reader->read(data,size);
+  inline int heif_reader_trampoline_read(void* data, size_t size, void* userdata)
+  {
+    Context::Reader* reader = (Context::Reader*) userdata;
+    return reader->read(data, size);
   }
 
-  inline int heif_reader_trampoline_seek(int64_t position, void* userdata) {
-    Context::Reader* reader = (Context::Reader*)userdata;
+  inline int heif_reader_trampoline_seek(int64_t position, void* userdata)
+  {
+    Context::Reader* reader = (Context::Reader*) userdata;
     return reader->seek(position);
   }
 
-  inline heif_reader_grow_status heif_reader_trampoline_wait_for_file_size(int64_t target_size, void* userdata) {
-    Context::Reader* reader = (Context::Reader*)userdata;
+  inline heif_reader_grow_status heif_reader_trampoline_wait_for_file_size(int64_t target_size, void* userdata)
+  {
+    Context::Reader* reader = (Context::Reader*) userdata;
     return reader->wait_for_file_size(target_size);
   }
 
 
   static struct heif_reader heif_reader_trampoline =
-    {
-      1,
-      heif_reader_trampoline_get_position,
-      heif_reader_trampoline_read,
-      heif_reader_trampoline_seek,
-      heif_reader_trampoline_wait_for_file_size
-    };
+      {
+          1,
+          heif_reader_trampoline_get_position,
+          heif_reader_trampoline_read,
+          heif_reader_trampoline_seek,
+          heif_reader_trampoline_wait_for_file_size
+      };
 
-  inline void Context::read_from_reader(Reader& reader, const ReadingOptions& /*opts*/) {
+  inline void Context::read_from_reader(Reader& reader, const ReadingOptions& /*opts*/)
+  {
     Error err = Error(heif_context_read_from_reader(m_context.get(), &heif_reader_trampoline,
                                                     &reader, NULL));
     if (err) {
@@ -449,22 +492,26 @@ namespace heif {
   }
 
 
-  inline int Context::get_number_of_top_level_images() const noexcept {
+  inline int Context::get_number_of_top_level_images() const noexcept
+  {
     return heif_context_get_number_of_top_level_images(m_context.get());
   }
 
-  inline bool Context::is_top_level_image_ID(heif_item_id id) const noexcept {
+  inline bool Context::is_top_level_image_ID(heif_item_id id) const noexcept
+  {
     return heif_context_is_top_level_image_ID(m_context.get(), id);
   }
 
-  inline std::vector<heif_item_id> Context::get_list_of_top_level_image_IDs() const noexcept {
+  inline std::vector<heif_item_id> Context::get_list_of_top_level_image_IDs() const noexcept
+  {
     int num = get_number_of_top_level_images();
     std::vector<heif_item_id> IDs(num);
     heif_context_get_list_of_top_level_image_IDs(m_context.get(), IDs.data(), num);
     return IDs;
   }
 
-  inline heif_item_id Context::get_primary_image_ID() const {
+  inline heif_item_id Context::get_primary_image_ID() const
+  {
     heif_item_id id;
     Error err = Error(heif_context_get_primary_image_ID(m_context.get(), &id));
     if (err) {
@@ -473,7 +520,8 @@ namespace heif {
     return id;
   }
 
-  inline ImageHandle Context::get_primary_image_handle() const {
+  inline ImageHandle Context::get_primary_image_handle() const
+  {
     heif_image_handle* handle;
     Error err = Error(heif_context_get_primary_image_handle(m_context.get(), &handle));
     if (err) {
@@ -483,7 +531,8 @@ namespace heif {
     return ImageHandle(handle);
   }
 
-  inline ImageHandle Context::get_image_handle(heif_item_id id) const {
+  inline ImageHandle Context::get_image_handle(heif_item_id id) const
+  {
     struct heif_image_handle* handle;
     Error err = Error(heif_context_get_image_handle(m_context.get(), id, &handle));
     if (err) {
@@ -504,10 +553,11 @@ namespace heif {
   inline struct ::heif_error heif_writer_trampoline_write(struct heif_context* ctx,
                                                           const void* data,
                                                           size_t size,
-                                                          void* userdata) {
-    Context::Writer* writer = (Context::Writer*)userdata;
+                                                          void* userdata)
+  {
+    Context::Writer* writer = (Context::Writer*) userdata;
 
-    (void)ctx;
+    (void) ctx;
 
     //Context context = Context::wrap_without_releasing(ctx);
     //return writer->write(context, data, size);
@@ -515,19 +565,21 @@ namespace heif {
   }
 
   static struct heif_writer heif_writer_trampoline =
-    {
-      1,
-      &heif_writer_trampoline_write
-    };
+      {
+          1,
+          &heif_writer_trampoline_write
+      };
 
-  inline void Context::write(Writer& writer) {
+  inline void Context::write(Writer& writer)
+  {
     Error err = Error(heif_context_write(m_context.get(), &heif_writer_trampoline, &writer));
     if (err) {
       throw err;
     }
   }
 
-  inline void Context::write_to_file(std::string filename) const {
+  inline void Context::write_to_file(std::string filename) const
+  {
     Error err = Error(heif_context_write_to_file(m_context.get(), filename.c_str()));
     if (err) {
       throw err;
@@ -535,43 +587,51 @@ namespace heif {
   }
 
 
-
-  inline ImageHandle::ImageHandle(heif_image_handle* handle) {
+  inline ImageHandle::ImageHandle(heif_image_handle* handle)
+  {
     if (handle != nullptr) {
       m_image_handle = std::shared_ptr<heif_image_handle>(handle,
-                                                          [] (heif_image_handle* h) { heif_image_handle_release(h); });
+                                                          [](heif_image_handle* h) { heif_image_handle_release(h); });
     }
   }
 
-  inline bool ImageHandle::is_primary_image() const noexcept {
+  inline bool ImageHandle::is_primary_image() const noexcept
+  {
     return heif_image_handle_is_primary_image(m_image_handle.get()) != 0;
   }
 
-  inline int ImageHandle::get_width() const noexcept {
+  inline int ImageHandle::get_width() const noexcept
+  {
     return heif_image_handle_get_width(m_image_handle.get());
   }
 
-  inline int ImageHandle::get_height() const noexcept {
+  inline int ImageHandle::get_height() const noexcept
+  {
     return heif_image_handle_get_height(m_image_handle.get());
   }
 
-  inline bool ImageHandle::has_alpha_channel() const noexcept {
+  inline bool ImageHandle::has_alpha_channel() const noexcept
+  {
     return heif_image_handle_has_alpha_channel(m_image_handle.get()) != 0;
   }
 
-  inline int ImageHandle::get_luma_bits_per_pixel() const noexcept {
+  inline int ImageHandle::get_luma_bits_per_pixel() const noexcept
+  {
     return heif_image_handle_get_luma_bits_per_pixel(m_image_handle.get());
   }
 
-  inline int ImageHandle::get_chroma_bits_per_pixel() const noexcept {
+  inline int ImageHandle::get_chroma_bits_per_pixel() const noexcept
+  {
     return heif_image_handle_get_chroma_bits_per_pixel(m_image_handle.get());
   }
 
-  inline int ImageHandle::get_ispe_width() const noexcept {
+  inline int ImageHandle::get_ispe_width() const noexcept
+  {
     return heif_image_handle_get_ispe_width(m_image_handle.get());
   }
 
-  inline int ImageHandle::get_ispe_height() const noexcept {
+  inline int ImageHandle::get_ispe_height() const noexcept
+  {
     return heif_image_handle_get_ispe_height(m_image_handle.get());
   }
 
@@ -581,18 +641,21 @@ namespace heif {
 
   // ------------------------- thumbnails -------------------------
 
-  inline int ImageHandle::get_number_of_thumbnails() const noexcept {
+  inline int ImageHandle::get_number_of_thumbnails() const noexcept
+  {
     return heif_image_handle_get_number_of_thumbnails(m_image_handle.get());
   }
 
-  inline std::vector<heif_item_id> ImageHandle::get_list_of_thumbnail_IDs() const noexcept {
+  inline std::vector<heif_item_id> ImageHandle::get_list_of_thumbnail_IDs() const noexcept
+  {
     int num = get_number_of_thumbnails();
     std::vector<heif_item_id> IDs(num);
     heif_image_handle_get_list_of_thumbnail_IDs(m_image_handle.get(), IDs.data(), num);
     return IDs;
   }
 
-  inline ImageHandle ImageHandle::get_thumbnail(heif_item_id id) {
+  inline ImageHandle ImageHandle::get_thumbnail(heif_item_id id)
+  {
     heif_image_handle* handle;
     Error err = Error(heif_image_handle_get_thumbnail(m_image_handle.get(), id, &handle));
     if (err) {
@@ -603,7 +666,8 @@ namespace heif {
   }
 
   inline Image ImageHandle::decode_image(heif_colorspace colorspace, heif_chroma chroma,
-                                         const DecodingOptions& /*options*/) {
+                                         const DecodingOptions& /*options*/)
+  {
     heif_image* out_img;
     Error err = Error(heif_decode_image(m_image_handle.get(),
                                         &out_img,
@@ -618,27 +682,31 @@ namespace heif {
   }
 
 
-  inline std::vector<heif_item_id> ImageHandle::get_list_of_metadata_block_IDs(const char* type_filter) const noexcept {
+  inline std::vector<heif_item_id> ImageHandle::get_list_of_metadata_block_IDs(const char* type_filter) const noexcept
+  {
     int nBlocks = heif_image_handle_get_number_of_metadata_blocks(m_image_handle.get(),
                                                                   type_filter);
     std::vector<heif_item_id> ids(nBlocks);
     int n = heif_image_handle_get_list_of_metadata_block_IDs(m_image_handle.get(),
                                                              type_filter,
                                                              ids.data(), nBlocks);
-    (void)n;
+    (void) n;
     //assert(n==nBlocks);
     return ids;
   }
 
-  inline std::string ImageHandle::get_metadata_type(heif_item_id metadata_id) const noexcept {
+  inline std::string ImageHandle::get_metadata_type(heif_item_id metadata_id) const noexcept
+  {
     return heif_image_handle_get_metadata_type(m_image_handle.get(), metadata_id);
   }
 
-  inline std::string ImageHandle::get_metadata_content_type(heif_item_id metadata_id) const noexcept {
+  inline std::string ImageHandle::get_metadata_content_type(heif_item_id metadata_id) const noexcept
+  {
     return heif_image_handle_get_metadata_content_type(m_image_handle.get(), metadata_id);
   }
 
-  inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id) const {
+  inline std::vector<uint8_t> ImageHandle::get_metadata(heif_item_id metadata_id) const
+  {
     size_t data_size = heif_image_handle_get_metadata_size(m_image_handle.get(),
                                                            metadata_id);
 
@@ -655,16 +723,17 @@ namespace heif {
   }
 
 
-
-  inline Image::Image(heif_image* image) {
+  inline Image::Image(heif_image* image)
+  {
     m_image = std::shared_ptr<heif_image>(image,
-                                          [] (heif_image* h) { heif_image_release(h); });
+                                          [](heif_image* h) { heif_image_release(h); });
   }
 
 
   inline void Image::create(int width, int height,
                             enum heif_colorspace colorspace,
-                            enum heif_chroma chroma) {
+                            enum heif_chroma chroma)
+  {
     heif_image* image;
     Error err = Error(heif_image_create(width, height, colorspace, chroma, &image));
     if (err) {
@@ -673,58 +742,69 @@ namespace heif {
     }
     else {
       m_image = std::shared_ptr<heif_image>(image,
-                                            [] (heif_image* h) { heif_image_release(h); });
+                                            [](heif_image* h) { heif_image_release(h); });
     }
   }
 
   inline void Image::add_plane(enum heif_channel channel,
-                               int width, int height, int bit_depth) {
+                               int width, int height, int bit_depth)
+  {
     Error err = Error(heif_image_add_plane(m_image.get(), channel, width, height, bit_depth));
     if (err) {
       throw err;
     }
   }
 
-  inline heif_colorspace Image::get_colorspace() const noexcept {
+  inline heif_colorspace Image::get_colorspace() const noexcept
+  {
     return heif_image_get_colorspace(m_image.get());
   }
 
-  inline heif_chroma Image::get_chroma_format() const noexcept {
+  inline heif_chroma Image::get_chroma_format() const noexcept
+  {
     return heif_image_get_chroma_format(m_image.get());
   }
 
-  inline int Image::get_width(enum heif_channel channel) const noexcept {
+  inline int Image::get_width(enum heif_channel channel) const noexcept
+  {
     return heif_image_get_width(m_image.get(), channel);
   }
 
-  inline int Image::get_height(enum heif_channel channel) const noexcept {
+  inline int Image::get_height(enum heif_channel channel) const noexcept
+  {
     return heif_image_get_height(m_image.get(), channel);
   }
 
-  inline int Image::get_bits_per_pixel(enum heif_channel channel) const noexcept {
+  inline int Image::get_bits_per_pixel(enum heif_channel channel) const noexcept
+  {
     return heif_image_get_bits_per_pixel(m_image.get(), channel);
   }
 
-  inline int Image::get_bits_per_pixel_range(enum heif_channel channel) const noexcept {
+  inline int Image::get_bits_per_pixel_range(enum heif_channel channel) const noexcept
+  {
     return heif_image_get_bits_per_pixel_range(m_image.get(), channel);
   }
 
-  inline bool Image::has_channel(enum heif_channel channel) const noexcept {
+  inline bool Image::has_channel(enum heif_channel channel) const noexcept
+  {
     return heif_image_has_channel(m_image.get(), channel);
   }
 
-  inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const noexcept {
+  inline const uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) const noexcept
+  {
     return heif_image_get_plane_readonly(m_image.get(), channel, out_stride);
   }
 
-  inline uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) noexcept {
+  inline uint8_t* Image::get_plane(enum heif_channel channel, int* out_stride) noexcept
+  {
     return heif_image_get_plane(m_image.get(), channel, out_stride);
   }
 
   inline Image Image::scale_image(int width, int height,
-                                  const ScalingOptions&) const {
+                                  const ScalingOptions&) const
+  {
     heif_image* img;
-    Error err = Error(heif_image_scale_image(m_image.get(), &img, width,height,
+    Error err = Error(heif_image_scale_image(m_image.get(), &img, width, height,
                                              nullptr)); // TODO: scaling options not defined yet
     if (err) {
       throw err;
@@ -734,15 +814,15 @@ namespace heif {
   }
 
 
-
   inline std::vector<EncoderDescriptor>
-    EncoderDescriptor::get_encoder_descriptors(enum heif_compression_format format_filter,
-                                               const char* name_filter) noexcept {
+  EncoderDescriptor::get_encoder_descriptors(enum heif_compression_format format_filter,
+                                             const char* name_filter) noexcept
+  {
     int maxDescriptors = 10;
     int nDescriptors;
     for (;;) {
       const struct heif_encoder_descriptor** descriptors;
-      descriptors = new const heif_encoder_descriptor*[maxDescriptors];
+      descriptors = new const heif_encoder_descriptor* [maxDescriptors];
 
       nDescriptors = heif_context_get_encoder_descriptors(nullptr,
                                                           format_filter,
@@ -751,7 +831,7 @@ namespace heif {
                                                           maxDescriptors);
       if (nDescriptors < maxDescriptors) {
         std::vector<EncoderDescriptor> outDescriptors;
-        for (int i=0;i<nDescriptors;i++) {
+        for (int i = 0; i < nDescriptors; i++) {
           outDescriptors.push_back(EncoderDescriptor(descriptors[i]));
         }
 
@@ -767,27 +847,33 @@ namespace heif {
   }
 
 
-  inline std::string EncoderDescriptor::get_name() const noexcept {
+  inline std::string EncoderDescriptor::get_name() const noexcept
+  {
     return heif_encoder_descriptor_get_name(m_descriptor);
   }
 
-  inline std::string EncoderDescriptor::get_id_name() const noexcept {
+  inline std::string EncoderDescriptor::get_id_name() const noexcept
+  {
     return heif_encoder_descriptor_get_id_name(m_descriptor);
   }
 
-  inline enum heif_compression_format EncoderDescriptor::get_compression_format() const noexcept {
+  inline enum heif_compression_format EncoderDescriptor::get_compression_format() const noexcept
+  {
     return heif_encoder_descriptor_get_compression_format(m_descriptor);
   }
 
-  inline bool EncoderDescriptor::supportes_lossy_compression() const noexcept {
+  inline bool EncoderDescriptor::supportes_lossy_compression() const noexcept
+  {
     return heif_encoder_descriptor_supportes_lossy_compression(m_descriptor);
   }
 
-  inline bool EncoderDescriptor::supportes_lossless_compression() const noexcept {
+  inline bool EncoderDescriptor::supportes_lossless_compression() const noexcept
+  {
     return heif_encoder_descriptor_supportes_lossless_compression(m_descriptor);
   }
 
-  inline Encoder EncoderDescriptor::get_encoder() const {
+  inline Encoder EncoderDescriptor::get_encoder() const
+  {
     heif_encoder* encoder;
     Error err = Error(heif_context_get_encoder(nullptr, m_descriptor, &encoder));
     if (err) {
@@ -798,7 +884,8 @@ namespace heif {
   }
 
 
-  inline Encoder::Encoder(enum heif_compression_format format) {
+  inline Encoder::Encoder(enum heif_compression_format format)
+  {
     heif_encoder* encoder;
     Error err = Error(heif_context_get_encoder_for_format(nullptr, format, &encoder));
     if (err) {
@@ -806,34 +893,38 @@ namespace heif {
     }
 
     m_encoder = std::shared_ptr<heif_encoder>(encoder,
-                                              [] (heif_encoder* e) { heif_encoder_release(e); });
+                                              [](heif_encoder* e) { heif_encoder_release(e); });
   }
 
   inline Encoder::Encoder(struct heif_encoder* encoder) noexcept
   {
     m_encoder = std::shared_ptr<heif_encoder>(encoder,
-                                              [] (heif_encoder* e) { heif_encoder_release(e); });
+                                              [](heif_encoder* e) { heif_encoder_release(e); });
   }
 
 
   inline EncoderParameter::EncoderParameter(const heif_encoder_parameter* param)
-    : m_parameter(param)
+      : m_parameter(param)
   {
   }
 
-  inline std::string EncoderParameter::get_name() const noexcept {
+  inline std::string EncoderParameter::get_name() const noexcept
+  {
     return heif_encoder_parameter_get_name(m_parameter);
   }
 
-  inline enum heif_encoder_parameter_type EncoderParameter::get_type() const noexcept {
+  inline enum heif_encoder_parameter_type EncoderParameter::get_type() const noexcept
+  {
     return heif_encoder_parameter_get_type(m_parameter);
   }
 
-  inline bool EncoderParameter::is_integer() const noexcept {
+  inline bool EncoderParameter::is_integer() const noexcept
+  {
     return get_type() == heif_encoder_parameter_type_integer;
   }
 
-  inline bool EncoderParameter::get_valid_integer_range(int& out_minimum, int& out_maximum) {
+  inline bool EncoderParameter::get_valid_integer_range(int& out_minimum, int& out_maximum)
+  {
     int have_minimum_maximum;
     Error err = Error(heif_encoder_parameter_get_valid_integer_range(m_parameter,
                                                                      &have_minimum_maximum,
@@ -845,16 +936,19 @@ namespace heif {
     return have_minimum_maximum;
   }
 
-  inline bool EncoderParameter::is_boolean() const noexcept {
+  inline bool EncoderParameter::is_boolean() const noexcept
+  {
     return get_type() == heif_encoder_parameter_type_boolean;
   }
 
-  inline bool EncoderParameter::is_string() const noexcept {
+  inline bool EncoderParameter::is_string() const noexcept
+  {
     return get_type() == heif_encoder_parameter_type_string;
   }
 
-  inline std::vector<std::string> EncoderParameter::get_valid_string_values() const {
-    const char*const* stringarray;
+  inline std::vector<std::string> EncoderParameter::get_valid_string_values() const
+  {
+    const char* const* stringarray;
     Error err = Error(heif_encoder_parameter_get_valid_string_values(m_parameter,
                                                                      &stringarray));
     if (err) {
@@ -862,17 +956,18 @@ namespace heif {
     }
 
     std::vector<std::string> values;
-    for (int i=0; stringarray[i]; i++) {
+    for (int i = 0; stringarray[i]; i++) {
       values.push_back(stringarray[i]);
     }
 
     return values;
   }
 
-  inline std::vector<EncoderParameter> Encoder::list_parameters() const noexcept {
+  inline std::vector<EncoderParameter> Encoder::list_parameters() const noexcept
+  {
     std::vector<EncoderParameter> parameters;
 
-    for (const struct heif_encoder_parameter*const* params = heif_encoder_list_parameters(m_encoder.get());
+    for (const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(m_encoder.get());
          *params;
          params++) {
       parameters.push_back(EncoderParameter(*params));
@@ -882,28 +977,32 @@ namespace heif {
   }
 
 
-  inline void Encoder::set_lossy_quality(int quality) {
+  inline void Encoder::set_lossy_quality(int quality)
+  {
     Error err = Error(heif_encoder_set_lossy_quality(m_encoder.get(), quality));
     if (err) {
       throw err;
     }
   }
 
-  inline void Encoder::set_lossless(bool enable_lossless) {
+  inline void Encoder::set_lossless(bool enable_lossless)
+  {
     Error err = Error(heif_encoder_set_lossless(m_encoder.get(), enable_lossless));
     if (err) {
       throw err;
     }
   }
 
-  inline void Encoder::set_integer_parameter(std::string parameter_name, int value) {
+  inline void Encoder::set_integer_parameter(std::string parameter_name, int value)
+  {
     Error err = Error(heif_encoder_set_parameter_integer(m_encoder.get(), parameter_name.c_str(), value));
     if (err) {
       throw err;
     }
   }
 
-  inline int  Encoder::get_integer_parameter(std::string parameter_name) const {
+  inline int Encoder::get_integer_parameter(std::string parameter_name) const
+  {
     int value;
     Error err = Error(heif_encoder_get_parameter_integer(m_encoder.get(), parameter_name.c_str(), &value));
     if (err) {
@@ -912,14 +1011,16 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_boolean_parameter(std::string parameter_name, bool value) {
+  inline void Encoder::set_boolean_parameter(std::string parameter_name, bool value)
+  {
     Error err = Error(heif_encoder_set_parameter_boolean(m_encoder.get(), parameter_name.c_str(), value));
     if (err) {
       throw err;
     }
   }
 
-  inline bool Encoder::get_boolean_parameter(std::string parameter_name) const {
+  inline bool Encoder::get_boolean_parameter(std::string parameter_name) const
+  {
     int value;
     Error err = Error(heif_encoder_get_parameter_boolean(m_encoder.get(), parameter_name.c_str(), &value));
     if (err) {
@@ -928,14 +1029,16 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_string_parameter(std::string parameter_name, std::string value) {
+  inline void Encoder::set_string_parameter(std::string parameter_name, std::string value)
+  {
     Error err = Error(heif_encoder_set_parameter_string(m_encoder.get(), parameter_name.c_str(), value.c_str()));
     if (err) {
       throw err;
     }
   }
 
-  inline std::string Encoder::get_string_parameter(std::string parameter_name) const {
+  inline std::string Encoder::get_string_parameter(std::string parameter_name) const
+  {
     const int max_size = 250;
     char value[max_size];
     Error err = Error(heif_encoder_get_parameter_string(m_encoder.get(), parameter_name.c_str(),
@@ -946,7 +1049,8 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_parameter(std::string parameter_name, std::string parameter_value) {
+  inline void Encoder::set_parameter(std::string parameter_name, std::string parameter_value)
+  {
     Error err = Error(heif_encoder_set_parameter(m_encoder.get(), parameter_name.c_str(),
                                                  parameter_value.c_str()));
     if (err) {
@@ -954,7 +1058,8 @@ namespace heif {
     }
   }
 
-  inline std::string Encoder::get_parameter(std::string parameter_name) const {
+  inline std::string Encoder::get_parameter(std::string parameter_name) const
+  {
     const int max_size = 250;
     char value[max_size];
     Error err = Error(heif_encoder_get_parameter(m_encoder.get(), parameter_name.c_str(),
@@ -965,7 +1070,8 @@ namespace heif {
     return value;
   }
 
-  inline void Context::set_primary_image(ImageHandle& new_primary_image_handle) {
+  inline void Context::set_primary_image(ImageHandle& new_primary_image_handle)
+  {
     Error err = Error(heif_context_set_primary_image(m_context.get(),
                                                      new_primary_image_handle.get_raw_image_handle()));
     if (err) {
@@ -974,7 +1080,8 @@ namespace heif {
   }
 
 
-  inline Context::EncodingOptions::EncodingOptions() {
+  inline Context::EncodingOptions::EncodingOptions()
+  {
     // TODO: this is a bit hacky. It would be better to have an API function to set
     // the options to default values. But I do not see any reason for that apart from
     // this use-case.
@@ -986,7 +1093,8 @@ namespace heif {
 
 
   inline ImageHandle Context::encode_image(const Image& img, Encoder& encoder,
-                                           const EncodingOptions& options) {
+                                           const EncodingOptions& options)
+  {
     struct heif_image_handle* image_handle;
 
     Error err = Error(heif_context_encode_image(m_context.get(),
@@ -1006,7 +1114,8 @@ namespace heif {
                                                const ImageHandle& master_image_handle,
                                                Encoder& encoder,
                                                const EncodingOptions& options,
-                                               int bbox_size) {
+                                               int bbox_size)
+  {
     struct heif_image_handle* thumb_image_handle;
 
     Error err = Error(heif_context_encode_thumbnail(m_context.get(),
@@ -1025,7 +1134,8 @@ namespace heif {
 
 
   inline void Context::assign_thumbnail(const ImageHandle& thumbnail_image,
-                                        const ImageHandle& master_image) {
+                                        const ImageHandle& master_image)
+  {
     Error err = Error(heif_context_assign_thumbnail(m_context.get(),
                                                     thumbnail_image.get_raw_image_handle(),
                                                     master_image.get_raw_image_handle()));
@@ -1035,7 +1145,8 @@ namespace heif {
   }
 
   inline void Context::add_exif_metadata(const ImageHandle& master_image,
-                                         const void* data, int size) {
+                                         const void* data, int size)
+  {
     Error err = Error(heif_context_add_exif_metadata(m_context.get(),
                                                      master_image.get_raw_image_handle(),
                                                      data, size));
@@ -1045,7 +1156,8 @@ namespace heif {
   }
 
   inline void Context::add_XMP_metadata(const ImageHandle& master_image,
-                                        const void* data, int size) {
+                                        const void* data, int size)
+  {
     Error err = Error(heif_context_add_XMP_metadata(m_context.get(),
                                                     master_image.get_raw_image_handle(),
                                                     data, size));

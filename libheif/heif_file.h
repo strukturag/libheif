@@ -41,16 +41,21 @@
 namespace heif {
 
   class HeifPixelImage;
+
   class HeifImage;
 
 
-  class HeifFile {
+  class HeifFile
+  {
   public:
     HeifFile();
+
     ~HeifFile();
 
     Error read(std::shared_ptr<StreamReader> reader);
+
     Error read_from_file(const char* input_filename);
+
     Error read_from_memory(const void* data, size_t size, bool copy);
 
     void new_empty_file();
@@ -59,9 +64,11 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
-    int get_num_images() const { return static_cast<int>(m_infe_boxes.size()); }
+    int get_num_images() const
+    { return static_cast<int>(m_infe_boxes.size()); }
 
-    heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
+    heif_item_id get_primary_image_ID() const
+    { return m_pitm_box->get_item_ID(); }
 
     std::vector<heif_item_id> get_item_IDs() const;
 
@@ -74,8 +81,8 @@ namespace heif {
     Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
 
-
-    std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID) {
+    std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
+    {
       auto iter = m_infe_boxes.find(imageID);
       if (iter == m_infe_boxes.end()) {
         return nullptr;
@@ -84,11 +91,14 @@ namespace heif {
       return iter->second;
     }
 
-    std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
+    std::shared_ptr<Box_iref> get_iref_box()
+    { return m_iref_box; }
 
-    std::shared_ptr<Box_ipco> get_ipco_box() { return m_ipco_box; }
+    std::shared_ptr<Box_ipco> get_ipco_box()
+    { return m_ipco_box; }
 
-    std::shared_ptr<Box_ipma> get_ipma_box() { return m_ipma_box; }
+    std::shared_ptr<Box_ipma> get_ipma_box()
+    { return m_ipma_box; }
 
     Error get_properties(heif_item_id imageID,
                          std::vector<Box_ipco::Property>& properties) const;
@@ -107,14 +117,19 @@ namespace heif {
     heif_item_id get_unused_item_id() const;
 
     heif_item_id add_new_image(const char* item_type);
+
     std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
     void add_hvcC_property(heif_item_id id);
+
     Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+
     Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
+
     Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
 
     void add_av1C_property(heif_item_id id);
+
     Error set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config);
 
     void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height);
@@ -123,6 +138,7 @@ namespace heif {
                            uint32_t image_width, uint32_t image_height);
 
     void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets);
+
     void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 
     void set_primary_item_id(heif_item_id id);

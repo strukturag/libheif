@@ -68,10 +68,9 @@ Error HeifFile::read_from_file(const char* input_filename)
 }
 
 
-
 Error HeifFile::read_from_memory(const void* data, size_t size, bool copy)
 {
-  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*)data, size, copy);
+  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*) data, size, copy);
 
   return read(input_stream);
 }
@@ -137,8 +136,8 @@ void HeifFile::set_brand(heif_compression_format format)
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
       break;
 
-  default:
-    break;
+    default:
+      break;
   }
 }
 
@@ -158,7 +157,7 @@ std::string HeifFile::debug_dump_boxes() const
 {
   std::stringstream sstr;
 
-  bool first=true;
+  bool first = true;
 
   for (const auto& box : m_top_level_boxes) {
     // dump box content for debugging
@@ -300,7 +299,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                    heif_suberror_No_infe_box);
     }
 
-    m_infe_boxes.insert( std::make_pair(infe_box->get_item_ID(), infe_box) );
+    m_infe_boxes.insert(std::make_pair(infe_box->get_item_ID(), infe_box));
   }
 
   return Error::Ok;
@@ -355,7 +354,8 @@ Error HeifFile::get_properties(heif_item_id imageID,
   if (!m_ipco_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipco_box);
-  } else if (!m_ipma_box) {
+  }
+  else if (!m_ipma_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipma_box);
   }
@@ -371,7 +371,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
   if (hvcC_box) {
-    return (heif_chroma)(hvcC_box->get_configuration().chroma_format);
+    return (heif_chroma) (hvcC_box->get_configuration().chroma_format);
   }
 
 
@@ -539,13 +539,15 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
       assert(false);
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_hvcC_box);
-    } else if (!hvcC_box->get_headers(data)) {
+    }
+    else if (!hvcC_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-  } else if (item_type == "av01") {
+  }
+  else if (item_type == "av01") {
     // --- --- --- AV1
 
     // --- get properties for this image
@@ -573,17 +575,19 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
       // heif_context::interpret_heif_file()
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_av1C_box);
-    } else if (!av1C_box->get_headers(data)) {
+    }
+    else if (!av1C_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-  } else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
-	     item_type == "grid" ||
-             item_type == "iovl" ||
-             item_type == "Exif" ||
-             (item_type == "mime" && content_type=="application/rdf+xml")) {
+  }
+  else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
+           item_type == "grid" ||
+           item_type == "iovl" ||
+           item_type == "Exif" ||
+           (item_type == "mime" && content_type == "application/rdf+xml")) {
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
 
@@ -597,8 +601,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
 heif_item_id HeifFile::get_unused_item_id() const
 {
-  for (heif_item_id id = 1;
-       ;
+  for (heif_item_id id = 1;;
        id++) {
 
     bool id_exists = false;
@@ -646,11 +649,11 @@ std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
 void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height)
 {
   auto ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(width,height);
+  ispe->set_size(width, height);
 
   int index = m_ipco_box->append_child_box(ispe);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { false, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
 void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t clap_height,
@@ -661,7 +664,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 
   int index = m_ipco_box->append_child_box(clap);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
 
 void HeifFile::add_hvcC_property(heif_item_id id)
@@ -669,7 +672,7 @@ void HeifFile::add_hvcC_property(heif_item_id id)
   auto hvcC = std::make_shared<Box_hvcC>();
   int index = m_ipco_box->append_child_box(hvcC);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
 
 
@@ -710,7 +713,6 @@ Error HeifFile::set_hvcC_configuration(heif_item_id id, const Box_hvcC::configur
 }
 
 
-
 Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
 {
   std::vector<Box_ipco::Property> properties;
@@ -720,7 +722,7 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_
                                                                                        fourcc("hvcC")));
 
   if (hvcC) {
-    hvcC->append_nal_data(data,size);
+    hvcC->append_nal_data(data, size);
     return Error::Ok;
   }
   else {
@@ -735,7 +737,7 @@ void HeifFile::add_av1C_property(heif_item_id id)
   auto av1C = std::make_shared<Box_av1C>();
   int index = m_ipco_box->append_child_box(av1C);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
 
 
@@ -766,12 +768,12 @@ void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* 
   std::vector<uint8_t> nal;
   nal.resize(size + 4);
 
-  nal[0] = (uint8_t)((size>>24) & 0xFF);
-  nal[1] = (uint8_t)((size>>16) & 0xFF);
-  nal[2] = (uint8_t)((size>> 8) & 0xFF);
-  nal[3] = (uint8_t)((size>> 0) & 0xFF);
+  nal[0] = (uint8_t) ((size >> 24) & 0xFF);
+  nal[1] = (uint8_t) ((size >> 16) & 0xFF);
+  nal[2] = (uint8_t) ((size >> 8) & 0xFF);
+  nal[3] = (uint8_t) ((size >> 0) & 0xFF);
 
-  memcpy(nal.data()+4, data, size);
+  memcpy(nal.data() + 4, data, size);
 
   append_iloc_data(id, nal);
 }
@@ -789,7 +791,7 @@ void HeifFile::add_iref_reference(uint32_t type, heif_item_id from,
     m_meta_box->append_child_box(m_iref_box);
   }
 
-  m_iref_box->add_reference(type,from,to);
+  m_iref_box->add_reference(type, from, to);
 }
 
 void HeifFile::set_auxC_property(heif_item_id id, std::string type)
@@ -799,7 +801,7 @@ void HeifFile::set_auxC_property(heif_item_id id, std::string type)
 
   int index = m_ipco_box->append_child_box(auxC);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
 
 void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile> profile)
@@ -808,5 +810,5 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
   colr->set_color_profile(profile);
 
   int index = m_ipco_box->append_child_box(colr);
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation { true, uint16_t(index+1) });
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }

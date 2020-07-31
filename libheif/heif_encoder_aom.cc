@@ -704,7 +704,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
     *data = nullptr;
   }
   else {
-    *size = (int)encoder->compressedData.size();
+    *size = (int) encoder->compressedData.size();
     *data = encoder->compressedData.data();
     encoder->data_read = true;
   }

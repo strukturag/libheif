@@ -30,18 +30,21 @@
 #include <assert.h>
 
 
-Y4MEncoder::Y4MEncoder() {
+Y4MEncoder::Y4MEncoder()
+{
 }
 
 
 void Y4MEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
-                                       struct heif_decoding_options *options) const {
+                                       struct heif_decoding_options* options) const
+{
 }
 
 
 bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
                         const struct heif_image* image,
-                        const std::string& filename) {
+                        const std::string& filename)
+{
   FILE* fp = fopen(filename.c_str(), "wb");
   if (!fp) {
     fprintf(stderr, "Can't open %s: %s\n", filename.c_str(), strerror(errno));
@@ -62,18 +65,18 @@ bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
   int cw = heif_image_get_width(image, heif_channel_Cb);
   int ch = heif_image_get_height(image, heif_channel_Cb);
 
-  fprintf(fp,"YUV4MPEG2 W%d H%d F30:1\nFRAME\n",yw,yh);
+  fprintf(fp, "YUV4MPEG2 W%d H%d F30:1\nFRAME\n", yw, yh);
 
-  for (int y=0;y<yh;y++) {
-    fwrite(yp+y*y_stride, 1,yw, fp);
+  for (int y = 0; y < yh; y++) {
+    fwrite(yp + y * y_stride, 1, yw, fp);
   }
 
-  for (int y=0;y<ch;y++) {
-    fwrite(cbp+y*cb_stride, 1,cw, fp);
+  for (int y = 0; y < ch; y++) {
+    fwrite(cbp + y * cb_stride, 1, cw, fp);
   }
 
-  for (int y=0;y<ch;y++) {
-    fwrite(crp+y*cr_stride, 1,cw, fp);
+  for (int y = 0; y < ch; y++) {
+    fwrite(crp + y * cr_stride, 1, cw, fp);
   }
 
   fclose(fp);

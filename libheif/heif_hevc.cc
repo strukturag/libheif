@@ -30,13 +30,13 @@ using namespace heif;
 static double read_depth_rep_info_element(BitReader& reader)
 {
   int sign_flag = reader.get_bits(1);
-  int exponent  = reader.get_bits(7);
-  int mantissa_len = reader.get_bits(5)+1;
-  if (mantissa_len<1 || mantissa_len>32) {
+  int exponent = reader.get_bits(7);
+  int mantissa_len = reader.get_bits(5) + 1;
+  if (mantissa_len < 1 || mantissa_len > 32) {
     // TODO err
   }
 
-  if (exponent==127) {
+  if (exponent == 127) {
     // TODO value unspecified
   }
 
@@ -46,10 +46,10 @@ static double read_depth_rep_info_element(BitReader& reader)
   //printf("sign:%d exponent:%d mantissa_len:%d mantissa:%d\n",sign_flag,exponent,mantissa_len,mantissa);
 
   if (exponent > 0) {
-    value = pow(2, exponent-31) * (1.0 + mantissa / pow(2,mantissa_len));
+    value = pow(2, exponent - 31) * (1.0 + mantissa / pow(2, mantissa_len));
   }
   else {
-    value = pow(2, -(30+mantissa_len)) * mantissa;
+    value = pow(2, -(30 + mantissa_len)) * mantissa;
   }
 
   if (sign_flag) {
@@ -76,17 +76,17 @@ static std::shared_ptr<SEIMessage> read_depth_representation_info(BitReader& rea
 
   // read header
 
-  msg->has_z_near = (uint8_t)reader.get_bits(1);
-  msg->has_z_far  = (uint8_t)reader.get_bits(1);
-  msg->has_d_min  = (uint8_t)reader.get_bits(1);
-  msg->has_d_max  = (uint8_t)reader.get_bits(1);
+  msg->has_z_near = (uint8_t) reader.get_bits(1);
+  msg->has_z_far = (uint8_t) reader.get_bits(1);
+  msg->has_d_min = (uint8_t) reader.get_bits(1);
+  msg->has_d_max = (uint8_t) reader.get_bits(1);
 
   int rep_type;
   if (!reader.get_uvlc(&rep_type)) {
     // TODO error
   }
   // TODO: check rep_type range
-  msg->depth_representation_type = (enum heif_depth_representation_type)rep_type;
+  msg->depth_representation_type = (enum heif_depth_representation_type) rep_type;
 
   //printf("flags: %d %d %d %d\n",msg->has_z_near,msg->has_z_far,msg->has_d_min,msg->has_d_max);
   //printf("type: %d\n",rep_type);
@@ -102,9 +102,9 @@ static std::shared_ptr<SEIMessage> read_depth_representation_info(BitReader& rea
   }
 
   if (msg->has_z_near) msg->z_near = read_depth_rep_info_element(reader);
-  if (msg->has_z_far ) msg->z_far  = read_depth_rep_info_element(reader);
-  if (msg->has_d_min ) msg->d_min  = read_depth_rep_info_element(reader);
-  if (msg->has_d_max ) msg->d_max  = read_depth_rep_info_element(reader);
+  if (msg->has_z_far) msg->z_far = read_depth_rep_info_element(reader);
+  if (msg->has_d_min) msg->d_min = read_depth_rep_info_element(reader);
+  if (msg->has_d_max) msg->d_max = read_depth_rep_info_element(reader);
 
   /*
   printf("z_near: %f\n",msg->z_near);
@@ -129,21 +129,21 @@ Error heif::decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
   // TODO: we probably do not need a full BitReader just for the array size.
   // Read this and the NAL size directly on the array data.
 
-  BitReader reader(data.data(), (int)data.size());
-  uint32_t len = (uint32_t)reader.get_bits(32);
+  BitReader reader(data.data(), (int) data.size());
+  uint32_t len = (uint32_t) reader.get_bits(32);
 
-  if (len > data.size()-4) {
+  if (len > data.size() - 4) {
     // ERROR: read past end of data
   }
 
-  while (reader.get_current_byte_index() < (int)len) {
+  while (reader.get_current_byte_index() < (int) len) {
     int currPos = reader.get_current_byte_index();
-    BitReader sei_reader(data.data() + currPos, (int)data.size()-currPos);
+    BitReader sei_reader(data.data() + currPos, (int) data.size() - currPos);
 
-    uint32_t nal_size = (uint32_t)sei_reader.get_bits(32);
-    (void)nal_size;
+    uint32_t nal_size = (uint32_t) sei_reader.get_bits(32);
+    (void) nal_size;
 
-    uint8_t nal_type = (uint8_t)(sei_reader.get_bits(8) >> 1);
+    uint8_t nal_type = (uint8_t) (sei_reader.get_bits(8) >> 1);
     sei_reader.skip_bits(8);
 
     // SEI
@@ -152,15 +152,15 @@ Error heif::decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
         nal_type == 40) {
 
       // TODO: loading of multi-byte sei headers
-      uint8_t payload_id = (uint8_t)(sei_reader.get_bits(8));
-      uint8_t payload_size = (uint8_t)(sei_reader.get_bits(8));
-      (void)payload_size;
+      uint8_t payload_id = (uint8_t) (sei_reader.get_bits(8));
+      uint8_t payload_size = (uint8_t) (sei_reader.get_bits(8));
+      (void) payload_size;
 
       switch (payload_id) {
-      case 177: // depth_representation_info
-        std::shared_ptr<SEIMessage> sei = read_depth_representation_info(sei_reader);
-        msgs.push_back(sei);
-        break;
+        case 177: // depth_representation_info
+          std::shared_ptr<SEIMessage> sei = read_depth_representation_info(sei_reader);
+          msgs.push_back(sei);
+          break;
       }
     }
 
@@ -176,14 +176,14 @@ static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size
 {
   std::vector<uint8_t> out_data;
 
-  for (size_t i=0;i<size;i++) {
-    if (i+2<size &&
-        sps[i  ] == 0 &&
-        sps[i+1] == 0 &&
-        sps[i+2] == 3) {
+  for (size_t i = 0; i < size; i++) {
+    if (i + 2 < size &&
+        sps[i] == 0 &&
+        sps[i + 1] == 0 &&
+        sps[i + 2] == 3) {
       out_data.push_back(0);
       out_data.push_back(0);
-      i+=2;
+      i += 2;
     }
     else {
       out_data.push_back(sps[i]);
@@ -206,42 +206,42 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   size = sps_no_emul.size();
 
 
-  BitReader reader(sps, (int)size);
+  BitReader reader(sps, (int) size);
 
   // skip NAL header
-  reader.skip_bits(2*8);
+  reader.skip_bits(2 * 8);
 
   // skip VPS ID
   reader.skip_bits(4);
 
   int nMaxSubLayersMinus1 = reader.get_bits(3);
 
-  config->temporal_id_nested = (uint8_t)reader.get_bits(1);
+  config->temporal_id_nested = (uint8_t) reader.get_bits(1);
 
   // --- profile_tier_level ---
 
-  config->general_profile_space = (uint8_t)reader.get_bits(2);
-  config->general_tier_flag = (uint8_t)reader.get_bits(1);
-  config->general_profile_idc = (uint8_t)reader.get_bits(5);
+  config->general_profile_space = (uint8_t) reader.get_bits(2);
+  config->general_tier_flag = (uint8_t) reader.get_bits(1);
+  config->general_profile_idc = (uint8_t) reader.get_bits(5);
   config->general_profile_compatibility_flags = reader.get_bits(32);
 
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
 
-  config->general_level_idc = (uint8_t)reader.get_bits(8);
+  config->general_level_idc = (uint8_t) reader.get_bits(8);
 
   std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
   std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
 
-  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
+  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
     layer_profile_present[i] = reader.get_bits(1);
     layer_level_present[i] = reader.get_bits(1);
   }
 
-  for (int i=0 ; i<nMaxSubLayersMinus1 ; i++) {
+  for (int i = 0; i < nMaxSubLayersMinus1; i++) {
     if (layer_profile_present[i]) {
-      reader.skip_bits(2+1+5);
+      reader.skip_bits(2 + 1 + 5);
       reader.skip_bits(32);
       reader.skip_bits(16);
     }
@@ -258,9 +258,9 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   reader.get_uvlc(&dummy); // skip seq_parameter_seq_id
 
   reader.get_uvlc(&value);
-  config->chroma_format = (uint8_t)value;
+  config->chroma_format = (uint8_t) value;
 
-  if (config->chroma_format==3) {
+  if (config->chroma_format == 3) {
     reader.skip_bits(1);
   }
 
@@ -269,7 +269,7 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   bool conformance_window = reader.get_bits(1);
   if (conformance_window) {
-    int left,right,top,bottom;
+    int left, right, top, bottom;
     reader.get_uvlc(&left);
     reader.get_uvlc(&right);
     reader.get_uvlc(&top);
@@ -277,15 +277,15 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
     //printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
 
-    *width -= 2*(left+right);
-    *height -= 2*(top+bottom);
+    *width -= 2 * (left + right);
+    *height -= 2 * (top + bottom);
   }
 
   reader.get_uvlc(&value);
-  config->bit_depth_luma = (uint8_t)(value + 8);
+  config->bit_depth_luma = (uint8_t) (value + 8);
 
   reader.get_uvlc(&value);
-  config->bit_depth_chroma = (uint8_t)(value + 8);
+  config->bit_depth_chroma = (uint8_t) (value + 8);
 
 
 

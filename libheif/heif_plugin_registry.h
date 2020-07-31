@@ -37,8 +37,11 @@ struct heif_encoder_descriptor
 {
   const struct heif_encoder_plugin* plugin;
 
-  const char* get_name() const { return plugin->get_plugin_name(); }
-  enum heif_compression_format get_compression_format() const { return plugin->compression_format; }
+  const char* get_name() const
+  { return plugin->get_plugin_name(); }
+
+  enum heif_compression_format get_compression_format() const
+  { return plugin->compression_format; }
 };
 
 
@@ -55,8 +58,8 @@ namespace heif {
   const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type);
 
   std::vector<const struct heif_encoder_descriptor*>
-    get_filtered_encoder_descriptors(enum heif_compression_format,
-                                     const char* name);
+  get_filtered_encoder_descriptors(enum heif_compression_format,
+                                   const char* name);
 }
 
 #endif

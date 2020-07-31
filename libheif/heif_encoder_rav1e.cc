@@ -71,7 +71,7 @@ static const char* const kParam_chroma_valid_values[] = {
     "420", "422", "444"
 };
 
-static int valid_tile_num_values[] = { 1,2,4,8,16,32,64 };
+static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
 
 static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_plugin_error,
                                                            heif_suberror_Unspecified,
@@ -489,7 +489,7 @@ void rav1e_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chro
 
 void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace, heif_chroma* chroma)
 {
-  auto* encoder = (struct encoder_struct_rav1e*)encoder_raw;
+  auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
 
   *colorspace = heif_colorspace_YCbCr;
   *chroma = encoder->chroma;
@@ -660,7 +660,7 @@ struct heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, i
   }
   else {
     *data = encoder->compressed_data.data();
-    *size = (int)encoder->compressed_data.size();
+    *size = (int) encoder->compressed_data.size();
     encoder->data_read = true;
   }
 

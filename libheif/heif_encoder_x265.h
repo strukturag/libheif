@@ -22,7 +22,6 @@
 #define LIBHEIF_HEIF_ENCODER_X265_H
 
 
-
 /* Image sizes in HEVC: since HEVC does not allow for odd image dimensions when
    using chroma 4:2:0, our strategy is as follows.
 

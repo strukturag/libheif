@@ -26,7 +26,8 @@
 #include "heif_colorconversion.h"
 #include "heif_image.h"
 
-static bool is_valid_chroma(uint8_t chroma) {
+static bool is_valid_chroma(uint8_t chroma)
+{
   switch (chroma) {
     case heif_chroma_monochrome:
     case heif_chroma_420:
@@ -44,7 +45,8 @@ static bool is_valid_chroma(uint8_t chroma) {
   }
 }
 
-static bool is_valid_colorspace(uint8_t colorspace) {
+static bool is_valid_colorspace(uint8_t colorspace)
+{
   switch (colorspace) {
     case heif_colorspace_YCbCr:
     case heif_colorspace_RGB:
@@ -56,8 +58,9 @@ static bool is_valid_colorspace(uint8_t colorspace) {
 }
 
 static bool read_plane(heif::BitstreamRange* range,
-    std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
-    int width, int height, int bit_depth) {
+                       std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
+                       int width, int height, int bit_depth)
+{
   if (width <= 0 || height <= 0) {
     return false;
   }
@@ -78,8 +81,9 @@ static bool read_plane(heif::BitstreamRange* range,
 }
 
 static bool read_plane_interleaved(heif::BitstreamRange* range,
-    std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
-    int width, int height, int bit_depth, int comps) {
+                                   std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
+                                   int width, int height, int bit_depth, int comps)
+{
   if (width <= 0 || height <= 0) {
     return false;
   }
@@ -99,7 +103,8 @@ static bool read_plane_interleaved(heif::BitstreamRange* range,
   return true;
 }
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
   auto reader = std::make_shared<heif::StreamReader_memory>(data, size, false);
   heif::BitstreamRange range(reader, size);
 
@@ -144,50 +149,50 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   auto in_image = std::make_shared<heif::HeifPixelImage>();
   in_image->create(width, height, static_cast<heif_colorspace>(in_colorspace),
-      static_cast<heif_chroma>(in_chroma));
+                   static_cast<heif_chroma>(in_chroma));
 
   switch (in_colorspace) {
     case heif_colorspace_YCbCr:
       switch (in_chroma) {
         case heif_chroma_420:
           if (!read_plane(&range, in_image, heif_channel_Y,
-              width, height, bit_depth)) {
+                          width, height, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cb,
-              width / 2, height / 2, bit_depth)) {
+                          width / 2, height / 2, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cr,
-              width / 2, height / 2, bit_depth)) {
+                          width / 2, height / 2, bit_depth)) {
             return 0;
           }
           break;
         case heif_chroma_422:
           if (!read_plane(&range, in_image, heif_channel_Y,
-              width, height / 2, bit_depth)) {
+                          width, height / 2, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cb,
-              width / 2, height / 2, bit_depth)) {
+                          width / 2, height / 2, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cr,
-              width / 2, height / 2, bit_depth)) {
+                          width / 2, height / 2, bit_depth)) {
             return 0;
           }
           break;
         case heif_chroma_444:
           if (!read_plane(&range, in_image, heif_channel_Y,
-              width, height, bit_depth)) {
+                          width, height, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cb,
-              width, height, bit_depth)) {
+                          width, height, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cr,
-              width, height, bit_depth)) {
+                          width, height, bit_depth)) {
             return 0;
           }
           break;
@@ -199,13 +204,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       switch (in_chroma) {
         case heif_chroma_interleaved_RGB:
           if (!read_plane_interleaved(&range, in_image,
-              heif_channel_interleaved, width, height, bit_depth, 3)) {
+                                      heif_channel_interleaved, width, height, bit_depth, 3)) {
             return 0;
           }
           break;
         case heif_chroma_interleaved_RGBA:
           if (!read_plane_interleaved(&range, in_image,
-              heif_channel_interleaved, width, height, bit_depth, 4)) {
+                                      heif_channel_interleaved, width, height, bit_depth, 4)) {
             return 0;
           }
           alpha = false;  // Already part of interleaved data.
@@ -220,7 +225,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         return 0;
       }
       if (!read_plane(&range, in_image, heif_channel_Y,
-          width, height, bit_depth)) {
+                      width, height, bit_depth)) {
         return 0;
       }
       break;
@@ -230,15 +235,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   if (alpha) {
     if (!read_plane(&range, in_image, heif_channel_Alpha,
-        width, height, bit_depth)) {
+                    width, height, bit_depth)) {
       return 0;
     }
   }
 
   auto out_image = convert_colorspace(in_image,
-      static_cast<heif_colorspace>(out_colorspace),
-      static_cast<heif_chroma>(out_chroma),
-      nullptr);
+                                      static_cast<heif_colorspace>(out_colorspace),
+                                      static_cast<heif_chroma>(out_chroma),
+                                      nullptr);
   if (!out_image) {
     // Conversion is not supported.
     return 0;

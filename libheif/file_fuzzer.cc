@@ -28,7 +28,8 @@ static const enum heif_colorspace kFuzzColorSpace = heif_colorspace_YCbCr;
 static const enum heif_chroma kFuzzChroma = heif_chroma_420;
 
 static void TestDecodeImage(struct heif_context* ctx,
-    const struct heif_image_handle* handle, size_t filesize) {
+                            const struct heif_image_handle* handle, size_t filesize)
+{
   struct heif_image* image;
   struct heif_error err;
 
@@ -42,7 +43,8 @@ static void TestDecodeImage(struct heif_context* ctx,
   assert(static_cast<size_t>(metadata_count) < filesize / sizeof(heif_item_id));
   heif_item_id* metadata_ids = static_cast<heif_item_id*>(malloc(metadata_count * sizeof(heif_item_id)));
   assert(metadata_ids);
-  int metadata_ids_count = heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, metadata_ids, metadata_count);
+  int metadata_ids_count = heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, metadata_ids,
+                                                                            metadata_count);
   assert(metadata_count == metadata_ids_count);
   for (int i = 0; i < metadata_count; i++) {
     heif_image_handle_get_metadata_type(handle, metadata_ids[i]);
@@ -69,11 +71,13 @@ static void TestDecodeImage(struct heif_context* ctx,
   heif_image_release(image);
 }
 
-static int clip_int(size_t size) {
+static int clip_int(size_t size)
+{
   return size > INT_MAX ? INT_MAX : static_cast<int>(size);
 }
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
   struct heif_context* ctx;
   struct heif_error err;
   struct heif_image_handle* primary_handle;
@@ -105,7 +109,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     goto quit;
   }
 
-  image_IDs = (heif_item_id*)malloc(images_count * sizeof(heif_item_id));
+  image_IDs = (heif_item_id*) malloc(images_count * sizeof(heif_item_id));
   assert(image_IDs);
   images_count = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, images_count);
   if (!images_count) {
@@ -136,7 +140,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     heif_image_handle_release(image_handle);
   }
 
-quit:
+  quit:
   heif_context_free(ctx);
   free(image_IDs);
   return 0;

@@ -36,28 +36,32 @@
 
 #include "encoder.h"
 
-class JpegEncoder : public Encoder {
- public:
+class JpegEncoder : public Encoder
+{
+public:
   JpegEncoder(int quality);
 
-  heif_colorspace colorspace(bool has_alpha) const override {
+  heif_colorspace colorspace(bool has_alpha) const override
+  {
     return heif_colorspace_YCbCr;
   }
 
-  heif_chroma chroma(bool has_alpha, int bit_depth) const override {
+  heif_chroma chroma(bool has_alpha, int bit_depth) const override
+  {
     return heif_chroma_420;
   }
 
   void UpdateDecodingOptions(const struct heif_image_handle* handle,
-      struct heif_decoding_options *options) const override;
+                             struct heif_decoding_options* options) const override;
 
   bool Encode(const struct heif_image_handle* handle,
-      const struct heif_image* image, const std::string& filename) override;
+              const struct heif_image* image, const std::string& filename) override;
 
- private:
+private:
   static const int kDefaultQuality = 90;
 
-  struct ErrorHandler {
+  struct ErrorHandler
+  {
     struct jpeg_error_mgr pub;  /* "public" fields */
     jmp_buf setjmp_buffer;  /* for return to caller */
   };

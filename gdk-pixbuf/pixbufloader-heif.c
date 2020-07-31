@@ -25,15 +25,17 @@
 
 
 G_MODULE_EXPORT void fill_vtable(GdkPixbufModule* module);
+
 G_MODULE_EXPORT void fill_info(GdkPixbufFormat* info);
 
 
-typedef struct {
-  GdkPixbufModuleUpdatedFunc  update_func;
+typedef struct
+{
+  GdkPixbufModuleUpdatedFunc update_func;
   GdkPixbufModulePreparedFunc prepare_func;
-  GdkPixbufModuleSizeFunc     size_func;
-  gpointer                    user_data;
-  GByteArray*                 data;
+  GdkPixbufModuleSizeFunc size_func;
+  gpointer user_data;
+  GByteArray* data;
 } HeifPixbufCtx;
 
 
@@ -45,12 +47,12 @@ static gpointer begin_load(GdkPixbufModuleSizeFunc size_func,
 {
   HeifPixbufCtx* hpc;
 
-  hpc               = g_new0(HeifPixbufCtx, 1);
-  hpc->data         = g_byte_array_new();
-  hpc->size_func    = size_func;
+  hpc = g_new0(HeifPixbufCtx, 1);
+  hpc->data = g_byte_array_new();
+  hpc->size_func = size_func;
   hpc->prepare_func = prepare_func;
-  hpc->update_func  = update_func;
-  hpc->user_data    = user_data;
+  hpc->update_func = update_func;
+  hpc->user_data = user_data;
   return hpc;
 }
 
@@ -94,8 +96,8 @@ static gboolean stop_load(gpointer context, GError** error)
   int has_alpha = heif_image_handle_has_alpha_channel(hdl);
 
   err = heif_decode_image(hdl, &img, heif_colorspace_RGB,
-      has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
-      NULL);
+                          has_alpha ? heif_chroma_interleaved_RGBA : heif_chroma_interleaved_RGB,
+                          NULL);
   if (err.code != heif_error_Ok) {
     g_warning("%s", err.message);
     goto cleanup;
@@ -121,7 +123,8 @@ static gboolean stop_load(gpointer context, GError** error)
 
   data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
 
-  pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, has_alpha, 8, width, height, stride, release_heif_image, img);
+  pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, has_alpha, 8, width, height, stride, release_heif_image,
+                                    img);
 
   if (hpc->prepare_func) {
     (*hpc->prepare_func)(pixbuf, NULL, hpc->user_data);
@@ -133,7 +136,7 @@ static gboolean stop_load(gpointer context, GError** error)
 
   result = TRUE;
 
- cleanup:
+  cleanup:
   if (img) {
     // Do not free the image here when we pass it to gdk-pixbuf, as its memory will still be used by gdk-pixbuf.
 
@@ -167,8 +170,8 @@ static gboolean load_increment(gpointer context, const guchar* buf, guint size, 
 
 void fill_vtable(GdkPixbufModule* module)
 {
-  module->begin_load     = begin_load;
-  module->stop_load      = stop_load;
+  module->begin_load = begin_load;
+  module->stop_load = stop_load;
   module->load_increment = load_increment;
 }
 
@@ -176,31 +179,31 @@ void fill_vtable(GdkPixbufModule* module)
 void fill_info(GdkPixbufFormat* info)
 {
   static GdkPixbufModulePattern signature[] = {
-    { "    ftyp", "xxxx    ", 100 },
-    { NULL, NULL, 0 }
+      {"    ftyp", "xxxx    ", 100},
+      {NULL, NULL,             0}
   };
 
-  static gchar *mime_types[] = {
-    "image/heif",
-    "image/heic",
-    "image/avif",
-    NULL
+  static gchar* mime_types[] = {
+      "image/heif",
+      "image/heic",
+      "image/avif",
+      NULL
   };
 
-  static gchar *extensions[] = {
-    "heif",
-    "heic",
-    "avif",
-    NULL
+  static gchar* extensions[] = {
+      "heif",
+      "heic",
+      "avif",
+      NULL
   };
 
-  info->name        = "heif/avif";
-  info->signature   = signature;
-  info->domain      = "pixbufloader-heif";
+  info->name = "heif/avif";
+  info->signature = signature;
+  info->domain = "pixbufloader-heif";
   info->description = "HEIF/AVIF Image";
-  info->mime_types  = mime_types;
-  info->extensions  = extensions;
-  info->flags       = GDK_PIXBUF_FORMAT_THREADSAFE;
-  info->disabled    = FALSE;
-  info->license     = "LGPL3";
+  info->mime_types = mime_types;
+  info->extensions = extensions;
+  info->flags = GDK_PIXBUF_FORMAT_THREADSAFE;
+  info->disabled = FALSE;
+  info->license = "LGPL3";
 }

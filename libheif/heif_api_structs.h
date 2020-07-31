@@ -51,9 +51,11 @@ struct heif_encoder
 {
   heif_encoder(std::shared_ptr<heif::HeifContext> context,
                const struct heif_encoder_plugin* plugin);
+
   ~heif_encoder();
 
   struct heif_error alloc();
+
   void release();
 
 

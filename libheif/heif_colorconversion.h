@@ -26,111 +26,118 @@
 
 namespace heif {
 
-struct ColorState
-{
-  heif_colorspace colorspace = heif_colorspace_undefined;
-  heif_chroma chroma = heif_chroma_undefined;
-  bool has_alpha = false;
-  int  bits_per_pixel = 8;
-  std::shared_ptr<const color_profile_nclx> nclx_profile;
+  struct ColorState
+  {
+    heif_colorspace colorspace = heif_colorspace_undefined;
+    heif_chroma chroma = heif_chroma_undefined;
+    bool has_alpha = false;
+    int bits_per_pixel = 8;
+    std::shared_ptr<const color_profile_nclx> nclx_profile;
 
-  ColorState() = default;
-  ColorState(heif_colorspace colorspace, heif_chroma chroma, bool has_alpha, int  bits_per_pixel)
-    : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel) {}
+    ColorState() = default;
 
-  bool operator==(const ColorState&) const;
-};
+    ColorState(heif_colorspace colorspace, heif_chroma chroma, bool has_alpha, int bits_per_pixel)
+        : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel)
+    {}
 
-
-enum class ColorConversionCriterion {
-  Speed,
-  Quality,
-  Memory,
-  Balanced
-};
+    bool operator==(const ColorState&) const;
+  };
 
 
-struct ColorConversionCosts {
-  ColorConversionCosts() = default;
-
-  ColorConversionCosts(float _speed, float _quality, float _memory) {
-    speed = _speed;
-    quality = _quality;
-    memory = _memory;
-  }
-
-  float speed = 0;
-  float quality = 0;
-  float memory = 0;
-
-  ColorConversionCosts operator+(const ColorConversionCosts& b) const {
-    return { speed + b.speed,
-        quality + b.quality,
-        memory + b.memory };
-  }
-
-  float total(ColorConversionCriterion) const {
-    return speed * 0.3f + quality * 0.6f + memory * 0.1f;
-  }
-};
+  enum class ColorConversionCriterion
+  {
+    Speed,
+    Quality,
+    Memory,
+    Balanced
+  };
 
 
-struct ColorConversionOptions
-{
-  ColorConversionCriterion criterion = ColorConversionCriterion::Balanced;
-};
+  struct ColorConversionCosts
+  {
+    ColorConversionCosts() = default;
+
+    ColorConversionCosts(float _speed, float _quality, float _memory)
+    {
+      speed = _speed;
+      quality = _quality;
+      memory = _memory;
+    }
+
+    float speed = 0;
+    float quality = 0;
+    float memory = 0;
+
+    ColorConversionCosts operator+(const ColorConversionCosts& b) const
+    {
+      return {speed + b.speed,
+              quality + b.quality,
+              memory + b.memory};
+    }
+
+    float total(ColorConversionCriterion) const
+    {
+      return speed * 0.3f + quality * 0.6f + memory * 0.1f;
+    }
+  };
 
 
-struct ColorStateWithCost
-{
-  ColorState color_state;
-  ColorConversionCosts costs;
-};
+  struct ColorConversionOptions
+  {
+    ColorConversionCriterion criterion = ColorConversionCriterion::Balanced;
+  };
 
 
-class ColorConversionOperation
-{
- public:
-  virtual ~ColorConversionOperation() = default;
-
-  // We specify the target state to control the conversion into a direction that is most
-  // suitable for reaching the target state. That allows one conversion operation to
-  // provide a range of conversion options.
-  // Also returns the cost for this conversion.
-  virtual std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options = ColorConversionOptions()) = 0;
-
-  virtual std::shared_ptr<HeifPixelImage>
-  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options = ColorConversionOptions()) = 0;
-};
+  struct ColorStateWithCost
+  {
+    ColorState color_state;
+    ColorConversionCosts costs;
+  };
 
 
-class ColorConversionPipeline
-{
- public:
-  bool construct_pipeline(ColorState input_state,
-                          ColorState target_state,
-                          ColorConversionOptions options = ColorConversionOptions());
+  class ColorConversionOperation
+  {
+  public:
+    virtual ~ColorConversionOperation() = default;
 
-  std::shared_ptr<HeifPixelImage>
+    // We specify the target state to control the conversion into a direction that is most
+    // suitable for reaching the target state. That allows one conversion operation to
+    // provide a range of conversion options.
+    // Also returns the cost for this conversion.
+    virtual std::vector<ColorStateWithCost>
+    state_after_conversion(ColorState input_state,
+                           ColorState target_state,
+                           ColorConversionOptions options = ColorConversionOptions()) = 0;
+
+    virtual std::shared_ptr<HeifPixelImage>
+    convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                       ColorState target_state,
+                       ColorConversionOptions options = ColorConversionOptions()) = 0;
+  };
+
+
+  class ColorConversionPipeline
+  {
+  public:
+    bool construct_pipeline(ColorState input_state,
+                            ColorState target_state,
+                            ColorConversionOptions options = ColorConversionOptions());
+
+    std::shared_ptr<HeifPixelImage>
     convert_image(const std::shared_ptr<HeifPixelImage>& input);
 
-  void debug_dump_pipeline() const;
+    void debug_dump_pipeline() const;
 
- private:
-  std::vector<std::shared_ptr<ColorConversionOperation>> m_operations;
-  ColorState m_target_state;
-  ColorConversionOptions m_options;
-};
+  private:
+    std::vector<std::shared_ptr<ColorConversionOperation>> m_operations;
+    ColorState m_target_state;
+    ColorConversionOptions m_options;
+  };
 
 
- std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
-                                                    heif_colorspace colorspace,
-                                                    heif_chroma chroma,
-                                                    std::shared_ptr<const color_profile_nclx> target_profile,
-                                                    int output_bpp = 0);
+  std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
+                                                     heif_colorspace colorspace,
+                                                     heif_chroma chroma,
+                                                     std::shared_ptr<const color_profile_nclx> target_profile,
+                                                     int output_bpp = 0);
 }

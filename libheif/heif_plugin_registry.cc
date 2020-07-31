@@ -52,12 +52,11 @@ using namespace heif;
 std::set<const struct heif_decoder_plugin*> heif::s_decoder_plugins;
 
 
-
-
 struct encoder_descriptor_priority_order
 {
-  bool operator() (const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                   const std::unique_ptr<struct heif_encoder_descriptor>& b) const {
+  bool operator()(const std::unique_ptr<struct heif_encoder_descriptor>& a,
+                  const std::unique_ptr<struct heif_encoder_descriptor>& b) const
+  {
     return a->plugin->priority > b->plugin->priority;  // highest priority first
   }
 };
@@ -67,11 +66,11 @@ std::set<std::unique_ptr<struct heif_encoder_descriptor>,
          encoder_descriptor_priority_order> s_encoder_descriptors;
 
 
-
 static class Register_Default_Plugins
 {
 public:
-  Register_Default_Plugins() {
+  Register_Default_Plugins()
+  {
 #if HAVE_LIBDE265
     heif::register_decoder(get_decoder_plugin_libde265());
 #endif
@@ -134,7 +133,7 @@ void heif::register_encoder(const heif_encoder_plugin* encoder_plugin)
 const struct heif_encoder_plugin* heif::get_encoder(enum heif_compression_format type)
 {
   auto filtered_encoder_descriptors = get_filtered_encoder_descriptors(type, nullptr);
-  if (filtered_encoder_descriptors.size()>0) {
+  if (filtered_encoder_descriptors.size() > 0) {
     return filtered_encoder_descriptors[0]->plugin;
   }
   else {
@@ -152,8 +151,8 @@ heif::get_filtered_encoder_descriptors(enum heif_compression_format format,
   for (const auto& descr : s_encoder_descriptors) {
     const struct heif_encoder_plugin* plugin = descr->plugin;
 
-    if (plugin->compression_format == format || format==heif_compression_undefined) {
-      if (name == nullptr || strcmp(name, plugin->id_name)==0) {
+    if (plugin->compression_format == format || format == heif_compression_undefined) {
+      if (name == nullptr || strcmp(name, plugin->id_name) == 0) {
         filtered_descriptors.push_back(descr.get());
       }
     }

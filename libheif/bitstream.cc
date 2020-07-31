@@ -30,7 +30,7 @@ using namespace heif;
 
 
 StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
-  : m_istr(std::move(istr))
+    : m_istr(std::move(istr))
 {
   m_istr->seekg(0, std::ios_base::end);
   m_length = m_istr->tellg();
@@ -47,20 +47,20 @@ StreamReader::grow_status StreamReader_istream::wait_for_file_size(int64_t targe
   return (target_size > m_length) ? size_beyond_eof : size_reached;
 }
 
-bool    StreamReader_istream::read(void* data, size_t size)
+bool StreamReader_istream::read(void* data, size_t size)
 {
   int64_t end_pos = get_position() + size;
   if (end_pos > m_length) {
     return false;
   }
 
-  m_istr->read((char*)data, size);
+  m_istr->read((char*) data, size);
   return true;
 }
 
-bool    StreamReader_istream::seek(int64_t position)
+bool StreamReader_istream::seek(int64_t position)
 {
-  if (position>m_length)
+  if (position > m_length)
     return false;
 
   m_istr->seekg(position, std::ios_base::beg);
@@ -68,10 +68,9 @@ bool    StreamReader_istream::seek(int64_t position)
 }
 
 
-
 StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size, bool copy)
-  : m_length(size),
-    m_position(0)
+    : m_length(size),
+      m_position(0)
 {
   if (copy) {
     m_owned_data = new uint8_t[m_length];
@@ -101,7 +100,7 @@ StreamReader::grow_status StreamReader_memory::wait_for_file_size(int64_t target
   return (target_size > m_length) ? size_beyond_eof : size_reached;
 }
 
-bool    StreamReader_memory::read(void* data, size_t size)
+bool StreamReader_memory::read(void* data, size_t size)
 {
   int64_t end_pos = m_position + size;
   if (end_pos > m_length) {
@@ -114,9 +113,9 @@ bool    StreamReader_memory::read(void* data, size_t size)
   return true;
 }
 
-bool    StreamReader_memory::seek(int64_t position)
+bool StreamReader_memory::seek(int64_t position)
 {
-  if (position>m_length || position<0)
+  if (position > m_length || position < 0)
     return false;
 
   m_position = position;
@@ -124,9 +123,8 @@ bool    StreamReader_memory::seek(int64_t position)
 }
 
 
-
 StreamReader_CApi::StreamReader_CApi(const heif_reader* func_table, void* userdata)
-  : m_func_table(func_table), m_userdata(userdata)
+    : m_func_table(func_table), m_userdata(userdata)
 {
 }
 
@@ -134,16 +132,17 @@ StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_s
 {
   heif_reader_grow_status status = m_func_table->wait_for_file_size(target_size, m_userdata);
   switch (status) {
-  case heif_reader_grow_status_size_reached: return size_reached;
-  case heif_reader_grow_status_timeout: return timeout;
-  case heif_reader_grow_status_size_beyond_eof: return size_beyond_eof;
-  default:
-    assert(0);
-    return size_beyond_eof;
+    case heif_reader_grow_status_size_reached:
+      return size_reached;
+    case heif_reader_grow_status_timeout:
+      return timeout;
+    case heif_reader_grow_status_size_beyond_eof:
+      return size_beyond_eof;
+    default:
+      assert(0);
+      return size_beyond_eof;
   }
 }
-
-
 
 
 BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
@@ -163,7 +162,7 @@ BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
 
 StreamReader::grow_status BitstreamRange::wait_until_range_is_available()
 {
-  return m_istr->wait_for_file_size( m_istr->get_position() + m_remaining );
+  return m_istr->wait_for_file_size(m_istr->get_position() + m_remaining);
 }
 
 
@@ -176,7 +175,7 @@ uint8_t BitstreamRange::read8()
   uint8_t buf;
 
   auto istr = get_istream();
-  bool success = istr->read((char*)&buf,1);
+  bool success = istr->read((char*) &buf, 1);
 
   if (!success) {
     set_eof_while_reading();
@@ -196,14 +195,14 @@ uint16_t BitstreamRange::read16()
   uint8_t buf[2];
 
   auto istr = get_istream();
-  bool success = istr->read((char*)buf,2);
+  bool success = istr->read((char*) buf, 2);
 
   if (!success) {
     set_eof_while_reading();
     return 0;
   }
 
-  return static_cast<uint16_t>((buf[0]<<8) | (buf[1]));
+  return static_cast<uint16_t>((buf[0] << 8) | (buf[1]));
 }
 
 
@@ -216,16 +215,16 @@ uint32_t BitstreamRange::read32()
   uint8_t buf[4];
 
   auto istr = get_istream();
-  bool success = istr->read((char*)buf,4);
+  bool success = istr->read((char*) buf, 4);
 
   if (!success) {
     set_eof_while_reading();
     return 0;
   }
 
-  return ((buf[0]<<24) |
-          (buf[1]<<16) |
-          (buf[2]<< 8) |
+  return ((buf[0] << 24) |
+          (buf[1] << 16) |
+          (buf[2] << 8) |
           (buf[3]));
 }
 
@@ -247,18 +246,18 @@ std::string BitstreamRange::read_string()
 
     auto istr = get_istream();
     char c;
-    bool success = istr->read(&c,1);
+    bool success = istr->read(&c, 1);
 
     if (!success) {
       set_eof_while_reading();
       return std::string();
     }
 
-    if (c==0) {
+    if (c == 0) {
       break;
     }
     else {
-      str += (char)c;
+      str += (char) c;
     }
   }
 
@@ -273,7 +272,7 @@ bool BitstreamRange::read(uint8_t* data, int64_t n)
   }
 
   auto istr = get_istream();
-  bool success = istr->read(data,n);
+  bool success = istr->read(data, n);
 
   if (!success) {
     set_eof_while_reading();
@@ -285,7 +284,7 @@ bool BitstreamRange::read(uint8_t* data, int64_t n)
 
 bool BitstreamRange::prepare_read(int64_t nBytes)
 {
-  if (nBytes<0) {
+  if (nBytes < 0) {
     // --- we cannot read negative amounts of bytes
 
     assert(false);
@@ -325,7 +324,7 @@ StreamReader::grow_status BitstreamRange::wait_for_available_bytes(int64_t nByte
 
 void BitstreamRange::skip_without_advancing_file_pos(int64_t n)
 {
-  assert(n<=m_remaining);
+  assert(n <= m_remaining);
 
   m_remaining -= n;
 
@@ -335,16 +334,14 @@ void BitstreamRange::skip_without_advancing_file_pos(int64_t n)
 }
 
 
-
-
 BitReader::BitReader(const uint8_t* buffer, int len)
 {
   data = buffer;
   data_length = len;
   bytes_remaining = len;
 
-  nextbits=0;
-  nextbits_cnt=0;
+  nextbits = 0;
+  nextbits_cnt = 0;
 
   refill();
 }
@@ -356,37 +353,37 @@ int BitReader::get_bits(int n)
   }
 
   uint64_t val = nextbits;
-  val >>= 64-n;
+  val >>= 64 - n;
 
   nextbits <<= n;
   nextbits_cnt -= n;
 
-  return (int)val;
+  return (int) val;
 }
 
-int  BitReader::get_bits_fast(int n)
+int BitReader::get_bits_fast(int n)
 {
   assert(nextbits_cnt >= n);
 
   uint64_t val = nextbits;
-  val >>= 64-n;
+  val >>= 64 - n;
 
   nextbits <<= n;
   nextbits_cnt -= n;
 
-  return (int)val;
+  return (int) val;
 }
 
-int  BitReader::peek_bits(int n)
+int BitReader::peek_bits(int n)
 {
   if (nextbits_cnt < n) {
     refill();
   }
 
   uint64_t val = nextbits;
-  val >>= 64-n;
+  val >>= 64 - n;
 
-  return (int)val;
+  return (int) val;
 }
 
 void BitReader::skip_bits(int n)
@@ -415,9 +412,9 @@ void BitReader::skip_to_byte_boundary()
 
 bool BitReader::get_uvlc(int* value)
 {
-  int num_zeros=0;
+  int num_zeros = 0;
 
-  while (get_bits(1)==0) {
+  while (get_bits(1) == 0) {
     num_zeros++;
 
     if (num_zeros > MAX_UVLC_LEADING_ZEROS) { return false; }
@@ -425,11 +422,12 @@ bool BitReader::get_uvlc(int* value)
 
   int offset = 0;
   if (num_zeros != 0) {
-    offset = (int)get_bits(num_zeros);
-    *value = offset + (1<<num_zeros)-1;
-    assert(*value>0);
+    offset = (int) get_bits(num_zeros);
+    *value = offset + (1 << num_zeros) - 1;
+    assert(*value > 0);
     return true;
-  } else {
+  }
+  else {
     *value = 0;
     return true;
   }
@@ -440,13 +438,14 @@ bool BitReader::get_svlc(int* value)
   int v;
   if (!get_uvlc(&v)) {
     return false;
-  } else if (v == 0) {
+  }
+  else if (v == 0) {
     *value = v;
     return true;
   }
 
-  bool negative = ((v&1)==0);
-  *value = negative ? -v/2 : (v+1)/2;
+  bool negative = ((v & 1) == 0);
+  *value = negative ? -v / 2 : (v + 1) / 2;
   return true;
 }
 
@@ -474,7 +473,7 @@ void BitReader::refill()
     nextbits |= newval;
   }
 
-  nextbits_cnt = 64-shift;
+  nextbits_cnt = 64 - shift;
 #endif
 }
 
@@ -493,67 +492,67 @@ void StreamWriter::write8(uint8_t v)
 
 void StreamWriter::write16(uint16_t v)
 {
-  size_t required_size = m_position+2;
+  size_t required_size = m_position + 2;
 
   if (required_size > m_data.size()) {
     m_data.resize(required_size);
   }
 
-  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
 }
 
 
 void StreamWriter::write32(uint32_t v)
 {
-  size_t required_size = m_position+4;
+  size_t required_size = m_position + 4;
 
   if (required_size > m_data.size()) {
     m_data.resize(required_size);
   }
 
-  m_data[m_position++] = uint8_t((v>>24) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>16) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 24) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
 }
 
 
 void StreamWriter::write64(uint64_t v)
 {
-  size_t required_size = m_position+8;
+  size_t required_size = m_position + 8;
 
   if (required_size > m_data.size()) {
     m_data.resize(required_size);
   }
 
-  m_data[m_position++] = uint8_t((v>>56) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>48) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>40) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>32) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>24) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>16) & 0xFF);
-  m_data[m_position++] = uint8_t((v>>8) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 56) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 48) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 40) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 32) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 24) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
 }
 
 
 void StreamWriter::write(int size, uint64_t value)
 {
-  if (size==1) {
+  if (size == 1) {
     assert(value <= 0xFF);
-    write8((uint8_t)value);
+    write8((uint8_t) value);
   }
-  else if (size==2) {
+  else if (size == 2) {
     assert(value <= 0xFFFF);
-    write16((uint16_t)value);
+    write16((uint16_t) value);
   }
-  else if (size==4) {
+  else if (size == 4) {
     assert(value <= 0xFFFFFFFF);
-    write32((uint32_t)value);
+    write32((uint32_t) value);
   }
-  else if (size==8) {
-    write64((uint64_t)value);
+  else if (size == 8) {
+    write64((uint64_t) value);
   }
   else {
     assert(false); // unimplemented size
@@ -563,13 +562,13 @@ void StreamWriter::write(int size, uint64_t value)
 
 void StreamWriter::write(const std::string& str)
 {
-  size_t required_size = m_position + str.size() +1;
+  size_t required_size = m_position + str.size() + 1;
 
   if (required_size > m_data.size()) {
     m_data.resize(required_size);
   }
 
-  for (size_t i=0;i<str.size();i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     m_data[m_position++] = str[i];
   }
 
@@ -609,20 +608,20 @@ void StreamWriter::write(const StreamWriter& writer)
 void StreamWriter::skip(int n)
 {
   assert(m_position == m_data.size());
-  m_data.resize( m_data.size() + n );
+  m_data.resize(m_data.size() + n);
   m_position += n;
 }
 
 
 void StreamWriter::insert(int nBytes)
 {
-  assert(nBytes>=0);
+  assert(nBytes >= 0);
 
-  if (nBytes==0) {
+  if (nBytes == 0) {
     return;
   }
 
-  m_data.resize( m_data.size() + nBytes );
+  m_data.resize(m_data.size() + nBytes);
 
   if (m_position < m_data.size() - nBytes) {
     memmove(m_data.data() + m_position + nBytes,

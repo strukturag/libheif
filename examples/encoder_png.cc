@@ -31,22 +31,27 @@
 
 #include "encoder_png.h"
 
-PngEncoder::PngEncoder() {}
+PngEncoder::PngEncoder()
+{}
 
-inline uint8_t clip(float value) {
+inline uint8_t clip(float value)
+{
   if (value < 0) {
     return 0x00;
-  } else if (value >= 255) {
+  }
+  else if (value >= 255) {
     return 0xff;
-  } else {
+  }
+  else {
     return static_cast<uint8_t>(round(value));
   }
 }
 
 bool PngEncoder::Encode(const struct heif_image_handle* handle,
-    const struct heif_image* image, const std::string& filename) {
+                        const struct heif_image* image, const std::string& filename)
+{
   png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr,
-      nullptr, nullptr);
+                                                nullptr, nullptr);
   if (!png_ptr) {
     fprintf(stderr, "libpng initialization failed (1)\n");
     return false;
@@ -83,7 +88,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   int bitDepth;
   int input_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_interleaved);
-  if (input_bpp>8) {
+  if (input_bpp > 8) {
     bitDepth = 16;
   }
   else {
@@ -93,46 +98,46 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   const int colorType = withAlpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB;
 
   png_set_IHDR(png_ptr, info_ptr, width, height, bitDepth, colorType,
-      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
   size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
-  if (profile_size > 0){
+  if (profile_size > 0) {
     uint8_t* profile_data = static_cast<uint8_t*>(malloc(profile_size));
     heif_image_handle_get_raw_color_profile(handle, profile_data);
     char profile_name[] = "unknown";
     png_set_iCCP(png_ptr, info_ptr, profile_name, PNG_COMPRESSION_TYPE_BASE,
 #if PNG_LIBPNG_VER < 10500
-                 (png_charp)profile_data,
+        (png_charp)profile_data,
 #else
-                 (png_const_bytep)profile_data,
+                 (png_const_bytep) profile_data,
 #endif
-                 (png_uint_32)profile_size);
+                 (png_uint_32) profile_size);
     free(profile_data);
   }
   png_write_info(png_ptr, info_ptr);
 
-  uint8_t** row_pointers = new uint8_t*[height];
+  uint8_t** row_pointers = new uint8_t* [height];
 
   int stride_rgb;
   const uint8_t* row_rgb = heif_image_get_plane_readonly(image,
-      heif_channel_interleaved, &stride_rgb);
+                                                         heif_channel_interleaved, &stride_rgb);
 
   for (int y = 0; y < height; ++y) {
     row_pointers[y] = const_cast<uint8_t*>(&row_rgb[y * stride_rgb]);
   }
 
-  if (bitDepth==16) {
+  if (bitDepth == 16) {
     // shift image data to full 16bit range
 
-    int shift = 16-input_bpp;
-    if (shift>0) {
+    int shift = 16 - input_bpp;
+    if (shift > 0) {
       for (int y = 0; y < height; ++y) {
-        for (int x=0; x < stride_rgb; x+= 2) {
+        for (int x = 0; x < stride_rgb; x += 2) {
           uint8_t* p = (&row_pointers[y][x]);
-          int v = (p[0]<<8) | p[1];
-          v = (v<<shift) | (v>>(16-shift));
-          p[0] = (uint8_t)(v>>8);
-          p[1] = (uint8_t)(v&0xFF);
+          int v = (p[0] << 8) | p[1];
+          v = (v << shift) | (v >> (16 - shift));
+          p[0] = (uint8_t) (v >> 8);
+          p[1] = (uint8_t) (v & 0xFF);
         }
       }
     }

@@ -40,7 +40,6 @@
 #include "heif.h"
 
 
-
 static constexpr char kSuccess[] = "Success";
 
 
@@ -49,18 +48,22 @@ namespace heif {
   class ErrorBuffer
   {
   public:
-    ErrorBuffer() { }
+    ErrorBuffer()
+    {}
 
-    void set_success() {
+    void set_success()
+    {
       m_error_message = c_success;
     }
 
-    void set_error(std::string err) {
+    void set_error(std::string err)
+    {
       m_buffer = err;
       m_error_message = m_buffer.c_str();
     }
 
-    const char* get_error() const {
+    const char* get_error() const
+    {
       return m_error_message;
     }
 
@@ -82,25 +85,31 @@ namespace heif {
 
     Error(heif_error_code c,
           heif_suberror_code sc = heif_suberror_Unspecified,
-          std::string msg="");
+          std::string msg = "");
 
     static Error Ok;
 
     static const char kSuccess[];
 
-    bool operator==(const Error& other) const { return error_code == other.error_code; }
-    bool operator!=(const Error& other) const { return !(*this == other); }
+    bool operator==(const Error& other) const
+    { return error_code == other.error_code; }
 
-    operator bool() const { return error_code != heif_error_Ok; }
+    bool operator!=(const Error& other) const
+    { return !(*this == other); }
+
+    operator bool() const
+    { return error_code != heif_error_Ok; }
 
     static const char* get_error_string(heif_error_code err);
+
     static const char* get_error_string(heif_suberror_code err);
 
     heif_error error_struct(ErrorBuffer* error_buffer) const;
   };
 
 
-  inline std::ostream& operator<<(std::ostream& ostr, const Error& err) {
+  inline std::ostream& operator<<(std::ostream& ostr, const Error& err)
+  {
     ostr << err.error_code << "/" << err.sub_error_code;
     return ostr;
   }

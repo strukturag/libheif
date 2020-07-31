@@ -36,14 +36,14 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::
   heif_chroma chroma = image->get_chroma_format();
 
   uint8_t profile;
-  
+
   if (bpp <= 10 &&
       (chroma == heif_chroma_420 ||
        chroma == heif_chroma_monochrome)) {
     profile = 0;
   }
   else if (bpp <= 10 &&
-	   chroma == heif_chroma_444) {
+           chroma == heif_chroma_444) {
     profile = 1;
   }
   else {
@@ -55,10 +55,10 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::
 
   uint8_t level;
 
-  if (width<=8192 && height <= 4352 && (width*height) <= 8912896) {
+  if (width <= 8192 && height <= 4352 && (width * height) <= 8912896) {
     level = 13; // 5.1
   }
-  else if (width<=16384 && height <= 8704 && (width*height) <= 35651584) {
+  else if (width <= 16384 && height <= 8704 && (width * height) <= 35651584) {
     level = 17; // 6.1
   }
   else {
@@ -67,8 +67,8 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::
 
   inout_config->seq_profile = profile;
   inout_config->seq_level_idx_0 = level;
-  inout_config->high_bitdepth = (bpp>8) ? 1 : 0;
-  inout_config->twelve_bit = (bpp>=12) ? 1 : 0;
+  inout_config->high_bitdepth = (bpp > 8) ? 1 : 0;
+  inout_config->twelve_bit = (bpp >= 12) ? 1 : 0;
   inout_config->monochrome = (chroma == heif_chroma_monochrome) ? 1 : 0;
   inout_config->chroma_subsampling_x = uint8_t(chroma_h_subsampling(chroma) >> 1);
   inout_config->chroma_subsampling_y = uint8_t(chroma_v_subsampling(chroma) >> 1);
@@ -80,6 +80,6 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::
 
   inout_config->chroma_sample_position = 0;
 
-  
+
   return Error::Ok;
 }

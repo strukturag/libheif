@@ -22,7 +22,8 @@
 #include "nclx.h"
 
 
-heif::primaries::primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy) {
+heif::primaries::primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy)
+{
   defined = true;
   redX = rx;
   redY = ry;
@@ -35,7 +36,8 @@ heif::primaries::primaries(float gx, float gy, float bx, float by, float rx, flo
 }
 
 
-heif::primaries heif::get_colour_primaries(uint16_t primaries_idx) {
+heif::primaries heif::get_colour_primaries(uint16_t primaries_idx)
+{
   switch (primaries_idx) {
     case 1:
       return {0.300f, 0.600f, 0.150f, 0.060f, 0.640f, 0.330f, 0.3127f, 0.3290f};
@@ -64,7 +66,8 @@ heif::primaries heif::get_colour_primaries(uint16_t primaries_idx) {
 }
 
 
-heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
+heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+{
   Kr_Kb result;
 
   if (matrix_coefficients_idx == 12 ||
@@ -83,7 +86,8 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
                            zw * (p.greenX * p.blueY - p.blueX * p.greenY))) / denom;
     result.Kb = (p.blueY * (p.whiteX * (p.redY * zg - p.greenY * zr) + p.whiteY * (p.greenX * zr - p.redX * zg) +
                             zw * (p.redX * p.greenY - p.greenX * p.redY))) / denom;
-  } else
+  }
+  else
     switch (matrix_coefficients_idx) {
       case 1:
         result.Kr = 0.2126f;
@@ -117,7 +121,7 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
 heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
 {
   YCbCr_to_RGB_coefficients coeffs;
-  coeffs.defined=true;
+  coeffs.defined = true;
   coeffs.r_cr = 1.402f;
   coeffs.g_cb = -0.344136f;
   coeffs.g_cr = -0.714136f;
@@ -126,7 +130,8 @@ heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
 }
 
 heif::YCbCr_to_RGB_coefficients
-heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
+heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+{
   YCbCr_to_RGB_coefficients coeffs;
 
   Kr_Kb k = get_Kr_Kb(matrix_coefficients_idx, primaries_idx);
@@ -147,7 +152,8 @@ heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
 
 
 heif::RGB_to_YCbCr_coefficients
-heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx) {
+heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+{
   RGB_to_YCbCr_coefficients coeffs;
 
   Kr_Kb k = get_Kr_Kb(matrix_coefficients_idx, primaries_idx);
@@ -155,14 +161,14 @@ heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
   if (k.Kb != 0 || k.Kr != 0) { // both will be != 0 when valid
     coeffs.defined = true;
     coeffs.c[0][0] = k.Kr;
-    coeffs.c[0][1] = 1-k.Kr-k.Kb;
+    coeffs.c[0][1] = 1 - k.Kr - k.Kb;
     coeffs.c[0][2] = k.Kb;
-    coeffs.c[1][0] = -k.Kr/(1-k.Kb)/2;
-    coeffs.c[1][1] = -(1-k.Kr-k.Kb)/(1-k.Kb)/2;
+    coeffs.c[1][0] = -k.Kr / (1 - k.Kb) / 2;
+    coeffs.c[1][1] = -(1 - k.Kr - k.Kb) / (1 - k.Kb) / 2;
     coeffs.c[1][2] = 0.5f;
     coeffs.c[2][0] = 0.5f;
-    coeffs.c[2][1] = -(1-k.Kr-k.Kb)/(1-k.Kr)/2;
-    coeffs.c[2][2] = -k.Kb/(1-k.Kr)/2;
+    coeffs.c[2][1] = -(1 - k.Kr - k.Kb) / (1 - k.Kr) / 2;
+    coeffs.c[2][2] = -k.Kb / (1 - k.Kr) / 2;
   }
   else {
     coeffs = RGB_to_YCbCr_coefficients::defaults();
@@ -175,7 +181,7 @@ heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
 heif::RGB_to_YCbCr_coefficients heif::RGB_to_YCbCr_coefficients::defaults()
 {
   RGB_to_YCbCr_coefficients coeffs;
-  coeffs.defined=true;
+  coeffs.defined = true;
 
   coeffs.c[0][0] = 0.299f;
   coeffs.c[0][1] = 0.587f;

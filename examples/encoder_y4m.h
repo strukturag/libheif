@@ -30,25 +30,28 @@
 
 #include "encoder.h"
 
-class Y4MEncoder : public Encoder {
- public:
+class Y4MEncoder : public Encoder
+{
+public:
   Y4MEncoder();
 
-  heif_colorspace colorspace(bool has_alpha) const override {
+  heif_colorspace colorspace(bool has_alpha) const override
+  {
     return heif_colorspace_YCbCr;
   }
 
-  heif_chroma chroma(bool has_alpha, int bit_depth) const override {
+  heif_chroma chroma(bool has_alpha, int bit_depth) const override
+  {
     return heif_chroma_420;
   }
 
   void UpdateDecodingOptions(const struct heif_image_handle* handle,
-      struct heif_decoding_options *options) const override;
+                             struct heif_decoding_options* options) const override;
 
   bool Encode(const struct heif_image_handle* handle,
-      const struct heif_image* image, const std::string& filename) override;
+              const struct heif_image* image, const std::string& filename) override;
 
- private:
+private:
 };
 
 #endif  // EXAMPLE_ENCODER_Y4M_H

@@ -30,16 +30,19 @@
 
 #include "encoder.h"
 
-class PngEncoder : public Encoder {
- public:
+class PngEncoder : public Encoder
+{
+public:
   PngEncoder();
 
-  heif_colorspace colorspace(bool has_alpha) const override {
+  heif_colorspace colorspace(bool has_alpha) const override
+  {
     return heif_colorspace_RGB;
   }
 
-  heif_chroma chroma(bool has_alpha, int bit_depth) const override {
-    if (bit_depth==8) {
+  heif_chroma chroma(bool has_alpha, int bit_depth) const override
+  {
+    if (bit_depth == 8) {
       if (has_alpha)
         return heif_chroma_interleaved_RGBA;
       else
@@ -54,9 +57,9 @@ class PngEncoder : public Encoder {
   }
 
   bool Encode(const struct heif_image_handle* handle,
-      const struct heif_image* image, const std::string& filename) override;
+              const struct heif_image* image, const std::string& filename) override;
 
- private:
+private:
 };
 
 #endif  // EXAMPLE_ENCODER_PNG_H
