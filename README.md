@@ -17,7 +17,7 @@ Alternative codecs for, e.g., AVC and JPEG can be provided as plugins.
 
 libheif has support for decoding
 * tiled images
-* alpha channels (currently HEIF only)
+* alpha channels
 * thumbnails
 * reading EXIF and XMP metadata
 * reading the depth channel
@@ -32,13 +32,13 @@ libheif has support for decoding
 The encoder supports:
 * lossy compression with adjustable quality
 * lossless compression
-* alpha channels (currently HEIF only)
+* alpha channels
 * thumbnails
 * save multiple images to a file
 * save EXIF and XMP metadata
 * writing color profiles
-* 10 and 12 bit images (currently HEIF only)
-* monochrome images (currently HEIF only)
+* 10 and 12 bit images
+* monochrome images
 
 ## API
 
