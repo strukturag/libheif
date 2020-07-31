@@ -639,6 +639,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   if (pkt && pkt->data && (pkt->len > 0)) {
     encoder->compressed_data.resize(pkt->len);
     memcpy(encoder->compressed_data.data(), pkt->data, pkt->len);
+    encoder->data_read = false;
   }
 
   if (pkt) {
