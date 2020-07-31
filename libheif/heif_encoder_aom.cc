@@ -667,8 +667,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       // TODO: split the received data into separate OBUs
       // This allows libheif to easily extract the sequence header for the av1C header
 
-      int n = pkt->data.frame.sz;
-      int oldSize = encoder->compressedData.size();
+      uint64_t n = pkt->data.frame.sz;
+      uint64_t oldSize = encoder->compressedData.size();
       encoder->compressedData.resize(oldSize + n);
 
       memcpy(encoder->compressedData.data() + oldSize,
@@ -704,7 +704,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
     *data = nullptr;
   }
   else {
-    *size = encoder->compressedData.size();
+    *size = (int)encoder->compressedData.size();
     *data = encoder->compressedData.data();
     encoder->data_read = true;
   }
