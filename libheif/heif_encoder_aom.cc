@@ -527,8 +527,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*)encoder_raw;
 
-  const int source_width  = heif_image_get_width(image, heif_channel_Y) & ~1;
-  const int source_height = heif_image_get_height(image, heif_channel_Y) & ~1;
+  const int source_width  = heif_image_get_width(image, heif_channel_Y);
+  const int source_height = heif_image_get_height(image, heif_channel_Y);
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
