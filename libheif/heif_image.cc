@@ -143,7 +143,7 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
   assert(width >= 0);
   assert(height >= 0);
   assert(bit_depth >= 1);
-  assert(bit_depth <= 16);
+  assert(bit_depth <= 32);
 
   // use 16 byte alignment
   uint16_t alignment = 16; // must be power of two
@@ -165,6 +165,7 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
     bit_depth = 8;
   }
 
+  assert(bit_depth <= 16);
   plane.bit_depth = static_cast<uint8_t>(bit_depth);
 
 
