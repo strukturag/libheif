@@ -1641,6 +1641,11 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 {
   *out_data = (struct heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
 
+  if (*out_data == nullptr) {
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Unspecified);
+  }
+  
   struct heif_color_profile_nclx* nclx = *out_data;
 
   nclx->version = 1;
