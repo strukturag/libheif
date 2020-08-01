@@ -558,8 +558,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     int h = source_height;
 
     if (plane != 0) {
-      if (chroma != heif_chroma_444) { w /= 2; }
-      if (chroma == heif_chroma_420) { h /= 2; }
+      if (chroma != heif_chroma_444) { w = (w+1)/2; }
+      if (chroma == heif_chroma_420) { h = (h+1)/2; }
     }
 
     for (int y = 0; y < h; y++) {
