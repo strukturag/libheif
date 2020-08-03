@@ -224,6 +224,10 @@ struct heif_error aom_new_encoder(void** enc)
 
   *enc = encoder;
 
+  // set default parameters
+
+  aom_set_default_parameters(encoder);
+
   return err;
 }
 
@@ -584,10 +588,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     assert(false);
     // TODO
   }
-
-  // set default parameters
-
-  aom_set_default_parameters(encoder);
 
 
   unsigned int aomUsage = 0;
