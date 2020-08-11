@@ -17,6 +17,7 @@ if(JPEG_FOUND)
 add_definitions(-DHAVE_LIBJPEG=1)
 
 include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
+include_directories(${JPEG_INCLUDE_DIR})
 
 set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
 check_cxx_source_compiles("
