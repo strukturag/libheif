@@ -692,8 +692,9 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
 
   if (has_alpha) {
+    int copyWidth = (hdr ? width*2 : width);
     for (y = 0; y < height; y++) {
-      memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], width * 2);
+      memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], copyWidth);
     }
   }
 
