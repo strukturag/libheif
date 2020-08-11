@@ -18,10 +18,12 @@ if(JPEG_FOUND)
 add_definitions(-DHAVE_LIBJPEG=1)
 
 include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
-include_directories(${JPEG_INCLUDE_DIR})
 
 set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
-set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS})
+
+# while the docs say JPEG_INCLUDE_DIRS, my FindJPEG.cmake script returns it in JPEG_INCLUDE_DIR
+set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS} ${JPEG_INCLUDE_DIR})
+
 check_cxx_source_compiles("
 #include <stddef.h>
 #include <stdio.h>
