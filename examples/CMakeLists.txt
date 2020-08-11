@@ -65,7 +65,7 @@ if(UNIX)
     )
     set (additional_libraries
       ${additional_libraries}
-      ${LIBPNG_LINK_LIBRARIES}
+      ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES}
     )
     set (additional_includes
       ${additional_includes}
@@ -120,6 +120,6 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LINK_LIBRARIES})
+  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES})
   target_include_directories(heif-thumbnailer PRIVATE ${LIBPNG_INCLUDE_DIRS})
 endif()
