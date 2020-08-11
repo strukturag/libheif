@@ -1671,6 +1671,12 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 }
 
 
+void color_profile_nclx::free_nclx_color_profile(struct heif_color_profile_nclx* profile)
+{
+  free(profile);
+}
+
+
 void color_profile_nclx::set_default()
 {
   m_colour_primaries = 2;

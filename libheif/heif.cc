@@ -1120,6 +1120,12 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
 }
 
 
+void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
+{
+  color_profile_nclx::free_nclx_color_profile(nclx_profile);
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

@@ -718,6 +718,9 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
                                                            struct heif_color_profile_nclx** out_data);
 
+LIBHEIF_API
+void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile);
+
 
 LIBHEIF_API
 enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image);
