@@ -81,7 +81,7 @@ heif_encoder_set_lossy_quality(encoder, 50);
 
 // encode the image
 heif_image* image; // code to fill in the image omitted in this example
-heif_context_encode_image(ctx, nullptr, image, encoder);
+heif_context_encode_image(ctx, image, encoder, nullptr, nullptr);
 
 heif_encoder_release(encoder);
 
