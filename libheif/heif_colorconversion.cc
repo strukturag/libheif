@@ -2026,13 +2026,16 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
     return {};
   }
 
-  if (target_state.nclx_profile) {
-    if (target_state.nclx_profile->get_matrix_coefficients() != 0) {
-      return {};
-    }
-    if (!input_state.nclx_profile->get_full_range_flag()) {
-      return {};
-    }
+  if (!target_state.nclx_profile) {
+    return {};
+  }
+  
+  if (target_state.nclx_profile->get_matrix_coefficients() != 0) {
+    return {};
+  }
+
+  if (!input_state.nclx_profile->get_full_range_flag()) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
