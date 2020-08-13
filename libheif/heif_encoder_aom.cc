@@ -612,13 +612,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   cfg.g_profile = inout_config.seq_profile;
 
-  //cfg.g_timebase.num = info.time_base.numerator;
-  //cfg.g_timebase.den = info.time_base.denominator;
-
-  int bitrate = (int) (12 * pow(6.26, encoder->quality * 0.01) * 1000);
-  //printf("bitrate: %d\n",bitrate);
-
-  cfg.rc_target_bitrate = bitrate;
+  cfg.rc_end_usage = AOM_Q;
   cfg.rc_min_quantizer = encoder->min_q;
   cfg.rc_max_quantizer = encoder->max_q;
   cfg.g_error_resilient = 0;
@@ -637,6 +631,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   }
 
   aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used);
+
+  int cq_level = ((100 - encoder->quality) * 63 + 50) / 100;
+  aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level);
 
   if (encoder->threads > 1) {
 #if defined(AV1E_SET_ROW_MT)
