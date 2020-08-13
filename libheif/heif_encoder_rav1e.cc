@@ -46,7 +46,6 @@ struct encoder_struct_rav1e
 
   int quality; // TODO: not sure yet how to map quality to min/max q
   int min_q;
-  int max_q;
   int threads;
 
   int tile_rows = 1; // 1,2,4,8,16,32,64
@@ -62,7 +61,6 @@ struct encoder_struct_rav1e
 
 
 static const char* kParam_min_q = "min-q";
-static const char* kParam_max_q = "max-q";
 static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
 
@@ -202,19 +200,6 @@ static void rav1e_init_parameters()
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
-  assert(i < MAX_NPARAMETERS);
-  p->version = 2;
-  p->name = kParam_max_q;
-  p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 255;
-  p->has_default = true;
-  p->integer.have_minimum_maximum = true;
-  p->integer.minimum = 0;
-  p->integer.maximum = 255;
-  p->integer.valid_values = NULL;
-  p->integer.num_valid_values = 0;
-  d[i++] = p++;
-
   d[i++] = nullptr;
 }
 
@@ -284,7 +269,6 @@ struct heif_error rav1e_set_parameter_lossless(void* encoder_raw, int enable)
 
   if (enable) {
     encoder->min_q = 0;
-    encoder->max_q = 0;
   }
 
   return heif_error_ok;
@@ -294,7 +278,7 @@ struct heif_error rav1e_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
 
-  *enable = (encoder->min_q == 0 && encoder->max_q == 0);
+  *enable = (encoder->min_q == 0);
 
   return heif_error_ok;
 }
@@ -343,7 +327,6 @@ struct heif_error rav1e_set_parameter_integer(void* encoder_raw, const char* nam
   }
 
   set_value(kParam_min_q, min_q);
-  set_value(kParam_max_q, max_q);
   set_value(kParam_threads, threads);
   set_value(kParam_speed, speed);
   set_value("tile-rows", tile_rows);
@@ -364,7 +347,6 @@ struct heif_error rav1e_get_parameter_integer(void* encoder_raw, const char* nam
   }
 
   get_value(kParam_min_q, min_q);
-  get_value(kParam_max_q, max_q);
   get_value(kParam_threads, threads);
   get_value(kParam_speed, speed);
   get_value("tile-rows", tile_rows);
@@ -555,7 +537,10 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   if (rav1e_config_parse_int(rav1eConfig.get(), "min_quantizer", encoder->min_q) == -1) {
     return heif_error_codec_library_error;
   }
-  if (rav1e_config_parse_int(rav1eConfig.get(), "quantizer", encoder->max_q) == -1) {
+
+  int base_quantizer = ((100 - encoder->quality) * 255 + 50)/100;
+
+  if (rav1e_config_parse_int(rav1eConfig.get(), "quantizer", base_quantizer) == -1) {
     return heif_error_codec_library_error;
   }
 
