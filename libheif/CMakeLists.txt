@@ -8,6 +8,7 @@ set(libheif_headers
     error.h
     heif_api_structs.h
     heif_context.h
+    heif_cxx.h
     heif_file.h
     heif.h
     heif_image.h
@@ -71,6 +72,7 @@ if(LIBDE265_FOUND)
         set(LIBDE265_LINKDIR "-L${LIBDE265_LIBRARY_DIRS}")
     endif()
 
+    include_directories(SYSTEM ${LIBDE265_INCLUDE_DIR})
     target_link_libraries(heif PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 
     install(FILES heif_decoder_libde265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
@@ -82,12 +84,14 @@ if(X265_FOUND)
         heif_encoder_x265.cc
         heif_encoder_x265.h
     )
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${X265_CFLAGS}")
 
     if (NOT "${X265_LIBRARY_DIRS}" STREQUAL "")
         set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
     endif()
 
+    include_directories(SYSTEM ${X265_INCLUDE_DIR})
     target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
 
     install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
