@@ -624,6 +624,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   cfg.g_error_resilient = 0;
   cfg.g_threads = encoder->threads;
 
+  if (chroma==heif_chroma_monochrome) {
+    cfg.monochrome = 1;
+  }
 
   // --- initialize codec
 
