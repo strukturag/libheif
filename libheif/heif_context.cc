@@ -1293,12 +1293,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     int bpp_c1 = 8;
     int bpp_c2 = 8;
 
-    if (pixi) {
-      if (pixi->get_num_channels() < 3) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_pixi_box,
-                     "No pixi information for chroma channels.");
-      }
+    // there are broken files that save only a one-channel pixi for an RGB image (issue #283)
+    if (pixi && pixi->get_num_channels() == 3) {
 
       bpp_c1 = pixi->get_bits_per_channel(1);
       bpp_c2 = pixi->get_bits_per_channel(2);
