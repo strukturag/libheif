@@ -88,6 +88,11 @@ func CheckHeifImage(t *testing.T, handle *ImageHandle, thumbnail bool) {
 		} else {
 			img.GetColorspace()
 			img.GetChromaFormat()
+
+			if _, err := img.GetImage(); err != nil {
+				t.Errorf("Could not get image with %v /%v: %s", test.colorspace, test.chroma, err)
+				continue
+			}
 		}
 	}
 }
