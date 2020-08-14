@@ -827,6 +827,63 @@ func (img *Image) GetImage() (image.Image, error) {
 					},
 				},
 			}
+		case ChromaInterleavedRRGGBB_BE:
+			rgb, err := img.GetPlane(ChannelInterleaved)
+			if err != nil {
+				return nil, err
+			}
+			width := img.GetWidth(ChannelInterleaved)
+			height := img.GetHeight(ChannelInterleaved)
+			rgba := make([]byte, width*height*8)
+			read_pos := 0
+			write_pos := 0
+			stride_add := rgb.Stride - width*6
+			for y := 0; y < height; y++ {
+				for x := 0; x < width; x++ {
+					rgba[write_pos] = rgb.Plane[read_pos]
+					rgba[write_pos+1] = rgb.Plane[read_pos+1]
+					rgba[write_pos+2] = rgb.Plane[read_pos+2]
+					rgba[write_pos+3] = rgb.Plane[read_pos+3]
+					rgba[write_pos+4] = rgb.Plane[read_pos+4]
+					rgba[write_pos+5] = rgb.Plane[read_pos+5]
+					read_pos += 6
+					write_pos += 8
+				}
+				read_pos += stride_add
+			}
+			i = &image.RGBA64{
+				Pix:    rgba,
+				Stride: width * 4,
+				Rect: image.Rectangle{
+					Min: image.Point{
+						X: 0,
+						Y: 0,
+					},
+					Max: image.Point{
+						X: width,
+						Y: height,
+					},
+				},
+			}
+		case ChromaInterleavedRRGGBBAA_BE:
+			rgba, err := img.GetPlane(ChannelInterleaved)
+			if err != nil {
+				return nil, err
+			}
+			i = &image.RGBA64{
+				Pix:    rgba.Plane,
+				Stride: rgba.Stride,
+				Rect: image.Rectangle{
+					Min: image.Point{
+						X: 0,
+						Y: 0,
+					},
+					Max: image.Point{
+						X: img.GetWidth(ChannelInterleaved),
+						Y: img.GetHeight(ChannelInterleaved),
+					},
+				},
+			}
 		default:
 			return nil, fmt.Errorf("Unsupported RGB chroma format: %v", cf)
 		}
