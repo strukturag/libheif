@@ -743,9 +743,11 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
 // and bit depths.
 
-// Note: when converting images to colorspace_RGB/chroma_interleaved_24bit, the resulting
-// image contains only a single channel of type channel_interleaved with 3 bytes per pixel,
+// Note: when converting images to an interleaved chroma format, the resulting
+// image contains only a single channel of type channel_interleaved with, e.g., 3 bytes per pixel,
 // containing the interleaved R,G,B values.
+
+// Planar RGB images are specified as heif_colorspace_RGB / heif_chroma_444.
 
 enum heif_compression_format
 {
