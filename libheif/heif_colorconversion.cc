@@ -2924,6 +2924,23 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
                                                          std::shared_ptr<const color_profile_nclx> target_profile,
                                                          int output_bpp)
 {
+  // --- check that input image is valid
+
+  int width = input->get_width();
+  int height = input->get_width();
+
+  // alpha image should have full image resolution
+
+  if (input->has_channel(heif_channel_Alpha)) {
+    if (input->get_width(heif_channel_Alpha) != width ||
+        input->get_height(heif_channel_Alpha) != height) {
+      return nullptr;
+    }
+  }
+
+
+  // --- prepare conversion
+
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
