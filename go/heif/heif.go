@@ -750,6 +750,7 @@ func (img *Image) GetImage() (image.Image, error) {
 					rgba[write_pos] = r.Plane[read_pos_r]
 					rgba[write_pos+1] = g.Plane[read_pos_g]
 					rgba[write_pos+2] = b.Plane[read_pos_b]
+					rgba[write_pos+3] = 0xff
 					read_pos_r++
 					read_pos_g++
 					read_pos_b++
@@ -789,6 +790,7 @@ func (img *Image) GetImage() (image.Image, error) {
 					rgba[write_pos] = rgb.Plane[read_pos]
 					rgba[write_pos+1] = rgb.Plane[read_pos+1]
 					rgba[write_pos+2] = rgb.Plane[read_pos+2]
+					rgba[write_pos+3] = 0xff
 					read_pos += 3
 					write_pos += 4
 				}
@@ -846,6 +848,8 @@ func (img *Image) GetImage() (image.Image, error) {
 					rgba[write_pos+3] = rgb.Plane[read_pos+3]
 					rgba[write_pos+4] = rgb.Plane[read_pos+4]
 					rgba[write_pos+5] = rgb.Plane[read_pos+5]
+					rgba[write_pos+6] = 0xff
+					rgba[write_pos+7] = 0xff
 					read_pos += 6
 					write_pos += 8
 				}
