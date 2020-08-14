@@ -910,15 +910,15 @@ type ImageAccess struct {
 func (i *ImageAccess) setData(data []byte, stride int) {
 	// Handle common case directly
 	if stride == i.Stride {
-		i.Plane = data
-		i.planePtr = unsafe.Pointer(&i.Plane[0])
-		return
-	}
-
-	for y := 0; y < i.height; y++ {
-		dstP := uintptr(i.planePtr) + uintptr(y*i.Stride)
-		srcP := uintptr(unsafe.Pointer(&data[0])) + uintptr(y*stride)
-		C.memcpy(unsafe.Pointer(dstP), unsafe.Pointer(srcP), C.size_t(stride))
+		dstP := uintptr(i.planePtr)
+		srcP := uintptr(unsafe.Pointer(&data[0]))
+		C.memcpy(unsafe.Pointer(dstP), unsafe.Pointer(srcP), C.size_t(i.height*stride))
+	} else {
+		for y := 0; y < i.height; y++ {
+			dstP := uintptr(i.planePtr) + uintptr(y*i.Stride)
+			srcP := uintptr(unsafe.Pointer(&data[0])) + uintptr(y*stride)
+			C.memcpy(unsafe.Pointer(dstP), unsafe.Pointer(srcP), C.size_t(stride))
+		}
 	}
 	i.Plane = C.GoBytes(i.planePtr, C.int(i.height*i.Stride))
 }
@@ -993,57 +993,31 @@ func freeHeifEncodingOptions(options *EncodingOptions) {
 	options.options = nil
 }
 
-func imageFromNRGBA(i *image.NRGBA) (*Image, error) {
+func imageFromRGBA(i *image.RGBA) (*Image, error) {
+	min := i.Bounds().Min
 	max := i.Bounds().Max
-	w, h := max.X, max.Y
+	w := max.X - min.X
+	h := max.Y - min.Y
 
-	hasAlpha := func(i *image.NRGBA) bool {
-		rect := i.Rect
-		if rect.Empty() {
-			return true
-		}
-
-		for y := rect.Min.Y; y < rect.Max.Y; y++ {
-			for x := rect.Min.X; x < rect.Max.X; x++ {
-				o := i.PixOffset(x, y)
-				if i.Pix[o+3] == 0xff {
-					return true
-				}
-			}
-		}
-		return false
-	}
-
-	var cm Chroma
-	var depth int
-	var stride int
-	if hasAlpha(i) {
-		cm = ChromaInterleavedRGBA
-		depth = 32
-		stride = w * 4
-	} else {
-		cm = ChromaInterleavedRGB
-		depth = 64
-		stride = w * 3
-	}
-
-	out, err := NewImage(w, h, ColorspaceRGB, cm)
+	out, err := NewImage(w, h, ColorspaceRGB, ChromaInterleavedRGBA)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create image: %v", err)
 	}
 
-	p, err := out.NewPlane(ChannelInterleaved, w, h, depth)
+	p, err := out.NewPlane(ChannelInterleaved, w, h, 8)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add plane: %v", err)
 	}
-	p.setData([]byte(i.Pix), stride)
+	p.setData([]byte(i.Pix), w*4)
 
 	return out, nil
 }
 
 func imageFromGray(i *image.Gray) (*Image, error) {
+	min := i.Bounds().Min
 	max := i.Bounds().Max
-	w, h := max.X, max.Y
+	w := max.X - min.X
+	h := max.Y - min.Y
 
 	out, err := NewImage(w, h, ColorspaceYCbCr, ChromaMonochrome)
 	if err != nil {
@@ -1061,8 +1035,10 @@ func imageFromGray(i *image.Gray) (*Image, error) {
 }
 
 func imageFromYCbCr(i *image.YCbCr) (*Image, error) {
+	min := i.Bounds().Min
 	max := i.Bounds().Max
-	w, h := max.X, max.Y
+	w := max.X - min.X
+	h := max.Y - min.Y
 
 	var cm Chroma
 	switch sr := i.SubsampleRatio; sr {
@@ -1106,8 +1082,8 @@ func EncodeFromImage(img image.Image, compression Compression, quality int, loss
 	switch i := img.(type) {
 	default:
 		return nil, fmt.Errorf("unsupported image type: %T", i)
-	case *image.NRGBA:
-		tmp, err := imageFromNRGBA(i)
+	case *image.RGBA:
+		tmp, err := imageFromRGBA(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create image: %v", err)
 		}
