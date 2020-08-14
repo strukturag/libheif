@@ -943,6 +943,7 @@ int main(int argc, char** argv)
         break;
       case 'b':
         output_bit_depth = atoi(optarg);
+        break;
       case 'A':
         enc_av1f = true;
         break;
