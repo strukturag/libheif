@@ -1967,7 +1967,7 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
       uint8_t r = p[0];
       uint8_t g = p[1];
       uint8_t b = p[2];
-      p += bytes_per_pixel*2;
+      p += bytes_per_pixel * 2;
 
       float cb = r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2];
       float cr = r * coeffs.c[2][0] + g * coeffs.c[2][1] + b * coeffs.c[2][2];
@@ -1977,8 +1977,8 @@ Op_RGB24_32_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixe
         out_cr[(y / 2) * out_cr_stride + (x / 2)] = clip(cr + 128);
       }
       else {
-        out_cb[(y / 2) * out_cb_stride + (x / 2)] = (uint8_t)clip(cb*0.875f + 128.0f);
-        out_cr[(y / 2) * out_cr_stride + (x / 2)] = (uint8_t)clip(cr*0.875f + 128.0f);
+        out_cb[(y / 2) * out_cb_stride + (x / 2)] = (uint8_t) clip(cb * 0.875f + 128.0f);
+        out_cr[(y / 2) * out_cr_stride + (x / 2)] = (uint8_t) clip(cr * 0.875f + 128.0f);
       }
     }
   }
@@ -2938,6 +2938,16 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
     }
   }
 
+  // check for valid target YCbCr chroma formats
+
+  if (target_colorspace == heif_colorspace_YCbCr) {
+    if (target_chroma != heif_chroma_monochrome &&
+        target_chroma != heif_chroma_420 &&
+        target_chroma != heif_chroma_422 &&
+        target_chroma != heif_chroma_444) {
+      return nullptr;
+    }
+  }
 
   // --- prepare conversion
 
