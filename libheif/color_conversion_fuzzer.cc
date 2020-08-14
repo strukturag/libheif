@@ -170,15 +170,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
           break;
         case heif_chroma_422:
           if (!read_plane(&range, in_image, heif_channel_Y,
-                          width, height / 2, bit_depth)) {
+                          width, height, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cb,
-                          width / 2, height / 2, bit_depth)) {
+                          width / 2, height, bit_depth)) {
             return 0;
           }
           if (!read_plane(&range, in_image, heif_channel_Cr,
-                          width / 2, height / 2, bit_depth)) {
+                          width / 2, height, bit_depth)) {
             return 0;
           }
           break;
