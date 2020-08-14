@@ -137,7 +137,8 @@ cargo install --force cbindgen
 * Make sure that the `cbindgen` executable is found. You probably have to add `~/.cargo/bin` to your `$PATH`.
 * Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
 
-The rav1e encoder plugin is currently only compiled when using the CMake build system.
+When using cmake, you have to enable compiling in the local rav1e encoder with `USE_LOCAL_RAV1E'.
+With autoconf, use the configure option `--enable-local-rav1e'.
 
 
 ## Compiling to JavaScript
