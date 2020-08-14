@@ -504,6 +504,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
+  int bpp_y = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
+
   // --- copy libheif image to aom image
 
   aom_image_t input_image;
@@ -526,11 +528,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       break;
   }
 
-  /*
-    if (bpp > 8) {
-        img_format |= AOM_IMG_FMT_HIGHBITDEPTH;
-    }
-  */
+  if (bpp_y > 8) {
+    img_format = (aom_img_fmt_t) (img_format | AOM_IMG_FMT_HIGHBITDEPTH);
+  }
 
   if (!aom_img_alloc(&input_image, img_format,
                      source_width, source_height, 1)) {
@@ -545,7 +545,17 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     const int stride = input_image.stride[plane];
 
     if (chroma == heif_chroma_monochrome && plane != 0) {
-      memset(buf, 128, source_height * stride);
+      if (bpp_y==8) {
+        memset(buf, 128, source_height * stride);
+      }
+      else {
+        uint16_t* buf16 = (uint16_t*)buf;
+        uint16_t half_range = (uint16_t)(1<<(bpp_y-1));
+        for (int i=0;i<source_height * stride/2;i++) {
+          buf16[i] = half_range;
+        }
+      }
+
       continue;
     }
 
@@ -562,8 +572,12 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     int h = source_height;
 
     if (plane != 0) {
-      if (chroma != heif_chroma_444) { w = (w+1)/2; }
-      if (chroma == heif_chroma_420) { h = (h+1)/2; }
+      if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
+      if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+    }
+
+    if (bpp_y > 8) {
+      w *= 2;
     }
 
     for (int y = 0; y < h; y++) {
@@ -611,6 +625,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   cfg.g_h = source_height;
 
   cfg.g_profile = inout_config.seq_profile;
+  cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
+  cfg.g_input_bit_depth = bpp_y;
 
   cfg.rc_end_usage = AOM_Q;
   cfg.rc_min_quantizer = encoder->min_q;
@@ -618,13 +634,18 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   cfg.g_error_resilient = 0;
   cfg.g_threads = encoder->threads;
 
-  if (chroma==heif_chroma_monochrome) {
+  if (chroma == heif_chroma_monochrome) {
     cfg.monochrome = 1;
   }
 
   // --- initialize codec
 
-  if (aom_codec_enc_init(&codec, iface, &cfg, 0)) {
+  aom_codec_flags_t encoder_flags = 0;
+  if (bpp_y > 8) {
+    encoder_flags = (aom_codec_flags_t) (encoder_flags | AOM_CODEC_USE_HIGHBITDEPTH);
+  }
+
+  if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     printf("Failed to initialize encoder\n");
     assert(0);
     // TODO
