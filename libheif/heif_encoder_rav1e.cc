@@ -581,35 +581,9 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   auto rav1eFrame = std::shared_ptr<RaFrame>(rav1eFrameRaw, [](RaFrame* frm) { rav1e_frame_unref(frm); });
 
   int byteWidth = (bitDepth > 8) ? 2 : 1;
-  if (input_class == heif_image_input_class_alpha) {
-    int stride;
-    const uint8_t* a = image->image->get_plane(heif_channel_Y, &stride);
-
-    rav1e_frame_fill_plane(rav1eFrame.get(), 0, a,
-                           stride * image->image->get_height(), stride, byteWidth);
-
-    int w = image->image->get_width();
-    int h = image->image->get_height();
-
-    if (bitDepth == 8) {
-      std::vector<uint8_t> dummy(w * h);
-      memset(dummy.data(), 128, w * h);
-
-      rav1e_frame_fill_plane(rav1eFrame.get(), 1, dummy.data(), w * h, w, byteWidth);
-      rav1e_frame_fill_plane(rav1eFrame.get(), 2, dummy.data(), w * h, w, byteWidth);
-    }
-    else {
-      std::vector<uint16_t> dummy(w * h);
-      int halfRange = 1<<(bitDepth-1);
-      for (int i=0;i<w*h;i++) {
-        dummy[i] = halfRange;
-      }
-
-      rav1e_frame_fill_plane(rav1eFrame.get(), 1, (uint8_t*)dummy.data(), w * h*2, w*2, byteWidth);
-      rav1e_frame_fill_plane(rav1eFrame.get(), 2, (uint8_t*)dummy.data(), w * h*2, w*2, byteWidth);
-    }
-  }
-  else {
+  // if (input_class == heif_image_input_class_alpha) {
+  //} else
+  {
     int strideY;
     const uint8_t* Y = image->image->get_plane(heif_channel_Y, &strideY);
     int strideCb;
