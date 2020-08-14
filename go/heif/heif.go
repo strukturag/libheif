@@ -722,6 +722,92 @@ func (img *Image) GetImage() (image.Image, error) {
 		}
 	case ColorspaceRGB:
 		switch cf {
+		case Chroma444:
+			r, err := img.GetPlane(ChannelR)
+			if err != nil {
+				return nil, err
+			}
+			g, err := img.GetPlane(ChannelG)
+			if err != nil {
+				return nil, err
+			}
+			b, err := img.GetPlane(ChannelB)
+			if err != nil {
+				return nil, err
+			}
+			width := img.GetWidth(ChannelR)
+			height := img.GetHeight(ChannelR)
+			rgba := make([]byte, width*height*4)
+			read_pos_r := 0
+			read_pos_g := 0
+			read_pos_b := 0
+			write_pos := 0
+			stride_add_r := r.Stride - width
+			stride_add_g := g.Stride - width
+			stride_add_b := b.Stride - width
+			for y := 0; y < height; y++ {
+				for x := 0; x < width; x++ {
+					rgba[write_pos] = r.Plane[read_pos_r]
+					rgba[write_pos+1] = g.Plane[read_pos_g]
+					rgba[write_pos+2] = b.Plane[read_pos_b]
+					read_pos_r++
+					read_pos_g++
+					read_pos_b++
+					write_pos += 4
+				}
+				read_pos_r += stride_add_r
+				read_pos_g += stride_add_g
+				read_pos_b += stride_add_b
+			}
+			i = &image.RGBA{
+				Pix:    rgba,
+				Stride: width * 4,
+				Rect: image.Rectangle{
+					Min: image.Point{
+						X: 0,
+						Y: 0,
+					},
+					Max: image.Point{
+						X: width,
+						Y: height,
+					},
+				},
+			}
+		case ChromaInterleavedRGB:
+			rgb, err := img.GetPlane(ChannelInterleaved)
+			if err != nil {
+				return nil, err
+			}
+			width := img.GetWidth(ChannelInterleaved)
+			height := img.GetHeight(ChannelInterleaved)
+			rgba := make([]byte, width*height*4)
+			read_pos := 0
+			write_pos := 0
+			stride_add := rgb.Stride - width*3
+			for y := 0; y < height; y++ {
+				for x := 0; x < width; x++ {
+					rgba[write_pos] = rgb.Plane[read_pos]
+					rgba[write_pos+1] = rgb.Plane[read_pos+1]
+					rgba[write_pos+2] = rgb.Plane[read_pos+2]
+					read_pos += 3
+					write_pos += 4
+				}
+				read_pos += stride_add
+			}
+			i = &image.RGBA{
+				Pix:    rgba,
+				Stride: width * 4,
+				Rect: image.Rectangle{
+					Min: image.Point{
+						X: 0,
+						Y: 0,
+					},
+					Max: image.Point{
+						X: width,
+						Y: height,
+					},
+				},
+			}
 		case ChromaInterleavedRGBA:
 			rgba, err := img.GetPlane(ChannelInterleaved)
 			if err != nil {
