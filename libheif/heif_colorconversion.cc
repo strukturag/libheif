@@ -2029,7 +2029,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
   if (!target_state.nclx_profile) {
     return {};
   }
-  
+
   if (target_state.nclx_profile->get_matrix_coefficients() != 0) {
     return {};
   }
@@ -2927,7 +2927,7 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   // --- check that input image is valid
 
   int width = input->get_width();
-  int height = input->get_width();
+  int height = input->get_height();
 
   // alpha image should have full image resolution
 
