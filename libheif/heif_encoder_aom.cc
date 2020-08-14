@@ -653,7 +653,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     assert(0);
   }
 
-
+  encoder->compressedData.clear();
   const aom_codec_cx_pkt_t* pkt = NULL;
 
   while ((pkt = aom_codec_get_cx_data(&codec, &iter)) != NULL) {
@@ -672,7 +672,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       encoder->compressedData.resize(oldSize + n);
 
       memcpy(encoder->compressedData.data() + oldSize,
-             (uint8_t*) pkt->data.frame.buf,
+             pkt->data.frame.buf,
              n);
 
       encoder->data_read = false;
