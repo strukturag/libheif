@@ -92,7 +92,7 @@ namespace heif {
                              heif_channel src_channel,
                              heif_channel dst_channel);
 
-    void fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height);
+    void fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
 
     void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                       heif_channel src_channel,

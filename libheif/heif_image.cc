@@ -370,16 +370,31 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
   }
 }
 
-void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint8_t value, int width, int height)
+void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp)
 {
-  add_plane(dst_channel, width, height, 8);
+  add_plane(dst_channel, width, height, bpp);
 
-  uint8_t* dst;
-  int dst_stride = 0;
-  dst = get_plane(dst_channel, &dst_stride);
+  if (bpp==8) {
+    uint8_t* dst;
+    int dst_stride = 0;
+    dst = get_plane(dst_channel, &dst_stride);
 
-  for (int y = 0; y < height; y++) {
-    memset(dst + y * dst_stride, value, width);
+    for (int y = 0; y < height; y++) {
+      memset(dst + y * dst_stride, value, width);
+    }
+  }
+  else {
+    uint16_t* dst;
+    int dst_stride = 0;
+    dst = (uint16_t*)get_plane(dst_channel, &dst_stride);
+
+    dst_stride /= 2;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        dst[y*dst_stride+x] = value;
+      }
+    }
   }
 }
 

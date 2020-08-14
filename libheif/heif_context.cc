@@ -1618,8 +1618,12 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
   alpha_image->create(image->get_width(), image->get_height(),
                       heif_colorspace_YCbCr, heif_chroma_420);
   alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
-  alpha_image->fill_new_plane(heif_channel_Cb, 128, chroma_width, chroma_height);
-  alpha_image->fill_new_plane(heif_channel_Cr, 128, chroma_width, chroma_height);
+
+  int bpp = image->get_bits_per_pixel(heif_channel_Alpha);
+  int half_range = 1<<(bpp-1);
+
+  alpha_image->fill_new_plane(heif_channel_Cb, half_range, chroma_width, chroma_height, bpp);
+  alpha_image->fill_new_plane(heif_channel_Cr, half_range, chroma_width, chroma_height, bpp);
 
   return alpha_image;
 }
