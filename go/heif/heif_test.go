@@ -36,6 +36,11 @@ func TestGetVersion(t *testing.T) {
 	}
 }
 
+type decodeTest struct {
+	colorspace Colorspace
+	chroma     Chroma
+}
+
 func CheckHeifImage(t *testing.T, handle *ImageHandle, thumbnail bool) {
 	handle.GetWidth()
 	handle.GetHeight()
@@ -65,6 +70,25 @@ func CheckHeifImage(t *testing.T, handle *ImageHandle, thumbnail bool) {
 	} else {
 		img.GetColorspace()
 		img.GetChromaFormat()
+	}
+
+	decodeTests := []decodeTest{
+		decodeTest{ColorspaceYCbCr, Chroma420},
+		decodeTest{ColorspaceYCbCr, Chroma422},
+		decodeTest{ColorspaceYCbCr, Chroma444},
+		decodeTest{ColorspaceRGB, Chroma444},
+		decodeTest{ColorspaceRGB, ChromaInterleavedRGB},
+		decodeTest{ColorspaceRGB, ChromaInterleavedRGBA},
+		decodeTest{ColorspaceRGB, ChromaInterleavedRRGGBB_BE},
+		decodeTest{ColorspaceRGB, ChromaInterleavedRRGGBBAA_BE},
+	}
+	for _, test := range decodeTests {
+		if img, err := handle.DecodeImage(test.colorspace, test.chroma, nil); err != nil {
+			t.Errorf("Could not decode image with %v / %v: %s", test.colorspace, test.chroma, err)
+		} else {
+			img.GetColorspace()
+			img.GetChromaFormat()
+		}
 	}
 }
 
