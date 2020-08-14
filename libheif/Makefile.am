@@ -21,6 +21,10 @@ if HAVE_X265
 ADDITIONAL_LIBS += $(x265_LIBS)
 endif
 
+if ENABLE_LOCAL_RAV1E
+ADDITIONAL_LIBS += ../third-party/rav1e/target/release/librav1e.a
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -32,6 +36,10 @@ libheif_la_CXXFLAGS = \
   $(x265_CFLAGS) \
   -DLIBHEIF_EXPORTS -I$(top_srcdir)
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
+
+if ENABLE_LOCAL_RAV1E
+libheif_la_CXXFLAGS += -I../third-party/rav1e/target/release/include
+endif
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
 if MINGW
@@ -81,6 +89,12 @@ if HAVE_LIBDE265
 libheif_la_SOURCES += \
   heif_decoder_libde265.cc \
   heif_decoder_libde265.h
+endif
+
+if ENABLE_LOCAL_RAV1E
+libheif_la_SOURCES += \
+  heif_encoder_rav1e.cc \
+  heif_encoder_rav1e.h
 endif
 
 

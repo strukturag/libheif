@@ -189,6 +189,16 @@ if eval "test x$have_gdkpixbuf2 = xyes"; then
     AC_SUBST([gdk_pixbuf_cache_file])
 fi
 
+AC_ARG_ENABLE([local_rav1e], AS_HELP_STRING([--enable-local-rav1e],
+    [Enable compiling with local rav1e encoder.]), [], [enable_local_rav1e=no])
+if eval "test x$enable_local_rav1e != xno"; then
+    AC_MSG_NOTICE([Enable compiling with local rav1e])
+    AC_DEFINE([HAVE_RAV1E], [1], [Whether rav1e plugin has been enabled.])
+fi
+AM_CONDITIONAL([ENABLE_LOCAL_RAV1E], [test "x$enable_local_rav1e" != "xno"])
+AC_SUBST(ENABLE_LOCAL_RAV1E)
+
+
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
     [Enable fuzzing with libFuzzer.]), [], [enable_libfuzzer=no])
 if eval "test x$enable_libfuzzer != xno"; then
@@ -226,6 +236,7 @@ AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
 AC_MSG_NOTICE([libaom decoder: $have_aom])
 AC_MSG_NOTICE([libaom encoder: $have_aom])
+AC_MSG_NOTICE([rav1e encoder: $enable_local_rav1e])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
