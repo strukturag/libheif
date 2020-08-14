@@ -545,7 +545,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     const int stride = input_image.stride[plane];
 
     if (chroma == heif_chroma_monochrome && plane != 0) {
-      memset(buf, 128, source_height);
+      memset(buf, 128, source_height * stride);
       continue;
     }
 
