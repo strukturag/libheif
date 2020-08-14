@@ -1730,6 +1730,8 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 
   m_heif_file->set_brand(encoder->plugin->compression_format);
 
+  m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
+
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC: {
       heif_item_id image_id = m_heif_file->add_new_image("hvc1");

@@ -34,6 +34,7 @@
 #include <limits>
 #include <istream>
 #include <bitset>
+#include <utility>
 
 #include "error.h"
 #include "heif.h"
@@ -303,6 +304,8 @@ namespace heif {
     { m_handler_type = handler; }
 
     Error write(StreamWriter& writer) const override;
+
+    void set_name(std::string name) { m_name = std::move(name); }
 
   protected:
     Error parse(BitstreamRange& range) override;

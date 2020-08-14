@@ -812,3 +812,11 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
   int index = m_ipco_box->append_child_box(colr);
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
+
+
+void HeifFile::set_hdlr_library_info(std::string encoder_plugin_version)
+{
+  std::stringstream sstr;
+  sstr << "libheif (" << LIBHEIF_VERSION << ") / " << encoder_plugin_version;
+  m_hdlr_box->set_name(sstr.str());
+}

@@ -150,6 +150,8 @@ namespace heif {
 
     void set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile> profile);
 
+    void set_hdlr_library_info(std::string encoder_plugin_version);
+
   private:
 #if ENABLE_PARALLEL_TILE_DECODING
     mutable std::mutex m_read_mutex;
