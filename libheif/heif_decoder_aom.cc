@@ -93,6 +93,8 @@ struct heif_error aom_new_decoder(void** dec)
   if (aomerr) {
     *dec = NULL;
 
+    delete decoder;
+
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
     return err;
   }
