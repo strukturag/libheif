@@ -20,11 +20,17 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
 INSTALL_PACKAGES=
 REMOVE_PACKAGES=
-BUILD_ROOT=$TRAVIS_BUILD_DIR
+BUILD_ROOT=$ROOT/..
 UPDATE_APT=
 ADD_LIBHEIF_PPA=
+CURRENT_BRANCH=$TRAVIS_BRANCH
+if [ -z "$CURRENT_BRANCH" ]; then
+    CURRENT_BRANCH=${GITHUB_REF##*/}
+fi
 
 if [ "$WITH_LIBDE265" = "1" ]; then
     echo "Adding PPA strukturag/libde265 ..."
@@ -47,7 +53,7 @@ if [ "$WITH_LIBDE265" = "2" ]; then
         --disable-hdrcopy \
         --disable-enc265 \
         --disable-acceleration_speed
-    make && make install
+    make -j $(nproc) && make -j $(nproc) install
     popd
 fi
 
@@ -66,9 +72,8 @@ if [ "$WITH_X265" = "1" ]; then
 fi
 
 if [ ! -z "$CHECK_LICENSES" ]; then
-    INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        devscripts \
-        "
+    sudo curl --location --output /usr/bin/licensecheck "https://github.com/Debian/devscripts/raw/v2.16.5/scripts/licensecheck.pl"
+    sudo chmod a+x /usr/bin/licensecheck
 fi
 
 if [ -z "$WITH_GRAPHICS" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ]; then
@@ -86,27 +91,24 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
-if [ ! -z "$MINGW32" ]; then
+if [ "$MINGW" == "32" ]; then
+    sudo dpkg --add-architecture i386
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-i686 \
         g++-mingw-w64-i686 \
         gcc-mingw-w64-i686 \
         mingw-w64-i686-dev \
-        wine \
+        wine-stable \
+        wine32 \
         "
-elif [ ! -z "$MINGW64" ]; then
+    UPDATE_APT=1
+elif [ "$MINGW" == "64" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-x86-64 \
         g++-mingw-w64-x86-64 \
         gcc-mingw-w64-x86-64 \
         mingw-w64-x86-64-dev \
-        wine \
-        "
-fi
-
-if [ ! -z "$GO" ]; then
-    INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        golang \
+        wine-stable \
         "
 fi
 
@@ -141,7 +143,17 @@ if [ ! -z "$FUZZER" ]; then
     ./scripts/install-clang.sh "$BUILD_ROOT/clang"
 fi
 
-if [ "$TRAVIS_BRANCH" = "coverity" ]; then
+if [ "$CURRENT_BRANCH" = "coverity" ]; then
     echo "Installing coverity build tool ..."
     echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
+fi
+
+if [ "$MINGW" == "32" ]; then
+    if [ -x "/usr/bin/i686-w64-mingw32-g++-posix" ]; then
+        sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+    fi
+elif [ "$MINGW" == "64" ]; then
+    if [ -x "/usr/bin/x86_64-w64-mingw32-g++-posix" ]; then
+        sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+    fi
 fi

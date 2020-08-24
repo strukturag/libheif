@@ -9,6 +9,7 @@ set (heif_convert_sources
   heif_convert.cc
 )
 
+set (additional_link_directories)
 set (additional_libraries)
 set (additional_includes)
 
@@ -65,6 +66,10 @@ if(UNIX)
       encoder_png.cc
       encoder_png.h
     )
+    set (additional_link_directories
+      ${additional_link_directories}
+      ${LIBPNG_LIBRARY_DIRS}
+    )
     set (additional_libraries
       ${additional_libraries}
       ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES}
@@ -98,6 +103,7 @@ if(MSVC)
 endif()
 
 add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
+target_link_directories (heif-convert PRIVATE ${additional_link_directories})
 target_link_libraries (heif-convert heif ${additional_libraries})
 target_include_directories(heif-convert PRIVATE ${additional_includes})
 
@@ -105,6 +111,7 @@ add_executable (heif-info ${heif_info_sources} ${getopt_sources})
 target_link_libraries (heif-info heif)
 
 add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
+target_link_directories (heif-enc PRIVATE ${additional_link_directories})
 target_link_libraries (heif-enc heif ${additional_libraries})
 target_include_directories(heif-enc PRIVATE ${additional_includes})
 
@@ -122,6 +129,7 @@ if(LIBPNG_FOUND)
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
+  target_link_directories (heif-thumbnailer PRIVATE ${LIBPNG_LIBRARY_DIRS})
   target_link_libraries (heif-thumbnailer heif ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES})
   target_include_directories(heif-thumbnailer PRIVATE ${LIBPNG_INCLUDE_DIRS})
 endif()

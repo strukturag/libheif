@@ -20,7 +20,17 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-BUILD_ROOT=$TRAVIS_BUILD_DIR
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+BUILD_ROOT=$ROOT/..
+CURRENT_OS=$TRAVIS_OS_NAME
+if [ -z "$CURRENT_OS" ]; then
+    if [ "$(uname)" != "Darwin" ]; then
+        CURRENT_OS=linux
+    else
+        CURRENT_OS=osx
+    fi
+fi
 
 # Don't run regular tests on Coverity scan builds.
 if [ ! -z "${COVERITY_SCAN_BRANCH}" ]; then
@@ -46,20 +56,20 @@ fi
 
 BIN_SUFFIX=
 BIN_WRAPPER=
-if [ ! -z "$MINGW32" ]; then
+if [ "$MINGW" == "32" ]; then
     # Make sure the correct compiler will be used.
     unset CC
     unset CXX
     BIN_SUFFIX=.exe
     BIN_WRAPPER=wine
-    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/4.8/;/usr/i686-w64-mingw32/lib"
-elif [ ! -z "$MINGW64" ]; then
+    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/7.3-posix/;/usr/i686-w64-mingw32/lib"
+elif [ "$MINGW" == "64" ]; then
     # Make sure the correct compiler will be used.
     unset CC
     unset CXX
     BIN_SUFFIX=.exe
     BIN_WRAPPER=wine64
-    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/4.8/;/usr/x86_64-w64-mingw32/lib"
+    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/7.3-posix/;/usr/x86_64-w64-mingw32/lib"
 elif [ ! -z "$FUZZER" ]; then
     export CC="$BUILD_ROOT/clang/bin/clang"
     export CXX="$BUILD_ROOT/clang/bin/clang++"
@@ -67,13 +77,19 @@ fi
 
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
-    cmake .
+    CMAKE_OPTIONS=
+    if [ "$CURRENT_OS" = "osx" ] ; then
+        # Make sure the homebrew installed libraries are used when building instead
+        # of the libraries provided by Apple.
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+    fi
+    cmake . $CMAKE_OPTIONS
 fi
 
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
-    make
-    if [ "$TRAVIS_OS_NAME" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW32" ] && [ -z "$MINGW64" ] && [ -z "$FUZZER" ]; then
+    make -j $(nproc)
+    if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ]; then
         echo "Running tests ..."
         make test
     fi
@@ -114,7 +130,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
     fi
     if [ ! -z "$GO" ]; then
         echo "Installing library ..."
-        make install
+        make -j $(nproc) install
 
         echo "Running golang example ..."
         export GOPATH="$BUILD_ROOT/gopath"
@@ -147,11 +163,11 @@ if [ ! -z "$TARBALL" ]; then
     tar xf libheif-$VERSION.tar*
     pushd libheif-$VERSION
     ./configure
-    make
+    make -j $(nproc)
     popd
 fi
 
-if [ ! -z "$FUZZER" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
+if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
     ./libheif/file-fuzzer ./fuzzing/corpus/*
 

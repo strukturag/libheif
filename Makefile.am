@@ -15,7 +15,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libheif.pc
 
 EXTRA_DIST = \
-    .travis.yml \
+    .github/workflows/*.yml \
     appveyor.yml \
     autogen.sh \
     CMakeLists.txt \
