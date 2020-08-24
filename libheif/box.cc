@@ -2345,6 +2345,9 @@ int Box_clap::get_height_rounded() const
 void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
                    uint32_t image_width, uint32_t image_height)
 {
+  assert(image_width >= clap_width);
+  assert(image_height >= clap_height);
+
   m_clean_aperture_width = Fraction(clap_width, 1);
   m_clean_aperture_height = Fraction(clap_height, 1);
 
