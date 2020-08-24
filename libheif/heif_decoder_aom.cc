@@ -28,6 +28,7 @@
 #include <memory>
 #include <string.h>
 #include <stdio.h>
+#include <cassert>
 
 #include <aom/aom_decoder.h>
 #include <aom/aomdx.h>
@@ -183,6 +184,7 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
                                             chroma,
                                             &heif_img);
   if (err.code != heif_error_Ok) {
+    assert(heif_img==nullptr);
     return err;
   }
 
