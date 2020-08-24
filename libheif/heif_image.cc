@@ -132,10 +132,8 @@ static uint32_t rounded_size(uint32_t s)
 {
   s = (s + 1U) & ~1U;
 
-  // actually, I thought 64 would be enough, but x265 has some illegal memory accesses
-  // for smaller sizes
-  if (s < 96) {
-    s = 96;
+  if (s < 64) {
+    s = 64;
   }
 
   return s;

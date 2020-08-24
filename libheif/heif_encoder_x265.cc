@@ -631,10 +631,8 @@ static int rounded_size(int s)
 {
   s = (s + 1) & ~1;
 
-  // actually, I thought 64 would be enough, but x265 has some illegal memory accesses
-  // for smaller sizes
-  if (s < 96) {
-    s = 96;
+  if (s < 64) {
+    s = 64;
   }
 
   return s;
