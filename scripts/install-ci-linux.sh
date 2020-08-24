@@ -112,12 +112,6 @@ elif [ "$MINGW" == "64" ]; then
         "
 fi
 
-if [ ! -z "$GO" ]; then
-    INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        golang \
-        "
-fi
-
 if [ ! -z "$ADD_LIBHEIF_PPA" ]; then
     echo "Adding PPA strukturag/libheif ..."
     sudo add-apt-repository -y ppa:strukturag/libheif
