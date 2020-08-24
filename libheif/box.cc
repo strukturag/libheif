@@ -2351,8 +2351,8 @@ void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
   m_clean_aperture_width = Fraction(clap_width, 1);
   m_clean_aperture_height = Fraction(clap_height, 1);
 
-  m_horizontal_offset = Fraction(-(image_width - clap_width), 2);
-  m_vertical_offset = Fraction(-(image_height - clap_height), 2);
+  m_horizontal_offset = Fraction(-(int32_t)(image_width - clap_width), 2);
+  m_vertical_offset = Fraction(-(int32_t)(image_height - clap_height), 2);
 }
 
 
