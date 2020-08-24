@@ -21,7 +21,7 @@ set -eu
 #
 
 echo "Checking licenses..."
-CHECK_RESULT=`/usr/bin/licensecheck --recursive --ignore 'emscripten|libde265' .`
+CHECK_RESULT=`/usr/bin/licensecheck --recursive --ignore 'emscripten|libde265|README\.md|post\.js|/.git/' .`
 
 FOUND=
 while read -r line; do
@@ -31,7 +31,7 @@ while read -r line; do
         continue
     fi
 
-    if ( echo "$line" | grep -q "No copyright" ) || ( echo "$line" | grep -q "UNKNOWN" ); then
+    if ( echo "$line" | grep -q "UNKNOWN" ); then
         FILENAME=`echo "$line" | awk '{split($0,a,":");print a[1]}'`
         echo "ERROR: $line" >& 2
         FOUND=1

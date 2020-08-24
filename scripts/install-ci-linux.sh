@@ -72,9 +72,8 @@ if [ "$WITH_X265" = "1" ]; then
 fi
 
 if [ ! -z "$CHECK_LICENSES" ]; then
-    INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        devscripts \
-        "
+    sudo curl --location --output /usr/bin/licensecheck "https://github.com/Debian/devscripts/raw/v2.16.5/scripts/licensecheck.pl"
+    sudo chmod a+x /usr/bin/licensecheck
 fi
 
 if [ -z "$WITH_GRAPHICS" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ]; then
