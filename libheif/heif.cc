@@ -1309,7 +1309,9 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor* descriptor,
                                            struct heif_encoder** encoder)
 {
-  if (!context || !descriptor || !encoder) {
+  // Note: be aware that context may be NULL as we explicitly allowed that in an earlier documentation.
+
+  if (!descriptor || !encoder) {
     Error err(heif_error_Usage_error,
               heif_suberror_Null_pointer_argument);
     return err.error_struct(context ? context->context.get() : nullptr);
@@ -1338,7 +1340,9 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
                                                       enum heif_compression_format format,
                                                       struct heif_encoder** encoder)
 {
-  if (!context || !encoder) {
+  // Note: be aware that context may be NULL as we explicitly allowed that in an earlier documentation.
+
+  if (!encoder) {
     Error err(heif_error_Usage_error,
               heif_suberror_Null_pointer_argument);
     return err.error_struct(context ? context->context.get() : nullptr);
@@ -1354,7 +1358,7 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
   else {
     Error err(heif_error_Unsupported_filetype, // TODO: is this the right error code?
               heif_suberror_Unspecified);
-    return err.error_struct(context->context.get());
+    return err.error_struct(context ? context->context.get() : nullptr);
   }
 }
 
