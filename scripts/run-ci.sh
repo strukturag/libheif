@@ -77,7 +77,13 @@ fi
 
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
-    cmake .
+    CMAKE_OPTIONS=
+    if [ "$CURRENT_OS" = "osx" ] ; then
+        # Make sure the homebrew installed libraries are used when building instead
+        # of the libraries provided by Apple.
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+    fi
+    cmake . $CMAKE_OPTIONS
 fi
 
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
