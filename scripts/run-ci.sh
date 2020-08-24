@@ -82,7 +82,7 @@ fi
 
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
-    make
+    make -j $(nproc)
     if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ]; then
         echo "Running tests ..."
         make test
@@ -124,7 +124,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
     fi
     if [ ! -z "$GO" ]; then
         echo "Installing library ..."
-        make install
+        make -j $(nproc) install
 
         echo "Running golang example ..."
         export GOPATH="$BUILD_ROOT/gopath"
@@ -157,7 +157,7 @@ if [ ! -z "$TARBALL" ]; then
     tar xf libheif-$VERSION.tar*
     pushd libheif-$VERSION
     ./configure
-    make
+    make -j $(nproc)
     popd
 fi
 

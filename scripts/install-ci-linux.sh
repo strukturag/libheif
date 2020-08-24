@@ -53,7 +53,7 @@ if [ "$WITH_LIBDE265" = "2" ]; then
         --disable-hdrcopy \
         --disable-enc265 \
         --disable-acceleration_speed
-    make && make install
+    make -j $(nproc) && make -j $(nproc) install
     popd
 fi
 
