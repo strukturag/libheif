@@ -29,9 +29,9 @@ if [ "$WITH_LIBDE265" = "2" ]; then
 fi
 
 CONFIGURE_HOST=
-if [ ! -z "$MINGW32" ]; then
+if [ "$MINGW" == "32" ]; then
     CONFIGURE_HOST=i686-w64-mingw32
-elif [ ! -z "$MINGW64" ]; then
+elif [ "$MINGW" == "64" ]; then
     CONFIGURE_HOST=x86_64-w64-mingw32
 fi
 

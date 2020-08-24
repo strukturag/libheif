@@ -91,21 +91,24 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
-if [ ! -z "$MINGW32" ]; then
+if [ "$MINGW" == "32" ]; then
+    sudo dpkg --add-architecture i386
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-i686 \
         g++-mingw-w64-i686 \
         gcc-mingw-w64-i686 \
         mingw-w64-i686-dev \
-        wine \
+        wine-stable \
+        wine32 \
         "
-elif [ ! -z "$MINGW64" ]; then
+    UPDATE_APT=1
+elif [ "$MINGW" == "64" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-x86-64 \
         g++-mingw-w64-x86-64 \
         gcc-mingw-w64-x86-64 \
         mingw-w64-x86-64-dev \
-        wine \
+        wine-stable \
         "
 fi
 
@@ -149,4 +152,14 @@ fi
 if [ "$CURRENT_BRANCH" = "coverity" ]; then
     echo "Installing coverity build tool ..."
     echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
+fi
+
+if [ "$MINGW" == "32" ]; then
+    if [ -x "/usr/bin/i686-w64-mingw32-g++-posix" ]; then
+        sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+    fi
+elif [ "$MINGW" == "64" ]; then
+    if [ -x "/usr/bin/x86_64-w64-mingw32-g++-posix" ]; then
+        sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+    fi
 fi

@@ -56,20 +56,20 @@ fi
 
 BIN_SUFFIX=
 BIN_WRAPPER=
-if [ ! -z "$MINGW32" ]; then
+if [ "$MINGW" == "32" ]; then
     # Make sure the correct compiler will be used.
     unset CC
     unset CXX
     BIN_SUFFIX=.exe
     BIN_WRAPPER=wine
-    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/4.8/;/usr/i686-w64-mingw32/lib"
-elif [ ! -z "$MINGW64" ]; then
+    export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/7.3-posix/;/usr/i686-w64-mingw32/lib"
+elif [ "$MINGW" == "64" ]; then
     # Make sure the correct compiler will be used.
     unset CC
     unset CXX
     BIN_SUFFIX=.exe
     BIN_WRAPPER=wine64
-    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/4.8/;/usr/x86_64-w64-mingw32/lib"
+    export WINEPATH="/usr/lib/gcc/x86_64-w64-mingw32/7.3-posix/;/usr/x86_64-w64-mingw32/lib"
 elif [ ! -z "$FUZZER" ]; then
     export CC="$BUILD_ROOT/clang/bin/clang"
     export CXX="$BUILD_ROOT/clang/bin/clang++"
@@ -83,7 +83,7 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make
-    if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW32" ] && [ -z "$MINGW64" ] && [ -z "$FUZZER" ]; then
+    if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ]; then
         echo "Running tests ..."
         make test
     fi
