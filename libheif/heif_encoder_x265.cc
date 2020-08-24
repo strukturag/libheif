@@ -630,8 +630,11 @@ static void x265_query_input_colorspace2(void* encoder_raw, heif_colorspace* col
 static int rounded_size(int s)
 {
   s = (s + 1) & ~1;
-  if (s < 16) {
-    s = 16;
+
+  // actually, I thought 64 would be enough, but x265 has some illegal memory accesses
+  // for smaller sizes
+  if (s < 96) {
+    s = 96;
   }
 
   return s;
@@ -822,7 +825,6 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceHeight = rounded_size(param->sourceHeight);
 
   image->image->extend_to_aligned_border();
-
 
   x265_picture* pic = api->picture_alloc();
   api->picture_init(param, pic);
