@@ -20,11 +20,17 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
 INSTALL_PACKAGES=
 REMOVE_PACKAGES=
-BUILD_ROOT=$TRAVIS_BUILD_DIR
+BUILD_ROOT=$ROOT/..
 UPDATE_APT=
 ADD_LIBHEIF_PPA=
+CURRENT_BRANCH=$TRAVIS_BRANCH
+if [ -z "$CURRENT_BRANCH" ]; then
+    CURRENT_BRANCH=${GITHUB_REF##*/}
+fi
 
 if [ "$WITH_LIBDE265" = "1" ]; then
     echo "Adding PPA strukturag/libde265 ..."
@@ -141,7 +147,7 @@ if [ ! -z "$FUZZER" ]; then
     ./scripts/install-clang.sh "$BUILD_ROOT/clang"
 fi
 
-if [ "$TRAVIS_BRANCH" = "coverity" ]; then
+if [ "$CURRENT_BRANCH" = "coverity" ]; then
     echo "Installing coverity build tool ..."
     echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
 fi

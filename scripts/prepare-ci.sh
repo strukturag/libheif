@@ -20,7 +20,9 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-BUILD_ROOT=$TRAVIS_BUILD_DIR
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+BUILD_ROOT=$ROOT/..
 
 if [ "$WITH_LIBDE265" = "2" ]; then
     export PKG_CONFIG_PATH=$BUILD_ROOT/libde265/dist/lib/pkgconfig/

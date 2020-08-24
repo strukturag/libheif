@@ -20,7 +20,17 @@ set -e
 # along with libheif.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-BUILD_ROOT=$TRAVIS_BUILD_DIR
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+BUILD_ROOT=$ROOT/..
+CURRENT_OS=$TRAVIS_OS_NAME
+if [ -z "$CURRENT_OS" ]; then
+    if [ "$(uname)" != "Darwin" ]; then
+        CURRENT_OS=linux
+    else
+        CURRENT_OS=osx
+    fi
+fi
 
 # Don't run regular tests on Coverity scan builds.
 if [ ! -z "${COVERITY_SCAN_BRANCH}" ]; then
@@ -73,7 +83,7 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make
-    if [ "$TRAVIS_OS_NAME" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW32" ] && [ -z "$MINGW64" ] && [ -z "$FUZZER" ]; then
+    if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW32" ] && [ -z "$MINGW64" ] && [ -z "$FUZZER" ]; then
         echo "Running tests ..."
         make test
     fi
@@ -151,7 +161,7 @@ if [ ! -z "$TARBALL" ]; then
     popd
 fi
 
-if [ ! -z "$FUZZER" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
+if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
     ./libheif/file-fuzzer ./fuzzing/corpus/*
 
