@@ -1315,7 +1315,7 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
     return err.error_struct(context ? context->context.get() : nullptr);
   }
 
-  *encoder = new struct heif_encoder(nullptr, descriptor->plugin);
+  *encoder = new struct heif_encoder(descriptor->plugin);
   (*encoder)->alloc();
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -1351,7 +1351,7 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
   descriptors = get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size() > 0) {
-    *encoder = new struct heif_encoder(nullptr, descriptors[0]->plugin);
+    *encoder = new struct heif_encoder(descriptors[0]->plugin);
 
     (*encoder)->alloc();
 
