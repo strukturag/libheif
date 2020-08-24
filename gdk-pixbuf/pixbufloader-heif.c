@@ -80,6 +80,10 @@ static gboolean stop_load(gpointer context, GError** error)
   hpc = (HeifPixbufCtx*) context;
 
   hc = heif_context_alloc();
+  if (!hc) {
+    g_warning("cannot allocate heif_context");
+    goto cleanup;
+  }
 
   err = heif_context_read_from_memory_without_copy(hc, hpc->data->data, hpc->data->len, NULL);
   if (err.code != heif_error_Ok) {
