@@ -26,8 +26,7 @@
 #endif
 
 #include <memory>
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
 #include <cassert>
 
 #include <aom/aom_decoder.h>
