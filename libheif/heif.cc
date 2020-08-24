@@ -1316,10 +1316,7 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
   }
 
   *encoder = new struct heif_encoder(descriptor->plugin);
-  (*encoder)->alloc();
-
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return (*encoder)->alloc();
 }
 
 
@@ -1352,11 +1349,7 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
 
   if (descriptors.size() > 0) {
     *encoder = new struct heif_encoder(descriptors[0]->plugin);
-
-    (*encoder)->alloc();
-
-    struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-    return err;
+    return (*encoder)->alloc();
   }
   else {
     Error err(heif_error_Unsupported_filetype, // TODO: is this the right error code?
