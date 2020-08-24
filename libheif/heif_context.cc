@@ -1894,10 +1894,15 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
       // if image size was rounded up to even size, add a 'clap' box to crop the
       // padding border away
 
-      if (m_width != (uint32_t) encoded_width ||
-          m_height != (uint32_t) encoded_height) {
-        m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
-                                                       encoded_width, encoded_height);;
+      // Note: github issue 291: we only add a clap box to the main image, but not for the
+      // alpha image. Otherwise, the alpha image will be cropped twice. First, the alpha image
+      // itself to the correct size, then again after being combined with the main image.
+      if (input_class == heif_image_input_class_normal) {
+        if (m_width != (uint32_t) encoded_width ||
+            m_height != (uint32_t) encoded_height) {
+          m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
+                                                         encoded_width, encoded_height);;
+        }
       }
     }
 
