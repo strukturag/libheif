@@ -1074,47 +1074,6 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
 
 
-  // --- add alpha channel, if available
-
-  // TODO: this if statement is probably wrong. When we have a tiled image with alpha
-  // channel, then the alpha images should be associated with their respective tiles.
-  // However, the tile images are not part of the m_all_images list.
-  // Fix this, when we have a test image available.
-  if (m_all_images.find(ID) != m_all_images.end()) {
-    const auto imginfo = m_all_images.find(ID)->second;
-
-    std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
-    if (alpha_image) {
-      std::shared_ptr<HeifPixelImage> alpha;
-      Error err = decode_image_planar(alpha_image->get_id(), alpha,
-                                      heif_colorspace_undefined);
-      if (err) {
-        return err;
-      }
-
-      // TODO: check that sizes are the same and that we have an Y channel
-      // BUT: is there any indication in the standard that the alpha channel should have the same size?
-
-      heif_channel channel;
-      switch (alpha->get_colorspace()) {
-        case heif_colorspace_YCbCr:
-        case heif_colorspace_monochrome:
-          channel = heif_channel_Y;
-          break;
-        case heif_colorspace_RGB:
-          channel = heif_channel_R;
-          break;
-        case heif_colorspace_undefined:
-        default:
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Unsupported_color_conversion);
-      }
-
-      img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
-    }
-  }
-
-
   // --- apply image transformations
 
   if (!options || options->ignore_transformations == false) {
@@ -1182,6 +1141,48 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
   }
 
+
+  // --- add alpha channel, if available
+
+  // TODO: this if statement is probably wrong. When we have a tiled image with alpha
+  // channel, then the alpha images should be associated with their respective tiles.
+  // However, the tile images are not part of the m_all_images list.
+  // Fix this, when we have a test image available.
+  if (m_all_images.find(ID) != m_all_images.end()) {
+    const auto imginfo = m_all_images.find(ID)->second;
+
+    std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
+    if (alpha_image) {
+      std::shared_ptr<HeifPixelImage> alpha;
+      Error err = decode_image_planar(alpha_image->get_id(), alpha,
+                                      heif_colorspace_undefined);
+      if (err) {
+        return err;
+      }
+
+      // TODO: check that sizes are the same and that we have an Y channel
+      // BUT: is there any indication in the standard that the alpha channel should have the same size?
+
+      heif_channel channel;
+      switch (alpha->get_colorspace()) {
+        case heif_colorspace_YCbCr:
+        case heif_colorspace_monochrome:
+          channel = heif_channel_Y;
+          break;
+        case heif_colorspace_RGB:
+          channel = heif_channel_R;
+          break;
+        case heif_colorspace_undefined:
+        default:
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Unsupported_color_conversion);
+      }
+
+      img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
+    }
+  }
+
+  
   return Error::Ok;
 }
 
@@ -1894,15 +1895,10 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
       // if image size was rounded up to even size, add a 'clap' box to crop the
       // padding border away
 
-      // Note: github issue 291: we only add a clap box to the main image, but not for the
-      // alpha image. Otherwise, the alpha image will be cropped twice. First, the alpha image
-      // itself to the correct size, then again after being combined with the main image.
-      if (input_class == heif_image_input_class_normal) {
-        if (m_width != (uint32_t) encoded_width ||
-            m_height != (uint32_t) encoded_height) {
-          m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
-                                                         encoded_width, encoded_height);;
-        }
+      if (m_width != (uint32_t) encoded_width ||
+          m_height != (uint32_t) encoded_height) {
+        m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
+                                                       encoded_width, encoded_height);;
       }
     }
 
