@@ -1309,23 +1309,16 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor* descriptor,
                                            struct heif_encoder** encoder)
 {
+  // Note: be aware that context may be NULL as we explicitly allowed that in an earlier documentation.
+
   if (!descriptor || !encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(context ? context->context.get() : nullptr);
   }
 
-  if (context == nullptr) {
-    *encoder = new struct heif_encoder(nullptr, descriptor->plugin);
-  }
-  else {
-    // DEPRECATED. We do not need the context anywhere.
-    *encoder = new struct heif_encoder(context->context, descriptor->plugin);
-  }
-
-  (*encoder)->alloc();
-
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  *encoder = new struct heif_encoder(descriptor->plugin);
+  return (*encoder)->alloc();
 }
 
 
@@ -1347,32 +1340,25 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
                                                       enum heif_compression_format format,
                                                       struct heif_encoder** encoder)
 {
+  // Note: be aware that context may be NULL as we explicitly allowed that in an earlier documentation.
+
   if (!encoder) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(nullptr);
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(context ? context->context.get() : nullptr);
   }
 
   std::vector<const struct heif_encoder_descriptor*> descriptors;
   descriptors = get_filtered_encoder_descriptors(format, nullptr);
 
   if (descriptors.size() > 0) {
-    if (context == nullptr) {
-      *encoder = new struct heif_encoder(nullptr, descriptors[0]->plugin);
-    }
-    else {
-      // DEPRECATED. We do not need the context anywhere.
-      *encoder = new struct heif_encoder(context->context, descriptors[0]->plugin);
-    }
-
-    (*encoder)->alloc();
-
-    struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-    return err;
+    *encoder = new struct heif_encoder(descriptors[0]->plugin);
+    return (*encoder)->alloc();
   }
   else {
-    struct heif_error err = {heif_error_Unsupported_filetype, // TODO: is this the right error code?
-                             heif_suberror_Unspecified, kSuccess};
-    return err;
+    Error err(heif_error_Unsupported_filetype, // TODO: is this the right error code?
+              heif_suberror_Unspecified);
+    return err.error_struct(context ? context->context.get() : nullptr);
   }
 }
 

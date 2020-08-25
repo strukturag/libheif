@@ -1010,7 +1010,6 @@ int heif_encoder_descriptor_supports_lossless_compression(const struct heif_enco
 
 
 // Get an encoder instance that can be used to actually encode images from a descriptor.
-// TODO: why do we need the context here? I think we should remove this. You may pass a NULL context.
 LIBHEIF_API
 struct heif_error heif_context_get_encoder(struct heif_context* context,
                                            const struct heif_encoder_descriptor*,
@@ -1030,7 +1029,6 @@ int heif_have_encoder_for_format(enum heif_compression_format format);
 
 // Get an encoder for the given compression format. If there are several encoder plugins
 // for this format, the encoder with the highest plugin priority will be returned.
-// TODO: why do we need the context here? I think we should remove this. You may pass a NULL context.
 LIBHEIF_API
 struct heif_error heif_context_get_encoder_for_format(struct heif_context* context,
                                                       enum heif_compression_format format,
