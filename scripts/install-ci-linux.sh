@@ -118,6 +118,11 @@ if [ ! -z "$ADD_LIBHEIF_PPA" ]; then
     UPDATE_APT=1
 fi
 
+if [ ! -z "$INSTALL_PACKAGES" ]; then
+    # The CI environment might have old package lists, so always update before installing.
+    UPDATE_APT=1
+fi
+
 if [ ! -z "$UPDATE_APT" ]; then
     echo "Updating package lists ..."
     sudo apt-get update
