@@ -138,9 +138,22 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   std::shared_ptr<heif_context> context(heif_context_alloc(),
                                         [](heif_context* c) { heif_context_free(c); });
   assert(context);
+
+  if (size < 2) {
+    return 0;
+  }
+
+  int quality = (data[0] & 0x7F) % 101;
+  bool lossless = (data[1] & 0x80);
+  bool use_avif = (data[1] & 0x40);
+  data += 2;
+  size -= 2;
+
   static const size_t kMaxEncoders = 5;
   const heif_encoder_descriptor* encoder_descriptors[kMaxEncoders];
-  int count = heif_context_get_encoder_descriptors(context.get(), heif_compression_AV1, nullptr,
+  int count = heif_context_get_encoder_descriptors(context.get(),
+                                                   use_avif ? heif_compression_AV1 : heif_compression_HEVC,
+                                                   nullptr,
                                                    encoder_descriptors, kMaxEncoders);
   assert(count > 0);
 
@@ -150,14 +163,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     return 0;
   }
 
-  if (size < 2) {
-    heif_encoder_release(encoder);
-    return 0;
-  }
-  int quality = data[0] % 101;;
-  int lossless = (data[1] > 0x80);
-  data += 2;
-  size -= 2;
   heif_encoder_set_lossy_quality(encoder, quality);
   heif_encoder_set_lossless(encoder, lossless);
 
