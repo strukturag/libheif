@@ -574,6 +574,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     if (plane != 0) {
       if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
       if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+
+      assert(w == heif_image_get_width(image, (heif_channel)plane));
+      assert(h == heif_image_get_height(image, (heif_channel)plane));
     }
 
     if (bpp_y > 8) {

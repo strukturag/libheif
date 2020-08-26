@@ -59,11 +59,14 @@ static size_t create_image(const uint8_t* data, size_t size, struct heif_image**
     return 0;
   }
 
+  int chroma_width = (width+1)/2;
+  int chroma_height = (height+1)/2;
+
   err = heif_image_add_plane(*image, heif_channel_Y, width, height, 8);
   assert(err.code == heif_error_Ok);
-  err = heif_image_add_plane(*image, heif_channel_Cb, width / 2, height / 2, 8);
+  err = heif_image_add_plane(*image, heif_channel_Cb, chroma_width, chroma_height, 8);
   assert(err.code == heif_error_Ok);
-  err = heif_image_add_plane(*image, heif_channel_Cr, width / 2, height / 2, 8);
+  err = heif_image_add_plane(*image, heif_channel_Cr, chroma_width, chroma_height, 8);
   assert(err.code == heif_error_Ok);
 
   int stride;
@@ -73,10 +76,10 @@ static size_t create_image(const uint8_t* data, size_t size, struct heif_image**
   generate_plane(width, height, plane, stride);
 
   plane = heif_image_get_plane(*image, heif_channel_Cb, &stride);
-  generate_plane(width / 2, height / 2, plane, stride);
+  generate_plane(chroma_width, chroma_height, plane, stride);
 
   plane = heif_image_get_plane(*image, heif_channel_Cr, &stride);
-  generate_plane(width / 2, height / 2, plane, stride);
+  generate_plane(chroma_width, chroma_height, plane, stride);
 
   return 2;
 }
