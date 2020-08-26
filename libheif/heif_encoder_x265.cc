@@ -654,6 +654,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
+  heif_chroma chroma = heif_image_get_chroma_format(image);
 
   const x265_api* api = x265_api_get(bit_depth);
   if (api == nullptr) {
@@ -749,14 +750,26 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   if (isGreyscale) {
     param->internalCsp = X265_CSP_I400;
   }
-  else if (encoder->chroma == heif_chroma_420) {
+  else if (chroma == heif_chroma_420) {
     param->internalCsp = X265_CSP_I420;
   }
-  else if (encoder->chroma == heif_chroma_422) {
+  else if (chroma == heif_chroma_422) {
     param->internalCsp = X265_CSP_I422;
   }
-  else if (encoder->chroma == heif_chroma_444) {
+  else if (chroma == heif_chroma_444) {
     param->internalCsp = X265_CSP_I444;
+  }
+
+  if (chroma != heif_chroma_monochrome) {
+    int w = heif_image_get_width(image, heif_channel_Y);
+    int h = heif_image_get_height(image, heif_channel_Y);
+    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
+    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+
+    assert(heif_image_get_width(image, heif_channel_Cb)==w);
+    assert(heif_image_get_width(image, heif_channel_Cr)==w);
+    assert(heif_image_get_height(image, heif_channel_Cb)==h);
+    assert(heif_image_get_height(image, heif_channel_Cr)==h);
   }
 
   api->param_parse(param, "info", "0");
