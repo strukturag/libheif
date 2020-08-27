@@ -155,7 +155,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
                                                    use_avif ? heif_compression_AV1 : heif_compression_HEVC,
                                                    nullptr,
                                                    encoder_descriptors, kMaxEncoders);
-  assert(count > 0);
+  assert(count >= 0);
+  if (count == 0) {
+    return 0;
+  }
 
   heif_encoder* encoder;
   err = heif_context_get_encoder(context.get(), encoder_descriptors[0], &encoder);
