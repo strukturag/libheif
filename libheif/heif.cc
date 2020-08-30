@@ -47,7 +47,7 @@
 #include <unistd.h>
 #endif
 
-#if (defined(_MSC_VER) && _MSC_VER >= 1900) || (__GNUC__ > 3 && _MSC_VER < 1900)
+#if (defined(_WIN32) || defined(_WIN64)) && (defined(_MSC_VER) && _MSC_VER >= 1900) || (__GNUC__ > 3 && _MSC_VER < 1900)
 // for _write
 #include <io.h>
 #endif
