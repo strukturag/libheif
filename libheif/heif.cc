@@ -47,7 +47,7 @@
 #include <unistd.h>
 #endif
 
-#if defined(_MSC_VER)
+#if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
 // for _write
 #include <io.h>
 #endif
@@ -324,7 +324,7 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
 
   std::string dump = ctx->context->debug_dump_boxes();
   // TODO(fancycode): Should we return an error if writing fails?
-#if defined(_MSC_VER)
+#if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
   auto written = _write(fd, dump.c_str(), dump.size());
 #else
   auto written = write(fd, dump.c_str(), dump.size());
