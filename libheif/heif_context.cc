@@ -31,7 +31,11 @@
 #include <deque>
 
 #if ENABLE_PARALLEL_TILE_DECODING
+#if __GNUC__ > 3
+#include "mingw.future.h"
+#else
 #include <future>
+#endif
 #endif
 
 #include "heif_context.h"
