@@ -34,7 +34,7 @@
 #include <vector>
 
 #if ENABLE_PARALLEL_TILE_DECODING
-#if __GNUC__ > 3
+#if defined(__MINGW32__)  || defined(__MINGW64__) 
 #include "mingw.mutex.h"
 #else
 #include <mutex>
