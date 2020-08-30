@@ -59,7 +59,7 @@
 
 #include "encoder_y4m.h"
 
-#if (defined(_MSC_VER) && _MSC_VER >= 1900) || (__GNUC__ > 3 && _MSC_VER < 1900) 
+#if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
 #include "getopt.h"
 #endif
 
