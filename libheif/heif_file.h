@@ -34,7 +34,11 @@
 #include <vector>
 
 #if ENABLE_PARALLEL_TILE_DECODING
+#if __GNUC__ > 3
+#include "mingw.mutex.h"
+#else
 #include <mutex>
+#endif
 #endif
 
 
