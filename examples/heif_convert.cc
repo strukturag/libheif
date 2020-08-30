@@ -59,7 +59,7 @@
 
 #include "encoder_y4m.h"
 
-#if defined(_MSC_VER)
+#if (defined(_MSC_VER) && _MSC_VER >= 1900) || (__GNUC__ > 3 && _MSC_VER < 1900) 
 #include "getopt.h"
 #endif
 
