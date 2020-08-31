@@ -9,8 +9,7 @@ HEIF and AVIF are new image file formats employing HEVC (h.265) or AV1 image cod
 best compression ratios currently possible.
 
 libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
-For AVIF, libaom is used as encoder and decoder.
-Alternative codecs for, e.g., AVC and JPEG can be provided as plugins.
+For AVIF, libaom or rav1e are used as codecs.
 
 
 ## Supported features
