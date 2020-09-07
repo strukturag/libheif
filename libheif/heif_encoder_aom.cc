@@ -665,6 +665,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     aom_codec_control(&encoder->codec, AV1E_SET_ROW_MT, 1);
 #endif
   }
+  
+  // In aom, color_range defaults to limited range (0). Set it to full range (1).
+  // TODO: color_range should ideally come from the nclx profile. See issue 288.
+  aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, 1);
 
   // --- encode frame
 
