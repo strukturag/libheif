@@ -112,11 +112,17 @@ namespace heif {
 
     Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width, int height) const;
 
-    void set_color_profile(std::shared_ptr<const color_profile> profile)
-    { m_color_profile = profile; }
+    void set_color_profile_nclx(std::shared_ptr<const color_profile_nclx> profile)
+    { m_color_profile_nclx = profile; }
 
-    std::shared_ptr<const color_profile> get_color_profile() const
-    { return m_color_profile; }
+    std::shared_ptr<const color_profile_nclx> get_color_profile_nclx() const
+    { return m_color_profile_nclx; }
+
+    void set_color_profile_icc(std::shared_ptr<const color_profile_raw> profile)
+    { m_color_profile_icc = profile; }
+
+    std::shared_ptr<const color_profile_raw> get_color_profile_icc() const
+    { return m_color_profile_icc; }
 
     void debug_dump() const;
 
@@ -138,7 +144,8 @@ namespace heif {
     int m_height = 0;
     heif_colorspace m_colorspace = heif_colorspace_undefined;
     heif_chroma m_chroma = heif_chroma_undefined;
-    std::shared_ptr<const color_profile> m_color_profile;
+    std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
+    std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
     std::map<heif_channel, ImagePlane> m_planes;
   };

@@ -851,7 +851,7 @@ struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
 
   auto color_profile = std::make_shared<color_profile_raw>(color_profile_type, data);
 
-  image->image->set_color_profile(color_profile);
+  image->image->set_color_profile_icc(color_profile);
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
   return err;
@@ -868,7 +868,7 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
   nclx->set_matrix_coefficients(color_profile->matrix_coefficients);
   nclx->set_full_range_flag(color_profile->full_range_flag);
 
-  image->image->set_color_profile(nclx);
+  image->image->set_color_profile_nclx(nclx);
 
   return error_Ok;
 }
@@ -1059,7 +1059,13 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
 
 enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image)
 {
-  auto profile = image->image->get_color_profile();
+  std::shared_ptr<const color_profile> profile;
+
+  profile = image->image->get_color_profile_icc();
+  if (!profile) {
+    profile = image->image->get_color_profile_nclx();
+  }
+
   if (!profile) {
     return heif_color_profile_type_not_present;
   }
@@ -1071,8 +1077,7 @@ enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif
 
 size_t heif_image_get_raw_color_profile_size(const struct heif_image* image)
 {
-  auto profile = image->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+  auto raw_profile = image->image->get_color_profile_icc();
   if (raw_profile) {
     return raw_profile->get_data().size();
   }
@@ -1091,8 +1096,7 @@ struct heif_error heif_image_get_raw_color_profile(const struct heif_image* imag
     return err.error_struct(image->image.get());
   }
 
-  auto profile = image->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+  auto raw_profile = image->image->get_color_profile_icc();
   if (raw_profile) {
     memcpy(out_data,
            raw_profile->get_data().data(),
@@ -1112,8 +1116,7 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
     return err.error_struct(image->image.get());
   }
 
-  auto profile = image->image->get_color_profile();
-  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+  auto nclx_profile = image->image->get_color_profile_nclx();
   Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(image->image.get());

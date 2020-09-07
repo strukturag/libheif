@@ -1006,7 +1006,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     // (non-NCLX) profile later.
     auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
     if (nclx) {
-      img->set_color_profile(nclx);
+      img->set_color_profile_nclx(nclx);
     }
 
     heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
@@ -1030,8 +1030,10 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
     }
 
-    auto colorProfileInMetadata = imginfo->get_color_profile();
-    img->set_color_profile(colorProfileInMetadata);
+    auto colorProfileInMetadata = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
+    if (colorProfileInMetadata) {
+      img->set_color_profile_nclx(colorProfileInMetadata);
+    }
   }
   else if (image_type == "grid") {
     std::vector<uint8_t> data;
@@ -1791,13 +1793,12 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
-  auto color_profile = image->get_color_profile();
-  if (!color_profile) {
-    auto nclx = std::make_shared<color_profile_nclx>();
-    nclx->set_default();
-    color_profile = nclx;
+  auto nclx_profile = image->get_color_profile_nclx();
+  if (!nclx_profile) {
+    auto default_nclx_profile = std::make_shared<color_profile_nclx>();
+    default_nclx_profile->set_default();
+    nclx_profile = default_nclx_profile;
   }
-  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -1819,9 +1820,9 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  if (color_profile &&
+  if (nclx_profile &&
       (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail)) {
-    m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
+    m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
   }
 
   // --- if there is an alpha channel, add it as an additional image
@@ -1924,7 +1925,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
-  auto color_profile = image->get_color_profile();
+  auto color_profile = image->get_color_profile_nclx();
   if (!color_profile) {
     auto nclx = std::make_shared<color_profile_nclx>();
     nclx->set_default();

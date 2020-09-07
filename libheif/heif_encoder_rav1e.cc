@@ -560,7 +560,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     }
   }
 
-  auto colorProfile = image->image->get_color_profile();
+  auto colorProfile = image->image->get_color_profile_nclx();
   if (auto nclxProfile = std::dynamic_pointer_cast<const heif_color_profile_nclx>(colorProfile)) {
     rav1e_config_set_color_description(rav1eConfig.get(),
                                        (RaMatrixCoefficients) nclxProfile->matrix_coefficients,

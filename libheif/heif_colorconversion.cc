@@ -414,7 +414,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   }
 
 
-  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  auto colorProfile = input->get_color_profile_nclx();
 
   int width = input->get_width();
   int height = input->get_height();
@@ -830,7 +830,7 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
-  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (colorProfile) {
     coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
@@ -951,7 +951,7 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   // --- get conversion coefficients
 
-  auto colorProfile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (colorProfile) {
     coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
@@ -2955,7 +2955,7 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
   input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_chroma_with_alpha(input->get_chroma_format());
-  input_state.nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(input->get_color_profile());
+  input_state.nclx_profile = input->get_color_profile_nclx();
 
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());
