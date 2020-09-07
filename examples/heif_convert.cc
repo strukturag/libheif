@@ -28,7 +28,7 @@
 #endif
 
 #include <alloca.h>
-#include "string.h"
+#include <cstring>
 
 #if defined(HAVE_UNISTD_H)
 
@@ -39,7 +39,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 #include <cctype>
 
