@@ -50,9 +50,9 @@
 static struct option long_options[] = {
     //{"write-raw", required_argument, 0, 'w' },
     //{"output",    required_argument, 0, 'o' },
-    {"decode-img", required_argument, 0, 'd'},
-    {"metadata",   required_argument, 0, 'm'},
-    {0, 0,                            0, 0}
+    {(char* const) "decode-img", required_argument, 0, 'd'},
+    {(char* const) "metadata",   required_argument, 0, 'm'},
+    {0, 0,                                          0, 0}
 };
 
 void show_help(const char* argv0)

@@ -65,9 +65,9 @@ info -d // dump
 static struct option long_options[] = {
     //{"write-raw", required_argument, 0, 'w' },
     //{"output",    required_argument, 0, 'o' },
-    {"dump-boxes", no_argument, 0, 'd'},
-    {"help",       no_argument, 0, 'h'},
-    {0, 0,                      0, 0}
+    {(char* const) "dump-boxes", no_argument, 0, 'd'},
+    {(char* const) "help",       no_argument, 0, 'h'},
+    {0, 0,                                    0, 0}
 };
 
 const char* fourcc_to_string(uint32_t fourcc)
