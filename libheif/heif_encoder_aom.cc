@@ -524,6 +524,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       img_format = AOM_IMG_FMT_I444;
       break;
     default:
+      img_format = AOM_IMG_FMT_NONE;
       assert(false);
       break;
   }
