@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <alloca.h>
 #include "string.h"
 
 #if defined(HAVE_UNISTD_H)
