@@ -27,7 +27,12 @@
 #include "config.h"
 #endif
 
-#include <alloca.h>
+#if defined(_MSC_VER) || defined(__MINGW32__)
+# include <malloc.h>
+#else
+# include <alloca.h>
+#endif
+
 #include <cstring>
 
 #if defined(HAVE_UNISTD_H)
