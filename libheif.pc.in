@@ -1,7 +1,7 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
-includedir=@includedir@
+includedir=@includedir@/@PACKAGE@
 builtin_h265_decoder=@have_libde265@
 builtin_h265_encoder=@have_x265@
 builtin_avif_decoder=@have_aom@
@@ -14,4 +14,4 @@ Version: @VERSION@
 Requires:
 Libs: -L@libdir@ -lheif
 Libs.private: @LIBS@ -lstdc++
-Cflags: -I@includedir@
+Cflags: -I@includedir@/@PACKAGE@
