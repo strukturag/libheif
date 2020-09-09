@@ -1181,7 +1181,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
   }
 
-  
+
   return Error::Ok;
 }
 
@@ -1824,10 +1824,18 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   m_width = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  if (nclx_profile &&
-      (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail)) {
-    m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
+  // --- choose which color profile to put into 'colr' box
+
+  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    auto icc_profile = image->get_color_profile_icc();
+    if (icc_profile) {
+      m_heif_context->m_heif_file->set_color_profile(m_id, icc_profile);
+    }
+    else if (nclx_profile) {
+      m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
+    }
   }
+
 
   // --- if there is an alpha channel, add it as an additional image
 
@@ -1957,9 +1965,16 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   m_width = image->get_width(heif_channel_Y);
   m_height = image->get_height(heif_channel_Y);
 
-  if (color_profile &&
-      (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail)) {
-    m_heif_context->m_heif_file->set_color_profile(m_id, color_profile);
+  // --- choose which color profile to put into 'colr' box
+
+  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    auto icc_profile = image->get_color_profile_icc();
+    if (icc_profile) {
+      m_heif_context->m_heif_file->set_color_profile(m_id, icc_profile);
+    }
+    else if (nclx_profile) {
+      m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
+    }
   }
 
 
