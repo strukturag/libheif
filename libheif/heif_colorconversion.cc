@@ -2034,7 +2034,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
     return {};
   }
 
-  if (!input_state.nclx_profile->get_full_range_flag()) {
+  if (input_state.nclx_profile && !input_state.nclx_profile->get_full_range_flag()) {
     return {};
   }
 
