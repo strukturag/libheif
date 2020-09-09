@@ -509,6 +509,11 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   }
 
   rav1eRange = RA_PIXEL_RANGE_FULL;
+  auto nclx = image->image->get_color_profile_nclx();
+  if (nclx) {
+    rav1eRange = nclx->get_full_range_flag() ? RA_PIXEL_RANGE_FULL : RA_PIXEL_RANGE_LIMITED;
+  }
+
   int bitDepth = image->image->get_bits_per_pixel(heif_channel_Y);
 
 
@@ -533,6 +538,14 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     return heif_error_codec_library_error;
   }
 
+  if (nclx) {
+    if (rav1e_config_set_color_description(rav1eConfig.get(),
+                                           (RaMatrixCoefficients)nclx->get_matrix_coefficients(),
+                                           (RaColorPrimaries)nclx->get_colour_primaries(),
+                                           (RaTransferCharacteristics)nclx->get_transfer_characteristics()) == -1) {
+      return heif_error_codec_library_error;
+    }
+  }
 
   if (rav1e_config_parse_int(rav1eConfig.get(), "min_quantizer", encoder->min_q) == -1) {
     return heif_error_codec_library_error;
