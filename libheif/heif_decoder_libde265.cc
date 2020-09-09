@@ -240,6 +240,8 @@ static struct heif_error libde265_v2_decode_image(void* decoder_raw,
 
   int action = de265_get_action(decoder->ctx, 1);
 
+  // TODO: read NCLX from h265 bitstream
+
   // TODO(farindk): Set "err" if no image was decoded.
   if (action==de265_action_get_image) {
     const de265_image* img = de265_get_next_picture(decoder->ctx);
@@ -314,6 +316,8 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
       // printf("Error decoding: %s (%d)\n", de265_get_error_text(decode_err), decode_err);
       break;
     }
+
+    // TODO: read NCLX from h265 bitstream
 
     const struct de265_image* image = de265_get_next_picture(decoder->ctx);
     if (image) {
