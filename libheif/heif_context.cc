@@ -1625,6 +1625,10 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
   alpha_image->fill_new_plane(heif_channel_Cb, half_range, chroma_width, chroma_height, bpp);
   alpha_image->fill_new_plane(heif_channel_Cr, half_range, chroma_width, chroma_height, bpp);
 
+  auto nclx = std::make_shared<color_profile_nclx>();
+  nclx->set_full_range_flag(true);
+  alpha_image->set_color_profile_nclx(nclx);
+
   return alpha_image;
 }
 
