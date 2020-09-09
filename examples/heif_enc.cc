@@ -70,6 +70,11 @@ int nclx_colour_primaries = 2;
 int nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
 
+const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
+const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
+const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
+const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
+
 static struct option long_options[] = {
     {(char* const) "help",                    no_argument,       0,                             'h'},
     {(char* const) "quality",                 required_argument, 0,                             'q'},
@@ -82,10 +87,10 @@ static struct option long_options[] = {
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,                  0},
     {(char* const) "bit-depth",               required_argument, 0,                             'b'},
     {(char* const) "avif",                    no_argument,       0,                             'A'},
-    {(char* const) "matrix_coefficients",     required_argument, &nclx_matrix_coefficients,     0},
-    {(char* const) "colour_primaries",        required_argument, &nclx_colour_primaries,        0},
-    {(char* const) "transfer_characteristic", required_argument, &nclx_transfer_characteristic, 0},
-    {(char* const) "full_range_flag",         required_argument, &nclx_full_range,              0},
+    {(char* const) "matrix_coefficients",     required_argument, 0, OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",        required_argument, 0, OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic", required_argument, 0, OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",         required_argument, 0, OPTION_NCLX_FULL_RANGE_FLAG},
     {0, 0,                                                       0,                             0}
 };
 
@@ -946,6 +951,18 @@ int main(int argc, char** argv)
         break;
       case 'A':
         enc_av1f = true;
+        break;
+      case OPTION_NCLX_MATRIX_COEFFICIENTS:
+        nclx_matrix_coefficients = atoi(optarg);
+        break;
+      case OPTION_NCLX_COLOUR_PRIMARIES:
+        nclx_colour_primaries = atoi(optarg);
+        break;
+      case OPTION_NCLX_TRANSFER_CHARACTERISTIC:
+        nclx_transfer_characteristic = atoi(optarg);
+        break;
+      case OPTION_NCLX_FULL_RANGE_FLAG:
+        nclx_full_range = atoi(optarg);
         break;
     }
   }
