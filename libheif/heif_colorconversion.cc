@@ -31,7 +31,7 @@
 
 using namespace heif;
 
-#define DEBUG_ME 0
+#define DEBUG_ME 1
 #define DEBUG_PIPELINE_CREATION 0
 
 std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
@@ -2643,6 +2643,13 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(ColorState input_state,
     return {};
   }
 
+  if (input_state.nclx_profile) {
+    int matrix = input_state.nclx_profile->get_matrix_coefficients();
+    if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
+      return {};
+    }
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
@@ -2719,19 +2726,32 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
 
   int maxval = (1 << bpp) - 1;
 
+  bool full_range_flag = true;
+  YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
+
+  auto colorProfile = input->get_color_profile_nclx();
+  if (colorProfile) {
+    full_range_flag = colorProfile->get_full_range_flag();
+    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                                 colorProfile->get_colour_primaries());
+  }
+
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
 
-      int y_ = in_y[y * in_y_stride / 2 + x];
-      int cb = in_cb[y / 2 * in_cb_stride / 2 + x / 2] - (1 << (bpp - 1));
-      int cr = in_cr[y / 2 * in_cr_stride / 2 + x / 2] - (1 << (bpp - 1));
+      float y_ = in_y[y * in_y_stride / 2 + x];
+      float cb = in_cb[y / 2 * in_cb_stride / 2 + x / 2] - (1 << (bpp - 1));
+      float cr = in_cr[y / 2 * in_cr_stride / 2 + x / 2] - (1 << (bpp - 1));
 
-      // TODO: does not use nclx profile yet
+      if (!full_range_flag) {
+        y_ = (y_ - 16) * 1.1689f;
+        cb = cb * 1.1429f;
+        cr = cr * 1.1429f;
+      }
 
-      int r = clip_int_u16((int16_t) (y_ + 1.40200 * cr), maxval);
-      int g = clip_int_u16((int16_t) (y_ - 0.34414 * cb - 0.71414 * cr), maxval);
-      int b = clip_int_u16(int16_t(y_ + 1.77200 * cb), maxval);
-
+      int r = clip_f_u16(y_ + coeffs.r_cr * cr, maxval);
+      int g = clip_f_u16(y_ + coeffs.g_cb * cb - coeffs.g_cr * cr, maxval);
+      int b = clip_f_u16(y_ + coeffs.b_cb * cb, maxval);
 
       out_p[y * out_p_stride + bytesPerPixel * x + 0 + le] = (uint8_t) (r >> 8);
       out_p[y * out_p_stride + bytesPerPixel * x + 2 + le] = (uint8_t) (g >> 8);
