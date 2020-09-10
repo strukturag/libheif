@@ -31,7 +31,7 @@
 
 using namespace heif;
 
-#define DEBUG_ME 1
+#define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
 
 std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
@@ -244,8 +244,6 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
   int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
 
@@ -424,8 +422,6 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   outimg->add_plane(heif_channel_R, width, height, bpp_y);
   outimg->add_plane(heif_channel_G, width, height, bpp_y);
@@ -625,8 +621,6 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_YCbCr, chroma);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   int cwidth = (width + subH - 1) / subH;
   int cheight = (height + subV - 1) / subV;
@@ -835,8 +829,6 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
   auto colorProfile = input->get_color_profile_nclx();
@@ -954,8 +946,6 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   int height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_32bit);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
@@ -1115,8 +1105,6 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   outimg->create(width, height, heif_colorspace_RGB,
                  target_state.has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R));
 
   const uint16_t* in_r, * in_g, * in_b, * in_a = nullptr;
@@ -1267,8 +1255,6 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
   outimg->create(width, height, heif_colorspace_RGB,
                  target_state.has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R));
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
@@ -1382,8 +1368,6 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
   int height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   outimg->add_plane(heif_channel_R, width, height, input->get_bits_per_pixel(heif_channel_interleaved));
   outimg->add_plane(heif_channel_G, width, height, input->get_bits_per_pixel(heif_channel_interleaved));
@@ -1532,8 +1516,6 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   int width = input->get_width();
   int height = input->get_height();
 
@@ -1639,8 +1621,6 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   int height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   int chroma_width = (width + 1) / 2;
   int chroma_height = (height + 1) / 2;
@@ -1779,8 +1759,6 @@ Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   else {
     outimg->create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_24bit);
   }
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   outimg->add_plane(heif_channel_interleaved, width, height, 8);
 
@@ -1932,8 +1910,6 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   uint8_t chromaSubV = chroma_v_subsampling(chroma);
 
   outimg->create(width, height, heif_colorspace_YCbCr, chroma);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   int chroma_width = (width + chromaSubH - 1) / chromaSubH;
   int chroma_height = (height + chromaSubV - 1) / chromaSubV;
@@ -2122,8 +2098,6 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
 
   outimg->add_plane(heif_channel_Y, width, height, 8);
@@ -2253,8 +2227,6 @@ Op_drop_alpha_plane::convert_colorspace(const std::shared_ptr<const HeifPixelIma
                  input->get_colorspace(),
                  input->get_chroma_format());
 
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
-
   for (heif_channel channel : {heif_channel_Y,
                                heif_channel_Cb,
                                heif_channel_Cr,
@@ -2327,8 +2299,6 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                  input->get_height(),
                  input->get_colorspace(),
                  input->get_chroma_format());
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   for (heif_channel channel : {heif_channel_Y,
                                heif_channel_Cb,
@@ -2427,8 +2397,6 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                  input->get_height(),
                  input->get_colorspace(),
                  input->get_chroma_format());
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   for (heif_channel channel : {heif_channel_Y,
                                heif_channel_Cb,
@@ -2532,8 +2500,6 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   int bytesPerPixel = has_alpha ? 8 : 6;
 
@@ -2698,8 +2664,6 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
 
   auto outimg = std::make_shared<HeifPixelImage>();
   outimg->create(width, height, heif_colorspace_RGB, target_state.chroma);
-
-  outimg->set_color_profile_nclx(target_state.nclx_profile);
 
   int bytesPerPixel = has_alpha ? 8 : 6;
 
@@ -2982,6 +2946,11 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
     if (!out) {
       return nullptr; // TODO: we should return a proper error
     }
+
+    // --- pass the color profiles to the new image
+
+    out->set_color_profile_nclx(m_target_state.nclx_profile);
+    out->set_color_profile_icc(in->get_color_profile_icc());
 
     in = out;
   }
