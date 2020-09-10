@@ -277,8 +277,12 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
     //printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
 
-    *width -= 2 * (left + right);
-    *height -= 2 * (top + bottom);
+    int subH=1, subV=1;
+    if (config->chroma_format == 1) { subV=2; subH=2; }
+    if (config->chroma_format == 2) { subH=2; }
+
+    *width -= subH * (left + right);
+    *height -= subV * (top + bottom);
   }
 
   reader.get_uvlc(&value);
