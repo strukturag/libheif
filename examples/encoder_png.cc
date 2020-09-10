@@ -34,18 +34,6 @@
 PngEncoder::PngEncoder()
 {}
 
-inline uint8_t clip_f_u8(float value)
-{
-  if (fx < 0) {
-    return 0x00;
-  }
-  else if (fx >= 255) {
-    return 0xff;
-  }
-  else {
-    return static_cast<uint8_t>(round(fx));
-  }
-}
 
 bool PngEncoder::Encode(const struct heif_image_handle* handle,
                         const struct heif_image* image, const std::string& filename)
