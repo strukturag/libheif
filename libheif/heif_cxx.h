@@ -263,6 +263,39 @@ namespace heif {
   };
 
 
+  class ColorProfile_nclx
+  {
+  public:
+    ColorProfile_nclx();
+
+    ~ColorProfile_nclx();
+
+    heif_color_primaries get_color_primaries() const;
+
+    heif_transfer_characteristics get_transfer_characteristics() const;
+
+    heif_matrix_coefficients get_matrix_coefficients() const;
+
+    bool is_full_range() const;
+
+    void set_color_primaties(heif_color_primaries cp);
+
+    void set_transfer_characteristics(heif_transfer_characteristics tc);
+
+    void set_matrix_coefficients(heif_matrix_coefficients mc);
+
+    void set_full_range_flag(bool is_full_range);
+
+  private:
+    ColorProfile_nclx(heif_color_profile_nclx* nclx)
+    { mProfile = nclx; }
+
+    heif_color_profile_nclx* mProfile;
+
+    friend class Image;
+  };
+
+
   class Image
   {
   public:
@@ -298,6 +331,12 @@ namespace heif {
     const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const noexcept;
 
     uint8_t* get_plane(enum heif_channel channel, int* out_stride) noexcept;
+
+    // throws Error
+    void set_nclx_color_profile(const ColorProfile_nclx&);
+
+    // throws Error
+    ColorProfile_nclx get_nclx_color_profile() const;
 
     class ScalingOptions
     {
@@ -723,6 +762,41 @@ namespace heif {
   }
 
 
+  inline ColorProfile_nclx::ColorProfile_nclx()
+  {
+    mProfile = heif_nclx_color_profile_alloc();
+  }
+
+  inline ColorProfile_nclx::~ColorProfile_nclx()
+  {
+    delete mProfile;
+  }
+
+  inline heif_color_primaries ColorProfile_nclx::get_color_primaries() const
+  { return mProfile->color_primaries; }
+
+  inline heif_transfer_characteristics ColorProfile_nclx::get_transfer_characteristics() const
+  { return mProfile->transfer_characteristics; }
+
+  inline heif_matrix_coefficients ColorProfile_nclx::get_matrix_coefficients() const
+  { return mProfile->matrix_coefficients; }
+
+  inline bool ColorProfile_nclx::is_full_range() const
+  { return mProfile->full_range_flag; }
+
+  inline void ColorProfile_nclx::set_color_primaties(heif_color_primaries cp)
+  { mProfile->color_primaries = cp; }
+
+  inline void ColorProfile_nclx::set_transfer_characteristics(heif_transfer_characteristics tc)
+  { mProfile->transfer_characteristics = tc; }
+
+  inline void ColorProfile_nclx::set_matrix_coefficients(heif_matrix_coefficients mc)
+  { mProfile->matrix_coefficients = mc; }
+
+  inline void ColorProfile_nclx::set_full_range_flag(bool is_full_range)
+  { mProfile->full_range_flag = is_full_range; }
+
+
   inline Image::Image(heif_image* image)
   {
     m_image = std::shared_ptr<heif_image>(image,
@@ -799,6 +873,27 @@ namespace heif {
   {
     return heif_image_get_plane(m_image.get(), channel, out_stride);
   }
+
+  inline void Image::set_nclx_color_profile(const ColorProfile_nclx& nclx)
+  {
+    Error err = Error(heif_image_set_nclx_color_profile(m_image.get(), nclx.mProfile));
+    if (err) {
+      throw err;
+    }
+  }
+
+  // throws Error
+  ColorProfile_nclx Image::get_nclx_color_profile() const
+  {
+    heif_color_profile_nclx* nclx = nullptr;
+    Error err = Error(heif_image_get_nclx_color_profile(m_image.get(), &nclx));
+    if (err) {
+      throw err;
+    }
+
+    return ColorProfile_nclx(nclx);
+  }
+
 
   inline Image Image::scale_image(int width, int height,
                                   const ScalingOptions&) const
