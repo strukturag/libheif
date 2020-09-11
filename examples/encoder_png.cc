@@ -28,6 +28,7 @@
 #include <math.h>
 #include <png.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "encoder_png.h"
 
