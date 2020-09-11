@@ -1099,7 +1099,7 @@ namespace heif {
   {
   public:
     color_profile_nclx()
-    {}
+    { set_default(); }
 
     uint32_t get_type() const override
     { return fourcc("nclx"); }
@@ -1137,6 +1137,8 @@ namespace heif {
     void set_default();
 
     Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
+
+    static struct heif_color_profile_nclx* alloc_nclx_color_profile();
 
     static void free_nclx_color_profile(struct heif_color_profile_nclx* profile);
 

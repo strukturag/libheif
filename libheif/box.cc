@@ -1639,7 +1639,7 @@ Error color_profile_nclx::parse(BitstreamRange& range)
 
 Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
 {
-  *out_data = (struct heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
+  *out_data = alloc_nclx_color_profile();
 
   if (*out_data == nullptr) {
     return Error(heif_error_Memory_allocation_error,
@@ -1668,6 +1668,22 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
   nclx->color_primary_white_y = primaries.whiteY;
 
   return Error::Ok;
+}
+
+
+struct heif_color_profile_nclx* color_profile_nclx::alloc_nclx_color_profile()
+{
+  auto profile = (heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
+
+  if (profile) {
+    profile->version = 1;
+    profile->color_primaries = heif_color_primaries_unspecified;
+    profile->transfer_characteristics = heif_transfer_characteristic_unspecified;
+    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+    profile->full_range_flag = true;
+  }
+
+  return profile;
 }
 
 

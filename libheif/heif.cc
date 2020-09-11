@@ -1123,6 +1123,12 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
 }
 
 
+struct heif_color_profile_nclx* heif_nclx_color_profile_alloc()
+{
+  return color_profile_nclx::alloc_nclx_color_profile();
+}
+
+
 void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 {
   color_profile_nclx::free_nclx_color_profile(nclx_profile);

@@ -697,7 +697,7 @@ enum heif_matrix_coefficients
 
 struct heif_color_profile_nclx
 {
-  // version 1 fields
+  // === version 1 fields
 
   uint8_t version;
 
@@ -717,6 +717,12 @@ struct heif_color_profile_nclx
 LIBHEIF_API
 struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
                                                            struct heif_color_profile_nclx** out_data);
+
+// Returned color profile has 'version' field set to the maximum allowed.
+// Do not fill values for higher versions as these might be outside the allocated structure size.
+// May return NULL.
+LIBHEIF_API
+struct heif_color_profile_nclx* heif_nclx_color_profile_alloc();
 
 LIBHEIF_API
 void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile);
