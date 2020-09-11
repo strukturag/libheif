@@ -325,6 +325,9 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
         heif_image_release(*out_img);
       }
       err = convert_libde265_image_to_heif_image(decoder, image, out_img);
+      if (err.code != heif_error_Ok) {
+        return err;
+      }
 
       auto nclx = std::make_shared<color_profile_nclx>();
 #if LIBDE265_NUMERIC_VERSION >= 0x01000700
