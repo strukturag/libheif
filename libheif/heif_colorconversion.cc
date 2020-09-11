@@ -2885,13 +2885,14 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 
     // expand the node with minimum cost
 
-    for (size_t i = 0; i < ops.size(); i++) {
+    for (const auto& op_ptr : ops) {
 
 #if DEBUG_PIPELINE_CREATION
-      std::cerr << "-- apply op: " << typeid(*(ops[i])).name() << "\n";
+      auto& op = *op_ptr;
+      std::cerr << "-- apply op: " << typeid(op).name() << "\n";
 #endif
 
-      auto out_states = ops[i]->state_after_conversion(processed_states.back().color_state.color_state,
+      auto out_states = op_ptr->state_after_conversion(processed_states.back().color_state.color_state,
                                                        target_state,
                                                        options);
       for (const auto& out_state : out_states) {
@@ -2919,7 +2920,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 
               if (s.color_state.costs.total(options.criterion) > new_op_costs.total(options.criterion)) {
                 s = {(int) (processed_states.size() - 1),
-                     ops[i],
+                     op_ptr,
                      out_state};
 
                 s.color_state.costs = new_op_costs;
@@ -2936,7 +2937,7 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
           ColorStateWithCost s = out_state;
           s.costs = s.costs + processed_states.back().color_state.costs;
 
-          border_states.push_back({(int) (processed_states.size() - 1), ops[i], s});
+          border_states.push_back({(int) (processed_states.size() - 1), op_ptr, s});
         }
       }
     }
@@ -2948,8 +2949,9 @@ bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
 
 void ColorConversionPipeline::debug_dump_pipeline() const
 {
-  for (const auto& op : m_operations) {
-    std::cerr << "> " << typeid(*op).name() << "\n";
+  for (const auto& op_ptr : m_operations) {
+    auto& op = *op_ptr;
+    std::cerr << "> " << typeid(op).name() << "\n";
   }
 }
 
@@ -2959,14 +2961,14 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
   std::shared_ptr<HeifPixelImage> in = input;
   std::shared_ptr<HeifPixelImage> out = in;
 
-  for (const auto& op : m_operations) {
+  for (const auto& op_ptr : m_operations) {
 
 #if DEBUG_ME
     std::cerr << "input spec: ";
     print_spec(std::cerr, in);
 #endif
 
-    out = op->convert_colorspace(in, m_target_state, m_options);
+    out = op_ptr->convert_colorspace(in, m_target_state, m_options);
     if (!out) {
       return nullptr; // TODO: we should return a proper error
     }
