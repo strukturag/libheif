@@ -36,6 +36,8 @@
 struct aom_decoder
 {
   aom_codec_ctx_t codec;
+  bool codec_initialized = false;
+
   aom_codec_iface_t* iface;
 };
 
@@ -99,6 +101,7 @@ struct heif_error aom_new_decoder(void** dec)
     return err;
   }
 
+  decoder->codec_initialized = true;
   *dec = decoder;
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -110,8 +113,14 @@ void aom_free_decoder(void* decoder_raw)
 {
   struct aom_decoder* decoder = (aom_decoder*) decoder_raw;
 
-  //de265_error err = de265_free_decoder(decoder->ctx);
-  //(void)err;
+  if (!decoder) {
+    return;
+  }
+
+  if (decoder->codec_initialized) {
+    aom_codec_destroy(&decoder->codec);
+    decoder->codec_initialized = false;
+  }
 
   delete decoder;
 }
