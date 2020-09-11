@@ -538,7 +538,9 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     return heif_error_codec_library_error;
   }
 
-  if (nclx) {
+  if (nclx &&
+      (input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail)) {
     if (rav1e_config_set_color_description(rav1eConfig.get(),
                                            (RaMatrixCoefficients)nclx->get_matrix_coefficients(),
                                            (RaColorPrimaries)nclx->get_colour_primaries(),
