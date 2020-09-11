@@ -327,13 +327,14 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
       }
       err = convert_libde265_image_to_heif_image(decoder, image, out_img);
 
-#if LIBDE265_NUMERIC_VERSION >= 0x01000700
       auto nclx = std::make_shared<color_profile_nclx>();
+#if LIBDE265_NUMERIC_VERSION >= 0x01000700
       nclx->set_full_range_flag(de265_get_image_full_range_flag(image));
       nclx->set_matrix_coefficients((uint16_t)de265_get_image_matrix_coefficients(image));
       nclx->set_colour_primaries((uint16_t)de265_get_image_colour_primaries(image));
       nclx->set_transfer_characteristics((uint16_t)de265_get_image_transfer_characteristics(image));
 #endif
+      (*out_img)->image->set_color_profile_nclx(nclx);
 
       de265_release_next_picture(decoder->ctx);
     }
