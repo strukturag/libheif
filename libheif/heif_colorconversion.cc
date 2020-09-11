@@ -303,7 +303,7 @@ static inline uint8_t clip_int_u8(int x)
 
 static inline uint16_t clip_f_u16(float fx, int32_t maxi)
 {
-  long x = lroundf(fx + 0.5f);
+  long x = lroundf(fx);
   if (x < 0) return 0;
   if (x > maxi) return (uint16_t) maxi;
   return static_cast<uint16_t>(x);
