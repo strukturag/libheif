@@ -507,7 +507,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   aom_image_t input_image;
 
-  aom_img_fmt_t img_format;
+  aom_img_fmt_t img_format = AOM_IMG_FMT_NONE;
 
   switch (chroma) {
     case heif_chroma_420:
