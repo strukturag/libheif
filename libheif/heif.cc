@@ -29,7 +29,6 @@
 #include "heif_plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
-#include "nclx.h"
 
 #if defined(__EMSCRIPTEN__)
 #include "heif_emscripten.h"
@@ -42,7 +41,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <string.h>
+#include <cstring>
 
 #if (defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
 // for _write

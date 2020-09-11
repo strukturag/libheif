@@ -20,7 +20,7 @@
 
 #include "error.h"
 
-#include <assert.h>
+#include <cassert>
 
 // static
 const char heif::Error::kSuccess[] = "Success";

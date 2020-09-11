@@ -27,13 +27,10 @@
 #include "config.h"
 #endif
 
-#include <math.h>
-#include <memory>
-#include <string>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
 #include <vector>
+#include <memory>
+#include <cstring>
+#include <cassert>
 
 #include <iostream>  // TODO: remove me
 

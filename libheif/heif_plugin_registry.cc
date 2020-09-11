@@ -23,8 +23,7 @@
 #endif
 
 #include <utility>
-
-#include <string.h>
+#include <cstring>
 
 #include "heif_plugin_registry.h"
 

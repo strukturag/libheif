@@ -18,11 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
-#include <math.h>
-
 #include "heif_hevc.h"
 #include "bitstream.h"
+
+#include <cmath>
 
 using namespace heif;
 

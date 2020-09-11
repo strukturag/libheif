@@ -28,10 +28,9 @@
 #endif
 
 #include <memory>
-#include <string.h>
+#include <cstring>
 
 #include <libde265/de265.h>
-#include <stdio.h>
 
 using namespace heif;
 

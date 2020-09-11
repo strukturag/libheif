@@ -19,15 +19,13 @@
  */
 
 #include "heif_file.h"
-#include "heif_image.h"
 
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <utility>
-#include <string.h>
-
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 
 using namespace heif;
 

@@ -27,12 +27,9 @@
 #include "config.h"
 #endif
 
-#include <math.h>
-#include <memory>
-#include <string>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
+#include <cstring>
+#include <cstdio>
+#include <cassert>
 #include <vector>
 
 #include <aom/aom_encoder.h>

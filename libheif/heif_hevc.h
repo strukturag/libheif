@@ -21,15 +21,12 @@
 #ifndef HEIF_HEVC_H
 #define HEIF_HEVC_H
 
-#include <assert.h>
-#include <math.h>
-
-#include <memory>
-#include <vector>
-
 #include "heif.h"
 #include "box.h"
 #include "error.h"
+
+#include <memory>
+#include <vector>
 
 
 namespace heif {
@@ -37,8 +34,7 @@ namespace heif {
   class SEIMessage
   {
   public:
-    virtual ~SEIMessage()
-    {}
+    virtual ~SEIMessage() = default;
   };
 
 

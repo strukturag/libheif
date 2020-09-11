@@ -21,8 +21,8 @@
 #include "bitstream.h"
 
 #include <utility>
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 
 #define MAX_UVLC_LEADING_ZEROS 20
 

@@ -23,8 +23,8 @@
 #include "nclx.h"
 #include <typeinfo>
 #include <algorithm>
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 #include <iostream>
 #include <set>
 #include <cmath>

@@ -25,13 +25,12 @@
 #include "heif_limits.h"
 #include "nclx.h"
 
-#include <sstream>
 #include <iomanip>
 #include <utility>
 #include <iostream>
 #include <algorithm>
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 
 
 using namespace heif;

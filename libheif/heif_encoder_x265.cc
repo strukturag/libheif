@@ -26,11 +26,10 @@
 #include "config.h"
 #endif
 
-#include <memory>
 #include <string>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
+#include <cstring>
+#include <cstdio>
+#include <cassert>
 #include <vector>
 
 extern "C" {
