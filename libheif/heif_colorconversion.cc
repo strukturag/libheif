@@ -1882,7 +1882,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(ColorState input_state,
 
 static inline uint8_t clip_f_u8(float fx)
 {
-  long x = lroundf(fx + 0.5f);
+  long x = lroundf(fx);
   if (x < 0) return 0;
   if (x > 255) return 255;
   return static_cast<uint8_t>(x);
