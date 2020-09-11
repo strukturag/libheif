@@ -310,14 +310,6 @@ static inline uint16_t clip_f_u16(float fx, int32_t maxi)
 }
 
 
-static inline uint16_t clip_int_u16(int32_t x, int32_t maxi)
-{
-  if (x < 0) return 0;
-  if (x > maxi) return (uint16_t) maxi;
-  return static_cast<uint16_t>(x);
-}
-
-
 template<class Pixel>
 class Op_YCbCr_to_RGB : public ColorConversionOperation
 {
