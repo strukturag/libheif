@@ -49,6 +49,13 @@ namespace heif {
       m_message = err.message;
     }
 
+    Error(heif_error_code code, heif_suberror_code subcode, const std::string& msg)
+    {
+      m_code = code;
+      m_subcode = subcode;
+      m_message = msg;
+    }
+
     std::string get_message() const
     { return m_message; }
 
@@ -337,6 +344,14 @@ namespace heif {
 
     // throws Error
     ColorProfile_nclx get_nclx_color_profile() const;
+
+    heif_color_profile_type get_color_profile_type() const;
+
+    // throws Error
+    std::vector<uint8_t> get_raw_color_profile() const;
+
+    void set_raw_color_profile(heif_color_profile_type type,
+                               const std::vector<uint8_t>& data);
 
     class ScalingOptions
     {
@@ -892,6 +907,46 @@ namespace heif {
     }
 
     return ColorProfile_nclx(nclx);
+  }
+
+
+  heif_color_profile_type Image::get_color_profile_type() const
+  {
+    return heif_image_get_color_profile_type(m_image.get());
+  }
+
+  // throws Error
+  std::vector<uint8_t> Image::get_raw_color_profile() const
+  {
+    auto size = heif_image_get_raw_color_profile_size(m_image.get());
+    std::vector<uint8_t> profile(size);
+    heif_image_get_raw_color_profile(m_image.get(), profile.data());
+    return profile;
+  }
+
+  void Image::set_raw_color_profile(heif_color_profile_type type,
+                                    const std::vector<uint8_t>& data)
+  {
+    const char* profile_type = nullptr;
+    switch (type) {
+      case heif_color_profile_type_prof:
+        profile_type = "prof";
+        break;
+      case heif_color_profile_type_rICC:
+        profile_type = "rICC";
+        break;
+      default:
+        throw Error(heif_error_code::heif_error_Usage_error,
+                    heif_suberror_Unspecified,
+                    "invalid raw color profile type");
+        break;
+    }
+
+    Error err = Error(heif_image_set_raw_color_profile(m_image.get(), profile_type,
+                                                       data.data(), data.size()));
+    if (err) {
+      throw err;
+    }
   }
 
 
