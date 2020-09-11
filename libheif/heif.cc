@@ -43,13 +43,12 @@
 #include <utility>
 #include <vector>
 #include <string.h>
-#if defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#endif
 
-#if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
+#if (defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H) 
 // for _write
 #include <io.h>
+#else
+#include <unistd.h>
 #endif
 
 using namespace heif;
