@@ -791,22 +791,23 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     api->param_parse(param, "range", "full");
   }
 
-  if (input_class == heif_image_input_class_normal ||
-      input_class == heif_image_input_class_thumbnail) {
+  if (nclx &&
+      (input_class == heif_image_input_class_normal ||
+       input_class == heif_image_input_class_thumbnail)) {
 
-    if (nclx) {
+    {
       std::stringstream sstr;
       sstr << nclx->get_colour_primaries();
       api->param_parse(param, "colorprim", sstr.str().c_str());
     }
 
-    if (nclx) {
+    {
       std::stringstream sstr;
       sstr << nclx->get_transfer_characteristics();
       api->param_parse(param, "transfer", sstr.str().c_str());
     }
 
-    if (nclx) {
+    {
       std::stringstream sstr;
       sstr << nclx->get_matrix_coefficients();
       api->param_parse(param, "colormatrix", sstr.str().c_str());
