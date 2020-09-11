@@ -536,6 +536,11 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     }
   }
 
+  // --- pass the color profiles to the new image
+
+  out_img->set_color_profile_nclx(get_color_profile_nclx());
+  out_img->set_color_profile_icc(get_color_profile_icc());
+
   return Error::Ok;
 }
 
@@ -630,6 +635,11 @@ Error HeifPixelImage::crop(int left, int right, int top, int bottom,
       }
     }
   }
+
+  // --- pass the color profiles to the new image
+
+  out_img->set_color_profile_nclx(get_color_profile_nclx());
+  out_img->set_color_profile_icc(get_color_profile_icc());
 
   return Error::Ok;
 }
