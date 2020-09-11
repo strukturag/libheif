@@ -45,7 +45,7 @@
 #include <string.h>
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
-#ednif
+#endif
 
 #if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
 // for _write
