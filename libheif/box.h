@@ -1136,6 +1136,8 @@ namespace heif {
 
     void set_default();
 
+    void set_undefined();
+    
     Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
 
     static struct heif_color_profile_nclx* alloc_nclx_color_profile();

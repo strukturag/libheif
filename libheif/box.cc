@@ -1701,6 +1701,15 @@ void color_profile_nclx::set_default()
 }
 
 
+void color_profile_nclx::set_undefined()
+{
+  m_colour_primaries = 2;
+  m_transfer_characteristics = 2;
+  m_matrix_coefficients = 2;
+  m_full_range_flag = true;
+}
+
+
 void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
 {
   m_colour_primaries = nclx->color_primaries;
