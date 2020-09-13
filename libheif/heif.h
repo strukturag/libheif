@@ -39,6 +39,7 @@ extern "C" {
 //  1.1          1             1           N/A           N/A            1           N/A
 //  1.3          1             1            1             1             1           N/A
 //  1.4          1             1            1             1             1            1
+//  1.7          1             2            1             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
