@@ -95,7 +95,13 @@ PKG_CHECK_MODULES([aom], [aom], [
     AC_SUBST(aom_CFLAGS)
     AC_SUBST(aom_LIBS)
     have_aom="yes"
-], [have_aom="no"])
+    have_avif_decoder="yes"
+    have_avif_encoder="yes"
+], [
+    have_aom="no"
+    have_avif_decoder="no"
+    have_avif_encoder="no"
+])
 AM_CONDITIONAL([HAVE_AOM], [test "x$have_aom" = "xyes"])
 AC_SUBST([have_aom])
 
@@ -194,10 +200,13 @@ AC_ARG_ENABLE([local_rav1e], AS_HELP_STRING([--enable-local-rav1e],
 if eval "test x$enable_local_rav1e != xno"; then
     AC_MSG_NOTICE([Enable compiling with local rav1e])
     AC_DEFINE([HAVE_RAV1E], [1], [Whether rav1e plugin has been enabled.])
+    have_avif_encoder="yes"
 fi
 AM_CONDITIONAL([ENABLE_LOCAL_RAV1E], [test "x$enable_local_rav1e" != "xno"])
 AC_SUBST(ENABLE_LOCAL_RAV1E)
 
+AC_SUBST(have_avif_decoder)
+AC_SUBST(have_avif_encoder)
 
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
     [Enable fuzzing with libFuzzer.]), [], [enable_libfuzzer=no])
