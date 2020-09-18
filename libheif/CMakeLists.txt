@@ -122,7 +122,7 @@ if(USE_LOCAL_RAV1E)
             heif_encoder_rav1e.h
             )
     target_include_directories(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/include)
-    target_link_libraries(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/librav1e.a)
+    target_link_libraries(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/librav1e.a -ldl)
 endif()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
