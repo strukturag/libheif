@@ -211,8 +211,15 @@ struct heif_encoder_plugin
                                    enum heif_colorspace* inout_colorspace,
                                    enum heif_chroma* inout_chroma);
 
-  // --- version 3 functions will follow below ... ---
+  // --- version 3 ---
 
+  // The encoded image size may be different from the input frame size, e.g. because
+  // of required rounding, or a required minimum size. Use this function to return
+  // the encoded size for a given input image size.
+  void (* query_encoded_size)(void* encoder, uint32_t input_width, uint32_t input_height,
+                              uint32_t* encoded_width, uint32_t* encoded_height);
+
+  // --- version 4 functions will follow below ... ---
 };
 
 

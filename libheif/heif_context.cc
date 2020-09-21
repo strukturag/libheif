@@ -2042,6 +2042,21 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   height = image->get_height();
   m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
 
+
+  if (encoder->plugin->plugin_api_version >= 3) {
+    uint32_t encoded_width, encoded_height;
+
+    encoder->plugin->query_encoded_size(encoder->encoder,
+                                        m_width, m_height,
+                                        &encoded_width,
+                                        &encoded_height);
+    if (m_width != encoded_width ||
+        m_height != encoded_height) {
+      m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
+                                                     encoded_width, encoded_height);;
+    }
+  }
+
   return Error::Ok;
 }
 

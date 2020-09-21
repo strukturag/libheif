@@ -37,8 +37,9 @@ extern "C" {
 }
 
 
-const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
-const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
+static const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
+static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
+static const char* kError_out_of_memory = "Out of memory";
 
 
 enum parameter_type
@@ -862,7 +863,15 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
-  image->image->extend_to_aligned_border();
+  bool success = image->image->extend_to_size(param->sourceWidth, param->sourceHeight);
+  if (!success) {
+    struct heif_error err = {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Unspecified,
+        kError_out_of_memory
+    };
+    return err;
+  }
 
   x265_picture* pic = api->picture_alloc();
   api->picture_init(param, pic);

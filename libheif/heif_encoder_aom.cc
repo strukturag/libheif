@@ -59,6 +59,7 @@ struct encoder_struct_aom
   bool data_read = false;
 };
 
+static const char* kError_out_of_memory = "Out of memory";
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_max_q = "max-q";
@@ -472,6 +473,14 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 
+void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height,
+                            uint32_t* encoded_width, uint32_t* encoded_height)
+{
+  *encoded_width = std::max(input_width, 16U);
+  *encoded_height = std::max(input_height, 16U);
+}
+
+
 // TODO: encode as still frame (seq header)
 static int encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
 {
@@ -495,6 +504,26 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
                                    heif_image_input_class input_class)
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+
+  // --- round image size to minimum size
+
+  uint32_t rounded_width, rounded_height;
+  aom_query_encoded_size(encoder,
+                         image->image->get_width(),
+                         image->image->get_height(),
+                         &rounded_width,
+                         &rounded_height);
+
+  bool success = image->image->extend_to_size(rounded_width, rounded_height);
+  if (!success) {
+    struct heif_error err = {
+        heif_error_Memory_allocation_error,
+        heif_suberror_Unspecified,
+        kError_out_of_memory
+    };
+    return err;
+  }
+
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
   const int source_height = heif_image_get_height(image, heif_channel_Y);
@@ -543,13 +572,13 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     const int stride = input_image.stride[plane];
 
     if (chroma == heif_chroma_monochrome && plane != 0) {
-      if (bpp_y==8) {
+      if (bpp_y == 8) {
         memset(buf, 128, source_height * stride);
       }
       else {
-        uint16_t* buf16 = (uint16_t*)buf;
-        uint16_t half_range = (uint16_t)(1<<(bpp_y-1));
-        for (int i=0;i<source_height * stride/2;i++) {
+        uint16_t* buf16 = (uint16_t*) buf;
+        uint16_t half_range = (uint16_t) (1 << (bpp_y - 1));
+        for (int i = 0; i < source_height * stride / 2; i++) {
           buf16[i] = half_range;
         }
       }
@@ -573,8 +602,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
       if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
 
-      assert(w == heif_image_get_width(image, (heif_channel)plane));
-      assert(h == heif_image_get_height(image, (heif_channel)plane));
+      assert(w == heif_image_get_width(image, (heif_channel) plane));
+      assert(h == heif_image_get_height(image, (heif_channel) plane));
     }
 
     if (bpp_y > 8) {
@@ -752,7 +781,7 @@ struct heif_error aom_get_compressed_data(void* encoder_raw, uint8_t** data, int
 
 static const struct heif_encoder_plugin encoder_plugin_aom
     {
-        /* plugin_api_version */ 2,
+        /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_AV1,
         /* id_name */ "aom",
         /* priority */ AOM_PLUGIN_PRIORITY,
@@ -779,7 +808,8 @@ static const struct heif_encoder_plugin encoder_plugin_aom
         /* query_input_colorspace */ aom_query_input_colorspace,
         /* encode_image */ aom_encode_image,
         /* get_compressed_data */ aom_get_compressed_data,
-        /* query_input_colorspace (v2) */ aom_query_input_colorspace2
+        /* query_input_colorspace (v2) */ aom_query_input_colorspace2,
+        /* query_encoded_size (v3) */ aom_query_encoded_size
     };
 
 const struct heif_encoder_plugin* get_encoder_plugin_aom()
