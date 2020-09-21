@@ -1800,9 +1800,7 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   heif_chroma chroma = image->get_chroma_format();
   auto nclx_profile = image->get_color_profile_nclx();
   if (!nclx_profile) {
-    auto default_nclx_profile = std::make_shared<color_profile_nclx>();
-    default_nclx_profile->set_default();
-    nclx_profile = default_nclx_profile;
+    nclx_profile = std::make_shared<color_profile_nclx>();
   }
 
   if (encoder->plugin->plugin_api_version >= 2) {
@@ -1940,9 +1938,7 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   heif_chroma chroma = image->get_chroma_format();
   auto color_profile = image->get_color_profile_nclx();
   if (!color_profile) {
-    auto nclx = std::make_shared<color_profile_nclx>();
-    nclx->set_default();
-    color_profile = nclx;
+    color_profile = std::make_shared<color_profile_nclx>();
   }
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 
