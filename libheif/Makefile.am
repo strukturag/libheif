@@ -22,7 +22,7 @@ ADDITIONAL_LIBS += $(x265_LIBS)
 endif
 
 if ENABLE_LOCAL_RAV1E
-ADDITIONAL_LIBS += ../third-party/rav1e/target/release/librav1e.a
+ADDITIONAL_LIBS += ../third-party/rav1e/target/release/librav1e.a -ldl
 endif
 
 libheif_la_CPPFLAGS =
