@@ -123,7 +123,13 @@ void show_help(const char* argv0)
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
-            << "  --full_range_flag         nclx profile: full range flag, default: 1\n";
+            << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
+            << "\n"
+            << "Note: to get lossless encoding, you need this set of options:\n"
+            << "  -L                       switch encoder to lossless mode\n"
+            << "  -p chroma=444            switch off color subsampling\n"
+            << "  --matrix_coefficients=0  encode in RGB color-space\n";
+
 }
 
 
@@ -1093,14 +1099,6 @@ int main(int argc, char** argv)
     nclx.full_range_flag = (uint8_t) nclx_full_range;
 
     heif_image_set_nclx_color_profile(image.get(), &nclx);
-
-    if (heif_image_get_colorspace(image.get()) == heif_colorspace_RGB &&
-        lossless) {
-      std::cerr << "Warning: input image is in RGB colorspace, but encoding is currently\n"
-                << "  always done in YCbCr colorspace. Hence, even though you specified lossless\n"
-                << "  compression, there will be differences because of the color conversion.\n";
-    }
-
 
     heif_encoder_set_lossy_quality(encoder, quality);
     heif_encoder_set_lossless(encoder, lossless);
