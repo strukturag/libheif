@@ -169,7 +169,7 @@ static const char* const kParam_tune_valid_values[] = {
 
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
-    "420", "422", "444"
+    "420", "422", "444", nullptr
 };
 
 

@@ -64,7 +64,7 @@ static const char* kParam_speed = "speed";
 
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
-    "420", "422", "444"
+    "420", "422", "444", nullptr
 };
 
 static int valid_tile_num_values[] = {1, 2, 4, 8, 16, 32, 64};
