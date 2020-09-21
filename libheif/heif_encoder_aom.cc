@@ -51,6 +51,8 @@ struct encoder_struct_aom
   int max_q;
   int threads;
 
+  aom_tune_metric tune;
+
   heif_chroma chroma = heif_chroma_420;
 
   // --- output
@@ -70,6 +72,11 @@ static const char* kParam_speed = "speed";
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
     "420", "422", "444", nullptr
+};
+
+static const char* kParam_tune = "tune";
+static const char* const kParam_tune_valid_values[] = {
+    "psnr", "ssim"
 };
 
 static const int AOM_PLUGIN_PRIORITY = 40;
@@ -168,6 +175,15 @@ static void aom_init_parameters()
   p->string.default_value = "420";
   p->has_default = true;
   p->string.valid_values = kParam_chroma_valid_values;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_tune;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "ssim";
+  p->has_default = true;
+  p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
 
   assert(i < MAX_NPARAMETERS);
@@ -400,6 +416,20 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
     }
   }
 
+  if (strcmp(name, kParam_tune) == 0) {
+    if (strcmp(value, "psnr") == 0) {
+      encoder->tune = AOM_TUNE_PSNR;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "ssim") == 0) {
+      encoder->tune = AOM_TUNE_SSIM;
+      return heif_error_ok;
+    }
+    else {
+      return heif_error_invalid_parameter_value;
+    }
+  }
+
   return heif_error_unsupported_parameter;
 }
 
@@ -416,19 +446,34 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
 
-  switch (encoder->chroma) {
-    case heif_chroma_420:
-      save_strcpy(value, value_size, "420");
-      break;
-    case heif_chroma_422:
-      save_strcpy(value, value_size, "422");
-      break;
-    case heif_chroma_444:
-      save_strcpy(value, value_size, "444");
-      break;
-    default:
-      assert(false);
-      return heif_error_invalid_parameter_value;
+  if (strcmp(name, kParam_chroma) == 0) {
+    switch (encoder->chroma) {
+      case heif_chroma_420:
+        save_strcpy(value, value_size, "420");
+        break;
+      case heif_chroma_422:
+        save_strcpy(value, value_size, "422");
+        break;
+      case heif_chroma_444:
+        save_strcpy(value, value_size, "444");
+        break;
+      default:
+        assert(false);
+        return heif_error_invalid_parameter_value;
+    }
+  }
+  else if (strcmp(name, kParam_tune) == 0) {
+    switch (encoder->tune) {
+      case AOM_TUNE_PSNR:
+        save_strcpy(value, value_size, "psnr");
+        break;
+      case AOM_TUNE_SSIM:
+        save_strcpy(value, value_size, "ssim");
+        break;
+      default:
+        assert(false);
+        return heif_error_invalid_parameter_value;
+    }
   }
 
   return heif_error_unsupported_parameter;
@@ -706,6 +751,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->get_matrix_coefficients());
     aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->get_transfer_characteristics());
   }
+
+  aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
 
 
   // --- encode frame
