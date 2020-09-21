@@ -112,6 +112,7 @@ if(AOM_FOUND)
     set(AOM_LINKDIR "-L${AOM_LIBRARY_DIRS}")
   endif()
 
+  include_directories(SYSTEM ${AOM_INCLUDE_DIR})
   target_link_libraries(heif PRIVATE ${AOM_LIBRARIES} ${AOM_LINKDIR})
 endif()
 
