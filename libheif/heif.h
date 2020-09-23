@@ -878,6 +878,17 @@ int heif_image_get_width(const struct heif_image*, enum heif_channel channel);
 LIBHEIF_API
 int heif_image_get_height(const struct heif_image*, enum heif_channel channel);
 
+// Get the width of the main channel (Y in YCbCr, or any in RGB).
+LIBHEIF_API
+int heif_image_get_primary_width(const struct heif_image*);
+
+LIBHEIF_API
+int heif_image_get_primary_height(const struct heif_image*);
+
+LIBHEIF_API
+struct heif_error heif_image_crop(struct heif_image* img,
+                                  int left, int right, int top, int bottom);
+
 // Get the number of bits per pixel in the given image channel. Returns -1 if
 // a non-existing channel was given.
 // Note that the number of bits per pixel may be different for each color channel.

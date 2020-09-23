@@ -43,12 +43,12 @@
 #include <vector>
 #include <cstring>
 
-#if (defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
+#if (defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
 // for _write
 #include <io.h>
 #else
 #include <unistd.h>
-#endif 
+#endif
 
 using namespace heif;
 
@@ -322,7 +322,7 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
 
   std::string dump = ctx->context->debug_dump_boxes();
   // TODO(fancycode): Should we return an error if writing fails?
-#if (defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
+#if (defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
   auto written = _write(fd, dump.c_str(), dump.size());
 #else
   auto written = write(fd, dump.c_str(), dump.size());
@@ -744,9 +744,61 @@ int heif_image_get_width(const struct heif_image* img, enum heif_channel channel
   return img->image->get_width(channel);
 }
 
+
 int heif_image_get_height(const struct heif_image* img, enum heif_channel channel)
 {
   return img->image->get_height(channel);
+}
+
+
+int heif_image_get_primary_width(const struct heif_image* img)
+{
+  if (img->image->get_colorspace() == heif_colorspace_RGB) {
+    if (img->image->get_chroma_format() == heif_chroma_444) {
+      return img->image->get_width(heif_channel_G);
+    }
+    else {
+      return img->image->get_width(heif_channel_interleaved);
+    }
+  }
+  else {
+    return img->image->get_width(heif_channel_Y);
+  }
+}
+
+
+int heif_image_get_primary_height(const struct heif_image* img)
+{
+  if (img->image->get_colorspace() == heif_colorspace_RGB) {
+    if (img->image->get_chroma_format() == heif_chroma_444) {
+      return img->image->get_height(heif_channel_G);
+    }
+    else {
+      return img->image->get_width(heif_channel_interleaved);
+    }
+  }
+  else {
+    return img->image->get_height(heif_channel_Y);
+  }
+}
+
+
+heif_error heif_image_crop(struct heif_image* img,
+                           int left, int right, int top, int bottom)
+{
+  std::shared_ptr<HeifPixelImage> out_img;
+
+  int w = img->image->get_width();
+  int h = img->image->get_height();
+
+  Error err = img->image->crop(left, w - 1 - right, top, h - 1 - bottom, out_img);
+  if (err) {
+    return err.error_struct(img->image.get());
+  }
+
+  img->image = out_img;
+
+  return heif_error{heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
 

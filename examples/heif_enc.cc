@@ -76,22 +76,23 @@ const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 
 static struct option long_options[] = {
-    {(char* const) "help",                    no_argument,       0,                             'h'},
-    {(char* const) "quality",                 required_argument, 0,                             'q'},
-    {(char* const) "output",                  required_argument, 0,                             'o'},
-    {(char* const) "lossless",                no_argument,       0,                             'L'},
-    {(char* const) "thumb",                   required_argument, 0,                             't'},
-    {(char* const) "verbose",                 no_argument,       0,                             'v'},
-    {(char* const) "params",                  no_argument,       0,                             'P'},
-    {(char* const) "no-alpha",                no_argument,       &master_alpha,                 0},
-    {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,                  0},
-    {(char* const) "bit-depth",               required_argument, 0,                             'b'},
-    {(char* const) "avif",                    no_argument,       0,                             'A'},
-    {(char* const) "matrix_coefficients",     required_argument, 0, OPTION_NCLX_MATRIX_COEFFICIENTS},
-    {(char* const) "colour_primaries",        required_argument, 0, OPTION_NCLX_COLOUR_PRIMARIES},
-    {(char* const) "transfer_characteristic", required_argument, 0, OPTION_NCLX_TRANSFER_CHARACTERISTIC},
-    {(char* const) "full_range_flag",         required_argument, 0, OPTION_NCLX_FULL_RANGE_FLAG},
-    {0, 0,                                                       0,                             0}
+    {(char* const) "help",                    no_argument,       0,             'h'},
+    {(char* const) "quality",                 required_argument, 0,             'q'},
+    {(char* const) "output",                  required_argument, 0,             'o'},
+    {(char* const) "lossless",                no_argument,       0,             'L'},
+    {(char* const) "thumb",                   required_argument, 0,             't'},
+    {(char* const) "verbose",                 no_argument,       0,             'v'},
+    {(char* const) "params",                  no_argument,       0,             'P'},
+    {(char* const) "no-alpha",                no_argument,       &master_alpha, 0},
+    {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,  0},
+    {(char* const) "bit-depth",               required_argument, 0,             'b'},
+    {(char* const) "even-size",               no_argument,       0,             'E'},
+    {(char* const) "avif",                    no_argument,       0,             'A'},
+    {(char* const) "matrix_coefficients",     required_argument, 0,             OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",        required_argument, 0,             OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic", required_argument, 0,             OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",         required_argument, 0,             OPTION_NCLX_FULL_RANGE_FLAG},
+    {0, 0,                                                       0,             0}
 };
 
 void show_help(const char* argv0)
@@ -120,6 +121,7 @@ void show_help(const char* argv0)
             << "  -b #            bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p              set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif      encode as AVIF\n"
+            << "  -E, --even-size crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
@@ -917,13 +919,14 @@ int main(int argc, char** argv)
   int thumbnail_bbox_size = 0;
   int output_bit_depth = 10;
   bool enc_av1f = false;
+  bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:A", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AE", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -957,6 +960,9 @@ int main(int argc, char** argv)
         break;
       case 'A':
         enc_av1f = true;
+        break;
+      case 'E':
+        crop_to_even_size = true;
         break;
       case OPTION_NCLX_MATRIX_COEFFICIENTS:
         nclx_matrix_coefficients = atoi(optarg);
@@ -1108,6 +1114,33 @@ int main(int argc, char** argv)
 
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
+
+    if (crop_to_even_size) {
+      if (heif_image_get_primary_width(image.get()) == 1 ||
+          heif_image_get_primary_height(image.get()) == 1) {
+        std::cerr << "Image only has a size of 1 pixel width or height. Cannot crop to even size.\n";
+        return 1;
+      }
+
+      int right = heif_image_get_primary_width(image.get()) % 2;
+      int bottom = heif_image_get_primary_height(image.get()) % 2;
+
+      error = heif_image_crop(image.get(), 0, right, 0, bottom);
+      if (error.code != 0) {
+        heif_encoding_options_free(options);
+        std::cerr << "Could not crop image: " << error.message << "\n";
+        return 1;
+      }
+    }
+
+    if (!enc_av1f &&
+        ((heif_image_get_primary_width(image.get())) % 2 ||
+         (heif_image_get_primary_height(image.get())) % 2)) {
+      std::cerr << "Warning: HEIF images with odd width or height cannot be displayed by\n"
+                   "many programs on macOS (tested up to Catalina 10.15.6). Until macOS is\n"
+                   "fixed or we have a workaround, it is advised to use option -E to make the\n"
+                   "image size an even number.\n";
+    }
 
     struct heif_image_handle* handle;
     error = heif_context_encode_image(context.get(),
