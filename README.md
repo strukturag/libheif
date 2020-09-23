@@ -218,6 +218,7 @@ to update the gdk-pixbuf loader database.
 * ImageMagick
 * digiKam 7.0.0
 * libvips
+* [Kodi HEIF image decoder plugin](https://kodi.wiki/view/Add-on:HEIF_image_decoder)
 
 
 ## License
