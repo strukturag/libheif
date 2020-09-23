@@ -25,6 +25,10 @@ if ENABLE_LOCAL_RAV1E
 ADDITIONAL_LIBS += ../third-party/rav1e/target/release/librav1e.a -ldl
 endif
 
+if ENABLE_LOCAL_DAV1D
+ADDITIONAL_LIBS += ../third-party/dav1d/build/src/libdav1d.a -ldl
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -39,6 +43,10 @@ libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
 if ENABLE_LOCAL_RAV1E
 libheif_la_CXXFLAGS += -I../third-party/rav1e/target/release/include
+endif
+
+if ENABLE_LOCAL_DAV1D
+libheif_la_CXXFLAGS += -I../third-party/dav1d/build -I../third-party/dav1d/build/include -I../third-party/dav1d/build/include/dav1d -I../third-party/dav1d/include
 endif
 
 libheif_la_LDFLAGS = -version-info $(LIBHEIF_CURRENT):$(LIBHEIF_REVISION):$(LIBHEIF_AGE)
@@ -95,6 +103,12 @@ if ENABLE_LOCAL_RAV1E
 libheif_la_SOURCES += \
   heif_encoder_rav1e.cc \
   heif_encoder_rav1e.h
+endif
+
+if ENABLE_LOCAL_DAV1D
+libheif_la_SOURCES += \
+  heif_decoder_dav1d.cc \
+  heif_decoder_dav1d.h
 endif
 
 

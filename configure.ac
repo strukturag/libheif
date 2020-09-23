@@ -205,6 +205,16 @@ fi
 AM_CONDITIONAL([ENABLE_LOCAL_RAV1E], [test "x$enable_local_rav1e" != "xno"])
 AC_SUBST(ENABLE_LOCAL_RAV1E)
 
+AC_ARG_ENABLE([local_dav1d], AS_HELP_STRING([--enable-local-dav1d],
+    [Enable compiling with local dav1d decoder.]), [], [enable_local_dav1d=no])
+if eval "test x$enable_local_dav1d != xno"; then
+    AC_MSG_NOTICE([Enable compiling with local dav1d])
+    AC_DEFINE([HAVE_DAV1D], [1], [Whether dav1d plugin has been enabled.])
+    have_avif_encoder="yes"
+fi
+AM_CONDITIONAL([ENABLE_LOCAL_DAV1D], [test "x$enable_local_dav1d" != "xno"])
+AC_SUBST(ENABLE_LOCAL_DAV1D)
+
 AC_SUBST(have_avif_decoder)
 AC_SUBST(have_avif_encoder)
 
@@ -246,6 +256,7 @@ AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
 AC_MSG_NOTICE([libaom decoder: $have_aom])
 AC_MSG_NOTICE([libaom encoder: $have_aom])
 AC_MSG_NOTICE([rav1e encoder: $enable_local_rav1e])
+AC_MSG_NOTICE([dav1d decoder: $enable_local_dav1d])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
