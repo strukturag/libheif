@@ -9,7 +9,7 @@ HEIF and AVIF are new image file formats employing HEVC (h.265) or AV1 image cod
 best compression ratios currently possible.
 
 libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
-For AVIF, libaom or rav1e are used as codecs.
+For AVIF, libaom, dav1d, or rav1e are used as codecs.
 
 
 ## Supported features
@@ -136,8 +136,17 @@ cargo install --force cbindgen
 * Make sure that the `cbindgen` executable is found. You probably have to add `~/.cargo/bin` to your `$PATH`.
 * Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
 
-When using cmake, you have to enable compiling in the local rav1e encoder with `USE_LOCAL_RAV1E'.
+When using cmake, you have to enable compiling the local rav1e encoder with `USE_LOCAL_RAV1E'.
 With autoconf, use the configure option `--enable-local-rav1e'.
+
+
+### Adding dav1d decoder for AVIF
+
+* Install `meson`.
+* Run the `dav1d.cmd` script in directory `third-party` to download dav1d and compile it.
+
+When using cmake, you have to enable compiling the local dav1d encoder with `USE_LOCAL_DAV1D'.
+With autoconf, use the configure option `--enable-local-dav1d'.
 
 
 ## Compiling to JavaScript
