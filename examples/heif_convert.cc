@@ -258,7 +258,7 @@ int main(int argc, char** argv)
     }
 
     if (image) {
-      bool written = encoder->Encode(handle, image, filename.c_str());
+      bool written = encoder->Encode(handle, image, filename);
       if (!written) {
         fprintf(stderr, "could not write image\n");
       }
@@ -283,13 +283,13 @@ int main(int argc, char** argv)
           return 1;
         }
 
-        int bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
+        int depth_bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
 
         struct heif_image* depth_image;
         err = heif_decode_image(depth_handle,
                                 &depth_image,
                                 encoder->colorspace(false),
-                                encoder->chroma(false, bit_depth),
+                                encoder->chroma(false, depth_bit_depth),
                                 nullptr);
         if (err.code) {
           heif_image_handle_release(depth_handle);
