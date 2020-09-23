@@ -126,6 +126,20 @@ if(USE_LOCAL_RAV1E)
     target_link_libraries(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/rav1e/target/release/librav1e.a -ldl)
 endif()
 
+if(USE_LOCAL_DAV1D)
+    target_compile_definitions(heif PRIVATE HAVE_DAV1D=1)
+    target_sources(heif PRIVATE
+            heif_decoder_dav1d.cc
+            heif_decoder_dav1d.h
+            )
+    target_include_directories(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/dav1d/build
+            ${CMAKE_SOURCE_DIR}/third-party/dav1d/build/include
+            ${CMAKE_SOURCE_DIR}/third-party/dav1d/build/include/dav1d
+            ${CMAKE_SOURCE_DIR}/third-party/dav1d/include)
+
+    target_link_libraries(heif PRIVATE ${CMAKE_SOURCE_DIR}/third-party/dav1d/build/src/libdav1d.a -ldl)
+endif ()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config

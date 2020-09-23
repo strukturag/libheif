@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.3.2)
 project(libheif LANGUAGES C CXX VERSION 1.8.0.0)
 
 option(USE_LOCAL_RAV1E "Include rav1e support from local rav1e source" FALSE)
+option(USE_LOCAL_DAV1D "Include dav1d support from local dav1d source" FALSE)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
@@ -82,6 +83,12 @@ else ()
     message("AVIF encoder, use local rav1e: no")
 endif ()
 
+if (USE_LOCAL_DAV1D)
+    message("AVIF decoder, use local dav1d: yes")
+else ()
+    message("AVIF decoder, use local dav1d: no")
+endif ()
+
 
 # Create libheif pkgconfig file
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -98,7 +105,7 @@ if (X265_FOUND)
 else()
     set(have_x265 no)
 endif()
-if (AOM_FOUND)
+if (AOM_FOUND OR USE_LOCAL_DAV1D)
     set(have_avif_decoder yes)
 else()
     set(have_avif_decoder no)

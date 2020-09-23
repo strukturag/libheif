@@ -44,6 +44,10 @@
 #include "heif_encoder_rav1e.h"
 #endif
 
+#if HAVE_DAV1D
+#include "heif_decoder_dav1d.h"
+#endif
+
 
 using namespace heif;
 
@@ -85,6 +89,10 @@ public:
 
 #if HAVE_RAV1E
     heif::register_encoder(get_encoder_plugin_rav1e());
+#endif
+
+#if HAVE_DAV1D
+    heif::register_decoder(get_decoder_plugin_dav1d());
 #endif
   }
 } dummy;
