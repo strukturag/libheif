@@ -149,6 +149,17 @@ When using cmake, you have to enable compiling the local dav1d encoder with `USE
 With autoconf, use the configure option `--enable-local-dav1d'.
 
 
+## Language bindings
+
+* C++: part of libheif
+* Go: part of libheif
+* JavaScript: by compilation with emscripten (see below)
+* Python: [pyheif](https://pypi.org/project/pyheif/)
+* Rust: [libheif-sys](https://github.com/Cykooz/libheif-sys)
+
+Languages that can directly interface with C libraries (e.g., Swift, C#) should work out of the box.
+
+
 ## Compiling to JavaScript
 
 libheif can also be compiled to JavaScript using
@@ -198,6 +209,15 @@ You may have to run `update-mime-database /usr/share/mime` to update the list of
 libheif also includes a gdk-pixbuf loader for HEIF/AVIF images. 'make install' will copy the plugin
 into the system directories. However, you will still have to run `gdk-pixbuf-query-loaders --update-cache`
 to update the gdk-pixbuf loader database.
+
+
+## Software using libheif
+
+* GIMP
+* Krita
+* ImageMagick
+* digiKam 7.0.0
+* libvips
 
 
 ## License
