@@ -126,6 +126,11 @@ For AVIF support, make sure that libaom is installed.
     make
     ```
 
+### Windows
+
+Libheif is included in [Vcpkg](https://github.com/Microsoft/vcpkg/).
+
+
 ### Adding rav1e encoder for AVIF
 
 * Install `cargo`.
