@@ -23,4 +23,5 @@ EXTRA_DIST = \
     README.md \
     pre.js \
     post.js \
-    build-emscripten.sh
+    build-emscripten.sh \
+    cmake/modules/*.cmake
