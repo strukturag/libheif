@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3.2)
 
-project(libheif LANGUAGES C CXX VERSION 1.8.0.0)
+project(libheif LANGUAGES C CXX VERSION 1.9.0.0)
 
 option(USE_LOCAL_RAV1E "Include rav1e support from local rav1e source" FALSE)
 option(USE_LOCAL_DAV1D "Include dav1d support from local dav1d source" FALSE)

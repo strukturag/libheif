@@ -1,11 +1,11 @@
 AC_PREREQ([2.68])
-AC_INIT([libheif], [1.8.0], [opensource@struktur.de])
+AC_INIT([libheif], [1.9.0], [opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
 # Note: do not forget to set the version in the CMakeLists.txt file accordingly
 PROJECT_VERSION_MAJOR=1
-PROJECT_VERSION_MINOR=8
+PROJECT_VERSION_MINOR=9
 PROJECT_VERSION_PATCH=0
 PROJECT_VERSION_TWEAK=0
 AC_SUBST(PROJECT_VERSION_MAJOR)
@@ -19,9 +19,9 @@ AC_SUBST(PROJECT_VERSION_TWEAK)
 # If any interfaces have been added since the last public release, then increment age.
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 
-LIBHEIF_CURRENT=9
+LIBHEIF_CURRENT=10
 LIBHEIF_REVISION=0
-LIBHEIF_AGE=8
+LIBHEIF_AGE=9
 AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
 AC_SUBST(LIBHEIF_AGE)
