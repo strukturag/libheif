@@ -898,7 +898,7 @@ namespace heif {
   }
 
   // throws Error
-  ColorProfile_nclx Image::get_nclx_color_profile() const
+  inline ColorProfile_nclx Image::get_nclx_color_profile() const
   {
     heif_color_profile_nclx* nclx = nullptr;
     Error err = Error(heif_image_get_nclx_color_profile(m_image.get(), &nclx));
@@ -910,13 +910,13 @@ namespace heif {
   }
 
 
-  heif_color_profile_type Image::get_color_profile_type() const
+  inline heif_color_profile_type Image::get_color_profile_type() const
   {
     return heif_image_get_color_profile_type(m_image.get());
   }
 
   // throws Error
-  std::vector<uint8_t> Image::get_raw_color_profile() const
+  inline std::vector<uint8_t> Image::get_raw_color_profile() const
   {
     auto size = heif_image_get_raw_color_profile_size(m_image.get());
     std::vector<uint8_t> profile(size);
@@ -924,7 +924,7 @@ namespace heif {
     return profile;
   }
 
-  void Image::set_raw_color_profile(heif_color_profile_type type,
+  inline void Image::set_raw_color_profile(heif_color_profile_type type,
                                     const std::vector<uint8_t>& data)
   {
     const char* profile_type = nullptr;
