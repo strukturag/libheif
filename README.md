@@ -147,11 +147,11 @@ With autoconf, use the configure option `--enable-local-rav1e'.
 
 ### Adding dav1d decoder for AVIF
 
-* Install `meson`.
+* Install [`meson`](https://mesonbuild.com/).
 * Run the `dav1d.cmd` script in directory `third-party` to download dav1d and compile it.
 
-When using cmake, you have to enable compiling the local dav1d encoder with `USE_LOCAL_DAV1D'.
-With autoconf, use the configure option `--enable-local-dav1d'.
+When running `cmake` or `configure`, make sure that the environment variable
+`PKG_CONFIG_PATH` includes the path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
 
 
 ## Language bindings

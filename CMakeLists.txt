@@ -3,7 +3,6 @@ cmake_minimum_required (VERSION 3.3.2)
 project(libheif LANGUAGES C CXX VERSION 1.9.1.0)
 
 option(USE_LOCAL_RAV1E "Include rav1e support from local rav1e source" FALSE)
-option(USE_LOCAL_DAV1D "Include dav1d support from local dav1d source" FALSE)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(SET CMP0054 NEW)
@@ -58,6 +57,7 @@ LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 find_package(Libde265 REQUIRED)
 find_package(X265)
 find_package(LibAOM)
+find_package(Dav1d)
 
 if (LIBDE265_FOUND)
     message("HEIF decoder, libde265: found")
@@ -83,10 +83,10 @@ else ()
     message("AVIF encoder, use local rav1e: no")
 endif ()
 
-if (USE_LOCAL_DAV1D)
-    message("AVIF decoder, use local dav1d: yes")
+if (DAV1D_FOUND)
+    message("AVIF decoder, dav1d: found")
 else ()
-    message("AVIF decoder, use local dav1d: no")
+    message("AVIF decoder, dav1d: not found")
 endif ()
 
 
@@ -105,7 +105,7 @@ if (X265_FOUND)
 else()
     set(have_x265 no)
 endif()
-if (AOM_FOUND OR USE_LOCAL_DAV1D)
+if (AOM_FOUND OR DAV1D_FOUND)
     set(have_avif_decoder yes)
 else()
     set(have_avif_decoder no)
