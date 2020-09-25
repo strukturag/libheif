@@ -12,7 +12,7 @@ jobs:
       matrix:
         env:
           - { NAME: "nothing" }
-          - { NAME: "cmake", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, CMAKE: 1 }
+          - { NAME: "cmake", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_DAV1D: 1, WITH_LIBDE265: 1, CMAKE: 1 }
           - { NAME: "tarball", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, TARBALL: 1 }
           - { NAME: "graphics", WITH_GRAPHICS: 1 }
           - { NAME: "x265", WITH_X265: 1 }
@@ -22,6 +22,7 @@ jobs:
           - { NAME: "libde265 (1) / x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_LIBDE265: 1 }
           - { NAME: "libde265 (2) / x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_LIBDE265: 2 }
           - { NAME: "libde265 (1) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
+          - { NAME: "libde265 (1) / x265 / dav1d / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_DAV1D: 1, WITH_LIBDE265: 1 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-latest
     steps:
