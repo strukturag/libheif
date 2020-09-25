@@ -17,7 +17,7 @@ cd dav1d
 : # macOS might require: -Dc_args=-fno-stack-check
 : # Build with asan: -Db_sanitize=address
 : # Build with ubsan: -Db_sanitize=undefined
-meson build --default-library=static --buildtype release --prefix "$(pwd)/dist"
+meson build --default-library=static --buildtype release --prefix "$(pwd)/dist" $@
 ninja -C build
 ninja -C build install
 cd ..

@@ -178,6 +178,6 @@ if [ "$WITH_DAV1D" = "1" ]; then
 
     export PATH="$PATH:$HOME/.local/bin"
     cd third-party
-    sh dav1d.cmd
+    sh dav1d.cmd -Denable_avx512=false
     cd ..
 fi
