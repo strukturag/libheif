@@ -120,6 +120,8 @@ class ImageGrid
 public:
   Error parse(const std::vector<uint8_t>& data);
 
+  std::vector<uint8_t> write() const;
+
   std::string dump() const;
 
   uint32_t get_width() const { return m_output_width; }
@@ -138,11 +140,23 @@ public:
     return m_columns;
   }
 
+  void set_num_tiles(uint16_t columns, uint16_t rows)
+  {
+    m_rows = rows;
+    m_columns = columns;
+  }
+
+  void set_output_size(uint32_t width, uint32_t height)
+  {
+    m_output_width = width;
+    m_output_height = height;
+  }
+
 private:
-  uint16_t m_rows;
-  uint16_t m_columns;
-  uint32_t m_output_width;
-  uint32_t m_output_height;
+  uint16_t m_rows = 0;
+  uint16_t m_columns = 0;
+  uint32_t m_output_width = 0;
+  uint32_t m_output_height = 0;
 };
 
 
@@ -189,6 +203,53 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   }
 
   return Error::Ok;
+}
+
+
+std::vector<uint8_t> ImageGrid::write() const
+{
+  int field_size;
+
+  if (m_output_width > 0xFFFF ||
+      m_output_height > 0xFFFF) {
+    field_size = 32;
+  }
+  else {
+    field_size = 16;
+  }
+
+  std::vector<uint8_t> data(field_size == 16 ? 8 : 12);
+
+  data[0] = 0; // version
+
+  uint8_t flags = 0;
+  if (field_size == 32) {
+    flags |= 1;
+  }
+
+  data[2] = (uint8_t) (m_rows - 1);
+  data[3] = (uint8_t) (m_columns - 1);
+
+  if (field_size == 32) {
+    data[4] = (uint8_t) ((m_output_width >> 24) & 0xFF);
+    data[5] = (uint8_t) ((m_output_width >> 16) & 0xFF);
+    data[6] = (uint8_t) ((m_output_width >> 8) & 0xFF);
+    data[7] = (uint8_t) ((m_output_width) & 0xFF);
+
+    data[8] = (uint8_t) ((m_output_height >> 24) & 0xFF);
+    data[9] = (uint8_t) ((m_output_height >> 16) & 0xFF);
+    data[10] = (uint8_t) ((m_output_height >> 8) & 0xFF);
+    data[11] = (uint8_t) ((m_output_height) & 0xFF);
+  }
+  else {
+    data[4] = (uint8_t) ((m_output_width >> 8) & 0xFF);
+    data[5] = (uint8_t) ((m_output_width) & 0xFF);
+
+    data[6] = (uint8_t) ((m_output_height >> 8) & 0xFF);
+    data[7] = (uint8_t) ((m_output_height) & 0xFF);
+  }
+
+  return data;
 }
 
 
@@ -1807,19 +1868,6 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                       image->get_height(heif_channel_Y));
 
 
-  // --- choose which color profile to put into 'colr' box
-
-  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
-    auto icc_profile = image->get_color_profile_icc();
-    if (icc_profile) {
-      m_heif_file->set_color_profile(image_id, icc_profile);
-    }
-    else if (nclx_profile) {
-      m_heif_file->set_color_profile(image_id, nclx_profile);
-    }
-  }
-
-
   // --- if there is an alpha channel, add it as an additional image
 
   if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
@@ -1881,7 +1929,6 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
       m_heif_file->set_hvcC_configuration(image_id, config);
-      m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
     }
 
     switch (data[0] >> 1) {
@@ -1908,10 +1955,53 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                      out_image->get_height(),
                                      encoded_width,
                                      encoded_height);
+
+      m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
     }
   }
   else {
+    // --- wrap the encoded image in a grid image just to apply the cropping
 
+    heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
+    auto grid_image = std::make_shared<Image>(this, grid_image_id);
+
+    m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), {image_id});
+
+    ImageGrid grid;
+    grid.set_num_tiles(1, 1);
+    grid.set_output_size(image->get_width(), image->get_height());
+    auto grid_data = grid.write();
+
+    m_heif_file->append_iloc_data(grid_image_id, grid_data);
+    m_heif_file->add_ispe_property(grid_image_id,
+                                   image->get_width(heif_channel_Y),
+                                   image->get_height(heif_channel_Y));
+
+    m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+
+    // --- now use the grid image instead of the original image
+
+    // hide the original image
+    m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
+
+    out_image = grid_image;
+
+    // now use the grid image for all further property output
+    image_id = grid_image_id;
+  }
+
+
+  // --- choose which color profile to put into 'colr' box
+
+  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    auto icc_profile = image->get_color_profile_icc();
+    if (icc_profile) {
+      m_heif_file->set_color_profile(image_id, icc_profile);
+    }
+    else if (nclx_profile) {
+      m_heif_file->set_color_profile(image_id, nclx_profile);
+    }
   }
 
   m_top_level_images.push_back(out_image);
