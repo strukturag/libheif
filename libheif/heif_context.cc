@@ -47,7 +47,7 @@
 using namespace heif;
 
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
-    : plugin(_plugin)
+        : plugin(_plugin)
 {
 
 }
@@ -122,11 +122,9 @@ public:
 
   std::string dump() const;
 
-  uint32_t get_width() const
-  { return m_output_width; }
+  uint32_t get_width() const { return m_output_width; }
 
-  uint32_t get_height() const
-  { return m_output_height; }
+  uint32_t get_height() const { return m_output_height; }
 
   uint16_t get_rows() const
   {
@@ -216,14 +214,11 @@ public:
 
   void get_background_color(uint16_t col[4]) const;
 
-  uint32_t get_canvas_width() const
-  { return m_width; }
+  uint32_t get_canvas_width() const { return m_width; }
 
-  uint32_t get_canvas_height() const
-  { return m_height; }
+  uint32_t get_canvas_height() const { return m_height; }
 
-  size_t get_num_offsets() const
-  { return m_offsets.size(); }
+  size_t get_num_offsets() const { return m_offsets.size(); }
 
   void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
 
@@ -809,8 +804,8 @@ Error HeifContext::interpret_heif_file()
 
 
 HeifContext::Image::Image(HeifContext* context, heif_item_id id)
-    : m_heif_context(context),
-      m_id(id)
+        : m_heif_context(context),
+          m_id(id)
 {
   memset(&m_depth_representation_info, 0, sizeof(m_depth_representation_info));
 }
@@ -1743,15 +1738,11 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC: {
-      heif_item_id image_id = m_heif_file->add_new_image("hvc1");
-
-      out_image = std::make_shared<Image>(this, image_id);
-      m_top_level_images.push_back(out_image);
-
-      error = out_image->encode_image_as_hevc(pixel_image,
-                                              encoder,
-                                              options,
-                                              heif_image_input_class_normal);
+      error = encode_image_as_hevc(pixel_image,
+                                   encoder,
+                                   options,
+                                   heif_image_input_class_normal,
+                                   out_image);
     }
       break;
 
@@ -1776,22 +1767,14 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 }
 
 
-Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
-                                               struct heif_encoder* encoder,
-                                               const struct heif_encoding_options* options,
-                                               enum heif_image_input_class input_class)
+Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options* options,
+                                        enum heif_image_input_class input_class,
+                                        std::shared_ptr<Image>& out_image)
 {
-  /*
-  const struct heif_encoder_plugin* encoder_plugin = nullptr;
-
-  encoder_plugin = m_heif_context->get_encoder(heif_compression_HEVC);
-
-  if (encoder_plugin == nullptr) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_codec);
-  }
-  */
-
+  heif_item_id image_id = m_heif_file->add_new_image("hvc1");
+  out_image = std::make_shared<Image>(this, image_id);
 
 
   // --- check whether we have to convert the image color space
@@ -1820,18 +1803,19 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
   }
 
 
-  m_width = image->get_width(heif_channel_Y);
-  m_height = image->get_height(heif_channel_Y);
+  out_image->set_size(image->get_width(heif_channel_Y),
+                      image->get_height(heif_channel_Y));
+
 
   // --- choose which color profile to put into 'colr' box
 
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
-      m_heif_context->m_heif_file->set_color_profile(m_id, icc_profile);
+      m_heif_file->set_color_profile(image_id, icc_profile);
     }
     else if (nclx_profile) {
-      m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
+      m_heif_file->set_color_profile(image_id, nclx_profile);
     }
   }
 
@@ -1849,24 +1833,21 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
 
     // --- encode the alpha image
 
-    heif_item_id alpha_image_id = m_heif_context->m_heif_file->add_new_image("hvc1");
-
     std::shared_ptr<HeifContext::Image> heif_alpha_image;
-    heif_alpha_image = std::make_shared<Image>(m_heif_context, alpha_image_id);
 
-
-    Error error = heif_alpha_image->encode_image_as_hevc(alpha_image, encoder, options,
-                                                         heif_image_input_class_alpha);
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
     if (error) {
       return error;
     }
 
-    m_heif_context->m_heif_file->add_iref_reference(alpha_image_id, fourcc("auxl"), {m_id});
-    m_heif_context->m_heif_file->set_auxC_property(alpha_image_id, "urn:mpeg:hevc:2015:auxid:1");
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
   }
 
 
-  m_heif_context->m_heif_file->add_hvcC_property(m_id);
+  m_heif_file->add_hvcC_property(image_id);
 
 
   heif_image c_api_image;
@@ -1878,6 +1859,8 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
                  err.subcode,
                  err.message);
   }
+
+  int encoded_width, encoded_height;
 
   for (;;) {
     uint8_t* data;
@@ -1893,35 +1876,45 @@ Error HeifContext::Image::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> i
     const uint8_t NAL_SPS = 33;
 
     if ((data[0] >> 1) == NAL_SPS) {
-      int encoded_width, encoded_height;
       Box_hvcC::configuration config;
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
-      m_heif_context->m_heif_file->set_hvcC_configuration(m_id, config);
-      m_heif_context->m_heif_file->add_ispe_property(m_id, m_width, m_height);
-
-      // if image size was rounded up to even size, add a 'clap' box to crop the
-      // padding border away
-
-      if (m_width != (uint32_t) encoded_width ||
-          m_height != (uint32_t) encoded_height) {
-        m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
-                                                       encoded_width, encoded_height);;
-      }
+      m_heif_file->set_hvcC_configuration(image_id, config);
+      m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
     }
 
     switch (data[0] >> 1) {
       case 0x20:
       case 0x21:
       case 0x22:
-        m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, data, size);
+        m_heif_file->append_hvcC_nal_data(image_id, data, size);
         break;
 
       default:
-        m_heif_context->m_heif_file->append_iloc_data_with_4byte_size(m_id, data, size);
+        m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
     }
   }
+
+
+  // if image size was rounded up to even size, add a 'clap' box to crop the
+  // padding border away
+
+  if (0) {
+    if (out_image->get_width() != encoded_width ||
+        out_image->get_height() != encoded_height) {
+      m_heif_file->add_clap_property(image_id,
+                                     out_image->get_width(),
+                                     out_image->get_height(),
+                                     encoded_width,
+                                     encoded_height);
+    }
+  }
+  else {
+
+  }
+
+  m_top_level_images.push_back(out_image);
 
   return Error::Ok;
 }
