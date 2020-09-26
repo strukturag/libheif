@@ -1743,6 +1743,7 @@ static void set_default_options(heif_encoding_options& options)
   options.version = 1;
 
   options.save_alpha_channel = true;
+  options.macOS_compatibility_workaround = true;
 }
 
 

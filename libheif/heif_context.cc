@@ -1948,7 +1948,7 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
   // if image size was rounded up to even size, add a 'clap' box to crop the
   // padding border away
 
-  if (0) {
+  if (options->macOS_compatibility_workaround == false) {
     if (out_image->get_width() != encoded_width ||
         out_image->get_height() != encoded_height) {
       m_heif_file->add_clap_property(image_id,

@@ -40,6 +40,7 @@ extern "C" {
 //  1.3          1             1            1             1             1           N/A
 //  1.4          1             1            1             1             1            1
 //  1.7          1             2            1             1             1            1
+//  1.9.2        1             2            2             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -1194,6 +1195,13 @@ struct heif_encoding_options
   // version 1 options
 
   uint8_t save_alpha_channel; // default: true
+
+  // version 2 options
+
+  // Crops heif images with a grid wrapper instead of a 'clap' transform.
+  // Results in slightly larger file size.
+  // Default: on.
+  uint8_t macOS_compatibility_workaround;
 };
 
 LIBHEIF_API
