@@ -1252,7 +1252,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   if (err) {
     return err;
   }
-  // std::cout << grid.dump();
+
+  //std::cout << grid.dump();
 
 
   auto iref_box = m_heif_file->get_iref_box();
@@ -1969,10 +1970,11 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
 
     ImageGrid grid;
     grid.set_num_tiles(1, 1);
-    grid.set_output_size(image->get_width(), image->get_height());
+    grid.set_output_size(image->get_width(heif_channel_Y), image->get_height(heif_channel_Y));
     auto grid_data = grid.write();
 
-    m_heif_file->append_iloc_data(grid_image_id, grid_data);
+    m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
+
     m_heif_file->add_ispe_property(grid_image_id,
                                    image->get_width(heif_channel_Y),
                                    image->get_height(heif_channel_Y));

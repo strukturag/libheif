@@ -959,10 +959,24 @@ namespace heif {
                     uint64_t start, uint64_t length,
                     std::vector<uint8_t>& out_data) const;
 
+    int append_data(const std::vector<uint8_t>& data) {
+      int pos = m_data_for_writing.size();
+
+      m_data_for_writing.insert(m_data_for_writing.end(),
+                                data.begin(),
+                                data.end());
+
+      return pos;
+    }
+
+    Error write(StreamWriter& writer) const override;
+
   protected:
     Error parse(BitstreamRange& range) override;
 
     std::streampos m_data_start_pos;
+
+    std::vector<uint8_t> m_data_for_writing;
   };
 
 

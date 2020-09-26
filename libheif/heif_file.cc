@@ -767,10 +767,11 @@ Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configur
 }
 
 
-void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets)
+void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method)
 {
-  m_iloc_box->append_data(id, nal_packets);
+  m_iloc_box->append_data(id, nal_packets, construction_method);
 }
+
 
 void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size)
 {
