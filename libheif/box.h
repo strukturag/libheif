@@ -429,6 +429,8 @@ namespace heif {
     uint8_t m_index_size = 0;
 
     void patch_iloc_header(StreamWriter& writer) const;
+
+    int m_idat_offset = 0; // only for writing: offset of next data array
   };
 
 

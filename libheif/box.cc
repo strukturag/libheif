@@ -1177,8 +1177,10 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   extent.data = data;
 
   if (construction_method==1) {
-    extent.offset = 0; // TODO
-    extent.length = data.size(); // TODO
+    extent.offset = m_idat_offset;
+    extent.length = data.size();
+
+    m_idat_offset += (int)data.size();
   }
 
   m_items[idx].extents.push_back(std::move(extent));
