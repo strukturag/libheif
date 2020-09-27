@@ -75,6 +75,18 @@ elif [ ! -z "$FUZZER" ]; then
     export CXX="$BUILD_ROOT/clang/bin/clang++"
 fi
 
+PKG_CONFIG_PATH=
+if [ "$WITH_LIBDE265" = "2" ]; then
+    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$BUILD_ROOT/libde265/dist/lib/pkgconfig/"
+fi
+
+if [ "$WITH_DAV1D" = "1" ]; then
+    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$BUILD_ROOT/third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig/"
+fi
+if [ ! -z "$PKG_CONFIG_PATH" ]; then
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+fi
+
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
     CMAKE_OPTIONS=
