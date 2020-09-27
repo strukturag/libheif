@@ -60,7 +60,7 @@ AM_EXTRA_RECURSIVE_TARGETS([format test])
 AX_CXX_COMPILE_STDCXX_11()
 
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([inttypes.h stddef.h unistd.h])
+AC_CHECK_HEADERS([inttypes.h stddef.h unistd.h alloca.h])
 AC_C_INLINE
 AC_FUNC_ERROR_AT_LINE
 

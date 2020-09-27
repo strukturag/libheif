@@ -11,9 +11,9 @@ include(GNUInstallDirs)
 # The version number.
 set (PACKAGE_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# Check for unistd.h
-
 include (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+
+# Check for unistd.h
 
 CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
 
@@ -21,6 +21,13 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
+# Check for alloca.h
+
+CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
+
+if (HAVE_ALLOCA_H)
+  add_definitions(-DHAVE_ALLOCA_H)
+endif()
 
 if(NOT MSVC)
   add_definitions(-Wall)
