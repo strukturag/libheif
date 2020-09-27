@@ -960,13 +960,13 @@ namespace heif {
                     std::vector<uint8_t>& out_data) const;
 
     int append_data(const std::vector<uint8_t>& data) {
-      int pos = m_data_for_writing.size();
+      auto pos = m_data_for_writing.size();
 
       m_data_for_writing.insert(m_data_for_writing.end(),
                                 data.begin(),
                                 data.end());
 
-      return pos;
+      return (int)pos;
     }
 
     Error write(StreamWriter& writer) const override;
