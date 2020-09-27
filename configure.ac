@@ -105,21 +105,35 @@ PKG_CHECK_MODULES([aom], [aom], [
 AM_CONDITIONAL([HAVE_AOM], [test "x$have_aom" = "xyes"])
 AC_SUBST([have_aom])
 
-PKG_CHECK_MODULES([libde265], [libde265], [
-    AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
-    AC_SUBST(libde265_CFLAGS)
-    AC_SUBST(libde265_LIBS)
-    have_libde265="yes"
-], [have_libde265="no"])
+AC_ARG_ENABLE([libde265], AS_HELP_STRING([--disable-libde265],
+    [Disable building of libde265 decoder.]))
+if eval "test x$enable_libde265 = x" ; then enable_libde265=yes ; fi
+if eval "test x$enable_libde265 != xno"; then
+    PKG_CHECK_MODULES([libde265], [libde265], [
+        AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
+        AC_SUBST(libde265_CFLAGS)
+        AC_SUBST(libde265_LIBS)
+        have_libde265="yes"
+    ], [have_libde265="no"])
+else
+    have_libde265="no"
+fi
 AM_CONDITIONAL([HAVE_LIBDE265], [test "x$have_libde265" = "xyes"])
 AC_SUBST([have_libde265])
 
-PKG_CHECK_MODULES([x265], [x265], [
-    AC_DEFINE([HAVE_X265], [1], [Whether x265 was found.])
-    AC_SUBST(x265_CFLAGS)
-    AC_SUBST(x265_LIBS)
-    have_x265="yes"
-], [have_x265="no"])
+AC_ARG_ENABLE([x265], AS_HELP_STRING([--disable-x265],
+    [Disable building of x265 encoder.]))
+if eval "test x$enable_x265 = x" ; then enable_x265=yes ; fi
+if eval "test x$enable_x265 != xno"; then
+    PKG_CHECK_MODULES([x265], [x265], [
+        AC_DEFINE([HAVE_X265], [1], [Whether x265 was found.])
+        AC_SUBST(x265_CFLAGS)
+        AC_SUBST(x265_LIBS)
+        have_x265="yes"
+    ], [have_x265="no"])
+else
+    have_x265="no"
+fi
 AM_CONDITIONAL([HAVE_X265], [test "x$have_x265" = "xyes"])
 AC_SUBST([have_x265])
 
