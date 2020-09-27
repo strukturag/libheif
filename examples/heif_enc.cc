@@ -127,7 +127,7 @@ void show_help(const char* argv0)
             << "  -A, --avif       encode as AVIF\n"
             << "  --list-encoders  list all available encoders for the selected output format\n"
             << "  -e, --encoder ID select encoder to use (the IDs can be listed with --list-encoders)\n"
-            << "  -E, --even-size crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
+            << "  -E, --even-size  [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
@@ -1156,6 +1156,8 @@ int main(int argc, char** argv)
         return 1;
       }
 
+      std::cerr << "Warning: option --even-size/-E is deprecated as it is not needed anymore.\n";
+
       int right = heif_image_get_primary_width(image.get()) % 2;
       int bottom = heif_image_get_primary_height(image.get()) % 2;
 
@@ -1167,14 +1169,6 @@ int main(int argc, char** argv)
       }
     }
 
-    if (!enc_av1f &&
-        ((heif_image_get_primary_width(image.get())) % 2 ||
-         (heif_image_get_primary_height(image.get())) % 2)) {
-      std::cerr << "Warning: HEIF images with odd width or height cannot be displayed by\n"
-                   "many programs on macOS (tested up to Catalina 10.15.6). Until macOS is\n"
-                   "fixed or we have a workaround, it is advised to use option -E to make the\n"
-                   "image size an even number.\n";
-    }
 
     struct heif_image_handle* handle;
     error = heif_context_encode_image(context.get(),
