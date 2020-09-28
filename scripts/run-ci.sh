@@ -95,8 +95,14 @@ WITH_HEIF_DECODER=
 if [ ! -z "$WITH_LIBDE265" ] ; then
     WITH_HEIF_DECODER=1
 fi
+WITH_AVIF_ENCODER=
 WITH_HEIF_ENCODER=
 # Need decoded images before encoding.
+if [ ! -z "$WITH_AVIF_DECODER" ]; then
+    if [ ! -z "$WITH_RAV1E" ]; then
+        WITH_AVIF_ENCODER=1
+    fi
+fi
 if [ ! -z "$WITH_HEIF_DECODER" ]; then
     if [ ! -z "$WITH_X265" ] ; then
         WITH_HEIF_ENCODER=1
@@ -111,6 +117,10 @@ if [ ! -z "$CMAKE" ]; then
         # of the libraries provided by Apple.
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
     fi
+    if [ "$WITH_RAV1E" = "1" ]; then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_LOCAL_RAV1E=1"
+    fi
+
     cmake . $CMAKE_OPTIONS
 fi
 
@@ -166,6 +176,16 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         echo "Checking second generated file ..."
         [ -s "output-multi-2.jpg" ] || exit 1
     fi
+    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_AVIF_ENCODER" ]; then
+        echo "Converting JPEG file to AVIF ..."
+        ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-jpeg.avif -v -v -v -A --thumb 320x240 example.jpg
+        echo "Checking generated file ..."
+        [ -s "output-jpeg.avif" ] || exit 1
+        echo "Converting back generated AVIF to JPEG ..."
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-jpeg.avif output-jpeg.jpg
+        echo "Checking generated file ..."
+        [ -s "output-jpeg.jpg" ] || exit 1
+    fi
     if [ ! -z "$GO" ]; then
         echo "Installing library ..."
         make -j $(nproc) install
@@ -193,6 +213,19 @@ if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
 fi
 
 if [ ! -z "$TARBALL" ]; then
+    CONFIGURE_ARGS=
+    if [ ! -z "$GO" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist --disable-gdk-pixbuf"
+    else
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
+    fi
+    if [ ! -z "$TESTS" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests"
+    fi
+    if [ "$WITH_RAV1E" = "1" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-local-rav1e"
+    fi
+
     VERSION=$(grep AC_INIT configure.ac | sed -r 's/^[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/g')
     echo "Creating tarball for version $VERSION ..."
     make dist
@@ -200,7 +233,8 @@ if [ ! -z "$TARBALL" ]; then
     echo "Building from tarball ..."
     tar xf libheif-$VERSION.tar*
     pushd libheif-$VERSION
-    ./configure
+    ln -s $BUILD_ROOT/third-party/rav1e ./third-party/
+    ./configure $CONFIGURE_ARGS
     make -j $(nproc)
     popd
 fi
