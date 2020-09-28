@@ -69,5 +69,8 @@ if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     if [ ! -z "$TESTS" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests"
     fi
+    if [ "$WITH_RAV1E" = "1" ]; then
+        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-local-rav1e"
+    fi
     ./configure $CONFIGURE_ARGS
 fi

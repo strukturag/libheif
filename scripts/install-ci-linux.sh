@@ -81,6 +81,13 @@ if [ "$WITH_DAV1D" = "1" ]; then
         "
 fi
 
+if [ "$WITH_RAV1E" = "1" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        cargo \
+        nasm \
+        "
+fi
+
 if [ ! -z "$CHECK_LICENSES" ]; then
     sudo curl --location --output /usr/bin/licensecheck "https://github.com/Debian/devscripts/raw/v2.16.5/scripts/licensecheck.pl"
     sudo chmod a+x /usr/bin/licensecheck
@@ -179,5 +186,14 @@ if [ "$WITH_DAV1D" = "1" ]; then
     export PATH="$PATH:$HOME/.local/bin"
     cd third-party
     sh dav1d.cmd -Denable_avx512=false
+    cd ..
+fi
+
+if [ "$WITH_RAV1E" = "1" ]; then
+    cargo install --force cbindgen
+
+    export PATH="$PATH:$HOME/.cargo/bin"
+    cd third-party
+    sh rav1e.cmd
     cd ..
 fi
