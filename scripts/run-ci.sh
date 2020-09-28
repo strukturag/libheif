@@ -233,6 +233,7 @@ if [ ! -z "$TARBALL" ]; then
     echo "Building from tarball ..."
     tar xf libheif-$VERSION.tar*
     pushd libheif-$VERSION
+    mkdir -p ./third-party/
     ln -s $BUILD_ROOT/third-party/rav1e ./third-party/
     ./configure $CONFIGURE_ARGS
     make -j $(nproc)
