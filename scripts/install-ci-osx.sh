@@ -27,6 +27,12 @@ INSTALL_PACKAGES="\
     "
 REMOVE_PACKAGES=
 
+if [ ! -z "$WITH_AOM" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        aom \
+        "
+fi
+
 if [ ! -z "$WITH_LIBDE265" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libde265 \
