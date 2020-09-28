@@ -87,6 +87,22 @@ if [ ! -z "$PKG_CONFIG_PATH" ]; then
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 fi
 
+WITH_AVIF_DECODER=
+if [ ! -z "$WITH_AOM" ] || [ ! -z "$WITH_DAV1D" ]; then
+    WITH_AVIF_DECODER=1
+fi
+WITH_HEIF_DECODER=
+if [ ! -z "$WITH_LIBDE265" ] ; then
+    WITH_HEIF_DECODER=1
+fi
+WITH_HEIF_ENCODER=
+# Need decoded images before encoding.
+if [ ! -z "$WITH_HEIF_DECODER" ]; then
+    if [ ! -z "$WITH_X265" ] ; then
+        WITH_HEIF_ENCODER=1
+    fi
+fi
+
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
     CMAKE_OPTIONS=
@@ -107,38 +123,48 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
     fi
     echo "Dumping information of sample file ..."
     ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
-    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_LIBDE265" ]; then
-        echo "Converting sample file to JPEG ..."
+    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_DECODER" ]; then
+        echo "Converting sample HEIF file to JPEG ..."
         ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.jpg
         echo "Checking first generated file ..."
         [ -s "example-1.jpg" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "example-2.jpg" ] || exit 1
-        echo "Converting sample file to PNG ..."
+        echo "Converting sample HEIF file to PNG ..."
         ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.png
         echo "Checking first generated file ..."
         [ -s "example-1.png" ] || exit 1
         echo "Checking second generated file ..."
         [ -s "example-2.png" ] || exit 1
-        if [ ! -z "$WITH_X265" ]; then
-            echo "Converting single JPEG file to heif ..."
-            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-single.heic -v -v -v --thumb 320x240 example-1.jpg
-            echo "Checking generated file ..."
-            [ -s "output-single.heic" ] || exit 1
-            echo "Converting back generated heif to JPEG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-single.heic output-single.jpg
-            echo "Checking generated file ..."
-            [ -s "output-single.jpg" ] || exit 1
-            echo "Converting multiple JPEG files to heif ..."
-            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic -v -v -v --thumb 320x240 example-1.jpg example-2.jpg
-            echo "Checking generated file ..."
-            [ -s "output-multi.heic" ] || exit 1
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-multi.heic output-multi.jpg
-            echo "Checking first generated file ..."
-            [ -s "output-multi-1.jpg" ] || exit 1
-            echo "Checking second generated file ..."
-            [ -s "output-multi-2.jpg" ] || exit 1
-        fi
+    fi
+    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_AVIF_DECODER" ]; then
+        echo "Converting sample AVIF file to JPEG ..."
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.avif example.jpg
+        echo "Checking generated file ..."
+        [ -s "example.jpg" ] || exit 1
+        echo "Converting sample AVIF file to PNG ..."
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.avif example.png
+        echo "Checking generated file ..."
+        [ -s "example.png" ] || exit 1
+    fi
+    if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_ENCODER" ]; then
+        echo "Converting single JPEG file to heif ..."
+        ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-single.heic -v -v -v --thumb 320x240 example-1.jpg
+        echo "Checking generated file ..."
+        [ -s "output-single.heic" ] || exit 1
+        echo "Converting back generated heif to JPEG ..."
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-single.heic output-single.jpg
+        echo "Checking generated file ..."
+        [ -s "output-single.jpg" ] || exit 1
+        echo "Converting multiple JPEG files to heif ..."
+        ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic -v -v -v --thumb 320x240 example-1.jpg example-2.jpg
+        echo "Checking generated file ..."
+        [ -s "output-multi.heic" ] || exit 1
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-multi.heic output-multi.jpg
+        echo "Checking first generated file ..."
+        [ -s "output-multi-1.jpg" ] || exit 1
+        echo "Checking second generated file ..."
+        [ -s "output-multi-2.jpg" ] || exit 1
     fi
     if [ ! -z "$GO" ]; then
         echo "Installing library ..."
