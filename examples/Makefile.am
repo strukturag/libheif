@@ -81,6 +81,7 @@ EXTRA_DIST = \
     CMakeLists.txt \
     COPYING \
     demo.html \
+    example.avif \
     example.heic
 
 if HAVE_GO
