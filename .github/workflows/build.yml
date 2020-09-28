@@ -13,7 +13,7 @@ jobs:
         env:
           - { NAME: "nothing" }
           - { NAME: "cmake", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_DAV1D: 1, WITH_LIBDE265: 1, CMAKE: 1 }
-          - { NAME: "tarball", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, TARBALL: 1 }
+          - { NAME: "tarball", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_DAV1D: 1, WITH_LIBDE265: 1, TARBALL: 1 }
           - { NAME: "graphics", WITH_GRAPHICS: 1 }
           - { NAME: "x265", WITH_X265: 1 }
           - { NAME: "x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1 }
