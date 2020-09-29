@@ -99,19 +99,36 @@ AC_ARG_ENABLE([aom], AS_HELP_STRING([--disable-aom],
     [Disable building of aom decoder/encoder.]))
 if eval "test x$enable_aom = x" ; then enable_aom=yes ; fi
 if eval "test x$enable_aom != xno"; then
-PKG_CHECK_MODULES([aom], [aom], [
-    AC_DEFINE([HAVE_AOM], [1], [Whether aom was found.])
-    AC_SUBST(aom_CFLAGS)
-    AC_SUBST(aom_LIBS)
-    have_aom="yes"
-    have_avif_decoder="yes"
-    have_avif_encoder="yes"
-], [have_aom="no"])
+    PKG_CHECK_MODULES([aom], [aom], [
+        AC_SUBST(aom_CFLAGS)
+        AC_SUBST(aom_LIBS)
+        have_aom="yes"
+    ], [have_aom="no"])
+
+    if eval "test x$have_aom = xyes"; then
+        AC_CHECK_HEADER([aom/aom_decoder.h], [
+            AC_DEFINE([HAVE_AOM_DECODER], [1], [Whether aom decoder was found.])
+            have_aom_decoder="yes"
+            have_avif_decoder="yes"
+        ], [have_aom_decoder="no"])
+
+        AC_CHECK_HEADER([aom/aom_encoder.h], [
+            AC_DEFINE([HAVE_AOM_ENCODER], [1], [Whether aom encoder was found.])
+            have_aom_encoder="yes"
+            have_avif_encoder="yes"
+        ], [have_aom_encoder="no"])
+    fi
 else
     have_aom="no"
+    have_aom_decoder="no"
+    have_aom_encoder="no"
 fi
 AM_CONDITIONAL([HAVE_AOM], [test "x$have_aom" = "xyes"])
 AC_SUBST([have_aom])
+AM_CONDITIONAL([HAVE_AOM_DECODER], [test "x$have_aom_decoder" = "xyes"])
+AC_SUBST([have_aom_decoder])
+AM_CONDITIONAL([HAVE_AOM_ENCODER], [test "x$have_aom_encoder" = "xyes"])
+AC_SUBST([have_aom_encoder])
 
 AC_ARG_ENABLE([libde265], AS_HELP_STRING([--disable-libde265],
     [Disable building of libde265 decoder.]))
@@ -274,8 +291,8 @@ AC_C_CXX_COMPILE_FLAGS([-Wno-error=potentially-evaluated-expression])
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
-AC_MSG_NOTICE([libaom decoder: $have_aom])
-AC_MSG_NOTICE([libaom encoder: $have_aom])
+AC_MSG_NOTICE([libaom decoder: $have_aom_decoder])
+AC_MSG_NOTICE([libaom encoder: $have_aom_encoder])
 AC_MSG_NOTICE([rav1e encoder: $enable_local_rav1e])
 AC_MSG_NOTICE([dav1d decoder: $have_dav1d])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
