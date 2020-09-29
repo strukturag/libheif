@@ -27,12 +27,6 @@
 #include "config.h"
 #endif
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-# include <malloc.h>
-#else
-# include <alloca.h>
-#endif
-
 #include <cstring>
 
 #if defined(HAVE_UNISTD_H)
@@ -46,6 +40,7 @@
 #include <sstream>
 #include <cassert>
 #include <algorithm>
+#include <vector>
 #include <cctype>
 
 #include <libheif/heif.h>
@@ -203,8 +198,8 @@ int main(int argc, char** argv)
 
   printf("File contains %d images\n", num_images);
 
-  heif_item_id* image_IDs = (heif_item_id*) alloca(num_images * sizeof(heif_item_id));
-  num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs, num_images);
+  std::vector<heif_item_id> image_IDs(num_images);
+  num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs.data(), num_images);
 
 
   std::string filename;

@@ -29,6 +29,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <vector>
 
 #if defined(HAVE_UNISTD_H)
 
@@ -184,8 +185,8 @@ int main(int argc, char** argv)
 
 
   int numImages = heif_context_get_number_of_top_level_images(ctx.get());
-  heif_item_id* IDs = (heif_item_id*) alloca(numImages * sizeof(heif_item_id));
-  heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs, numImages);
+  std::vector<heif_item_id> IDs(numImages);
+  heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs.data(), numImages);
 
   for (int i = 0; i < numImages; i++) {
     struct heif_image_handle* handle;
@@ -206,16 +207,15 @@ int main(int argc, char** argv)
     // --- thumbnails
 
     int nThumbnails = heif_image_handle_get_number_of_thumbnails(handle);
-    heif_item_id* thumbnailIDs = (heif_item_id*) calloc(nThumbnails, sizeof(heif_item_id));
+    std::vector<heif_item_id> thumbnailIDs(nThumbnails);
 
-    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle, thumbnailIDs, nThumbnails);
+    nThumbnails = heif_image_handle_get_list_of_thumbnail_IDs(handle, thumbnailIDs.data(), nThumbnails);
 
     for (int thumbnailIdx = 0; thumbnailIdx < nThumbnails; thumbnailIdx++) {
       heif_image_handle* thumbnail_handle;
       err = heif_image_handle_get_thumbnail(handle, thumbnailIDs[thumbnailIdx], &thumbnail_handle);
       if (err.code) {
         std::cerr << err.message << "\n";
-        free(thumbnailIDs);
         return 10;
       }
 
@@ -226,8 +226,6 @@ int main(int argc, char** argv)
 
       heif_image_handle_release(thumbnail_handle);
     }
-
-    free(thumbnailIDs);
 
 
     // --- color profile
