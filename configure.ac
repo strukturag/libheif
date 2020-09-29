@@ -90,6 +90,15 @@ AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
+PKG_PROG_PKG_CONFIG
+
+have_avif_decoder="no"
+have_avif_encoder="no"
+
+AC_ARG_ENABLE([aom], AS_HELP_STRING([--disable-aom],
+    [Disable building of aom decoder/encoder.]))
+if eval "test x$enable_aom = x" ; then enable_aom=yes ; fi
+if eval "test x$enable_aom != xno"; then
 PKG_CHECK_MODULES([aom], [aom], [
     AC_DEFINE([HAVE_AOM], [1], [Whether aom was found.])
     AC_SUBST(aom_CFLAGS)
@@ -97,11 +106,10 @@ PKG_CHECK_MODULES([aom], [aom], [
     have_aom="yes"
     have_avif_decoder="yes"
     have_avif_encoder="yes"
-], [
+], [have_aom="no"])
+else
     have_aom="no"
-    have_avif_decoder="no"
-    have_avif_encoder="no"
-])
+fi
 AM_CONDITIONAL([HAVE_AOM], [test "x$have_aom" = "xyes"])
 AC_SUBST([have_aom])
 
