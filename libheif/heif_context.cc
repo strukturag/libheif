@@ -1666,21 +1666,11 @@ static std::shared_ptr<HeifPixelImage>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage> image)
 {
   // --- generate alpha image
-  // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-  int chroma_width = (image->get_width() + 1) / 2;
-  int chroma_height = (image->get_height() + 1) / 2;
 
   std::shared_ptr<HeifPixelImage> alpha_image = std::make_shared<HeifPixelImage>();
   alpha_image->create(image->get_width(), image->get_height(),
-                      heif_colorspace_YCbCr, heif_chroma_420);
+                      heif_colorspace_monochrome, heif_chroma_monochrome);
   alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
-
-  uint8_t bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-  uint16_t half_range = static_cast<uint16_t>(1 << (bpp - 1));
-
-  alpha_image->fill_new_plane(heif_channel_Cb, half_range, chroma_width, chroma_height, bpp);
-  alpha_image->fill_new_plane(heif_channel_Cr, half_range, chroma_width, chroma_height, bpp);
 
   auto nclx = std::make_shared<color_profile_nclx>();
   nclx->set_undefined();
@@ -1869,33 +1859,6 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                       image->get_height(heif_channel_Y));
 
 
-  // --- if there is an alpha channel, add it as an additional image
-
-  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-
-    // --- generate alpha image
-    // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-    std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(image);
-
-
-    // --- encode the alpha image
-
-    std::shared_ptr<HeifContext::Image> heif_alpha_image;
-
-    Error error = encode_image_as_hevc(alpha_image, encoder, options,
-                                       heif_image_input_class_alpha,
-                                       heif_alpha_image);
-    if (error) {
-      return error;
-    }
-
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
-  }
-
-
   m_heif_file->add_hvcC_property(image_id);
 
 
@@ -1991,6 +1954,32 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
 
     // now use the grid image for all further property output
     image_id = grid_image_id;
+  }
+
+  // --- if there is an alpha channel, add it as an additional image
+
+  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
   }
 
 
