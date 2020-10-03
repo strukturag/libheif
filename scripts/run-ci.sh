@@ -192,7 +192,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
 
         echo "Running golang example ..."
         export GOPATH="$BUILD_ROOT/gopath"
-        export PKG_CONFIG_PATH="$BUILD_ROOT/dist/lib/pkgconfig"
+        export PKG_CONFIG_PATH="$BUILD_ROOT/dist/lib/pkgconfig:$BUILD_ROOT/libde265/dist/lib/pkgconfig/"
         export LD_LIBRARY_PATH="$BUILD_ROOT/dist/lib"
         mkdir -p "$GOPATH/src/github.com/strukturag"
         ln -s "$BUILD_ROOT" "$GOPATH/src/github.com/strukturag/libheif"
