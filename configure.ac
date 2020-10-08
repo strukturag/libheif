@@ -223,7 +223,7 @@ PKG_CHECK_MODULES([dav1d], [dav1d], [
     AC_DEFINE([HAVE_DAV1D], [1], [Whether dav1d was found.])
     AC_SUBST(dav1d_CFLAGS)
     AC_SUBST(dav1d_LIBS)
-    have_avif_encoder="yes"
+    have_avif_decoder="yes"
     have_dav1d="yes"
 ], [have_dav1d="no"])
 AM_CONDITIONAL([HAVE_DAV1D], [test "x$have_dav1d" = "xyes"])
