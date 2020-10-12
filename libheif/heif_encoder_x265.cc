@@ -187,9 +187,11 @@ static const char* x265_plugin_name()
 {
   strcpy(plugin_name, "x265 HEVC encoder");
 
-  if (strlen(x265_version_str) + strlen(plugin_name) + 4 < MAX_PLUGIN_NAME_LENGTH) {
+  const char* x265_version = (x265_version_str != nullptr ? x265_version_str : "null");
+  
+  if (strlen(x265_version) + strlen(plugin_name) + 4 < MAX_PLUGIN_NAME_LENGTH) {
     strcat(plugin_name, " (");
-    strcat(plugin_name, x265_version_str);
+    strcat(plugin_name, x265_version);
     strcat(plugin_name, ")");
   }
 
