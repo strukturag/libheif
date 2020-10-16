@@ -526,7 +526,6 @@ void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 }
 
 
-// TODO: encode as still frame (seq header)
 static int encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
 {
   int got_pkts = 0;
@@ -698,6 +697,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   cfg.g_w = source_width;
   cfg.g_h = source_height;
+  // Set the max number of frames to encode to 1. This makes the libaom encoder
+  // set still_picture and reduced_still_picture_header to 1 in the AV1 sequence
+  // header OBU.
+  cfg.g_limit = 1;
 
   cfg.g_profile = inout_config.seq_profile;
   cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
