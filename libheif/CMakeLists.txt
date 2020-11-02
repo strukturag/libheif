@@ -97,14 +97,7 @@ if(X265_FOUND)
     install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
-if(AOM_FOUND)
-  target_compile_definitions(heif PRIVATE HAVE_AOM=1)
-  target_sources(heif PRIVATE
-    heif_decoder_aom.cc
-    heif_decoder_aom.h
-    heif_encoder_aom.cc
-    heif_encoder_aom.h
-  )
+if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${AOM_CFLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AOM_CFLAGS}")
 
@@ -114,6 +107,20 @@ if(AOM_FOUND)
 
   include_directories(SYSTEM ${AOM_INCLUDE_DIR})
   target_link_libraries(heif PRIVATE ${AOM_LIBRARIES} ${AOM_LINKDIR})
+endif()
+if(AOM_ENCODER_FOUND)
+  target_compile_definitions(heif PRIVATE HAVE_AOM_ENCODER=1)
+  target_sources(heif PRIVATE
+    heif_encoder_aom.cc
+    heif_encoder_aom.h
+  )
+endif()
+if(AOM_DECODER_FOUND)
+  target_compile_definitions(heif PRIVATE HAVE_AOM_DECODER=1)
+  target_sources(heif PRIVATE
+    heif_decoder_aom.cc
+    heif_decoder_aom.h
+  )
 endif()
 
 if(USE_LOCAL_RAV1E)

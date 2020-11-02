@@ -82,12 +82,16 @@ libheif_la_SOURCES = \
   nclx.cc \
   nclx.h
 
-if HAVE_AOM
+if HAVE_AOM_DECODER
 libheif_la_SOURCES += \
-  heif_encoder_aom.cc \
-  heif_encoder_aom.h \
   heif_decoder_aom.cc \
   heif_decoder_aom.h
+endif
+
+if HAVE_AOM_ENCODER
+libheif_la_SOURCES += \
+  heif_encoder_aom.cc \
+  heif_encoder_aom.h
 endif
 
 if HAVE_LIBDE265
