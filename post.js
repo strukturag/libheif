@@ -75,7 +75,7 @@ HeifImage.prototype.display = function(image_data, callback) {
         var uoffset = 0;
         var voffset = 0;
         var x2;
-        var i2;
+        var i2 = 0;
         var y = this.data;
         var u = this.data.subarray(w * h, w * h + (w * h / 4));
         var v = this.data.subarray(w * h + (w * h / 4), w * h + (w * h / 2));
@@ -84,25 +84,29 @@ HeifImage.prototype.display = function(image_data, callback) {
         var stridev = Math.floor(w / 2);
         var dest = image_data.data;
         for (var i=0; i<maxi; i++) {
-            i2 = i << 1;
-            x2 = (xpos << 1);
-            yval = 1.164 * (y[yoffset + x2] - 16);
+            x2 = (xpos >> 1);
+            yval = 1.164 * (y[yoffset + xpos] - 16);
 
-            uval = u[uoffset + xpos] - 128;
-            vval = v[voffset + xpos] - 128;
+            uval = u[uoffset + x2] - 128;
+            vval = v[voffset + x2] - 128;
             dest[(i2<<2)+0] = yval + 1.596 * vval;
             dest[(i2<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
             dest[(i2<<2)+2] = yval + 2.018 * uval;
             dest[(i2<<2)+3] = 0xff;
-
-            yval = 1.164 * (y[yoffset + x2 + 1] - 16);
-            dest[((i2+1)<<2)+0] = yval + 1.596 * vval;
-            dest[((i2+1)<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-            dest[((i2+1)<<2)+2] = yval + 2.018 * uval;
-            dest[((i2+1)<<2)+3] = 0xff;
-
+            i2++;
             xpos++;
-            if (xpos === w2) {
+
+            if (xpos < w) {
+                yval = 1.164 * (y[yoffset + xpos] - 16);
+                dest[(i2<<2)+0] = yval + 1.596 * vval;
+                dest[(i2<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
+                dest[(i2<<2)+2] = yval + 2.018 * uval;
+                dest[(i2<<2)+3] = 0xff;
+                i2++;
+                xpos++;
+            }
+
+            if (xpos === w) {
                 xpos = 0;
                 ypos++;
                 yoffset += stridey;
