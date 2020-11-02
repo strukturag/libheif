@@ -90,6 +90,9 @@ AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
 
+REQUIRES_PRIVATE=""
+AC_SUBST([REQUIRES_PRIVATE])
+
 PKG_PROG_PKG_CONFIG
 
 have_avif_decoder="no"
@@ -100,8 +103,10 @@ AC_ARG_ENABLE([aom], AS_HELP_STRING([--disable-aom],
 if eval "test x$enable_aom = x" ; then enable_aom=yes ; fi
 if eval "test x$enable_aom != xno"; then
     PKG_CHECK_MODULES([aom], [aom], [
+        AC_DEFINE([HAVE_AOM], [1], [Whether aom was found.])
         AC_SUBST(aom_CFLAGS)
         AC_SUBST(aom_LIBS)
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE aom"
         have_aom="yes"
     ], [have_aom="no"])
 
@@ -138,6 +143,7 @@ if eval "test x$enable_libde265 != xno"; then
         AC_DEFINE([HAVE_LIBDE265], [1], [Whether libde265 was found.])
         AC_SUBST(libde265_CFLAGS)
         AC_SUBST(libde265_LIBS)
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE libde265"
         have_libde265="yes"
     ], [have_libde265="no"])
 else
@@ -154,6 +160,7 @@ if eval "test x$enable_x265 != xno"; then
         AC_DEFINE([HAVE_X265], [1], [Whether x265 was found.])
         AC_SUBST(x265_CFLAGS)
         AC_SUBST(x265_LIBS)
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE x265"
         have_x265="yes"
     ], [have_x265="no"])
 else

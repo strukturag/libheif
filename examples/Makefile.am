@@ -95,7 +95,7 @@ gopath:
 	ln -sf ${CURDIR}/../go ${CURDIR}/src/github.com/strukturag/libheif/
 
 heif-test-go: gopath $(top_builddir)/libheif/libheif.la $(top_builddir)/libheif.pc heif-test.go
-	GOPATH=${CURDIR} PKG_CONFIG_PATH=$(abs_top_builddir) CGO_CFLAGS="-I$(abs_top_builddir)" CGO_LDFLAGS="-L$(abs_top_builddir)/libheif/.libs" LD_LIBRARY_PATH=$(abs_top_builddir)/libheif/.libs $(GO) build -o heif-test-go ${heif_test_go_SOURCES}
+	GOPATH=${CURDIR} PKG_CONFIG_PATH=$(abs_top_builddir):$(abs_top_builddir)/libde265/dist/lib/pkgconfig/ CGO_CFLAGS="-I$(abs_top_builddir)" CGO_LDFLAGS="-L$(abs_top_builddir)/libheif/.libs" LD_LIBRARY_PATH=$(abs_top_builddir)/libheif/.libs $(GO) build -o heif-test-go ${heif_test_go_SOURCES}
 
 format-go: ${heif_test_go_SOURCES}
 	$(GO) fmt ${heif_test_go_SOURCES}
