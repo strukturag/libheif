@@ -69,13 +69,12 @@ HeifImage.prototype.display = function(image_data, callback) {
         var vval;
         var xpos = 0;
         var ypos = 0;
-        var w2 = w >> 1;
-        var maxi = w2*h;
         var yoffset = 0;
         var uoffset = 0;
         var voffset = 0;
         var x2;
-        var i2 = 0;
+        var i = 0;
+        var maxi = w*h;
         var y = this.data;
         var u = this.data.subarray(w * h, w * h + (w * h / 4));
         var v = this.data.subarray(w * h + (w * h / 4), w * h + (w * h / 2));
@@ -83,26 +82,26 @@ HeifImage.prototype.display = function(image_data, callback) {
         var strideu = Math.floor(w / 2);
         var stridev = Math.floor(w / 2);
         var dest = image_data.data;
-        for (var i=0; i<maxi; i++) {
+        while (i < maxi) {
             x2 = (xpos >> 1);
             yval = 1.164 * (y[yoffset + xpos] - 16);
 
             uval = u[uoffset + x2] - 128;
             vval = v[voffset + x2] - 128;
-            dest[(i2<<2)+0] = yval + 1.596 * vval;
-            dest[(i2<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-            dest[(i2<<2)+2] = yval + 2.018 * uval;
-            dest[(i2<<2)+3] = 0xff;
-            i2++;
+            dest[(i<<2)+0] = yval + 1.596 * vval;
+            dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
+            dest[(i<<2)+2] = yval + 2.018 * uval;
+            dest[(i<<2)+3] = 0xff;
+            i++;
             xpos++;
 
             if (xpos < w) {
                 yval = 1.164 * (y[yoffset + xpos] - 16);
-                dest[(i2<<2)+0] = yval + 1.596 * vval;
-                dest[(i2<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-                dest[(i2<<2)+2] = yval + 2.018 * uval;
-                dest[(i2<<2)+3] = 0xff;
-                i2++;
+                dest[(i<<2)+0] = yval + 1.596 * vval;
+                dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
+                dest[(i<<2)+2] = yval + 2.018 * uval;
+                dest[(i<<2)+3] = 0xff;
+                i++;
                 xpos++;
             }
 
