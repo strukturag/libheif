@@ -141,7 +141,7 @@ cargo install --force cargo-c
 * Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the path to `third-party/rav1e/dist/lib/pkgconfig`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/rav1e/dist/lib/pkgconfig`.
 
 
 ### Adding dav1d decoder for AVIF
@@ -150,7 +150,7 @@ When running `cmake` or `configure`, make sure that the environment variable
 * Run the `dav1d.cmd` script in directory `third-party` to download dav1d and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
 
 
 ## Language bindings
