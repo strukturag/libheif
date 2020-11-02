@@ -967,7 +967,7 @@ Error HeifContext::decode_image_user(heif_item_id ID,
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
   int bpp = (options && options->convert_hdr_to_8bit) ? 8 : 0;
-
+// TODO: check BPP changed
   if (different_chroma || different_colorspace) {
     img = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp);
     if (!img) {
@@ -2006,6 +2006,20 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
     }
   }
 
+
+  // --- write PIXI property
+
+  if (image->get_chroma_format() == heif_chroma_monochrome) {
+    m_heif_file->add_pixi_property(image_id,
+                                   image->get_bits_per_pixel(heif_channel_Y), 0,0);
+  }
+  else {
+    m_heif_file->add_pixi_property(image_id,
+                                   image->get_bits_per_pixel(heif_channel_Y),
+                                   image->get_bits_per_pixel(heif_channel_Cb),
+                                   image->get_bits_per_pixel(heif_channel_Cr));
+  }
+
   m_top_level_images.push_back(out_image);
 
   return Error::Ok;
@@ -2137,6 +2151,9 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
                                                      encoded_width, encoded_height);;
     }
   }
+
+
+  // TODO: do we also need a PIXI property for AVIF images?
 
   return Error::Ok;
 }

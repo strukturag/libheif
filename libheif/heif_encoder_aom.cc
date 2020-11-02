@@ -526,7 +526,6 @@ void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 }
 
 
-// TODO: encode as still frame (seq header)
 static int encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
 {
   int got_pkts = 0;
@@ -668,8 +667,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_codec_iface_t* iface;
   aom_codec_ctx_t codec;
 
-  aom_codec_iter_t iter = NULL; // for extracting the compressed packets
-
   iface = aom_codec_av1_cx();
   //encoder->encoder = get_aom_encoder_by_name("av1");
   if (!iface) {
@@ -698,6 +695,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   cfg.g_w = source_width;
   cfg.g_h = source_height;
+  // Set the max number of frames to encode to 1. This makes the libaom encoder
+  // set still_picture and reduced_still_picture_header to 1 in the AV1 sequence
+  // header OBU.
+  cfg.g_limit = 1;
 
   cfg.g_profile = inout_config.seq_profile;
   cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
@@ -759,15 +760,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   encode_frame(&codec, &input_image); //, frame_count++, flags, writer);
 
-  int flags = 0;
-  res = aom_codec_encode(&codec, NULL, -1, 0, flags);
-  if (res != AOM_CODEC_OK) {
-    printf("Failed to encode frame\n");
-    assert(0);
-  }
-
   encoder->compressedData.clear();
   const aom_codec_cx_pkt_t* pkt = NULL;
+  aom_codec_iter_t iter = NULL; // for extracting the compressed packets
 
   while ((pkt = aom_codec_get_cx_data(&codec, &iter)) != NULL) {
 
@@ -780,8 +775,40 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       // TODO: split the received data into separate OBUs
       // This allows libheif to easily extract the sequence header for the av1C header
 
-      uint64_t n = pkt->data.frame.sz;
-      uint64_t oldSize = encoder->compressedData.size();
+      size_t n = pkt->data.frame.sz;
+      size_t oldSize = encoder->compressedData.size();
+      encoder->compressedData.resize(oldSize + n);
+
+      memcpy(encoder->compressedData.data() + oldSize,
+             pkt->data.frame.buf,
+             n);
+
+      encoder->data_read = false;
+    }
+  }
+
+  int flags = 0;
+  res = aom_codec_encode(&codec, NULL, -1, 0, flags);
+  if (res != AOM_CODEC_OK) {
+    printf("Failed to encode frame\n");
+    assert(0);
+  }
+
+  iter = NULL;
+
+  while ((pkt = aom_codec_get_cx_data(&codec, &iter)) != NULL) {
+
+    if (pkt->kind == AOM_CODEC_CX_FRAME_PKT) {
+      //std::cerr.write((char*)pkt->data.frame.buf, pkt->data.frame.sz);
+
+      //printf("packet of size: %d\n",(int)pkt->data.frame.sz);
+
+
+      // TODO: split the received data into separate OBUs
+      // This allows libheif to easily extract the sequence header for the av1C header
+
+      size_t n = pkt->data.frame.sz;
+      size_t oldSize = encoder->compressedData.size();
       encoder->compressedData.resize(oldSize + n);
 
       memcpy(encoder->compressedData.data() + oldSize,

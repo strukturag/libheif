@@ -774,7 +774,7 @@ int heif_image_get_primary_height(const struct heif_image* img)
       return img->image->get_height(heif_channel_G);
     }
     else {
-      return img->image->get_width(heif_channel_interleaved);
+      return img->image->get_height(heif_channel_interleaved);
     }
   }
   else {

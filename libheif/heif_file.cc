@@ -676,6 +676,22 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
 
+
+void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_t c3)
+{
+  auto pixi = std::make_shared<Box_pixi>();
+  pixi->add_channel_bits(c1);
+  if (c2 || c3) {
+    pixi->add_channel_bits(c2);
+    pixi->add_channel_bits(c3);
+  }
+
+  int index = m_ipco_box->append_child_box(pixi);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
 void HeifFile::add_hvcC_property(heif_item_id id)
 {
   auto hvcC = std::make_shared<Box_hvcC>();
