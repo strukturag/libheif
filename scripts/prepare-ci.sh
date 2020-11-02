@@ -29,6 +29,10 @@ if [ "$WITH_LIBDE265" = "2" ]; then
     PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$BUILD_ROOT/libde265/dist/lib/pkgconfig/"
 fi
 
+if [ "$WITH_RAV1E" = "1" ]; then
+    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$BUILD_ROOT/third-party/rav1e/dist/lib/pkgconfig/"
+fi
+
 if [ "$WITH_DAV1D" = "1" ]; then
     PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$BUILD_ROOT/third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig/"
 fi

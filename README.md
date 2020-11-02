@@ -134,15 +134,14 @@ Libheif is included in [Vcpkg](https://github.com/Microsoft/vcpkg/).
 ### Adding rav1e encoder for AVIF
 
 * Install `cargo`.
-* Install `cbindgen` by executing
+* Install `cargo-c` by executing
 ```
-cargo install --force cbindgen
+cargo install --force cargo-c
 ```
-* Make sure that the `cbindgen` executable is found. You probably have to add `~/.cargo/bin` to your `$PATH`.
 * Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
 
-When using cmake, you have to enable compiling the local rav1e encoder with `USE_LOCAL_RAV1E'.
-With autoconf, use the configure option `--enable-local-rav1e'.
+When running `cmake` or `configure`, make sure that the environment variable
+`PKG_CONFIG_PATH` includes the path to `third-party/rav1e/dist/lib/pkgconfig`.
 
 
 ### Adding dav1d decoder for AVIF

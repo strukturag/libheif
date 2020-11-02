@@ -234,15 +234,22 @@ if eval "test x$have_gdkpixbuf2 = xyes"; then
     AC_SUBST([gdk_pixbuf_cache_file])
 fi
 
-AC_ARG_ENABLE([local_rav1e], AS_HELP_STRING([--enable-local-rav1e],
-    [Enable compiling with local rav1e encoder.]), [], [enable_local_rav1e=no])
-if eval "test x$enable_local_rav1e != xno"; then
-    AC_MSG_NOTICE([Enable compiling with local rav1e])
-    AC_DEFINE([HAVE_RAV1E], [1], [Whether rav1e plugin has been enabled.])
-    have_avif_encoder="yes"
+AC_ARG_ENABLE([rav1e], AS_HELP_STRING([--disable-rav1e],
+    [Disable building of rav1e encoder.]))
+if eval "test x$enable_rav1e = x" ; then enable_rav1e=yes ; fi
+if eval "test x$enable_rav1e != xno"; then
+    PKG_CHECK_MODULES([rav1e], [rav1e], [
+        AC_DEFINE([HAVE_RAV1E], [1], [Whether rav1e was found.])
+        AC_SUBST(rav1e_CFLAGS)
+        AC_SUBST(rav1e_LIBS)
+        have_avif_encoder="yes"
+        have_rav1e="yes"
+    ], [have_rav1e="no"])
+else
+    have_rav1e="no"
 fi
-AM_CONDITIONAL([ENABLE_LOCAL_RAV1E], [test "x$enable_local_rav1e" != "xno"])
-AC_SUBST(ENABLE_LOCAL_RAV1E)
+AM_CONDITIONAL([HAVE_RAV1E], [test "x$have_rav1e" = "xyes"])
+AC_SUBST([have_rav1e])
 
 PKG_CHECK_MODULES([dav1d], [dav1d], [
     AC_DEFINE([HAVE_DAV1D], [1], [Whether dav1d was found.])
@@ -293,7 +300,7 @@ AC_MSG_NOTICE([Multithreading: $enable_multithreading])
 AC_MSG_NOTICE([Symbol visibility: $enable_visibility])
 AC_MSG_NOTICE([libaom decoder: $have_aom_decoder])
 AC_MSG_NOTICE([libaom encoder: $have_aom_encoder])
-AC_MSG_NOTICE([rav1e encoder: $enable_local_rav1e])
+AC_MSG_NOTICE([rav1e encoder: $have_rav1e])
 AC_MSG_NOTICE([dav1d decoder: $have_dav1d])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])

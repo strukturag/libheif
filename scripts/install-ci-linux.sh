@@ -190,7 +190,7 @@ if [ "$WITH_DAV1D" = "1" ]; then
 fi
 
 if [ "$WITH_RAV1E" = "1" ]; then
-    cargo install --force cbindgen
+    cargo install --force cargo-c
 
     export PATH="$PATH:$HOME/.cargo/bin"
     cd third-party
