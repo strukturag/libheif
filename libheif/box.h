@@ -1063,6 +1063,10 @@ namespace heif {
     int get_bits_per_channel(int channel) const
     { return m_bits_per_channel[channel]; }
 
+    void add_channel_bits(uint8_t c){
+      m_bits_per_channel.push_back(c);
+    }
+
     std::string dump(Indent&) const override;
 
     Error write(StreamWriter& writer) const override;
@@ -1153,7 +1157,7 @@ namespace heif {
     void set_default();
 
     void set_undefined();
-    
+
     Error get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const;
 
     static struct heif_color_profile_nclx* alloc_nclx_color_profile();

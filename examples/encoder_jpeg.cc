@@ -47,8 +47,9 @@ void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
 {
   if (HasExifMetaData(handle)) {
     options->ignore_transformations = 1;
-    options->convert_hdr_to_8bit = 1;
   }
+
+  options->convert_hdr_to_8bit = 1;
 }
 
 // static
