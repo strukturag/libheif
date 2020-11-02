@@ -88,6 +88,10 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   return result;
 }
 
+static int round_odd(int v) {
+  return (int) ((v / 2.0) + 0.5);
+}
+
 static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
                                             enum heif_colorspace colorspace, enum heif_chroma chroma)
 {
@@ -122,13 +126,13 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       int stride_v;
       const uint8_t* plane_v = heif_image_get_plane_readonly(image,
                                                              heif_channel_Cr, &stride_v);
-      data.resize((width * height) + (width * height / 2));
+      data.resize((width * height) + (2 * round_odd(width) * round_odd(height)));
       char* dest = const_cast<char*>(data.data());
       strided_copy(dest, plane_y, width, height, stride_y);
       strided_copy(dest + (width * height), plane_u,
-                   width / 2, height / 2, stride_u);
-      strided_copy(dest + (width * height) + (width * height / 4),
-                   plane_v, width / 2, height / 2, stride_v);
+                   round_odd(width), round_odd(height), stride_u);
+      strided_copy(dest + (width * height) + (round_odd(width) * round_odd(height)),
+                   plane_v, round_odd(width), round_odd(height), stride_v);
     }
       break;
     case heif_colorspace_RGB: {

@@ -75,12 +75,13 @@ HeifImage.prototype.display = function(image_data, callback) {
         var x2;
         var i = 0;
         var maxi = w*h;
-        var y = this.data;
-        var u = this.data.subarray(w * h, w * h + (w * h / 4));
-        var v = this.data.subarray(w * h + (w * h / 4), w * h + (w * h / 2));
         var stridey = w;
-        var strideu = Math.floor(w / 2);
-        var stridev = Math.floor(w / 2);
+        var strideu = Math.ceil(w / 2);
+        var stridev = Math.ceil(w / 2);
+        var h2 = Math.ceil(h / 2);
+        var y = this.data;
+        var u = this.data.subarray(stridey * h, stridey * h + (strideu * h2));
+        var v = this.data.subarray(stridey * h + (strideu * h2), stridey * h + (strideu * h2) + (stridev * h2));
         var dest = image_data.data;
         while (i < maxi) {
             x2 = (xpos >> 1);
