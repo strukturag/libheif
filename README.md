@@ -156,6 +156,7 @@ When running `cmake` or `configure`, make sure that the environment variable
 
 ## Language bindings
 
+* .NET Platform (C#, F#, and other languages): [libheif-sharp](https://github.com/0xC0000054/libheif-sharp)
 * C++: part of libheif
 * Go: part of libheif
 * JavaScript: by compilation with emscripten (see below)
