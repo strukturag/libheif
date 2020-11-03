@@ -1161,32 +1161,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
       auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
       if (clap) {
-        std::shared_ptr<HeifPixelImage> clap_img;
-
-        int img_width = img->get_width();
-        int img_height = img->get_height();
-        assert(img_width >= 0);
-        assert(img_height >= 0);
-
-        int left = clap->left_rounded(img_width);
-        int right = clap->right_rounded(img_width);
-        int top = clap->top_rounded(img_height);
-        int bottom = clap->bottom_rounded(img_height);
-
-        if (left < 0) { left = 0; }
-        if (top < 0) { top = 0; }
-
-        if (right >= img_width) { right = img_width - 1; }
-        if (bottom >= img_height) { bottom = img_height - 1; }
-
-        if (left >= right ||
-            top >= bottom) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Invalid_clean_aperture);
-        }
-
         std::shared_ptr<HeifPixelImage> cropped_img;
-        error = img->crop(left, right, top, bottom, cropped_img);
+        error = img->crop(0, clap->get_width_rounded() - 1, 0, clap->get_height_rounded() - 1, cropped_img);
         if (error) {
           return error;
         }
@@ -1666,21 +1642,11 @@ static std::shared_ptr<HeifPixelImage>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage> image)
 {
   // --- generate alpha image
-  // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-  int chroma_width = (image->get_width() + 1) / 2;
-  int chroma_height = (image->get_height() + 1) / 2;
 
   std::shared_ptr<HeifPixelImage> alpha_image = std::make_shared<HeifPixelImage>();
   alpha_image->create(image->get_width(), image->get_height(),
-                      heif_colorspace_YCbCr, heif_chroma_420);
+                      heif_colorspace_monochrome, heif_chroma_monochrome);
   alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
-
-  uint8_t bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-  uint16_t half_range = static_cast<uint16_t>(1 << (bpp - 1));
-
-  alpha_image->fill_new_plane(heif_channel_Cb, half_range, chroma_width, chroma_height, bpp);
-  alpha_image->fill_new_plane(heif_channel_Cr, half_range, chroma_width, chroma_height, bpp);
 
   auto nclx = std::make_shared<color_profile_nclx>();
   nclx->set_undefined();
@@ -1869,33 +1835,6 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                       image->get_height(heif_channel_Y));
 
 
-  // --- if there is an alpha channel, add it as an additional image
-
-  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-
-    // --- generate alpha image
-    // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-    std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(image);
-
-
-    // --- encode the alpha image
-
-    std::shared_ptr<HeifContext::Image> heif_alpha_image;
-
-    Error error = encode_image_as_hevc(alpha_image, encoder, options,
-                                       heif_image_input_class_alpha,
-                                       heif_alpha_image);
-    if (error) {
-      return error;
-    }
-
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
-  }
-
-
   m_heif_file->add_hvcC_property(image_id);
 
 
@@ -1948,9 +1887,9 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
   // if image size was rounded up to even size, add a 'clap' box to crop the
   // padding border away
 
-  if (options->macOS_compatibility_workaround == false) {
-    if (out_image->get_width() != encoded_width ||
-        out_image->get_height() != encoded_height) {
+  if (out_image->get_width() != encoded_width ||
+      out_image->get_height() != encoded_height) {
+    if (options->macOS_compatibility_workaround == false) {
       m_heif_file->add_clap_property(image_id,
                                      out_image->get_width(),
                                      out_image->get_height(),
@@ -1958,39 +1897,66 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                      encoded_height);
 
       m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
+    } else {
+      // --- wrap the encoded image in a grid image just to apply the cropping
+
+      heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
+      auto grid_image = std::make_shared<Image>(this, grid_image_id);
+
+      m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), {image_id});
+
+      ImageGrid grid;
+      grid.set_num_tiles(1, 1);
+      grid.set_output_size(image->get_width(heif_channel_Y), image->get_height(heif_channel_Y));
+      auto grid_data = grid.write();
+
+      m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
+
+      m_heif_file->add_ispe_property(grid_image_id,
+                                     image->get_width(heif_channel_Y),
+                                     image->get_height(heif_channel_Y));
+
+      m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+
+      // --- now use the grid image instead of the original image
+
+      // hide the original image
+      m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
+
+      out_image = grid_image;
+
+      // now use the grid image for all further property output
+      image_id = grid_image_id;
     }
+  } else {
+    m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
   }
-  else {
-    // --- wrap the encoded image in a grid image just to apply the cropping
 
-    heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
-    auto grid_image = std::make_shared<Image>(this, grid_image_id);
+  // --- if there is an alpha channel, add it as an additional image
 
-    m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), {image_id});
+  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
 
-    ImageGrid grid;
-    grid.set_num_tiles(1, 1);
-    grid.set_output_size(image->get_width(heif_channel_Y), image->get_height(heif_channel_Y));
-    auto grid_data = grid.write();
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
 
-    m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
-
-    m_heif_file->add_ispe_property(grid_image_id,
-                                   image->get_width(heif_channel_Y),
-                                   image->get_height(heif_channel_Y));
-
-    m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(image);
 
 
-    // --- now use the grid image instead of the original image
+    // --- encode the alpha image
 
-    // hide the original image
-    m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
 
-    out_image = grid_image;
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
+    if (error) {
+      return error;
+    }
 
-    // now use the grid image for all further property output
-    image_id = grid_image_id;
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
   }
 
 
