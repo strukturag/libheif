@@ -51,7 +51,7 @@ if (has_potentially_evaluated_expression)
   add_definitions(-Wno-error=potentially-evaluated-expression)
 endif()
 
-LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 option(WITH_LIBDE265 "Build libde265 decoder" ON)
 if (WITH_LIBDE265)
     find_package(Libde265)
