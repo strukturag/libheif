@@ -836,12 +836,30 @@ void list_encoder_parameters(heif_encoder* encoder)
           std::cerr << ", default=" << value;
         }
 
-        int have_minmax, minimum, maximum;
-        error = heif_encoder_parameter_integer_valid_range(encoder, name,
-                                                           &have_minmax, &minimum, &maximum);
+        int have_minimum, have_maximum, minimum, maximum, num_valid_values;
+        const int* valid_values = nullptr;
+        error = heif_encoder_parameter_integer_valid_values(encoder, name,
+                                                            &have_minimum, &have_maximum,
+                                                            &minimum, &maximum,
+                                                            &num_valid_values,
+                                                            &valid_values);
 
-        if (have_minmax) {
+        if (have_minimum || have_maximum) {  // TODO: only one is set
           std::cerr << ", [" << minimum << ";" << maximum << "]";
+        }
+
+        if (num_valid_values > 0) {
+          std::cerr << ", {";
+
+          for (int p=0;p<num_valid_values;p++) {
+            if (p>0) {
+              std::cerr << ", ";
+            }
+
+            std::cerr << valid_values[p];
+          }
+
+          std::cerr << "}";
         }
 
         std::cerr << "\n";

@@ -58,6 +58,9 @@ static struct heif_error error_Ok = {heif_error_Ok, heif_suberror_Unspecified, k
 static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
                                                         heif_suberror_Unsupported_parameter,
                                                         "Unsupported encoder parameter"};
+static struct heif_error error_invalid_parameter_value = {heif_error_Usage_error,
+                                                          heif_suberror_Invalid_parameter_value,
+                                                          "Invalid parameter value"};
 static struct heif_error error_unsupported_plugin_version = {heif_error_Usage_error,
                                                              heif_suberror_Unsupported_plugin_version,
                                                              "Unsupported plugin version"};
@@ -1519,6 +1522,47 @@ struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder* encode
                                                      const char* parameter_name,
                                                      int value)
 {
+  // --- check if parameter is valid
+
+  for (const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name) == 0) {
+
+      int have_minimum, have_maximum, minimum, maximum, num_valid_values;
+      const int* valid_values;
+      heif_error err = heif_encoder_parameter_get_valid_integer_values((*params), &have_minimum, &have_maximum,
+                                                                       &minimum, &maximum,
+                                                                       &num_valid_values,
+                                                                       &valid_values);
+      if (err.code) {
+        return err;
+      }
+
+      if ((have_minimum && value < minimum) ||
+          (have_maximum && value > maximum)) {
+        return error_invalid_parameter_value;
+      }
+
+      if (num_valid_values > 0) {
+        bool found = false;
+        for (int i = 0; i < num_valid_values; i++) {
+          if (valid_values[i] == value) {
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          return error_invalid_parameter_value;
+        }
+      }
+    }
+  }
+
+
+  // --- parameter is ok, pass it to the encoder plugin
+
   return encoder->plugin->set_parameter_integer(encoder->encoder, parameter_name, value);
 }
 
@@ -1554,6 +1598,55 @@ heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_paramet
 
   return error_Ok;
 }
+
+LIBHEIF_API
+struct heif_error heif_encoder_parameter_get_valid_integer_values(const struct heif_encoder_parameter* param,
+                                                                  int* have_minimum, int* have_maximum,
+                                                                  int* minimum, int* maximum,
+                                                                  int* num_valid_values,
+                                                                  const int** out_integer_array)
+{
+  if (param->type != heif_encoder_parameter_type_integer) {
+    return error_unsupported_parameter; // TODO: correct error ?
+  }
+
+
+  // --- range of values
+
+  if (param->integer.have_minimum_maximum) {
+    if (minimum) {
+      *minimum = param->integer.minimum;
+    }
+
+    if (maximum) {
+      *maximum = param->integer.maximum;
+    }
+  }
+
+  if (have_minimum) {
+    *have_minimum = param->integer.have_minimum_maximum;
+  }
+
+  if (have_maximum) {
+    *have_maximum = param->integer.have_minimum_maximum;
+  }
+
+
+  // --- set of valid values
+
+  if (param->integer.num_valid_values > 0) {
+    if (out_integer_array) {
+      *out_integer_array = param->integer.valid_values;
+    }
+  }
+
+  if (num_valid_values) {
+    *num_valid_values = param->integer.num_valid_values;
+  }
+
+  return error_Ok;
+}
+
 
 struct heif_error
 heif_encoder_parameter_get_valid_string_values(const struct heif_encoder_parameter* param,
@@ -1625,6 +1718,25 @@ struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder
        params++) {
     if (strcmp((*params)->name, parameter_name) == 0) {
       return heif_encoder_parameter_get_valid_string_values(*params, out_stringarray);
+    }
+  }
+
+  return error_unsupported_parameter;
+}
+
+struct heif_error heif_encoder_parameter_integer_valid_values(struct heif_encoder* encoder,
+                                                              const char* parameter_name,
+                                                              int* have_minimum, int* have_maximum,
+                                                              int* minimum, int* maximum,
+                                                              int* num_valid_values,
+                                                              const int** out_integer_array)
+{
+  for (const struct heif_encoder_parameter* const* params = heif_encoder_list_parameters(encoder);
+       *params;
+       params++) {
+    if (strcmp((*params)->name, parameter_name) == 0) {
+      return heif_encoder_parameter_get_valid_integer_values(*params, have_minimum, have_maximum, minimum, maximum,
+                                                             num_valid_values, out_integer_array);
     }
   }
 

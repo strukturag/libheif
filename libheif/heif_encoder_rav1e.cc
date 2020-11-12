@@ -136,7 +136,7 @@ static void rav1e_init_parameters()
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 4;
   p->has_default = true;
-  p->integer.have_minimum_maximum = true;
+  p->integer.have_minimum_maximum = false;
   p->integer.valid_values = valid_tile_num_values;
   p->integer.num_valid_values = 7;
   d[i++] = p++;
@@ -147,7 +147,7 @@ static void rav1e_init_parameters()
   p->type = heif_encoder_parameter_type_integer;
   p->integer.default_value = 4;
   p->has_default = true;
-  p->integer.have_minimum_maximum = true;
+  p->integer.have_minimum_maximum = false;
   p->integer.valid_values = valid_tile_num_values;
   p->integer.num_valid_values = 7;
   d[i++] = p++;

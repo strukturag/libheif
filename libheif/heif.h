@@ -1119,10 +1119,20 @@ enum heif_encoder_parameter_type
 LIBHEIF_API
 enum heif_encoder_parameter_type heif_encoder_parameter_get_type(const struct heif_encoder_parameter*);
 
+// DEPRECATED. Use heif_encoder_parameter_get_valid_integer_values() instead.
 LIBHEIF_API
 struct heif_error heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_parameter*,
                                                                  int* have_minimum_maximum,
                                                                  int* minimum, int* maximum);
+
+// If integer is limited by a range, have_minimum and/or have_maximum will be != 0 and *minimum, *maximum is set.
+// If integer is limited by a fixed set of values, *num_valid_values will be >0 and *out_integer_array is set.
+LIBHEIF_API
+struct heif_error heif_encoder_parameter_get_valid_integer_values(const struct heif_encoder_parameter*,
+                                                                  int* have_minimum, int* have_maximum,
+                                                                  int* minimum, int* maximum,
+                                                                  int* num_valid_values,
+                                                                  const int** out_integer_array);
 
 LIBHEIF_API
 struct heif_error heif_encoder_parameter_get_valid_string_values(const struct heif_encoder_parameter*,
@@ -1171,6 +1181,14 @@ LIBHEIF_API
 struct heif_error heif_encoder_parameter_string_valid_values(struct heif_encoder*,
                                                              const char* parameter_name,
                                                              const char* const** out_stringarray);
+
+LIBHEIF_API
+struct heif_error heif_encoder_parameter_integer_valid_values(struct heif_encoder*,
+                                                              const char* parameter_name,
+                                                              int* have_minimum, int* have_maximum,
+                                                              int* minimum, int* maximum,
+                                                              int* num_valid_values,
+                                                              const int** out_integer_array);
 
 // Set a parameter of any type to the string value.
 // Integer values are parsed from the string.
