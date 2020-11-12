@@ -2298,10 +2298,20 @@ Error Box_clap::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  m_clean_aperture_width = Fraction(range.read32(), range.read32());
-  m_clean_aperture_height = Fraction(range.read32(), range.read32());
-  m_horizontal_offset = Fraction(range.read32(), range.read32());
-  m_vertical_offset = Fraction(range.read32(), range.read32());
+  int32_t clean_aperture_width_num = range.read32();
+  int32_t clean_aperture_width_den = range.read32();
+  int32_t clean_aperture_height_num = range.read32();
+  int32_t clean_aperture_height_den = range.read32();
+  int32_t horizontal_offset_num = range.read32();
+  int32_t horizontal_offset_den = range.read32();
+  int32_t vertical_offset_num = range.read32();
+  int32_t vertical_offset_den = range.read32();
+  m_clean_aperture_width = Fraction(clean_aperture_width_num,
+                                    clean_aperture_width_den);
+  m_clean_aperture_height = Fraction(clean_aperture_height_num,
+                                     clean_aperture_height_den);
+  m_horizontal_offset = Fraction(horizontal_offset_num, horizontal_offset_den);
+  m_vertical_offset = Fraction(vertical_offset_num, vertical_offset_den);
   if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
       !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
     return Error(heif_error_Invalid_input,
