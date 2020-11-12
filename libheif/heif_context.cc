@@ -1176,8 +1176,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
         if (right >= img_width) { right = img_width - 1; }
         if (bottom >= img_height) { bottom = img_height - 1; }
 
-        if (left >= right ||
-            top >= bottom) {
+        if (left > right ||
+            top > bottom) {
           return Error(heif_error_Invalid_input,
                        heif_suberror_Invalid_clean_aperture);
         }
