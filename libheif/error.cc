@@ -67,6 +67,8 @@ const char* heif::Error::get_error_string(heif_error_code err)
       return "Encoder plugin generated an error";
     case heif_error_Encoding_error:
       return "Error during encoding or writing output file";
+    case heif_error_Color_profile_does_not_exist:
+      return "Color profile does not exist";
   }
 
   assert(false);

@@ -211,9 +211,22 @@ namespace heif {
                                 const struct heif_encoding_options* options,
                                 enum heif_image_input_class input_class);
 
-      std::shared_ptr<const color_profile> get_color_profile() const { return m_color_profile; }
+      std::shared_ptr<const color_profile_nclx> get_color_profile_nclx() const { return m_color_profile_nclx; }
 
-      void set_color_profile(std::shared_ptr<const color_profile> profile) { m_color_profile = std::move(profile); };
+      std::shared_ptr<const color_profile_raw> get_color_profile_icc() const { return m_color_profile_icc; }
+
+      void set_color_profile(std::shared_ptr<const color_profile> profile)
+      {
+        auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+        if (icc) {
+          m_color_profile_icc = std::move(icc);
+        }
+
+        auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+        if (nclx) {
+          m_color_profile_nclx = std::move(nclx);
+        }
+      };
 
     private:
       HeifContext* m_heif_context;
@@ -241,7 +254,8 @@ namespace heif {
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
-      std::shared_ptr<const color_profile> m_color_profile;
+      std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
+      std::shared_ptr<const color_profile_raw> m_color_profile_icc;
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }

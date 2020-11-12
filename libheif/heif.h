@@ -41,6 +41,7 @@ extern "C" {
 //  1.4          1             1            1             1             1            1
 //  1.7          1             2            1             1             1            1
 //  1.9.2        1             2            2             1             1            1
+//  1.10         1             2            3             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -115,7 +116,9 @@ enum heif_error_code
   heif_error_Encoder_plugin_error = 8,
 
   // Error during encoding or when writing to the output
-  heif_error_Encoding_error = 9
+  heif_error_Encoding_error = 9,
+
+  heif_error_Color_profile_does_not_exist = 10
 };
 
 
@@ -633,12 +636,17 @@ enum heif_color_profile_type
 
 
 // Returns 'heif_color_profile_type_not_present' if there is no color profile.
+// If there is an ICC profile and an NCLX profile, the ICC profile is returned.
+// TODO: we need a new API for this function as images can contain both NCLX and ICC at the same time.
+//       However, you can still use heif_image_handle_get_raw_color_profile() and
+//       heif_image_handle_get_nclx_color_profile() to access both profiles.
 LIBHEIF_API
 enum heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle);
 
 LIBHEIF_API
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle);
 
+// Returns 'heif_error_Color_profile_does_not_exist' when there is no ICC profile.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_image_handle* handle,
                                                           void* out_data);
@@ -718,6 +726,9 @@ struct heif_color_profile_nclx
   float color_primary_white_x, color_primary_white_y;
 };
 
+// Returns 'heif_error_Color_profile_does_not_exist' when there is no NCLX profile.
+// TODO: This function does currently not return an NCLX profile if it is stored in the image bitstream.
+//       Only NCLX profiles stored as colr boxes are returned. This may change in the future.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
                                                            struct heif_color_profile_nclx** out_data);
@@ -1202,6 +1213,10 @@ struct heif_encoding_options
   // Results in slightly larger file size.
   // Default: on.
   uint8_t macOS_compatibility_workaround;
+
+  // version 3 options
+
+  uint8_t save_two_colr_boxes_when_ICC_and_nclx_available; // default: false
 };
 
 LIBHEIF_API

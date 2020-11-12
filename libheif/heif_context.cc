@@ -744,7 +744,6 @@ Error HeifContext::interpret_heif_file()
     }
 
     bool ispe_read = false;
-    bool primary_colr_set = false;
     for (const auto& prop : properties) {
       auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
       if (ispe) {
@@ -802,10 +801,8 @@ Error HeifContext::interpret_heif_file()
         const bool is_grid_item = !image->is_primary() && !image->is_alpha_channel() && !image->is_depth_channel();
 
         if (primary_is_grid &&
-            !primary_colr_set &&
             is_grid_item) {
           m_primary_image->set_color_profile(profile);
-          primary_colr_set = true;
         }
       }
     }
@@ -1060,9 +1057,14 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     // If there is an NCLX profile in the HEIF/AVIF metadata, use this for the color conversion.
     // Otherwise, use the profile that is stored in the image stream itself and then set the
     // (non-NCLX) profile later.
-    auto nclx = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
+    auto nclx = imginfo->get_color_profile_nclx();
     if (nclx) {
       img->set_color_profile_nclx(nclx);
+    }
+
+    auto icc = imginfo->get_color_profile_icc();
+    if (icc) {
+      img->set_color_profile_icc(icc);
     }
 
     heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
@@ -1084,11 +1086,6 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       if (!img) {
         return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
       }
-    }
-
-    auto colorProfileInMetadata = std::dynamic_pointer_cast<const color_profile_nclx>(imginfo->get_color_profile());
-    if (colorProfileInMetadata) {
-      img->set_color_profile_nclx(colorProfileInMetadata);
     }
   }
   else if (image_type == "grid") {
@@ -2001,7 +1998,10 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
     if (icc_profile) {
       m_heif_file->set_color_profile(image_id, icc_profile);
     }
-    else if (nclx_profile) {
+
+    if (nclx_profile &&
+        (!icc_profile || (options->version >= 3 &&
+                          options->save_two_colr_boxes_when_ICC_and_nclx_available))) {
       m_heif_file->set_color_profile(image_id, nclx_profile);
     }
   }
@@ -2011,7 +2011,7 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
 
   if (image->get_chroma_format() == heif_chroma_monochrome) {
     m_heif_file->add_pixi_property(image_id,
-                                   image->get_bits_per_pixel(heif_channel_Y), 0,0);
+                                   image->get_bits_per_pixel(heif_channel_Y), 0, 0);
   }
   else {
     m_heif_file->add_pixi_property(image_id,
@@ -2068,7 +2068,10 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     if (icc_profile) {
       m_heif_context->m_heif_file->set_color_profile(m_id, icc_profile);
     }
-    else if (nclx_profile) {
+
+    if (nclx_profile &&
+        (!icc_profile || (options->version >= 3 &&
+                          options->save_two_colr_boxes_when_ICC_and_nclx_available))) {
       m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
     }
   }

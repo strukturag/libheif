@@ -47,7 +47,9 @@
 // for _write
 #include <io.h>
 #else
+
 #include <unistd.h>
+
 #endif
 
 using namespace heif;
@@ -1047,21 +1049,25 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 
 heif_color_profile_type heif_image_handle_get_color_profile_type(const struct heif_image_handle* handle)
 {
-  auto profile = handle->image->get_color_profile();
-  if (!profile) {
-    return heif_color_profile_type_not_present;
+  auto profile_icc = handle->image->get_color_profile_icc();
+  if (profile_icc) {
+    return (heif_color_profile_type) profile_icc->get_type();
+  }
+
+  auto profile_nclx = handle->image->get_color_profile_nclx();
+  if (profile_nclx) {
+    return (heif_color_profile_type) profile_nclx->get_type();
   }
   else {
-    return (heif_color_profile_type) profile->get_type();
+    return heif_color_profile_type_not_present;
   }
 }
 
 size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_handle* handle)
 {
-  auto profile = handle->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
-  if (raw_profile) {
-    return raw_profile->get_data().size();
+  auto profile_icc = handle->image->get_color_profile_icc();
+  if (profile_icc) {
+    return profile_icc->get_data().size();
   }
   else {
     return 0;
@@ -1078,8 +1084,13 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
     return err.error_struct(handle->image.get());
   }
 
-  auto profile = handle->image->get_color_profile();
-  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(profile);
+  auto nclx_profile = handle->image->get_color_profile_nclx();
+  if (!nclx_profile) {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(handle->image.get());
+  }
+
   Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(handle->image.get());
@@ -1095,12 +1106,16 @@ struct heif_error heif_image_handle_get_raw_color_profile(const struct heif_imag
     return err.error_struct(handle->image.get());
   }
 
-  auto profile = handle->image->get_color_profile();
-  auto raw_profile = std::dynamic_pointer_cast<const color_profile_raw>(profile);
+  auto raw_profile = handle->image->get_color_profile_icc();
   if (raw_profile) {
     memcpy(out_data,
            raw_profile->get_data().data(),
            raw_profile->get_data().size());
+  }
+  else {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(handle->image.get());
   }
 
   return Error::Ok.error_struct(handle->image.get());
@@ -1740,10 +1755,11 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 
 static void set_default_options(heif_encoding_options& options)
 {
-  options.version = 1;
+  options.version = 3;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = true;
+  options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
 }
 
 
