@@ -652,7 +652,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, output_bit_depth);
 
     int y_stride;
-    int a_stride;
+    int a_stride = 0;
     uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
     uint16_t* pa = nullptr;
 
