@@ -603,7 +603,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
 
-  if (band == 1) {
+  if (band == 1 && bit_depth==8) {
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_monochrome,
                             heif_chroma_monochrome,
@@ -638,6 +638,58 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
       }
     }
   }
+  else if (band == 1) {
+    assert(bit_depth>8);
+
+    err = heif_image_create((int) width, (int) height,
+                            heif_colorspace_monochrome,
+                            heif_chroma_monochrome,
+                            &image);
+    (void) err;
+
+    int bdShift = 16 - output_bit_depth;
+
+    heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, output_bit_depth);
+
+    int y_stride;
+    int a_stride;
+    uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint16_t* pa = nullptr;
+
+    if (has_alpha) {
+      heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, output_bit_depth);
+
+      pa = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
+    }
+
+    y_stride /= 2;
+    a_stride /= 2;
+
+    for (uint32_t y = 0; y < height; y++) {
+      uint8_t* p = row_pointers[y];
+
+      if (has_alpha) {
+        for (uint32_t x = 0; x < width; x++) {
+          uint16_t vp = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
+          uint16_t va = (uint16_t) (((p[2] << 8) | p[3]) >> bdShift);
+
+          py[x + y * y_stride] = vp;
+          pa[x + y * y_stride] = va;
+
+          p += 4;
+        }
+      }
+      else {
+        for (uint32_t x = 0; x < width; x++) {
+          uint16_t vp = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
+
+          py[x + y * y_stride] = vp;
+
+          p += 2;
+        }
+      }
+    }
+  }
   else if (bit_depth == 8) {
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_RGB,
@@ -664,8 +716,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_RGB,
                             has_alpha ?
-                            heif_chroma_interleaved_RRGGBBAA_BE :
-                            heif_chroma_interleaved_RRGGBB_BE,
+                            heif_chroma_interleaved_RRGGBBAA_LE :
+                            heif_chroma_interleaved_RRGGBB_LE,
                             &image);
     (void) err;
 
@@ -683,8 +735,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
       for (uint32_t x = 0; x < nVal; x++) {
         uint16_t v = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
-        p_out[2 * x + y * stride + 0] = (uint8_t) (v >> 8);
-        p_out[2 * x + y * stride + 1] = (uint8_t) (v & 0xFF);
+        p_out[2 * x + y * stride + 1] = (uint8_t) (v >> 8);
+        p_out[2 * x + y * stride + 0] = (uint8_t) (v & 0xFF);
         p += 2;
       }
     }
