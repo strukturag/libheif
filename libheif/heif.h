@@ -118,6 +118,7 @@ enum heif_error_code
   // Error during encoding or when writing to the output
   heif_error_Encoding_error = 9,
 
+  // Application has asked for a color profile type that does not exist
   heif_error_Color_profile_does_not_exist = 10
 };
 

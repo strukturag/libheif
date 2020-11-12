@@ -149,6 +149,9 @@ const (
 
 	// Error during encoding or when writing to the output
 	ErrorEncoding = C.heif_error_Encoding_error
+
+	// Application has asked for a color profile type that does not exist
+	ErrorColorProfileDoesNotExist = C.heif_error_Color_profile_does_not_exist
 )
 
 type ErrorSubcode C.enum_heif_suberror_code
