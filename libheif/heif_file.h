@@ -152,6 +152,7 @@ namespace heif {
 
     void set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile> profile);
 
+    // TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
     void set_hdlr_library_info(std::string encoder_plugin_version);
 
   private:

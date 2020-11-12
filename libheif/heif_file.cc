@@ -844,6 +844,7 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
 }
 
 
+// TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
 void HeifFile::set_hdlr_library_info(std::string encoder_plugin_version)
 {
   std::stringstream sstr;

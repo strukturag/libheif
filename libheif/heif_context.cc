@@ -1793,7 +1793,8 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 
   m_heif_file->set_brand(encoder->plugin->compression_format);
 
-  m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
+  // TODO: the hdlr box is not the right place for comments
+  // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
 
   switch (encoder->plugin->compression_format) {
     case heif_compression_HEVC: {
