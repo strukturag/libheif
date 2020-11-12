@@ -197,7 +197,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_error_Memory_allocation_error", heif_error_Memory_allocation_error)
     .value("heif_error_Decoder_plugin_error", heif_error_Decoder_plugin_error)
     .value("heif_error_Encoder_plugin_error", heif_error_Encoder_plugin_error)
-    .value("heif_error_Encoding_error", heif_error_Encoding_error);
+    .value("heif_error_Encoding_error", heif_error_Encoding_error)
+    .value("heif_error_Color_profile_does_not_exist", heif_error_Color_profile_does_not_exist);
     emscripten::enum_<heif_suberror_code>("heif_suberror_code")
     .value("heif_suberror_Unspecified", heif_suberror_Unspecified)
     .value("heif_suberror_Cannot_write_output_data", heif_suberror_Cannot_write_output_data)
