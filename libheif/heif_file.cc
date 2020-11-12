@@ -29,6 +29,9 @@
 
 using namespace heif;
 
+// TODO: make this a decoder option
+#define STRICT_PARSING false
+
 
 HeifFile::HeifFile()
 {
@@ -231,12 +234,13 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 
   m_hdlr_box = std::dynamic_pointer_cast<Box_hdlr>(m_meta_box->get_child_box(fourcc("hdlr")));
-  if (!m_hdlr_box) {
+  if (STRICT_PARSING && !m_hdlr_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_hdlr_box);
   }
 
-  if (m_hdlr_box->get_handler_type() != fourcc("pict")) {
+  if (m_hdlr_box &&
+      m_hdlr_box->get_handler_type() != fourcc("pict")) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_pict_handler);
   }
