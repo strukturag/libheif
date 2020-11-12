@@ -1626,7 +1626,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, input_bpp);
   outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, input_bpp);
 
-  int alpha_bpp;
+  int alpha_bpp = 0;
   bool has_alpha = input->has_channel(heif_channel_Alpha);
   if (has_alpha) {
     alpha_bpp = input->get_bits_per_pixel(heif_channel_Alpha);
