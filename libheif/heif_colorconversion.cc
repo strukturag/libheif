@@ -1676,8 +1676,8 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
 
     for (int y = 0; y < chroma_height; y++)
       for (int x = 0; x < chroma_width; x++) {
-        out_cb[x + y * out_cb_stride] = 128 << (input_bpp - 8);
-        out_cr[x + y * out_cr_stride] = 128 << (input_bpp - 8);
+        out_cb[x + y * out_cb_stride] = (uint16_t)(128 << (input_bpp - 8));
+        out_cr[x + y * out_cr_stride] = (uint16_t)(128 << (input_bpp - 8));
       }
 
     for (int y = 0; y < height; y++) {
