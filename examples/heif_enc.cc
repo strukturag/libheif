@@ -1110,6 +1110,7 @@ int main(int argc, char** argv)
 
   if (list_encoders) {
     show_list_of_encoders(encoder_descriptors, count);
+    return 0;
   }
 
   if (count > 0) {
