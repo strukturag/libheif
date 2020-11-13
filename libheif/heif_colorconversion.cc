@@ -31,7 +31,7 @@
 
 using namespace heif;
 
-#define DEBUG_ME 1
+#define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
 
 std::ostream& operator<<(std::ostream& ostr, heif_colorspace c)
