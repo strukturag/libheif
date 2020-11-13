@@ -1663,25 +1663,18 @@ static std::shared_ptr<HeifPixelImage>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage> image)
 {
   // --- generate alpha image
-  // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-  int chroma_width = (image->get_width() + 1) / 2;
-  int chroma_height = (image->get_height() + 1) / 2;
 
   std::shared_ptr<HeifPixelImage> alpha_image = std::make_shared<HeifPixelImage>();
   alpha_image->create(image->get_width(), image->get_height(),
-                      heif_colorspace_YCbCr, heif_chroma_420);
+                      heif_colorspace_monochrome, heif_chroma_monochrome);
   alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
 
-  uint8_t bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-  uint16_t half_range = static_cast<uint16_t>(1 << (bpp - 1));
 
-  alpha_image->fill_new_plane(heif_channel_Cb, half_range, chroma_width, chroma_height, bpp);
-  alpha_image->fill_new_plane(heif_channel_Cr, half_range, chroma_width, chroma_height, bpp);
+  // --- set nclx profile with full-range flag
 
   auto nclx = std::make_shared<color_profile_nclx>();
   nclx->set_undefined();
-  nclx->set_full_range_flag(true); // in default, but just to be sure in case defaults change
+  nclx->set_full_range_flag(true); // this is the default, but just to be sure in case the defaults change
   alpha_image->set_color_profile_nclx(nclx);
 
   return alpha_image;
