@@ -1529,7 +1529,7 @@ struct heif_error heif_encoder_set_parameter_integer(struct heif_encoder* encode
        params++) {
     if (strcmp((*params)->name, parameter_name) == 0) {
 
-      int have_minimum, have_maximum, minimum, maximum, num_valid_values;
+      int have_minimum = 0, have_maximum = 0, minimum = 0, maximum = 0, num_valid_values = 0;
       const int* valid_values;
       heif_error err = heif_encoder_parameter_get_valid_integer_values((*params), &have_minimum, &have_maximum,
                                                                        &minimum, &maximum,
