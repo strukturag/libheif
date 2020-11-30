@@ -159,6 +159,7 @@ When running `cmake` or `configure`, make sure that the environment variable
 * C++: part of libheif
 * Go: part of libheif
 * JavaScript: by compilation with emscripten (see below)
+* NodeJS module: [libheif-js](https://www.npmjs.com/package/libheif-js)
 * Python: [pyheif](https://pypi.org/project/pyheif/)
 * Rust: [libheif-sys](https://github.com/Cykooz/libheif-sys)
 
