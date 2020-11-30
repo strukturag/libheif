@@ -306,6 +306,70 @@ int main(int argc, char** argv)
           printf("Depth image written to %s\n", s.str().c_str());
         }
       }
+
+
+      // --- aux images
+
+      int nAuxImages = heif_image_handle_get_number_of_auxiliary_images(handle, LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH);
+      if (nAuxImages>0) {
+
+        std::vector<heif_item_id> auxIDs(nAuxImages);
+        heif_image_handle_get_list_of_auxiliary_image_IDs(handle,
+                                                          LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH,
+                                                          auxIDs.data(), nAuxImages);
+
+        for (heif_item_id auxId : auxIDs) {
+
+          struct heif_image_handle* aux_handle;
+          err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
+          if (err.code) {
+            heif_image_handle_release(handle);
+            std::cerr << "Could not read auxiliary image\n";
+            return 1;
+          }
+
+          int aux_bit_depth = heif_image_handle_get_luma_bits_per_pixel(aux_handle);
+
+          struct heif_image* aux_image;
+          err = heif_decode_image(aux_handle,
+                                  &aux_image,
+                                  encoder->colorspace(false),
+                                  encoder->chroma(false, aux_bit_depth),
+                                  nullptr);
+          if (err.code) {
+            heif_image_handle_release(aux_handle);
+            heif_image_handle_release(handle);
+            std::cerr << "Could not decode auxiliary image: " << err.message << "\n";
+            return 1;
+          }
+
+          const char* auxTypeC = nullptr;
+          err = heif_image_handle_get_auxiliary_type(aux_handle, &auxTypeC);
+          if (err.code) {
+            heif_image_handle_release(aux_handle);
+            heif_image_handle_release(handle);
+            std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
+            return 1;
+          }
+
+          std::string auxType = std::string(auxTypeC);
+
+          std::ostringstream s;
+          s << output_filename.substr(0, output_filename.find('.'));
+          s << "-" + auxType;
+          s << output_filename.substr(output_filename.find('.'));
+
+          written = encoder->Encode(aux_handle, aux_image, s.str());
+          if (!written) {
+            fprintf(stderr, "could not write auxiliary image\n");
+          }
+          else {
+            printf("Auxiliary image written to %s\n", s.str().c_str());
+          }
+        }
+      }
+
+
       heif_image_handle_release(handle);
     }
 

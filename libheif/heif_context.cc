@@ -403,6 +403,7 @@ HeifContext::~HeifContext()
     image->get_thumbnails().clear();
     image->set_alpha_channel(nullptr);
     image->set_depth_channel(nullptr);
+    image->get_aux_images().clear();
   }
 }
 
@@ -652,7 +653,8 @@ Error HeifContext::interpret_heif_file()
           if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||   // HEIF (avc)
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // AVIF
-            image->set_is_alpha_channel_of(refs[0]);
+
+            image->set_is_alpha_channel_of(refs[0], true); // TODO: only consume when same size
 
             auto master_iter = m_all_images.find(refs[0]);
             if (master_iter == m_all_images.end()) {
@@ -700,6 +702,25 @@ Error HeifContext::interpret_heif_file()
               }
             }
           }
+
+
+          // --- generic aux image
+
+          image->set_is_aux_image_of(refs[0], auxC_property->get_aux_type());
+
+          auto master_iter = m_all_images.find(refs[0]);
+          if (master_iter == m_all_images.end()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Non-existing aux image referenced");
+          }
+          if (image.get() == master_iter->second.get()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Recursive aux image detected");
+          }
+
+          master_iter->second->add_aux_image(image);
 
           remove_top_level_image(image);
         }

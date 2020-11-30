@@ -586,6 +586,33 @@ struct heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle
                                                   struct heif_image_handle** out_thumbnail_handle);
 
 
+// ------------------------- auxiliary images -------------------------
+
+#define LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA (1UL<<1)
+#define LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH (2UL<<1)
+
+// List the number of auxiliary images assigned to this image handle.
+LIBHEIF_API
+int heif_image_handle_get_number_of_auxiliary_images(const struct heif_image_handle* handle,
+                                                     int aux_filter);
+
+LIBHEIF_API
+int heif_image_handle_get_list_of_auxiliary_image_IDs(const struct heif_image_handle* handle,
+                                                      int aux_filter,
+                                                      heif_item_id* ids, int count);
+
+// You are responsible to deallocate the returned buffer with free().
+LIBHEIF_API
+struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_handle* handle,
+                                                       const char** out_type);
+
+// Get the image handle of an auxiliary image.
+LIBHEIF_API
+struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif_image_handle* main_image_handle,
+                                                               heif_item_id auxiliary_id,
+                                                               struct heif_image_handle** out_auxiliary_handle);
+
+
 // ------------------------- metadata (Exif / XMP) -------------------------
 
 // How many metadata blocks are attached to an image. Usually, the only metadata is
