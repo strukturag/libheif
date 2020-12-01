@@ -60,7 +60,7 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo)
   longjmp(handler->setjmp_buffer, 1);
 }
 
-#if (defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER < 1005080) || JPEG_LIB_VERSION < 90
+#if (defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER < 1005080) || (!defined(LIBJPEG_TURBO_VERSION_NUMBER) && JPEG_LIB_VERSION < 90)
 
 #define ICC_MARKER  (JPEG_APP0 + 2)     /* JPEG marker code for ICC */
 #define ICC_OVERHEAD_LEN  14            /* size of non-profile data in APP2 */
