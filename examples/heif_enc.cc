@@ -40,8 +40,10 @@
 
 #include <libheif/heif.h>
 
-#if defined(HAVE_AOM_DECODER) || defined(HAVE_AOM_ENCODER)
+#if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
+extern "C" {
 #include <config/aom_version.h>
+}
 #endif
 
 #if HAVE_LIBJPEG
@@ -1216,7 +1218,7 @@ int main(int argc, char** argv)
       if (enc_av1f == true)
       {
         std::cerr << "\nLibrary encoder:   libavif  HDR " << heif_get_version() << "  8+16bit c++\n";
-#if defined(HAVE_AOM_DECODER) || defined(HAVE_AOM_ENCODER)
+#if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
         std::cerr << "                   libaom       " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << "  8+16bit c\n";
 #endif
       }
