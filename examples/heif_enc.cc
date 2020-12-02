@@ -54,6 +54,7 @@ extern "C" {
 #undef HAVE_STDDEF_H
 #undef HAVE_STDLIB_H
 #include <jpeglib.h>
+#define XSTR(LIBJPEG_TURBO_VERSION) STR(LIBJPEG_TURBO_VERSION)
 #define STR(LIBJPEG_TURBO_VERSION) #LIBJPEG_TURBO_VERSION
 }
 #endif
