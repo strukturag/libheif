@@ -42,7 +42,7 @@
 
 #if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
 extern "C" {
-#include <aom_version.h>
+#include <aom/aom_version.h>
 }
 #endif
 
