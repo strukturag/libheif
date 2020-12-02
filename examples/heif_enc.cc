@@ -39,6 +39,9 @@
 #include <string>
 
 #include <libheif/heif.h>
+//#if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
+//#include <config/aom_version.h>
+//#endif
 
 #if HAVE_LIBJPEG
 extern "C" {
@@ -48,12 +51,15 @@ extern "C" {
 #undef HAVE_STDDEF_H
 #undef HAVE_STDLIB_H
 #include <jpeglib.h>
+#define xstr(x) str(x)
+#define str(x) #x
 }
 #endif
 
 #if HAVE_LIBPNG
 extern "C" {
 #include <png.h>
+#include <zlib.h>
 }
 #endif
 
@@ -1204,6 +1210,28 @@ int main(int argc, char** argv)
     }
     else {
       image = loadJPEG(input_filename.c_str());
+    }
+
+     if (logging_level >> 1)
+    {
+      if (enc_av1f == true)
+      {
+        std::cerr << "\nLibrary encoder:   libavif  HDR " << heif_get_version() << "  8+16bit c++\n";
+//#if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
+        //std::cerr << "                   libaom       " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << "  8+16bit c\n";
+//#endif
+      }
+      else
+      {
+        std::cerr << "\nLibrary encoder:   libheif  HDR " << heif_get_version() << " 8<>12bit c++\n";
+      }
+#if HAVE_LIBJPEG
+      std::cerr << "                   libJPEGturbo " << xstr(LIBJPEG_TURBO_VERSION) << "    8bit c\n";
+#endif
+#if HAVE_LIBPNG
+      std::cerr << "                   libPNG       " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "         c\n";
+      std::cerr << "                     zlib       " << ZLIB_VER_MAJOR << "." << ZLIB_VER_MINOR << "." << ZLIB_VER_REVISION << "." << ZLIB_VER_SUBREVISION <<"       c\n\n";
+#endif
     }
 
     heif_color_profile_nclx nclx;
