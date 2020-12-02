@@ -60,7 +60,7 @@ extern "C" {
 #if HAVE_LIBPNG
 extern "C" {
 #include <png.h>
-#include <pngstruct.h>
+#include <zlib.h>
 }
 #endif
 
