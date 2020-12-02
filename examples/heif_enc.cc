@@ -54,8 +54,8 @@ extern "C" {
 #undef HAVE_STDDEF_H
 #undef HAVE_STDLIB_H
 #include <jpeglib.h>
-#define XSTR(LIBJPEG_TURBO_VERSION) STR(LIBJPEG_TURBO_VERSION)
-#define STR(LIBJPEG_TURBO_VERSION) #LIBJPEG_TURBO_VERSION
+#define xstr(x) str(x)
+#define str(x) #x
 }
 #endif
 
@@ -1229,7 +1229,7 @@ int main(int argc, char** argv)
         std::cerr << "\nLibrary encoder:   libheif  HDR " << heif_get_version() << " 8<>12bit c++\n";
       }
 #if HAVE_LIBJPEG
-      std::cerr << "                   libJPEGturbo " << LIBJPEG_TURBO_VERSION << "    8bit c\n";
+      std::cerr << "                   libJPEGturbo " << xstr(LIBJPEG_TURBO_VERSION) << "    8bit c\n";
 #endif
 #if HAVE_LIBPNG
       std::cerr << "                   libPNG       " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "         c\n";
