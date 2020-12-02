@@ -51,10 +51,10 @@ extern "C" {
 // Prevent duplicate definition for libjpeg-turbo v2.0
 // Note: these 'undef's are only a workaround for a libjpeg-turbo-v2.0 bug and
 // should be removed again later. Bug has been fixed in libjpeg-turbo-v2.0.1.
-#include <jconfig.h>
 #undef HAVE_STDDEF_H
 #undef HAVE_STDLIB_H
 #include <jpeglib.h>
+#define STR(LIBJPEG_TURBO_VERSION) #LIBJPEG_TURBO_VERSION
 }
 #endif
 
