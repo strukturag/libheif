@@ -27,6 +27,15 @@
 #include <cstring>
 #include <cassert>
 
+#ifdef _MSC_VER
+
+#ifndef NOMINMAX
+#define NOMINMAX 1
+#endif
+
+#include <Windows.h>
+#endif
+
 using namespace heif;
 
 // TODO: make this a decoder option
@@ -57,7 +66,11 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 
 Error HeifFile::read_from_file(const char* input_filename)
 {
+#ifdef _MSC_VER
+  auto input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(convert_utf8_path_to_utf16(input_filename).c_str(), std::ios_base::binary));
+#else
   auto input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(input_filename, std::ios_base::binary));
+#endif
   if (!input_stream_istr->good()) {
     std::stringstream sstr;
     sstr << "Error opening file: " << strerror(errno) << " (" << errno << ")\n";
@@ -851,3 +864,18 @@ void HeifFile::set_hdlr_library_info(std::string encoder_plugin_version)
   sstr << "libheif (" << LIBHEIF_VERSION << ") / " << encoder_plugin_version;
   m_hdlr_box->set_name(sstr.str());
 }
+
+
+#ifdef _MSC_VER
+std::wstring HeifFile::convert_utf8_path_to_utf16(std::string str)
+{
+  std::wstring ret;
+  int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), NULL, 0);
+  if (len > 0)
+  {
+    ret.resize(len);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &ret[0], len);
+  }
+  return ret;
+}
+#endif
