@@ -1226,7 +1226,11 @@ int main(int argc, char** argv)
         std::cerr << "\nLibrary encoder:   libheif  HDR " << heif_get_version() << " 8<>12bit c++\n";
       }
 #if HAVE_LIBJPEG
+#ifdef LIBJPEG_TURBO_VERSION_NUMBER
       std::cerr << "                   libJPEGturbo " << xstr(LIBJPEG_TURBO_VERSION) << "    8bit c\n";
+#else
+      std::cerr << "                   libJPEG      " << JPEG_LIB_VERSION_MAJOR << "." << JPEG_LIB_VERSION_MINOR << "      8bit c\n";
+#endif
 #endif
 #if HAVE_LIBPNG
       std::cerr << "                   libPNG       " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "         c\n";
