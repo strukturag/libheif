@@ -565,7 +565,7 @@ Error HeifContext::interpret_heif_file()
   // --- read through properties for each image and extract image resolutions
   // Note: this has to be executed before assigning the auxiliary images below because we will only
   // merge the alpha image with the main image when their resolutions are the same.
-  
+
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
 
@@ -833,6 +833,10 @@ Error HeifContext::interpret_heif_file()
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
       continue;
+    }
+
+    if (!iref_box) {
+      break;
     }
 
     if (infe_box->get_item_type() == "grid") {
