@@ -305,6 +305,9 @@ int main(int argc, char** argv)
         else {
           printf("Depth image written to %s\n", s.str().c_str());
         }
+
+        heif_image_release(depth_image);
+        heif_image_handle_release(depth_handle);
       }
 
 
@@ -354,6 +357,8 @@ int main(int argc, char** argv)
 
           std::string auxType = std::string(auxTypeC);
 
+          free((void*)auxTypeC);
+
           std::ostringstream s;
           s << output_filename.substr(0, output_filename.find('.'));
           s << "-" + auxType;
@@ -366,6 +371,9 @@ int main(int argc, char** argv)
           else {
             printf("Auxiliary image written to %s\n", s.str().c_str());
           }
+
+          heif_image_release(aux_image);
+          heif_image_handle_release(aux_handle);
         }
       }
 
