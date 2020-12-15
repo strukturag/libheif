@@ -562,7 +562,74 @@ Error HeifContext::interpret_heif_file()
   }
 
 
-  // --- remove thumbnails from top-level images and assign to their respective image
+  // --- read through properties for each image and extract image resolutions
+  // Note: this has to be executed before assigning the auxiliary images below because we will only
+  // merge the alpha image with the main image when their resolutions are the same.
+  
+  for (auto& pair : m_all_images) {
+    auto& image = pair.second;
+
+    std::vector<Box_ipco::Property> properties;
+
+    Error err = m_heif_file->get_properties(pair.first, properties);
+    if (err) {
+      return err;
+    }
+
+    bool ispe_read = false;
+    for (const auto& prop : properties) {
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+      if (ispe) {
+        uint32_t width = ispe->get_width();
+        uint32_t height = ispe->get_height();
+
+
+        // --- check whether the image size is "too large"
+
+        if (width > m_maximum_image_width_limit ||
+            height > m_maximum_image_height_limit) {
+          std::stringstream sstr;
+          sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+               << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
+
+          return Error(heif_error_Memory_allocation_error,
+                       heif_suberror_Security_limit_exceeded,
+                       sstr.str());
+        }
+
+        image->set_resolution(width, height);
+        image->set_ispe_resolution(width, height);
+        ispe_read = true;
+      }
+
+      if (ispe_read) {
+        auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
+        if (clap) {
+          image->set_resolution(clap->get_width_rounded(),
+                                clap->get_height_rounded());
+        }
+
+        auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);
+        if (irot) {
+          if (irot->get_rotation() == 90 ||
+              irot->get_rotation() == 270) {
+            // swap width and height
+            image->set_resolution(image->get_height(),
+                                  image->get_width());
+          }
+        }
+      }
+
+      auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
+      if (colr) {
+        auto profile = colr->get_color_profile();
+        image->set_color_profile(profile);
+      }
+    }
+  }
+
+
+  // --- remove auxiliary from top-level images and assign to their respective image
 
   auto iref_box = m_heif_file->get_iref_box();
   if (iref_box) {
@@ -651,20 +718,28 @@ Error HeifContext::interpret_heif_file()
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // AVIF
 
-            image->set_is_alpha_channel_of(refs[0], true); // TODO: only consume when same size
-
             auto master_iter = m_all_images.find(refs[0]);
             if (master_iter == m_all_images.end()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Nonexisting_item_referenced,
                            "Non-existing alpha image referenced");
             }
-            if (image.get() == master_iter->second.get()) {
+
+            auto master_img = master_iter->second;
+
+            if (image.get() == master_img.get()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Nonexisting_item_referenced,
                            "Recursive alpha image detected");
             }
-            master_iter->second->set_alpha_channel(image);
+
+
+            if (image->get_width() == master_img->get_width() &&
+                image->get_height() == master_img->get_height()) {
+
+              image->set_is_alpha_channel_of(refs[0], true);
+              master_img->set_alpha_channel(image);
+            }
           }
 
 
@@ -749,71 +824,6 @@ Error HeifContext::interpret_heif_file()
   }
 
 
-  // --- read through properties for each image and extract image resolutions
-
-  for (auto& pair : m_all_images) {
-    auto& image = pair.second;
-
-    std::vector<Box_ipco::Property> properties;
-
-    Error err = m_heif_file->get_properties(pair.first, properties);
-    if (err) {
-      return err;
-    }
-
-    bool ispe_read = false;
-    for (const auto& prop : properties) {
-      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
-      if (ispe) {
-        uint32_t width = ispe->get_width();
-        uint32_t height = ispe->get_height();
-
-
-        // --- check whether the image size is "too large"
-
-        if (width > m_maximum_image_width_limit ||
-            height > m_maximum_image_height_limit) {
-          std::stringstream sstr;
-          sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-               << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
-
-          return Error(heif_error_Memory_allocation_error,
-                       heif_suberror_Security_limit_exceeded,
-                       sstr.str());
-        }
-
-        image->set_resolution(width, height);
-        image->set_ispe_resolution(width, height);
-        ispe_read = true;
-      }
-
-      if (ispe_read) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
-        if (clap) {
-          image->set_resolution(clap->get_width_rounded(),
-                                clap->get_height_rounded());
-        }
-
-        auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);
-        if (irot) {
-          if (irot->get_rotation() == 90 ||
-              irot->get_rotation() == 270) {
-            // swap width and height
-            image->set_resolution(image->get_height(),
-                                  image->get_width());
-          }
-        }
-      }
-
-      auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
-      if (colr) {
-        auto profile = colr->get_color_profile();
-        image->set_color_profile(profile);
-      }
-    }
-  }
-
-
   // --- assign color profile from grid tiles to main image when main image has no profile assigned
 
   for (auto& pair : m_all_images) {
@@ -841,11 +851,11 @@ Error HeifContext::interpret_heif_file()
 
       auto tile_img = iter->second;
       if (image->get_color_profile_icc() == nullptr && tile_img->get_color_profile_icc()) {
-        image->set_color_profile( tile_img->get_color_profile_icc() );
+        image->set_color_profile(tile_img->get_color_profile_icc());
       }
 
       if (image->get_color_profile_nclx() == nullptr && tile_img->get_color_profile_nclx()) {
-        image->set_color_profile( tile_img->get_color_profile_nclx() );
+        image->set_color_profile(tile_img->get_color_profile_nclx());
       }
     }
   }
