@@ -403,6 +403,7 @@ HeifContext::~HeifContext()
     image->get_thumbnails().clear();
     image->set_alpha_channel(nullptr);
     image->set_depth_channel(nullptr);
+    image->get_aux_images().clear();
   }
 }
 
@@ -532,7 +533,6 @@ Error HeifContext::interpret_heif_file()
 
   std::vector<heif_item_id> image_IDs = m_heif_file->get_item_IDs();
 
-  bool primary_is_grid = false;
   for (heif_item_id id : image_IDs) {
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
@@ -548,14 +548,12 @@ Error HeifContext::interpret_heif_file()
         if (id == m_heif_file->get_primary_image_ID()) {
           image->set_primary(true);
           m_primary_image = image;
-          primary_is_grid = infe_box->get_item_type() == "grid";
         }
 
         m_top_level_images.push_back(image);
       }
     }
   }
-
 
   if (!m_primary_image) {
     return Error(heif_error_Invalid_input,
@@ -652,7 +650,8 @@ Error HeifContext::interpret_heif_file()
           if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||   // HEIF (avc)
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // AVIF
-            image->set_is_alpha_channel_of(refs[0]);
+
+            image->set_is_alpha_channel_of(refs[0], true); // TODO: only consume when same size
 
             auto master_iter = m_all_images.find(refs[0]);
             if (master_iter == m_all_images.end()) {
@@ -700,6 +699,25 @@ Error HeifContext::interpret_heif_file()
               }
             }
           }
+
+
+          // --- generic aux image
+
+          image->set_is_aux_image_of(refs[0], auxC_property->get_aux_type());
+
+          auto master_iter = m_all_images.find(refs[0]);
+          if (master_iter == m_all_images.end()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Non-existing aux image referenced");
+          }
+          if (image.get() == master_iter->second.get()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Recursive aux image detected");
+          }
+
+          master_iter->second->add_aux_image(image);
 
           remove_top_level_image(image);
         }
@@ -790,20 +808,44 @@ Error HeifContext::interpret_heif_file()
       auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
       if (colr) {
         auto profile = colr->get_color_profile();
-
         image->set_color_profile(profile);
+      }
+    }
+  }
 
-        // if this is a grid item we assign the first one's color profile
-        // to the main image which is supposed to be a grid
 
-        // TODO: this condition is not correct. It would also classify a secondary image as a 'grid item'.
-        // We have to set the grid-image color profile in another way...
-        const bool is_grid_item = !image->is_primary() && !image->is_alpha_channel() && !image->is_depth_channel();
+  // --- assign color profile from grid tiles to main image when main image has no profile assigned
 
-        if (primary_is_grid &&
-            is_grid_item) {
-          m_primary_image->set_color_profile(profile);
-        }
+  for (auto& pair : m_all_images) {
+    auto& image = pair.second;
+    auto id = pair.first;
+
+    auto infe_box = m_heif_file->get_infe_box(id);
+    if (!infe_box) {
+      continue;
+    }
+
+    if (infe_box->get_item_type() == "grid") {
+      std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
+
+      if (image_references.empty()) {
+        continue; // TODO: can this every happen?
+      }
+
+      auto tileId = image_references.front();
+
+      auto iter = m_all_images.find(tileId);
+      if (iter == m_all_images.end()) {
+        continue; // invalid grid entry
+      }
+
+      auto tile_img = iter->second;
+      if (image->get_color_profile_icc() == nullptr && tile_img->get_color_profile_icc()) {
+        image->set_color_profile( tile_img->get_color_profile_icc() );
+      }
+
+      if (image->get_color_profile_nclx() == nullptr && tile_img->get_color_profile_nclx()) {
+        image->set_color_profile( tile_img->get_color_profile_nclx() );
       }
     }
   }

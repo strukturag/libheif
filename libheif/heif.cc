@@ -510,6 +510,75 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
 }
 
 
+int heif_image_handle_get_number_of_auxiliary_images(const struct heif_image_handle* handle,
+                                                     int include_alpha_image)
+{
+  return (int) handle->image->get_aux_images(include_alpha_image).size();
+}
+
+
+int heif_image_handle_get_list_of_auxiliary_image_IDs(const struct heif_image_handle* handle,
+                                                      int include_alpha_image,
+                                                      heif_item_id* ids, int count)
+{
+  if (ids == nullptr) {
+    return 0;
+  }
+
+  auto auxImages = handle->image->get_aux_images(include_alpha_image);
+  int n = (int) std::min(count, (int) auxImages.size());
+
+  for (int i = 0; i < n; i++) {
+    ids[i] = auxImages[i]->get_id();
+  }
+
+  return n;
+}
+
+
+struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_handle* handle,
+                                                       const char** out_type)
+{
+  if (out_type == nullptr) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(handle->image.get());
+  }
+
+  auto auxType = handle->image->get_aux_type();
+
+  char* buf = (char*)malloc(auxType.length()+1);
+  strcpy(buf, auxType.c_str());
+  *out_type = buf;
+
+  return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
+}
+
+
+struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif_image_handle* main_image_handle,
+                                                               heif_item_id auxiliary_id,
+                                                               struct heif_image_handle** out_auxiliary_handle)
+{
+  if (!out_auxiliary_handle) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(main_image_handle->image.get());
+  }
+
+  auto auxImages = main_image_handle->image->get_aux_images();
+  for (auto aux : auxImages) {
+    if (aux->get_id() == auxiliary_id) {
+      *out_auxiliary_handle = new heif_image_handle();
+      (*out_auxiliary_handle)->image = aux;
+      (*out_auxiliary_handle)->context = main_image_handle->context;
+
+      return Error::Ok.error_struct(main_image_handle->image.get());
+    }
+  }
+
+  Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+  return err.error_struct(main_image_handle->image.get());
+}
+
+
 int heif_image_handle_get_width(const struct heif_image_handle* handle)
 {
   if (handle && handle->image) {

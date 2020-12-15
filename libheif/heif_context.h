@@ -147,10 +147,11 @@ namespace heif {
 
       // --- alpha channel
 
-      void set_is_alpha_channel_of(heif_item_id id)
+      void set_is_alpha_channel_of(heif_item_id id, bool consumed)
       {
         m_is_alpha_channel = true;
         m_alpha_channel_ref_id = id;
+        m_implicitly_consumed_alpha = consumed;
       }
 
       void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel = std::move(img); }
@@ -189,6 +190,47 @@ namespace heif {
       const struct heif_depth_representation_info& get_depth_representation_info() const
       {
         return m_depth_representation_info;
+      }
+
+
+      // --- generic aux image
+
+      void set_is_aux_image_of(heif_item_id id, const std::string& aux_type)
+      {
+        m_is_aux_image = true;
+        m_aux_image_ref_id = id;
+        m_aux_image_type = aux_type;
+      }
+
+      void add_aux_image(std::shared_ptr<Image> img) { m_aux_images.push_back(std::move(img)); }
+
+      bool is_aux_image() const { return m_is_aux_image; }
+
+      std::string get_aux_type() const { return m_aux_image_type; }
+
+      std::vector<std::shared_ptr<Image>> get_aux_images(int aux_image_filter = 0) const
+      {
+        if (aux_image_filter == 0) {
+          return m_aux_images;
+        }
+        else {
+          std::vector<std::shared_ptr<Image>> auxImgs;
+          for (auto aux : m_aux_images) {
+            if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA) &&
+                aux->is_alpha_channel() && aux->m_implicitly_consumed_alpha) {
+              continue;
+            }
+
+            if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH) &&
+                aux->is_depth_channel()) {
+              continue;
+            }
+
+            auxImgs.push_back(aux);
+          }
+
+          return auxImgs;
+        }
       }
 
 
@@ -242,6 +284,7 @@ namespace heif {
       std::vector<std::shared_ptr<Image>> m_thumbnails;
 
       bool m_is_alpha_channel = false;
+      bool m_implicitly_consumed_alpha = false; // alpha data was integrated into main color image
       heif_item_id m_alpha_channel_ref_id = 0;
       std::shared_ptr<Image> m_alpha_channel;
 
@@ -251,6 +294,11 @@ namespace heif {
 
       bool m_has_depth_representation_info = false;
       struct heif_depth_representation_info m_depth_representation_info;
+
+      heif_item_id m_aux_image_ref_id = 0;
+      bool m_is_aux_image = false;
+      std::string m_aux_image_type;
+      std::vector<std::shared_ptr<Image>> m_aux_images;
 
       std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
