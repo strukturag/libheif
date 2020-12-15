@@ -34,6 +34,7 @@
 #include <iostream>
 
 #include "encoder_jpeg.h"
+#include <jconfig.h>
 
 JpegEncoder::JpegEncoder(int quality) : quality_(quality)
 {
@@ -59,7 +60,7 @@ void JpegEncoder::OnJpegError(j_common_ptr cinfo)
   longjmp(handler->setjmp_buffer, 1);
 }
 
-#if !defined(HAVE_JPEG_WRITE_ICC_PROFILE)
+#if (defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER < 1005080) || (!defined(LIBJPEG_TURBO_VERSION_NUMBER) && JPEG_LIB_VERSION <= 90)
 
 #define ICC_MARKER  (JPEG_APP0 + 2)     /* JPEG marker code for ICC */
 #define ICC_OVERHEAD_LEN  14            /* size of non-profile data in APP2 */
@@ -129,7 +130,7 @@ void jpeg_write_icc_profile(j_compress_ptr cinfo, const JOCTET* icc_data_ptr,
   }
 }
 
-#endif  // !defined(HAVE_JPEG_WRITE_ICC_PROFILE)
+#endif
 
 bool JpegEncoder::Encode(const struct heif_image_handle* handle,
                          const struct heif_image* image, const std::string& filename)
