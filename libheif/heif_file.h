@@ -155,6 +155,10 @@ namespace heif {
     // TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
     void set_hdlr_library_info(std::string encoder_plugin_version);
 
+#ifdef _MSC_VER
+    static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);
+#endif
+
   private:
 #if ENABLE_PARALLEL_TILE_DECODING
     mutable std::mutex m_read_mutex;

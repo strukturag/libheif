@@ -23,6 +23,7 @@
 #endif
 
 #include "heif.h"
+#include "heif_file.h"
 #include "heif_image.h"
 #include "heif_api_structs.h"
 #include "heif_context.h"
@@ -1271,7 +1272,11 @@ static struct heif_error heif_file_writer_write(struct heif_context* ctx,
 {
   const char* filename = static_cast<const char*>(userdata);
 
+#ifdef _MSC_VER
+  std::ofstream ostr(HeifFile::convert_utf8_path_to_utf16(filename).c_str(), std::ios_base::binary);
+#else
   std::ofstream ostr(filename, std::ios_base::binary);
+#endif
   ostr.write(static_cast<const char*>(data), size);
   // TODO: handle write errors
   return Error::Ok.error_struct(ctx->context.get());
