@@ -28,15 +28,11 @@
 #endif
 
 #include <cstring>
-#include <cstdio>
 #include <cassert>
 #include <vector>
 
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
-
-
-#include <iostream>  // TODO: remove me
 
 
 struct encoder_struct_aom
@@ -62,6 +58,7 @@ struct encoder_struct_aom
 };
 
 static const char* kError_out_of_memory = "Out of memory";
+static const char* kError_encode_frame = "Failed to encode frame";
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_max_q = "max-q";
@@ -526,9 +523,8 @@ void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
 }
 
 
-static int encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
+static heif_error encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
 {
-  int got_pkts = 0;
   //aom_codec_iter_t iter = NULL;
   int frame_index = 0; // only encoding a single frame
   int flags = 0; // no flags
@@ -536,11 +532,15 @@ static int encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
   //const aom_codec_cx_pkt_t *pkt = NULL;
   const aom_codec_err_t res = aom_codec_encode(codec, img, frame_index, 1, flags);
   if (res != AOM_CODEC_OK) {
-    printf("Failed to encode frame\n");
-    assert(0);
+    struct heif_error err = {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unspecified,
+        kError_encode_frame
+    };
+    return err;
   }
 
-  return got_pkts;
+  return heif_error_ok;
 }
 
 
@@ -548,6 +548,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
                                    heif_image_input_class input_class)
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
+
+  struct heif_error err;
 
   // --- round image size to minimum size
 
@@ -560,11 +562,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   bool success = image->image->extend_to_size(rounded_width, rounded_height);
   if (!success) {
-    struct heif_error err = {
-        heif_error_Memory_allocation_error,
-        heif_suberror_Unspecified,
-        kError_out_of_memory
-    };
+    err = {heif_error_Memory_allocation_error,
+           heif_suberror_Unspecified,
+           kError_out_of_memory};
     return err;
   }
 
@@ -605,9 +605,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   if (!aom_img_alloc(&input_image, img_format,
                      source_width, source_height, 1)) {
-    printf("Failed to allocate image.\n");
-    assert(false);
-    // TODO
+    err = {heif_error_Memory_allocation_error,
+           heif_suberror_Unspecified,
+           "Failed to allocate image"};
+    return err;
   }
 
 
@@ -670,9 +671,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   iface = aom_codec_av1_cx();
   //encoder->encoder = get_aom_encoder_by_name("av1");
   if (!iface) {
-    printf("Unsupported codec.");
-    assert(false);
-    // TODO
+    err = {heif_error_Unsupported_feature,
+           heif_suberror_Unsupported_codec,
+           "Unsupported codec: AOMedia Project AV1 Encoder"};
+    return err;
   }
 
 
@@ -685,13 +687,14 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_codec_enc_cfg_t cfg;
   aom_codec_err_t res = aom_codec_enc_config_default(iface, &cfg, aomUsage);
   if (res) {
-    printf("Failed to get default codec config.\n");
-    assert(0);
-    // TODO
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Unspecified,
+           "Failed to get default codec config"};
+    return err;
   }
 
   heif::Box_av1C::configuration inout_config;
-  heif::Error err = heif::fill_av1C_configuration(&inout_config, image->image);
+  heif::fill_av1C_configuration(&inout_config, image->image);
 
   cfg.g_w = source_width;
   cfg.g_h = source_height;
@@ -722,9 +725,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   }
 
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
-    printf("Failed to initialize encoder\n");
-    assert(0);
-    // TODO
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Unspecified,
+           "Failed to initialize encoder"};
+    return err;
   }
 
   aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used);
@@ -758,7 +762,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- encode frame
 
-  encode_frame(&codec, &input_image); //, frame_count++, flags, writer);
+  err = encode_frame(&codec, &input_image); //, frame_count++, flags, writer);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
 
   encoder->compressedData.clear();
   const aom_codec_cx_pkt_t* pkt = NULL;
@@ -790,8 +797,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   int flags = 0;
   res = aom_codec_encode(&codec, NULL, -1, 0, flags);
   if (res != AOM_CODEC_OK) {
-    printf("Failed to encode frame\n");
-    assert(0);
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Unspecified,
+           kError_encode_frame};
+    return err;
   }
 
   iter = NULL;
@@ -825,9 +834,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_img_free(&input_image);
 
   if (aom_codec_destroy(&codec)) {
-    printf("Failed to destroy codec.\n");
-    assert(0);
-    // TODO
+    err = {heif_error_Encoder_plugin_error,
+           heif_suberror_Unspecified,
+           "Failed to destroy codec"};
+    return err;
   }
 
   return heif_error_ok;
