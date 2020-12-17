@@ -1216,9 +1216,9 @@ int main(int argc, char** argv)
     {
       if (enc_av1f == true)
       {
-        std::cerr << "\nLibrary encoder:   libavif  HDR " << heif_get_version() << "  8+16bit c++\n";
+        std::cerr << "\nLibrary encoder:   libavif  HDR " << heif_get_version() << " 8<>12bit c++\n";
 //#if HAVE_AOM_DECODER || HAVE_AOM_ENCODER
-        //std::cerr << "                   libaom       " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << "  8+16bit c\n";
+        //std::cerr << "                   libaom       " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " 8<>12bit c\n";
 //#endif
       }
       else
@@ -1227,14 +1227,14 @@ int main(int argc, char** argv)
       }
 #if HAVE_LIBJPEG
 #ifdef LIBJPEG_TURBO_VERSION_NUMBER
-      std::cerr << "                   libJPEGturbo " << xstr(LIBJPEG_TURBO_VERSION) << "    8bit c\n";
+      std::cerr << "                   libJPEGturbo " << xstr(LIBJPEG_TURBO_VERSION) << "     8bit c\n";
 #else
-      std::cerr << "                   libJPEG      " << JPEG_LIB_VERSION_MAJOR << "." << JPEG_LIB_VERSION_MINOR << "      8bit c\n";
+      std::cerr << "                   libJPEG      " << JPEG_LIB_VERSION_MAJOR << "." << JPEG_LIB_VERSION_MINOR << "        8bit c\n";
 #endif
 #endif
 #if HAVE_LIBPNG
-      std::cerr << "                   libPNG       " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "         c\n";
-      std::cerr << "                     zlib       " << ZLIB_VER_MAJOR << "." << ZLIB_VER_MINOR << "." << ZLIB_VER_REVISION << "." << ZLIB_VER_SUBREVISION <<"       c\n\n";
+      std::cerr << "                   libPNG       " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "          c\n";
+      std::cerr << "                     zlib       " << ZLIB_VER_MAJOR << "." << ZLIB_VER_MINOR << "." << ZLIB_VER_REVISION << "." << ZLIB_VER_SUBREVISION <<"        c\n\n";
 #endif
     }
 
