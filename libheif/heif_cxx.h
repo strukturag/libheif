@@ -765,6 +765,9 @@ namespace heif {
                                                            metadata_id);
 
     std::vector<uint8_t> data(data_size);
+    //.data() of 0 size vector is nullptr so return early
+    if (data_size == 0)
+      return data;
 
     Error err = Error(heif_image_handle_get_metadata(m_image_handle.get(),
                                                      metadata_id,
