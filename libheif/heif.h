@@ -601,10 +601,14 @@ int heif_image_handle_get_list_of_auxiliary_image_IDs(const struct heif_image_ha
                                                       int aux_filter,
                                                       heif_item_id* ids, int count);
 
-// You are responsible to deallocate the returned buffer with free().
+// You are responsible to deallocate the returned buffer with heif_image_handle_free_auxiliary_types().
 LIBHEIF_API
 struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_handle* handle,
                                                        const char** out_type);
+
+LIBHEIF_API
+void heif_image_handle_free_auxiliary_types(const struct heif_image_handle* handle,
+                                            const char** out_type);
 
 // Get the image handle of an auxiliary image.
 LIBHEIF_API

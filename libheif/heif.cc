@@ -554,6 +554,16 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
 }
 
 
+void heif_image_handle_free_auxiliary_types(const struct heif_image_handle* handle,
+                                            const char** out_type)
+{
+  if (out_type && *out_type) {
+    free((void*)*out_type);
+    *out_type = nullptr;
+  }
+}
+
+
 struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif_image_handle* main_image_handle,
                                                                heif_item_id auxiliary_id,
                                                                struct heif_image_handle** out_auxiliary_handle)
