@@ -1107,19 +1107,22 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  heif_item_id metadata_id,
                                                  void* out_data)
 {
-  if (out_data == nullptr) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Null_pointer_argument);
-    return err.error_struct(handle->image.get());
-  }
-
   auto metadata_list = handle->image->get_metadata();
 
   for (auto metadata : metadata_list) {
     if (metadata->item_id == metadata_id) {
-      memcpy(out_data,
-             metadata->m_data.data(),
-             metadata->m_data.size());
+
+      if (metadata->m_data.size() > 0) {
+        if (out_data == nullptr) {
+          Error err(heif_error_Usage_error,
+                    heif_suberror_Null_pointer_argument);
+          return err.error_struct(handle->image.get());
+        }
+
+        memcpy(out_data,
+               metadata->m_data.data(),
+               metadata->m_data.size());
+      }
 
       return Error::Ok.error_struct(handle->image.get());
     }
