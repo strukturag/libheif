@@ -250,6 +250,7 @@ if eval "test x$enable_rav1e != xno"; then
         AC_SUBST(rav1e_CFLAGS)
         AC_SUBST(rav1e_LIBS)
         have_avif_encoder="yes"
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE rav1e"
         have_rav1e="yes"
     ], [have_rav1e="no"])
 else
@@ -263,6 +264,7 @@ PKG_CHECK_MODULES([dav1d], [dav1d], [
     AC_SUBST(dav1d_CFLAGS)
     AC_SUBST(dav1d_LIBS)
     have_avif_decoder="yes"
+    REQUIRES_PRIVATE="$REQUIRES_PRIVATE dav1d"
     have_dav1d="yes"
 ], [have_dav1d="no"])
 AM_CONDITIONAL([HAVE_DAV1D], [test "x$have_dav1d" = "xyes"])
