@@ -2051,9 +2051,22 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
       m_heif_file->set_color_profile(image_id, icc_profile);
     }
 
-    if (nclx_profile &&
-        (!icc_profile || (options->version >= 3 &&
-                          options->save_two_colr_boxes_when_ICC_and_nclx_available))) {
+    // save nclx profile
+
+    bool save_nclx_profile = (nclx_profile != nullptr);
+
+    // if there is an ICC profile, only save NCLX when we chose to save both profiles
+    if (icc_profile && !(options->version >= 3 &&
+                         options->save_two_colr_boxes_when_ICC_and_nclx_available)) {
+      save_nclx_profile = false;
+    }
+
+    // we might have turned off nclx completely because macOS/iOS cannot read it
+    if (options->version >= 4 && options->macOS_compatibility_workaround_no_nclx_profile) {
+      save_nclx_profile = false;
+    }
+
+    if (save_nclx_profile) {
       m_heif_file->set_color_profile(image_id, nclx_profile);
     }
   }

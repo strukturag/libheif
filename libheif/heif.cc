@@ -1957,6 +1957,7 @@ static void set_default_options(heif_encoding_options& options)
   options.macOS_compatibility_workaround = true;
   options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
   options.output_nclx_profile = nullptr;
+  options.macOS_compatibility_workaround_no_nclx_profile = true;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
@@ -1966,6 +1967,7 @@ static void copy_options(heif_encoding_options& options, const heif_encoding_opt
   switch (input_options.version) {
     case 4:
       options.output_nclx_profile = input_options.output_nclx_profile;
+      options.macOS_compatibility_workaround_no_nclx_profile = input_options.macOS_compatibility_workaround_no_nclx_profile;
       // fallthrough
     case 3:
       options.save_two_colr_boxes_when_ICC_and_nclx_available = input_options.save_two_colr_boxes_when_ICC_and_nclx_available;
