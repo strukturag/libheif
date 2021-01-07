@@ -120,6 +120,9 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
     else if (brand == heif_avif) {
       return heif_filetype_yes_supported;
     }
+    else if (brand == heif_avis) {
+      return heif_filetype_yes_supported;
+    }
     else if (brand == heif_unknown_brand) {
       return heif_filetype_no;
     }
