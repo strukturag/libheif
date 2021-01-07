@@ -2039,7 +2039,9 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
       image_id = grid_image_id;
     }
   }
-
+  else {
+    m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
+  }
 
   // --- choose which color profile to put into 'colr' box
 
