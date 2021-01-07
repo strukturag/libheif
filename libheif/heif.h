@@ -42,6 +42,7 @@ extern "C" {
 //  1.7          1             2            1             1             1            1
 //  1.9.2        1             2            2             1             1            1
 //  1.10         1             2            3             1             1            1
+//  1.11         1             2            4             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -1267,6 +1268,12 @@ struct heif_encoding_options
   // version 3 options
 
   uint8_t save_two_colr_boxes_when_ICC_and_nclx_available; // default: false
+
+  // version 4 options
+
+  // Set this to the NCLX parameters to be used in the output image or set to NULL
+  // when the same parameters as in the input image should be used.
+  struct heif_color_profile_nclx* output_nclx_profile;
 };
 
 LIBHEIF_API

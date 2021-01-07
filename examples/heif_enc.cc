@@ -1215,7 +1215,7 @@ int main(int argc, char** argv)
     nclx.color_primaries = (heif_color_primaries) nclx_colour_primaries;
     nclx.full_range_flag = (uint8_t) nclx_full_range;
 
-    heif_image_set_nclx_color_profile(image.get(), &nclx);
+    //heif_image_set_nclx_color_profile(image.get(), &nclx);
 
     heif_encoder_set_lossy_quality(encoder, quality);
     heif_encoder_set_lossless(encoder, lossless);
@@ -1226,6 +1226,7 @@ int main(int argc, char** argv)
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
+    options->output_nclx_profile = &nclx;
 
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||

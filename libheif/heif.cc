@@ -1951,11 +1951,31 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 
 static void set_default_options(heif_encoding_options& options)
 {
-  options.version = 3;
+  options.version = 4;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = true;
   options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
+  options.output_nclx_profile = nullptr;
+}
+
+static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
+{
+  set_default_options(options);
+
+  switch (input_options.version) {
+    case 4:
+      options.output_nclx_profile = input_options.output_nclx_profile;
+      // fallthrough
+    case 3:
+      options.save_two_colr_boxes_when_ICC_and_nclx_available = input_options.save_two_colr_boxes_when_ICC_and_nclx_available;
+      // fallthrough
+    case 2:
+      options.macOS_compatibility_workaround = input_options.macOS_compatibility_workaround;
+      // fallthrough
+    case 1:
+      options.save_alpha_channel = input_options.save_alpha_channel;
+  }
 }
 
 
@@ -1977,7 +1997,7 @@ void heif_encoding_options_free(heif_encoding_options* options)
 struct heif_error heif_context_encode_image(struct heif_context* ctx,
                                             const struct heif_image* input_image,
                                             struct heif_encoder* encoder,
-                                            const struct heif_encoding_options* options,
+                                            const struct heif_encoding_options* input_options,
                                             struct heif_image_handle** out_image_handle)
 {
   if (!encoder) {
@@ -1985,18 +2005,34 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
-  heif_encoding_options default_options;
-  if (options == nullptr) {
-    set_default_options(default_options);
-    options = &default_options;
+  heif_encoding_options options;
+  heif_color_profile_nclx nclx;
+  if (input_options == nullptr) {
+    set_default_options(options);
+  }
+  else {
+    copy_options(options, *input_options);
+
+    if (options.output_nclx_profile == nullptr) {
+      auto input_nclx = input_image->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options.output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries)input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics)input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients)input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
   }
 
   std::shared_ptr<HeifContext::Image> image;
   Error error;
 
+
   error = ctx->context->encode_image(input_image->image,
                                      encoder,
-                                     options,
+                                     &options,
                                      heif_image_input_class_normal,
                                      image);
   if (error != Error::Ok) {
