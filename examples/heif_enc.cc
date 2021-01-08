@@ -42,10 +42,15 @@
 
 #define xstr(x) str(x)
 #define str(x) #x
+#define _str(s) #s
+#define vstr(s) _str(s)
 
 #if HAVE_AOM_ENCODER
 #include <aom_version.h>
-const char *aom_codec_version_str(void) { return VERSION_STRING_NOSP; }
+#define AOM_VERSION_STR vstr(VERSION_MAJOR) "." \
+                        vstr(VERSION_MINOR) "." \
+                        vstr(VERSION_PATCH)
+const char *aom_version_str(void) { return AOM_VERSION_STR; }
 #endif
 
 #if HAVE_LIBJPEG
@@ -61,9 +66,9 @@ extern "C" {
 #endif
 const char *jpegturbo_version_str(void) { return xstr(LIBJPEG_TURBO_VERSION); }
 #else
-#define LIBJPEG_VERSION_HEX ((uint32_t(JPEG_LIB_VERSION_MAJOR) << 24) | \
-                             (uint32_t(JPEG_LIB_VERSION_MINOR) << 16))
-const char *libjpeg_version_str(void) { return xstr(LIBJPEG_VERSION_HEX); }
+#define LIBJPEG_VERSION_STR vstr(JPEG_LIB_VERSION_MAJOR) "." \
+                            vstr(JPEG_LIB_VERSION_MINOR)
+const char *libjpeg_version_str(void) { return LIBJPEG_VERSION_STR; }
 #endif
 #include <jpeglib.h>
 }
@@ -73,14 +78,15 @@ const char *libjpeg_version_str(void) { return xstr(LIBJPEG_VERSION_HEX); }
 extern "C" {
 #include <png.h>
 #include <zlib.h>
-#define LIBPNG_VERSION_HEX ((uint32_t(PNG_LIBPNG_VER_MAJOR) << 24) | \
-                            (uint32_t(PNG_LIBPNG_VER_MINOR) << 16) | \
-                            (uint32_t(PNG_LIBPNG_VER_RELEASE) << 8))
-#define ZLIB_VERSION_HEX ((uint32_t(ZLIB_VER_MAJOR) << 24) | \
-                          (uint32_t(ZLIB_VER_MINOR) << 16) | \
-                          (uint32_t(ZLIB_VER_SUBREVISION) << 8))
-const char *libpng_version_str(void) { return xstr(LIBPNG_VERSION_HEX); }
-const char *zlib_version_str(void) { return xstr(ZLIB_VERSION_HEX); }
+#define LIBPNG_VERSION_STR vstr(PNG_LIBPNG_VER_MAJOR) "." \
+                           vstr(PNG_LIBPNG_VER_MINOR) "." \
+                           vstr(PNG_LIBPNG_VER_RELEASE)
+#define ZLIB_VERSION_STR vstr(ZLIB_VER_MAJOR) "." \
+                         vstr(ZLIB_VER_MINOR) "." \
+                         vstr(ZLIB_VER_REVISION) "." \
+                         vstr(ZLIB_VER_SUBREVISION)
+const char *libpng_version_str(void) { return LIBPNG_VERSION_STR; }
+const char *zlib_version_str(void) { return ZLIB_VERSION_STR; }
 }
 #endif
 
@@ -1239,7 +1245,7 @@ int main(int argc, char** argv)
       {
         std::cerr << "\nLibrary encoder:  libavif  HDR  " << heif_get_version() << "  8_12bit c++\n";
 #if HAVE_AOM_ENCODER
-        std::cerr << "                     aom        " << aom_codec_version_str() << "   8_12bit c\n";
+        std::cerr << "                     aom        " << aom_version_str() << "   8_12bit c\n";
 #endif
       }
       else
@@ -1255,8 +1261,9 @@ int main(int argc, char** argv)
 #endif
 #if HAVE_LIBPNG
       std::cerr << "                  libPNG        " << libpng_version_str() << "          c\n";
-      std::cerr << "                    zlib        " << zlib_version_str() << "        c\n\n";
+      std::cerr << "                    zlib        " << zlib_version_str() << "        c\n";
 #endif
+      std::cerr << "\n";
     }
 
     heif_color_profile_nclx nclx;
