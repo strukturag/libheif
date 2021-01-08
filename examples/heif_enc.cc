@@ -41,6 +41,7 @@
 #include <libheif/heif.h>
 //#if HAVE_AOM_ENCODER
 //#include <config/aom_version.h>
+//const char *aom_codec_version_str(void) { return VERSION_STRING_NOSP; }
 //#endif
 
 #if HAVE_LIBJPEG
@@ -48,11 +49,16 @@ extern "C" {
 // Prevent duplicate definition for libjpeg-turbo v2.0
 // Note: these 'undef's are only a workaround for a libjpeg-turbo-v2.0 bug and
 // should be removed again later. Bug has been fixed in libjpeg-turbo-v2.0.1.
+#include <jconfig.h>
+#ifdef LIBJPEG_TURBO_VERSION_NUMBER
+#if LIBJPEG_TURBO_VERSION_NUMBER == 2000000
 #undef HAVE_STDDEF_H
 #undef HAVE_STDLIB_H
-#include <jpeglib.h>
+#endif
 #define xstr(x) str(x)
 #define str(x) #x
+const char *jpegturbo_get_libjpeg_ver(void) { return xstr(LIBJPEG_TURBO_VERSION); }
+#endif
 }
 #endif
 
@@ -1218,7 +1224,7 @@ int main(int argc, char** argv)
       {
         std::cerr << "\nLibrary encoder:  libavif  HDR  " << heif_get_version() << "  8_12bit c++\n";
 //#if HAVE_AOM_ENCODER
-        //std::cerr << "                  libaom        " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << "   8_12bit c\n";
+        //std::cerr << "                  libaom        " << aom_codec_version_str() << "   8_12bit c\n";
 //#endif
       }
       else
@@ -1227,14 +1233,14 @@ int main(int argc, char** argv)
       }
 #if HAVE_LIBJPEG
 #ifdef LIBJPEG_TURBO_VERSION_NUMBER
-      std::cerr << "                  libJPEG-turbo " << xstr(LIBJPEG_TURBO_VERSION) << "     8bit c\n";
+      std::cerr << "                  libJPEG-turbo " << jpegturbo_get_libjpeg_ver() << "     8bit c\n";
 #else
       std::cerr << "                  libJPEG       " << JPEG_LIB_VERSION_MAJOR << "." << JPEG_LIB_VERSION_MINOR << "        8bit c\n";
 #endif
 #endif
 #if HAVE_LIBPNG
-      std::cerr << "                  libPNG        " << PNG_LIBPNG_VER_MAJOR << "." << PNG_LIBPNG_VER_MINOR << "." << PNG_LIBPNG_VER_RELEASE << "          c\n";
-      std::cerr << "                    zlib        " << ZLIB_VER_MAJOR << "." << ZLIB_VER_MINOR << "." << ZLIB_VER_REVISION << "." << ZLIB_VER_SUBREVISION <<"        c\n\n";
+      std::cerr << "                  libPNG        " << png_get_libpng_ver(nullptr) << "          c\n";
+      std::cerr << "                    zlib        " << zlibVersion() <<"        c\n\n";
 #endif
     }
 
