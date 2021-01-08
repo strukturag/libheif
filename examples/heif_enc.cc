@@ -59,6 +59,7 @@ extern "C" {
 #define str(x) #x
 const char *jpegturbo_get_libjpeg_ver(void) { return xstr(LIBJPEG_TURBO_VERSION); }
 #endif
+#include <jpeglib.h>
 }
 #endif
 
