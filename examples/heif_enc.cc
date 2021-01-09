@@ -46,7 +46,7 @@
 #define vstr(s) _str(s)
 
 #if HAVE_AOM_ENCODER
-#include <aom_version.h>
+#include <aom/config/aom_version.h>
 #define AOM_VERSION_STR vstr(VERSION_MAJOR) "." \
                         vstr(VERSION_MINOR) "." \
                         vstr(VERSION_PATCH)
