@@ -1972,6 +1972,9 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   if (has_alpha) {
     out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
+  else {
+    out_a = nullptr;
+  }
 
 
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
