@@ -316,7 +316,7 @@ enum heif_brand
 };
 
 // input data should be at least 12 bytes
-// DEPRECATED, use heif_main_brand2() instead
+// DEPRECATED, use heif_read_main_brand() instead
 LIBHEIF_API
 enum heif_brand heif_main_brand(const uint8_t* data, int len);
 
@@ -325,7 +325,7 @@ typedef uint32_t heif_brand2;
 
 // input data should be at least 12 bytes
 LIBHEIF_API
-heif_brand2 heif_main_brand2(const uint8_t* data, int len);
+heif_brand2 heif_read_main_brand(const uint8_t* data, int len);
 
 LIBHEIF_API
 heif_brand2 heif_fourcc_to_brand(const char* brand_fourcc);

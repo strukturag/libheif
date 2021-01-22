@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 
       char fourcc[5];
       fourcc[4]=0;
-      heif_brand_to_fourcc( heif_main_brand2(buf,bufSize), fourcc );
+      heif_brand_to_fourcc( heif_read_main_brand(buf,bufSize), fourcc );
       std::cout << "main brand: " << fourcc << "\n";
 
       const static int brandsSize = 50;

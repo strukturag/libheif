@@ -200,7 +200,7 @@ enum heif_brand heif_main_brand(const uint8_t* data, int len)
 }
 
 
-heif_brand2 heif_main_brand2(const uint8_t* data, int len)
+heif_brand2 heif_read_main_brand(const uint8_t* data, int len)
 {
   if (len < 12) {
     return heif_unknown_brand;
