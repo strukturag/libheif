@@ -137,6 +137,10 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 
 heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
 {
+  if (fourcc==nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {
+    return heif_unknown_brand;
+  }
+  
   char brand[5];
   brand[0] = fourcc[0];
   brand[1] = fourcc[1];
@@ -210,22 +214,28 @@ heif_brand2 heif_main_brand2(const uint8_t* data, int len)
 
 heif_brand2 heif_fourcc_to_brand(const char* fourcc)
 {
+  if (fourcc==nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {
+    return 0;
+  }
+
   return fourcc_to_uint32(fourcc);
 }
 
 
 void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc)
 {
-  out_fourcc[0] = (char)((brand >> 24) & 0xFF);
-  out_fourcc[1] = (char)((brand >> 16) & 0xFF);
-  out_fourcc[2] = (char)((brand >>  8) & 0xFF);
-  out_fourcc[3] = (char)((brand >>  0) & 0xFF);
+  if (out_fourcc) {
+    out_fourcc[0] = (char)((brand >> 24) & 0xFF);
+    out_fourcc[1] = (char)((brand >> 16) & 0xFF);
+    out_fourcc[2] = (char)((brand >>  8) & 0xFF);
+    out_fourcc[3] = (char)((brand >>  0) & 0xFF);
+  }
 }
 
 
 int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc)
 {
-  if (data == nullptr || len<=0) {
+  if (data == nullptr || len<=0 || brand_fourcc == nullptr || !brand_fourcc[0] || !brand_fourcc[1] || !brand_fourcc[2] || !brand_fourcc[3]) {
     return -1;
   }
   
