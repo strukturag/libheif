@@ -327,6 +327,7 @@ typedef uint32_t heif_brand2;
 LIBHEIF_API
 heif_brand2 heif_read_main_brand(const uint8_t* data, int len);
 
+// 'brand_fourcc' must be 4 character long, but need not be 0-terminated
 LIBHEIF_API
 heif_brand2 heif_fourcc_to_brand(const char* brand_fourcc);
 
@@ -334,6 +335,7 @@ heif_brand2 heif_fourcc_to_brand(const char* brand_fourcc);
 LIBHEIF_API
 void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc);
 
+// 'brand_fourcc' must be 4 character long, but need not be 0-terminated
 // returns 1 if file includes the brand, and 0 if it does not
 // returns -1 if the provided data is not sufficient
 //            (you should input at least as many bytes as indicated in the first 4 bytes of the file, usually ~50 bytes will do)
@@ -341,12 +343,13 @@ void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc);
 LIBHEIF_API
 int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc);
 
-// returns the number of brands filled into the output. If there are more brands in the file than out_size, it will return only out_size brands.
-// returns -1 if the provided data is not sufficient
-//            (you should input at least as many bytes as indicated in the first 4 bytes of the file, usually ~50 bytes will do)
-// returns -2 on other errors
+// Returns an array of compatible brands. The array is allocated by this function and has to be freed with 'heif_free_list_of_compatible_brands()'.
+// The number of entries is returned in out_size.
 LIBHEIF_API
-int heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2* out_brands, int out_size);
+struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size);
+
+LIBHEIF_API
+void heif_free_list_of_compatible_brands(heif_brand2* brands_list);
 
 
 // Returns one of these MIME types:

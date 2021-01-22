@@ -262,10 +262,14 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
 
 
 
-int heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2* out_brands, int out_size)
+struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2** out_brands, int* out_size)
 {
-  if (data == nullptr || len<=0 || out_brands==nullptr) {
-    return -1;
+  if (data == nullptr || out_brands==nullptr || out_size==nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+  }
+
+  if (len<=0) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "data length must be positive"};
   }
   
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
@@ -275,25 +279,34 @@ int heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2* out_b
   Error err = Box::read(range, &box);
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
-      return -1;
+      return {err.error_code, err.sub_error_code, "insufficient input data"};
     }
     
-    return -2;
+    return {err.error_code, err.sub_error_code, "error reading ftyp box"};
   }
 
   auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
   if (!ftyp) {
-    return -2;
+    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is no ftyp box"};
   }
 
   auto brands = ftyp->list_brands();
-  int n = std::min((int)brands.size(), out_size);
-
-  for (int i=0;i<n;i++) {
-    out_brands[i] = brands[i];
+  *out_brands = (heif_brand2*)malloc(sizeof(heif_brand2) * brands.size());
+  *out_size = (int)brands.size();
+  
+  for (int i=0;i<(int)brands.size();i++) {
+    (*out_brands)[i] = brands[i];
   }
   
-  return n;
+  return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
+}
+
+
+void heif_free_list_of_compatible_brands(heif_brand2* brands_list)
+{
+  if (brands_list) {
+    free(brands_list);
+  }
 }
 
 

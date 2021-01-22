@@ -163,16 +163,15 @@ int main(int argc, char** argv)
       heif_brand_to_fourcc( heif_read_main_brand(buf,bufSize), fourcc );
       std::cout << "main brand: " << fourcc << "\n";
 
-      const static int brandsSize = 50;
-
-      heif_brand2 brands[brandsSize];
-      n=heif_list_compatible_brands(buf, n, brands, brandsSize);
-      if (n<0) {
-	std::cerr << "error reading brands\n";
+      heif_brand2* brands=nullptr;
+      int nBrands=0;
+      struct heif_error err=heif_list_compatible_brands(buf, n, &brands, &nBrands);
+      if (err.code) {
+	std::cerr << "error reading brands: " << err.message << "\n";
       }
       else {
 	std::cout << "compatible brands: ";
-	for (int i=0;i<n;i++) {
+	for (int i=0;i<nBrands;i++) {
 	  heif_brand_to_fourcc(brands[i], fourcc);
 	  if (i>0) {
 	    std::cout << ", ";
@@ -181,6 +180,8 @@ int main(int argc, char** argv)
 	}
 	
 	std::cout << "\n";
+
+	heif_free_list_of_compatible_brands(brands);
       }
     }
 
