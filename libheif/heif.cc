@@ -135,17 +135,13 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 }
 
 
-heif_brand heif_main_brand(const uint8_t* data, int len)
+heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
 {
-  if (len < 12) {
-    return heif_unknown_brand;
-  }
-
   char brand[5];
-  brand[0] = data[8];
-  brand[1] = data[9];
-  brand[2] = data[10];
-  brand[3] = data[11];
+  brand[0] = fourcc[0];
+  brand[1] = fourcc[1];
+  brand[2] = fourcc[2];
+  brand[3] = fourcc[3];
   brand[4] = 0;
 
   if (strcmp(brand, "heic") == 0) {
@@ -187,6 +183,107 @@ heif_brand heif_main_brand(const uint8_t* data, int len)
   else {
     return heif_unknown_brand;
   }
+}
+
+
+enum heif_brand heif_main_brand(const uint8_t* data, int len)
+{
+  if (len < 12) {
+    return heif_unknown_brand;
+  }
+
+  return heif_fourcc_to_brand_enum((char*)(data+8));
+}
+
+
+heif_brand2 heif_main_brand2(const uint8_t* data, int len)
+{
+  if (len < 12) {
+    return heif_unknown_brand;
+  }
+
+  return heif_fourcc_to_brand((char*)(data+8));
+}
+
+
+#define fourcc_to_uint32(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
+
+heif_brand2 heif_fourcc_to_brand(const char* fourcc)
+{
+  return fourcc_to_uint32(fourcc);
+}
+
+
+void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc)
+{
+  out_fourcc[0] = (char)((brand >> 24) & 0xFF);
+  out_fourcc[1] = (char)((brand >> 16) & 0xFF);
+  out_fourcc[2] = (char)((brand >>  8) & 0xFF);
+  out_fourcc[3] = (char)((brand >>  0) & 0xFF);
+}
+
+
+int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc)
+{
+  if (data == nullptr || len<=0) {
+    return -1;
+  }
+  
+  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
+  BitstreamRange range(stream, len);
+
+  std::shared_ptr<heif::Box> box;
+  Error err = Box::read(range, &box);
+  if (err) {
+    if (err.sub_error_code == heif_suberror_End_of_data) {
+      return -1;
+    }
+    
+    return -2;
+  }
+
+  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
+  if (!ftyp) {
+    return -2;
+  }
+
+  return ftyp->has_compatible_brand(fourcc_to_uint32(brand_fourcc)) ? 1 : 0;
+}
+
+
+
+int heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2* out_brands, int out_size)
+{
+  if (data == nullptr || len<=0 || out_brands==nullptr) {
+    return -1;
+  }
+  
+  auto stream = std::make_shared<StreamReader_memory>(data, len, false);
+  BitstreamRange range(stream, len);
+
+  std::shared_ptr<heif::Box> box;
+  Error err = Box::read(range, &box);
+  if (err) {
+    if (err.sub_error_code == heif_suberror_End_of_data) {
+      return -1;
+    }
+    
+    return -2;
+  }
+
+  auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
+  if (!ftyp) {
+    return -2;
+  }
+
+  auto brands = ftyp->list_brands();
+  int n = std::min((int)brands.size(), out_size);
+
+  for (int i=0;i<n;i++) {
+    out_brands[i] = brands[i];
+  }
+  
+  return n;
 }
 
 

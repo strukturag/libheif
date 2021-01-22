@@ -240,7 +240,9 @@ namespace heif {
 
     bool has_compatible_brand(uint32_t brand) const;
 
+    std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
 
+    
     void set_major_brand(uint32_t major_brand)
     { m_major_brand = major_brand; }
 

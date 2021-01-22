@@ -141,11 +141,13 @@ int main(int argc, char** argv)
   //   show MIME type
 
   {
-    uint8_t buf[20];
+    const static int bufSize = 50;
+
+    uint8_t buf[bufSize];
     FILE* fh = fopen(input_filename, "rb");
     if (fh) {
       std::cout << "MIME type: ";
-      int n = (int) fread(buf, 1, 20, fh);
+      int n = (int) fread(buf, 1, bufSize, fh);
       const char* mime_type = heif_get_file_mime_type(buf, n);
       if (*mime_type == 0) {
         std::cout << "unknown\n";
@@ -155,7 +157,34 @@ int main(int argc, char** argv)
       }
 
       fclose(fh);
+
+      char fourcc[5];
+      fourcc[4]=0;
+      heif_brand_to_fourcc( heif_main_brand2(buf,bufSize), fourcc );
+      std::cout << "main brand: " << fourcc << "\n";
+
+      const static int brandsSize = 50;
+
+      heif_brand2 brands[brandsSize];
+      n=heif_list_compatible_brands(buf, n, brands, brandsSize);
+      if (n<0) {
+	std::cerr << "error reading brands\n";
+      }
+      else {
+	std::cout << "compatible brands: ";
+	for (int i=0;i<n;i++) {
+	  heif_brand_to_fourcc(brands[i], fourcc);
+	  if (i>0) {
+	    std::cout << ", ";
+	  }
+	  std::cout << fourcc;
+	}
+	
+	std::cout << "\n";
+      }
     }
+
+    std::cout << "\n";
   }
 
   // ==============================================================================

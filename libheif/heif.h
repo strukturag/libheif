@@ -298,6 +298,7 @@ LIBHEIF_API
 enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
 
 
+// DEPRECATED, use heif_brand2 instead
 enum heif_brand
 {
   heif_unknown_brand,
@@ -315,8 +316,37 @@ enum heif_brand
 };
 
 // input data should be at least 12 bytes
+// DEPRECATED, use heif_main_brand2() instead
 LIBHEIF_API
 enum heif_brand heif_main_brand(const uint8_t* data, int len);
+
+
+typedef uint32_t heif_brand2;
+
+// input data should be at least 12 bytes
+LIBHEIF_API
+heif_brand2 heif_main_brand2(const uint8_t* data, int len);
+
+LIBHEIF_API
+heif_brand2 heif_fourcc_to_brand(const char* brand_fourcc);
+
+// the output buffer must be at least 4 bytes long
+LIBHEIF_API
+void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc);
+
+// returns 1 if file includes the brand, and 0 if it does not
+// returns -1 if the provided data is not sufficient
+//            (you should input at least as many bytes as indicated in the first 4 bytes of the file, usually ~50 bytes will do)
+// returns -2 on other errors
+LIBHEIF_API
+int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fourcc);
+
+// returns the number of brands filled into the output. If there are more brands in the file than out_size, it will return only out_size brands.
+// returns -1 if the provided data is not sufficient
+//            (you should input at least as many bytes as indicated in the first 4 bytes of the file, usually ~50 bytes will do)
+// returns -2 on other errors
+LIBHEIF_API
+int heif_list_compatible_brands(const uint8_t* data, int len, heif_brand2* out_brands, int out_size);
 
 
 // Returns one of these MIME types:
