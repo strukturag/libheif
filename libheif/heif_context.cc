@@ -227,6 +227,7 @@ std::vector<uint8_t> ImageGrid::write() const
     flags |= 1;
   }
 
+  data[1] = flags;
   data[2] = (uint8_t) (m_rows - 1);
   data[3] = (uint8_t) (m_columns - 1);
 
