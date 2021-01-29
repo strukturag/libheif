@@ -44,8 +44,17 @@ if [ ! -z "$CHECK_LICENSES" ]; then
 fi
 
 if [ ! -z "$CPPLINT" ]; then
-    echo "Running cpplint ..."
-    find -name "*.c" -o -name "*.cc" -o -name "*.h" | sort | xargs ./scripts/cpplint.py --extensions=c,cc,h
+    PYTHON=$(which python || true)
+    if [ -z "$PYTHON" ]; then
+        PYTHON=$(which python3 || true)
+        if [ -z "$PYTHON" ]; then
+            echo "Could not find valid Python interpreter to run cpplint."
+            echo "Make sure you have either python or python3 in your PATH."
+            exit 1
+        fi
+    fi
+    echo "Running cpplint with $PYTHON ..."
+    find -name "*.c" -o -name "*.cc" -o -name "*.h" | sort | xargs "$PYTHON" ./scripts/cpplint.py --extensions=c,cc,h
     ./scripts/check-emscripten-enums.sh
     ./scripts/check-go-enums.sh
 
