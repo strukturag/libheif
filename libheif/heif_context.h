@@ -149,7 +149,7 @@ namespace heif {
 
       bool is_thumbnail() const { return m_is_thumbnail; }
 
-      std::vector<std::shared_ptr<Image>> get_thumbnails() const { return m_thumbnails; }
+      const std::vector<std::shared_ptr<Image>>& get_thumbnails() const { return m_thumbnails; }
 
 
       // --- alpha channel
@@ -165,7 +165,7 @@ namespace heif {
 
       bool is_alpha_channel() const { return m_is_alpha_channel; }
 
-      std::shared_ptr<Image> get_alpha_channel() const { return m_alpha_channel; }
+      const std::shared_ptr<Image>& get_alpha_channel() const { return m_alpha_channel; }
 
 
       // --- depth channel
@@ -180,7 +180,7 @@ namespace heif {
 
       bool is_depth_channel() const { return m_is_depth_channel; }
 
-      std::shared_ptr<Image> get_depth_channel() const { return m_depth_channel; }
+      const std::shared_ptr<Image>& get_depth_channel() const { return m_depth_channel; }
 
 
       void set_depth_representation_info(struct heif_depth_representation_info& info)
@@ -213,7 +213,7 @@ namespace heif {
 
       bool is_aux_image() const { return m_is_aux_image; }
 
-      std::string get_aux_type() const { return m_aux_image_type; }
+      const std::string& get_aux_type() const { return m_aux_image_type; }
 
       std::vector<std::shared_ptr<Image>> get_aux_images(int aux_image_filter = 0) const
       {
@@ -248,7 +248,7 @@ namespace heif {
         m_metadata.push_back(std::move(metadata));
       }
 
-      std::vector<std::shared_ptr<ImageMetadata>> get_metadata() const { return m_metadata; }
+      const std::vector<std::shared_ptr<ImageMetadata>>& get_metadata() const { return m_metadata; }
 
 
       // === writing ===
@@ -260,9 +260,9 @@ namespace heif {
                                 const struct heif_encoding_options* options,
                                 enum heif_image_input_class input_class);
 
-      std::shared_ptr<const color_profile_nclx> get_color_profile_nclx() const { return m_color_profile_nclx; }
+      const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
 
-      std::shared_ptr<const color_profile_raw> get_color_profile_icc() const { return m_color_profile_icc; }
+      const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
       void set_color_profile(std::shared_ptr<const color_profile> profile)
       {
