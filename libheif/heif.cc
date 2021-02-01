@@ -1140,10 +1140,8 @@ void heif_image_remove_color_profile(struct heif_image* image)
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
                                                     const char* type_filter)
 {
-  auto metadata_list = handle->image->get_metadata();
-
   int cnt = 0;
-  for (const auto& metadata : metadata_list) {
+  for (const auto& metadata : handle->image->get_metadata()) {
     if (type_filter == nullptr ||
         metadata->item_type == type_filter) {
       cnt++;
@@ -1158,10 +1156,8 @@ int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_han
                                                      const char* type_filter,
                                                      heif_item_id* ids, int count)
 {
-  auto metadata_list = handle->image->get_metadata();
-
   int cnt = 0;
-  for (const auto& metadata : metadata_list) {
+  for (const auto& metadata : handle->image->get_metadata()) {
     if (type_filter == nullptr ||
         metadata->item_type == type_filter) {
       if (cnt < count) {
@@ -1181,39 +1177,33 @@ int heif_image_handle_get_list_of_metadata_block_IDs(const struct heif_image_han
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
                                                 heif_item_id metadata_id)
 {
-  auto metadata_list = handle->image->get_metadata();
-
-  for (auto metadata : metadata_list) {
+  for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
       return metadata->item_type.c_str();
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 
 const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
                                                         heif_item_id metadata_id)
 {
-  auto metadata_list = handle->image->get_metadata();
-
-  for (auto metadata : metadata_list) {
+  for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
       return metadata->content_type.c_str();
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
                                            heif_item_id metadata_id)
 {
-  auto metadata_list = handle->image->get_metadata();
-
-  for (auto metadata : metadata_list) {
+  for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
       return metadata->m_data.size();
     }
@@ -1227,12 +1217,10 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  heif_item_id metadata_id,
                                                  void* out_data)
 {
-  auto metadata_list = handle->image->get_metadata();
-
-  for (auto metadata : metadata_list) {
+  for (auto& metadata : handle->image->get_metadata()) {
     if (metadata->item_id == metadata_id) {
 
-      if (metadata->m_data.size() > 0) {
+      if (!metadata->m_data.empty()) {
         if (out_data == nullptr) {
           Error err(heif_error_Usage_error,
                     heif_suberror_Null_pointer_argument);
