@@ -52,20 +52,31 @@ if (has_potentially_evaluated_expression)
 endif()
 
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
+
 option(WITH_LIBDE265 "Build libde265 decoder" ON)
 if (WITH_LIBDE265)
     find_package(Libde265)
 endif ()
+
 option(WITH_X265 "Build x265 encoder" ON)
 if (WITH_X265)
     find_package(X265)
 endif ()
+
 option(WITH_AOM "Build aom encoder/decoder" ON)
 if (WITH_AOM)
     find_package(LibAOM)
 endif()
-find_package(Rav1e)
-find_package(Dav1d)
+
+option(WITH_RAV1E "Build rav1e encoder" ON)
+if (WITH_RAV1E)
+    find_package(Rav1e)
+endif ()
+
+option(WITH_DAV1D "Build dav1e decoder" ON)
+if (WITH_DAV1D)
+    find_package(Dav1d)
+endif ()
 
 if (LIBDE265_FOUND)
     message("HEIF decoder, libde265: found")
