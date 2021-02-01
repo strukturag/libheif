@@ -91,6 +91,13 @@ namespace heif {
 
       ~Image();
 
+      void clear() {
+        m_thumbnails.clear();
+        m_alpha_channel.reset();
+        m_depth_channel.reset();
+        m_aux_images.clear();
+      }
+
       void set_resolution(int w, int h)
       {
         m_width = w;

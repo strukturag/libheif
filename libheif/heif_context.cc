@@ -398,13 +398,10 @@ HeifContext::HeifContext()
 
 HeifContext::~HeifContext()
 {
-  // Break circular references
+  // Break circular references between Images (when a faulty input image has circular image references)
   for (auto& it : m_all_images) {
     std::shared_ptr<Image> image = it.second;
-    image->get_thumbnails().clear();
-    image->set_alpha_channel(nullptr);
-    image->set_depth_channel(nullptr);
-    image->get_aux_images().clear();
+    image->clear();
   }
 }
 
