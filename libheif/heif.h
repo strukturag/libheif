@@ -596,6 +596,10 @@ LIBHEIF_API
 void heif_depth_representation_info_free(const struct heif_depth_representation_info* info);
 
 // Returns true when there is depth_representation_info available
+// Note 1: depth_image_id is currently unused because we support only one depth channel per image, but
+// you should still provide the correct ID for future compatibility.
+// Note 2: Because of an API bug before v1.11.0, the function also works when 'handle' is the handle of the depth image.
+// However, you should pass the handle of the main image. Please adapt your code if needed.
 LIBHEIF_API
 int heif_image_handle_get_depth_image_representation_info(const struct heif_image_handle* handle,
                                                           heif_item_id depth_image_id,

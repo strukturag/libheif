@@ -785,10 +785,20 @@ int heif_image_handle_get_depth_image_representation_info(const struct heif_imag
                                                           heif_item_id depth_image_id,
                                                           const struct heif_depth_representation_info** out)
 {
+  std::shared_ptr<HeifContext::Image> depth_image;
+
   if (out) {
-    if (handle->image->has_depth_representation_info()) {
+    if (handle->image->is_depth_channel()) {
+      // Because of an API bug before v1.11.0, the input handle may be the depth image (#422).
+      depth_image = handle->image;
+    }
+    else {
+      depth_image = handle->image->get_depth_channel();
+    }
+
+    if (depth_image->has_depth_representation_info()) {
       auto info = new heif_depth_representation_info;
-      *info = handle->image->get_depth_representation_info();
+      *info = depth_image->get_depth_representation_info();
       *out = info;
       return true;
     }
