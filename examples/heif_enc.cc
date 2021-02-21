@@ -92,7 +92,7 @@ static struct option long_options[] = {
     {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoders",                no_argument,       0,              'e'},
+    {(char* const) "encoder",                 no_argument,       0,              'e'},
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
@@ -127,7 +127,7 @@ void show_help(const char* argv0)
             << "  -o, --output     output filename (optional)\n"
             << "  -v, --verbose    enable logging output (more -v will increase logging level)\n"
             << "  -P, --params     show all encoder parameters\n"
-            << "  -b #             bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
+            << "  -b, --bit-depth #             bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p               set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif       encode as AVIF\n"
             << "  --list-encoders  list all available encoders for the selected output format\n"
