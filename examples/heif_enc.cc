@@ -994,7 +994,6 @@ void set_params(struct heif_encoder* encoder, std::vector<std::string> params)
 static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_descriptors,
                                   int count)
 {
-  std::cout << "Encoders (first is default):\n";
   for (int i = 0; i < count; i++) {
     std::cout << "- " << heif_encoder_descriptor_get_id_name(encoder_descriptors[i])
               << " = "
@@ -1106,44 +1105,96 @@ int main(int argc, char** argv)
 
 #define MAX_ENCODERS 5
   const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
-  int count = heif_context_get_encoder_descriptors(context.get(),
-                                                   enc_av1f ? heif_compression_AV1 : heif_compression_HEVC,
-                                                   nullptr,
-                                                   encoder_descriptors, MAX_ENCODERS);
 
-  if (list_encoders) {
-    show_list_of_encoders(encoder_descriptors, count);
-    return 0;
+#if HAVE_X265
+  if (!enc_av1f && list_encoders == 0) {
+    std::cout << "Encoders HEIF (first is default):\n";
   }
+  if (!enc_av1f || list_encoders == 1) {
+    int count1 = heif_context_get_encoder_descriptors(context.get(),
+                                                     heif_compression_HEVC,
+                                                     nullptr,
+                                                     encoder_descriptors, MAX_ENCODERS);
+    int count = count1;
+    show_list_of_encoders(encoder_descriptors, count1);
+#if !(HAVE_AOM_ENCODER || HAVE_RAV1E)
+    if (list_encoders == 1) {
+      return 0;
+    }
+#endif
+    if (count > 0) {
+      int idx = 0;
+      if (encoderId != nullptr) {
+        for (int i = 0; i <= count; i++) {
+          if (i==count) {
+            std::cerr << "Unknown encoder ID. Choose one from the list below.\n";
+            show_list_of_encoders(encoder_descriptors, count);
+            return 5;
+          }
 
-  if (count > 0) {
-    int idx = 0;
-    if (encoderId != nullptr) {
-      for (int i = 0; i <= count; i++) {
-        if (i==count) {
-          std::cerr << "Unknown encoder ID. Choose one from the list below.\n";
-          show_list_of_encoders(encoder_descriptors, count);
-          return 5;
-        }
-
-        if (strcmp(encoderId, heif_encoder_descriptor_get_id_name(encoder_descriptors[i])) == 0) {
-          idx = i;
-          break;
+          if (strcmp(encoderId, heif_encoder_descriptor_get_id_name(encoder_descriptors[i])) == 0) {
+            idx = i;
+            break;
+          }
         }
       }
-    }
 
-    heif_error error = heif_context_get_encoder(context.get(), encoder_descriptors[idx], &encoder);
-    if (error.code) {
-      std::cerr << error.message << "\n";
+      heif_error error = heif_context_get_encoder(context.get(), encoder_descriptors[idx], &encoder);
+      if (error.code) {
+        std::cerr << error.message << "\n";
+        return 5;
+      }
+    }
+    else {
+      std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
       return 5;
     }
   }
-  else {
-    std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
-    return 5;
-  }
+#endif
 
+#if HAVE_AOM_ENCODER || HAVE_RAV1E
+  if (enc_av1f && list_encoders == 0) {
+    std::cout << "Encoders AVIF (first is default):\n";
+  }
+  if (enc_av1f || list_encoders == 1) {
+    int count2 = heif_context_get_encoder_descriptors(context.get(),
+                                                     heif_compression_AV1,
+                                                     nullptr,
+                                                     encoder_descriptors, MAX_ENCODERS);
+    int count = count2;
+    show_list_of_encoders(encoder_descriptors, count2);
+    if (list_encoders == 1) {
+      return 0;
+    }
+    if (count > 0) {
+      int idx = 0;
+      if (encoderId != nullptr) {
+        for (int i = 0; i <= count; i++) {
+          if (i==count) {
+            std::cerr << "Unknown encoder ID. Choose one from the list below.\n";
+            show_list_of_encoders(encoder_descriptors, count);
+            return 5;
+          }
+
+          if (strcmp(encoderId, heif_encoder_descriptor_get_id_name(encoder_descriptors[i])) == 0) {
+            idx = i;
+            break;
+          }
+        }
+      }
+
+      heif_error error = heif_context_get_encoder(context.get(), encoder_descriptors[idx], &encoder);
+      if (error.code) {
+        std::cerr << error.message << "\n";
+        return 5;
+      }
+    }
+    else {
+      std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
+      return 5;
+    }
+  }
+#endif
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
