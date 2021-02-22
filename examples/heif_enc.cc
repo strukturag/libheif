@@ -991,7 +991,7 @@ void set_params(struct heif_encoder* encoder, std::vector<std::string> params)
 }
 
 
-static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_descriptors,
+static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_descriptors,
                                   int count)
 {
   for (int i = 0; i < count; i++) {
@@ -1106,7 +1106,7 @@ int main(int argc, char** argv)
 #define MAX_ENCODERS 5
   const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
 
-#if HAVE_X265
+//#if HAVE_X265
   if (!enc_av1f && list_encoders == 0) {
     std::cout << "Encoders HEIF (first is default):\n";
   }
@@ -1150,9 +1150,9 @@ int main(int argc, char** argv)
       return 5;
     }
   }
-#endif
+//#endif
 
-#if HAVE_AOM_ENCODER || HAVE_RAV1E
+#if (HAVE_AOM_ENCODER || HAVE_RAV1E)
   if (enc_av1f && list_encoders == 0) {
     std::cout << "Encoders AVIF (first is default):\n";
   }
