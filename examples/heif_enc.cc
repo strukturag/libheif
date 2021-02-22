@@ -1117,11 +1117,11 @@ int main(int argc, char** argv)
                                                      encoder_descriptors, MAX_ENCODERS);
     int count = count1;
     show_list_of_encoders(encoder_descriptors, count1);
-#if !(HAVE_AOM_ENCODER || HAVE_RAV1E)
-    if (list_encoders == 1) {
-      return 0;
-    }
-#endif
+//#if !(HAVE_AOM_ENCODER || HAVE_RAV1E)
+//    if (list_encoders == 1) {
+//      return 0;
+//    }
+//#endif
     if (count > 0) {
       int idx = 0;
       if (encoderId != nullptr) {
@@ -1152,7 +1152,7 @@ int main(int argc, char** argv)
   }
 //#endif
 
-#if (HAVE_AOM_ENCODER || HAVE_RAV1E)
+//#if (HAVE_AOM_ENCODER || HAVE_RAV1E)
   if (enc_av1f && list_encoders == 0) {
     std::cout << "Encoders AVIF (first is default):\n";
   }
@@ -1194,7 +1194,7 @@ int main(int argc, char** argv)
       return 5;
     }
   }
-#endif
+//#endif
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
