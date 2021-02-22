@@ -1914,33 +1914,6 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                       image->get_height(heif_channel_Y));
 
 
-  // --- if there is an alpha channel, add it as an additional image
-
-  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
-
-    // --- generate alpha image
-    // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-    std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(image);
-
-
-    // --- encode the alpha image
-
-    std::shared_ptr<HeifContext::Image> heif_alpha_image;
-
-    Error error = encode_image_as_hevc(alpha_image, encoder, options,
-                                       heif_image_input_class_alpha,
-                                       heif_alpha_image);
-    if (error) {
-      return error;
-    }
-
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
-  }
-
-
   m_heif_file->add_hvcC_property(image_id);
 
 
@@ -2084,6 +2057,36 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
   }
 
   m_top_level_images.push_back(out_image);
+
+
+
+  // --- If there is an alpha channel, add it as an additional image.
+  //     Save alpha after the color image because we need to know the final reference to the color image.
+
+  if (options->save_alpha_channel && image->has_channel(heif_channel_Alpha)) {
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
+  }
+
 
   return Error::Ok;
 }
