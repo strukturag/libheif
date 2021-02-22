@@ -865,7 +865,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
-  bool success = image->image->extend_to_size(param->sourceWidth, param->sourceHeight);
+  bool success = image->image->extend_padding_to_size(param->sourceWidth, param->sourceHeight);
   if (!success) {
     struct heif_error err = {
         heif_error_Memory_allocation_error,

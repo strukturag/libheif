@@ -500,7 +500,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
                            &rounded_width,
                            &rounded_height);
 
-  bool success = image->image->extend_to_size(rounded_width, rounded_height);
+  bool success = image->image->extend_padding_to_size(rounded_width, rounded_height);
   if (!success) {
     struct heif_error err = {
         heif_error_Memory_allocation_error,

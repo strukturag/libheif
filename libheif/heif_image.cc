@@ -228,7 +228,7 @@ void heif::get_subsampled_size(int width, int height,
 }
 
 
-bool HeifPixelImage::extend_to_size(int width, int height)
+bool HeifPixelImage::extend_padding_to_size(int width, int height)
 {
   for (auto& planeIter : m_planes) {
     auto* plane = &planeIter.second;
@@ -277,13 +277,9 @@ bool HeifPixelImage::extend_to_size(int width, int height)
              &plane->mem[(plane->m_height - 1) * plane->stride],
              subsampled_width * nbytes);
     }
-
-    plane->m_width = subsampled_width;
-    plane->m_height = subsampled_height;
   }
 
-  m_width = width;
-  m_height = height;
+  // don't modify the logical image size
 
   return true;
 }

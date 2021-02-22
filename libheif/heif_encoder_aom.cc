@@ -560,7 +560,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
                          &rounded_width,
                          &rounded_height);
 
-  bool success = image->image->extend_to_size(rounded_width, rounded_height);
+  bool success = image->image->extend_padding_to_size(rounded_width, rounded_height);
   if (!success) {
     err = {heif_error_Memory_allocation_error,
            heif_suberror_Unspecified,

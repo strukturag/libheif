@@ -131,7 +131,7 @@ namespace heif {
 
     void debug_dump() const;
 
-    bool extend_to_size(int width, int height);
+    bool extend_padding_to_size(int width, int height);
 
   private:
     struct ImagePlane
