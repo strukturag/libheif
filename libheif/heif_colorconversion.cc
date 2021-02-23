@@ -727,7 +727,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
         if (!full_range_flag) {
           cb = (cb * 224) / 256;
-          cr = (cb * 224) / 256;
+          cr = (cr * 224) / 256;
         }
 
         out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(cb + halfRange, fullRange);
