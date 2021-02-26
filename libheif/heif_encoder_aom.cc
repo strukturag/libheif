@@ -73,7 +73,10 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static const char* kParam_tune = "tune";
 static const char* const kParam_tune_valid_values[] = {
-    "psnr", "ssim", "butteraugli"
+    "psnr", "ssim"
+#if CONFIG_TUNE_BUTTERAUGLI
+    , "butteraugli"
+#endif
 };
 
 static const int AOM_PLUGIN_PRIORITY = 40;
@@ -422,10 +425,12 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
       encoder->tune = AOM_TUNE_SSIM;
       return heif_error_ok;
     }
+#if CONFIG_TUNE_BUTTERAUGLI
     else if (strcmp(value, "butteraugli") == 0) {
       encoder->tune = AOM_TUNE_BUTTERAUGLI;
       return heif_error_ok;
     }
+#endif
     else {
       return heif_error_invalid_parameter_value;
     }
@@ -471,9 +476,11 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
       case AOM_TUNE_SSIM:
         save_strcpy(value, value_size, "ssim");
         break;
+#if CONFIG_TUNE_BUTTERAUGLI
       case AOM_TUNE_BUTTERAUGLI:
         save_strcpy(value, value_size, "butteraugli");
         break;
+#endif
       default:
         assert(false);
         return heif_error_invalid_parameter_value;
