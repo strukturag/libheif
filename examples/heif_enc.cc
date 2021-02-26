@@ -1116,7 +1116,9 @@ int main(int argc, char** argv)
                                                      nullptr,
                                                      encoder_descriptors, MAX_ENCODERS);
     int count = count1;
-    show_list_of_encoders(encoder_descriptors, count1);
+    if (!option_show_parameters) {
+      show_list_of_encoders(encoder_descriptors, count1);
+    }
 //#if !(HAVE_AOM_ENCODER || HAVE_RAV1E)
 //    if (list_encoders == 1) {
 //      return 0;
@@ -1150,19 +1152,28 @@ int main(int argc, char** argv)
       return 5;
     }
   }
+
+  if (option_show_parameters) {
+    list_encoder_parameters(encoder);
+//#if !(HAVE_AOM_ENCODER || HAVE_RAV1E)
+//    return 0;
+//#endif
+  }
 //#endif
 
 //#if (HAVE_AOM_ENCODER || HAVE_RAV1E)
-  if (enc_av1f && list_encoders == 0) {
+  if (option_show_parameters || (enc_av1f && list_encoders == 0)) {
     std::cout << "Encoders AVIF (first is default):\n";
   }
-  if (enc_av1f || list_encoders == 1) {
+  if (option_show_parameters || enc_av1f || list_encoders == 1) {
     int count2 = heif_context_get_encoder_descriptors(context.get(),
                                                      heif_compression_AV1,
                                                      nullptr,
                                                      encoder_descriptors, MAX_ENCODERS);
     int count = count2;
-    show_list_of_encoders(encoder_descriptors, count2);
+    if (!option_show_parameters) {
+      show_list_of_encoders(encoder_descriptors, count2);
+    }
     if (list_encoders == 1) {
       return 0;
     }
@@ -1194,13 +1205,12 @@ int main(int argc, char** argv)
       return 5;
     }
   }
-//#endif
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
     return 0;
   }
-
+//#endif
 
   if (optind > argc - 1) {
     show_help(argv[0]);
