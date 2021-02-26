@@ -1108,7 +1108,7 @@ int main(int argc, char** argv)
 
 //#if HAVE_X265
   if (!enc_av1f && list_encoders == 0) {
-    std::cout << "Encoders HEIF (first is default):\n";
+    std::cout << "Encoders (HEIF is default):\n";
   }
   if (!enc_av1f || list_encoders == 1) {
     int count1 = heif_context_get_encoder_descriptors(context.get(),
@@ -1163,7 +1163,7 @@ int main(int argc, char** argv)
 
 //#if (HAVE_AOM_ENCODER || HAVE_RAV1E)
   if (option_show_parameters || (enc_av1f && list_encoders == 0)) {
-    std::cout << "Encoders AVIF (first is default):\n";
+    std::cout << "Encoders (AVIF is default):\n";
   }
   if (option_show_parameters || enc_av1f || list_encoders == 1) {
     int count2 = heif_context_get_encoder_descriptors(context.get(),
