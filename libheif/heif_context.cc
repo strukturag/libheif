@@ -47,7 +47,7 @@
 using namespace heif;
 
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
-        : plugin(_plugin)
+    : plugin(_plugin)
 {
 
 }
@@ -916,8 +916,8 @@ Error HeifContext::interpret_heif_file()
 
 
 HeifContext::Image::Image(HeifContext* context, heif_item_id id)
-        : m_heif_context(context),
-          m_id(id)
+    : m_heif_context(context),
+      m_id(id)
 {
   memset(&m_depth_representation_info, 0, sizeof(m_depth_representation_info));
 }
@@ -1382,7 +1382,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
               heif_colorspace_RGB,
               heif_chroma_444);
 
-  int bpp = 8;
+  int bpp = 0;
+
   if (pixi) {
     if (pixi->get_num_channels() < 1) {
       return Error(heif_error_Invalid_input,
@@ -1391,33 +1392,49 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     }
 
     bpp = pixi->get_bits_per_channel(0);
-  }
 
-  img->add_plane(heif_channel_R, w, h, bpp);
+    if (tile_chroma != heif_chroma_monochrome) {
 
+      // there are broken files that save only a one-channel pixi for an RGB image (issue #283)
+      if (pixi->get_num_channels() == 3) {
 
-  if (tile_chroma != heif_chroma_monochrome) {
+        int bpp_c1 = pixi->get_bits_per_channel(1);
+        int bpp_c2 = pixi->get_bits_per_channel(2);
 
-    int bpp_c1 = 8;
-    int bpp_c2 = 8;
-
-    // there are broken files that save only a one-channel pixi for an RGB image (issue #283)
-    if (pixi && pixi->get_num_channels() == 3) {
-
-      bpp_c1 = pixi->get_bits_per_channel(1);
-      bpp_c2 = pixi->get_bits_per_channel(2);
-
-      if (bpp_c1 != bpp || bpp_c2 != bpp) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_pixi_box,
-                     "Different number of bits per pixel in each channel.");
+        if (bpp_c1 != bpp || bpp_c2 != bpp) {
+          // TODO: is this really an error? Does the pixi depths refer to RGB or YCbCr?
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Invalid_pixi_box,
+                       "Different number of bits per pixel in each channel.");
+        }
       }
     }
+  }
+  else {
+    // When there is no pixi-box, get the pixel-depth from one of the tile images
 
+    heif_item_id tileID = image_references[0];
+
+    auto iter = m_all_images.find(tileID);
+    if (iter == m_all_images.end()) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Missing_grid_images,
+                   "Nonexistent grid image referenced");
+    }
+
+    const std::shared_ptr<Image> tileImg = iter->second;
+    bpp = tileImg->get_luma_bits_per_pixel();
+  }
+
+
+  if (tile_chroma == heif_chroma_monochrome) {
+    img->add_plane(heif_channel_Y, w, h, bpp);
+  }
+  else {
+    img->add_plane(heif_channel_R, w, h, bpp);
     img->add_plane(heif_channel_G, w, h, bpp);
     img->add_plane(heif_channel_B, w, h, bpp);
   }
-
 
   int y0 = 0;
   int reference_idx = 0;
@@ -1447,7 +1464,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       if (iter == m_all_images.end()) {
         return Error(heif_error_Invalid_input,
                      heif_suberror_Missing_grid_images,
-                     "Unexisting grid image referenced");
+                     "Nonexistent grid image referenced");
       }
 
       const std::shared_ptr<Image> tileImg = iter->second;
@@ -1558,6 +1575,11 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     if (w <= x0 || h <= y0) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_Invalid_grid_data);
+    }
+
+    if (img->get_bits_per_pixel(channel) != tile_img->get_bits_per_pixel(channel)) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Wrong_tile_image_pixel_depth);
     }
 
     int copy_width = std::min(src_width, w - x0);

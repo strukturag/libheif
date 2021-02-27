@@ -205,6 +205,7 @@ enum heif_suberror_code
 
   heif_suberror_No_av1C_box = 131,
 
+  heif_suberror_Wrong_tile_image_pixel_depth = 132,
 
 
   // --- Memory_allocation_error ---

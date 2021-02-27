@@ -147,6 +147,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Invalid image size";
     case heif_suberror_Invalid_pixi_box:
       return "Invalid pixi box";
+    case heif_suberror_Wrong_tile_image_pixel_depth:
+      return "Wrong tile image pixel depth";
 
 
       // --- Memory_allocation_error ---

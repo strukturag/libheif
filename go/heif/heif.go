@@ -266,6 +266,8 @@ const (
 
 	SuberrorInvalidPixiBox = C.heif_suberror_Invalid_pixi_box
 
+	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.
