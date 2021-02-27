@@ -1944,7 +1944,7 @@ Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                  sstr.str());
   }
 
-  auto allProperties = get_all_child_boxes();
+  const auto& allProperties = get_all_child_boxes();
   for (const Box_ipma::PropertyAssociation& assoc : *property_assoc) {
     if (assoc.property_index > allProperties.size()) {
       std::stringstream sstr;
@@ -1978,14 +1978,14 @@ std::shared_ptr<Box> Box_ipco::get_property_for_item_ID(heif_item_id itemID,
     return nullptr;
   }
 
-  auto allProperties = get_all_child_boxes();
+  const auto& allProperties = get_all_child_boxes();
   for (const Box_ipma::PropertyAssociation& assoc : *property_assoc) {
     if (assoc.property_index > allProperties.size() ||
         assoc.property_index == 0) {
       return nullptr;
     }
 
-    auto property = allProperties[assoc.property_index - 1];
+    const auto& property = allProperties[assoc.property_index - 1];
     if (property->get_short_type() == box_type) {
       return property;
     }
