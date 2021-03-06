@@ -181,7 +181,11 @@ static void aom_init_parameters()
   p->version = 2;
   p->name = kParam_tune;
   p->type = heif_encoder_parameter_type_string;
+#if CONFIG_TUNE_BUTTERAUGLI
+  p->string.default_value = "butteraugli";
+#else
   p->string.default_value = "ssim";
+#endif
   p->has_default = true;
   p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
@@ -398,18 +402,30 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
 
+#if CONFIG_TUNE_BUTTERAUGLI
+  if ((!strcmp(name, kParam_tune) == 0) && (strcmp(name, kParam_chroma) == 0)) {
+#else
   if (strcmp(name, kParam_chroma) == 0) {
+#endif
     if (strcmp(value, "420") == 0) {
       encoder->chroma = heif_chroma_420;
       return heif_error_ok;
     }
     else if (strcmp(value, "422") == 0) {
       encoder->chroma = heif_chroma_422;
+#if CONFIG_TUNE_BUTTERAUGLI
+      return heif_error_invalid_parameter_value;
+#else
       return heif_error_ok;
+#endif
     }
     else if (strcmp(value, "444") == 0) {
       encoder->chroma = heif_chroma_444;
+#if CONFIG_TUNE_BUTTERAUGLI
+      return heif_error_invalid_parameter_value;
+#else
       return heif_error_ok;
+#endif
     }
     else {
       return heif_error_invalid_parameter_value;
@@ -426,7 +442,7 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
       return heif_error_ok;
     }
 #if CONFIG_TUNE_BUTTERAUGLI
-    else if (strcmp(value, "butteraugli") == 0) {
+    else if (((strcmp(value, "butteraugli") == 0) || (strcmp(value, "") == 0)) && ((strcmp(name, kParam_chroma) == 0) && (strcmp(value, "420") == 0))) {
       encoder->tune = AOM_TUNE_BUTTERAUGLI;
       return heif_error_ok;
     }
