@@ -402,11 +402,7 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
 
-#if CONFIG_TUNE_BUTTERAUGLI
-  if ((!strcmp(name, kParam_tune) == 0) && (strcmp(name, kParam_chroma) == 0)) {
-#else
   if (strcmp(name, kParam_chroma) == 0) {
-#endif
     if (strcmp(value, "420") == 0) {
       encoder->chroma = heif_chroma_420;
       return heif_error_ok;
@@ -442,7 +438,7 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
       return heif_error_ok;
     }
 #if CONFIG_TUNE_BUTTERAUGLI
-    else if (((strcmp(value, "butteraugli") == 0) || (strcmp(value, "") == 0)) && ((strcmp(name, kParam_chroma) == 0) && (strcmp(value, "420") == 0))) {
+    else if (strcmp(value, "butteraugli") == 0) {
       encoder->tune = AOM_TUNE_BUTTERAUGLI;
       return heif_error_ok;
     }
