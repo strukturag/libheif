@@ -4,6 +4,10 @@ image: Visual Studio 2019
 configuration: Release
 cache: c:\tools\vcpkg\installed\
 
+matrix:
+  allow_failures:
+    - arch: arm64 # libde265 currently doesn't support arm64 on vcpkg
+
 environment:
   matrix:
   - arch: x64
