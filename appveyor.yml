@@ -1,29 +1,30 @@
 # stats available at
 # https://ci.appveyor.com/project/strukturag/libheif
-version: 1.0.{build}
-
-os:
-  - Windows Server 2012 R2
+image: Visual Studio 2019
+configuration: Release
+cache: c:\tools\vcpkg\installed\
 
 environment:
   matrix:
-    - GENERATOR: "Visual Studio 14 2015"
+  - arch: x64
+  - arch: arm64
 
-platform:
-  - x86
-  - x64
+install:
+  - vcpkg install libde265:%arch%-windows
+  - vcpkg install x265:%arch%-windows
+  - vcpkg install dav1d:%arch%-windows
+  - cd c:\tools\vcpkg
+  - vcpkg integrate install
+  - cd %APPVEYOR_BUILD_FOLDER%
 
-configuration:
-  - Debug
+before_build:
+  - mkdir build
+  - cd build
+  - cmake .. -A %arch% -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
 
 build:
   verbosity: normal
 
-build_script:
-  - ps: if($env:PLATFORM -eq "x64") { $env:CMAKE_GEN_SUFFIX=" Win64" }
-  - cmd: scripts\prepare-appveyor.cmd
-  - cmake "-G%GENERATOR%%CMAKE_GEN_SUFFIX%" -H. -Bbuild -DLIBDE265_LIBRARY="%APPVEYOR_BUILD_FOLDER%\build-libde265\libde265.lib" -DLIBDE265_INCLUDE_DIR="%APPVEYOR_BUILD_FOLDER%\build-libde265" -DX265_LIBRARY="%APPVEYOR_BUILD_FOLDER%\build-x265\libx265.lib" -DX265_INCLUDE_DIR="%APPVEYOR_BUILD_FOLDER%\build-x265"
-  - cmake --build build --config %CONFIGURATION%
-
 artifacts:
   - path: build
+  - path: build\**\Release\*.exe
