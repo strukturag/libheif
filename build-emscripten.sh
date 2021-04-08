@@ -40,6 +40,7 @@ export TOTAL_MEMORY=16777216
 echo "Running Emscripten..."
 emcc libheif/.libs/libheif.so \
     --bind \
+    -s WASM=1 \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
     -s ALLOW_MEMORY_GROWTH=1 \
