@@ -14,5 +14,5 @@ git clone -b 0.4 --depth 1 https://github.com/xiph/rav1e.git
 
 cd rav1e
 cargo install cargo-c
-cargo cinstall --release --prefix="$(pwd)/dist" --library-type=staticlib
+cargo cinstall --crt-static --release --prefix="$(pwd)/dist" --library-type=staticlib
 cd ..
