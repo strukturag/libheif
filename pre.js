@@ -18,16 +18,17 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-(function() {
-var Module = {
-    print: function(text) {
-        text = Array.prototype.slice.call(arguments).join(' ');
-        console.log(text);
+(function () {
+  var Module = {
+    print: function (text) {
+      text = Array.prototype.slice.call(arguments).join(" ");
+      console.log(text);
     },
-    printErr: function(text) {
-        text = Array.prototype.slice.call(arguments).join(' ');
-        console.error(text);
+    printErr: function (text) {
+      text = Array.prototype.slice.call(arguments).join(" ");
+      console.error(text);
     },
     canvas: {},
-    noInitialRun: true
-};
+    noInitialRun: true,
+  };
+}.call(this));
