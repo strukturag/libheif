@@ -3036,6 +3036,8 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
     out->set_color_profile_nclx(m_target_state.nclx_profile);
     out->set_color_profile_icc(in->get_color_profile_icc());
 
+    out->set_premultiplied_alpha(in->is_premultiplied_alpha());
+
     in = out;
   }
 

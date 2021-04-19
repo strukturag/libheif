@@ -1404,6 +1404,14 @@ struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,
                                        int width, int height, int bit_depth);
 
+// Signal that the image is premultiplied by the alpha pixel values.
+LIBHEIF_API
+void heif_image_set_premultiplied_alpha(struct heif_image* image,
+                                        int is_premultiplied_alpha);
+
+LIBHEIF_API
+int heif_image_is_premultiplied_alpha(struct heif_image* image);
+
 
 
 

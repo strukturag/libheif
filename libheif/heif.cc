@@ -1077,6 +1077,27 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
 }
 
 
+void heif_image_set_premultiplied_alpha(struct heif_image* image,
+                                        int is_premultiplied_alpha)
+{
+  if (image == nullptr) {
+    return;
+  }
+
+  image->image->set_premultiplied_alpha(is_premultiplied_alpha);
+}
+
+
+int heif_image_is_premultiplied_alpha(struct heif_image* image)
+{
+  if (image == nullptr) {
+    return 0;
+  }
+
+  return image->image->is_premultiplied_alpha();
+}
+
+
 struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          struct heif_image** output,
                                          int width, int height,

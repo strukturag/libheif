@@ -67,6 +67,10 @@ namespace heif {
     // Has alpha information either as a separate channel or in the interleaved format.
     bool has_alpha() const;
 
+    bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
+
+    void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
+
     int get_width() const
     { return m_width; }
 
@@ -157,6 +161,7 @@ namespace heif {
     int m_height = 0;
     heif_colorspace m_colorspace = heif_colorspace_undefined;
     heif_chroma m_chroma = heif_chroma_undefined;
+    bool m_premultiplied_alpha = false;
     std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
     std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 

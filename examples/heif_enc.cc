@@ -69,6 +69,7 @@ int master_alpha = 1;
 int thumb_alpha = 1;
 int list_encoders = 0;
 int two_colr_boxes = 0;
+int premultiplied_alpha = 0;
 const char* encoderId = nullptr;
 
 int nclx_matrix_coefficients = 6;
@@ -101,6 +102,7 @@ static struct option long_options[] = {
     {(char* const) "transfer_characteristic", required_argument, 0,              OPTION_NCLX_TRANSFER_CHARACTERISTIC},
     {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
     {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
+    {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
     {0, 0,                                                       0,              0}
 };
 
@@ -138,6 +140,7 @@ void show_help(const char* argv0)
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both a present\n"
+            << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
             << "  -L                       switch encoder to lossless mode\n"
@@ -1245,6 +1248,10 @@ int main(int argc, char** argv)
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
+    }
+
+    if (premultiplied_alpha) {
+      heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
 
