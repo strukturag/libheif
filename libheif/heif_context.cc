@@ -763,7 +763,7 @@ Error HeifContext::interpret_heif_file()
             auto subtypes = auxC_property->get_subtypes();
 
             std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-            Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+            err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
 
             for (auto& msg : sei_messages) {
               auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
@@ -2192,11 +2192,10 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
   }
 
   Box_av1C::configuration config;
+
+  // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+  // TODO: maybe we can remove this later.
   fill_av1C_configuration(&config, image);
-
-  m_heif_file->add_av1C_property(image_id);
-  m_heif_file->set_av1C_configuration(image_id, config);
-
 
   heif_image c_api_image;
   c_api_image.image = image;
@@ -2207,9 +2206,13 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
     uint8_t* data;
     int size;
 
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
 
-    if (data == NULL) {
+    Box_av1C::configuration configA;
+    bool found_config = fill_av1C_configuration_from_stream(&configA, data, size);
+    (void)found_config;
+
+    if (data == nullptr) {
       break;
     }
 
@@ -2219,6 +2222,10 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
 
     m_heif_file->append_iloc_data(image_id, vec);
   }
+
+  m_heif_file->add_av1C_property(image_id);
+  m_heif_file->set_av1C_configuration(image_id, config);
+
 
   uint32_t input_width, input_height;
   input_width = image->get_width();

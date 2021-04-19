@@ -253,6 +253,8 @@ namespace heif {
 
     int peek_bits(int n);
 
+    void skip_bytes(int nBytes);
+
     void skip_bits(int n);
 
     void skip_bits_fast(int n);

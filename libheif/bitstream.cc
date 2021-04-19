@@ -386,6 +386,14 @@ int BitReader::peek_bits(int n)
   return (int) val;
 }
 
+void BitReader::skip_bytes(int nBytes)
+{
+  // TODO: this is slow
+  while (nBytes--) {
+    skip_bits(8);
+  }
+}
+
 void BitReader::skip_bits(int n)
 {
   if (nextbits_cnt < n) {
