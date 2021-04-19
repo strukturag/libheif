@@ -268,6 +268,11 @@ namespace heif {
       return data_length - bytes_remaining - nextbits_cnt / 8;
     }
 
+    int64_t get_bits_remaining() const
+    {
+      return bytes_remaining*8 + nextbits_cnt;
+    }
+
   private:
     const uint8_t* data;
     int data_length;

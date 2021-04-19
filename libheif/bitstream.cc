@@ -452,7 +452,7 @@ bool BitReader::get_svlc(int* value)
 void BitReader::refill()
 {
 #if 0
-  // TODO: activate me one I'm sure this works
+  // TODO: activate me once I'm sure this works
   while (nextbits_cnt <= 64-8 && bytes_remaining) {
     uint64_t newval = *data++;
     bytes_remaining--;
