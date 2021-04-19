@@ -135,6 +135,12 @@ void HeifFile::new_empty_file()
 
 void HeifFile::set_brand(heif_compression_format format)
 {
+  // Note: major brand should be repeated in the compatible brands, according to this:
+  //   ISOBMFF (ISO/IEC 14496-12:2020) § K.4:
+  //   NOTE This document requires that the major brand be repeated in the compatible-brands,
+  //   but this requirement is relaxed in the 'profiles' parameter for compactness.
+  // See https://github.com/strukturag/libheif/issues/478
+
   switch (format) {
     case heif_compression_HEVC:
       m_ftyp_box->set_major_brand(fourcc("heic"));
