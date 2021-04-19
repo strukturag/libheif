@@ -267,8 +267,15 @@ int main(int argc, char** argv)
     // --- depth information
 
     bool has_depth = heif_image_handle_has_depth_image(handle);
+    bool has_alpha = heif_image_handle_has_alpha_channel(handle);
+    bool premultiplied_alpha = false;
 
-    printf("  alpha channel: %s\n", heif_image_handle_has_alpha_channel(handle) ? "yes" : "no");
+    if (has_alpha) {
+      premultiplied_alpha = heif_image_handle_is_premultiplied_alpha(handle);
+    }
+
+    printf("  alpha channel: %s %s\n", has_alpha ? "yes" : "no",
+           premultiplied_alpha ? "(premultiplied)" : "");
     printf("  depth channel: %s\n", has_depth ? "yes" : "no");
 
     heif_item_id depth_id;

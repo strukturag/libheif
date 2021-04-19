@@ -167,6 +167,10 @@ namespace heif {
 
       const std::shared_ptr<Image>& get_alpha_channel() const { return m_alpha_channel; }
 
+      void set_is_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
+
+      bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
+
 
       // --- depth channel
 
@@ -286,6 +290,7 @@ namespace heif {
       std::vector<std::shared_ptr<Image>> m_thumbnails;
 
       bool m_is_alpha_channel = false;
+      bool m_premultiplied_alpha = false;
       bool m_implicitly_consumed_alpha = false; // alpha data was integrated into main color image
       heif_item_id m_alpha_channel_ref_id = 0;
       std::shared_ptr<Image> m_alpha_channel;

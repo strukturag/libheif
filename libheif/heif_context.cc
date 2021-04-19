@@ -907,6 +907,17 @@ Error HeifContext::interpret_heif_file()
 
           img_iter->second->add_metadata(metadata);
         }
+        else if (ref.header.get_short_type() == fourcc("prem")) {
+          uint32_t color_image_id = ref.from_item_ID;
+          auto img_iter = m_all_images.find(color_image_id);
+          if (img_iter == m_all_images.end()) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "`prem` link assigned to non-existing image");
+          }
+
+          img_iter->second->set_is_premultiplied_alpha(true);;
+        }
       }
     }
   }
@@ -1285,6 +1296,10 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
       img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
+
+      if (imginfo->is_premultiplied_alpha()) {
+        img->set_premultiplied_alpha(true);
+      }
     }
   }
 
