@@ -714,7 +714,7 @@ Error HeifContext::interpret_heif_file()
 
           if (auxC_property->get_aux_type() == "urn:mpeg:avc:2015:auxid:1" ||   // HEIF (avc)
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
-              auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // AVIF
+              auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // MIAF
 
             auto master_iter = m_all_images.find(refs[0]);
             if (master_iter == m_all_images.end()) {
@@ -2102,6 +2102,9 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
     }
 
     m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+
+    // TODO: MIAF says that the *:hevc:* urn is deprecated and we should use "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"
+    // Is this compatible to other decoders?
     m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
   }
 
