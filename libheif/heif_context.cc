@@ -2241,7 +2241,18 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
   }
 
 
-  // TODO: do we also need a PIXI property for AVIF images?
+  // --- write PIXI property
+
+  if (image->get_chroma_format() == heif_chroma_monochrome) {
+    m_heif_file->add_pixi_property(image_id,
+                                   image->get_bits_per_pixel(heif_channel_Y), 0, 0);
+  }
+  else {
+    m_heif_file->add_pixi_property(image_id,
+                                   image->get_bits_per_pixel(heif_channel_Y),
+                                   image->get_bits_per_pixel(heif_channel_Cb),
+                                   image->get_bits_per_pixel(heif_channel_Cr));
+  }
 
   return Error::Ok;
 }
