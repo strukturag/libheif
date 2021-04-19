@@ -127,7 +127,13 @@ static void aom_init_parameters()
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
-  p->integer.maximum = 9;
+
+  if (aom_codec_version_major() >= 3) {
+    p->integer.maximum = 9;
+  }
+  else {
+    p->integer.maximum = 8;
+  }
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
