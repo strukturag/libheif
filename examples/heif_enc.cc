@@ -92,7 +92,7 @@ static struct option long_options[] = {
     {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoders",                no_argument,       0,              'e'},
+    {(char* const) "encoder",                 no_argument,       0,              'e'},
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
@@ -118,21 +118,21 @@ void show_help(const char* argv0)
             << "Note that there is no checking for valid parameters when using the prefix.\n"
             << "\n"
             << "Options:\n"
-            << "  -h, --help       show help\n"
-            << "  -q, --quality    set output quality (0-100) for lossy compression\n"
-            << "  -L, --lossless   generate lossless output (-q has no effect)\n"
-            << "  -t, --thumb #    generate thumbnail with maximum size # (default: off)\n"
-            << "      --no-alpha   do not save alpha channel\n"
+            << "  -h, --help        show help\n"
+            << "  -q, --quality     set output quality (0-100) for lossy compression\n"
+            << "  -L, --lossless    generate lossless output (-q has no effect)\n"
+            << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
+            << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
-            << "  -o, --output     output filename (optional)\n"
-            << "  -v, --verbose    enable logging output (more -v will increase logging level)\n"
-            << "  -P, --params     show all encoder parameters\n"
-            << "  -b #             bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
-            << "  -p               set encoder parameter (NAME=VALUE)\n"
-            << "  -A, --avif       encode as AVIF\n"
-            << "  --list-encoders  list all available encoders for the selected output format\n"
-            << "  -e, --encoder ID select encoder to use (the IDs can be listed with --list-encoders)\n"
-            << "  -E, --even-size  [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
+            << "  -o, --output      output filename (optional)\n"
+            << "  -v, --verbose     enable logging output (more -v will increase logging level)\n"
+            << "  -P, --params      show all encoder parameters\n"
+            << "  -b, --bit-depth # bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
+            << "  -p                set encoder parameter (NAME=VALUE)\n"
+            << "  -A, --avif        encode as AVIF\n"
+            << "      --list-encoders   list all available encoders for the selected output format\n"
+            << "  -e, --encoder     ID select encoder to use (the IDs can be listed with --list-encoders)\n"
+            << "  -E, --even-size   [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
@@ -143,7 +143,6 @@ void show_help(const char* argv0)
             << "  -L                       switch encoder to lossless mode\n"
             << "  -p chroma=444            switch off color subsampling\n"
             << "  --matrix_coefficients=0  encode in RGB color-space\n";
-
 }
 
 
