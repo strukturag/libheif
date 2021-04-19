@@ -127,7 +127,6 @@ static obu_header_info read_obu_header_type(BitReader& reader)
 
 
 const static int HEIF_OBU_SEQUENCE_HEADER = 1;
-const static int HEIF_OBU_TEMPORAL_DELIMITER = 2;
 const static int CP_UNSPECIFIED = 2;
 const static int TC_UNSPECIFIED = 2;
 const static int MC_UNSPECIFIED = 2;
@@ -168,13 +167,13 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
   bool decoder_model_info_present = false;
   int buffer_delay_length_minus1 = 0;
 
-  out_config->seq_profile = reader.get_bits(3);
+  out_config->seq_profile = (uint8_t)reader.get_bits(3);
   bool still_picture = reader.get_bits(1);
   (void) still_picture;
 
   bool reduced_still_picture = reader.get_bits(1);
   if (reduced_still_picture) {
-    out_config->seq_level_idx_0 = reader.get_bits(5);
+    out_config->seq_level_idx_0 = (uint8_t)reader.get_bits(5);
     out_config->seq_tier_0 = 0;
   }
   else {
@@ -200,12 +199,12 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
     int operating_points_cnt_minus1 = reader.get_bits(5);
     for (int i = 0; i <= operating_points_cnt_minus1; i++) {
       reader.skip_bits(12);
-      uint8_t level = (uint8_t) reader.get_bits(5);
+      auto level = (uint8_t) reader.get_bits(5);
       if (i == 0) {
         out_config->seq_level_idx_0 = level;
       }
       if (level > 7) {
-        uint8_t tier = (uint8_t) reader.get_bits(1);
+        auto tier = (uint8_t) reader.get_bits(1);
         if (i == 0) {
           out_config->seq_tier_0 = tier;
         }
@@ -228,7 +227,7 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
         }
 
         if (initial_display_delay_present_for_this) {
-          int delay = reader.get_bits(4);
+          auto delay = (uint8_t)reader.get_bits(4);
           if (i==0) {
             out_config->initial_presentation_delay_minus_one = delay;
           }
@@ -286,9 +285,9 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
 
   // --- color config
 
-  out_config->high_bitdepth = reader.get_bits(1);
+  out_config->high_bitdepth = (uint8_t)reader.get_bits(1);
   if (out_config->seq_profile == 2 && out_config->high_bitdepth) {
-    out_config->twelve_bit = reader.get_bits(1);
+    out_config->twelve_bit = (uint8_t)reader.get_bits(1);
   }
   else {
     out_config->twelve_bit = 0;
@@ -298,7 +297,7 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
     out_config->monochrome = 0;
   }
   else {
-    out_config->monochrome = reader.get_bits(1);
+    out_config->monochrome = (uint8_t)reader.get_bits(1);
   }
 
   int color_primaries = CP_UNSPECIFIED;
@@ -339,9 +338,9 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
     }
     else {
       if (out_config->twelve_bit) {
-        out_config->chroma_subsampling_x = reader.get_bits(1);
+        out_config->chroma_subsampling_x = (uint8_t)reader.get_bits(1);
         if (out_config->chroma_subsampling_x) {
-          out_config->chroma_subsampling_y = reader.get_bits(1);
+          out_config->chroma_subsampling_y = (uint8_t)reader.get_bits(1);
         }
         else {
           out_config->chroma_subsampling_y = 0;
@@ -355,15 +354,11 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
 
     if (out_config->chroma_subsampling_x &&
         out_config->chroma_subsampling_y) {
-      out_config->chroma_sample_position = reader.get_bits(2);
+      out_config->chroma_sample_position = (uint8_t)reader.get_bits(2);
     }
   }
 
   reader.skip_bits(1); // separate_uv_delta
-/*
-  uint8_t initial_presentation_delay_present = 0;
-  uint8_t initial_presentation_delay_minus_one = 0;
-*/
 
   return true;
 }
