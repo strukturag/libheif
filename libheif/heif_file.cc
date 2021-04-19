@@ -141,6 +141,7 @@ void HeifFile::set_brand(heif_compression_format format)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
       m_ftyp_box->add_compatible_brand(fourcc("heic"));
+      m_ftyp_box->add_compatible_brand(fourcc("miaf"));
       break;
 
     case heif_compression_AV1:
@@ -148,6 +149,7 @@ void HeifFile::set_brand(heif_compression_format format)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("avif"));
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(fourcc("miaf"));
       break;
 
     default:
