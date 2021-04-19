@@ -2208,8 +2208,7 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
 
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
 
-    Box_av1C::configuration configA;
-    bool found_config = fill_av1C_configuration_from_stream(&configA, data, size);
+    bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
     (void)found_config;
 
     if (data == nullptr) {
