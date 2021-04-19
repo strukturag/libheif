@@ -1876,15 +1876,11 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
       break;
 
     case heif_compression_AV1: {
-      heif_item_id image_id = m_heif_file->add_new_image("av01");
-
-      out_image = std::make_shared<Image>(this, image_id);
-      m_top_level_images.push_back(out_image);
-
-      error = out_image->encode_image_as_av1(pixel_image,
-                                             encoder,
-                                             options,
-                                             heif_image_input_class_normal);
+      error = encode_image_as_av1(pixel_image,
+                                  encoder,
+                                  options,
+                                  heif_image_input_class_normal,
+                                  out_image);
     }
       break;
 
@@ -2114,11 +2110,17 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
 }
 
 
-Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
-                                              struct heif_encoder* encoder,
-                                              const struct heif_encoding_options* options,
-                                              enum heif_image_input_class input_class)
+Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
+                                       struct heif_encoder* encoder,
+                                       const struct heif_encoding_options* options,
+                                       enum heif_image_input_class input_class,
+                                       std::shared_ptr<Image>& out_image)
 {
+  heif_item_id image_id = m_heif_file->add_new_image("av01");
+
+  out_image = std::make_shared<Image>(this, image_id);
+  m_top_level_images.push_back(out_image);
+
   // --- check whether we have to convert the image color space
 
   heif_colorspace colorspace = image->get_colorspace();
@@ -2146,21 +2148,18 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
   }
 
 
-  m_width = image->get_width(heif_channel_Y);
-  m_height = image->get_height(heif_channel_Y);
-
   // --- choose which color profile to put into 'colr' box
 
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
-      m_heif_context->m_heif_file->set_color_profile(m_id, icc_profile);
+      m_heif_file->set_color_profile(image_id, icc_profile);
     }
 
     if (nclx_profile &&
         (!icc_profile || (options->version >= 3 &&
                           options->save_two_colr_boxes_when_ICC_and_nclx_available))) {
-      m_heif_context->m_heif_file->set_color_profile(m_id, nclx_profile);
+      m_heif_file->set_color_profile(image_id, nclx_profile);
     }
   }
 
@@ -2178,27 +2177,25 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
 
     // --- encode the alpha image
 
-    heif_item_id alpha_image_id = m_heif_context->m_heif_file->add_new_image("av01");
-
     std::shared_ptr<HeifContext::Image> heif_alpha_image;
-    heif_alpha_image = std::make_shared<Image>(m_heif_context, alpha_image_id);
 
 
-    Error error = heif_alpha_image->encode_image_as_av1(alpha_image, encoder, options,
-                                                        heif_image_input_class_alpha);
+    Error error = encode_image_as_av1(alpha_image, encoder, options,
+                                      heif_image_input_class_alpha,
+                                      heif_alpha_image);
     if (error) {
       return error;
     }
 
-    m_heif_context->m_heif_file->add_iref_reference(alpha_image_id, fourcc("auxl"), {m_id});
-    m_heif_context->m_heif_file->set_auxC_property(alpha_image_id, "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
   }
 
   Box_av1C::configuration config;
   fill_av1C_configuration(&config, image);
 
-  m_heif_context->m_heif_file->add_av1C_property(m_id);
-  m_heif_context->m_heif_file->set_av1C_configuration(m_id, config);
+  m_heif_file->add_av1C_property(image_id);
+  m_heif_file->set_av1C_configuration(image_id, config);
 
 
   heif_image c_api_image;
@@ -2220,26 +2217,26 @@ Error HeifContext::Image::encode_image_as_av1(std::shared_ptr<HeifPixelImage> im
     vec.resize(size);
     memcpy(vec.data(), data, size);
 
-    m_heif_context->m_heif_file->append_iloc_data(m_id, vec);
+    m_heif_file->append_iloc_data(image_id, vec);
   }
 
-  int width, height;
-  width = image->get_width();
-  height = image->get_height();
-  m_heif_context->m_heif_file->add_ispe_property(m_id, width, height);
+  uint32_t input_width, input_height;
+  input_width = image->get_width();
+  input_height = image->get_height();
+  m_heif_file->add_ispe_property(image_id, input_width, input_height);
 
 
   if (encoder->plugin->plugin_api_version >= 3) {
     uint32_t encoded_width, encoded_height;
 
     encoder->plugin->query_encoded_size(encoder->encoder,
-                                        m_width, m_height,
+                                        input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (m_width != encoded_width ||
-        m_height != encoded_height) {
-      m_heif_context->m_heif_file->add_clap_property(m_id, m_width, m_height,
-                                                     encoded_width, encoded_height);;
+    if (input_width != encoded_width ||
+        input_height != encoded_height) {
+      m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                     encoded_width, encoded_height);;
     }
   }
 

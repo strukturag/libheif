@@ -255,11 +255,6 @@ namespace heif {
 
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
-      Error encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options* options,
-                                enum heif_image_input_class input_class);
-
       const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
 
       const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
@@ -351,6 +346,12 @@ namespace heif {
                                const struct heif_encoding_options* options,
                                enum heif_image_input_class input_class,
                                std::shared_ptr<Image>& out_image);
+
+    Error encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
+                              struct heif_encoder* encoder,
+                              const struct heif_encoding_options* options,
+                              enum heif_image_input_class input_class,
+                              std::shared_ptr<Image>& out_image);
 
     void set_primary_image(std::shared_ptr<Image> image);
 
