@@ -153,6 +153,12 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
       seq_header_found = true;
       break;
     }
+    else if (header_info.has_size) {
+      reader.skip_bytes(header_info.size);
+    }
+    else {
+      return false;
+    }
   }
 
   if (!seq_header_found) {
