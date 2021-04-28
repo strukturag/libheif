@@ -1302,7 +1302,7 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
         out_p[y * out_p_stride + pixelsize * x + 5] = in_b[x + y * in_b_stride];
 
         if (output_has_alpha) {
-          out_p[y * out_p_stride + pixelsize * x + 6] = 0xFF;
+          out_p[y * out_p_stride + pixelsize * x + 6] = 0;
           out_p[y * out_p_stride + pixelsize * x + 7] = 0xFF;
         }
       }
