@@ -56,7 +56,7 @@ set (additional_includes
 )
 endif()
 
-if(UNIX)
+if(UNIX OR MINGW)
   include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
   pkg_check_modules (LIBPNG libpng)
   if(LIBPNG_FOUND)
@@ -106,14 +106,17 @@ add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
 target_link_directories (heif-convert PRIVATE ${additional_link_directories})
 target_link_libraries (heif-convert heif ${additional_libraries})
 target_include_directories(heif-convert PRIVATE ${additional_includes})
+install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable (heif-info ${heif_info_sources} ${getopt_sources})
 target_link_libraries (heif-info heif)
+install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
 target_link_directories (heif-enc PRIVATE ${additional_link_directories})
 target_link_libraries (heif-enc heif ${additional_libraries})
 target_include_directories(heif-enc PRIVATE ${additional_includes})
+install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable (heif-test ${heif_test_sources} ${getopt_sources})
 target_link_libraries (heif-test heif)
