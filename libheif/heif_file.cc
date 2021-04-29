@@ -133,7 +133,7 @@ void HeifFile::new_empty_file()
 }
 
 
-void HeifFile::set_brand(heif_compression_format format)
+void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
 {
   // Note: major brand should be repeated in the compatible brands, according to this:
   //   ISOBMFF (ISO/IEC 14496-12:2020) § K.4:
@@ -147,7 +147,6 @@ void HeifFile::set_brand(heif_compression_format format)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
       m_ftyp_box->add_compatible_brand(fourcc("heic"));
-      m_ftyp_box->add_compatible_brand(fourcc("miaf"));
       break;
 
     case heif_compression_AV1:
@@ -155,11 +154,14 @@ void HeifFile::set_brand(heif_compression_format format)
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("avif"));
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
-      m_ftyp_box->add_compatible_brand(fourcc("miaf"));
       break;
 
     default:
       break;
+  }
+
+  if (miaf_compatible) {
+    m_ftyp_box->add_compatible_brand(fourcc("miaf"));
   }
 }
 

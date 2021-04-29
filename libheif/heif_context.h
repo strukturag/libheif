@@ -255,6 +255,13 @@ namespace heif {
       const std::vector<std::shared_ptr<ImageMetadata>>& get_metadata() const { return m_metadata; }
 
 
+      // --- miaf
+
+      void mark_not_miaf_compatible() { m_miaf_compatible = false; }
+
+      bool is_miaf_compatible() const { return m_miaf_compatible; }
+
+
       // === writing ===
 
       void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
@@ -311,6 +318,8 @@ namespace heif {
 
       std::shared_ptr<const color_profile_nclx> m_color_profile_nclx;
       std::shared_ptr<const color_profile_raw> m_color_profile_icc;
+
+      bool m_miaf_compatible = true;
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }

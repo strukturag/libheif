@@ -120,6 +120,25 @@ int heif::num_interleaved_pixels_per_plane(heif_chroma chroma)
 }
 
 
+bool heif::is_integer_multiple_of_chroma_size(int width,
+                                              int height,
+                                              heif_chroma chroma)
+{
+  switch (chroma) {
+    case heif_chroma_444:
+    case heif_chroma_monochrome:
+      return true;
+    case heif_chroma_422:
+      return (width & 1) == 0;
+    case heif_chroma_420:
+      return (width & 1) == 0 && (height & 1) == 0;
+    default:
+      assert(false);
+      return false;
+  }
+}
+
+
 void HeifPixelImage::create(int width, int height, heif_colorspace colorspace, heif_chroma chroma)
 {
   m_width = width;

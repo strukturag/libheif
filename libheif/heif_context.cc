@@ -1875,8 +1875,6 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
 {
   Error error;
 
-  m_heif_file->set_brand(encoder->plugin->compression_format);
-
   // TODO: the hdlr box is not the right place for comments
   // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
 
@@ -1902,6 +1900,9 @@ Error HeifContext::encode_image(std::shared_ptr<HeifPixelImage> pixel_image,
     default:
       return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
   }
+
+  m_heif_file->set_brand(encoder->plugin->compression_format,
+                         out_image->is_miaf_compatible());
 
   return error;
 }
@@ -2009,6 +2010,14 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                                      encoded_height);
 
       m_heif_file->add_ispe_property(image_id, out_image->get_width(), out_image->get_height());
+
+      // MIAF 7.3.6.7
+
+      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                              out_image->get_height(),
+                                              image->get_chroma_format())) {
+        out_image->mark_not_miaf_compatible();
+      }
     }
     else {
       // --- wrap the encoded image in a grid image just to apply the cropping
@@ -2020,13 +2029,27 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
 
       ImageGrid grid;
       grid.set_num_tiles(1, 1);
-      grid.set_output_size(image->get_width(heif_channel_Y), image->get_height(heif_channel_Y));
+      grid.set_output_size(image->get_width(heif_channel_Y), image->get_height(heif_channel_Y)); // TODO: using out_image->get_width/height() would be shorter.
       auto grid_data = grid.write();
+
+      // MIAF 7.3.11.4.2
+
+      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                              out_image->get_height(),
+                                              image->get_chroma_format())) {
+        grid_image->mark_not_miaf_compatible();
+      }
+
+      if ((encoded_width % 64) != 0 &&
+          (encoded_height % 64) != 0) {
+        grid_image->mark_not_miaf_compatible();
+      }
+
 
       m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
 
       m_heif_file->add_ispe_property(grid_image_id,
-                                     image->get_width(heif_channel_Y),
+                                     image->get_width(heif_channel_Y), // TODO: using out_image->get_width/height() would be shorter.
                                      image->get_height(heif_channel_Y));
 
       m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
@@ -2268,7 +2291,15 @@ Error HeifContext::encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
     if (input_width != encoded_width ||
         input_height != encoded_height) {
       m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);;
+                                     encoded_width, encoded_height);
+
+      // MIAF 7.3.6.7
+
+      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                              out_image->get_height(),
+                                              image->get_chroma_format())) {
+        out_image->mark_not_miaf_compatible();
+      }
     }
   }
 

@@ -60,7 +60,7 @@ namespace heif {
 
     void new_empty_file();
 
-    void set_brand(heif_compression_format format);
+    void set_brand(heif_compression_format format, bool miaf_compatible);
 
     void write(StreamWriter& writer);
 
