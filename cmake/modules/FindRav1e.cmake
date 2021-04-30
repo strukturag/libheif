@@ -8,7 +8,7 @@ find_path(RAV1E_INCLUDE_DIR
 )
 
 find_library(RAV1E_LIBRARY
-    NAMES librav1e rav1e
+    NAMES librav1e rav1e rav1e.dll
     HINTS ${RAV1E_PKGCONF_LIBRARY_DIRS} ${RAV1E_PKGCONF_LIBDIR}
 )
 
