@@ -74,7 +74,7 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static const char* kParam_tune = "tune";
 static const char* const kParam_tune_valid_values[] = {
-    "psnr", "ssim"
+    "psnr", "ssim", nullptr
 };
 
 static const int AOM_PLUGIN_PRIORITY = 40;
