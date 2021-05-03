@@ -32,3 +32,4 @@ build:
 artifacts:
   - path: build
   - path: build\**\Release\*.exe
+  - path: build\**\Release\*.dll
