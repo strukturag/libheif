@@ -667,6 +667,13 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
   auto auxType = handle->image->get_aux_type();
 
   char* buf = (char*)malloc(auxType.length()+1);
+  
+  if (buf == nullptr) {
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Unspecified,
+                 "Failed to allocate memory for the type string").error_struct(handle->image.get());
+  }
+  
   strcpy(buf, auxType.c_str());
   *out_type = buf;
 
