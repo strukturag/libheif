@@ -155,7 +155,7 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
       break;
     }
     else if (header_info.has_size) {
-      if (header_info.size > std::numeric_limits<int>::max()) {
+      if (header_info.size > (uint64_t)std::numeric_limits<int>::max()) {
         return false;
       }
 
