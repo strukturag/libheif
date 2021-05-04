@@ -21,6 +21,7 @@
 #include "heif_image.h"
 #include "heif_avif.h"
 #include "bitstream.h"
+#include <limits>
 
 using namespace heif;
 
@@ -154,7 +155,11 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
       break;
     }
     else if (header_info.has_size) {
-      reader.skip_bytes(header_info.size);
+      if (header_info.size > std::numeric_limits<int>::max()) {
+        return false;
+      }
+
+      reader.skip_bytes((int)header_info.size);
     }
     else {
       return false;
