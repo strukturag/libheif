@@ -2458,13 +2458,13 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                heif_channel_B,
                                heif_channel_Alpha}) {
     if (input->has_channel(channel)) {
-      int width = input->get_width(channel);
-      int height = input->get_height(channel);
-      outimg->add_plane(channel, width, height, 8);
-
       int input_bits = input->get_bits_per_pixel(channel);
 
       if (input_bits>8) {
+        int width = input->get_width(channel);
+        int height = input->get_height(channel);
+        outimg->add_plane(channel, width, height, 8);
+
         int shift = input_bits - 8;
 
         const uint16_t* p_in;

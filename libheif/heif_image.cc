@@ -428,6 +428,8 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
   int width = src_image->get_width(src_channel);
   int height = src_image->get_height(src_channel);
 
+  assert(!has_channel(dst_channel));
+
   add_plane(dst_channel, width, height, src_image->get_bits_per_pixel(src_channel));
 
   uint8_t* dst;
