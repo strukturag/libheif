@@ -1132,24 +1132,29 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       img->set_color_profile_icc(icc);
     }
 
-    heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
-                                         img->get_colorspace() :
-                                         out_colorspace);
-
-    if (!alphaImage && target_colorspace == heif_colorspace_YCbCr) {
-      target_colorspace = heif_colorspace_RGB;
+    if (alphaImage) {
+      // no color conversion required
     }
+    else {
+      heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
+                                           img->get_colorspace() :
+                                           out_colorspace);
 
-    heif_chroma target_chroma = (target_colorspace == heif_colorspace_monochrome ?
-                                 heif_chroma_monochrome : heif_chroma_444);
+      if (!alphaImage && target_colorspace == heif_colorspace_YCbCr) {
+        target_colorspace = heif_colorspace_RGB;
+      }
 
-    bool different_chroma = (target_chroma != img->get_chroma_format());
-    bool different_colorspace = (target_colorspace != img->get_colorspace());
+      heif_chroma target_chroma = (target_colorspace == heif_colorspace_monochrome ?
+                                   heif_chroma_monochrome : heif_chroma_444);
 
-    if (different_chroma || different_colorspace) {
-      img = convert_colorspace(img, target_colorspace, target_chroma, nullptr);
-      if (!img) {
-        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+      bool different_chroma = (target_chroma != img->get_chroma_format());
+      bool different_colorspace = (target_colorspace != img->get_colorspace());
+
+      if (different_chroma || different_colorspace) {
+        img = convert_colorspace(img, target_colorspace, target_chroma, nullptr);
+        if (!img) {
+          return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+        }
       }
     }
   }
