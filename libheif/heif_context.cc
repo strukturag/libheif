@@ -1044,7 +1044,7 @@ Error HeifContext::decode_image_user(heif_item_id ID,
 Error HeifContext::decode_image_planar(heif_item_id ID,
                                        std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace out_colorspace,
-                                       const struct heif_decoding_options* options) const
+                                       const struct heif_decoding_options* options, bool alphaImage) const
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
@@ -1136,7 +1136,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
                                          img->get_colorspace() :
                                          out_colorspace);
 
-    if (target_colorspace == heif_colorspace_YCbCr) {
+    if (!alphaImage && target_colorspace == heif_colorspace_YCbCr) {
       target_colorspace = heif_colorspace_RGB;
     }
 
@@ -1272,7 +1272,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (alpha_image) {
       std::shared_ptr<HeifPixelImage> alpha;
       Error err = decode_image_planar(alpha_image->get_id(), alpha,
-                                      heif_colorspace_undefined);
+                                      heif_colorspace_undefined, nullptr, true);
       if (err) {
         return err;
       }
