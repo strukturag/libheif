@@ -97,7 +97,7 @@ struct heif_error aom_new_decoder(void** dec)
 
     delete decoder;
 
-    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
+    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
     return err;
   }
 
@@ -133,7 +133,7 @@ struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_
   aom_codec_err_t aomerr;
   aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*) frame_data, frame_size, NULL);
   if (aomerr) {
-    struct heif_error err = {heif_error_Invalid_input, heif_suberror_Unspecified, kSuccess};
+    struct heif_error err = {heif_error_Invalid_input, heif_suberror_Unspecified, aom_codec_err_to_string(aomerr)};
     return err;
   }
 
