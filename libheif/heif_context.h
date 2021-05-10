@@ -338,8 +338,8 @@ namespace heif {
 
     Error decode_image_planar(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                               heif_colorspace out_colorspace,
-                              const struct heif_decoding_options* options = nullptr,
-                              bool alphaImage = false) const;
+                              const struct heif_decoding_options* options,
+                              bool alphaImage) const;
 
     std::string debug_dump_boxes() const;
 

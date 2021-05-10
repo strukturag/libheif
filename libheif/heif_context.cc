@@ -1011,7 +1011,7 @@ Error HeifContext::decode_image_user(heif_item_id ID,
                                      heif_chroma out_chroma,
                                      const struct heif_decoding_options* options) const
 {
-  Error err = decode_image_planar(ID, img, out_colorspace);
+  Error err = decode_image_planar(ID, img, out_colorspace, options, false);
   if (err) {
     return err;
   }
@@ -1559,7 +1559,7 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 
-  Error err = decode_image_planar(tileID, tile_img, img->get_colorspace());
+  Error err = decode_image_planar(tileID, tile_img, img->get_colorspace(), nullptr, false);
   if (err != Error::Ok) {
     return err;
   }
@@ -1647,7 +1647,7 @@ Error HeifContext::decode_derived_image(heif_item_id ID,
 
 
   Error error = decode_image_planar(reference_image_id, img,
-                                    heif_colorspace_RGB); // TODO: always RGB ?
+                                    heif_colorspace_RGB, nullptr, false); // TODO: always RGB ?
   return error;
 }
 
@@ -1724,7 +1724,7 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   for (size_t i = 0; i < image_references.size(); i++) {
     std::shared_ptr<HeifPixelImage> overlay_img;
     err = decode_image_planar(image_references[i], overlay_img,
-                              heif_colorspace_RGB); // TODO: always RGB? Probably yes, because of RGB background color.
+                              heif_colorspace_RGB, nullptr, false); // TODO: always RGB? Probably yes, because of RGB background color.
     if (err != Error::Ok) {
       return err;
     }
