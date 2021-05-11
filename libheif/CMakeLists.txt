@@ -74,8 +74,6 @@ if(LIBDE265_FOUND)
 
     include_directories(SYSTEM ${LIBDE265_INCLUDE_DIR})
     target_link_libraries(heif PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
-
-    install(FILES heif_decoder_libde265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
 if(X265_FOUND)
@@ -93,8 +91,6 @@ if(X265_FOUND)
 
     include_directories(SYSTEM ${X265_INCLUDE_DIR})
     target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
-
-    install(FILES heif_encoder_x265.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 endif()
 
 if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
