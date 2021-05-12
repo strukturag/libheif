@@ -1118,6 +1118,7 @@ int main(int argc, char** argv)
     return 0;
   }
 
+  const heif_encoder_descriptor* active_encoder_descriptor = nullptr;
   if (count > 0) {
     int idx = 0;
     if (encoderId != nullptr) {
@@ -1140,6 +1141,8 @@ int main(int argc, char** argv)
       std::cerr << error.message << "\n";
       return 5;
     }
+
+    active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
     std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
@@ -1219,8 +1222,16 @@ int main(int argc, char** argv)
 
     //heif_image_set_nclx_color_profile(image.get(), &nclx);
 
+    if (lossless) {
+      if (heif_encoder_descriptor_supportes_lossless_compression(active_encoder_descriptor)) {
+        heif_encoder_set_lossless(encoder, lossless);
+      }
+      else {
+        std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+      }
+    }
+
     heif_encoder_set_lossy_quality(encoder, quality);
-    heif_encoder_set_lossless(encoder, lossless);
     heif_encoder_set_logging_level(encoder, logging_level);
 
     set_params(encoder, raw_params);
