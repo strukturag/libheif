@@ -530,8 +530,8 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height,
                             uint32_t* encoded_width, uint32_t* encoded_height)
 {
-  *encoded_width = std::max(input_width, 16U);
-  *encoded_height = std::max(input_height, 16U);
+  *encoded_width = input_width;
+  *encoded_height = input_height;
 }
 
 
@@ -563,16 +563,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   struct heif_error err;
 
-  // --- round image size to minimum size
-
-  uint32_t rounded_width, rounded_height;
-  aom_query_encoded_size(encoder,
-                         image->image->get_width(),
-                         image->image->get_height(),
-                         &rounded_width,
-                         &rounded_height);
-
-  bool success = image->image->extend_padding_to_size(rounded_width, rounded_height);
+  bool success = image->image->extend_padding_to_size(image->image->get_width(),
+                                                      image->image->get_height());
   if (!success) {
     err = {heif_error_Memory_allocation_error,
            heif_suberror_Unspecified,
