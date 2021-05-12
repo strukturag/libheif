@@ -47,6 +47,7 @@ struct encoder_struct_aom
   int min_q;
   int max_q;
   int threads;
+  bool lossless;
 
   aom_tune_metric tune;
 
@@ -288,6 +289,8 @@ struct heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
     encoder->max_q = 0;
   }
 
+  encoder->lossless = enable;
+
   return heif_error_ok;
 }
 
@@ -295,7 +298,7 @@ struct heif_error aom_get_parameter_lossless(void* encoder_raw, int* enable)
 {
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
 
-  *enable = (encoder->min_q == 0 && encoder->max_q == 0);
+  *enable = encoder->lossless;
 
   return heif_error_ok;
 }
@@ -768,6 +771,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
 
+  if (encoder->lossless) {
+    aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
+  }
 
   // --- encode frame
 
