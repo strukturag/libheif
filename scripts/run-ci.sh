@@ -137,6 +137,10 @@ if [ ! -z "$CMAKE" ]; then
     cmake . $CMAKE_OPTIONS
 fi
 
+if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
+    export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
+fi
+
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
     echo "Building libheif ..."
     make -j $(nproc)
@@ -254,7 +258,6 @@ if [ ! -z "$TARBALL" ]; then
 fi
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
-    export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
     ./libheif/file-fuzzer ./fuzzing/corpus/*
 
     echo "Running color conversion fuzzer ..."
