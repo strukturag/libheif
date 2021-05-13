@@ -2306,6 +2306,10 @@ Error Box_clap::parse(BitstreamRange& range)
   int32_t horizontal_offset_den = range.read32();
   int32_t vertical_offset_num = range.read32();
   int32_t vertical_offset_den = range.read32();
+  if (clean_aperture_width_num < 0 || clean_aperture_width_den < 0 ||
+      clean_aperture_height_num < 0 || clean_aperture_height_den < 0) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_image_size);
+  }
   m_clean_aperture_width = Fraction(clean_aperture_width_num,
                                     clean_aperture_width_den);
   m_clean_aperture_height = Fraction(clean_aperture_height_num,
