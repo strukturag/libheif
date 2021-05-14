@@ -240,7 +240,9 @@ heif::Error heif::BoxHeader::parse(BitstreamRange& range)
 
     if (range.prepare_read(16)) {
       m_uuid_type.resize(16);
-      range.get_istream()->read((char*) m_uuid_type.data(), 16);
+      bool success = range.get_istream()->read((char*) m_uuid_type.data(), 16);
+      assert(success);
+      (void) success;
     }
 
     m_header_size += 16;
@@ -2666,7 +2668,9 @@ Error Box_hvcC::parse(BitstreamRange& range)
 
       if (range.prepare_read(size)) {
         nal_unit.resize(size);
-        range.get_istream()->read((char*) nal_unit.data(), size);
+        bool success = range.get_istream()->read((char*) nal_unit.data(), size);
+        assert(success);
+        (void) success;
       }
 
       array.m_nal_units.push_back(std::move(nal_unit));
