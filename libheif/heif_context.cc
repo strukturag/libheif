@@ -1966,7 +1966,8 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                  err.message);
   }
 
-  int encoded_width, encoded_height;
+  int encoded_width = image->get_width(heif_channel_Y);
+  int encoded_height = image->get_height(heif_channel_Y);
 
   for (;;) {
     uint8_t* data;
