@@ -272,7 +272,7 @@ namespace heif {
 
     int64_t get_bits_remaining() const
     {
-      return bytes_remaining*8 + nextbits_cnt;
+      return ((int64_t) bytes_remaining) * 8 + nextbits_cnt;
     }
 
   private:
