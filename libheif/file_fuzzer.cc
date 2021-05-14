@@ -33,7 +33,8 @@ static void TestDecodeImage(struct heif_context* ctx,
   struct heif_image* image;
   struct heif_error err;
 
-  heif_image_handle_is_primary_image(handle);
+  bool primary = heif_image_handle_is_primary_image(handle);
+  (void) primary;
   int width = heif_image_handle_get_width(handle);
   int height = heif_image_handle_get_height(handle);
   assert(width >= 0);
