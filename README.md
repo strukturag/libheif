@@ -163,6 +163,7 @@ When running `cmake` or `configure`, make sure that the environment variable
 * NodeJS module: [libheif-js](https://www.npmjs.com/package/libheif-js)
 * Python: [pyheif](https://pypi.org/project/pyheif/)
 * Rust: [libheif-sys](https://github.com/Cykooz/libheif-sys)
+* Swift: [libheif-Xcode](https://swiftpackageregistry.com/SDWebImage/libheif-Xcode)
 
 Languages that can directly interface with C libraries (e.g., Swift, C#) should work out of the box.
 
@@ -226,7 +227,9 @@ to update the gdk-pixbuf loader database.
 * digiKam 7.0.0
 * libvips
 * [Kodi HEIF image decoder plugin](https://kodi.wiki/view/Add-on:HEIF_image_decoder)
-
+* [bimg](https://github.com/h2non/bimg)
+* [GDAL](https://gdal.org/drivers/raster/heif.html)
+* [OpenImageIO](https://sites.google.com/site/openimageio/)
 
 ## License
 
