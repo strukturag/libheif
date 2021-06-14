@@ -2024,17 +2024,26 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
     }
   }
 
+  float chroma_divisor = chromaSubH * chromaSubV;
   for (int y = 0; y < height; y += chromaSubV) {
-    const uint8_t* p = &in_p[y * in_stride];
-
     for (int x = 0; x < width; x += chromaSubH) {
-      uint8_t r = p[0];
-      uint8_t g = p[1];
-      uint8_t b = p[2];
-      p += bytes_per_pixel * chromaSubH;
+      float cb_sum = 0.0f;
+      float cr_sum = 0.0f;
+      for (int j = 0; j < chromaSubV; j++) {
+        int yy = std::min(y + j, height - 1);
+        for (int i = 0; i < chromaSubH; i++) {
+          int xx = std::min(x + i, width - 1);
+          const uint8_t* p = &in_p[yy * in_stride + xx * bytes_per_pixel];
+          uint8_t r = p[0];
+          uint8_t g = p[1];
+          uint8_t b = p[2];
 
-      float cb = r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2];
-      float cr = r * coeffs.c[2][0] + g * coeffs.c[2][1] + b * coeffs.c[2][2];
+          cb_sum += r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2];
+          cr_sum += r * coeffs.c[2][0] + g * coeffs.c[2][1] + b * coeffs.c[2][2];
+        }
+      }
+      float cb = cb_sum / chroma_divisor;
+      float cr = cr_sum / chroma_divisor;
 
       if (full_range_flag) {
         out_cb[(y / chromaSubV) * out_cb_stride + (x / chromaSubH)] = clip_f_u8(cb + 128);
