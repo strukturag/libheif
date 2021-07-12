@@ -520,6 +520,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
 
   if (input_class == heif_image_input_class_alpha) {
     chromaSampling = RA_CHROMA_SAMPLING_CS420; // I can't seem to get RA_CHROMA_SAMPLING_CS400 to work right now, unfortunately
+    chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
   }
   else {
     switch (chroma) {
