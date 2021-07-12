@@ -76,7 +76,7 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::
   // 2 - CSP_COLOCATED
   // 3 - CSP_RESERVED
 
-  inout_config->chroma_sample_position = 0;
+  inout_config->chroma_sample_position = (chroma == heif_chroma_420 ? 0 : 2);
 
 
   return Error::Ok;
