@@ -723,6 +723,27 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         float g = in_g[y * in_g_stride + x];
         float b = in_b[y * in_b_stride + x];
 
+        if (subH > 1 || subV > 1) {
+          int x2 = (x + 1 < width && subH == 2 && subV == 2) ? x + 1 : x;  // subV==2 -> Do not center for 4:2:2 (see comment in Op_RGB24_32_to_YCbCr, github issue #521)
+          int y2 = (y + 1 < height && subV == 2) ? y + 1 : y;
+
+          r += in_r[y * in_r_stride + x2];
+          g += in_g[y * in_g_stride + x2];
+          b += in_b[y * in_b_stride + x2];
+
+          r += in_r[y2 * in_r_stride + x];
+          g += in_g[y2 * in_g_stride + x];
+          b += in_b[y2 * in_b_stride + x];
+
+          r += in_r[y2 * in_r_stride + x2];
+          g += in_g[y2 * in_g_stride + x2];
+          b += in_b[y2 * in_b_stride + x2];
+
+          r *= 0.25f;
+          g *= 0.25f;
+          b *= 0.25f;
+        }
+
         float cb, cr;
 
         cb = r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2];
