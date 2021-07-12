@@ -590,23 +590,28 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_img_fmt_t img_format = AOM_IMG_FMT_NONE;
 
   int chroma_height = 0;
+  int chroma_sample_position = AOM_CSP_UNKNOWN;
 
   switch (chroma) {
     case heif_chroma_420:
     case heif_chroma_monochrome:
       img_format = AOM_IMG_FMT_I420;
       chroma_height = (source_height+1)/2;
+      chroma_sample_position = AOM_CSP_UNKNOWN; // TODO: change this to CSP_CENTER in the future (https://github.com/AOMediaCodec/av1-avif/issues/88)
       break;
     case heif_chroma_422:
       img_format = AOM_IMG_FMT_I422;
       chroma_height = (source_height+1)/2;
+      chroma_sample_position = AOM_CSP_COLOCATED;
       break;
     case heif_chroma_444:
       img_format = AOM_IMG_FMT_I444;
       chroma_height = source_height;
+      chroma_sample_position = AOM_CSP_COLOCATED;
       break;
     default:
       img_format = AOM_IMG_FMT_NONE;
+      chroma_sample_position = AOM_CSP_UNKNOWN;
       assert(false);
       break;
   }
@@ -760,6 +765,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // In aom, color_range defaults to limited range (0). Set it to full range (1).
   aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->get_full_range_flag() : 1);
+  aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position);
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||

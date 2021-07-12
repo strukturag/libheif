@@ -515,7 +515,9 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
 
   uint8_t yShift = 0;
   RaChromaSampling chromaSampling;
+  RaChromaSamplePosition chromaPosition;
   RaPixelRange rav1eRange;
+
   if (input_class == heif_image_input_class_alpha) {
     chromaSampling = RA_CHROMA_SAMPLING_CS420; // I can't seem to get RA_CHROMA_SAMPLING_CS400 to work right now, unfortunately
   }
@@ -523,12 +525,15 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     switch (chroma) {
       case heif_chroma_444:
         chromaSampling = RA_CHROMA_SAMPLING_CS444;
+        chromaPosition = RA_CHROMA_SAMPLE_POSITION_COLOCATED;
         break;
       case heif_chroma_422:
         chromaSampling = RA_CHROMA_SAMPLING_CS422;
+        chromaPosition = RA_CHROMA_SAMPLE_POSITION_COLOCATED;
         break;
       case heif_chroma_420:
         chromaSampling = RA_CHROMA_SAMPLING_CS420;
+        chromaPosition = RA_CHROMA_SAMPLE_POSITION_UNKNOWN; // TODO: set to CENTER when AV1 and rav1e supports this
         yShift = 1;
         break;
       default:
@@ -548,8 +553,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   auto rav1eConfigRaw = rav1e_config_default();
   auto rav1eConfig = std::shared_ptr<RaConfig>(rav1eConfigRaw, [](RaConfig* c) { rav1e_config_unref(c); });
 
-  if (rav1e_config_set_pixel_format(rav1eConfig.get(), (uint8_t) bitDepth, chromaSampling,
-                                    RA_CHROMA_SAMPLE_POSITION_UNKNOWN, rav1eRange) < 0) {
+  if (rav1e_config_set_pixel_format(rav1eConfig.get(), (uint8_t) bitDepth, chromaSampling, chromaPosition, rav1eRange) < 0) {
     return heif_error_codec_library_error;
   }
 
