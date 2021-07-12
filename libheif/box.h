@@ -69,6 +69,9 @@ namespace heif {
 
     Fraction(int32_t num, int32_t den);
 
+    // may only use values up to int32_t maximum
+    Fraction(uint32_t num, uint32_t den);
+
     Fraction operator+(const Fraction&) const;
 
     Fraction operator-(const Fraction&) const;
