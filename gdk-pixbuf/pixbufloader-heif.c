@@ -138,6 +138,8 @@ static gboolean stop_load(gpointer context, GError** error)
     (*hpc->update_func)(pixbuf, 0, 0, gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), hpc->user_data);
   }
 
+  g_clear_object(&pixbuf);
+
   result = TRUE;
 
   cleanup:
