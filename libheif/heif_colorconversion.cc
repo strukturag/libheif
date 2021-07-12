@@ -2786,6 +2786,25 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
       float g = static_cast<float>((in[2 + le] << 8) | in[3 - le]);
       float b = static_cast<float>((in[4 + le] << 8) | in[5 - le]);
 
+      int dx = (x + 1 < width) ? bytesPerPixel : 0;
+      int dy = (y + 1 < height) ? in_p_stride : 0;
+
+      r += static_cast<float>((in[0 + le + dx] << 8) | in[1 - le + dx]);
+      g += static_cast<float>((in[2 + le + dx] << 8) | in[3 - le + dx]);
+      b += static_cast<float>((in[4 + le + dx] << 8) | in[5 - le + dx]);
+
+      r += static_cast<float>((in[0 + le + dy] << 8) | in[1 - le + dy]);
+      g += static_cast<float>((in[2 + le + dy] << 8) | in[3 - le + dy]);
+      b += static_cast<float>((in[4 + le + dy] << 8) | in[5 - le + dy]);
+
+      r += static_cast<float>((in[0 + le + dx + dy] << 8) | in[1 - le + dx + dy]);
+      g += static_cast<float>((in[2 + le + dx + dy] << 8) | in[3 - le + dx + dy]);
+      b += static_cast<float>((in[4 + le + dx + dy] << 8) | in[5 - le + dx + dy]);
+
+      r *= 0.25f;
+      g *= 0.25f;
+      b *= 0.25f;
+
       float cb = r * coeffs.c[1][0] + g * coeffs.c[1][1] + b * coeffs.c[1][2];
       float cr = r * coeffs.c[2][0] + g * coeffs.c[2][1] + b * coeffs.c[2][2];
 
