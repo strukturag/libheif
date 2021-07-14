@@ -1219,7 +1219,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
       auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
       if (mirror) {
-        error = img->mirror_inplace(mirror->get_mirror_axis() == Box_imir::MirrorAxis::Horizontal);
+        error = img->mirror_inplace(mirror->get_mirror_direction() == Box_imir::MirrorDirection::Horizontal);
         if (error) {
           return error;
         }

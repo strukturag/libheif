@@ -717,13 +717,13 @@ namespace heif {
     Box_imir(const BoxHeader& hdr) : Box(hdr)
     {}
 
-    enum class MirrorAxis : uint8_t
+    enum class MirrorDirection : uint8_t
     {
       Vertical = 0,
       Horizontal = 1
     };
 
-    MirrorAxis get_mirror_axis() const
+    MirrorDirection get_mirror_direction() const
     { return m_axis; }
 
     std::string dump(Indent&) const override;
@@ -732,7 +732,7 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
 
   private:
-    MirrorAxis m_axis = MirrorAxis::Vertical;
+    MirrorDirection m_axis = MirrorDirection::Vertical;
   };
 
 

@@ -2273,10 +2273,10 @@ Error Box_imir::parse(BitstreamRange& range)
 
   uint16_t axis = range.read8();
   if (axis & 1) {
-    m_axis = MirrorAxis::Horizontal;
+    m_axis = MirrorDirection::Horizontal;
   }
   else {
-    m_axis = MirrorAxis::Vertical;
+    m_axis = MirrorDirection::Vertical;
   }
 
   return range.get_error();
@@ -2288,12 +2288,12 @@ std::string Box_imir::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "mirror axis: ";
+  sstr << indent << "mirror direction: ";
   switch (m_axis) {
-    case MirrorAxis::Vertical:
+    case MirrorDirection::Vertical:
       sstr << "vertical\n";
       break;
-    case MirrorAxis::Horizontal:
+    case MirrorDirection::Horizontal:
       sstr << "horizontal\n";
       break;
   }
