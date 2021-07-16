@@ -152,7 +152,7 @@ else()
     set(have_avif_encoder no)
 endif()
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
-set(VERSION ${PROJECT_VERSION})
+set(VERSION ${PACKAGE_VERSION})
 
 configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 
