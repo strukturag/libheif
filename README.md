@@ -231,6 +231,10 @@ to update the gdk-pixbuf loader database.
 * [GDAL](https://gdal.org/drivers/raster/heif.html)
 * [OpenImageIO](https://sites.google.com/site/openimageio/)
 
+## Source code visualization
+
+![Visualization of this repo](./diagram.svg)
+
 ## License
 
 The libheif is distributed under the terms of the GNU Lesser General Public License.
