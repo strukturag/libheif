@@ -235,6 +235,8 @@ to update the gdk-pixbuf loader database.
 
 ![Visualization of this repo](./diagram.svg)
 
+[Explore source](https://octo-repo-visualization.vercel.app/?repo=strukturag%2Flibheif)
+
 ## License
 
 The libheif is distributed under the terms of the GNU Lesser General Public License.
