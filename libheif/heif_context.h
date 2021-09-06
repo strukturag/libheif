@@ -419,7 +419,8 @@ namespace heif {
 
     Error decode_full_grid_image(heif_item_id ID,
                                  std::shared_ptr<HeifPixelImage>& img,
-                                 const std::vector<uint8_t>& grid_data) const;
+                                 const std::vector<uint8_t>& grid_data,
+                                 const struct heif_decoding_options* options) const;
 
     Error decode_and_paste_tile_image(heif_item_id tileID,
                                       std::shared_ptr<HeifPixelImage> out_image,

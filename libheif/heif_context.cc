@@ -1165,7 +1165,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return error;
     }
 
-    error = decode_full_grid_image(ID, img, data);
+    error = decode_full_grid_image(ID, img, data, options);
     if (error) {
       return error;
     }
@@ -1316,7 +1316,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 // This function only works with RGB images.
 Error HeifContext::decode_full_grid_image(heif_item_id ID,
                                           std::shared_ptr<HeifPixelImage>& img,
-                                          const std::vector<uint8_t>& grid_data) const
+                                          const std::vector<uint8_t>& grid_data, 
+                                          const struct heif_decoding_options* options) const
 {
   ImageGrid grid;
   Error err = grid.parse(grid_data);
@@ -1470,6 +1471,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   tiles.resize(grid.get_rows() * grid.get_columns() );
 
   std::deque<std::future<Error> > errs;
+#else
+  options->start_progress(heif_progress_step_load_tile, grid.get_rows() * grid.get_columns(), options->progress_user_data);
 #endif
 
   for (int y = 0; y < grid.get_rows(); y++) {
@@ -1498,6 +1501,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       if (err) {
         return err;
       }
+      options->on_progress(heif_progress_step_load_tile, reference_idx + 1, options->progress_user_data);
 #endif
 
       x0 += src_width;
@@ -1547,6 +1551,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
     errs.pop_front();
   }
+#else
+  options->end_progress(heif_progress_step_load_tile, options->progress_user_data);
 #endif
 
   return Error::Ok;
