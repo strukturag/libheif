@@ -1472,7 +1472,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   std::deque<std::future<Error> > errs;
 #else
-  options->start_progress(heif_progress_step_load_tile, grid.get_rows() * grid.get_columns(), options->progress_user_data);
+  if (options && options->start_progress) {
+    options->start_progress(heif_progress_step_load_tile, grid.get_rows() * grid.get_columns(), options->progress_user_data);
+  }
 #endif
 
   for (int y = 0; y < grid.get_rows(); y++) {
@@ -1501,7 +1503,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       if (err) {
         return err;
       }
-      options->on_progress(heif_progress_step_load_tile, reference_idx + 1, options->progress_user_data);
+      if (options && options->on_progress) {
+        options->on_progress(heif_progress_step_load_tile, reference_idx + 1, options->progress_user_data);
+      }
 #endif
 
       x0 += src_width;
@@ -1552,7 +1556,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     errs.pop_front();
   }
 #else
-  options->end_progress(heif_progress_step_load_tile, options->progress_user_data);
+  if (options && options->end_progress) {
+    options->end_progress(heif_progress_step_load_tile, options->progress_user_data);
+  }
 #endif
 
   return Error::Ok;
