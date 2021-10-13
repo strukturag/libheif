@@ -2337,3 +2337,9 @@ void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int max
 {
   ctx->context->set_maximum_image_size_limit(maximum_width);
 }
+
+
+void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads)
+{
+  ctx->context->set_max_decoding_threads(max_threads);
+}

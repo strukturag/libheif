@@ -494,6 +494,9 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 LIBHEIF_API
 void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
 
+LIBHEIF_API
+void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
+
 
 // ========================= heif_image_handle =========================
 
