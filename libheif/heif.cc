@@ -1609,6 +1609,45 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 }
 
 
+struct heif_transformations* heif_transformations_alloc()
+{
+  auto transformations = (heif_transformations*) malloc(
+    sizeof(struct heif_transformations)
+  );
+
+  if (transformations) {
+    transformations->version = 1;
+    transformations->crop_left = 0;
+    transformations->crop_top = 0;
+    transformations->crop_width = 0;
+    transformations->crop_height = 0;
+    transformations->orientation_tag = 0;
+  }
+
+  return transformations;
+}
+
+
+void heif_transformations_free(struct heif_transformations* transformations)
+{
+  free(transformations);
+}
+
+
+struct heif_error heif_image_handle_get_transformations(const struct heif_image_handle* handle,
+                                                        struct heif_transformations* transformations)
+{
+  if (transformations == nullptr) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(handle->image.get());
+  }
+
+  handle->image->read_transformations(transformations);
+  return Error::Ok.error_struct(handle->image.get());
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

@@ -927,6 +927,39 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
                                                     struct heif_color_profile_nclx** out_data);
 
 
+// Represents image transformation stored in irot, imir and clap boxes.
+// Unlike boxes in the file, these operations have only one proper order:
+// you always should crop the image first, then rotate according to orientation_tag.
+// imir and irot boxes stored in single orientation_tag. orientation_tag have
+// has the same meaning as orientation tag in EXIF (values from 1 to 8).
+// In general, you may transform the image according to this tag,
+// and if orientation_tag is 0, apply the value from EXIF metadata.
+struct heif_transformations
+{
+  uint8_t version;
+  
+  // version 1 fields
+
+  // Crop coords and size. If clap box is not present, coords will be (0, 0)
+  // and size will be the same as image size.
+  uint32_t crop_left, crop_top;
+  uint32_t crop_width, crop_height;
+
+  // Orientation tag: values 0-8, where 1-8 means the same values
+  // as in EXIF Orientation tag. 0 means no irot or imir boxes in the file.
+  uint8_t orientation_tag;
+};
+
+LIBHEIF_API
+struct heif_transformations* heif_transformations_alloc();
+
+LIBHEIF_API
+void heif_transformations_free(struct heif_transformations* transformations);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_transformations(const struct heif_image_handle* handle,
+                                                        struct heif_transformations* transformations);
+
 
 // ========================= heif_image =========================
 

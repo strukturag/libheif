@@ -1079,6 +1079,47 @@ int HeifContext::Image::get_chroma_bits_per_pixel() const
 }
 
 
+Error HeifContext::Image::read_transformations(struct heif_transformations* transformations) const
+{
+  std::vector<Box_ipco::Property> properties;
+  Error err = m_heif_context->m_heif_file->get_properties(m_id, properties);
+  if (err) {
+    return err;
+  }
+
+  transformations->version = 1;
+  transformations->crop_left = 0;
+  transformations->crop_top = 0;
+  transformations->crop_width = m_ispe_width;
+  transformations->crop_height = m_ispe_height;
+  transformations->orientation_tag = 0;
+
+  // Use this flag to match HeifContext::interpret_heif_file logic
+  bool ispe_read = false;
+  for (const auto& property : properties) {
+    auto ispe = std::dynamic_pointer_cast<Box_ispe>(property.property);
+    if (ispe) {
+      ispe_read = true;
+    }
+    if (!ispe_read) continue;
+
+    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+    if (clap) {
+    }
+
+    auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
+    if (irot) {
+    }
+
+    auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
+    if (mirror) {
+    }
+  }
+  
+  return Error::Ok;
+}
+
+
 Error HeifContext::decode_image_user(heif_item_id ID,
                                      std::shared_ptr<HeifPixelImage>& img,
                                      heif_colorspace out_colorspace,
