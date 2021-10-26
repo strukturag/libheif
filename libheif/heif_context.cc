@@ -116,6 +116,45 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 }
 
 
+static void transform_orientation(struct heif_transformations* transformations,
+  uint8_t rotation, bool horizontal, bool vertical)
+{
+  /* EXIF orientation tag values decomposed by operations
+    1: 0b000: NONE
+    2: 0b001: FLIP_LEFT_RIGHT
+    3: 0b011: ROTATE_180
+    4: 0b010: FLIP_TOP_BOTTOM
+    5: 0b100: TRANSPOSE
+    6: 0b110: ROTATE_270
+    7: 0b111: TRANSVERSE
+    8: 0b101: ROTATE_90
+  */
+  uint8_t tag2bitmask[9] = {
+    0b000, 0b000, 0b001, 0b011, 0b010, 0b100, 0b110, 0b111, 0b101
+  };
+  uint8_t bitmask2tag[9] = {1, 2, 4, 3, 5, 8, 6, 7};
+  
+  // Current operation. rotation in degrees (CCW)
+  uint8_t rotation2bitmask[4] = {0b000, 0b101, 0b011, 0b110};
+  uint8_t operation = rotation2bitmask[rotation & 0b11];
+  if (horizontal) operation ^= 0b1;
+  if (vertical) operation ^= 0b10;
+
+  uint8_t bitmask = tag2bitmask[transformations->orientation_tag];
+
+  // If operation consist of transposition, swap first two bits of bitmask
+  if (operation & 0b100) {
+    uint8_t bit0 = bitmask & 0b01;
+    uint8_t bit1 = bitmask & 0b10;
+    bitmask = (bitmask & 0b100) | (uint8_t) (bit0 << 1) | (uint8_t) (bit1 >> 0);
+  }
+  bitmask ^= operation;
+
+  transformations->orientation_tag = bitmask2tag[bitmask];
+}
+
+
+
 class ImageGrid
 {
 public:
@@ -1103,16 +1142,20 @@ Error HeifContext::Image::read_transformations(struct heif_transformations* tran
     }
     if (!ispe_read) continue;
 
-    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
-    if (clap) {
-    }
-
     auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
     if (irot) {
+      transform_orientation(transformations, (irot->get_rotation() / 90) & 0x3, false, false);
     }
 
-    auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
-    if (mirror) {
+    auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
+    if (imir) {
+      transform_orientation(transformations, 0,
+        imir->get_mirror_direction() == Box_imir::MirrorDirection::Horizontal,
+        imir->get_mirror_direction() == Box_imir::MirrorDirection::Vertical);
+    }
+
+    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+    if (clap) {
     }
   }
   
