@@ -116,8 +116,43 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 }
 
 
+static void transform_crop(struct heif_transformations* transformations,
+  int left, int top, int width, int height, int img_width, int img_height)
+{
+  uint8_t tag_to_bitmask[9] = {
+    0b000, 0b000, 0b001, 0b011, 0b010, 0b100, 0b110, 0b111, 0b101
+  };
+  uint8_t bitmask = tag_to_bitmask[transformations->orientation_tag];
+
+  if (bitmask & 0b100) {
+    int tmp1 = left;
+    int tmp2 = width;
+    left = top;
+    width = height;
+    top = tmp1;
+    height = tmp2;
+  }
+  if (bitmask & 0b001) {
+    left = img_width - (left + width);
+  }
+  if (bitmask & 0b010) {
+    top = img_height - (top + height);
+  }
+
+  left = left < 0 ? 0 : (left >= img_width ? img_width - 1 : left);
+  top = top < 0 ? 0 : (top >= img_height ? img_height - 1 : top);
+  width = width < 0 ? 0 : (width > img_width - left ? img_width - left : width);
+  height = height < 0 ? 0 : (height > img_height - top ? img_height - top : height);
+
+  transformations->crop_left = (uint32_t) left;
+  transformations->crop_top = (uint32_t) top;
+  transformations->crop_width = (uint32_t) width;
+  transformations->crop_height = (uint32_t) height;
+}
+
+
 static void transform_orientation(struct heif_transformations* transformations,
-  uint8_t rotation, bool horizontal, bool vertical)
+  uint8_t angle, bool horizontal, bool vertical)
 {
   /* EXIF orientation tag values decomposed by operations
     1: 0b000: NONE
@@ -125,32 +160,32 @@ static void transform_orientation(struct heif_transformations* transformations,
     3: 0b011: ROTATE_180
     4: 0b010: FLIP_TOP_BOTTOM
     5: 0b100: TRANSPOSE
-    6: 0b110: ROTATE_270
+    6: 0b110: ROTATE_270_CCW
     7: 0b111: TRANSVERSE
-    8: 0b101: ROTATE_90
+    8: 0b101: ROTATE_90_CCW
   */
-  uint8_t tag2bitmask[9] = {
+  uint8_t tag_to_bitmask[9] = {
     0b000, 0b000, 0b001, 0b011, 0b010, 0b100, 0b110, 0b111, 0b101
   };
-  uint8_t bitmask2tag[9] = {1, 2, 4, 3, 5, 8, 6, 7};
+  uint8_t bitmask_to_tag[8] = {1, 2, 4, 3, 5, 8, 6, 7};
   
-  // Current operation. rotation in degrees (CCW)
-  uint8_t rotation2bitmask[4] = {0b000, 0b101, 0b011, 0b110};
-  uint8_t operation = rotation2bitmask[rotation & 0b11];
-  if (horizontal) operation ^= 0b1;
-  if (vertical) operation ^= 0b10;
+  // angle * 90 specifies the angle (counterclockwise) in degrees.
+  uint8_t rotation_to_bitmask[4] = {0b000, 0b101, 0b011, 0b110};
+  uint8_t operation = rotation_to_bitmask[angle & 0b011];
+  if (horizontal) operation ^= 0b001;
+  if (vertical) operation ^= 0b010;
 
-  uint8_t bitmask = tag2bitmask[transformations->orientation_tag];
+  uint8_t bitmask = tag_to_bitmask[transformations->orientation_tag];
 
-  // If operation consist of transposition, swap first two bits of bitmask
-  if (operation & 0b100) {
-    uint8_t bit0 = bitmask & 0b01;
-    uint8_t bit1 = bitmask & 0b10;
-    bitmask = (bitmask & 0b100) | (uint8_t) (bit0 << 1) | (uint8_t) (bit1 >> 0);
+  // If bitmask contatins transposition, swap first two bits of operation
+  if (bitmask & 0b100) {
+    uint8_t bit0 = operation & 0b001;
+    uint8_t bit1 = operation & 0b010;
+    operation = (operation & 0b100) | (uint8_t) (bit0 << 1) | (uint8_t) (bit1 >> 1);
   }
   bitmask ^= operation;
 
-  transformations->orientation_tag = bitmask2tag[bitmask];
+  transformations->orientation_tag = bitmask_to_tag[bitmask];
 }
 
 
@@ -1140,11 +1175,13 @@ Error HeifContext::Image::read_transformations(struct heif_transformations* tran
     if (ispe) {
       ispe_read = true;
     }
-    if (!ispe_read) continue;
+    if (!ispe_read)
+      continue;
 
     auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
     if (irot) {
-      transform_orientation(transformations, (irot->get_rotation() / 90) & 0x3, false, false);
+      transform_orientation(transformations, (irot->get_rotation() / 90) & 0x3,
+        false, false);
     }
 
     auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
@@ -1156,6 +1193,16 @@ Error HeifContext::Image::read_transformations(struct heif_transformations* tran
 
     auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
     if (clap) {
+      int img_width = get_ispe_width();
+      int img_height = get_ispe_height();
+      transform_crop(
+        transformations,
+        clap->left_rounded(img_width),
+        clap->right_rounded(img_width),
+        clap->get_width_rounded(),
+        clap->get_height_rounded(),
+        img_width, img_height
+      );
     }
   }
   
