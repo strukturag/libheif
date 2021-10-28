@@ -1643,8 +1643,9 @@ struct heif_error heif_image_handle_get_transformations(const struct heif_image_
     return err.error_struct(handle->image.get());
   }
 
-  handle->image->read_transformations(transformations);
-  return Error::Ok.error_struct(handle->image.get());
+  Error err = handle->image->read_transformations(transformations);
+
+  return err.error_struct(handle->image.get());
 }
 
 

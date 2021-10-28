@@ -172,8 +172,12 @@ static void transform_orientation(struct heif_transformations* transformations,
   // angle * 90 specifies the angle (counterclockwise) in degrees.
   uint8_t rotation_to_bitmask[4] = {0b000, 0b101, 0b011, 0b110};
   uint8_t operation = rotation_to_bitmask[angle & 0b011];
-  if (horizontal) operation ^= 0b001;
-  if (vertical) operation ^= 0b010;
+  if (horizontal) {
+    operation ^= 0b001;
+  }
+  if (vertical) {
+    operation ^= 0b010;
+  }
 
   uint8_t bitmask = tag_to_bitmask[transformations->orientation_tag];
 
@@ -1180,8 +1184,8 @@ Error HeifContext::Image::read_transformations(struct heif_transformations* tran
 
     auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
     if (irot) {
-      transform_orientation(transformations, (irot->get_rotation() / 90) & 0x3,
-        false, false);
+      transform_orientation(transformations,
+        (irot->get_rotation() / 90) & 0x3, false, false);
     }
 
     auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
@@ -1193,15 +1197,13 @@ Error HeifContext::Image::read_transformations(struct heif_transformations* tran
 
     auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
     if (clap) {
-      int img_width = get_ispe_width();
-      int img_height = get_ispe_height();
       transform_crop(
         transformations,
-        clap->left_rounded(img_width),
-        clap->right_rounded(img_width),
+        clap->left_rounded(m_ispe_width),
+        clap->right_rounded(m_ispe_height),
         clap->get_width_rounded(),
         clap->get_height_rounded(),
-        img_width, img_height
+        m_ispe_width, m_ispe_height
       );
     }
   }
