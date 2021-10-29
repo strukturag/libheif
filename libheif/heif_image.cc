@@ -767,7 +767,7 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
         val16 = a;
         break;
       default:
-        // initialization only to avoid warning of uninitalized variable.
+        // initialization only to avoid warning of uninitialized variable.
         val16 = 0;
         // Should already be detected by the check above ("m_planes.find").
         assert(false);
