@@ -709,7 +709,7 @@ namespace heif {
     int get_rotation() const
     { return m_rotation; }
 
-    void set(int rotation)
+    void set_rotation(int rotation)
     { m_rotation = rotation; }
 
   protected:
@@ -725,6 +725,12 @@ namespace heif {
   class Box_imir : public Box
   {
   public:
+    Box_imir()
+    {
+      set_short_type(fourcc("imir"));
+      set_is_full_box(false);
+    }
+
     Box_imir(const BoxHeader& hdr) : Box(hdr)
     {}
 
@@ -734,13 +740,18 @@ namespace heif {
       Horizontal = 1
     };
 
+    std::string dump(Indent&) const override;
+
     MirrorDirection get_mirror_direction() const
     { return m_axis; }
 
-    std::string dump(Indent&) const override;
+    void set_mirror_direction(MirrorDirection axis)
+    { m_axis = axis; }
 
   protected:
     Error parse(BitstreamRange& range) override;
+
+    Error write(StreamWriter& writer) const override;
 
   private:
     MirrorDirection m_axis = MirrorDirection::Vertical;

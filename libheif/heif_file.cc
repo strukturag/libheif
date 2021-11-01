@@ -708,9 +708,25 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 void HeifFile::add_irot_property(heif_item_id id, int rotation)
 {
   auto irot = std::make_shared<Box_irot>();
-  irot->set(rotation);
+  irot->set_rotation(rotation);
 
   int index = m_ipco_box->append_child_box(irot);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
+void HeifFile::add_imir_property(heif_item_id id, int vertical)
+{
+  auto imir = std::make_shared<Box_imir>();
+
+  if (vertical) {
+    imir->set_mirror_direction(Box_imir::MirrorDirection::Vertical);
+  } else {
+    imir->set_mirror_direction(Box_imir::MirrorDirection::Horizontal);
+  }
+
+  int index = m_ipco_box->append_child_box(imir);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }

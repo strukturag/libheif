@@ -139,6 +139,8 @@ namespace heif {
 
     void add_irot_property(heif_item_id id, int rotation);
 
+    void add_imir_property(heif_item_id id, int vertical);
+
     void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2=0, uint8_t c3=0);
 
     void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);

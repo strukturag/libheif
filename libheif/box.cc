@@ -2284,7 +2284,7 @@ Error Box_imir::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  uint16_t axis = range.read8();
+  uint8_t axis = range.read8();
   if (axis & 1) {
     m_axis = MirrorDirection::Horizontal;
   }
@@ -2293,6 +2293,17 @@ Error Box_imir::parse(BitstreamRange& range)
   }
 
   return range.get_error();
+}
+
+Error Box_imir::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  
+  writer.write8((uint8_t) m_axis);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
 }
 
 
