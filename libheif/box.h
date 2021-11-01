@@ -695,6 +695,12 @@ namespace heif {
   class Box_irot : public Box
   {
   public:
+    Box_irot()
+    {
+      set_short_type(fourcc("irot"));
+      set_is_full_box(false);
+    }
+
     Box_irot(const BoxHeader& hdr) : Box(hdr)
     {}
 
@@ -703,8 +709,13 @@ namespace heif {
     int get_rotation() const
     { return m_rotation; }
 
+    void set(int rotation)
+    { m_rotation = rotation; }
+
   protected:
     Error parse(BitstreamRange& range) override;
+
+    Error write(StreamWriter& writer) const override;
 
   private:
     int m_rotation = 0; // in degrees (CCW)

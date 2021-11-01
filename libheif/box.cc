@@ -2247,12 +2247,25 @@ Error Box_irot::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  uint16_t rotation = range.read8();
+  uint8_t rotation = range.read8();
   rotation &= 0x03;
 
   m_rotation = rotation * 90;
 
   return range.get_error();
+}
+
+
+Error Box_irot::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  
+  uint8_t rotation = (uint8_t) ((m_rotation % 360) / 90);
+  writer.write8(rotation);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
 }
 
 

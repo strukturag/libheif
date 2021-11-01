@@ -692,6 +692,7 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
+
 void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t clap_height,
                                  uint32_t image_width, uint32_t image_height)
 {
@@ -699,6 +700,17 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
   clap->set(clap_width, clap_height, image_width, image_height);
 
   int index = m_ipco_box->append_child_box(clap);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
+void HeifFile::add_irot_property(heif_item_id id, int rotation)
+{
+  auto irot = std::make_shared<Box_irot>();
+  irot->set(rotation);
+
+  int index = m_ipco_box->append_child_box(irot);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
