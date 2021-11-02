@@ -2260,7 +2260,8 @@ Error Box_irot::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
   
-  uint8_t rotation = (uint8_t) ((m_rotation % 360) / 90);
+  // Taking remainder twice for correct negative values handling
+  uint8_t rotation = (uint8_t) (((m_rotation % 360 + 360) % 360) / 90);
   writer.write8(rotation);
 
   prepend_header(writer, box_start);
