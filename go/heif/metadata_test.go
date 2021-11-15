@@ -2,9 +2,16 @@ package heif
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"testing"
 )
+
+// exists checks if the given path exists
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
 
 func TestExifCount(t *testing.T) {
 	ctx, err := NewContext()
@@ -12,9 +19,17 @@ func TestExifCount(t *testing.T) {
 		t.Fatalf("Can't create context: %s", err)
 	}
 
-	filename := path.Join("..", "..", "examples", "mont.heic")
-	if err := ctx.ReadFromFile(filename); err != nil {
-		t.Fatalf("Can't read from %s: %s", filename, err)
+	imageFilename := path.Join("..", "..", "examples", "mont.heic")
+
+	if !exists(imageFilename) {
+		// skip the test, since the image is not available in the repositry, for copyright reasons
+		// the test image can be downloaded from:
+		// https://dynamicwallpaper.club/wallpaper/la4wfuwtkg
+		return
+	}
+
+	if err := ctx.ReadFromFile(imageFilename); err != nil {
+		t.Fatalf("Can't read from %s: %s", imageFilename, err)
 	}
 
 	if count := ctx.GetNumberOfTopLevelImages(); count != 16 {
@@ -52,62 +67,6 @@ func TestExifCount(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+
 	fmt.Println(times)
-
-	thumbnail := false
-
-	handle.GetWidth()
-	handle.GetHeight()
-	handle.HasAlphaChannel()
-	handle.HasDepthImage()
-	count := handle.GetNumberOfDepthImages()
-	if ids := handle.GetListOfDepthImageIDs(); len(ids) != count {
-		t.Errorf("Expected %d depth image ids, got %d", count, len(ids))
-	}
-	if !thumbnail {
-		count = handle.GetNumberOfThumbnails()
-		ids := handle.GetListOfThumbnailIDs()
-		if len(ids) != count {
-			t.Errorf("Expected %d thumbnail image ids, got %d", count, len(ids))
-		}
-		for _, id := range ids {
-			if thumb, err := handle.GetThumbnail(id); err != nil {
-				t.Errorf("Could not get thumbnail %d: %s", id, err)
-			} else {
-				CheckHeifImage(t, thumb, true)
-			}
-		}
-	}
-
-	if img, err := handle.DecodeImage(ColorspaceUndefined, ChromaUndefined, nil); err != nil {
-		t.Errorf("Could not decode image: %s", err)
-	} else {
-		img.GetColorspace()
-		img.GetChromaFormat()
-	}
-
-	decodeTests := []decodeTest{
-		decodeTest{ColorspaceYCbCr, Chroma420},
-		decodeTest{ColorspaceYCbCr, Chroma422},
-		decodeTest{ColorspaceYCbCr, Chroma444},
-		decodeTest{ColorspaceRGB, Chroma444},
-		decodeTest{ColorspaceRGB, ChromaInterleavedRGB},
-		decodeTest{ColorspaceRGB, ChromaInterleavedRGBA},
-		decodeTest{ColorspaceRGB, ChromaInterleavedRRGGBB_BE},
-		decodeTest{ColorspaceRGB, ChromaInterleavedRRGGBBAA_BE},
-	}
-	for _, test := range decodeTests {
-		if img, err := handle.DecodeImage(test.colorspace, test.chroma, nil); err != nil {
-			t.Errorf("Could not decode image with %v / %v: %s", test.colorspace, test.chroma, err)
-		} else {
-			img.GetColorspace()
-			img.GetChromaFormat()
-
-			if _, err := img.GetImage(); err != nil {
-				t.Errorf("Could not get image with %v /%v: %s", test.colorspace, test.chroma, err)
-				continue
-			}
-		}
-	}
-
 }
