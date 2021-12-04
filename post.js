@@ -1,25 +1,25 @@
 function StringToArrayBuffer(str) {
     var buf = new ArrayBuffer(str.length);
     var bufView = new Uint8Array(buf);
-    for (var i=0, strLen=str.length; i<strLen; i++) {
+    for (var i = 0, strLen = str.length; i < strLen; i++) {
         bufView[i] = str.charCodeAt(i);
     }
     return buf;
 }
 
-var HeifImage = function(handle) {
+var HeifImage = function (handle) {
     this.handle = handle;
     this.img = null;
 };
 
-HeifImage.prototype.free = function() {
+HeifImage.prototype.free = function () {
     if (this.handle) {
         libheif.heif_image_handle_release(this.handle);
         this.handle = null;
     }
 };
 
-HeifImage.prototype._ensureImage = function() {
+HeifImage.prototype._ensureImage = function () {
     if (this.img) {
         return;
     }
@@ -36,27 +36,27 @@ HeifImage.prototype._ensureImage = function() {
     this.img = img;
 };
 
-HeifImage.prototype.get_width = function() {
+HeifImage.prototype.get_width = function () {
     this._ensureImage();
     return this.img.width;
 };
 
-HeifImage.prototype.get_height = function() {
+HeifImage.prototype.get_height = function () {
     this._ensureImage();
     return this.img.height;
 };
 
-HeifImage.prototype.is_primary = function() {
+HeifImage.prototype.is_primary = function () {
     this._ensureImage();
     return !!this.img.is_primary;
 }
 
-HeifImage.prototype.display = function(image_data, callback) {
+HeifImage.prototype.display = function (image_data, callback) {
     // Defer color conversion.
     var w = this.get_width();
     var h = this.get_height();
 
-    setTimeout(function() {
+    setTimeout(function () {
         this._ensureImage();
         if (!this.img) {
             // Decoding failed.
@@ -74,7 +74,7 @@ HeifImage.prototype.display = function(image_data, callback) {
         var voffset = 0;
         var x2;
         var i = 0;
-        var maxi = w*h;
+        var maxi = w * h;
         var stridey = w;
         var strideu = Math.ceil(w / 2);
         var stridev = Math.ceil(w / 2);
@@ -89,19 +89,19 @@ HeifImage.prototype.display = function(image_data, callback) {
 
             uval = u[uoffset + x2] - 128;
             vval = v[voffset + x2] - 128;
-            dest[(i<<2)+0] = yval + 1.596 * vval;
-            dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-            dest[(i<<2)+2] = yval + 2.018 * uval;
-            dest[(i<<2)+3] = 0xff;
+            dest[(i << 2) + 0] = yval + 1.596 * vval;
+            dest[(i << 2) + 1] = yval - 0.813 * vval - 0.391 * uval;
+            dest[(i << 2) + 2] = yval + 2.018 * uval;
+            dest[(i << 2) + 3] = 0xff;
             i++;
             xpos++;
 
             if (xpos < w) {
                 yval = 1.164 * (y[yoffset + xpos] - 16);
-                dest[(i<<2)+0] = yval + 1.596 * vval;
-                dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-                dest[(i<<2)+2] = yval + 2.018 * uval;
-                dest[(i<<2)+3] = 0xff;
+                dest[(i << 2) + 0] = yval + 1.596 * vval;
+                dest[(i << 2) + 1] = yval - 0.813 * vval - 0.391 * uval;
+                dest[(i << 2) + 2] = yval + 2.018 * uval;
+                dest[(i << 2) + 3] = 0xff;
                 i++;
                 xpos++;
             }
@@ -118,11 +118,11 @@ HeifImage.prototype.display = function(image_data, callback) {
     }.bind(this), 0);
 };
 
-var HeifDecoder = function() {
+var HeifDecoder = function () {
     this.decoder = null;
 };
 
-HeifDecoder.prototype.decode = function(buffer) {
+HeifDecoder.prototype.decode = function (buffer) {
     if (this.decoder) {
         libheif.heif_context_free(this.decoder);
     }
@@ -161,7 +161,7 @@ HeifDecoder.prototype.decode = function(buffer) {
 };
 
 this.HeifDecoder = HeifDecoder;
-this.fourcc = function(s) {
+this.fourcc = function (s) {
     return s.charCodeAt(0) << 24 |
         s.charCodeAt(1) << 16 |
         s.charCodeAt(2) << 8 |
@@ -170,4 +170,5 @@ this.fourcc = function(s) {
 // Expose enum values.
 
 // NOTE: wrapped inside "(function() {" block from pre.js
+return this;
 }).call({});
