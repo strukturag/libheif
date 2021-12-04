@@ -19,4 +19,4 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 window.libheif = (function() {
-    var libheif = this;
+    var libheif = window.Module;
