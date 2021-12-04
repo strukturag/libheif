@@ -160,24 +160,14 @@ HeifDecoder.prototype.decode = function(buffer) {
     return result;
 };
 
-libheif = this = {
-    // Expose high-level API.
-    /** @expose */
-    HeifDecoder: HeifDecoder,
-
-    // Expose low-level API.
-    /** @expose */
-    fourcc: function(s) {
-        return s.charCodeAt(0) << 24 |
-            s.charCodeAt(1) << 16 |
-            s.charCodeAt(2) << 8 |
-            s.charCodeAt(3);
-    }
-};
-
-var key;
-
+this.HeifDecoder = HeifDecoder;
+this.fourcc = function(s) {
+    return s.charCodeAt(0) << 24 |
+        s.charCodeAt(1) << 16 |
+        s.charCodeAt(2) << 8 |
+        s.charCodeAt(3);
+}
 // Expose enum values.
 
 // NOTE: wrapped inside "(function() {" block from pre.js
-}).call(window.libheif);
+}).call({});
