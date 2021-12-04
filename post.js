@@ -25,7 +25,7 @@ HeifImage.prototype._ensureImage = function () {
     }
 
     var img = libheif.heif_js_decode_image(this.handle,
-        libheif.heif_colorspace_YCbCr, libheif.heif_chroma_420);
+        libheif.heif_colorspace.heif_colorspace_YCbCr, libheif.heif_chroma.heif_chroma_420);
     if (!img || img.code) {
         console.log("Decoding image failed", this.handle, img);
         return;
@@ -132,7 +132,7 @@ HeifDecoder.prototype.decode = function (buffer) {
         return [];
     }
     var error = libheif.heif_context_read_from_memory(this.decoder, buffer);
-    if (error.code !== libheif.heif_error_Ok) {
+    if (error.code !== libheif.heif_error_code.heif_error_Ok) {
         console.log("Could not parse HEIF file", error);
         return [];
     }
