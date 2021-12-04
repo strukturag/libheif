@@ -18,16 +18,5 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
+window.libheif = {};
 (function() {
-var Module = {
-    print: function(text) {
-        text = Array.prototype.slice.call(arguments).join(' ');
-        console.log(text);
-    },
-    printErr: function(text) {
-        text = Array.prototype.slice.call(arguments).join(' ');
-        console.error(text);
-    },
-    canvas: {},
-    noInitialRun: true
-};
