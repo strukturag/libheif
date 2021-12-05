@@ -139,10 +139,10 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
                                                            heif_channel_Cr, nullptr);
     data.resize((width * height) + (width * height / 2));
     strided_copy(data.data(), plane_y, width, height, width);
-    strided_copy(data.data() + (width * height),
-                 plane_u, width / 2, height / 2, width / 2);
-    strided_copy(data.data() + (width * height) + (width * height / 4),
-                 plane_v, width / 2, height / 2, width / 2);
+    // strided_copy(data.data() + (width * height),
+    //              plane_u, width / 2, height / 2, width / 2);
+    // strided_copy(data.data() + (width * height) + (width * height / 4),
+    //              plane_v, width / 2, height / 2, width / 2);
   }
   break;
   case heif_colorspace_RGB:
