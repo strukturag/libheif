@@ -88,10 +88,6 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   return result;
 }
 
-static int round_odd(int v) {
-  return (int) ((v / 2.0) + 0.5);
-}
-
 static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
                                             enum heif_colorspace colorspace, enum heif_chroma chroma)
 {
