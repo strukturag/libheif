@@ -142,7 +142,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     strided_copy(data.data() + (width * height / 2),
                  plane_u, width / 2, height / 2, stride_u);
     strided_copy(data.data() + (width * height / 2) + (width * height / 4),
-                 plane_v, width / 4, height / 4, stride_v);
+                 plane_v, width / 2, height / 2, stride_v);
   }
   break;
   case heif_colorspace_RGB:
