@@ -128,21 +128,21 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
   case heif_colorspace_YCbCr:
   {
-    int stride_y;
+    // int stride_y;
     const uint8_t *plane_y = heif_image_get_plane_readonly(image,
-                                                           heif_channel_Y, &stride_y);
-    int stride_u;
+                                                           heif_channel_Y, nullptr);
+    // int stride_u;
     const uint8_t *plane_u = heif_image_get_plane_readonly(image,
-                                                           heif_channel_Cb, &stride_u);
-    int stride_v;
+                                                           heif_channel_Cb, nullptr);
+    // int stride_v;
     const uint8_t *plane_v = heif_image_get_plane_readonly(image,
-                                                           heif_channel_Cr, &stride_v);
+                                                           heif_channel_Cr, nullptr);
     data.resize((width * height) + (width * height / 2));
-    strided_copy(data.data(), plane_y, width, height, stride_y);
+    strided_copy(data.data(), plane_y, width, height, nullptr);
     strided_copy(data.data() + (width * height),
-                 plane_u, width / 2, height / 2, stride_u);
+                 plane_u, width / 2, height / 2, nullptr);
     strided_copy(data.data() + (width * height) + (width * height / 4),
-                 plane_v, width / 2, height / 2, stride_v);
+                 plane_v, width / 2, height / 2, nullptr);
   }
   break;
   case heif_colorspace_RGB:
@@ -171,8 +171,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     // Should never reach here.
     break;
   }
-  result.set("data", std::string(reinterpret_cast<char*>(data.data()),
-      data.size()));
+  result.set("data", std::string(reinterpret_cast<char *>(data.data()),
+                                 data.size()));
   // result.set("data", std::move(data));
   heif_image_release(image);
   return result;
