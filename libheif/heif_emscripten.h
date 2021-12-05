@@ -108,7 +108,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("width", width);
   int height = heif_image_get_height(image, heif_channel_Y);
   result.set("height", height);
-  std::string data;
+  std::vector<uint8_t> data;
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
   switch (heif_image_get_colorspace(image)) {
@@ -157,10 +157,10 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       // Should never reach here.
       break;
   }
-  result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
-      image_data.size()));
-  // result.set("data", std::move(data));
-  // heif_image_release(image);
+  // result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
+  //     image_data.size()));
+  result.set("data", std::move(data));
+  heif_image_release(image);
   return result;
 }
 
