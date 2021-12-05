@@ -132,11 +132,11 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_y = heif_image_get_plane_readonly(image,
                                                            heif_channel_Y, nullptr);
     // int stride_u;
-    const uint8_t *plane_u = heif_image_get_plane_readonly(image,
-                                                           heif_channel_Cb, nullptr);
+    // const uint8_t *plane_u = heif_image_get_plane_readonly(image,
+    //                                                        heif_channel_Cb, nullptr);
     // int stride_v;
-    const uint8_t *plane_v = heif_image_get_plane_readonly(image,
-                                                           heif_channel_Cr, nullptr);
+    // const uint8_t *plane_v = heif_image_get_plane_readonly(image,
+    //                                                        heif_channel_Cr, nullptr);
     data.resize((width * height) + (width * height / 2));
     strided_copy(data.data(), plane_y, width, height, width);
     // strided_copy(data.data() + (width * height),
