@@ -157,8 +157,10 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       // Should never reach here.
       break;
   }
-  result.set("data", std::move(data));
-  heif_image_release(image);
+  result.set("data", std::string(reinterpret_cast<char*>(image_data.data()),
+      image_data.size()));
+  // result.set("data", std::move(data));
+  // heif_image_release(image);
   return result;
 }
 
