@@ -137,15 +137,12 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
                                                            heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image,
                                                            heif_channel_Cr, &stride_v);
-    result.set("stride_y", stride_y);
-    result.set("stride_u", stride_u);
-    result.set("stride_v", stride_v);
     data.resize((width * height) + (width * height / 2));
-    strided_copy(data.data(), plane_y, width, height, width);
-    strided_copy(data.data() + (width * height),
-                 plane_u, width / 2, height / 2, width / 2);
-    strided_copy(data.data() + (width * height) + (width * height / 4),
-                 plane_v, width / 2, height / 2, width / 2);
+    strided_copy(data.data(), plane_y, width, height, stride_y);
+    strided_copy(data.data() + (width * height / 2),
+                 plane_u, width / 2, height / 2, stride_u);
+    strided_copy(data.data() + (width * height / 2) + (width * height / 4),
+                 plane_v, width / 4, height / 4, stride_v);
   }
   break;
   case heif_colorspace_RGB:
