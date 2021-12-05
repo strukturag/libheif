@@ -123,7 +123,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_v = heif_image_get_plane_readonly(image,
                                                              heif_channel_Cr, &stride_v);
       data.resize((width * height) + (width * height / 2));
-      unsigned char* dest = const_cast<unsigned char*>(data.data());
+      unsigned char* dest = reinterpret_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_y, width, height, stride_y);
       strided_copy(dest + (width * height), plane_u,
                    width / 2, height / 2, stride_u);
@@ -138,7 +138,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
                                                                heif_channel_interleaved, &stride_rgb);
       data.resize(width * height * 3);
-      unsigned char* dest = const_cast<unsigned char*>(data.data());
+      unsigned char* dest = reinterpret_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
     }
       break;
@@ -149,7 +149,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
                                                                 heif_channel_Y, &stride_grey);
       data.resize(width * height);
-      unsigned char* dest = const_cast<unsigned char*>(data.data());
+      unsigned char* dest = reinterpret_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_grey, width, height, stride_grey);
     }
       break;
