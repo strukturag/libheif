@@ -151,10 +151,10 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
-    data.resize(widhtOnHeight + widhtOnHeight / 2);
+    data.resize(widhtOnHeight + (widhtOnHeight / 2));
     strided_copy(data.data(), plane_y, width, height, stride_y);
     strided_copy(data.data() + widhtOnHeight, plane_u, width / 2, height / 2, stride_u);
-    strided_copy(data.data() + widhtOnHeight + widhtOnHeight / 4,
+    strided_copy(data.data() + widhtOnHeight + (widhtOnHeight / 4),
                  plane_v, width / 2, height / 2, stride_v);
   }
   break;
@@ -163,8 +163,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    data.resize(stride_rgb * height * 3);
-    strided_copy(data.data(), plane_rgb, stride_rgb * 3, height, stride_rgb);
+    data.resize(widhtOnHeight * 3);
+    strided_copy(data.data(), plane_rgb, width * 3, height, stride_rgb);
   }
   break;
   case heif_colorspace_monochrome:
