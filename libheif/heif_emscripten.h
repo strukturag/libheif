@@ -163,8 +163,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    data.resize(widhtOnHeight * 3);
-    strided_copy(data.data(), plane_rgb, width * 3, height, stride_rgb);
+    data.resize(stride_rgb * height * 3);
+    strided_copy(data.data(), plane_rgb, stride_rgb * 3, height, stride_rgb);
   }
   break;
   case heif_colorspace_monochrome:
