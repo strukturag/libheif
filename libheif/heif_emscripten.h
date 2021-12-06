@@ -131,7 +131,6 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   }
   int width = heif_image_get_width(image, channel);
   int height = heif_image_get_height(image, channel);
-  int widhtOnHeight = width * height;
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
   result.set("thumbnails", heif_image_handle_get_number_of_thumbnails(handle));
@@ -151,13 +150,12 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
-    data.resize(widhtOnHeight + (widhtOnHeight / 2));
-    strided_copy(&(data.data()[0]),
-                 plane_y, width, height, stride_y);
-    strided_copy(&(data.data()[widhtOnHeight]),
+    data.resize((width * height) + (width * height / 2));
+    strided_copy(data.data(), plane_y, width, height, stride_y);
+    strided_copy(data.data() + (width * height),
                  plane_u, width / 2, height / 2, stride_u);
-    strided_copy(&(data.data()[widhtOnHeight + (widhtOnHeight / 4)]),
-                 plane_v, width / 2, height / 2, stride_v);
+    strided_copy(data.data() + (width * height) + (width * height / 4),
+                 plane_v, width / 4, stride_v / 4, stride_v);
   }
   break;
   case heif_colorspace_RGB:
@@ -165,8 +163,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    data.resize(widhtOnHeight * 3);
-    strided_copy(&(data.data()[0]), plane_rgb, width * 3, height, stride_rgb);
+    data.resize(width * height * 3);
+    strided_copy(data.data(), plane_rgb, width * 3, height, stride_rgb);
   }
   break;
   case heif_colorspace_monochrome:
@@ -174,8 +172,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
     int stride_grey;
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_grey);
-    data.resize(widhtOnHeight);
-    strided_copy(&(data.data()[0]), plane_grey, width, height, stride_grey);
+    data.resize(width * height);
+    strided_copy(data.data(), plane_grey, width, height, stride_grey);
   }
   break;
   default:
