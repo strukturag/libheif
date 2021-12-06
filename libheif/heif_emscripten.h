@@ -116,6 +116,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   enum heif_channel channel;
   switch (heif_image_get_colorspace(image))
   {
+  case heif_colorspace_monochrome:
+  case heif_colorspace_undefined:
   case heif_colorspace_YCbCr:
   {
     channel = heif_channel_Y;
