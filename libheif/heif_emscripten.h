@@ -11,7 +11,6 @@
 
 #include "heif.h"
 
-
 static std::string _heif_get_version()
 {
   return heif_get_version();
@@ -114,8 +113,22 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
     return emscripten::val(err);
   }
-  int width = heif_image_get_width(image, heif_channel_Y);
-  int height = heif_image_get_height(image, heif_channel_Y);
+  enum heif_channel channel;
+  switch (heif_image_get_colorspace(image))
+  {
+  case heif_colorspace_YCbCr:
+  {
+    channel = heif_channel_Y;
+  }
+  break;
+  case heif_colorspace_RGB:
+  {
+    channel = heif_channel_interleaved;
+  }
+  break;
+  }
+  int width = heif_image_get_width(image, channel);
+  int height = heif_image_get_height(image, channel);
   int widhtOnHeight = width * height;
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
