@@ -145,7 +145,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
 
-  std::string data;
+  std::vector<char> data;
   switch (heif_image_get_colorspace(image))
   {
   case heif_colorspace_YCbCr:
