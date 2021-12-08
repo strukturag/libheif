@@ -157,7 +157,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
     data.resize((4 * half_width * half_height) + (2 * half_width * half_height));
-    char *dest = const_cast<char *>(data.data());
+    uint8_t* dest = reinterpret_cast<uint8_t*>(const_cast<char *>(data.data()));
     strided_copy(dest, plane_y, width, height, stride_y);
     strided_copy(dest + (4 * half_width * half_height),
                  plane_u, half_width, half_height, stride_u);
