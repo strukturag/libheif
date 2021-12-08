@@ -157,13 +157,13 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
-    data.resize((width * height) + (2 * round_odd(width) * round_odd(height)));
+    data.resize((width * height) + (2 * half_width * half_height));
     char *dest = const_cast<char *>(data.data());
     strided_copy(dest, plane_y, width, height, stride_y);
     strided_copy(dest + (width * height), plane_u,
-                 round_odd(width), round_odd(height), stride_u);
-    strided_copy(dest + (width * height) + (round_odd(width) * round_odd(height)),
-                 plane_v, round_odd(width), round_odd(height), stride_v);
+                 half_width, half_height, stride_u);
+    strided_copy(dest + (width * height) + (half_width * half_height),
+                 plane_v, half_width, half_height, stride_v);
   }
   break;
   case heif_colorspace_RGB:
