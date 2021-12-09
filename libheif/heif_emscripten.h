@@ -27,24 +27,6 @@ static struct heif_error _heif_context_read_from_memory(
   return heif_context_read_from_memory(context, data.data(), data.size(), nullptr);
 }
 
-static void strided_copy(void *dest, const void *src, int width, int height,
-                         int stride)
-{
-  if (width == stride)
-  {
-    memcpy(dest, src, width * height);
-  }
-  else
-  {
-    const uint8_t *_src = static_cast<const uint8_t *>(src);
-    uint8_t *_dest = static_cast<uint8_t *>(dest);
-    for (int y = 0; y < height; y++, _dest += width, _src += stride)
-    {
-      memcpy(_dest, _src, stride);
-    }
-  }
-}
-
 static emscripten::val heif_js_context_get_image_handle(
     struct heif_context *context, heif_item_id id)
 {
