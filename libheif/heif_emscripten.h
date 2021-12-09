@@ -118,7 +118,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   }
   int width = heif_image_get_width(image, channel);
   int height = heif_image_get_height(image, channel);
-  // int half_width = round_odd(width);
+  int half_width = round_odd(width);
   int half_height = round_odd(height);
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
@@ -132,37 +132,27 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
   case heif_colorspace_YCbCr:
   {
-    uint32_t stride_y;
-    uint32_t stride_u;
-    uint32_t stride_v;
-    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
-    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
-    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
+    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, nullptr);
+    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, nullptr);
+    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, nullptr);
 
-    result.set("stride_y", stride_y);
-    result.set("stride_u", stride_u);
-    result.set("stride_v", stride_v);
-    result.set("y", std::move(std::string(plane_y, plane_y + (int)stride_y * height - 1)));
-    result.set("u", std::move(std::string(plane_u, plane_u + (int)stride_u * half_height - 1)));
-    result.set("v", std::move(std::string(plane_v, plane_v + (int)stride_v * half_height - 1)));
+    result.set("y", std::move(std::string(plane_y, plane_y + half_width * height - 1)));
+    result.set("u", std::move(std::string(plane_u, plane_u + half_width * half_height - 1)));
+    result.set("v", std::move(std::string(plane_v, plane_v + half_width * half_height - 1)));
   }
   break;
   case heif_colorspace_RGB:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
-    int stride_rgb;
-    const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    result.set("stride_v", stride_rgb);
-    result.set("rgb", std::move(std::string(plane_rgb, plane_rgb + 3 * stride_rgb * height - 1)));
+    const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, nullptr);
+    result.set("rgb", std::move(std::string(plane_rgb, plane_rgb + 3 * width * height - 1)));
   }
   break;
   case heif_colorspace_monochrome:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
-    int stride_m;
-    const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_m);
-    result.set("stride_v", stride_m);
-    result.set("y", std::move(std::string(plane_grey, plane_grey + stride_m * height - 1)));
+    const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, nullptr);
+    result.set("y", std::move(std::string(plane_grey, plane_grey + width * height - 1)));
   }
   break;
   default:
