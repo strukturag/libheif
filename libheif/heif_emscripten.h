@@ -16,6 +16,16 @@ static int round_odd(int v)
   return (int)((v / 2.0) + 0.5);
 }
 
+static std::string getString(const uint8_t *bytes, int size_)
+{
+  std::ostringstream convert;
+
+  for (int a = 0; a < size_; a++)
+    convert << (int)bytes[a];
+
+  return convert.str()
+}
+
 static std::string _heif_get_version()
 {
   return heif_get_version();
@@ -153,24 +163,24 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
-    
-    result.set("y", std::string(std::move(reinterpret_cast<const char *>(plane_y))));
-    result.set("u", std::string(std::move(reinterpret_cast<const char *>(plane_u))));
-    result.set("v", std::string(std::move(reinterpret_cast<const char *>(plane_v))));
+
+    result.set("y", std::move(getString(plane_v, width * height)));
+    result.set("u", std::move(getString(plane_u, half_width * half_height)));
+    result.set("v", std::move(getString(plane_v, half_width * half_height)));
   }
   break;
   case heif_colorspace_RGB:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    result.set("rgb", std::string(std::move(reinterpret_cast<char *>(plane_rgb))));
+    result.set("rgb", std::move(plane_rgb, 3 * width * height));
   }
   break;
   case heif_colorspace_monochrome:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_grey);
-    result.set("y", std::string(std::move(reinterpret_cast<char *>(plane_grey))));
+    result.set("y", std::move(getString(plane_grey, width * height)));
   }
   break;
   default:
