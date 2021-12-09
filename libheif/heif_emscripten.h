@@ -154,9 +154,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
     
-    result.set("y", std::string(std::move(reinterpret_cast<char *>(plane_y))));
-    result.set("u", std::string(std::move(reinterpret_cast<char *>(plane_u))));
-    result.set("v", std::string(std::move(reinterpret_cast<char *>(plane_v))));
+    result.set("y", std::string(std::move(reinterpret_cast<const char *>(plane_y))));
+    result.set("u", std::string(std::move(reinterpret_cast<const char *>(plane_u))));
+    result.set("v", std::string(std::move(reinterpret_cast<const char *>(plane_v))));
   }
   break;
   case heif_colorspace_RGB:
