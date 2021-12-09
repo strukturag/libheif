@@ -16,16 +16,6 @@ static int round_odd(int v)
   return (int)((v / 2.0) + 0.5);
 }
 
-static std::string getString(const uint8_t *bytes, int size_)
-{
-  std::ostringstream convert;
-
-  for (int a = 0; a < size_; a++)
-    convert << (int)bytes[a];
-
-  return convert.str()
-}
-
 static std::string _heif_get_version()
 {
   return heif_get_version();
@@ -164,9 +154,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, nullptr);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, nullptr);
 
-    result.set("y", std::move(getString(plane_v, width * height)));
-    result.set("u", std::move(getString(plane_u, half_width * half_height)));
-    result.set("v", std::move(getString(plane_v, half_width * half_height)));
+    result.set("y", std::move(std::string(plane_y, plane_y + width * height)));
+    result.set("u", std::move(std::string(plane_u, plane_u + half_width * half_height)));
+    result.set("v", std::move(std::string(plane_v, plane_v + half_width * half_height)));
   }
   break;
   case heif_colorspace_RGB:
