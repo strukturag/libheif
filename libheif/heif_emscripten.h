@@ -163,14 +163,14 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, nullptr);
-    result.set("rgb", std::move(plane_rgb, 3 * width * height));
+    result.set("rgb", std::move(std::string(plane_rgb, plane_rgb + 3 * width * height)));
   }
   break;
   case heif_colorspace_monochrome:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, nullptr);
-    result.set("y", std::move(getString(plane_grey, width * height)));
+    result.set("y", std::move(std::string(plane_grey, plane_grey + width * height)));
   }
   break;
   default:
