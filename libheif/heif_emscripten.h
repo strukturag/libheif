@@ -146,51 +146,38 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
 
-  std::string data;
   switch (heif_image_get_colorspace(image))
   {
   case heif_colorspace_YCbCr:
   {
-    int stride_y;
-    int stride_u;
-    int stride_v;
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
-    data.resize((width * height) + (2 * half_width * half_height));
-    char *dest = const_cast<char *>(data.data());
-    strided_copy(dest, plane_y, width, height, stride_y);
-    strided_copy(dest + (width * height), plane_u,
-                 half_width, half_height, stride_u);
-    strided_copy(dest + (width * height) + (half_width * half_height),
-                 plane_v, half_width, half_height, stride_v);
+    
+    result.set("y", std::string(std::move(reinterpret_cast<char *>(plane_y))));
+    result.set("u", std::string(std::move(reinterpret_cast<char *>(plane_u))));
+    result.set("v", std::string(std::move(reinterpret_cast<char *>(plane_v))));
   }
   break;
   case heif_colorspace_RGB:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
-    int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
-    data.resize(width * height * 3);
-    char *dest = const_cast<char *>(data.data());
-    strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
+    result.set("rgb", std::string(std::move(reinterpret_cast<char *>(plane_rgb))));
   }
   break;
   case heif_colorspace_monochrome:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
-    int stride_grey;
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_grey);
-    data.resize(width * height);
-    char *dest = const_cast<char *>(data.data());
-    strided_copy(dest, plane_grey, width, height, stride_grey);
+    result.set("y", std::string(std::move(reinterpret_cast<char *>(plane_grey))));
   }
   break;
   default:
     // Should never reach here.
     break;
   }
-  result.set("data", std::move(data));
+
   heif_image_release(image);
   return result;
 }
