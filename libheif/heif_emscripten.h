@@ -139,6 +139,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
 
+    result.set("stride_y", stride_y);
+    result.set("stride_u", stride_u);
+    result.set("stride_v", stride_v);
     result.set("y", std::move(std::string(plane_y, plane_y + stride_y * height)));
     result.set("u", std::move(std::string(plane_u, plane_u + stride_u * half_height)));
     result.set("v", std::move(std::string(plane_v, plane_v + stride_v * half_height)));
@@ -149,6 +152,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
     int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
+    result.set("stride_v", stride_rgb);
     result.set("rgb", std::move(std::string(plane_rgb, plane_rgb + 3 * stride_rgb * height)));
   }
   break;
@@ -157,6 +161,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
     int stride_m;
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_m);
+    result.set("stride_v", stride_m);
     result.set("y", std::move(std::string(plane_grey, plane_grey + stride_m * height)));
   }
   break;
