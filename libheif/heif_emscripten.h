@@ -132,9 +132,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
   case heif_colorspace_YCbCr:
   {
-    int stride_y;
-    int stride_u;
-    int stride_v;
+    uint32_t stride_y;
+    uint32_t stride_u;
+    uint32_t stride_v;
     const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
     const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
@@ -142,9 +142,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     result.set("stride_y", stride_y);
     result.set("stride_u", stride_u);
     result.set("stride_v", stride_v);
-    result.set("y", std::move(std::string(plane_y, plane_y + stride_y * height - 1)));
-    result.set("u", std::move(std::string(plane_u, plane_u + stride_u * half_height - 1)));
-    result.set("v", std::move(std::string(plane_v, plane_v + stride_v * half_height - 1)));
+    result.set("y", std::move(std::string(plane_y, plane_y + (int)stride_y * height - 1)));
+    result.set("u", std::move(std::string(plane_u, plane_u + (int)stride_u * half_height - 1)));
+    result.set("v", std::move(std::string(plane_v, plane_v + (int)stride_v * half_height - 1)));
   }
   break;
   case heif_colorspace_RGB:
