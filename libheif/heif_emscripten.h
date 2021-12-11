@@ -130,9 +130,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     result.set("stride_y", stride_y);
     result.set("stride_u", stride_u);
     result.set("stride_v", stride_v);
-    result.set("y", std::string(plane_y, stride_y * height).c_str());
-    result.set("u", std::string(plane_u, stride_u * half_height).c_str());
-    result.set("v", std::string(plane_v, stride_v * half_height).c_str());
+    result.set("y", std::string((const char *)plane_y, stride_y * height).c_str());
+    result.set("u", std::string((const char *)plane_u, stride_u * half_height).c_str());
+    result.set("v", std::string((const char *)plane_v, stride_v * half_height).c_str());
   }
   break;
   case heif_colorspace_RGB:
@@ -141,7 +141,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     int stride_rgb;
     const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
     result.set("stride_rgb", stride_rgb);
-    result.set("rgb", std::string(plane_rgb, 3 * stride_rgb * height).c_str());
+    result.set("rgb", std::string((const char *)plane_rgb, 3 * stride_rgb * height).c_str());
   }
   break;
   case heif_colorspace_monochrome:
@@ -150,7 +150,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     int stride_y;
     const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
     result.set("stride_y", stride_y);
-    result.set("y", std::string(plane_grey, stride_y * height).c_str());
+    result.set("y", std::string((const char *)plane_grey, stride_y * height).c_str());
   }
   break;
   default:
