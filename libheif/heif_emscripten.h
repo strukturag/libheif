@@ -141,9 +141,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     result.set("stride_y", stride_y);
     result.set("stride_u", stride_u);
     result.set("stride_v", stride_v);
-    result.set("y", std::string(plane_y, plane_y + stride_y * height).data());
-    result.set("u", std::string(plane_u, plane_u + stride_u * half_height).data());
-    result.set("v", std::string(plane_v, plane_v + stride_v * half_height).data());
+    result.set("y", std::string(plane_y, plane_y + stride_y * height).c_str());
+    result.set("u", std::string(plane_u, plane_u + stride_u * half_height).c_str());
+    result.set("v", std::string(plane_v, plane_v + stride_v * half_height).c_str());
   }
   break;
   case heif_colorspace_RGB:
