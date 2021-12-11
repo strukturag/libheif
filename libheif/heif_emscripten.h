@@ -186,11 +186,12 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle, he
   // thumbnail decode successfull
   assert(image);
 
-  int thumbnail_width = heif_image_handle_get_width(thumbnail_handle);
-  int thumbnail_height = heif_image_handle_get_height(thumbnail_handle);
+  int width = heif_image_handle_get_width(thumbnail_handle);
+  int height = heif_image_handle_get_height(thumbnail_handle);
+  int half_height = heif_image_handle_get_height(thumbnail_handle);
 
-  result.set("width", thumbnail_width);
-  result.set("thumbnail_height", thumbnail_width);
+  result.set("width", width);
+  result.set("thumbnail_height", height);
 
   int stride_y;
   int stride_u;
