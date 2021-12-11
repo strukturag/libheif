@@ -90,6 +90,7 @@
         "memory_resource": "cpp",
         "stop_token": "cpp",
         "__std_stream": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "*.inc": "cpp"
     }
 }

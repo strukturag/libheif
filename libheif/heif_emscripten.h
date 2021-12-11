@@ -162,6 +162,50 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   return result;
 }
 
+static emscripten::val heif_js_decode_image(struct heif_image_handle *handle, heif_item_id thumbnail_ID)
+{
+  emscripten::val result = emscripten::val::object();
+  if (!handle)
+  {
+    return result;
+  }
+
+  struct heif_image_handle *thumbnail_handle;
+  err = heif_image_handle_get_thumbnail(handle, thumbnail_ID, &thumbnail_handle);
+  if (err.code)
+  {
+    std::cerr << "Could not read HEIF image : " << err.message << "\n";
+    return 1;
+  }
+
+  struct heif_image *image = NULL;
+  err = heif_decode_image(thumbnail_handle,
+                          &image,
+                          heif_colorspace_YCbCr,
+                          heif_chroma_420,
+                          nullptr);
+  // thumbnail decode successfull
+  assert(image);
+
+  int thumbnail_width = heif_image_handle_get_width(thumbnail_handle);
+  int thumbnail_height = heif_image_handle_get_height(thumbnail_handle);
+
+  result.set("width", thumbnail_width);
+  result.set("thumbnail_height", thumbnail_width);
+
+  const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
+  const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
+  const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
+  result.set("stride_y", stride_y);
+  result.set("stride_u", stride_u);
+  result.set("stride_v", stride_v);
+  result.set("y", emscripten::val::array(std::vector<uint8_t>(plane_y, plane_y + stride_y * height)));
+  result.set("u", emscripten::val::array(std::vector<uint8_t>(plane_u, plane_u + stride_u * half_height)));
+  result.set("v", emscripten::val::array(std::vector<uint8_t>(plane_v, plane_v + stride_v * half_height)));
+
+  return result;
+}
+
 #define EXPORT_HEIF_FUNCTION(name) \
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
 
