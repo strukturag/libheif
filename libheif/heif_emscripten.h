@@ -171,11 +171,10 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle, he
   }
 
   struct heif_image_handle *thumbnail_handle;
-  err = heif_image_handle_get_thumbnail(handle, thumbnail_ID, &thumbnail_handle);
+  struct heif_error err = heif_image_handle_get_thumbnail(handle, thumbnail_ID, &thumbnail_handle);
   if (err.code)
   {
-    std::cerr << "Could not read HEIF image : " << err.message << "\n";
-    return 1;
+    return emscripten::val(err);
   }
 
   struct heif_image *image = NULL;
@@ -193,6 +192,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle, he
   result.set("width", thumbnail_width);
   result.set("thumbnail_height", thumbnail_width);
 
+  int stride_y;
+  int stride_u;
+  int stride_v;
   const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
   const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
   const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
