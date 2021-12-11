@@ -11,10 +11,10 @@
 
 #include "heif.h"
 
-// static int round_odd(int v)
-// {
-//   return (int)((v / 2.0) + 0.5);
-// }
+static int round_odd(int v)
+{
+  return (int)((v / 2.0) + 0.5);
+}
 
 static std::string _heif_get_version()
 {
