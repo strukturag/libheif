@@ -11,10 +11,10 @@
 
 #include "heif.h"
 
-static int round_odd(int v)
-{
-  return (int)((v / 2.0) + 0.5);
-}
+// static int round_odd(int v)
+// {
+//   return (int)((v / 2.0) + 0.5);
+// }
 
 static std::string _heif_get_version()
 {
@@ -118,8 +118,8 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   }
   int width = heif_image_get_width(image, channel);
   int height = heif_image_get_height(image, channel);
-  int half_width = round_odd(width);
-  int half_height = round_odd(height);
+  // int half_width = round_odd(width);
+  // int half_height = round_odd(height);
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
   result.set("thumbnails", heif_image_handle_get_number_of_thumbnails(handle));
