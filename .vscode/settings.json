@@ -88,6 +88,8 @@
         "vector": "cpp",
         "*.tcc": "cpp",
         "memory_resource": "cpp",
-        "stop_token": "cpp"
+        "stop_token": "cpp",
+        "__std_stream": "cpp",
+        "filesystem": "cpp"
     }
 }
