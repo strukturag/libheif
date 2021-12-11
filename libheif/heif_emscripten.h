@@ -135,9 +135,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
     int stride_y;
     int stride_u;
     int stride_v;
-    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, stride_y);
-    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, stride_u);
-    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, stride_v);
+    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
+    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, &stride_u);
+    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, &stride_v);
     result.set("y", std::string(plane_y, plane_y + stride_y * height).data());
     result.set("u", std::string(plane_u, plane_u + stride_u * half_height).data());
     result.set("v", std::string(plane_v, plane_v + stride_v * half_height).data());
@@ -146,15 +146,17 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   case heif_colorspace_RGB:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_interleaved_24bit);
-    const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, nullptr);
-    result.set("rgb", std::string(plane_rgb, plane_rgb + 3 * width * height));
+    int stride_rgb;
+    const uint8_t *plane_rgb = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride_rgb);
+    result.set("rgb", std::string(plane_rgb, plane_rgb + 3 * stride_rgb * height));
   }
   break;
   case heif_colorspace_monochrome:
   {
     assert(heif_image_get_chroma_format(image) == heif_chroma_monochrome);
-    const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, nullptr);
-    result.set("y", std::string(plane_grey, plane_grey + width * height));
+    int stride_y;
+    const uint8_t *plane_grey = heif_image_get_plane_readonly(image, heif_channel_Y, &stride_y);
+    result.set("y", std::string(plane_grey, plane_grey + stride_y * height));
   }
   break;
   default:
