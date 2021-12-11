@@ -118,7 +118,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   }
   int width = heif_image_get_width(image, channel);
   int height = heif_image_get_height(image, channel);
-  int half_width = round_odd(width);
+  // int half_width = round_odd(width);
   int half_height = round_odd(height);
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
@@ -132,12 +132,15 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   {
   case heif_colorspace_YCbCr:
   {
-    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, nullptr);
-    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, nullptr);
-    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, nullptr);
-    result.set("y", std::string(plane_y, plane_y + width * height).data());
-    result.set("u", std::string(plane_u, plane_u + half_width * half_height).data());
-    result.set("v", std::string(plane_v, plane_v + half_width * half_height).data());
+    int stride_y;
+    int stride_u;
+    int stride_v;
+    const uint8_t *plane_y = heif_image_get_plane_readonly(image, heif_channel_Y, stride_y);
+    const uint8_t *plane_u = heif_image_get_plane_readonly(image, heif_channel_Cb, stride_u);
+    const uint8_t *plane_v = heif_image_get_plane_readonly(image, heif_channel_Cr, stride_v);
+    result.set("y", std::string(plane_y, plane_y + stride_y * height).data());
+    result.set("u", std::string(plane_u, plane_u + stride_u * half_height).data());
+    result.set("v", std::string(plane_v, plane_v + stride_v * half_height).data());
   }
   break;
   case heif_colorspace_RGB:
