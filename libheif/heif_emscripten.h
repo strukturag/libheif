@@ -162,7 +162,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   return result;
 }
 
-static emscripten::val heif_js_decode_image(struct heif_image_handle *handle, heif_item_id thumbnail_ID)
+static emscripten::val heif_js_decode_image_thumbnail(struct heif_image_handle *handle, heif_item_id thumbnail_ID)
 {
   emscripten::val result = emscripten::val::object();
   if (!handle)
@@ -229,6 +229,8 @@ EMSCRIPTEN_BINDINGS(libheif)
                        &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_decode_image",
                        &heif_js_decode_image, emscripten::allow_raw_pointers());
+  emscripten::function("heif_js_decode_image_thumbnail",
+                       &heif_js_decode_image_thumbnail, emscripten::allow_raw_pointers());
   EXPORT_HEIF_FUNCTION(heif_image_handle_release);
 
   emscripten::enum_<heif_error_code>("heif_error_code")
