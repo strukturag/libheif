@@ -94,11 +94,11 @@ static emscripten::val heif_js_image_info(struct heif_image_handle *handle)
   emscripten::val thumbnails = emscripten::val::object();
 
   uint32_t count = heif_image_handle_get_number_of_thumbnails(handle);
-  uint32_t *ids = new uint32_t[count];
-  heif_image_handle_get_list_of_thumbnail_IDs(handle, ids, count);
+  heif_item_id thumbnail_ID;
+  heif_image_handle_get_list_of_thumbnail_IDs(handle, &thumbnail_ID, 1);
 
   thumbnails.set("count", count);
-  thumbnails.set("id", ids);
+  thumbnails.set("id", thumbnail_ID);
   result.set("thumbnails", thumbnails);
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
 
