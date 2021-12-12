@@ -85,6 +85,26 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   return result;
 }
 
+static emscripten::val heif_js_image_info(struct heif_image_handle *handle)
+{
+  if (!handle)
+    return emscripten::val::object();
+
+  emscripten::val result = emscripten::val::object();
+  emscripten::val thumbnails = emscripten::val::object();
+
+  uint32_t count = heif_image_handle_get_number_of_thumbnails(handle);
+  uint32_t *ids = new uint32_t[count];
+  heif_image_handle_get_list_of_thumbnail_IDs(handle, ids, count);
+
+  thumbnails.set("count", count);
+  thumbnails.set("id", ids);
+  result.set("thumbnails", thumbnails);
+  result.set("is_primary", heif_image_handle_is_primary_image(handle));
+
+  return result;
+}
+
 static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
                                             enum heif_colorspace colorspace, enum heif_chroma chroma)
 {
@@ -110,8 +130,6 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle *handle,
   // int half_width = round_odd(width);
   int half_height = round_odd(height);
 
-  result.set("is_primary", heif_image_handle_is_primary_image(handle));
-  result.set("thumbnails", heif_image_handle_get_number_of_thumbnails(handle));
   result.set("width", width);
   result.set("height", height);
   result.set("chroma", heif_image_get_chroma_format(image));
