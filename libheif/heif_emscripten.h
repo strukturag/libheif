@@ -245,6 +245,8 @@ EMSCRIPTEN_BINDINGS(libheif)
                        &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_context_get_image_handle",
                        &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+  emscripten::function("heif_js_image_info",
+                       &heif_js_image_info, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_decode_image",
                        &heif_js_decode_image, emscripten::allow_raw_pointers());
   emscripten::function("heif_js_decode_image_thumbnail",
