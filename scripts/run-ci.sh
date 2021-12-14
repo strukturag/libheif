@@ -124,7 +124,7 @@ fi
 
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
-    CMAKE_OPTIONS=
+    CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Release"
     if [ "$CURRENT_OS" = "osx" ] ; then
         # Make sure the homebrew installed libraries are used when building instead
         # of the libraries provided by Apple.
