@@ -1966,8 +1966,8 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
                  err.message);
   }
 
-  int encoded_width = image->get_width(heif_channel_Y);
-  int encoded_height = image->get_height(heif_channel_Y);
+  int encoded_width = 0;
+  int encoded_height = 0;
 
   for (;;) {
     uint8_t* data;
@@ -2002,6 +2002,10 @@ Error HeifContext::encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
     }
   }
 
+  if (!encoded_width || !encoded_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
 
   // if image size was rounded up to even size, add a 'clap' box to crop the
   // padding border away
