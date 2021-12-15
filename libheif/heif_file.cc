@@ -880,11 +880,11 @@ void HeifFile::set_hdlr_library_info(std::string encoder_plugin_version)
 std::wstring HeifFile::convert_utf8_path_to_utf16(std::string str)
 {
   std::wstring ret;
-  int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), NULL, 0);
+  int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.length(), NULL, 0);
   if (len > 0)
   {
     ret.resize(len);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &ret[0], len);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.length(), &ret[0], len);
   }
   return ret;
 }

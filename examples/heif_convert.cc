@@ -60,7 +60,7 @@
 
 #include "encoder_y4m.h"
 
-#if defined(__MINGW32__)  || defined(__MINGW64__) || defined(_MSC_VER)
+#if defined(_MSC_VER)
 #include "getopt.h"
 #endif
 
