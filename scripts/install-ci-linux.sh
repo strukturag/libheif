@@ -110,6 +110,8 @@ fi
 
 if [ "$MINGW" == "32" ]; then
     sudo dpkg --add-architecture i386
+    # https://github.com/actions/virtual-environments/issues/4589
+    sudo apt install -y --allow-downgrades libpcre2-8-0=10.34-7
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         binutils-mingw-w64-i686 \
         g++-mingw-w64-i686 \
