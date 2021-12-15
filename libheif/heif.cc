@@ -1513,7 +1513,7 @@ static struct heif_error heif_file_writer_write(struct heif_context* ctx,
 {
   const char* filename = static_cast<const char*>(userdata);
 
-#ifdef _MSC_VER
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
   std::ofstream ostr(HeifFile::convert_utf8_path_to_utf16(filename).c_str(), std::ios_base::binary);
 #else
   std::ofstream ostr(filename, std::ios_base::binary);
