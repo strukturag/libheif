@@ -39,22 +39,13 @@ export TOTAL_MEMORY=16777216
 
 echo "Running Emscripten..."
 emcc libheif/.libs/libheif.so \
-    --bind \
-    -s NO_EXIT_RUNTIME=1 \
-    -s TOTAL_MEMORY=${TOTAL_MEMORY} \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s ASSERTIONS=0 \
-    -s INVOKE_RUN=0 \
-    -s DOUBLE_MODE=0 \
-    -s PRECISE_F32=0 \
-    -s DISABLE_EXCEPTION_CATCHING=1 \
-    -s USE_CLOSURE_COMPILER=0 \
-    -s LEGACY_VM_SUPPORT=1 \
-    --memory-init-file 0 \
-    -O3 \
-    -std=c++11 \
-    -L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs \
-    -lde265 \
-    --pre-js pre.js \
-    --post-js post.js \
-    -o libheif.js
+        --bind \
+        -s WASM=0 \
+        -s ALLOW_MEMORY_GROWTH=1 \
+        -s MODULARIZE=1 \
+        -s EXPORT_NAME="libheif" \
+        --memory-init-file 0 \
+        -O3 \
+        -L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs \
+        -lde265 \
+        -o libheif.js
