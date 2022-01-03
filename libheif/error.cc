@@ -185,6 +185,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unsupported color conversion";
     case heif_suberror_Unsupported_item_construction_method:
       return "Unsupported item construction method";
+    case heif_suberror_Unsupported_nclx_profile:
+      return "Unsupported NCLX profile";
 
       // --- Encoder_plugin_error --
 

@@ -255,6 +255,8 @@ enum heif_suberror_code
 
   heif_suberror_Unsupported_item_construction_method = 3004,
 
+  heif_suberror_Unsupported_nclx_profile = 3005,
+
 
   // --- Encoder_plugin_error ---
 

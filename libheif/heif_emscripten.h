@@ -247,6 +247,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_data_version", heif_suberror_Unsupported_data_version)
     .value("heif_suberror_Unsupported_color_conversion", heif_suberror_Unsupported_color_conversion)
     .value("heif_suberror_Unsupported_item_construction_method", heif_suberror_Unsupported_item_construction_method)
+    .value("heif_suberror_Unsupported_nclx_profile", heif_suberror_Unsupported_nclx_profile)
     .value("heif_suberror_Unsupported_bit_depth", heif_suberror_Unsupported_bit_depth)
     .value("heif_suberror_Wrong_tile_image_pixel_depth", heif_suberror_Wrong_tile_image_pixel_depth);
     emscripten::enum_<heif_compression_format>("heif_compression_format")

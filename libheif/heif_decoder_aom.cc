@@ -202,6 +202,18 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
   // --- read nclx parameters from decoded AV1 bitstream
 
+  if (img->cp < AOM_CICP_CP_BT_709 ||
+      img->cp > AOM_CICP_CP_EBU_3213 ||
+      img->tc < AOM_CICP_TC_BT_709 ||
+      img->tc > AOM_CICP_TC_HLG ||
+      img->mc < AOM_CICP_MC_IDENTITY ||
+      img->mc > AOM_CICP_MC_ICTCP) {
+    struct heif_error err = {heif_error_Decoder_plugin_error,
+                             heif_suberror_Unsupported_nclx_profile,
+                             kEmptyString};
+    return err;
+  }
+
   heif_color_profile_nclx nclx;
   nclx.color_primaries = (heif_color_primaries) img->cp;
   nclx.transfer_characteristics = (heif_transfer_characteristics) img->tc;

@@ -283,6 +283,8 @@ const (
 
 	SuberrorUnsupportedItemConstructionMethod = C.heif_suberror_Unsupported_item_construction_method
 
+	SuberrorUnsupportedNclxProfile = C.heif_suberror_Unsupported_nclx_profile
+
 	// --- Encoder_plugin_error ---
 
 	SuberrorUnsupportedBitDepth = C.heif_suberror_Unsupported_bit_depth
