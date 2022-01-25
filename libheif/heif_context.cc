@@ -2481,7 +2481,7 @@ Error HeifContext::add_generic_metadata(std::shared_ptr<Image> master_image, con
                                   fourcc("cdsc"), {master_image->get_id()});
 
 
-  // copy the XMP data into the file, store the pointer to it in an iloc box entry
+  // copy the data into the file, store the pointer to it in an iloc box entry
 
   std::vector<uint8_t> data_array;
   data_array.resize(size);
