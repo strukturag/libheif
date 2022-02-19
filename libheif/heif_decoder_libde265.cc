@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <memory>
 #include <cstring>
 
@@ -336,6 +337,7 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
       nclx->set_colour_primaries((uint16_t)de265_get_image_colour_primaries(image));
       nclx->set_transfer_characteristics((uint16_t)de265_get_image_transfer_characteristics(image));
 #endif
+      assert(*out_img);
       (*out_img)->image->set_color_profile_nclx(nclx);
 
       de265_release_next_picture(decoder->ctx);
