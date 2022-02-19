@@ -1235,7 +1235,6 @@ int main(int argc, char** argv)
     heif_encoder_set_logging_level(encoder, logging_level);
 
     set_params(encoder, raw_params);
-
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;

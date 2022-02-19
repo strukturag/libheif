@@ -956,7 +956,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
 
-  if (encoder->lossless || input_class == heif_image_input_class_alpha && encoder->lossless_alpha) {
+  if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
     aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
   }
 

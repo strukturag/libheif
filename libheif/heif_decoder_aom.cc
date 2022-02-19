@@ -130,6 +130,9 @@ struct heif_error aom_push_data(void* decoder_raw, const void* frame_data, size_
 {
   struct aom_decoder* decoder = (struct aom_decoder*) decoder_raw;
 
+  const char* ver = aom_codec_version_str();
+  (void)ver;
+
   aom_codec_err_t aomerr;
   aomerr = aom_codec_decode(&decoder->codec, (const uint8_t*) frame_data, frame_size, NULL);
   if (aomerr) {
