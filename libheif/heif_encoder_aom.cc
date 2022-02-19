@@ -35,6 +35,19 @@
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
 
+// Detect whether the aom_codec_set_option() function is available.
+// See https://aomedia.googlesource.com/aom/+/c1d42fe6615c96fc929257ed53c41fa094f38836%5E%21/aom/aom_codec.h.
+#if AOM_CODEC_ABI_VERSION >= (6 + AOM_IMAGE_ABI_VERSION)
+#define HAVE_AOM_CODEC_SET_OPTION 1
+#endif
+
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+struct custom_option
+{
+    std::string name;
+    std::string value;
+};
+#endif
 
 struct encoder_struct_aom
 {
@@ -49,6 +62,14 @@ struct encoder_struct_aom
   int threads;
   bool lossless;
 
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+  std::vector<custom_option> custom_options;
+
+  void add_custom_option(const custom_option&);
+
+  void add_custom_option(std::string name, std::string value);
+#endif
+
   aom_tune_metric tune;
 
   heif_chroma chroma = heif_chroma_420;
@@ -58,6 +79,35 @@ struct encoder_struct_aom
   std::vector<uint8_t> compressedData;
   bool data_read = false;
 };
+
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+void encoder_struct_aom::add_custom_option(const custom_option& p)
+{
+  // if there is already a parameter of that name, remove it from list
+
+  for (size_t i = 0; i < custom_options.size(); i++) {
+    if (custom_options[i].name == p.name) {
+      for (size_t k = i + 1; k < custom_options.size(); k++) {
+        custom_options[k - 1] = custom_options[k];
+      }
+      custom_options.pop_back();
+      break;
+    }
+  }
+
+  // and add the new parameter at the end of the list
+
+  custom_options.push_back(p);
+}
+
+void encoder_struct_aom::add_custom_option(std::string name, std::string value)
+{
+    custom_option p;
+    p.name = name;
+    p.value = value;
+    add_custom_option(p);
+}
+#endif
 
 static const char* kError_out_of_memory = "Out of memory";
 static const char* kError_encode_frame = "Failed to encode frame";
@@ -437,6 +487,13 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
     }
   }
 
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+  if (strncmp(name, "aom:", 4) == 0) {
+    encoder->add_custom_option(std::string(name).substr(4), std::string(value));
+    return heif_error_ok;
+  }
+#endif
+
   return heif_error_unsupported_parameter;
 }
 
@@ -783,6 +840,14 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (encoder->lossless) {
     aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
   }
+
+#if defined(HAVE_AOM_CODEC_SET_OPTION)
+  // Apply the custom AOM encoder options.
+  // These should always be applied last as they can override the values that were set above.
+  for (const auto& p : encoder->custom_options) {
+    aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str());
+  }
+#endif
 
   // --- encode frame
 
