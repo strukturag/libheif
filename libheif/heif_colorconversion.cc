@@ -306,7 +306,7 @@ static inline uint8_t clip_int_u8(int x)
 
 static inline uint16_t clip_f_u16(float fx, int32_t maxi)
 {
-  long x = lroundf(fx);
+  long x = (long int) (fx + 0.5f);
   if (x < 0) return 0;
   if (x > maxi) return (uint16_t) maxi;
   return static_cast<uint16_t>(x);
@@ -1961,7 +1961,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(ColorState input_state,
 
 static inline uint8_t clip_f_u8(float fx)
 {
-  long x = lroundf(fx);
+  long x = (long int) (fx + 0.5f);
   if (x < 0) return 0;
   if (x > 255) return 255;
   return static_cast<uint8_t>(x);
