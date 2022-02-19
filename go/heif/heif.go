@@ -587,8 +587,6 @@ func (h *ImageHandle) GetThumbnail(thumbnail_id int) (*ImageHandle, error) {
 	return &handle, convertHeifError(err)
 }
 
-// TODO: EXIF metadata
-
 // --- Image
 
 type DecodingOptions struct {
