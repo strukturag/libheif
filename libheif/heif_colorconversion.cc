@@ -856,10 +856,10 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
                                                  colorProfile->get_colour_primaries());
   }
 
-  int r_cr = static_cast<int>(lround(256 * coeffs.r_cr));
-  int g_cr = static_cast<int>(lround(256 * coeffs.g_cr));
-  int g_cb = static_cast<int>(lround(256 * coeffs.g_cb));
-  int b_cb = static_cast<int>(lround(256 * coeffs.b_cb));
+  int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
+  int g_cr = static_cast<int>(std::lround(256 * coeffs.g_cr));
+  int g_cb = static_cast<int>(std::lround(256 * coeffs.g_cb));
+  int b_cb = static_cast<int>(std::lround(256 * coeffs.b_cb));
 
   const uint8_t* in_y, * in_cb, * in_cr;
   int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0;
@@ -977,10 +977,10 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
                                                  colorProfile->get_colour_primaries());
   }
 
-  int r_cr = static_cast<int>(lround(256 * coeffs.r_cr));
-  int g_cr = static_cast<int>(lround(256 * coeffs.g_cr));
-  int g_cb = static_cast<int>(lround(256 * coeffs.g_cb));
-  int b_cb = static_cast<int>(lround(256 * coeffs.b_cb));
+  int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
+  int g_cr = static_cast<int>(std::lround(256 * coeffs.g_cr));
+  int g_cb = static_cast<int>(std::lround(256 * coeffs.g_cb));
+  int b_cb = static_cast<int>(std::lround(256 * coeffs.b_cb));
 
 
   const bool with_alpha = input->has_channel(heif_channel_Alpha);
