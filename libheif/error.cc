@@ -27,16 +27,12 @@ const char heif::Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";
 
 
-heif::Error::Error()
-    : error_code(heif_error_Ok),
-      sub_error_code(heif_suberror_Unspecified)
-{
-}
+heif::Error::Error() = default;
 
 
 heif::Error::Error(heif_error_code c,
                    heif_suberror_code sc,
-                   std::string msg)
+                   const std::string& msg)
     : error_code(c),
       sub_error_code(sc),
       message(msg)

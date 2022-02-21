@@ -133,6 +133,9 @@ if [ ! -z "$CMAKE" ]; then
     if [ "$WITH_RAV1E" = "1" ]; then
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_LOCAL_RAV1E=1"
     fi
+    if [ "$CLANG_TIDY" = "1" ]; then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    fi
 
     cmake . $CMAKE_OPTIONS
 fi
@@ -141,7 +144,7 @@ if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
 fi
 
-if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]; then
+if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ] && [ -z "$CLANG_TIDY" ]; then
     echo "Building libheif ..."
     make -j $(nproc)
     if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ]; then

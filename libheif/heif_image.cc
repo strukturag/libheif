@@ -237,7 +237,9 @@ void heif::get_subsampled_size(int width, int height,
     uint8_t chromaSubH = chroma_h_subsampling(chroma);
     uint8_t chromaSubV = chroma_v_subsampling(chroma);
 
+    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
     *subsampled_width = (width + chromaSubH - 1) / chromaSubH;
+    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
     *subsampled_height = (height + chromaSubV - 1) / chromaSubV;
   }
   else {

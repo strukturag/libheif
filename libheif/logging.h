@@ -40,8 +40,7 @@ namespace heif {
   class Indent
   {
   public:
-    Indent() : m_indent(0)
-    {}
+    Indent() = default;
 
     int get_indent() const
     { return m_indent; }
@@ -56,7 +55,7 @@ namespace heif {
     }
 
   private:
-    int m_indent;
+    int m_indent = 0;
   };
 
 

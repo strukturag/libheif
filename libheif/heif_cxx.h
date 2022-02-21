@@ -56,7 +56,7 @@ namespace heif {
       m_message = msg;
     }
 
-    std::string get_message() const
+    const std::string& get_message() const
     { return m_message; }
 
     heif_error_code get_code() const
@@ -96,7 +96,7 @@ namespace heif {
     };
 
     // throws Error
-    void read_from_file(std::string filename, const ReadingOptions& opts = ReadingOptions());
+    void read_from_file(const std::string& filename, const ReadingOptions& opts = ReadingOptions());
 
     // DEPRECATED. Use read_from_memory_without_copy() instead.
     // throws Error
@@ -108,8 +108,7 @@ namespace heif {
     class Reader
     {
     public:
-      virtual ~Reader()
-      {}
+      virtual ~Reader() = default;
 
       virtual int64_t get_position() const = 0;
 
@@ -173,8 +172,7 @@ namespace heif {
     class Writer
     {
     public:
-      virtual ~Writer()
-      {}
+      virtual ~Writer() = default;
 
       virtual heif_error write(const void* data, size_t size) = 0;
     };
@@ -183,7 +181,7 @@ namespace heif {
     void write(Writer&);
 
     // throws Error
-    void write_to_file(std::string filename) const;
+    void write_to_file(const std::string& filename) const;
 
   private:
     std::shared_ptr<heif_context> m_context;
@@ -200,8 +198,7 @@ namespace heif {
   class ImageHandle
   {
   public:
-    ImageHandle()
-    {}
+    ImageHandle() = default;
 
     ImageHandle(heif_image_handle* handle);
 
@@ -308,8 +305,7 @@ namespace heif {
   class Image
   {
   public:
-    Image()
-    {}
+    Image() = default;
 
     Image(heif_image* image);
 
@@ -445,21 +441,21 @@ namespace heif {
 
     std::vector<EncoderParameter> list_parameters() const noexcept;
 
-    void set_integer_parameter(std::string parameter_name, int value);
+    void set_integer_parameter(const std::string& parameter_name, int value);
 
-    int get_integer_parameter(std::string parameter_name) const;
+    int get_integer_parameter(const std::string& parameter_name) const;
 
-    void set_boolean_parameter(std::string parameter_name, bool value);
+    void set_boolean_parameter(const std::string& parameter_name, bool value);
 
-    bool get_boolean_parameter(std::string parameter_name) const;
+    bool get_boolean_parameter(const std::string& parameter_name) const;
 
-    void set_string_parameter(std::string parameter_name, std::string value);
+    void set_string_parameter(const std::string& parameter_name, const std::string& value);
 
-    std::string get_string_parameter(std::string parameter_name) const;
+    std::string get_string_parameter(const std::string& parameter_name) const;
 
-    void set_parameter(std::string parameter_name, std::string parameter_value);
+    void set_parameter(const std::string& parameter_name, const std::string& parameter_value);
 
-    std::string get_parameter(std::string parameter_name) const;
+    std::string get_parameter(const std::string& parameter_name) const;
 
   private:
     Encoder(struct heif_encoder*) noexcept;
@@ -483,7 +479,7 @@ namespace heif {
                                               [](heif_context* c) { heif_context_free(c); });
   }
 
-  inline void Context::read_from_file(std::string filename, const ReadingOptions& /*opts*/)
+  inline void Context::read_from_file(const std::string& filename, const ReadingOptions& /*opts*/)
   {
     Error err = Error(heif_context_read_from_file(m_context.get(), filename.c_str(), NULL));
     if (err) {
@@ -638,7 +634,7 @@ namespace heif {
     }
   }
 
-  inline void Context::write_to_file(std::string filename) const
+  inline void Context::write_to_file(const std::string& filename) const
   {
     Error err = Error(heif_context_write_to_file(m_context.get(), filename.c_str()));
     if (err) {
@@ -1001,6 +997,7 @@ namespace heif {
                                                           maxDescriptors);
       if (nDescriptors < maxDescriptors) {
         std::vector<EncoderDescriptor> outDescriptors;
+        outDescriptors.reserve(nDescriptors);
         for (int i = 0; i < nDescriptors; i++) {
           outDescriptors.push_back(EncoderDescriptor(descriptors[i]));
         }
@@ -1163,7 +1160,7 @@ namespace heif {
     }
   }
 
-  inline void Encoder::set_integer_parameter(std::string parameter_name, int value)
+  inline void Encoder::set_integer_parameter(const std::string& parameter_name, int value)
   {
     Error err = Error(heif_encoder_set_parameter_integer(m_encoder.get(), parameter_name.c_str(), value));
     if (err) {
@@ -1171,7 +1168,7 @@ namespace heif {
     }
   }
 
-  inline int Encoder::get_integer_parameter(std::string parameter_name) const
+  inline int Encoder::get_integer_parameter(const std::string& parameter_name) const
   {
     int value;
     Error err = Error(heif_encoder_get_parameter_integer(m_encoder.get(), parameter_name.c_str(), &value));
@@ -1181,7 +1178,7 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_boolean_parameter(std::string parameter_name, bool value)
+  inline void Encoder::set_boolean_parameter(const std::string& parameter_name, bool value)
   {
     Error err = Error(heif_encoder_set_parameter_boolean(m_encoder.get(), parameter_name.c_str(), value));
     if (err) {
@@ -1189,7 +1186,7 @@ namespace heif {
     }
   }
 
-  inline bool Encoder::get_boolean_parameter(std::string parameter_name) const
+  inline bool Encoder::get_boolean_parameter(const std::string& parameter_name) const
   {
     int value;
     Error err = Error(heif_encoder_get_parameter_boolean(m_encoder.get(), parameter_name.c_str(), &value));
@@ -1199,7 +1196,7 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_string_parameter(std::string parameter_name, std::string value)
+  inline void Encoder::set_string_parameter(const std::string& parameter_name, const std::string& value)
   {
     Error err = Error(heif_encoder_set_parameter_string(m_encoder.get(), parameter_name.c_str(), value.c_str()));
     if (err) {
@@ -1207,7 +1204,7 @@ namespace heif {
     }
   }
 
-  inline std::string Encoder::get_string_parameter(std::string parameter_name) const
+  inline std::string Encoder::get_string_parameter(const std::string& parameter_name) const
   {
     const int max_size = 250;
     char value[max_size];
@@ -1219,7 +1216,7 @@ namespace heif {
     return value;
   }
 
-  inline void Encoder::set_parameter(std::string parameter_name, std::string parameter_value)
+  inline void Encoder::set_parameter(const std::string& parameter_name, const std::string& parameter_value)
   {
     Error err = Error(heif_encoder_set_parameter(m_encoder.get(), parameter_name.c_str(),
                                                  parameter_value.c_str()));
@@ -1228,7 +1225,7 @@ namespace heif {
     }
   }
 
-  inline std::string Encoder::get_parameter(std::string parameter_name) const
+  inline std::string Encoder::get_parameter(const std::string& parameter_name) const
   {
     const int max_size = 250;
     char value[max_size];

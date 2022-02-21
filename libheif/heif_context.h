@@ -78,7 +78,7 @@ namespace heif {
       m_maximum_image_height_limit = maximum_size;
     }
 
-    Error read(std::shared_ptr<StreamReader> reader);
+    Error read(const std::shared_ptr<StreamReader>& reader);
 
     Error read_from_file(const char* input_filename);
 
@@ -227,7 +227,7 @@ namespace heif {
         }
         else {
           std::vector<std::shared_ptr<Image>> auxImgs;
-          for (auto aux : m_aux_images) {
+          for (const auto& aux : m_aux_images) {
             if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA) &&
                 aux->is_alpha_channel() && aux->m_implicitly_consumed_alpha) {
               continue;
@@ -271,7 +271,7 @@ namespace heif {
 
       const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
-      void set_color_profile(std::shared_ptr<const color_profile> profile)
+      void set_color_profile(const std::shared_ptr<const color_profile>& profile)
       {
         auto icc = std::dynamic_pointer_cast<const color_profile_raw>(profile);
         if (icc) {
@@ -351,44 +351,44 @@ namespace heif {
     // contain no valid data yet.
     void reset_to_empty_heif();
 
-    Error encode_image(std::shared_ptr<HeifPixelImage> image,
+    Error encode_image(const std::shared_ptr<HeifPixelImage>& image,
                        struct heif_encoder* encoder,
                        const struct heif_encoding_options* options,
                        enum heif_image_input_class input_class,
                        std::shared_ptr<Image>& out_image);
 
-    Error encode_image_as_hevc(std::shared_ptr<HeifPixelImage> image,
+    Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                struct heif_encoder* encoder,
                                const struct heif_encoding_options* options,
                                enum heif_image_input_class input_class,
                                std::shared_ptr<Image>& out_image);
 
-    Error encode_image_as_av1(std::shared_ptr<HeifPixelImage> image,
+    Error encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& image,
                               struct heif_encoder* encoder,
                               const struct heif_encoding_options* options,
                               enum heif_image_input_class input_class,
                               std::shared_ptr<Image>& out_image);
 
-    void set_primary_image(std::shared_ptr<Image> image);
+    void set_primary_image(const std::shared_ptr<Image>& image);
 
     Error set_primary_item(heif_item_id id);
 
     bool is_primary_image_set() const { return m_primary_image != nullptr; }
 
-    Error assign_thumbnail(std::shared_ptr<Image> master_image,
-                           std::shared_ptr<Image> thumbnail_image);
+    Error assign_thumbnail(const std::shared_ptr<Image>& master_image,
+                           const std::shared_ptr<Image>& thumbnail_image);
 
-    Error encode_thumbnail(std::shared_ptr<HeifPixelImage> image,
+    Error encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
                            struct heif_encoder* encoder,
                            const struct heif_encoding_options* options,
                            int bbox_size,
                            std::shared_ptr<Image>& out_image_handle);
 
-    Error add_exif_metadata(std::shared_ptr<Image> master_image, const void* data, int size);
+    Error add_exif_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
 
-    Error add_XMP_metadata(std::shared_ptr<Image> master_image, const void* data, int size);
+    Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
 
-    Error add_generic_metadata(std::shared_ptr<Image> master_image, const void* data, int size,
+    Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                const char* item_type, const char* content_type);
 
     void write(StreamWriter& writer);
@@ -415,14 +415,14 @@ namespace heif {
 
     Error interpret_heif_file();
 
-    void remove_top_level_image(std::shared_ptr<Image> image);
+    void remove_top_level_image(const std::shared_ptr<Image>& image);
 
     Error decode_full_grid_image(heif_item_id ID,
                                  std::shared_ptr<HeifPixelImage>& img,
                                  const std::vector<uint8_t>& grid_data) const;
 
     Error decode_and_paste_tile_image(heif_item_id tileID,
-                                      std::shared_ptr<HeifPixelImage> out_image,
+                                      const std::shared_ptr<HeifPixelImage>& out_image,
                                       int x0, int y0) const;
 
     Error decode_derived_image(heif_item_id ID,

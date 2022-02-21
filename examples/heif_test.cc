@@ -68,7 +68,7 @@ void show_help(const char* argv0)
 }
 
 
-std::pair<heif_item_id, heif_item_id> parse_id_pair(std::string s)
+std::pair<heif_item_id, heif_item_id> parse_id_pair(const std::string& s)
 {
   std::string::size_type p = s.find_first_of(':');
   if (p == std::string::npos) {

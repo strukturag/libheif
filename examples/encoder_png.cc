@@ -32,9 +32,7 @@
 
 #include "encoder_png.h"
 
-PngEncoder::PngEncoder()
-{}
-
+PngEncoder::PngEncoder() = default;
 
 bool PngEncoder::Encode(const struct heif_image_handle* handle,
                         const struct heif_image* image, const std::string& filename)

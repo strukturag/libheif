@@ -48,15 +48,14 @@ namespace heif {
   class ErrorBuffer
   {
   public:
-    ErrorBuffer()
-    {}
+    ErrorBuffer() = default;
 
     void set_success()
     {
       m_error_message = c_success;
     }
 
-    void set_error(std::string err)
+    void set_error(const std::string& err)
     {
       m_buffer = err;
       m_error_message = m_buffer.c_str();
@@ -77,15 +76,15 @@ namespace heif {
   class Error
   {
   public:
-    enum heif_error_code error_code;
-    enum heif_suberror_code sub_error_code;
+    enum heif_error_code error_code = heif_error_Ok;
+    enum heif_suberror_code sub_error_code = heif_suberror_Unspecified;
     std::string message;
 
     Error();
 
     Error(heif_error_code c,
           heif_suberror_code sc = heif_suberror_Unspecified,
-          std::string msg = "");
+          const std::string& msg = "");
 
     static Error Ok;
 

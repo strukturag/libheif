@@ -30,9 +30,7 @@
 #include <assert.h>
 
 
-Y4MEncoder::Y4MEncoder()
-{
-}
+Y4MEncoder::Y4MEncoder() = default;
 
 
 void Y4MEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
