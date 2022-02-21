@@ -214,7 +214,7 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
   heif_color_profile_nclx nclx;
   HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_color_primaries(&nclx, img->cp));
-  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_transfer_characteristics(&nclx, img->tc + 200));
+  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_transfer_characteristics(&nclx, img->tc));
   HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_matrix_coefficients(&nclx, img->mc));
   nclx.full_range_flag = (img->range == AOM_CR_FULL_RANGE);
   heif_image_set_nclx_color_profile(heif_img, &nclx);
