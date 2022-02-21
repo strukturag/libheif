@@ -30,6 +30,8 @@
 #include "heif_plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
+#include <set>
+#include <limits>
 
 #if defined(__EMSCRIPTEN__)
 #include "heif_emscripten.h"
@@ -1347,7 +1349,7 @@ static const std::set<enum heif_color_primaries> known_color_primaries{
     heif_color_primaries_EBU_Tech_3213_E,
 };
 
-struct heif_error heif_color_profile_nclx_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t n)
+struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t n)
 {
   if (n < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
       n > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {

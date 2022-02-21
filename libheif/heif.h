@@ -806,7 +806,7 @@ struct heif_color_profile_nclx
 };
 
 LIBHEIF_API
-struct heif_error heif_color_profile_nclx_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t primaries);
+struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t primaries);
 
 // Returns 'heif_error_Color_profile_does_not_exist' when there is no NCLX profile.
 // TODO: This function does currently not return an NCLX profile if it is stored in the image bitstream.
