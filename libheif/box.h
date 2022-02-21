@@ -64,8 +64,7 @@ namespace heif {
   class Fraction
   {
   public:
-    Fraction()
-    {}
+    Fraction() = default;
 
     Fraction(int32_t num, int32_t den);
 
@@ -107,8 +106,7 @@ namespace heif {
   public:
     BoxHeader();
 
-    virtual ~BoxHeader()
-    {}
+    virtual ~BoxHeader() = default;
 
     constexpr static uint64_t size_until_end_of_file = 0;
 
@@ -181,8 +179,7 @@ namespace heif {
   class Box : public BoxHeader
   {
   public:
-    Box()
-    {}
+    Box() = default;
 
     Box(const BoxHeader& hdr) : BoxHeader(hdr)
     {}
@@ -197,7 +194,7 @@ namespace heif {
 
     void derive_box_version_recursive();
 
-    virtual std::string dump(Indent&) const;
+    std::string dump(Indent&) const override;
 
     std::shared_ptr<Box> get_child_box(uint32_t short_type) const;
 
@@ -1086,8 +1083,7 @@ namespace heif {
   class color_profile
   {
   public:
-    virtual ~color_profile()
-    {}
+    virtual ~color_profile() = default;
 
     virtual uint32_t get_type() const = 0;
 

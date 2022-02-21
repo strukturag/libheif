@@ -42,15 +42,9 @@ using namespace heif;
 #define STRICT_PARSING false
 
 
-HeifFile::HeifFile()
-{
-}
+HeifFile::HeifFile() = default;
 
-
-HeifFile::~HeifFile()
-{
-}
-
+HeifFile::~HeifFile() = default;
 
 std::vector<heif_item_id> HeifFile::get_item_IDs() const
 {

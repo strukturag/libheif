@@ -144,9 +144,7 @@ static std::string to_fourcc(uint32_t code)
 }
 
 
-heif::BoxHeader::BoxHeader()
-{
-}
+heif::BoxHeader::BoxHeader() = default;
 
 
 std::vector<uint8_t> heif::BoxHeader::get_type() const

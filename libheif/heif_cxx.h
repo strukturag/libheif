@@ -108,8 +108,7 @@ namespace heif {
     class Reader
     {
     public:
-      virtual ~Reader()
-      {}
+      virtual ~Reader() = default;
 
       virtual int64_t get_position() const = 0;
 
@@ -173,8 +172,7 @@ namespace heif {
     class Writer
     {
     public:
-      virtual ~Writer()
-      {}
+      virtual ~Writer() = default;
 
       virtual heif_error write(const void* data, size_t size) = 0;
     };
@@ -200,8 +198,7 @@ namespace heif {
   class ImageHandle
   {
   public:
-    ImageHandle()
-    {}
+    ImageHandle() = default;
 
     ImageHandle(heif_image_handle* handle);
 
@@ -308,8 +305,7 @@ namespace heif {
   class Image
   {
   public:
-    Image()
-    {}
+    Image() = default;
 
     Image(heif_image* image);
 
