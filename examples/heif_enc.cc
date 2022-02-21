@@ -72,9 +72,9 @@ int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 const char* encoderId = nullptr;
 
-int nclx_matrix_coefficients = 6;
-int nclx_colour_primaries = 2;
-int nclx_transfer_characteristic = 2;
+uint16_t nclx_matrix_coefficients = 6;
+uint16_t nclx_colour_primaries = 2;
+uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
 
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
@@ -1065,13 +1065,13 @@ int main(int argc, char** argv)
         encoderId = optarg;
         break;
       case OPTION_NCLX_MATRIX_COEFFICIENTS:
-        nclx_matrix_coefficients = atoi(optarg);
+        nclx_matrix_coefficients = (uint16_t)strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_COLOUR_PRIMARIES:
-        nclx_colour_primaries = atoi(optarg);
+        nclx_colour_primaries = (uint16_t)strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_TRANSFER_CHARACTERISTIC:
-        nclx_transfer_characteristic = atoi(optarg);
+        nclx_transfer_characteristic = (uint16_t)strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_FULL_RANGE_FLAG:
         nclx_full_range = atoi(optarg);
@@ -1215,9 +1215,21 @@ int main(int argc, char** argv)
     }
 
     heif_color_profile_nclx nclx;
-    nclx.matrix_coefficients = (heif_matrix_coefficients) nclx_matrix_coefficients;
-    nclx.transfer_characteristics = (heif_transfer_characteristics) nclx_transfer_characteristic;
-    nclx.color_primaries = (heif_color_primaries) nclx_colour_primaries;
+    error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
+    if (error.code) {
+      std::cerr << "Invalid matrix coefficients specified.\n";
+      exit(5);
+    }
+    error = heif_nclx_color_profile_set_transfer_characteristics(&nclx, nclx_transfer_characteristic);
+    if (error.code) {
+      std::cerr << "Invalid transfer characteristics specified.\n";
+      exit(5);
+    }
+    error = heif_nclx_color_profile_set_color_primaries(&nclx, nclx_colour_primaries);
+    if (error.code) {
+      std::cerr << "Invalid color primaries specified.\n";
+      exit(5);
+    }
     nclx.full_range_flag = (uint8_t) nclx_full_range;
 
     //heif_image_set_nclx_color_profile(image.get(), &nclx);
