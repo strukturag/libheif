@@ -166,10 +166,12 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
   size_t exifsize = 0;
   uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
-  if (exifdata && exifsize > 4) {
-    static const uint8_t kExifMarker = JPEG_APP0 + 1;
-    jpeg_write_marker(&cinfo, kExifMarker, exifdata + 4,
-                      static_cast<unsigned int>(exifsize - 4));
+  if (exifdata) {
+    if (exifsize > 4 && exifsize<=MAX_BYTES_IN_MARKER) {
+      static const uint8_t kExifMarker = JPEG_APP0 + 1;
+      jpeg_write_marker(&cinfo, kExifMarker, exifdata + 4,
+                        static_cast<unsigned int>(exifsize - 4));
+    }
     free(exifdata);
   }
 
