@@ -1332,6 +1332,41 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
 }
 
 
+static const std::set<enum heif_color_primaries> known_color_primaries{
+    heif_color_primaries_ITU_R_BT_709_5,
+    heif_color_primaries_unspecified,
+    heif_color_primaries_ITU_R_BT_470_6_System_M,
+    heif_color_primaries_ITU_R_BT_470_6_System_B_G,
+    heif_color_primaries_ITU_R_BT_601_6,
+    heif_color_primaries_SMPTE_240M,
+    heif_color_primaries_generic_film,
+    heif_color_primaries_ITU_R_BT_2020_2_and_2100_0,
+    heif_color_primaries_SMPTE_ST_428_1,
+    heif_color_primaries_SMPTE_RP_431_2,
+    heif_color_primaries_SMPTE_EG_432_1,
+    heif_color_primaries_EBU_Tech_3213_E,
+};
+
+struct heif_error heif_color_profile_nclx_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t n)
+{
+  if (n < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
+      n > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
+  }
+
+  auto p = static_cast<heif_color_primaries>(n);
+  if (known_color_primaries.find(p) != known_color_primaries.end()) {
+    nclx->color_primaries = p;
+  }
+  else {
+    nclx->color_primaries = heif_color_primaries_unspecified;
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
+  }
+
+  return Error::Ok.error_struct(nullptr);
+}
+
+
 struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_image_handle* handle,
                                                            struct heif_color_profile_nclx** out_data)
 {
