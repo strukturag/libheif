@@ -1090,7 +1090,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
     if (decoder_plugin->plugin_api_version >= 2) {
       if (decoder_plugin->set_strict_decoding) {
-        decoder_plugin->set_strict_decoding(decoder, options->strict_decoding);
+        decoder_plugin->set_strict_decoding(decoder, options ? options->strict_decoding : false);
       }
     }
 
