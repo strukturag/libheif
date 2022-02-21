@@ -40,6 +40,7 @@ extern "C" {
 //  1.1          1         1          1
 //  1.4          1         1          2
 //  1.8          1         2          2
+//  1.13         2         2          2
 
 
 // ====================================================================================================
@@ -87,6 +88,8 @@ struct heif_decoder_plugin
 
 
   // --- version 2 functions will follow below ... ---
+
+  void (*set_strict_decoding)(void* decoder, int flag);
 
   // If not NULL, this can provide a specialized function to convert YCbCr to sRGB, because
   // only the codec itself knows how to interpret the chroma samples and their locations.
@@ -276,6 +279,17 @@ extern struct heif_error heif_error_ok;
 extern struct heif_error heif_error_unsupported_parameter;
 extern struct heif_error heif_error_invalid_parameter_value;
 
+#define HEIF_WARN_OR_FAIL(strict, image, cmd) \
+{ struct heif_error e = cmd;                  \
+  if (e.code != heif_error_Ok) {              \
+    if (strict) {                             \
+      return e;                               \
+    }                                         \
+    else {                                    \
+      heif_image_add_decoding_warning(image, e); \
+    }                                         \
+  }                                           \
+}
 #ifdef __cplusplus
 }
 #endif

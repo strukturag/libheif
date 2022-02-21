@@ -3217,6 +3217,11 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
 
     out->set_premultiplied_alpha(in->is_premultiplied_alpha());
 
+    auto warnings = in->get_warnings();
+    for (const auto& warning : warnings) {
+      out->add_warning(warning);
+    }
+
     in = out;
   }
 

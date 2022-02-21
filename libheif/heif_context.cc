@@ -1088,6 +1088,12 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return Error(err.code, err.subcode, err.message);
     }
 
+    if (decoder_plugin->plugin_api_version >= 2) {
+      if (decoder_plugin->set_strict_decoding) {
+        decoder_plugin->set_strict_decoding(decoder, options->strict_decoding);
+      }
+    }
+
     err = decoder_plugin->push_data(decoder, data.data(), data.size());
     if (err.code != heif_error_Ok) {
       decoder_plugin->free_decoder(decoder);

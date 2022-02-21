@@ -883,7 +883,7 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
-  options->version = 2;
+  options->version = 3;
 
   options->ignore_transformations = false;
 
@@ -895,6 +895,10 @@ heif_decoding_options* heif_decoding_options_alloc()
   // version 2
 
   options->convert_hdr_to_8bit = false;
+
+  // version 3
+
+  options->strict_decoding = false;
 
   return options;
 }
@@ -963,6 +967,12 @@ int heif_image_get_decoding_warnings(struct heif_image* image,
     }
     return n;
   }
+}
+
+void heif_image_add_decoding_warning(struct heif_image* image,
+                                     struct heif_error err)
+{
+  image->image->add_warning(Error(err.code, err.subcode));
 }
 
 

@@ -91,11 +91,16 @@ int main(int argc, char** argv)
 {
   int opt;
   int quality = -1;  // Use default quality.
+  bool strict_decoding = false;
+
   UNUSED(quality);  // The quality will only be used by encoders that support it.
-  while ((opt = getopt(argc, argv, "q:")) != -1) {
+  while ((opt = getopt(argc, argv, "q:s")) != -1) {
     switch (opt) {
       case 'q':
         quality = atoi(optarg);
+        break;
+      case 's':
+        strict_decoding = true;
         break;
       default: /* '?' */
         return usage(argv[0]);
@@ -230,6 +235,8 @@ int main(int argc, char** argv)
     struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
     encoder->UpdateDecodingOptions(handle, decode_options);
 
+    decode_options->strict_decoding = strict_decoding;
+
     int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
     if (bit_depth < 0) {
       heif_decoding_options_free(decode_options);
@@ -250,6 +257,17 @@ int main(int argc, char** argv)
       std::cerr << "Could not decode image: " << idx << ": "
                 << err.message << "\n";
       return 1;
+    }
+
+    // show decoding warnings
+
+    for (int i = 0;; i++) {
+      int n = heif_image_get_decoding_warnings(image, i, &err, 1);
+      if (n == 0) {
+        break;
+      }
+
+      std::cerr << "Warning: " << err.message << "\n";
     }
 
     if (image) {

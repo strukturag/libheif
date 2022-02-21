@@ -43,6 +43,7 @@ extern "C" {
 //  1.9.2        1             2            2             1             1            1
 //  1.10         1             2            3             1             1            1
 //  1.11         1             2            4             1             1            1
+//  1.13         1             3            4             1             1            1
 
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
@@ -940,6 +941,12 @@ struct heif_decoding_options
   // version 2 options
 
   uint8_t convert_hdr_to_8bit;
+
+  // version 3 options
+
+  // When enabled, an error is returned for invalid input. Otherwise, it will try its best and
+  // add decoding warnings to the decoded heif_image. Default is non-strict.
+  uint8_t strict_decoding;
 };
 
 
@@ -1069,6 +1076,11 @@ int heif_image_get_decoding_warnings(struct heif_image* image,
                                      int first_warning_idx,
                                      struct heif_error* out_warnings,
                                      int max_output_buffer_entries);
+
+// This function is only for decoder plugin implementors.
+LIBHEIF_API
+void heif_image_add_decoding_warning(struct heif_image* image,
+                                     struct heif_error err);
 
 // Release heif_image.
 LIBHEIF_API
