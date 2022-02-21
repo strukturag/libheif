@@ -67,4 +67,4 @@ jobs:
 
     - name: Run clang-tidy
       run: |
-        run-clang-tidy-12 -j$(nproc)
+        run-clang-tidy-12 -checks=*,-tautological-compare,-tautological-constant-out-of-range-compare -j$(nproc)
