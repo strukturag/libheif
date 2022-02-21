@@ -133,6 +133,10 @@ namespace heif {
 
     bool extend_padding_to_size(int width, int height);
 
+    void add_warning(Error warning) { m_warnings.emplace_back(std::move(warning)); }
+
+    const std::vector<Error>& get_warnings() const { return m_warnings; }
+
   private:
     struct ImagePlane
     {
@@ -162,6 +166,8 @@ namespace heif {
     std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
     std::map<heif_channel, ImagePlane> m_planes;
+
+    std::vector<Error> m_warnings;
   };
 
 }

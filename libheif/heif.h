@@ -1043,6 +1043,18 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 //LIBHEIF_API
 //void heif_image_remove_color_profile(struct heif_image* image);
 
+// Fills the image decoding warnings into the provided 'out_warnings' array.
+// The size of the array has to be provided in max_output_buffer_entries.
+// If max_output_buffer_entries==0, the number of decoder warnings is returned.
+// The function fills the warnings into the provided buffer, starting with 'first_warning_idx'.
+// It returns the number of warnings filled into the buffer.
+// Note: you can iterate through all warnings by using 'max_output_buffer_entries=1' and iterate 'first_warning_idx'.
+LIBHEIF_API
+int heif_image_get_decoding_warnings(struct heif_image* image,
+                                     int first_warning_idx,
+                                     struct heif_error* out_warnings,
+                                     int max_output_buffer_entries);
+
 // Release heif_image.
 LIBHEIF_API
 void heif_image_release(const struct heif_image*);

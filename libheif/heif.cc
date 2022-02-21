@@ -945,6 +945,25 @@ struct heif_error heif_image_create(int width, int height,
   return err;
 }
 
+int heif_image_get_decoding_warnings(struct heif_image* image,
+                                     int first_warning_idx,
+                                     struct heif_error* out_warnings,
+                                     int max_output_buffer_entries)
+{
+  if (max_output_buffer_entries == 0) {
+    return (int) image->image->get_warnings().size();
+  }
+  else {
+    const auto& warnings = image->image->get_warnings();
+    int n;
+    for (n = 0; n + first_warning_idx < (int) warnings.size(); n++) {
+      out_warnings[n] = warnings[n + first_warning_idx].error_struct(image->image.get());
+    }
+    return n;
+  }
+}
+
+
 void heif_image_release(const struct heif_image* img)
 {
   delete img;
