@@ -303,6 +303,7 @@ CXXFLAGS="$CXXFLAGS $WARNING_FLAGS"
 CFLAGS="$CFLAGS $WARNING_FLAGS"
 
 AC_C_CXX_COMPILE_FLAGS([-Wno-error=potentially-evaluated-expression])
+AC_C_CXX_COMPILE_FLAGS([-Wno-error=tautological-constant-out-of-range-compare])
 
 AC_MSG_NOTICE([---------------------------------------])
 AC_MSG_NOTICE([Multithreading: $enable_multithreading])
