@@ -268,6 +268,12 @@ const (
 
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
 
+    SuberrorUnknownNCLXColorPrimaries = C.heif_suberror_Unknown_NCLX_color_primaries
+
+    SuberrorUnknownNCLXTransferCharacteristics = C.heif_suberror_Unknown_NCLX_transfer_characteristics
+
+    SuberrorUnknownNCLXMatrixCoefficients = C.heif_suberror_Unknown_NCLX_matrix_coefficients
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.
