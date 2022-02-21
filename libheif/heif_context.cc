@@ -987,6 +987,7 @@ int HeifContext::Image::get_luma_bits_per_pixel() const
     return -1;
   }
 
+  // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
   return m_heif_context->m_heif_file->get_luma_bits_per_pixel_from_configuration(id);
 }
 
@@ -999,6 +1000,7 @@ int HeifContext::Image::get_chroma_bits_per_pixel() const
     return -1;
   }
 
+  // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
   return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
 }
 
