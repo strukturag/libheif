@@ -229,6 +229,7 @@ struct heif_encoder_plugin
 
 // For use only by the encoder plugins.
 // Application programs should use the access functions.
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding)
 struct heif_encoder_parameter
 {
   int version; // current version: 2
