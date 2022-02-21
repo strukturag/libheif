@@ -1167,9 +1167,9 @@ namespace heif {
     void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
 
   private:
-    uint16_t m_colour_primaries = 0;
-    uint16_t m_transfer_characteristics = 0;
-    uint16_t m_matrix_coefficients = 0;
+    uint16_t m_colour_primaries = heif_color_primaries_unspecified;
+    uint16_t m_transfer_characteristics = heif_transfer_characteristic_unspecified;
+    uint16_t m_matrix_coefficients = heif_matrix_coefficients_unspecified;
     bool m_full_range_flag = true;
   };
 
