@@ -34,7 +34,7 @@ namespace heif {
 
   class HeifPixelImage;
 
-  Error fill_av1C_configuration(Box_av1C::configuration* inout_config, std::shared_ptr<HeifPixelImage>);
+  Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image);
 
   bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
 

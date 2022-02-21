@@ -153,21 +153,21 @@ class Op_RGB_to_RGB24_32 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RGB_to_RGB24_32::state_after_conversion(ColorState input_state,
-                                           ColorState target_state,
-                                           ColorConversionOptions options)
+Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
+                                           const ColorState& target_state,
+                                           const ColorConversionOptions& options)
 {
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
@@ -221,8 +221,8 @@ Op_RGB_to_RGB24_32::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                       ColorState target_state,
-                                       ColorConversionOptions options)
+                                       const ColorState& target_state,
+                                       const ColorConversionOptions& options)
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
   bool want_alpha = target_state.has_alpha;
@@ -318,22 +318,22 @@ class Op_YCbCr_to_RGB : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 template<class Pixel>
 std::vector<ColorStateWithCost>
-Op_YCbCr_to_RGB<Pixel>::state_after_conversion(ColorState input_state,
-                                               ColorState target_state,
-                                               ColorConversionOptions options)
+Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
+                                               const ColorState& target_state,
+                                               const ColorConversionOptions& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -368,8 +368,8 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(ColorState input_state,
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                           ColorState target_state,
-                                           ColorConversionOptions options)
+                                           const ColorState& target_state,
+                                           const ColorConversionOptions& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -539,22 +539,22 @@ class Op_RGB_to_YCbCr : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 template<class Pixel>
 std::vector<ColorStateWithCost>
-Op_RGB_to_YCbCr<Pixel>::state_after_conversion(ColorState input_state,
-                                               ColorState target_state,
-                                               ColorConversionOptions options)
+Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
+                                               const ColorState& target_state,
+                                               const ColorConversionOptions& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -590,8 +590,8 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(ColorState input_state,
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                           ColorState target_state,
-                                           ColorConversionOptions options)
+                                           const ColorState& target_state,
+                                           const ColorConversionOptions& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -776,21 +776,21 @@ class Op_YCbCr420_to_RGB24 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_YCbCr420_to_RGB24::state_after_conversion(ColorState input_state,
-                                             ColorState target_state,
-                                             ColorConversionOptions options)
+Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
+                                             const ColorState& target_state,
+                                             const ColorConversionOptions& options)
 {
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
@@ -831,8 +831,8 @@ Op_YCbCr420_to_RGB24::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                         ColorState target_state,
-                                         ColorConversionOptions options)
+                                         const ColorState& target_state,
+                                         const ColorConversionOptions& options)
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -893,21 +893,21 @@ class Op_YCbCr420_to_RGB32 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_YCbCr420_to_RGB32::state_after_conversion(ColorState input_state,
-                                             ColorState target_state,
-                                             ColorConversionOptions options)
+Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
+                                             const ColorState& target_state,
+                                             const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -949,8 +949,8 @@ Op_YCbCr420_to_RGB32::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                         ColorState target_state,
-                                         ColorConversionOptions options)
+                                         const ColorState& target_state,
+                                         const ColorConversionOptions& options)
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -1030,21 +1030,21 @@ class Op_RGB_HDR_to_RRGGBBaa_BE : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(ColorState input_state,
-                                                  ColorState target_state,
-                                                  ColorConversionOptions options)
+Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
+                                                  const ColorState& target_state,
+                                                  const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1091,8 +1091,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                              ColorState target_state,
-                                              ColorConversionOptions options)
+                                              const ColorState& target_state,
+                                              const ColorConversionOptions& options)
 {
   if (input->get_bits_per_pixel(heif_channel_R) == 8 ||
       input->get_bits_per_pixel(heif_channel_G) == 8 ||
@@ -1195,21 +1195,21 @@ class Op_RGB_to_RRGGBBaa_BE : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RGB_to_RRGGBBaa_BE::state_after_conversion(ColorState input_state,
-                                              ColorState target_state,
-                                              ColorConversionOptions options)
+Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
+                                              const ColorState& target_state,
+                                              const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1256,8 +1256,8 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                          ColorState target_state,
-                                          ColorConversionOptions options)
+                                          const ColorState& target_state,
+                                          const ColorConversionOptions& options)
 {
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
       input->get_bits_per_pixel(heif_channel_G) != 8 ||
@@ -1341,21 +1341,21 @@ class Op_RRGGBBaa_BE_to_RGB_HDR : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(ColorState input_state,
-                                                  ColorState target_state,
-                                                  ColorConversionOptions options)
+Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
+                                                  const ColorState& target_state,
+                                                  const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1390,8 +1390,8 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                              ColorState target_state,
-                                              ColorConversionOptions options)
+                                              const ColorState& target_state,
+                                              const ColorConversionOptions& options)
 {
   bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
                     input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE);
@@ -1466,21 +1466,21 @@ class Op_RRGGBBaa_swap_endianness : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RRGGBBaa_swap_endianness::state_after_conversion(ColorState input_state,
-                                                    ColorState target_state,
-                                                    ColorConversionOptions options)
+Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_state,
+                                                    const ColorState& target_state,
+                                                    const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1547,8 +1547,8 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                                ColorState target_state,
-                                                ColorConversionOptions options)
+                                                const ColorState& target_state,
+                                                const ColorConversionOptions& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -1602,21 +1602,21 @@ class Op_mono_to_YCbCr420 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_mono_to_YCbCr420::state_after_conversion(ColorState input_state,
-                                            ColorState target_state,
-                                            ColorConversionOptions options)
+Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
+                                            const ColorState& target_state,
+                                            const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1647,8 +1647,8 @@ Op_mono_to_YCbCr420::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                        ColorState target_state,
-                                        ColorConversionOptions options)
+                                        const ColorState& target_state,
+                                        const ColorConversionOptions& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -1751,21 +1751,21 @@ class Op_mono_to_RGB24_32 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_mono_to_RGB24_32::state_after_conversion(ColorState input_state,
-                                            ColorState target_state,
-                                            ColorConversionOptions options)
+Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
+                                            const ColorState& target_state,
+                                            const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1812,8 +1812,8 @@ Op_mono_to_RGB24_32::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                        ColorState target_state,
-                                        ColorConversionOptions options)
+                                        const ColorState& target_state,
+                                        const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -1886,21 +1886,21 @@ class Op_RGB24_32_to_YCbCr : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RGB24_32_to_YCbCr::state_after_conversion(ColorState input_state,
-                                             ColorState target_state,
-                                             ColorConversionOptions options)
+Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
+                                             const ColorState& target_state,
+                                             const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1989,8 +1989,8 @@ inline void set_chroma_pixels(uint8_t* out_cb, uint8_t* out_cr,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                         ColorState target_state,
-                                         ColorConversionOptions options)
+                                         const ColorState& target_state,
+                                         const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2221,21 +2221,21 @@ class Op_RGB24_32_to_YCbCr444_GBR : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
-                                                    ColorState target_state,
-                                                    ColorConversionOptions options)
+Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_state,
+                                                    const ColorState& target_state,
+                                                    const ColorConversionOptions& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -2295,8 +2295,8 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                                ColorState target_state,
-                                                ColorConversionOptions options)
+                                                const ColorState& target_state,
+                                                const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2375,21 +2375,21 @@ class Op_drop_alpha_plane : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_drop_alpha_plane::state_after_conversion(ColorState input_state,
-                                            ColorState target_state,
-                                            ColorConversionOptions options)
+Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
+                                            const ColorState& target_state,
+                                            const ColorConversionOptions& options)
 {
   // only drop alpha plane if it is not needed in output
 
@@ -2422,8 +2422,8 @@ Op_drop_alpha_plane::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_drop_alpha_plane::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                        ColorState target_state,
-                                        ColorConversionOptions options)
+                                        const ColorState& target_state,
+                                        const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2453,21 +2453,21 @@ class Op_to_hdr_planes : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_to_hdr_planes::state_after_conversion(ColorState input_state,
-                                         ColorState target_state,
-                                         ColorConversionOptions options)
+Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
+                                         const ColorState& target_state,
+                                         const ColorConversionOptions& options)
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -2497,8 +2497,8 @@ Op_to_hdr_planes::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                     ColorState target_state,
-                                     ColorConversionOptions options)
+                                     const ColorState& target_state,
+                                     const ColorConversionOptions& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -2550,21 +2550,21 @@ class Op_to_sdr_planes : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_to_sdr_planes::state_after_conversion(ColorState input_state,
-                                         ColorState target_state,
-                                         ColorConversionOptions options)
+Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
+                                         const ColorState& target_state,
+                                         const ColorConversionOptions& options)
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -2594,8 +2594,8 @@ Op_to_sdr_planes::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                     ColorState target_state,
-                                     ColorConversionOptions options)
+                                     const ColorState& target_state,
+                                     const ColorConversionOptions& options)
 {
 
   auto outimg = std::make_shared<HeifPixelImage>();
@@ -2651,21 +2651,21 @@ class Op_RRGGBBxx_HDR_to_YCbCr420 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(ColorState input_state,
-                                                    ColorState target_state,
-                                                    ColorConversionOptions options)
+Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_state,
+                                                    const ColorState& target_state,
+                                                    const ColorConversionOptions& options)
 {
   if (input_state.colorspace != heif_colorspace_RGB ||
       !(input_state.chroma == heif_chroma_interleaved_RRGGBB_BE ||
@@ -2709,8 +2709,8 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                                ColorState target_state,
-                                                ColorConversionOptions options)
+                                                const ColorState& target_state,
+                                                const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2848,21 +2848,21 @@ class Op_YCbCr420_to_RRGGBBaa : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
-  state_after_conversion(ColorState input_state,
-                         ColorState target_state,
-                         ColorConversionOptions options) override;
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const ColorConversionOptions& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     ColorState target_state,
-                     ColorConversionOptions options) override;
+                     const ColorState& target_state,
+                     const ColorConversionOptions& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
-Op_YCbCr420_to_RRGGBBaa::state_after_conversion(ColorState input_state,
-                                                ColorState target_state,
-                                                ColorConversionOptions options)
+Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
+                                                const ColorState& target_state,
+                                                const ColorConversionOptions& options)
 {
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
@@ -2911,8 +2911,8 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(ColorState input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                            ColorState target_state,
-                                            ColorConversionOptions options)
+                                            const ColorState& target_state,
+                                            const ColorConversionOptions& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -3002,7 +3002,7 @@ struct Node
 {
   Node() = default;
 
-  Node(int prev, const std::shared_ptr<ColorConversionOperation>& _op, ColorStateWithCost state)
+  Node(int prev, const std::shared_ptr<ColorConversionOperation>& _op, const ColorStateWithCost& state)
   {
     prev_processed_idx = prev;
     op = _op;
@@ -3015,9 +3015,9 @@ struct Node
 };
 
 
-bool ColorConversionPipeline::construct_pipeline(ColorState input_state,
-                                                 ColorState target_state,
-                                                 ColorConversionOptions options)
+bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
+                                                 const ColorState& target_state,
+                                                 const ColorConversionOptions& options)
 {
   m_operations.clear();
 
@@ -3227,7 +3227,7 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
 std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                          heif_colorspace target_colorspace,
                                                          heif_chroma target_chroma,
-                                                         std::shared_ptr<const color_profile_nclx> target_profile,
+                                                         const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                          int output_bpp)
 {
   // --- check that input image is valid

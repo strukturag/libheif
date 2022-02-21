@@ -36,7 +36,7 @@ heif::Error::Error()
 
 heif::Error::Error(heif_error_code c,
                    heif_suberror_code sc,
-                   std::string msg)
+                   const std::string& msg)
     : error_code(c),
       sub_error_code(sc),
       message(msg)

@@ -158,10 +158,10 @@ int main(int argc, char** argv)
   int input_width = heif_image_handle_get_width(image_handle);
   int input_height = heif_image_handle_get_height(image_handle);
 
-  int thumbnail_width = input_width;
-  int thumbnail_height = input_height;
-
   if (input_width > size || input_height > size) {
+    int thumbnail_width;
+    int thumbnail_height;
+
     if (input_width > input_height) {
       thumbnail_height = input_height * size / input_width;
       thumbnail_width = size;

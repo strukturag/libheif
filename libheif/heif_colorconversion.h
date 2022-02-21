@@ -105,23 +105,23 @@ namespace heif {
     // provide a range of conversion options.
     // Also returns the cost for this conversion.
     virtual std::vector<ColorStateWithCost>
-    state_after_conversion(ColorState input_state,
-                           ColorState target_state,
-                           ColorConversionOptions options = ColorConversionOptions()) = 0;
+    state_after_conversion(const ColorState& input_state,
+                           const ColorState& target_state,
+                           const ColorConversionOptions& options = ColorConversionOptions()) = 0;
 
     virtual std::shared_ptr<HeifPixelImage>
     convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                       ColorState target_state,
-                       ColorConversionOptions options = ColorConversionOptions()) = 0;
+                       const ColorState& target_state,
+                       const ColorConversionOptions& options = ColorConversionOptions()) = 0;
   };
 
 
   class ColorConversionPipeline
   {
   public:
-    bool construct_pipeline(ColorState input_state,
-                            ColorState target_state,
-                            ColorConversionOptions options = ColorConversionOptions());
+    bool construct_pipeline(const ColorState& input_state,
+                            const ColorState& target_state,
+                            const ColorConversionOptions& options = ColorConversionOptions());
 
     std::shared_ptr<HeifPixelImage>
     convert_image(const std::shared_ptr<HeifPixelImage>& input);
@@ -138,6 +138,6 @@ namespace heif {
   std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPixelImage>& input,
                                                      heif_colorspace colorspace,
                                                      heif_chroma chroma,
-                                                     std::shared_ptr<const color_profile_nclx> target_profile,
+                                                     const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                      int output_bpp = 0);
 }

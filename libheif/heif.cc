@@ -140,7 +140,7 @@ heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
   if (fourcc==nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {
     return heif_unknown_brand;
   }
-  
+
   char brand[5];
   brand[0] = fourcc[0];
   brand[1] = fourcc[1];
@@ -238,7 +238,7 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
   if (data == nullptr || len<=0 || brand_fourcc == nullptr || !brand_fourcc[0] || !brand_fourcc[1] || !brand_fourcc[2] || !brand_fourcc[3]) {
     return -1;
   }
-  
+
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
   BitstreamRange range(stream, len);
 
@@ -248,7 +248,7 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
     if (err.sub_error_code == heif_suberror_End_of_data) {
       return -1;
     }
-    
+
     return -2;
   }
 
@@ -271,7 +271,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
   if (len<=0) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "data length must be positive"};
   }
-  
+
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
   BitstreamRange range(stream, len);
 
@@ -281,7 +281,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
     if (err.sub_error_code == heif_suberror_End_of_data) {
       return {err.error_code, err.sub_error_code, "insufficient input data"};
     }
-    
+
     return {err.error_code, err.sub_error_code, "error reading ftyp box"};
   }
 
@@ -293,11 +293,11 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
   auto brands = ftyp->list_brands();
   *out_brands = (heif_brand2*)malloc(sizeof(heif_brand2) * brands.size());
   *out_size = (int)brands.size();
-  
+
   for (int i=0;i<(int)brands.size();i++) {
     (*out_brands)[i] = brands[i];
   }
-  
+
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
@@ -615,7 +615,7 @@ heif_error heif_image_handle_get_thumbnail(const struct heif_image_handle* handl
   }
 
   auto thumbnails = handle->image->get_thumbnails();
-  for (auto thumb : thumbnails) {
+  for (const auto& thumb : thumbnails) {
     if (thumb->get_id() == thumbnail_id) {
       *out_thumbnail_handle = new heif_image_handle();
       (*out_thumbnail_handle)->image = thumb;
@@ -667,13 +667,13 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
   auto auxType = handle->image->get_aux_type();
 
   char* buf = (char*)malloc(auxType.length()+1);
-  
+
   if (buf == nullptr) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Unspecified,
                  "Failed to allocate memory for the type string").error_struct(handle->image.get());
   }
-  
+
   strcpy(buf, auxType.c_str());
   *out_type = buf;
 
@@ -701,7 +701,7 @@ struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif
   }
 
   auto auxImages = main_image_handle->image->get_aux_images();
-  for (auto aux : auxImages) {
+  for (const auto& aux : auxImages) {
     if (aux->get_id() == auxiliary_id) {
       *out_auxiliary_handle = new heif_image_handle();
       (*out_auxiliary_handle)->image = aux;
@@ -1420,13 +1420,13 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
   }
 
   auto nclx_profile = image->image->get_color_profile_nclx();
-  
+
   if (!nclx_profile) {
     Error err(heif_error_Color_profile_does_not_exist,
               heif_suberror_Unspecified);
     return err.error_struct(image->image.get());
   }
-  
+
   Error err = nclx_profile->get_nclx_color_profile(out_data);
 
   return err.error_struct(image->image.get());

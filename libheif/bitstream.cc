@@ -148,12 +148,8 @@ StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_s
 BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
                                uint64_t length,
                                BitstreamRange* parent)
+    : m_istr(std::move(istr)), m_parent_range(parent), m_remaining(length)
 {
-  m_remaining = length;
-
-  m_istr = istr;
-  m_parent_range = parent;
-
   if (parent) {
     m_nesting_level = parent->m_nesting_level + 1;
   }

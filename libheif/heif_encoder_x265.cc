@@ -77,13 +77,13 @@ struct encoder_struct_x265
 
   void add_param(const parameter&);
 
-  void add_param(std::string name, int value);
+  void add_param(const std::string& name, int value);
 
-  void add_param(std::string name, bool value);
+  void add_param(const std::string& name, bool value);
 
-  void add_param(std::string name, std::string value);
+  void add_param(const std::string& name, const std::string& value);
 
-  parameter get_param(std::string name) const;
+  parameter get_param(const std::string& name) const;
 
   std::string preset;
   std::string tune;
@@ -112,7 +112,7 @@ void encoder_struct_x265::add_param(const parameter& p)
 }
 
 
-void encoder_struct_x265::add_param(std::string name, int value)
+void encoder_struct_x265::add_param(const std::string& name, int value)
 {
   parameter p;
   p.type = Int;
@@ -121,7 +121,7 @@ void encoder_struct_x265::add_param(std::string name, int value)
   add_param(p);
 }
 
-void encoder_struct_x265::add_param(std::string name, bool value)
+void encoder_struct_x265::add_param(const std::string& name, bool value)
 {
   parameter p;
   p.type = Bool;
@@ -130,7 +130,7 @@ void encoder_struct_x265::add_param(std::string name, bool value)
   add_param(p);
 }
 
-void encoder_struct_x265::add_param(std::string name, std::string value)
+void encoder_struct_x265::add_param(const std::string& name, const std::string& value)
 {
   parameter p;
   p.type = String;
@@ -140,7 +140,7 @@ void encoder_struct_x265::add_param(std::string name, std::string value)
 }
 
 
-parameter encoder_struct_x265::get_param(std::string name) const
+parameter encoder_struct_x265::get_param(const std::string& name) const
 {
   for (size_t i = 0; i < parameters.size(); i++) {
     if (parameters[i].name == name) {
@@ -188,7 +188,7 @@ static const char* x265_plugin_name()
   strcpy(plugin_name, "x265 HEVC encoder");
 
   const char* x265_version = (x265_version_str != nullptr ? x265_version_str : "null");
-  
+
   if (strlen(x265_version) + strlen(plugin_name) + 4 < MAX_PLUGIN_NAME_LENGTH) {
     strcat(plugin_name, " (");
     strcat(plugin_name, x265_version);
@@ -772,6 +772,8 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     assert(heif_image_get_width(image, heif_channel_Cr)==w);
     assert(heif_image_get_height(image, heif_channel_Cb)==h);
     assert(heif_image_get_height(image, heif_channel_Cr)==h);
+    (void) w;
+    (void) h;
   }
 
   api->param_parse(param, "info", "0");

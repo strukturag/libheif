@@ -972,9 +972,9 @@ void list_encoder_parameters(heif_encoder* encoder)
 }
 
 
-void set_params(struct heif_encoder* encoder, std::vector<std::string> params)
+void set_params(struct heif_encoder* encoder, const std::vector<std::string>& params)
 {
-  for (std::string p : params) {
+  for (const std::string& p : params) {
     auto pos = p.find_first_of('=');
     if (pos == std::string::npos || pos == 0 || pos == p.size() - 1) {
       std::cerr << "Encoder parameter must be in the format 'name=value'\n";

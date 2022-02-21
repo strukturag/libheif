@@ -206,7 +206,7 @@ namespace heif {
     const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const
     { return m_children; }
 
-    int append_child_box(std::shared_ptr<Box> box)
+    int append_child_box(const std::shared_ptr<Box>& box)
     {
       m_children.push_back(box);
       return (int) m_children.size() - 1;
@@ -245,7 +245,6 @@ namespace heif {
 
     std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
 
-    
     void set_major_brand(uint32_t major_brand)
     { m_major_brand = major_brand; }
 
@@ -392,7 +391,7 @@ namespace heif {
     { return m_items; }
 
     Error read_data(const Item& item,
-                    std::shared_ptr<StreamReader> istr,
+                    const std::shared_ptr<StreamReader>& istr,
                     const std::shared_ptr<class Box_idat>&,
                     std::vector<uint8_t>* dest) const;
 
@@ -464,19 +463,19 @@ namespace heif {
     void set_item_ID(heif_item_id id)
     { m_item_ID = id; }
 
-    std::string get_item_type() const
+    const std::string& get_item_type() const
     { return m_item_type; }
 
-    void set_item_type(std::string type)
+    void set_item_type(const std::string& type)
     { m_item_type = type; }
 
-    void set_item_name(std::string name)
+    void set_item_name(const std::string& name)
     { m_item_name = name; }
 
-    std::string get_content_type() const
+    const std::string& get_content_type() const
     { return m_content_type; }
 
-    void set_content_type(std::string content_type)
+    void set_content_type(const std::string& content_type)
     { m_content_type = content_type; }
 
     void derive_box_version() override;
@@ -670,13 +669,13 @@ namespace heif {
     Box_auxC(const BoxHeader& hdr) : Box(hdr)
     {}
 
-    std::string get_aux_type() const
+    const std::string& get_aux_type() const
     { return m_aux_type; }
 
-    void set_aux_type(std::string type)
+    void set_aux_type(const std::string& type)
     { m_aux_type = type; }
 
-    std::vector<uint8_t> get_subtypes() const
+    const std::vector<uint8_t>& get_subtypes() const
     { return m_aux_subtypes; }
 
     std::string dump(Indent&) const override;
@@ -804,7 +803,7 @@ namespace heif {
 
     std::vector<Reference> get_references_from(heif_item_id itemID) const;
 
-    void add_reference(heif_item_id from_id, uint32_t type, std::vector<heif_item_id> to_ids);
+    void add_reference(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids);
 
   protected:
     Error parse(BitstreamRange& range) override;
@@ -863,7 +862,7 @@ namespace heif {
     void set_configuration(const configuration& config)
     { m_configuration = config; }
 
-    configuration get_configuration() const
+    const configuration& get_configuration() const
     { return m_configuration; }
 
     void append_nal_data(const std::vector<uint8_t>& nal);
@@ -936,7 +935,7 @@ namespace heif {
     void set_configuration(const configuration& config)
     { m_configuration = config; }
 
-    configuration get_configuration() const
+    const configuration& get_configuration() const
     { return m_configuration; }
 
     //void append_nal_data(const std::vector<uint8_t>& nal);
@@ -962,7 +961,7 @@ namespace heif {
 
     std::string dump(Indent&) const override;
 
-    Error read_data(std::shared_ptr<StreamReader> istr,
+    Error read_data(const std::shared_ptr<StreamReader>& istr,
                     uint64_t start, uint64_t length,
                     std::vector<uint8_t>& out_data) const;
 
@@ -1100,14 +1099,14 @@ namespace heif {
   class color_profile_raw : public color_profile
   {
   public:
-    color_profile_raw(uint32_t type, std::vector<uint8_t> data)
+    color_profile_raw(uint32_t type, const std::vector<uint8_t>& data)
         : m_type(type), m_data(data)
     {}
 
     uint32_t get_type() const override
     { return m_type; }
 
-    std::vector<uint8_t> get_data() const
+    const std::vector<uint8_t>& get_data() const
     { return m_data; }
 
     std::string dump(Indent&) const override;
@@ -1196,10 +1195,10 @@ namespace heif {
     uint32_t get_color_profile_type() const
     { return m_color_profile->get_type(); }
 
-    std::shared_ptr<const color_profile> get_color_profile() const
+    const std::shared_ptr<const color_profile>& get_color_profile() const
     { return m_color_profile; }
 
-    void set_color_profile(std::shared_ptr<const color_profile> prof)
+    void set_color_profile(const std::shared_ptr<const color_profile>& prof)
     { m_color_profile = prof; }
 
 

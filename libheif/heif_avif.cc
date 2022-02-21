@@ -28,7 +28,7 @@ using namespace heif;
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
 
-Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, std::shared_ptr<HeifPixelImage> image)
+Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image)
 {
   int bpp = image->get_bits_per_pixel(heif_channel_Y);
   heif_chroma chroma = image->get_chroma_format();

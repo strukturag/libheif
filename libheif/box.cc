@@ -1063,7 +1063,7 @@ std::string Box_iloc::dump(Indent& indent) const
 
 
 Error Box_iloc::read_data(const Item& item,
-                          std::shared_ptr<StreamReader> istr,
+                          const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
@@ -1130,6 +1130,7 @@ Error Box_iloc::read_data(const Item& item,
       dest->resize(static_cast<size_t>(old_size + extent.length));
       success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(extent.length));
       assert(success);
+      (void) success;
     }
     else if (item.construction_method == 1) {
       if (!idat) {
@@ -2596,7 +2597,7 @@ std::vector<uint32_t> Box_iref::get_references(uint32_t itemID, uint32_t ref_typ
 }
 
 
-void Box_iref::add_reference(heif_item_id from_id, uint32_t type, std::vector<heif_item_id> to_ids)
+void Box_iref::add_reference(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids)
 {
   Reference ref;
   ref.header.set_short_type(type);
@@ -3014,7 +3015,7 @@ std::string Box_idat::dump(Indent& indent) const
 }
 
 
-Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
+Error Box_idat::read_data(const std::shared_ptr<StreamReader>& istr,
                           uint64_t start, uint64_t length,
                           std::vector<uint8_t>& out_data) const
 {
@@ -3064,6 +3065,7 @@ Error Box_idat::read_data(std::shared_ptr<StreamReader> istr,
 
     success = istr->read((char*) data, static_cast<size_t>(length));
     assert(success);
+    (void) success;
   }
 
   return Error::Ok;

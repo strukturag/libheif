@@ -56,7 +56,7 @@ namespace heif {
       m_error_message = c_success;
     }
 
-    void set_error(std::string err)
+    void set_error(const std::string& err)
     {
       m_buffer = err;
       m_error_message = m_buffer.c_str();
@@ -85,7 +85,7 @@ namespace heif {
 
     Error(heif_error_code c,
           heif_suberror_code sc = heif_suberror_Unspecified,
-          std::string msg = "");
+          const std::string& msg = "");
 
     static Error Ok;
 
