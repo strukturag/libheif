@@ -1694,10 +1694,25 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 
   struct heif_color_profile_nclx* nclx = *out_data;
 
+  struct heif_error err;
+
   nclx->version = 1;
-  nclx->color_primaries = (enum heif_color_primaries) get_colour_primaries();
-  nclx->transfer_characteristics = (enum heif_transfer_characteristics) get_transfer_characteristics();
-  nclx->matrix_coefficients = (enum heif_matrix_coefficients) get_matrix_coefficients();
+
+  err = heif_nclx_color_profile_set_color_primaries(nclx, get_colour_primaries());
+  if (err.code) {
+    return {err.code, err.subcode};
+  }
+
+  err = heif_nclx_color_profile_set_transfer_characteristics(nclx, get_transfer_characteristics());
+  if (err.code) {
+    return {err.code, err.subcode};
+  }
+
+  err = heif_nclx_color_profile_set_matrix_coefficients(nclx, get_matrix_coefficients());
+  if (err.code) {
+    return {err.code, err.subcode};
+  }
+
   nclx->full_range_flag = get_full_range_flag();
 
   // fill color primaries
