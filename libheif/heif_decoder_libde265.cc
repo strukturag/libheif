@@ -39,6 +39,7 @@ using namespace heif;
 struct libde265_decoder
 {
   de265_decoder_context* ctx;
+  bool strict_decoding = false;
 };
 
 static const char kEmptyString[] = "";
@@ -189,6 +190,14 @@ static void libde265_free_decoder(void* decoder_raw)
 }
 
 
+void libde265_set_strict_decoding(void* decoder_raw, int flag)
+{
+  struct libde265_decoder* decoder = (libde265_decoder*) decoder_raw;
+
+  decoder->strict_decoding = flag;
+}
+
+
 #if LIBDE265_NUMERIC_VERSION >= 0x02000000
 
 static struct heif_error libde265_v2_push_data(void* decoder_raw, const void* data, size_t size)
@@ -330,15 +339,15 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
         return err;
       }
 
-      auto nclx = std::make_shared<color_profile_nclx>();
+      struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
 #if LIBDE265_NUMERIC_VERSION >= 0x01000700
-      nclx->set_full_range_flag(de265_get_image_full_range_flag(image));
-      nclx->set_matrix_coefficients((uint16_t)de265_get_image_matrix_coefficients(image));
-      nclx->set_colour_primaries((uint16_t)de265_get_image_colour_primaries(image));
-      nclx->set_transfer_characteristics((uint16_t)de265_get_image_transfer_characteristics(image));
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_color_primaries(nclx, (uint16_t)de265_get_image_colour_primaries(image)));
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_transfer_characteristics(nclx, (uint16_t)de265_get_image_transfer_characteristics(image)));
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_matrix_coefficients(nclx, (uint16_t)de265_get_image_matrix_coefficients(image)));
+      nclx->full_range_flag = (bool)de265_get_image_full_range_flag(image);
 #endif
-      assert(*out_img);
-      (*out_img)->image->set_color_profile_nclx(nclx);
+      heif_image_set_nclx_color_profile(*out_img, nclx);
+      heif_nclx_color_profile_free(nclx);
 
       de265_release_next_picture(decoder->ctx);
     }
@@ -370,7 +379,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 static const struct heif_decoder_plugin decoder_libde265
     {
-        1,
+        2,
         libde265_plugin_name,
         libde265_init_plugin,
         libde265_deinit_plugin,
@@ -378,7 +387,8 @@ static const struct heif_decoder_plugin decoder_libde265
         libde265_new_decoder,
         libde265_free_decoder,
         libde265_v1_push_data,
-        libde265_v1_decode_image
+        libde265_v1_decode_image,
+        libde265_set_strict_decoding
     };
 
 #endif
