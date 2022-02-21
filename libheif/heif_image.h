@@ -30,6 +30,7 @@
 #include <memory>
 #include <map>
 #include <set>
+#include <utility>
 
 
 namespace heif {
