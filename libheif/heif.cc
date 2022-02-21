@@ -1349,20 +1349,98 @@ static const std::set<enum heif_color_primaries> known_color_primaries{
     heif_color_primaries_EBU_Tech_3213_E,
 };
 
-struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t n)
+struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t cp)
 {
-  if (n < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
-      n > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {
+  if (cp < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
+      cp > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
   }
 
-  auto p = static_cast<heif_color_primaries>(n);
-  if (known_color_primaries.find(p) != known_color_primaries.end()) {
-    nclx->color_primaries = p;
+  auto n = static_cast<heif_color_primaries>(cp);
+  if (known_color_primaries.find(n) != known_color_primaries.end()) {
+    nclx->color_primaries = n;
   }
   else {
     nclx->color_primaries = heif_color_primaries_unspecified;
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
+  }
+
+  return Error::Ok.error_struct(nullptr);
+}
+
+
+static const std::set<enum heif_transfer_characteristics> known_transfer_characteristics{
+  heif_transfer_characteristic_ITU_R_BT_709_5,
+  heif_transfer_characteristic_unspecified,
+  heif_transfer_characteristic_ITU_R_BT_470_6_System_M,
+  heif_transfer_characteristic_ITU_R_BT_470_6_System_B_G,
+  heif_transfer_characteristic_ITU_R_BT_601_6,
+  heif_transfer_characteristic_SMPTE_240M,
+  heif_transfer_characteristic_linear,
+  heif_transfer_characteristic_logarithmic_100,
+  heif_transfer_characteristic_logarithmic_100_sqrt10,
+  heif_transfer_characteristic_IEC_61966_2_4,
+  heif_transfer_characteristic_ITU_R_BT_1361,
+  heif_transfer_characteristic_IEC_61966_2_1,
+  heif_transfer_characteristic_ITU_R_BT_2020_2_10bit,
+  heif_transfer_characteristic_ITU_R_BT_2020_2_12bit,
+  heif_transfer_characteristic_ITU_R_BT_2100_0_PQ,
+  heif_transfer_characteristic_SMPTE_ST_428_1,
+  heif_transfer_characteristic_ITU_R_BT_2100_0_HLG
+};
+
+
+struct heif_error heif_nclx_color_profile_set_transfer_characteristics(struct heif_color_profile_nclx* nclx, uint16_t tc)
+{
+  if (tc < std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::min() ||
+      tc > std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::max()) {
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_transfer_characteristics).error_struct(nullptr);
+  }
+
+  auto n = static_cast<heif_transfer_characteristics>(tc);
+  if (known_transfer_characteristics.find(n) != known_transfer_characteristics.end()) {
+    nclx->transfer_characteristics = n;
+  }
+  else {
+    nclx->transfer_characteristics = heif_transfer_characteristic_unspecified;
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_transfer_characteristics).error_struct(nullptr);
+  }
+
+  return Error::Ok.error_struct(nullptr);
+}
+
+
+static const std::set<enum heif_matrix_coefficients> known_matrix_coefficients{
+    heif_matrix_coefficients_RGB_GBR,
+    heif_matrix_coefficients_ITU_R_BT_709_5,
+    heif_matrix_coefficients_unspecified,
+    heif_matrix_coefficients_US_FCC_T47,
+    heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G,
+    heif_matrix_coefficients_ITU_R_BT_601_6,
+    heif_matrix_coefficients_SMPTE_240M,
+    heif_matrix_coefficients_YCgCo,
+    heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance,
+    heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance,
+    heif_matrix_coefficients_SMPTE_ST_2085,
+    heif_matrix_coefficients_chromaticity_derived_non_constant_luminance,
+    heif_matrix_coefficients_chromaticity_derived_constant_luminance,
+    heif_matrix_coefficients_ICtCp
+};
+
+struct heif_error heif_nclx_color_profile_set_matrix_coefficients(struct heif_color_profile_nclx* nclx, uint16_t mc)
+{
+  if (mc < std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::min() ||
+      mc > std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::max()) {
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_matrix_coefficients).error_struct(nullptr);
+  }
+
+  auto n = static_cast<heif_matrix_coefficients>(mc);
+  if (known_matrix_coefficients.find(n) != known_matrix_coefficients.end()) {
+    nclx->matrix_coefficients = n;
+  }
+  else {
+    nclx->matrix_coefficients = heif_matrix_coefficients_unspecified;
+    return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_matrix_coefficients).error_struct(nullptr);
   }
 
   return Error::Ok.error_struct(nullptr);

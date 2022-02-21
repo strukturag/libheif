@@ -209,6 +209,10 @@ enum heif_suberror_code
 
   heif_suberror_Unknown_NCLX_color_primaries = 133,
 
+  heif_suberror_Unknown_NCLX_transfer_characteristics = 134,
+
+  heif_suberror_Unknown_NCLX_matrix_coefficients = 135,
+
 
   // --- Memory_allocation_error ---
 
@@ -806,7 +810,13 @@ struct heif_color_profile_nclx
 };
 
 LIBHEIF_API
-struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t primaries);
+struct heif_error heif_nclx_color_profile_set_color_primaries(struct heif_color_profile_nclx* nclx, uint16_t cp);
+
+LIBHEIF_API
+struct heif_error heif_nclx_color_profile_set_transfer_characteristics(struct heif_color_profile_nclx* nclx, uint16_t transfer_characteristics);
+
+LIBHEIF_API
+struct heif_error heif_nclx_color_profile_set_matrix_coefficients(struct heif_color_profile_nclx* nclx, uint16_t matrix_coefficients);
 
 // Returns 'heif_error_Color_profile_does_not_exist' when there is no NCLX profile.
 // TODO: This function does currently not return an NCLX profile if it is stored in the image bitstream.
