@@ -1143,13 +1143,13 @@ namespace heif {
     { return m_full_range_flag; }
 
     void set_colour_primaries(uint16_t primaries)
-    { m_colour_primaries = primaries; }
+    { m_colour_primaries = heif_color_primaries_sanitize(primaries); }
 
     void set_transfer_characteristics(uint16_t characteristics)
-    { m_transfer_characteristics = characteristics; }
+    { m_transfer_characteristics = heif_transfer_characteristics_sanitize(characteristics); }
 
     void set_matrix_coefficients(uint16_t coefficients)
-    { m_matrix_coefficients = coefficients; }
+    { m_matrix_coefficients = heif_matrix_coefficients_sanitize(coefficients); }
 
     void set_full_range_flag(bool full_range)
     { m_full_range_flag = full_range; }
@@ -1167,9 +1167,9 @@ namespace heif {
     void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
 
   private:
-    uint16_t m_colour_primaries = 0;
-    uint16_t m_transfer_characteristics = 0;
-    uint16_t m_matrix_coefficients = 0;
+    uint16_t m_colour_primaries = heif_color_primaries_unspecified;
+    uint16_t m_transfer_characteristics = heif_transfer_characteristic_unspecified;
+    uint16_t m_matrix_coefficients = heif_matrix_coefficients_unspecified;
     bool m_full_range_flag = true;
   };
 

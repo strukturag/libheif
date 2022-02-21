@@ -1445,6 +1445,113 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 }
 
 
+heif_color_primaries heif_color_primaries_sanitize(uint16_t cp)
+{
+  switch (cp) {
+    case 1:
+      return heif_color_primaries_ITU_R_BT_709_5;
+    case 4:
+      return heif_color_primaries_ITU_R_BT_470_6_System_M;
+    case 5:
+      return heif_color_primaries_ITU_R_BT_470_6_System_B_G;
+    case 6:
+      return heif_color_primaries_ITU_R_BT_601_6;
+    case 7:
+      return heif_color_primaries_SMPTE_240M;
+    case 8:
+      return heif_color_primaries_generic_film;
+    case 9:
+      return heif_color_primaries_ITU_R_BT_2020_2_and_2100_0;
+    case 10:
+      return heif_color_primaries_SMPTE_ST_428_1;
+    case 11:
+      return heif_color_primaries_SMPTE_RP_431_2;
+    case 12:
+      return heif_color_primaries_SMPTE_EG_432_1;
+    case 22:
+      return heif_color_primaries_EBU_Tech_3213_E;
+    default:
+      return heif_color_primaries_unspecified;
+  }
+}
+
+
+heif_transfer_characteristics heif_transfer_characteristics_sanitize(uint16_t tc)
+{
+  switch (tc) {
+    case 1:
+      return heif_transfer_characteristic_ITU_R_BT_709_5;
+    case 4:
+      return heif_transfer_characteristic_ITU_R_BT_470_6_System_M;
+    case 5:
+      return heif_transfer_characteristic_ITU_R_BT_470_6_System_B_G;
+    case 6:
+      return heif_transfer_characteristic_ITU_R_BT_601_6;
+    case 7:
+      return heif_transfer_characteristic_SMPTE_240M;
+    case 8:
+      return heif_transfer_characteristic_linear;
+    case 9:
+      return heif_transfer_characteristic_logarithmic_100;
+    case 10:
+      return heif_transfer_characteristic_logarithmic_100_sqrt10;
+    case 11:
+      return heif_transfer_characteristic_IEC_61966_2_4;
+    case 12:
+      return heif_transfer_characteristic_ITU_R_BT_1361;
+    case 13:
+      return heif_transfer_characteristic_IEC_61966_2_1;
+    case 14:
+      return heif_transfer_characteristic_ITU_R_BT_2020_2_10bit;
+    case 15:
+      return heif_transfer_characteristic_ITU_R_BT_2020_2_12bit;
+    case 16:
+      return heif_transfer_characteristic_ITU_R_BT_2100_0_PQ;
+    case 17:
+      return heif_transfer_characteristic_SMPTE_ST_428_1;
+    case 18:
+      return heif_transfer_characteristic_ITU_R_BT_2100_0_HLG;
+    default:
+      return heif_transfer_characteristic_unspecified;
+  }
+}
+
+
+heif_matrix_coefficients heif_matrix_coefficients_sanitize(uint16_t mc)
+{
+  switch (mc) {
+    case 0:
+      return heif_matrix_coefficients_RGB_GBR;
+    case 1:
+      return heif_matrix_coefficients_ITU_R_BT_709_5;
+    case 4:
+      return heif_matrix_coefficients_US_FCC_T47;
+    case 5:
+      return heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
+    case 6:
+      return heif_matrix_coefficients_ITU_R_BT_601_6;
+    case 7:
+      return heif_matrix_coefficients_SMPTE_240M;
+    case 8:
+      return heif_matrix_coefficients_YCgCo;
+    case 9:
+      return heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance;
+    case 10:
+      return heif_matrix_coefficients_ITU_R_BT_2020_2_constant_luminance;
+    case 11:
+      return heif_matrix_coefficients_SMPTE_ST_2085;
+    case 12:
+      return heif_matrix_coefficients_chromaticity_derived_non_constant_luminance;
+    case 13:
+      return heif_matrix_coefficients_chromaticity_derived_constant_luminance;
+    case 14:
+      return heif_matrix_coefficients_ICtCp;
+    default:
+      return heif_matrix_coefficients_unspecified;
+  }
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

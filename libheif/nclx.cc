@@ -74,6 +74,9 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
       matrix_coefficients_idx == 13) {
 
     primaries p = get_colour_primaries(primaries_idx);
+    if (p.whiteY == 0.0f) {
+      return result;
+    }
     float zr = 1 - (p.redX + p.redY);
     float zg = 1 - (p.greenX + p.greenY);
     float zb = 1 - (p.blueX + p.blueY);

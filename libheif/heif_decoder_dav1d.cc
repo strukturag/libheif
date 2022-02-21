@@ -224,9 +224,9 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
   // --- read nclx parameters from decoded AV1 bitstream
 
   heif_color_profile_nclx nclx;
-  nclx.color_primaries = (heif_color_primaries) frame.seq_hdr->pri;
-  nclx.transfer_characteristics = (heif_transfer_characteristics) frame.seq_hdr->trc;
-  nclx.matrix_coefficients = (heif_matrix_coefficients) frame.seq_hdr->mtrx;
+  nclx.color_primaries = heif_color_primaries_sanitize(frame.seq_hdr->pri);
+  nclx.transfer_characteristics = heif_transfer_characteristics_sanitize(frame.seq_hdr->trc);
+  nclx.matrix_coefficients = heif_matrix_coefficients_sanitize(frame.seq_hdr->mtrx);
   nclx.full_range_flag = (frame.seq_hdr->color_range != 0);
   heif_image_set_nclx_color_profile(heif_img, &nclx);
 

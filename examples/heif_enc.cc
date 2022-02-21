@@ -1215,10 +1215,10 @@ int main(int argc, char** argv)
     }
 
     heif_color_profile_nclx nclx;
-    nclx.matrix_coefficients = (heif_matrix_coefficients) nclx_matrix_coefficients;
-    nclx.transfer_characteristics = (heif_transfer_characteristics) nclx_transfer_characteristic;
-    nclx.color_primaries = (heif_color_primaries) nclx_colour_primaries;
-    nclx.full_range_flag = (uint8_t) nclx_full_range;
+    nclx.matrix_coefficients = heif_matrix_coefficients_sanitize(static_cast<uint16_t>(nclx_matrix_coefficients));
+    nclx.transfer_characteristics = heif_transfer_characteristics_sanitize(static_cast<uint16_t>(nclx_transfer_characteristic));
+    nclx.color_primaries = heif_color_primaries_sanitize(static_cast<uint16_t>(nclx_colour_primaries));
+    nclx.full_range_flag = static_cast<uint8_t>(nclx_full_range);
 
     //heif_image_set_nclx_color_profile(image.get(), &nclx);
 

@@ -834,6 +834,14 @@ LIBHEIF_API
 struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
                                                     struct heif_color_profile_nclx** out_data);
 
+LIBHEIF_API
+enum heif_color_primaries heif_color_primaries_sanitize(uint16_t cp);
+
+LIBHEIF_API
+enum heif_transfer_characteristics heif_transfer_characteristics_sanitize(uint16_t tc);
+
+LIBHEIF_API
+enum heif_matrix_coefficients heif_matrix_coefficients_sanitize(uint16_t mc);
 
 
 // ========================= heif_image =========================
