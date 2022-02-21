@@ -82,6 +82,10 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
     float denom = p.whiteY * (p.redX * (p.greenY * zb - p.blueY * zg) + p.greenX * (p.blueY * zr - p.redY * zb) +
                               p.blueX * (p.redY * zg - p.greenY * zr));
 
+    if (denom == 0.0f) {
+      return result;
+    }
+
     result.Kr = (p.redY * (p.whiteX * (p.greenY * zb - p.blueY * zg) + p.whiteY * (p.blueX * zg - p.greenX * zb) +
                            zw * (p.greenX * p.blueY - p.blueX * p.greenY))) / denom;
     result.Kb = (p.blueY * (p.whiteX * (p.redY * zg - p.greenY * zr) + p.whiteY * (p.greenX * zr - p.redX * zg) +
