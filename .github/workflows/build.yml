@@ -28,6 +28,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install rust dependencies
+      if: ${{ env.WITH_RAV1E == '1' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install cargo nasm
+
+    - uses: Swatinem/rust-cache@v2
+      if: ${{ env.WITH_RAV1E == '1' }}
+      with:
+        shared-key: "rust"
+
     - name: Install dependencies
       run: |
         ./scripts/install-ci-linux.sh
