@@ -14,7 +14,7 @@ jobs:
       WITH_LIBDE265: 1
       WITH_X265: 1
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Cache Coverity build tool
       uses: actions/cache@v3
