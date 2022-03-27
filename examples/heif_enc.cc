@@ -139,12 +139,12 @@ void show_help(const char* argv0)
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
-            << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both a present\n"
+            << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
             << "  -L                       switch encoder to lossless mode\n"
-            << "  -p chroma=444            switch off color subsampling\n"
+            << "  -p chroma=444            switch off chroma subsampling\n"
             << "  --matrix_coefficients=0  encode in RGB color-space\n";
 }
 
