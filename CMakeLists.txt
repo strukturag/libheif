@@ -69,7 +69,7 @@ endif ()
 
 option(WITH_AOM "Build aom encoder/decoder" ON)
 if (WITH_AOM)
-    find_package(LibAOM)
+    find_package(AOM)
 endif()
 
 option(WITH_RAV1E "Build rav1e encoder" ON)

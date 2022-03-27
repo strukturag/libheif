@@ -29,7 +29,7 @@ if(LIBDE265_INCLUDE_DIR)
 endif()
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LIBDE265
+find_package_handle_standard_args(Libde265
     REQUIRED_VARS
         LIBDE265_INCLUDE_DIRS
         LIBDE265_LIBRARIES

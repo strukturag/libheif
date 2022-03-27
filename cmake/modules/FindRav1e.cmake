@@ -17,7 +17,7 @@ set(RAV1E_PROCESS_INCLUDES RAV1E_INCLUDE_DIR)
 libfind_process(RAV1E)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(RAV1E
+find_package_handle_standard_args(Rav1e
     REQUIRED_VARS
         RAV1E_INCLUDE_DIR
         RAV1E_LIBRARIES

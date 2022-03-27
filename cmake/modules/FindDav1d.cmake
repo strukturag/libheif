@@ -17,7 +17,7 @@ set(DAV1D_PROCESS_INCLUDES DAV1D_INCLUDE_DIR)
 libfind_process(DAV1D)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(DAV1D
+find_package_handle_standard_args(Dav1d
     REQUIRED_VARS
         DAV1D_INCLUDE_DIR
         DAV1D_LIBRARIES
