@@ -810,18 +810,25 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
       break;
     }
 
-    if (end - pos <= 1) {
+    /*if (end - pos <= 1) {
       std::cerr << "Header format error in Y4M file.\n";
       exit(1);
-    }
+    }*/
 
     char tag = header[pos];
-    std::string value = header.substr(pos + 1, end - pos - 1);
+    std::string value1 = header.substr(pos + 1, end - pos - 1);
+    std::string value2 = header.substr(pos + 1, end - pos - 4);
     if (tag == 'W') {
-      w = atoi(value.c_str());
+      w = atoi(value1.c_str());
+      std::cout << "width: " << value1 << "\n";
     }
     else if (tag == 'H') {
-      h = atoi(value.c_str());
+      h = atoi(value1.c_str());
+      std::cout << "height: " << value1 << "\n";
+    }
+    else if (tag == 'C') {
+      c = atoi(value2.c_str());
+      std::cout << "color: " << value2 << "\n";
     }
   }
 
@@ -838,11 +845,34 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
     exit(1);
   }
 
+  if (c == 444) {
+  struct heif_error err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_444,
+                                            &image);
+  (void) err;
+  }
+  if (c == 422) {
+  struct heif_error err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_422,
+                                            &image);
+  (void) err;
+  }
+  if (c == 420) {
   struct heif_error err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_420,
                                             &image);
   (void) err;
+  }
+  if (c == 400) {
+  struct heif_error err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_monochrome,
+                                            &image);
+  (void) err;
+  }
   // TODO: handle error
 
   heif_image_add_plane(image, heif_channel_Y, w, h, 8);
