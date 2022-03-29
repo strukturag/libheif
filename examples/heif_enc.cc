@@ -831,7 +831,6 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
     }
     else if (tag == 'X') {
       if( tag1 == 'Y' && tag2 == 'P' ) {
-        std::cout << "I found something that isn't digit.\n" << std::endl;
         std::string value2 = header.substr(pos + 7, end - pos - 10);
         std::string value3 = header.substr(pos + 11, end - pos - 11);
 
@@ -840,7 +839,6 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
         std::cout << "color: " << value2 << "\n";
         std::cout << "depth: " << value3 << "\n";
       } else {
-        std::cout << "I found something that is digit.\n" << std::endl;
         std::string value2 = header.substr(pos + 7, end - pos - 7);
         c = atoi(value2.c_str());
         std::cout << "color: " << value2 << "\n";
@@ -892,15 +890,9 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
   }
   // TODO: handle error
 
-  if (b > 8) {
-    heif_image_add_plane(image, heif_channel_Y, w, h, b);
-    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
-    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
-  } else {
-    heif_image_add_plane(image, heif_channel_Y, w, h, 8);
-    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
-    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
-  }
+  heif_image_add_plane(image, heif_channel_Y, w, h, b);
+  heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
+  heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
 
   int y_stride, cb_stride, cr_stride;
   uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
