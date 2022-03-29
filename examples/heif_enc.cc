@@ -860,29 +860,30 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
     exit(1);
   }
 
+  struct heif_error err;
   if (c == 444) {
-  struct heif_error err = heif_image_create(w, h,
+    err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_444,
                                             &image);
   (void) err;
   }
   if (c == 422) {
-  struct heif_error err = heif_image_create(w, h,
+    err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_422,
                                             &image);
   (void) err;
   }
   if (c == 420) {
-  struct heif_error err = heif_image_create(w, h,
+    err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_420,
                                             &image);
   (void) err;
   }
   if (c == 400) {
-  struct heif_error err = heif_image_create(w, h,
+    err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_monochrome,
                                             &image);
