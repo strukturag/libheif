@@ -797,6 +797,8 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
 
   int w = -1;
   int h = -1;
+  int c = -1;
+  int b = 8;
 
   size_t pos = 0;
   for (;;) {
@@ -810,14 +812,15 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
       break;
     }
 
-    /*if (end - pos <= 1) {
+    if (end - pos <= 1) {
       std::cerr << "Header format error in Y4M file.\n";
       exit(1);
-    }*/
+    }
 
     char tag = header[pos];
+    char tag1 = header[pos + 1];
+    char tag2 = header[pos + 10];
     std::string value1 = header.substr(pos + 1, end - pos - 1);
-    std::string value2 = header.substr(pos + 1, end - pos - 4);
     if (tag == 'W') {
       w = atoi(value1.c_str());
       std::cout << "width: " << value1 << "\n";
@@ -826,9 +829,23 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
       h = atoi(value1.c_str());
       std::cout << "height: " << value1 << "\n";
     }
-    else if (tag == 'C') {
-      c = atoi(value2.c_str());
-      std::cout << "color: " << value2 << "\n";
+    else if (tag == 'X') {
+      if( tag1 == 'Y' && tag2 == 'P' ) {
+        std::cout << "I found something that isn't digit.\n" << std::endl;
+        std::string value2 = header.substr(pos + 7, end - pos - 10);
+        std::string value3 = header.substr(pos + 11, end - pos - 11);
+
+        c = atoi(value2.c_str());
+        b = atoi(value3.c_str());
+        std::cout << "color: " << value2 << "\n";
+        std::cout << "depth: " << value3 << "\n";
+      } else {
+        std::cout << "I found something that is digit.\n" << std::endl;
+        std::string value2 = header.substr(pos + 7, end - pos - 7);
+        c = atoi(value2.c_str());
+        std::cout << "color: " << value2 << "\n";
+        std::cout << "depth: 8\n";
+      }
     }
   }
 
@@ -875,9 +892,15 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
   }
   // TODO: handle error
 
-  heif_image_add_plane(image, heif_channel_Y, w, h, 8);
-  heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
-  heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
+  if (b > 8) {
+    heif_image_add_plane(image, heif_channel_Y, w, h, b);
+    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
+    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
+  } else {
+    heif_image_add_plane(image, heif_channel_Y, w, h, 8);
+    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
+    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, 8);
+  }
 
   int y_stride, cb_stride, cr_stride;
   uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
