@@ -80,6 +80,7 @@ static void show_help(const char* argv0)
                "  -h, --help      show help\n"
                "  -q, --quality   quality (for JPEG output)\n"
                "      --with-aux  also write auxiliary images (e.g. depth images)\n"
+               "      --no-colons replace ':' characters in auxiliary image filenames with '_'\n"
                "      --quiet     do not output status messages to console\n";
 }
 
@@ -102,13 +103,15 @@ private:
 
 int option_quiet = 0;
 int option_aux = 0;
+int option_no_colons = 0;
 
 static struct option long_options[] = {
-    {(char* const) "quality", required_argument, 0, 'q'},
-    {(char* const) "strict", no_argument, 0, 's'},
-    {(char* const) "quiet", no_argument, &option_quiet, 1},
-    {(char* const) "with-aux", no_argument, &option_aux, 1},
-    {(char* const) "help", no_argument, 0, 'h'}
+    {(char* const) "quality",   required_argument, 0,                 'q'},
+    {(char* const) "strict",    no_argument,       0,                 's'},
+    {(char* const) "quiet",     no_argument,       &option_quiet,     1},
+    {(char* const) "with-aux",  no_argument,       &option_aux,       1},
+    {(char* const) "no-colons", no_argument,       &option_no_colons, 1},
+    {(char* const) "help",      no_argument,       0,                 'h'}
 };
 
 int main(int argc, char** argv)
@@ -426,13 +429,19 @@ int main(int argc, char** argv)
             s << "-" + auxType;
             s << output_filename.substr(output_filename.find('.'));
 
-            written = encoder->Encode(aux_handle, aux_image, s.str());
+            std::string auxFilename = s.str();
+
+            if (option_no_colons) {
+              std::replace(auxFilename.begin(), auxFilename.end(), ':', '_');
+            }
+
+            written = encoder->Encode(aux_handle, aux_image, auxFilename);
             if (!written) {
               fprintf(stderr, "could not write auxiliary image\n");
             }
             else {
               if (!option_quiet) {
-                std::cout << "Auxiliary image written to " << s.str().c_str() << "\n";
+                std::cout << "Auxiliary image written to " << auxFilename << "\n";
               }
             }
 
