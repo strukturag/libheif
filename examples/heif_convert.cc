@@ -67,11 +67,18 @@
 
 #define UNUSED(x) (void)x
 
-static int usage(const char* command)
+static void show_help(const char* argv0)
 {
-  fprintf(stderr, "USAGE: %s [-q quality 0..100] <filename> <output>\n", command);
-  return 1;
+  std::cerr << " heif-convert  libheif version: " << heif_get_version() << "\n"
+            << "-------------------------------------------\n"
+            << "Usage: heif-convert [options]  <input-image> <output-image>\n"
+            << "\n"
+            << "Options:\n"
+               "  -h, --help     show help\n"
+               "  -q, --quality  quality (for JPEG output)\n"
+               "      --quiet    do not output status messages to console\n";
 }
+
 
 class ContextReleaser
 {
@@ -89,9 +96,13 @@ private:
 };
 
 
+int option_quiet = 0;
+
 static struct option long_options[] = {
     {(char* const) "quality", required_argument, 0, 'q'},
-    {(char* const) "strict", no_argument, 0, 's'}
+    {(char* const) "strict", no_argument, 0, 's'},
+    {(char* const) "quiet", no_argument, &option_quiet, 1},
+    {(char* const) "help", no_argument, 0, 'h'}
 };
 
 int main(int argc, char** argv)
@@ -115,14 +126,17 @@ int main(int argc, char** argv)
       case 's':
         strict_decoding = true;
         break;
-      default: /* '?' */
-        return usage(argv[0]);
+      case '?':
+      case 'h':
+        show_help(argv[0]);
+        return 0;
     }
   }
 
   if (optind + 2 > argc) {
     // Need input and output filenames as additional arguments.
-    return usage(argv[0]);
+    show_help(argv[0]);
+    return 5;
   }
 
   std::string input_filename(argv[optind++]);
@@ -214,7 +228,9 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  printf("File contains %d images\n", num_images);
+  if (!option_quiet) {
+    std::cout << "File contains " << num_images << " image" << (num_images>1 ? "s" : "") << "\n";
+  }
 
   std::vector<heif_item_id> image_IDs(num_images);
   num_images = heif_context_get_list_of_top_level_image_IDs(ctx, image_IDs.data(), num_images);
@@ -289,7 +305,9 @@ int main(int argc, char** argv)
         fprintf(stderr, "could not write image\n");
       }
       else {
-        printf("Written to %s\n", filename.c_str());
+        if (!option_quiet) {
+          std::cout << "Written to " << filename << "\n";
+        }
       }
       heif_image_release(image);
 
@@ -334,7 +352,9 @@ int main(int argc, char** argv)
           fprintf(stderr, "could not write depth image\n");
         }
         else {
-          printf("Depth image written to %s\n", s.str().c_str());
+          if (!option_quiet) {
+            std::cout << "Depth image written to " << s.str() << "\n";
+          }
         }
 
         heif_image_release(depth_image);
@@ -400,7 +420,9 @@ int main(int argc, char** argv)
             fprintf(stderr, "could not write auxiliary image\n");
           }
           else {
-            printf("Auxiliary image written to %s\n", s.str().c_str());
+            if (!option_quiet) {
+              std::cout << "Auxiliary image written to " << s.str().c_str() << "\n";
+            }
           }
 
           heif_image_release(aux_image);
