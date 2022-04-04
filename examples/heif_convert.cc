@@ -28,6 +28,7 @@
 #endif
 
 #include <cstring>
+#include <getopt.h>
 
 #if defined(HAVE_UNISTD_H)
 
@@ -87,15 +88,27 @@ private:
   struct heif_context* ctx_;
 };
 
+
+static struct option long_options[] = {
+    {(char* const) "quality", required_argument, 0, 'q'},
+    {(char* const) "strict", no_argument, 0, 's'}
+};
+
 int main(int argc, char** argv)
 {
-  int opt;
   int quality = -1;  // Use default quality.
   bool strict_decoding = false;
 
   UNUSED(quality);  // The quality will only be used by encoders that support it.
-  while ((opt = getopt(argc, argv, "q:s")) != -1) {
-    switch (opt) {
+  //while ((opt = getopt(argc, argv, "q:s")) != -1) {
+  while (true) {
+    int option_index = 0;
+    int c = getopt_long(argc, argv, "q:s", long_options, &option_index);
+    if (c == -1) {
+      break;
+    }
+
+    switch (c) {
       case 'q':
         quality = atoi(optarg);
         break;
