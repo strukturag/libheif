@@ -163,7 +163,10 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
   Dav1dPicture frame;
   memset(&frame, 0, sizeof(Dav1dPicture));
 
+  bool flushed = false;
+
   for (;;) {
+
     int res = dav1d_send_data(decoder->context, &decoder->data);
     if ((res < 0) && (res != DAV1D_ERR(EAGAIN))) {
       err = {heif_error_Decoder_plugin_error,
@@ -173,11 +176,11 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     }
 
     res = dav1d_get_picture(decoder->context, &frame);
-    if (res == DAV1D_ERR(EAGAIN)) {
-      err = {heif_error_Decoder_plugin_error,
-             heif_suberror_Unspecified,
-             kEmptyString};
-      return err;
+    if (!flushed && res == DAV1D_ERR(EAGAIN)) {
+      if (decoder->data.sz == 0) {
+        flushed = true;
+      }
+      continue;
     }
     else if (res < 0) {
       err = {heif_error_Decoder_plugin_error,
