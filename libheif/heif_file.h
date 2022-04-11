@@ -139,7 +139,7 @@ namespace heif {
 
     void add_irot_property(heif_item_id id, int rotation);
 
-    void add_imir_property(heif_item_id id, int vertical);
+    void add_imir_property(heif_item_id id, Box_imir::MirrorDirection direction);
 
     void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2=0, uint8_t c3=0);
 

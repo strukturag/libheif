@@ -716,15 +716,10 @@ void HeifFile::add_irot_property(heif_item_id id, int rotation)
 }
 
 
-void HeifFile::add_imir_property(heif_item_id id, int vertical)
+void HeifFile::add_imir_property(heif_item_id id, Box_imir::MirrorDirection direction)
 {
   auto imir = std::make_shared<Box_imir>();
-
-  if (vertical) {
-    imir->set_mirror_direction(Box_imir::MirrorDirection::Vertical);
-  } else {
-    imir->set_mirror_direction(Box_imir::MirrorDirection::Horizontal);
-  }
+  imir->set_mirror_direction(direction);
 
   int index = m_ipco_box->append_child_box(imir);
 
