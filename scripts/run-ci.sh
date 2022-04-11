@@ -261,7 +261,8 @@ if [ ! -z "$TARBALL" ]; then
 fi
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
-    ./libheif/file-fuzzer ./fuzzing/corpus/*
+    ./libheif/color-conversion-fuzzer ./fuzzing/corpus/*color-conversion-fuzzer*
+    ./libheif/file-fuzzer ./fuzzing/corpus/*.heic
 
     echo "Running color conversion fuzzer ..."
     ./libheif/color-conversion-fuzzer -max_total_time=120
