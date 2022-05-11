@@ -458,6 +458,48 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
   (void) written;
 }
 
+std::shared_ptr<HeifFile> create_heif_file(char* input_filename) {
+  std::shared_ptr<heif_context> ctx(heif_context_alloc(), [](heif_context* c) { heif_context_free(c); });
+  if (!ctx) {
+    std::cerr << "Could not create context object" << std::endl;    
+    exit(1);
+  }
+
+  struct heif_error err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
+  if (err.code != 0) {
+    std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
+    exit(1);
+  }
+
+  std::shared_ptr<HeifFile> heif_file = ctx->context->get_heif_file();
+
+  return heif_file;
+}
+
+void printBoxes(std::vector<std::shared_ptr<Box>> boxes) {
+  for (const auto& box : boxes) {
+    heif::Indent indent;
+    std::cout << box->dump(indent);
+  }
+}
+
+LIBHEIF_API
+void heif_add_box_example(char* input_filename) {
+
+  std::shared_ptr<HeifFile> heif_file = create_heif_file(input_filename);
+  
+  auto boxes = heif_file->get_top_level_boxes();
+  auto meta_box = boxes.at(1);              
+  std::shared_ptr<Box_iinf> iinf_box = heif_file->get_iinf_box();
+
+  auto box_infe = std::make_shared<Box_infe>();
+  box_infe->set_item_name("item name");
+  boxes.push_back(box_infe); 
+  
+  printBoxes(boxes);
+}
+
+
 heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_handle** img)
 {
   if (!img) {

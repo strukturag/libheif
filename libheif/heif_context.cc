@@ -2508,3 +2508,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
 
   return Error::Ok;
 }
+
+std::shared_ptr<HeifFile> HeifContext::get_heif_file() {
+  return m_heif_file;
+}

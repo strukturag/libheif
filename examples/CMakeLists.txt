@@ -89,8 +89,19 @@ set (heif_enc_sources
   heif_enc.cc
 )
 
+# Insert a box
+set (heif_insert_sources
+  heif_insert.cc
+)
+
+
 set (heif_test_sources
   heif_test.cc
+)
+
+# Bare minimum code to convert a jpg to heif
+set (heif_enc_minimum_sources
+  heif_enc_minimum.cc
 )
 
 if(MSVC)
@@ -120,6 +131,20 @@ target_link_libraries (heif-enc heif ${additional_libraries})
 target_include_directories(heif-enc PRIVATE ${additional_includes})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+
+add_executable (heif-insert ${heif_insert_sources} ${getopt_sources})
+target_link_directories (heif-insert PRIVATE ${additional_link_directories})
+target_link_libraries (heif-insert heif ${additional_libraries})
+target_include_directories(heif-insert PRIVATE ${additional_includes})
+install(TARGETS heif-insert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES heif-insert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+
+add_executable (heif-enc_minimum ${heif_enc_minimum_sources} ${getopt_sources})
+target_link_directories (heif-enc_minimum PRIVATE ${additional_link_directories})
+target_link_libraries (heif-enc_minimum heif ${additional_libraries})
+target_include_directories(heif-enc_minimum PRIVATE ${additional_includes})
+install(TARGETS heif-enc_minimum RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES heif-enc_minimum.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 add_executable (heif-test ${heif_test_sources} ${getopt_sources})
 target_link_libraries (heif-test heif)

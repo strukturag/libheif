@@ -393,6 +393,8 @@ namespace heif {
 
     void write(StreamWriter& writer);
 
+    std::shared_ptr<HeifFile> get_heif_file();
+
   private:
     const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
 
