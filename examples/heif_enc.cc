@@ -84,6 +84,10 @@ const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 
 static struct option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
+    {(char* const) "input-height",            required_argument, 0,              'H'},
+    {(char* const) "input-width",             required_argument, 0,              'W'},
+    {(char* const) "input-pix_fmt",           required_argument, 0,              'F'},
+    {(char* const) "input-bit_depth",         required_argument, 0,              'D'},
     {(char* const) "quality",                 required_argument, 0,              'q'},
     {(char* const) "output",                  required_argument, 0,              'o'},
     {(char* const) "lossless",                no_argument,       0,              'L'},
@@ -121,6 +125,10 @@ void show_help(const char* argv0)
             << "\n"
             << "Options:\n"
             << "  -h, --help        show help\n"
+            << "  -H, --input-height  input RAW height\n"
+            << "  -W, --input-width  input RAW width\n"
+            << "  -F, --input-pix_fmt input RAW pixel format (400,420,422,444)\n"
+            << "  -D, --input-bit_depth input RAW bit depth\n"
             << "  -q, --quality     set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless    generate lossless output (-q has no effect)\n"
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
@@ -871,6 +879,118 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
 }
 
 
+std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int input_width, int input_pix_fmt, int input_bit_depth, int output_bit_depth)
+{
+  struct heif_image* image = nullptr;
+
+
+  // open input file
+
+  std::ifstream istr(filename, std::ios_base::binary);
+  if (istr.fail()) {
+    std::cerr << "Can't open " << filename << "\n";
+    exit(1);
+  }
+
+  int w = input_height;
+  int h = input_width;
+  int c = input_pix_fmt;
+  int b = input_bit_depth;
+
+  if (w <= 0 || h <= 0) {
+    std::cerr << "RAW hasn't frame size.\n";
+    exit(1);
+  }
+  if (c <= 0) {
+    std::cerr << "RAW hasn't pixel format.\n";
+    exit(1);
+  }
+  if (b <= 0) {
+    std::cerr << "RAW hasn't bit depth.\n";
+    exit(1);
+  }
+
+  struct heif_error err;
+  if (c == 444) {
+    err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_444,
+                                            &image);
+    (void) err;
+  }
+  if (c == 422) {
+    err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_422,
+                                            &image);
+    (void) err;
+  }
+  if (c == 420) {
+    err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_420,
+                                            &image);
+    (void) err;
+  }
+  if (c == 400) {
+    err = heif_image_create(w, h,
+                                            heif_colorspace_YCbCr,
+                                            heif_chroma_monochrome,
+                                            &image);
+    (void) err;
+  }
+
+  // TODO: handle error
+
+  heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
+  if (c < 444) {
+    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
+  } else {
+    heif_image_add_plane(image, heif_channel_Cb, w, h, output_bit_depth);
+    heif_image_add_plane(image, heif_channel_Cr, w, h, output_bit_depth);
+  }
+
+  int y_stride, cb_stride, cr_stride;
+  if (b == 8) {
+    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+
+    for (int y = 0; y < h; y++) {
+      istr.read((char*) (py + y * y_stride), w);
+    }
+
+    for (int y = 0; y < (h + 1) / 2; y++) {
+      istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+    }
+
+    for (int y = 0; y < (h + 1) / 2; y++) {
+      istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+    }
+  } else {
+    uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint16_t* pcb = (uint16_t*)heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+    uint16_t* pcr = (uint16_t*)heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+
+    for (int y = 0; y < h; y++) {
+      istr.read((char*) (py + y * y_stride), w);
+    }
+
+    for (int y = 0; y < (h + 1) / 2; y++) {
+      istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+    }
+
+    for (int y = 0; y < (h + 1) / 2; y++) {
+      istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+    }
+  }
+
+  return std::shared_ptr<heif_image>(image,
+                                     [](heif_image* img) { heif_image_release(img); });
+}
+
+
 void list_encoder_parameters(heif_encoder* encoder)
 {
   std::cerr << "Parameters for encoder `" << heif_encoder_get_name(encoder) << "`:\n";
@@ -1008,6 +1128,12 @@ static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_d
 
 int main(int argc, char** argv)
 {
+  // RAW input functions
+  int input_height = -1;
+  int input_width = -1;
+  int input_pix_fmt = -1;
+  int input_bit_depth = -1;
+
   int quality = 50;
   bool lossless = false;
   std::string output_filename;
@@ -1031,6 +1157,18 @@ int main(int argc, char** argv)
       case 'h':
         show_help(argv[0]);
         return 0;
+      case 'H':
+        input_height = atoi(optarg);
+        break;
+      case 'W':
+        input_width = atoi(optarg);
+        break;
+      case 'F':
+        input_pix_fmt = atoi(optarg);
+        break;
+      case 'D':
+        input_bit_depth = atoi(optarg);
+        break;
       case 'q':
         quality = atoi(optarg);
         break;
@@ -1194,9 +1332,12 @@ int main(int argc, char** argv)
 
     enum
     {
-      PNG, JPEG, Y4M
-    } filetype = JPEG;
-    if (suffix == "png") {
+      PNG, JPEG, Y4M, RAW
+    } filetype = RAW;
+    if (suffix == "jpg" || suffix == "jpeg") {
+      filetype = JPEG;
+    }
+    else if (suffix == "png") {
       filetype = PNG;
     }
     else if (suffix == "y4m") {
@@ -1204,14 +1345,17 @@ int main(int argc, char** argv)
     }
 
     std::shared_ptr<heif_image> image;
-    if (filetype == PNG) {
+    if (filetype == JPEG) {
+      image = loadJPEG(input_filename.c_str());
+    }
+    else if (filetype == PNG) {
       image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype == Y4M) {
       image = loadY4M(input_filename.c_str());
     }
     else {
-      image = loadJPEG(input_filename.c_str());
+      image = loadRAW(input_filename.c_str(), input_height, input_width, input_pix_fmt, input_bit_depth, output_bit_depth);
     }
 
     heif_color_profile_nclx nclx;
