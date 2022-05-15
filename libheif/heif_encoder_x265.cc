@@ -28,6 +28,7 @@
 
 #include <string>
 #include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include <cassert>
 #include <vector>
@@ -304,12 +305,24 @@ static void x265_cleanup_plugin()
 {
 }
 
+heif_encoding_options_x265* heif_encoding_options_alloc_x265()
+{
+  heif_encoding_options_x265* options_x265 = (heif_encoding_options_x265*)malloc(sizeof(heif_encoding_options_x265));
+
+  return options_x265;
+}
+
+void heif_encoding_options_free_x265(heif_encoding_options_x265* options_x265)
+{
+  delete options_x265;
+}
 
 static struct heif_error x265_new_encoder(void** enc)
 {
   struct encoder_struct_x265* encoder = new encoder_struct_x265();
   struct heif_error err = heif_error_ok;
-
+  heif_encoding_options_x265* options_x265 = new heif_encoding_options_x265();
+  memset(options_x265, 0, sizeof(heif_encoding_options_x265));
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
@@ -317,7 +330,7 @@ static struct heif_error x265_new_encoder(void** enc)
   encoder->nals = nullptr;
   encoder->num_nals = 0;
   encoder->nal_output_counter = 0;
-  encoder->bit_depth = 8;
+  encoder->bit_depth = (int)options_x265->save_bit_depth;
 
   *enc = encoder;
 
@@ -766,12 +779,13 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     int w = heif_image_get_width(image, heif_channel_Y);
     int h = heif_image_get_height(image, heif_channel_Y);
     if (chroma != heif_chroma_444) {
-      w = (w + 1) / 2;
       if (chroma == heif_chroma_420) {
         h = (h + 1) / 2;
+        w = (w + 1) / 2;
       }
       if (chroma == heif_chroma_422) {
-        h = h;
+        h = (h + 1) / 2;
+        w = (w + 1) / 2;
       }
     }
 
