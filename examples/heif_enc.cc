@@ -945,7 +945,11 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
   heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
   if (c < 444) {
     heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
-    heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
+    if (c < 422) {
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
+    } else {
+      heif_image_add_plane(image, heif_channel_Cr, w, h, output_bit_depth);
+    }
   } else {
     heif_image_add_plane(image, heif_channel_Cb, w, h, output_bit_depth);
     heif_image_add_plane(image, heif_channel_Cr, w, h, output_bit_depth);
@@ -961,12 +965,28 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
       istr.read((char*) (py + y * y_stride), w);
     }
 
-    for (int y = 0; y < (h + 1) / 2; y++) {
-      istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-    }
+    if (c < 444) {
+      for (int y = 0; y < (h + 1) / 2; y++) {
+        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+      }
 
-    for (int y = 0; y < (h + 1) / 2; y++) {
-      istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+      if (c < 422) {
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      } else {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (pcr + y * cr_stride), w);
+        }
+      }
+    } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcb + y * cb_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcr + y * cr_stride), w);
+      }
     }
   } else {
     uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
@@ -977,12 +997,28 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
       istr.read((char*) (py + y * y_stride), w);
     }
 
-    for (int y = 0; y < (h + 1) / 2; y++) {
-      istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-    }
+    if (c < 444) {
+      for (int y = 0; y < (h + 1) / 2; y++) {
+        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+      }
 
-    for (int y = 0; y < (h + 1) / 2; y++) {
-      istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+      if (c < 422) {
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      } else {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (pcr + y * cr_stride), w);
+        }
+      }
+    } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcb + y * cb_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcr + y * cr_stride), w);
+      }
     }
   }
 
