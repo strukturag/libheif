@@ -1361,12 +1361,22 @@ struct heif_encoding_options
   uint8_t macOS_compatibility_workaround_no_nclx_profile;
 };
 
+struct heif_encoding_options_x265
+{
+  int save_bit_depth;
+};
+
 LIBHEIF_API
 struct heif_encoding_options* heif_encoding_options_alloc();
 
 LIBHEIF_API
+struct heif_encoding_options_x265* heif_encoding_options_alloc_x265();
+
+LIBHEIF_API
 void heif_encoding_options_free(struct heif_encoding_options*);
 
+LIBHEIF_API
+void heif_encoding_options_free_x265(struct heif_encoding_options_x265*);
 
 // Compress the input image.
 // Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
