@@ -942,15 +942,18 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
 
   // TODO: handle error
 
-  heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
   if (c < 444) {
-    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
     if (c < 422) {
+      heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
       heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
     } else {
-      heif_image_add_plane(image, heif_channel_Cr, w, h, output_bit_depth);
+      heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1), (h + 1), output_bit_depth);
     }
   } else {
+    heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
     heif_image_add_plane(image, heif_channel_Cb, w, h, output_bit_depth);
     heif_image_add_plane(image, heif_channel_Cr, w, h, output_bit_depth);
   }
@@ -961,25 +964,37 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
     uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    for (int y = 0; y < h; y++) {
-      istr.read((char*) (py + y * y_stride), w);
-    }
-
     if (c < 444) {
-      for (int y = 0; y < (h + 1) / 2; y++) {
-        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-      }
-
       if (c < 422) {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
         for (int y = 0; y < (h + 1) / 2; y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       } else {
         for (int y = 0; y < h; y++) {
-          istr.read((char*) (pcr + y * cr_stride), w);
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
+        for (int y = 0; y < (h + 1); y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1));
         }
       }
     } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (py + y * y_stride), w);
+      }
+
       for (int y = 0; y < h; y++) {
         istr.read((char*) (pcb + y * cb_stride), w);
       }
@@ -993,25 +1008,37 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
     uint16_t* pcb = (uint16_t*)heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint16_t* pcr = (uint16_t*)heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    for (int y = 0; y < h; y++) {
-      istr.read((char*) (py + y * y_stride), w);
-    }
-
     if (c < 444) {
-      for (int y = 0; y < (h + 1) / 2; y++) {
-        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-      }
-
       if (c < 422) {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
         for (int y = 0; y < (h + 1) / 2; y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       } else {
         for (int y = 0; y < h; y++) {
-          istr.read((char*) (pcr + y * cr_stride), w);
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
+        for (int y = 0; y < (h + 1); y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1));
         }
       }
     } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (py + y * y_stride), w);
+      }
+
       for (int y = 0; y < h; y++) {
         istr.read((char*) (pcb + y * cb_stride), w);
       }
@@ -1428,9 +1455,11 @@ int main(int argc, char** argv)
 
     set_params(encoder, raw_params);
     struct heif_encoding_options* options = heif_encoding_options_alloc();
+    struct heif_encoding_options_x265* options_x265 = heif_encoding_options_alloc_x265();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
     options->output_nclx_profile = &nclx;
+	options_x265->save_bit_depth = output_bit_depth;
 
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||
@@ -1447,6 +1476,7 @@ int main(int argc, char** argv)
       error = heif_image_crop(image.get(), 0, right, 0, bottom);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_encoding_options_free_x265(options_x265);
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
@@ -1465,6 +1495,7 @@ int main(int argc, char** argv)
                                       &handle);
     if (error.code != 0) {
       heif_encoding_options_free(options);
+      heif_encoding_options_free_x265(options_x265);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
@@ -1485,6 +1516,7 @@ int main(int argc, char** argv)
                                             &thumbnail_handle);
       if (error.code) {
         heif_encoding_options_free(options);
+        heif_encoding_options_free_x265(options_x265);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -1496,6 +1528,7 @@ int main(int argc, char** argv)
 
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
+    heif_encoding_options_free_x265(options_x265);
   }
 
   heif_encoder_release(encoder);
