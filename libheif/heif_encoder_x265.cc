@@ -765,13 +765,16 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   if (chroma != heif_chroma_monochrome) {
     int w = heif_image_get_width(image, heif_channel_Y);
     int h = heif_image_get_height(image, heif_channel_Y);
-    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
-    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+    if (chroma != heif_chroma_444) {
+      w = (w + 1) / 2;
+      if (chroma == heif_chroma_420) {
+        h = (h + 1) / 2;
+      }
+      if (chroma == heif_chroma_422) {
+        h = h;
+      }
+    }
 
-    assert(heif_image_get_width(image, heif_channel_Cb)==w);
-    assert(heif_image_get_width(image, heif_channel_Cr)==w);
-    assert(heif_image_get_height(image, heif_channel_Cb)==h);
-    assert(heif_image_get_height(image, heif_channel_Cr)==h);
     (void) w;
     (void) h;
   }
