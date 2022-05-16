@@ -879,7 +879,8 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
 }
 
 
-std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int input_width, int input_pix_fmt, int input_bit_depth, int output_bit_depth)
+std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int input_width,
+                                    int input_pix_fmt, int input_bit_depth, int output_bit_depth)
 {
   struct heif_image* image = nullptr;
 
@@ -950,7 +951,7 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
     } else {
       heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
       heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, output_bit_depth);
-      heif_image_add_plane(image, heif_channel_Cr, (w + 1), (h + 1), output_bit_depth);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1), output_bit_depth);
     }
   } else {
     heif_image_add_plane(image, heif_channel_Y, w, h, output_bit_depth);
@@ -987,7 +988,7 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
         }
 
         for (int y = 0; y < (h + 1); y++) {
-          istr.read((char*) (pcr + y * cr_stride), (w + 1));
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       }
     } else {
@@ -1031,7 +1032,7 @@ std::shared_ptr<heif_image> loadRAW(const char* filename, int input_height, int 
         }
 
         for (int y = 0; y < (h + 1); y++) {
-          istr.read((char*) (pcr + y * cr_stride), (w + 1));
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       }
     } else {
@@ -1418,7 +1419,8 @@ int main(int argc, char** argv)
       image = loadY4M(input_filename.c_str());
     }
     else {
-      image = loadRAW(input_filename.c_str(), input_height, input_width, input_pix_fmt, input_bit_depth, output_bit_depth);
+      image = loadRAW(input_filename.c_str(), input_height, input_width,
+                      input_pix_fmt, input_bit_depth, output_bit_depth);
     }
 
     heif_color_profile_nclx nclx;
