@@ -330,7 +330,7 @@ static struct heif_error x265_new_encoder(void** enc)
   encoder->nals = nullptr;
   encoder->num_nals = 0;
   encoder->nal_output_counter = 0;
-  encoder->bit_depth = (int)options_x265->save_bit_depth;
+  encoder->bit_depth = options_x265->save_bit_depth;
 
   *enc = encoder;
 
@@ -780,12 +780,12 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     int h = heif_image_get_height(image, heif_channel_Y);
     if (chroma != heif_chroma_444) {
       if (chroma == heif_chroma_420) {
-        h = (h + 1) / 2;
         w = (w + 1) / 2;
+        h = (h + 1) / 2;
       }
       if (chroma == heif_chroma_422) {
-        h = (h + 1) / 2;
         w = (w + 1) / 2;
+        h = (h + 1);
       }
     }
 
