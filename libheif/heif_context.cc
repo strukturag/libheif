@@ -963,7 +963,7 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 
     // TODO: check whether this really can be recursive (e.g. overlay of grid images)
 
-    if (image_references.empty()) {
+    if (image_references.empty() || image_references[0] == id) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data,
                    "Derived image does not reference any other image items");
