@@ -1,4 +1,4 @@
-if(UNIX)
+if(UNIX OR MINGW)
   find_package(PkgConfig)
   find_package(Threads)
   pkg_check_modules(GDKPIXBUF2 gdk-pixbuf-2.0)
@@ -17,6 +17,6 @@ if(UNIX)
 
     target_link_libraries(pixbufloader-heif PUBLIC ${GDKPIXBUF2_LIBRARIES} heif)
 
-    install(TARGETS pixbufloader-heif LIBRARY DESTINATION ${GDKPIXBUF2_MODULE_DIR})
+    install(TARGETS pixbufloader-heif DESTINATION ${GDKPIXBUF2_MODULE_DIR})
   endif()
 endif()
