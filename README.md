@@ -115,7 +115,7 @@ For AVIF support, make sure that libaom is installed.
 1. Install dependencies with Homebrew
 
     ```
-    brew install automake make pkg-config x265 libde265 libjpeg
+    brew install automake make pkg-config x265 libde265 libjpeg libtool
     ```
 
 
