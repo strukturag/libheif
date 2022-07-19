@@ -791,7 +791,7 @@ namespace heif {
 
   inline ColorProfile_nclx::~ColorProfile_nclx()
   {
-    delete mProfile;
+    heif_nclx_color_profile_free(mProfile);
   }
 
   inline heif_color_primaries ColorProfile_nclx::get_color_primaries() const
