@@ -101,6 +101,15 @@ public:
     heif::register_decoder(get_decoder_plugin_dav1d());
 #endif
   }
+
+  ~Register_Default_Plugins()
+  {
+     for (const auto* plugin : heif::s_decoder_plugins) {
+       if (plugin->deinit_plugin) {
+         (*plugin->deinit_plugin)();
+       }
+     }
+  }
 } dummy;
 
 
