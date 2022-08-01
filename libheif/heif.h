@@ -1474,7 +1474,11 @@ struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*
 LIBHEIF_API
 struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
 
+LIBHEIF_API
+void heif_unregister_encoder_plugins();
 
+LIBHEIF_API
+void heif_unregister_decoder_plugins();
 
 // DEPRECATED, typo in function name
 LIBHEIF_API
