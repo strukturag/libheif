@@ -85,7 +85,7 @@ AS_IF([test "x$enable_tests" = "xyes"], [
     HAVE_VISIBILITY=0
     CFLAG_VISIBILITY=
 ])
-AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" == "x1"])
+AM_CONDITIONAL([HAVE_TESTS], [test "x$HAVE_TESTS" = "x1"])
 
 AM_CONDITIONAL([HAVE_VISIBILITY], [test "x$HAVE_VISIBILITY" != "x0"])
 if eval "test x$enable_visibility = x" ; then enable_visibility=yes ; fi
