@@ -65,14 +65,8 @@ func CheckHeifImage(t *testing.T, handle *ImageHandle, thumbnail bool) {
 		}
 	}
 
-	if img, err := handle.DecodeImage(ColorspaceUndefined, ChromaUndefined, nil); err != nil {
-		t.Errorf("Could not decode image: %s", err)
-	} else {
-		img.GetColorspace()
-		img.GetChromaFormat()
-	}
-
 	decodeTests := []decodeTest{
+		decodeTest{ColorspaceUndefined, ChromaUndefined},
 		decodeTest{ColorspaceYCbCr, Chroma420},
 		decodeTest{ColorspaceYCbCr, Chroma422},
 		decodeTest{ColorspaceYCbCr, Chroma444},
