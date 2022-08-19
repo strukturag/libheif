@@ -1,4 +1,4 @@
-// +build go1.7
+//go:build go1.7
 
 /*
  * GO interface to libheif
