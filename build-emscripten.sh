@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CORES=$(nproc --all)
 echo "Build using ${CORES} CPU cores"
 
-LIBDE265_VERSION=1.0.2
+LIBDE265_VERSION=1.0.8
 [ -s "libde265-${LIBDE265_VERSION}.tar.gz" ] || curl \
     -L \
     -o libde265-${LIBDE265_VERSION}.tar.gz \
