@@ -957,9 +957,9 @@ void list_encoder_parameters(heif_encoder* encoder)
 
         if (valid_options) {
           std::cerr << ", { ";
-          for (int i = 0; valid_options[i]; i++) {
-            if (i > 0) { std::cerr << ","; }
-            std::cerr << valid_options[i];
+          for (int k = 0; valid_options[k]; k++) {
+            if (k > 0) { std::cerr << ","; }
+            std::cerr << valid_options[k];
           }
           std::cerr << " }";
         }
