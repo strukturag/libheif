@@ -95,8 +95,19 @@ void show_help(const char* argv0)
   fprintf(stderr, "  -h, --help           show help\n");
 }
 
+
+class LibHeifInitializer {
+public:
+  LibHeifInitializer() { heif_init(nullptr); }
+  ~LibHeifInitializer() { heif_deinit(); }
+};
+
+
 int main(int argc, char** argv)
 {
+  // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
+  LibHeifInitializer initializer;
+
   bool dump_boxes = false;
 
   bool write_raw_image = false;

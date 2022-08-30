@@ -61,6 +61,8 @@ namespace heif {
   extern std::set<std::unique_ptr<struct heif_encoder_descriptor>,
     encoder_descriptor_priority_order> s_encoder_descriptors;
 
+  void register_default_plugins();
+
   void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
   void register_encoder(const heif_encoder_plugin* encoder_plugin);

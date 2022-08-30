@@ -114,8 +114,19 @@ static struct option long_options[] = {
     {(char* const) "help",      no_argument,       0,                 'h'}
 };
 
+
+class LibHeifInitializer {
+public:
+  LibHeifInitializer() { heif_init(nullptr); }
+  ~LibHeifInitializer() { heif_deinit(); }
+};
+
+
 int main(int argc, char** argv)
 {
+  // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
+  LibHeifInitializer initializer;
+
   int quality = -1;  // Use default quality.
   bool strict_decoding = false;
 

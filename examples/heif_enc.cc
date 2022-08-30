@@ -1006,8 +1006,18 @@ static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_d
 }
 
 
+class LibHeifInitializer {
+public:
+  LibHeifInitializer() { heif_init(nullptr); }
+  ~LibHeifInitializer() { heif_deinit(); }
+};
+
+
 int main(int argc, char** argv)
 {
+  // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
+  LibHeifInitializer initializer;
+
   int quality = 50;
   bool lossless = false;
   std::string output_filename;

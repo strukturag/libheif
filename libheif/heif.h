@@ -291,6 +291,30 @@ typedef uint32_t heif_item_id;
 
 
 
+// ========================= library initialization ======================
+
+// You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+// These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+// For backwards compatibility, it is not really necessary to call heif_init(), but if you don't, the plugins
+// registered by default may not be freed correctly.
+// However, this should not be mixed, i.e. one part of your program does use heif_init()/heif_deinit() and another doesn't.
+// If in doubt, enclose everything with init/deinit.
+
+struct heif_init_params {
+  int version;
+
+  // currently no parameters
+};
+
+
+// You may pass nullptr to get default parameters. Currently, no parameters are supported.
+LIBHEIF_API
+struct heif_error heif_init(struct heif_init_params*);
+
+LIBHEIF_API
+void heif_deinit();
+
+
 // ========================= file type check ======================
 
 enum heif_filetype_result
@@ -1473,12 +1497,6 @@ struct heif_error heif_register_decoder_plugin(const struct heif_decoder_plugin*
 
 LIBHEIF_API
 struct heif_error heif_register_encoder_plugin(const struct heif_encoder_plugin*);
-
-LIBHEIF_API
-void heif_unregister_encoder_plugins();
-
-LIBHEIF_API
-void heif_unregister_decoder_plugins();
 
 // DEPRECATED, typo in function name
 LIBHEIF_API

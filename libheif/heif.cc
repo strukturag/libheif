@@ -1630,25 +1630,6 @@ struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encode
   return error_Ok;
 }
 
-void heif_unregister_decoder_plugins()
-{
-  for( const auto* plugin : heif::s_decoder_plugins ) {
-    if( plugin->deinit_plugin ) {
-      (*plugin->deinit_plugin)();
-    }
-  }
-  heif::s_decoder_plugins.clear();
-}
-
-void heif_unregister_encoder_plugins()
-{
-  for( const auto& plugin : heif::s_encoder_descriptors ) {
-    if( plugin->plugin->cleanup_plugin ) {
-      (*plugin->plugin->cleanup_plugin)();
-    }
-  }
-  heif::s_encoder_descriptors.clear();
-}
 
 /*
 int  heif_image_get_number_of_data_chunks(heif_image* img);
