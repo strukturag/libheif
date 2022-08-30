@@ -34,7 +34,7 @@ add_library(heif
     heif_colorconversion.h
     heif_plugin_registry.h
     heif_limits.h
-    heif_init.cpp heif_init.h
+    heif_init.cc heif_init.h
     nclx.h
     logging.h
     ${libheif_headers}
