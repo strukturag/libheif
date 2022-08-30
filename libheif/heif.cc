@@ -1595,7 +1595,7 @@ struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_p
   if (!decoder_plugin) {
     return error_null_parameter;
   }
-  else if (decoder_plugin->plugin_api_version != 1) {
+  else if (decoder_plugin->plugin_api_version > 2) {
     return error_unsupported_plugin_version;
   }
 
@@ -1609,7 +1609,7 @@ struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decode
   if (!decoder_plugin) {
     return error_null_parameter;
   }
-  else if (decoder_plugin->plugin_api_version != 1) {
+  else if (decoder_plugin->plugin_api_version > 2) {
     return error_unsupported_plugin_version;
   }
 
@@ -1622,7 +1622,7 @@ struct heif_error heif_register_encoder_plugin(const heif_encoder_plugin* encode
   if (!encoder_plugin) {
     return error_null_parameter;
   }
-  else if (encoder_plugin->plugin_api_version != 1) {
+  else if (encoder_plugin->plugin_api_version > 3) {
     return error_unsupported_plugin_version;
   }
 

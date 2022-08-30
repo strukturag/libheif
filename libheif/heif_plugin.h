@@ -40,7 +40,7 @@ extern "C" {
 //  1.1          1         1          1
 //  1.4          1         1          2
 //  1.8          1         2          2
-//  1.13         2         2          2
+//  1.13         2         3          2
 
 
 // ====================================================================================================
@@ -51,8 +51,8 @@ extern "C" {
 
 struct heif_decoder_plugin
 {
-  // API version supported by this plugin
-  int plugin_api_version; // current version: 1
+  // API version supported by this plugin (see table above for supported versions)
+  int plugin_api_version;
 
 
   // --- version 1 functions ---
@@ -127,8 +127,8 @@ enum heif_image_input_class
 
 struct heif_encoder_plugin
 {
-  // API version supported by this plugin
-  int plugin_api_version; // current version: 2
+  // API version supported by this plugin (see table above for supported versions)
+  int plugin_api_version;
 
 
   // --- version 1 functions ---
