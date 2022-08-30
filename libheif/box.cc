@@ -2326,18 +2326,19 @@ Error Box_clap::parse(BitstreamRange& range)
   uint32_t clean_aperture_width_den = range.read32();
   uint32_t clean_aperture_height_num = range.read32();
   uint32_t clean_aperture_height_den = range.read32();
-  uint32_t horizontal_offset_num = range.read32();
-  uint32_t horizontal_offset_den = range.read32();
-  uint32_t vertical_offset_num = range.read32();
-  uint32_t vertical_offset_den = range.read32();
 
-  if (clean_aperture_width_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      clean_aperture_width_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      horizontal_offset_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
+  // Note: in the standard document 14496-12(2015), it says that the offset values should also be unsigned integers,
+  // but this is obviously an error. Even the accompanying standard text says that offsets may be negative.
+  int32_t horizontal_offset_num = (int32_t) range.read32();
+  uint32_t horizontal_offset_den = (int32_t)range.read32();
+  int32_t vertical_offset_num = (int32_t) range.read32();
+  uint32_t vertical_offset_den = (int32_t)range.read32();
+
+  if (clean_aperture_width_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
+      clean_aperture_width_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
+      clean_aperture_height_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
+      clean_aperture_height_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
       horizontal_offset_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      vertical_offset_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
       vertical_offset_den > (uint32_t)std::numeric_limits<int32_t>::max()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_fractional_number,
@@ -2348,8 +2349,8 @@ Error Box_clap::parse(BitstreamRange& range)
                                     clean_aperture_width_den);
   m_clean_aperture_height = Fraction(clean_aperture_height_num,
                                      clean_aperture_height_den);
-  m_horizontal_offset = Fraction(horizontal_offset_num, horizontal_offset_den);
-  m_vertical_offset = Fraction(vertical_offset_num, vertical_offset_den);
+  m_horizontal_offset = Fraction(horizontal_offset_num, (int32_t)horizontal_offset_den);
+  m_vertical_offset = Fraction(vertical_offset_num, (int32_t)vertical_offset_den);
   if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
       !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
     return Error(heif_error_Invalid_input,
