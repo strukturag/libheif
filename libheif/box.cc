@@ -61,8 +61,8 @@ Fraction::Fraction(int32_t num, int32_t den)
 
 Fraction::Fraction(uint32_t num, uint32_t den)
 {
-  assert(num <= std::numeric_limits<int32_t>::max());
-  assert(den <= std::numeric_limits<int32_t>::max());
+  assert(num <= (uint32_t)std::numeric_limits<int32_t>::max());
+  assert(den <= (uint32_t)std::numeric_limits<int32_t>::max());
 
   *this = Fraction(int32_t(num), int32_t(den));
 }
@@ -2331,14 +2331,14 @@ Error Box_clap::parse(BitstreamRange& range)
   uint32_t vertical_offset_num = range.read32();
   uint32_t vertical_offset_den = range.read32();
 
-  if (clean_aperture_width_num > std::numeric_limits<int32_t>::max() ||
-      clean_aperture_width_den > std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_num > std::numeric_limits<int32_t>::max() ||
-      clean_aperture_height_den > std::numeric_limits<int32_t>::max() ||
-      horizontal_offset_num > std::numeric_limits<int32_t>::max() ||
-      horizontal_offset_den > std::numeric_limits<int32_t>::max() ||
-      vertical_offset_num > std::numeric_limits<int32_t>::max() ||
-      vertical_offset_den > std::numeric_limits<int32_t>::max()) {
+  if (clean_aperture_width_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      clean_aperture_width_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      clean_aperture_height_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      clean_aperture_height_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      horizontal_offset_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      horizontal_offset_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      vertical_offset_num > (uint32_t)std::numeric_limits<int32_t>::max() ||
+      vertical_offset_den > (uint32_t)std::numeric_limits<int32_t>::max()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_fractional_number,
                  "Exceeded supported value range.");
