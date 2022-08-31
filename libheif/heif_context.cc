@@ -1464,8 +1464,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   int y0 = 0;
   int reference_idx = 0;
+  int use_multithreading = heif_global_get_multithreading();
 
 #if ENABLE_PARALLEL_TILE_DECODING
+  
   // remember which tile to put where into the image
   struct tile_data {
     heif_item_id tileID;
@@ -1473,7 +1475,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   };
 
   std::deque<tile_data> tiles;
-  tiles.resize(grid.get_rows() * grid.get_columns() );
+  if (use_multithreading)
+    tiles.resize(grid.get_rows() * grid.get_columns() );
 
   std::deque<std::future<Error> > errs;
 #endif
@@ -1498,12 +1501,16 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       int src_height = tileImg->get_height();
 
 #if ENABLE_PARALLEL_TILE_DECODING
-      tiles[x+y*grid.get_columns()] = tile_data { tileID, x0,y0 };
-#else
-      Error err = decode_and_paste_tile_image(tileID, img, x0, y0);
-      if (err) {
-        return err;
-      }
+      if (use_multithreading) {
+         tiles[x+y*grid.get_columns()] = tile_data { tileID, x0,y0 };
+      } else {
+#endif
+        Error err = decode_and_paste_tile_image(tileID, img, x0, y0);
+        if (err) {
+          return err;
+        }
+#if ENABLE_PARALLEL_TILE_DECODING
+     }
 #endif
 
       x0 += src_width;
@@ -1516,14 +1523,37 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   }
 
 #if ENABLE_PARALLEL_TILE_DECODING
-  // Process all tiles in a set of background threads.
-  // Do not start more than the maximum number of threads.
+  if ( use_multithreading ) {
+    // Process all tiles in a set of background threads.
+    // Do not start more than the maximum number of threads.
 
-  while (tiles.empty()==false) {
+    while (tiles.empty()==false) {
 
-    // If maximum number of threads running, wait until first thread finishes
+      // If maximum number of threads running, wait until first thread finishes
 
-    if (errs.size() >= (size_t)m_max_decoding_threads) {
+      if (errs.size() >= (size_t)m_max_decoding_threads) {
+        Error e = errs.front().get();
+        if (e) {
+          return e;
+        }
+
+        errs.pop_front();
+      }
+
+
+      // Start a new decoding thread
+
+      tile_data data = tiles.front();
+      tiles.pop_front();
+
+      errs.push_back( std::async(std::launch::async,
+                                 &HeifContext::decode_and_paste_tile_image, this,
+                                 data.tileID, img, data.x_origin,data.y_origin) );
+    }
+
+    // check for decoding errors in remaining tiles
+
+    while (errs.empty() == false) {
       Error e = errs.front().get();
       if (e) {
         return e;
@@ -1531,27 +1561,6 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
       errs.pop_front();
     }
-
-
-    // Start a new decoding thread
-
-    tile_data data = tiles.front();
-    tiles.pop_front();
-
-    errs.push_back( std::async(std::launch::async,
-                               &HeifContext::decode_and_paste_tile_image, this,
-                               data.tileID, img, data.x_origin,data.y_origin) );
-  }
-
-  // check for decoding errors in remaining tiles
-
-  while (errs.empty() == false) {
-    Error e = errs.front().get();
-    if (e) {
-      return e;
-    }
-
-    errs.pop_front();
   }
 #endif
 

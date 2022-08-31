@@ -83,6 +83,11 @@ LIBHEIF_API int heif_get_version_number_maintenance(void);
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
+// 1 if ENABLE_PARALLEL_TILE_DECODING is defined -- can be turned off
+LIBHEIF_API int heif_global_get_multithreading(void);
+// returns new flag value or 0 if ENABLE_PARALLEL_TILE_DECODING is undefined
+LIBHEIF_API int heif_global_set_multithreading(int flag);
+
 struct heif_context;
 struct heif_image_handle;
 struct heif_image;

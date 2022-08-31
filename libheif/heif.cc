@@ -96,6 +96,28 @@ int heif_get_version_number_maintenance(void)
   return ((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF;
 }
 
+static int use_multithreading =
+#ifdef ENABLE_PARALLEL_TILE_DECODING
+  1
+#else
+  0
+#endif
+;
+
+int heif_global_get_multithreading(void)
+{
+	return use_multithreading;
+}
+
+int heif_global_set_multithreading(int flag)
+{
+#ifdef ENABLE_PARALLEL_TILE_DECODING
+  use_multithreading = flag ? 1 : 0;
+  return use_multithreading;
+#else
+  return 0;
+#endif
+}
 
 heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 {
