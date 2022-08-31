@@ -221,11 +221,11 @@ to update the gdk-pixbuf loader database.
 
 ## Software using libheif
 
-* GIMP
-* Krita
-* ImageMagick
-* digiKam 7.0.0
-* libvips
+* [GIMP](https://www.gimp.org/)
+* [Krita](https://krita.org)
+* [ImageMagick](https://imagemagick.org/)
+* [digiKam 7.0.0](https://www.digikam.org/)
+* [libvips](https://github.com/libvips/libvips)
 * [Kodi HEIF image decoder plugin](https://kodi.wiki/view/Add-on:HEIF_image_decoder)
 * [bimg](https://github.com/h2non/bimg)
 * [GDAL](https://gdal.org/drivers/raster/heif.html)
