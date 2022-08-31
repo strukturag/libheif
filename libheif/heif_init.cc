@@ -76,12 +76,3 @@ void heif_deinit()
   }
 }
 
-
-static class Register_Default_Plugins
-{
-public:
-  Register_Default_Plugins()
-  {
-    register_default_plugins();
-  }
-} dummy;
