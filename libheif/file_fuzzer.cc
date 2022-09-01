@@ -103,6 +103,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     assert(heif_image_handle_is_primary_image(primary_handle));
     TestDecodeImage(ctx, primary_handle, size);
     heif_image_handle_release(primary_handle);
+    primary_handle = nullptr;
   }
 
   images_count = heif_context_get_number_of_top_level_images(ctx);
