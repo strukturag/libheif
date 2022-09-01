@@ -235,9 +235,9 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
   // --- read nclx parameters from decoded AV1 bitstream
 
   heif_color_profile_nclx nclx;
-  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_color_primaries(&nclx, frame.seq_hdr->pri));
-  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_transfer_characteristics(&nclx, frame.seq_hdr->trc));
-  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_matrix_coefficients(&nclx, frame.seq_hdr->mtrx));
+  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_color_primaries(&nclx, frame.seq_hdr->pri), {});
+  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_transfer_characteristics(&nclx, frame.seq_hdr->trc), {});
+  HEIF_WARN_OR_FAIL(decoder->strict_decoding, heif_img, heif_nclx_color_profile_set_matrix_coefficients(&nclx, frame.seq_hdr->mtrx), {});
   nclx.full_range_flag = (frame.seq_hdr->color_range != 0);
   heif_image_set_nclx_color_profile(heif_img, &nclx);
 
