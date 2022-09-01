@@ -185,11 +185,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   err = heif_context_encode_image(context.get(), image, encoder, nullptr, &img);
   heif_image_release(image);
   heif_encoder_release(encoder);
+  heif_image_handle_release(img);
   if (err.code != heif_error_Ok) {
     return 0;
   }
-
-  heif_image_handle_release(img);
 
   MemoryWriter writer;
   struct heif_writer w;

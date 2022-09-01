@@ -30,7 +30,7 @@ static const enum heif_chroma kFuzzChroma = heif_chroma_420;
 static void TestDecodeImage(struct heif_context* ctx,
                             const struct heif_image_handle* handle, size_t filesize)
 {
-  struct heif_image* image;
+  struct heif_image* image = nullptr;
   struct heif_error err;
 
   bool primary = heif_image_handle_is_primary_image(handle);
@@ -61,6 +61,7 @@ static void TestDecodeImage(struct heif_context* ctx,
 
   err = heif_decode_image(handle, &image, kFuzzColorSpace, kFuzzChroma, nullptr);
   if (err.code != heif_error_Ok) {
+    heif_image_release(image);
     return;
   }
 
@@ -81,7 +82,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
   struct heif_context* ctx;
   struct heif_error err;
-  struct heif_image_handle* primary_handle;
+  struct heif_image_handle* primary_handle = nullptr;
   int images_count;
   heif_item_id* image_IDs = NULL;
 
@@ -122,6 +123,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     struct heif_image_handle* image_handle;
     err = heif_context_get_image_handle(ctx, image_IDs[i], &image_handle);
     if (err.code != heif_error_Ok) {
+      heif_image_handle_release(image_handle);
       // Ignore, we are only interested in crashes here.
       continue;
     }
@@ -142,6 +144,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   }
 
   quit:
+  heif_image_handle_release(primary_handle);
   heif_context_free(ctx);
   free(image_IDs);
   return 0;
