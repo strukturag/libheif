@@ -1825,12 +1825,12 @@ std::string Box_colr::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "colour_type: " << to_fourcc(get_color_profile_type()) << "\n";
-
   if (m_color_profile) {
+    sstr << indent << "colour_type: " << to_fourcc(get_color_profile_type()) << "\n";
     sstr << m_color_profile->dump(indent);
   }
   else {
+    sstr << indent << "colour_type: ---\n";
     sstr << "no color profile\n";
   }
 
