@@ -120,7 +120,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   }
 
   for (int i = 0; i < images_count; ++i) {
-    struct heif_image_handle* image_handle;
+    struct heif_image_handle* image_handle = nullptr;
     err = heif_context_get_image_handle(ctx, image_IDs[i], &image_handle);
     if (err.code != heif_error_Ok) {
       heif_image_handle_release(image_handle);
