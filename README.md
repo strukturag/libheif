@@ -224,6 +224,7 @@ to update the gdk-pixbuf loader database.
 * [GIMP](https://www.gimp.org/)
 * [Krita](https://krita.org)
 * [ImageMagick](https://imagemagick.org/)
+* [darktable](https://www.darktable.org)
 * [digiKam 7.0.0](https://www.digikam.org/)
 * [libvips](https://github.com/libvips/libvips)
 * [Kodi HEIF image decoder plugin](https://kodi.wiki/view/Add-on:HEIF_image_decoder)
