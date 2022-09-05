@@ -58,7 +58,7 @@ struct encoder_struct_rav1e
   bool data_read = false;
 };
 
-static const char* kError_out_of_memory = "Out of memory";
+//static const char* kError_out_of_memory = "Out of memory";
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_threads = "threads";
@@ -481,8 +481,8 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 void rav1e_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height,
                               uint32_t* encoded_width, uint32_t* encoded_height)
 {
-  *encoded_width = std::max(input_width, 16U);
-  *encoded_height = std::max(input_height, 16U);
+  *encoded_width = input_width;
+  *encoded_height = input_height;
 }
 
 
@@ -490,26 +490,6 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
                                      heif_image_input_class input_class)
 {
   auto* encoder = (struct encoder_struct_rav1e*) encoder_raw;
-
-  // --- round image size to minimum size
-
-  uint32_t rounded_width, rounded_height;
-  rav1e_query_encoded_size(encoder,
-                           image->image->get_width(),
-                           image->image->get_height(),
-                           &rounded_width,
-                           &rounded_height);
-
-  bool success = image->image->extend_padding_to_size(rounded_width, rounded_height);
-  if (!success) {
-    struct heif_error err = {
-        heif_error_Memory_allocation_error,
-        heif_suberror_Unspecified,
-        kError_out_of_memory
-    };
-    return err;
-  }
-
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
 
