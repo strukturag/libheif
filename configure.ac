@@ -259,15 +259,23 @@ fi
 AM_CONDITIONAL([HAVE_RAV1E], [test "x$have_rav1e" = "xyes"])
 AC_SUBST([have_rav1e])
 
-PKG_CHECK_MODULES([dav1d], [dav1d], [
-    AC_DEFINE([HAVE_DAV1D], [1], [Whether dav1d was found.])
-    AC_SUBST(dav1d_CFLAGS)
-    AC_SUBST(dav1d_LIBS)
-    have_avif_decoder="yes"
-    REQUIRES_PRIVATE="$REQUIRES_PRIVATE dav1d"
-    have_dav1d="yes"
-], [have_dav1d="no"])
+AC_ARG_ENABLE([dav1d], AS_HELP_STRING([--disable-dav1d],
+    [Disable building of dav1d decoder.]))
+if eval "test x$enable_dav1d = x" ; then enable_dav1d=yes ; fi
+if eval "test x$enable_dav1d != xno"; then
+    PKG_CHECK_MODULES([dav1d], [dav1d], [
+        AC_DEFINE([HAVE_DAV1D], [1], [Whether dav1d was found.])
+        AC_SUBST(dav1d_CFLAGS)
+        AC_SUBST(dav1d_LIBS)
+        have_avif_decoder="yes"
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE dav1d"
+        have_dav1d="yes"
+    ], [have_dav1d="no"])
+else
+    have_dav1d="no"
+fi
 AM_CONDITIONAL([HAVE_DAV1D], [test "x$have_dav1d" = "xyes"])
+AC_SUBST([have_dav1d])
 
 AC_SUBST(have_avif_decoder)
 AC_SUBST(have_avif_encoder)
