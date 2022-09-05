@@ -119,7 +119,7 @@ void encoder_struct_aom::add_custom_option(std::string name, std::string value)
 }
 #endif
 
-static const char* kError_out_of_memory = "Out of memory";
+//static const char* kError_out_of_memory = "Out of memory";
 static const char* kError_encode_frame = "Failed to encode frame";
 
 static const char* kParam_min_q = "min-q";
@@ -726,16 +726,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   struct encoder_struct_aom* encoder = (struct encoder_struct_aom*) encoder_raw;
 
   struct heif_error err;
-
-  bool success = image->image->extend_padding_to_size(image->image->get_width(),
-                                                      image->image->get_height());
-  if (!success) {
-    err = {heif_error_Memory_allocation_error,
-           heif_suberror_Unspecified,
-           kError_out_of_memory};
-    return err;
-  }
-
 
   const int source_width = heif_image_get_width(image, heif_channel_Y);
   const int source_height = heif_image_get_height(image, heif_channel_Y);
