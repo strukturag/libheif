@@ -2303,7 +2303,8 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   m_heif_file->add_ispe_property(image_id, input_width, input_height);
 
 
-  if (encoder->plugin->plugin_api_version >= 3) {
+  if (encoder->plugin->plugin_api_version >= 3 &&
+      encoder->plugin->query_encoded_size != nullptr) {
     uint32_t encoded_width, encoded_height;
 
     encoder->plugin->query_encoded_size(encoder->encoder,

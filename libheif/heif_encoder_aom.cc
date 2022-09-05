@@ -691,14 +691,6 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 
-void aom_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height,
-                            uint32_t* encoded_width, uint32_t* encoded_height)
-{
-  *encoded_width = input_width;
-  *encoded_height = input_height;
-}
-
-
 static heif_error encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
 {
   //aom_codec_iter_t iter = NULL;
@@ -1091,7 +1083,7 @@ static const struct heif_encoder_plugin encoder_plugin_aom
         /* encode_image */ aom_encode_image,
         /* get_compressed_data */ aom_get_compressed_data,
         /* query_input_colorspace (v2) */ aom_query_input_colorspace2,
-        /* query_encoded_size (v3) */ aom_query_encoded_size
+        /* query_encoded_size (v3) */ nullptr
     };
 
 const struct heif_encoder_plugin* get_encoder_plugin_aom()

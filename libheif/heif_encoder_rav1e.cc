@@ -478,14 +478,6 @@ void rav1e_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspac
 }
 
 
-void rav1e_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height,
-                              uint32_t* encoded_width, uint32_t* encoded_height)
-{
-  *encoded_width = input_width;
-  *encoded_height = input_height;
-}
-
-
 struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image* image,
                                      heif_image_input_class input_class)
 {
@@ -707,7 +699,7 @@ static const struct heif_encoder_plugin encoder_plugin_rav1e
         /* encode_image */ rav1e_encode_image,
         /* get_compressed_data */ rav1e_get_compressed_data,
         /* query_input_colorspace (v2) */ rav1e_query_input_colorspace2,
-        /* query_encoded_size (v3) */ rav1e_query_encoded_size
+        /* query_encoded_size (v3) */ nullptr
     };
 
 const struct heif_encoder_plugin* get_encoder_plugin_rav1e()
