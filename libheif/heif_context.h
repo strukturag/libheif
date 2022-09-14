@@ -55,6 +55,7 @@ namespace heif {
   public:
     heif_item_id item_id;
     std::string item_type;  // e.g. "Exif"
+    std::string item_uri_type; //16-byte key indicating how to parse the data when item_type is "uri "
     std::string content_type;
     std::vector<uint8_t> m_data;
   };
@@ -387,6 +388,8 @@ namespace heif {
     Error add_exif_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
 
     Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
+
+    Error add_uri_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, const char* item_uri_type);
 
     Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                const char* item_type, const char* content_type);

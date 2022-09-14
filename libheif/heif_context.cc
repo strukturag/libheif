@@ -867,14 +867,16 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
+    std::string item_uri_type = m_heif_file->get_item_uri_type(id);
     std::string content_type = m_heif_file->get_content_type(id);
-
+  
     // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
 
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
     metadata->item_type = item_type;
     metadata->content_type = content_type;
+    metadata->item_uri_type = item_uri_type;
 
     Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
     if (err) {
@@ -2478,6 +2480,36 @@ Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, 
   return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml");
 }
 
+Error HeifContext::add_uri_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, const char* item_uri_type)
+{
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  const char* item_type = "uri "; //the space is important
+  auto metadata_infe_box = m_heif_file->add_new_infe_box(item_type);
+  metadata_infe_box->set_hidden_item(true);
+  if (item_uri_type != nullptr) {
+    metadata_infe_box->set_item_uri_type(item_uri_type);
+  }
+
+  heif_item_id metadata_id = metadata_infe_box->get_item_ID();
+
+
+  // we assign this data to the image
+
+  m_heif_file->add_iref_reference(metadata_id,
+                                  fourcc("cdsc"), {master_image->get_id()});
+
+
+  // copy the data into the file, store the pointer to it in an iloc box entry
+
+  std::vector<uint8_t> data_array;
+  data_array.resize(size);
+  memcpy(data_array.data(), data, size);
+
+  m_heif_file->append_iloc_data(metadata_id, data_array);
+
+  return Error::Ok;
+}
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                         const char* item_type, const char* content_type)

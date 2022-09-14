@@ -356,6 +356,16 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
 }
 
 
+std::string HeifFile::get_item_uri_type(heif_item_id ID) const 
+{
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
+    return "";
+  }
+
+  return infe_box->get_item_uri_type();
+}
+
 std::string HeifFile::get_content_type(heif_item_id ID) const
 {
   auto infe_box = get_infe(ID);

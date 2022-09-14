@@ -1274,6 +1274,18 @@ const char* heif_image_handle_get_metadata_content_type(const struct heif_image_
   return nullptr;
 }
 
+const char* heif_image_handle_get_metadata_uri_type(const struct heif_image_handle* handle,
+                                           heif_item_id metadata_id) 
+{
+  for (auto& metadata : handle->image->get_metadata()) {
+    if (metadata->item_id == metadata_id) {
+      std::cout << metadata->item_uri_type.c_str() << std::endl;
+      return metadata->item_uri_type.c_str();
+    }
+  }
+
+  return nullptr;
+}
 
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
                                            heif_item_id metadata_id)
@@ -2457,6 +2469,19 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
   }
 }
 
+struct heif_error heif_context_add_uri_metadata(struct heif_context* ctx,
+                                                const struct heif_image_handle* image_handle,
+                                                const void* data, int size,
+                                                const char* item_uri_type) 
+{
+  Error error = ctx->context->add_uri_metadata(image_handle->image, data, size, item_uri_type);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+  else {
+    return error_Ok;
+  }
+}
 
 struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const struct heif_image_handle* image_handle,
