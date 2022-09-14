@@ -129,7 +129,17 @@ For AVIF support, make sure that libaom is installed.
 
 ### Windows
 
-Libheif is included in [Vcpkg](https://github.com/Microsoft/vcpkg/).
+You can build and install libheif using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+
+```
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./vcpkg integrate install
+./vcpkg install libheif
+```
+
+The libheif port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 
 ### Adding rav1e encoder for AVIF
