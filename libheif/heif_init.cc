@@ -23,20 +23,21 @@
 #include "error.h"
 #include "heif_plugin_registry.h"
 
+#include <atomic>
+
 using namespace heif;
 
 
-static int heif_library_initialization_count = 0;
+static std::atomic<int> heif_library_initialization_count{0};
 static bool default_plugins_registered = true; // because they are implicitly registered at startup
 
 
 struct heif_error heif_init(struct heif_init_params*)
 {
-  if (heif_library_initialization_count == 0 && !default_plugins_registered) {
+  int count = heif_library_initialization_count.fetch_add(1);
+  if (count == 0 && !default_plugins_registered) {
     register_default_plugins();
   }
-
-  heif_library_initialization_count++;
 
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
@@ -64,12 +65,14 @@ static void heif_unregister_encoder_plugins()
 
 void heif_deinit()
 {
-  if (heif_library_initialization_count==0) {
+  int count = heif_library_initialization_count.fetch_sub(1);
+  if (count == 0) {
+    // This case should never happen (heif_deinit() is called more often then heif_init()).
+    heif_library_initialization_count++;
     return;
   }
 
-  heif_library_initialization_count--;
-  if (heif_library_initialization_count == 0) {
+  if (count == 1) {
     heif_unregister_decoder_plugins();
     heif_unregister_encoder_plugins();
     default_plugins_registered = false;
