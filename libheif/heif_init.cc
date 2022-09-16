@@ -23,21 +23,31 @@
 #include "error.h"
 #include "heif_plugin_registry.h"
 
-#include <atomic>
+#include <mutex>
 
 using namespace heif;
 
 
-static std::atomic<int> heif_library_initialization_count{0};
+static int heif_library_initialization_count = 0;
 static bool default_plugins_registered = true; // because they are implicitly registered at startup
+
+
+static std::mutex& heif_init_mutex()
+{
+  static std::mutex init_mutex;
+  return init_mutex;
+}
 
 
 struct heif_error heif_init(struct heif_init_params*)
 {
-  int count = heif_library_initialization_count.fetch_add(1);
-  if (count == 0 && !default_plugins_registered) {
+  std::lock_guard<std::mutex> lock(heif_init_mutex());
+
+  if (heif_library_initialization_count==0 && !default_plugins_registered) {
     register_default_plugins();
   }
+
+  heif_library_initialization_count++;
 
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
@@ -65,14 +75,16 @@ static void heif_unregister_encoder_plugins()
 
 void heif_deinit()
 {
-  int count = heif_library_initialization_count.fetch_sub(1);
-  if (count == 0) {
+  std::lock_guard<std::mutex> lock(heif_init_mutex());
+
+  if (heif_library_initialization_count == 0) {
     // This case should never happen (heif_deinit() is called more often then heif_init()).
-    heif_library_initialization_count++;
     return;
   }
 
-  if (count == 1) {
+  heif_library_initialization_count--;
+
+  if (heif_library_initialization_count == 0) {
     heif_unregister_decoder_plugins();
     heif_unregister_encoder_plugins();
     default_plugins_registered = false;
