@@ -67,7 +67,7 @@ static gboolean stop_load(gpointer context, GError** error)
 {
   HeifPixbufCtx* hpc;
   struct heif_error err;
-  struct heif_context* hc;
+  struct heif_context* hc = NULL;
   struct heif_image_handle* hdl = NULL;
   struct heif_image* img = NULL;
   int width, height, stride;
@@ -78,6 +78,12 @@ static gboolean stop_load(gpointer context, GError** error)
 
   result = FALSE;
   hpc = (HeifPixbufCtx*) context;
+
+  err = heif_init(NULL);
+  if (err.code != heif_error_Ok) {
+    g_warning("%s", err.message);
+    goto cleanup;
+  }
 
   hc = heif_context_alloc();
   if (!hc) {
@@ -161,6 +167,8 @@ static gboolean stop_load(gpointer context, GError** error)
 
   g_byte_array_free(hpc->data, TRUE);
   g_free(hpc);
+
+  heif_deinit();
 
   return result;
 }
