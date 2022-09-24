@@ -698,8 +698,8 @@ struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif
 
 // ------------------------- metadata (Exif / XMP) -------------------------
 
-// How many metadata blocks are attached to an image. Usually, the only metadata is
-// an "Exif" block.
+// How many metadata blocks are attached to an image. If you only want to get EXIF data,
+// set the type_filter to "Exif". Otherwise, set the type_filter to NULL.
 LIBHEIF_API
 int heif_image_handle_get_number_of_metadata_blocks(const struct heif_image_handle* handle,
                                                     const char* type_filter);
@@ -719,6 +719,8 @@ LIBHEIF_API
 const char* heif_image_handle_get_metadata_type(const struct heif_image_handle* handle,
                                                 heif_item_id metadata_id);
 
+// For EXIF, the content type is empty.
+// For XMP, the content type is "application/rdf+xml".
 LIBHEIF_API
 const char* heif_image_handle_get_metadata_content_type(const struct heif_image_handle* handle,
                                                         heif_item_id metadata_id);
