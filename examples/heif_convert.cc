@@ -77,12 +77,14 @@ static void show_help(const char* argv0)
                "These suffices are recognized: jpg, jpeg, png, y4m."
                "\n"
                "Options:\n"
-               "  -h, --help      show help\n"
-               "  -q, --quality   quality (for JPEG output)\n"
-               "      --with-aux  also write auxiliary images (e.g. depth images)\n"
-               "      --with-xmp  write XMP metadata to file (output filename with .xmp suffix)\n"
-               "      --no-colons replace ':' characters in auxiliary image filenames with '_'\n"
-               "      --quiet     do not output status messages to console\n";
+               "  -h, --help              show help\n"
+               "  -q, --quality           quality (for JPEG output)\n"
+               "      --with-aux          also write auxiliary images (e.g. depth images)\n"
+               "      --with-xmp          write XMP metadata to file (output filename with .xmp suffix)\n"
+               "      --with-exif         write EXIF metadata to file (output filename with .exif suffix)\n"
+               "      --skip-exif-offset  skip EXIF metadata offset bytes\n"
+               "      --no-colons         replace ':' characters in auxiliary image filenames with '_'\n"
+               "      --quiet             do not output status messages to console\n";
 }
 
 
@@ -106,15 +108,19 @@ int option_quiet = 0;
 int option_aux = 0;
 int option_no_colons = 0;
 int option_with_xmp = 0;
+int option_with_exif = 0;
+int option_skip_exif_offset = 0;
 
 static struct option long_options[] = {
-    {(char* const) "quality",   required_argument, 0,                 'q'},
-    {(char* const) "strict",    no_argument,       0,                 's'},
-    {(char* const) "quiet",     no_argument,       &option_quiet,     1},
-    {(char* const) "with-aux",  no_argument,       &option_aux,       1},
-    {(char* const) "with-xmp",  no_argument,       &option_with_xmp,  1},
-    {(char* const) "no-colons", no_argument,       &option_no_colons, 1},
-    {(char* const) "help",      no_argument,       0,                 'h'}
+    {(char* const) "quality",          required_argument, 0,                        'q'},
+    {(char* const) "strict",           no_argument,       0,                        's'},
+    {(char* const) "quiet",            no_argument,       &option_quiet,            1},
+    {(char* const) "with-aux",         no_argument,       &option_aux,              1},
+    {(char* const) "with-xmp",         no_argument,       &option_with_xmp,         1},
+    {(char* const) "with-exif",        no_argument,       &option_with_exif,        1},
+    {(char* const) "skip-exif-offset", no_argument,       &option_skip_exif_offset, 1},
+    {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
+    {(char* const) "help",             no_argument,       0,                        'h'}
 };
 
 
@@ -488,7 +494,7 @@ int main(int argc, char** argv)
 
       // --- write metadata
 
-      if (option_with_xmp) {
+      if (option_with_xmp || option_with_exif) {
         int numMetadata = heif_image_handle_get_number_of_metadata_blocks(handle, nullptr);
         if (numMetadata>0) {
           std::vector<heif_item_id> ids(numMetadata);
@@ -498,8 +504,10 @@ int main(int argc, char** argv)
 
             // check whether metadata block is XMP
 
+            std::string itemtype = heif_image_handle_get_metadata_type(handle, ids[n]);
             std::string contenttype = heif_image_handle_get_metadata_content_type(handle, ids[n]);
-            if (contenttype == "application/rdf+xml") {
+
+            if (option_with_xmp && contenttype == "application/rdf+xml") {
               // read XMP data to memory array
 
               size_t xmpSize = heif_image_handle_get_metadata_size(handle, ids[n]);
@@ -516,6 +524,42 @@ int main(int argc, char** argv)
               std::string xmp_filename = numbered_output_filename_stem + ".xmp";
               std::ofstream ostr(xmp_filename.c_str());
               ostr.write((char*)xmp.data(), xmpSize);
+            }
+            else if (option_with_exif && itemtype == "Exif") {
+              // read EXIF data to memory array
+
+              size_t exifSize = heif_image_handle_get_metadata_size(handle, ids[n]);
+              std::vector<uint8_t> exif(exifSize);
+              err = heif_image_handle_get_metadata(handle, ids[n], exif.data());
+              if (err.code) {
+                heif_image_handle_release(handle);
+                std::cerr << "Could not read EXIF metadata: " << err.message << "\n";
+                return 1;
+              }
+
+              uint32_t offset = 0;
+              if (option_skip_exif_offset) {
+                if (exifSize<4) {
+                  heif_image_handle_release(handle);
+                  std::cerr << "Invalid EXIF metadata, it is too small.\n";
+                  return 1;
+                }
+
+                offset = (exif[0]<<24) | (exif[1]<<16) | (exif[2]<<8) | exif[3];
+                offset += 4;
+                
+                if (offset >= exifSize) {
+                  heif_image_handle_release(handle);
+                  std::cerr << "Invalid EXIF metadata, offset out of range.\n";
+                  return 1;
+                }
+              }
+
+              // write EXIF data to file
+
+              std::string exif_filename = numbered_output_filename_stem + ".exif";
+              std::ofstream ostr(exif_filename.c_str());
+              ostr.write((char*)exif.data() + offset, exifSize - offset);
             }
           }
         }
