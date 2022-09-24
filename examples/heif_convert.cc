@@ -80,6 +80,7 @@ static void show_help(const char* argv0)
                "  -h, --help      show help\n"
                "  -q, --quality   quality (for JPEG output)\n"
                "      --with-aux  also write auxiliary images (e.g. depth images)\n"
+               "      --with-xmp  write XMP metadata to file (output filename with .xmp suffix)\n"
                "      --no-colons replace ':' characters in auxiliary image filenames with '_'\n"
                "      --quiet     do not output status messages to console\n";
 }
@@ -104,12 +105,14 @@ private:
 int option_quiet = 0;
 int option_aux = 0;
 int option_no_colons = 0;
+int option_with_xmp = 0;
 
 static struct option long_options[] = {
     {(char* const) "quality",   required_argument, 0,                 'q'},
     {(char* const) "strict",    no_argument,       0,                 's'},
     {(char* const) "quiet",     no_argument,       &option_quiet,     1},
     {(char* const) "with-aux",  no_argument,       &option_aux,       1},
+    {(char* const) "with-xmp",  no_argument,       &option_with_xmp,  1},
     {(char* const) "no-colons", no_argument,       &option_no_colons, 1},
     {(char* const) "help",      no_argument,       0,                 'h'}
 };
@@ -278,15 +281,20 @@ int main(int argc, char** argv)
 
   for (int idx = 0; idx < num_images; ++idx) {
 
+    std::string numbered_output_filename_stem;
+
     if (num_images > 1) {
       std::ostringstream s;
       s << output_filename_stem;
-      s << "-" << image_index << ".";
-      s << output_filename_suffix;
+      s << "-" << image_index;
+      numbered_output_filename_stem = s.str();
+
+      s << "." << output_filename_suffix;
       filename.assign(s.str());
     }
     else {
       filename.assign(output_filename);
+      numbered_output_filename_stem = output_filename_stem;
     }
 
     struct heif_image_handle* handle;
@@ -381,7 +389,7 @@ int main(int argc, char** argv)
           }
 
           std::ostringstream s;
-          s << output_filename_stem;
+          s << numbered_output_filename_stem;
           s << "-depth.";
           s << output_filename_suffix;
 
@@ -451,7 +459,7 @@ int main(int argc, char** argv)
             heif_image_handle_free_auxiliary_types(aux_handle, &auxTypeC);
 
             std::ostringstream s;
-            s << output_filename_stem;
+            s << numbered_output_filename_stem;
             s << "-" + auxType + ".";
             s << output_filename_suffix;
 
@@ -473,6 +481,42 @@ int main(int argc, char** argv)
 
             heif_image_release(aux_image);
             heif_image_handle_release(aux_handle);
+          }
+        }
+      }
+
+
+      // --- write metadata
+
+      if (option_with_xmp) {
+        int numMetadata = heif_image_handle_get_number_of_metadata_blocks(handle, nullptr);
+        if (numMetadata>0) {
+          std::vector<heif_item_id> ids(numMetadata);
+          heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, ids.data(), numMetadata);
+
+          for (int n = 0; n < numMetadata; n++) {
+
+            // check whether metadata block is XMP
+
+            std::string contenttype = heif_image_handle_get_metadata_content_type(handle, ids[n]);
+            if (contenttype == "application/rdf+xml") {
+              // read XMP data to memory array
+
+              size_t xmpSize = heif_image_handle_get_metadata_size(handle, ids[n]);
+              std::vector<uint8_t> xmp(xmpSize);
+              err = heif_image_handle_get_metadata(handle, ids[n], xmp.data());
+              if (err.code) {
+                heif_image_handle_release(handle);
+                std::cerr << "Could not read XMP metadata: " << err.message << "\n";
+                return 1;
+              }
+
+              // write XMP data to file
+
+              std::string xmp_filename = numbered_output_filename_stem + ".xmp";
+              std::ofstream ostr(xmp_filename.c_str());
+              ostr.write((char*)xmp.data(), xmpSize);
+            }
           }
         }
       }
