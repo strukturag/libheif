@@ -137,6 +137,21 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 }
 
 
+int heif_check_jpeg_filetype(const uint8_t* data, int len)
+{
+  if (len<12 || data==nullptr) {
+    return -1;
+  }
+
+  static uint8_t jpeg_signature[12] = {
+      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10,
+      0x4A, 0x46, 0x49, 0x46, 0x00, 0x01
+  };
+
+  return strncmp((const char*)data, (const char*)jpeg_signature, 12)==0;
+}
+
+
 heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
 {
   if (fourcc==nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {

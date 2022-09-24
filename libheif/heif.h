@@ -329,6 +329,9 @@ enum heif_filetype_result
 LIBHEIF_API
 enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
 
+LIBHEIF_API
+int heif_check_jpeg_filetype(const uint8_t* data, int len);
+
 
 // DEPRECATED, use heif_brand2 instead
 enum heif_brand

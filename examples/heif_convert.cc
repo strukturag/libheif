@@ -215,6 +215,12 @@ int main(int argc, char** argv)
   std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
   uint8_t magic[12];
   istr.read((char*) magic, 12);
+
+  if (heif_check_jpeg_filetype(magic, 12)) {
+    fprintf(stderr, "Input file '%s' is a JPEG image\n", input_filename.c_str());
+    return 1;
+  }
+
   enum heif_filetype_result filetype_check = heif_check_filetype(magic, 12);
   if (filetype_check == heif_filetype_no) {
     fprintf(stderr, "Input file is not an HEIF/AVIF file\n");
