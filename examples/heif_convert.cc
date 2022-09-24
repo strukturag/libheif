@@ -163,15 +163,20 @@ int main(int argc, char** argv)
 
   std::string input_filename(argv[optind++]);
   std::string output_filename(argv[optind++]);
+  std::string output_filename_stem;
+  std::string output_filename_suffix;
 
   std::unique_ptr<Encoder> encoder;
 
   size_t dot_pos = output_filename.rfind('.');
   if (dot_pos != std::string::npos) {
+    output_filename_stem = output_filename.substr(0,dot_pos);
     std::string suffix_lowercase = output_filename.substr(dot_pos + 1);
 
     std::transform(suffix_lowercase.begin(), suffix_lowercase.end(),
                    suffix_lowercase.begin(), ::tolower);
+
+    output_filename_suffix = suffix_lowercase;
 
     if (suffix_lowercase == "jpg" || suffix_lowercase == "jpeg") {
 #if HAVE_LIBJPEG
@@ -198,6 +203,10 @@ int main(int argc, char** argv)
     if (suffix_lowercase == "y4m") {
       encoder.reset(new Y4MEncoder());
     }
+  }
+  else {
+    output_filename_stem = output_filename;
+    output_filename_suffix = "jpg";
   }
 
   if (!encoder) {
@@ -271,9 +280,9 @@ int main(int argc, char** argv)
 
     if (num_images > 1) {
       std::ostringstream s;
-      s << output_filename.substr(0, output_filename.find_last_of('.'));
-      s << "-" << image_index;
-      s << output_filename.substr(output_filename.find_last_of('.'));
+      s << output_filename_stem;
+      s << "-" << image_index << ".";
+      s << output_filename_suffix;
       filename.assign(s.str());
     }
     else {
@@ -372,9 +381,9 @@ int main(int argc, char** argv)
           }
 
           std::ostringstream s;
-          s << output_filename.substr(0, output_filename.find('.'));
-          s << "-depth";
-          s << output_filename.substr(output_filename.find('.'));
+          s << output_filename_stem;
+          s << "-depth.";
+          s << output_filename_suffix;
 
           written = encoder->Encode(depth_handle, depth_image, s.str());
           if (!written) {
@@ -442,9 +451,9 @@ int main(int argc, char** argv)
             heif_image_handle_free_auxiliary_types(aux_handle, &auxTypeC);
 
             std::ostringstream s;
-            s << output_filename.substr(0, output_filename.find('.'));
-            s << "-" + auxType;
-            s << output_filename.substr(output_filename.find('.'));
+            s << output_filename_stem;
+            s << "-" + auxType + ".";
+            s << output_filename_suffix;
 
             std::string auxFilename = s.str();
 
