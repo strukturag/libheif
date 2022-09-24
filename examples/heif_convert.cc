@@ -134,7 +134,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "q:s", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:s", long_options, &option_index);
     if (c == -1) {
       break;
     }
