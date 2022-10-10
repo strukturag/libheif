@@ -58,7 +58,7 @@ namespace heif {
 
   extern std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
-  extern std::set<std::unique_ptr<struct heif_encoder_descriptor>,
+  extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
     encoder_descriptor_priority_order> s_encoder_descriptors;
 
   void register_default_plugins();

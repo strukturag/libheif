@@ -57,7 +57,7 @@ using namespace heif;
 
 std::set<const struct heif_decoder_plugin*> heif::s_decoder_plugins;
 
-std::set<std::unique_ptr<struct heif_encoder_descriptor>,
+std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
          encoder_descriptor_priority_order> heif::s_encoder_descriptors;
 
 // Note: we cannot move this to 'heif_init' because we have to make sure that this is initialized
