@@ -259,9 +259,13 @@ to update the gdk-pixbuf loader database.
 
 ## Sponsors
 
+Since I work as an independent developer, I need your support to be able to allocate time for libheif.
+You can [sponsor](https://github.com/sponsors/farindk) the development using the link in the right hand column.
+
 A big thank you goes to these major sponsors for supporting the development of libheif:
 
-* <img src="logos/sponsors/shopify.svg" alt="shopify-logo" width="50"/> Shopify
+* Shopify <img src="logos/sponsors/shopify.svg" alt="shopify-logo" height="20"/>
+* StrukturAG
 
 ## License
 
@@ -270,6 +274,6 @@ The sample applications are distributed under the terms of the MIT License.
 
 See COPYING for more details.
 
-Copyright (c) 2017-2020 Struktur AG
-Copyright (c) 2017-2022 Dirk Farin
+Copyright (c) 2017-2020 Struktur AG</br>
+Copyright (c) 2017-2022 Dirk Farin</br>
 Contact: Dirk Farin <dirk.farin@gmail.com>
