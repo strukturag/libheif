@@ -51,6 +51,10 @@
 #include "heif_decoder_dav1d.h"
 #endif
 
+#if HAVE_SvtEnc
+#include "heif_encoder_svt.h"
+#endif
+
 
 using namespace heif;
 
@@ -96,6 +100,10 @@ void heif::register_default_plugins()
 
 #if HAVE_DAV1D
   heif::register_decoder(get_decoder_plugin_dav1d());
+#endif
+
+#if HAVE_SvtEnc
+  heif::register_encoder(get_encoder_plugin_svt());
 #endif
 }
 

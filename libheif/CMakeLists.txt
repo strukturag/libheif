@@ -154,6 +154,23 @@ if(DAV1D_FOUND)
     target_link_libraries(heif PRIVATE ${DAV1D_LIBRARIES} ${DAV1D_LINKDIR})
 endif ()
 
+if(SvtEnc_FOUND)
+    target_compile_definitions(heif PRIVATE HAVE_SvtEnc=1)
+    target_sources(heif PRIVATE
+            heif_encoder_svt.cc
+            heif_encoder_svt.h
+            )
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SvtEnc_CFLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SvtEnc_CFLAGS}")
+
+    if (NOT "${SvtEnc_LIBRARY_DIRS}" STREQUAL "")
+        set(SvtEnc_LINKDIR "-L${SvtEnc_LIBRARY_DIRS}")
+    endif()
+
+    include_directories(SYSTEM ${SvtEnc_INCLUDE_DIR})
+    target_link_libraries(heif PRIVATE ${SvtEnc_LIBRARIES} ${SvtEnc_LINKDIR})
+endif ()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config
