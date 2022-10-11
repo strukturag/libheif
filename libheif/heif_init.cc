@@ -75,6 +75,8 @@ static void heif_unregister_encoder_plugins()
   heif::s_encoder_descriptors.clear();
 }
 
+#if defined(__linux__)
+// Currently only linux, as we don't have dynamic plugins for other systems yet.
 static void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
 {
   if (plugin->cleanup_plugin) {
@@ -88,6 +90,7 @@ static void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
     }
   }
 }
+#endif
 
 void heif_deinit()
 {
