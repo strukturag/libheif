@@ -29,6 +29,10 @@ using namespace heif;
 
 void heif_unload_all_plugins();
 
+#if ENABLE_PLUGIN_LOADING
+void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
+#endif
+
 
 static int heif_library_initialization_count = 0;
 static bool default_plugins_registered = true; // because they are implicitly registered at startup
@@ -77,7 +81,7 @@ static void heif_unregister_encoder_plugins()
 
 #if defined(__linux__) && ENABLE_PLUGIN_LOADING
 // Currently only linux, as we don't have dynamic plugins for other systems yet.
-static void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
+void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
 {
   if (plugin->cleanup_plugin) {
     (*plugin->cleanup_plugin)();
@@ -130,8 +134,6 @@ static std::vector<loaded_plugin> sLoadedPlugins;
 static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
 static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
 static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
-#else
-static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
 #endif
 
 
@@ -310,6 +312,7 @@ struct heif_error heif_load_plugins(const char* directory,
 }
 
 #else
+static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
 
 struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
 {
