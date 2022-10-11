@@ -324,7 +324,9 @@ struct heif_error heif_init(struct heif_init_params*);
 LIBHEIF_API
 void heif_deinit();
 
-#if defined(__linux__)
+
+// --- Plugins are currently only supported on Unix platforms.
+
 enum heif_plugin_type
 {
   heif_plugin_type_encoder,
@@ -350,7 +352,6 @@ struct heif_error heif_load_plugins(const char* directory,
 
 LIBHEIF_API
 struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin);
-#endif
 
 
 // ========================= file type check ======================

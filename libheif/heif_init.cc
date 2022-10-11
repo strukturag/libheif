@@ -121,7 +121,7 @@ void heif_deinit()
 struct loaded_plugin
 {
   void* plugin_library_handle = nullptr;
-  heif_plugin_info* info = nullptr;
+  struct heif_plugin_info* info = nullptr;
   int openCnt = 0;
 };
 
