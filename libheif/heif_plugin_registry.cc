@@ -52,7 +52,7 @@
 #endif
 
 #if HAVE_SvtEnc
-#include "heif_encoder_svt.h"
+#include "libheif/plugins/heif_encoder_svt.h"
 #endif
 
 

@@ -7,8 +7,6 @@ find_path(SvtEnc_INCLUDE_DIR
     PATH_SUFFIXES SvtEnc
 )
 
-message("svt lib dir " ${SvtEnc_PKGCONF_LIBRARY_DIRS})
-
 find_library(SvtEnc_LIBRARY
     NAMES SvtAv1Enc libSvtAv1Enc
     HINTS ${SvtEnc_PKGCONF_LIBRARY_DIRS} ${SvtEnc_PKGCONF_LIBDIR}
