@@ -261,7 +261,7 @@ to update the gdk-pixbuf loader database.
 
 A big thank you goes to these major sponsors for supporting the development of libheif:
 
-* ![Shopify-logo](logos/sponsors/shopify.svg) Shopify
+* <img src="logos/sponsors/shopify.svg" alt="shopify-logo" width="50"/> Shopify
 
 ## License
 
