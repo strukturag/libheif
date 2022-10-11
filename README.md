@@ -164,6 +164,21 @@ When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
 
 
+### Adding SVT-AV1 encoder for AVIF
+
+You can either use the SVT-AV1 encoder libraries installed in the system or use a self-compiled current version.
+If you want to compile SVT-AV1 yourself,
+
+* Run the `svt.cmd` script in directory `third-party` to download SVT-AV1 and compile it.
+
+When running `cmake` or `configure`, make sure that the environment variable
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
+
+You have to enable SVT-AV1 with CMake. You can choose between compiling the encoder support directly into libheif
+or compile it as a plugin (currently Linux only). In the latter case, you will get a shared library that you can
+put into a plugins folder and then load it on demand (see `heif-enc` command line options).
+
+
 ## Language bindings
 
 * .NET Platform (C#, F#, and other languages): [libheif-sharp](https://github.com/0xC0000054/libheif-sharp)
@@ -242,11 +257,11 @@ to update the gdk-pixbuf loader database.
 * [GDAL](https://gdal.org/drivers/raster/heif.html)
 * [OpenImageIO](https://sites.google.com/site/openimageio/)
 
-## Source code visualization
+## Sponsors
 
-![Visualization of this repo](./diagram.svg)
+A big thank you goes to these major sponsors for supporting the development of libheif:
 
-[Explore source](https://octo-repo-visualization.vercel.app/?repo=strukturag%2Flibheif)
+* !(logos/sponsors/shopify.svg) Shopify
 
 ## License
 
@@ -256,4 +271,5 @@ The sample applications are distributed under the terms of the MIT License.
 See COPYING for more details.
 
 Copyright (c) 2017-2020 Struktur AG
+Copyright (c) 2017-2022 Dirk Farin
 Contact: Dirk Farin <dirk.farin@gmail.com>
