@@ -131,14 +131,14 @@ struct loaded_plugin
 
 static std::vector<loaded_plugin> sLoadedPlugins;
 
-static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
-static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
-static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
+__attribute__((unused)) static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
+__attribute__((unused)) static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
+__attribute__((unused)) static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
 #endif
 
 
 #if ENABLE_PLUGIN_LOADING
-static void unregister_plugin(const heif_plugin_info* info)
+__attribute__((unused)) static void unregister_plugin(const heif_plugin_info* info)
 {
   switch (info->type) {
     case heif_plugin_type_encoder: {
