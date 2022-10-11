@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_api_structs.h"
+#include "heif_encoder_svt.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -30,6 +31,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <string>
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
@@ -817,3 +819,12 @@ const struct heif_encoder_plugin* get_encoder_plugin_svt()
 {
   return &encoder_plugin_svt;
 }
+
+
+#if PLUGIN_SVTENC
+heif_plugin_info plugin_info {
+  1,
+  heif_plugin_type_encoder,
+  &encoder_plugin_svt
+};
+#endif

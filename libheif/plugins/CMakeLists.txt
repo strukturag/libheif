@@ -13,11 +13,17 @@ if (SvtEnc_FOUND)
                 SHARED
                 heif_encoder_svt.cc
                 heif_encoder_svt.h
+                ../heif_plugin.cc
                 )
         set_target_properties(heif-svtenc
                 PROPERTIES
                 VERSION ${PROJECT_VERSION}
                 SOVERSION ${PROJECT_VERSION_MAJOR})
+        target_compile_definitions(heif-svtenc
+                PUBLIC
+                LIBHEIF_EXPORTS
+                HAVE_VISIBILITY)
+        target_compile_definitions(heif-svtenc PRIVATE PLUGIN_SVTENC=1)
         target_include_directories(heif-svtenc PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
         target_link_libraries(heif-svtenc PRIVATE ${SvtEnc_LIBRARIES} ${SvtEnc_LINKDIR})
     endif ()

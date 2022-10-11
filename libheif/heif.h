@@ -45,7 +45,6 @@ extern "C" {
 //  1.11         1             2            4             1             1            1
 //  1.13         1             3            4             1             1            1
 
-
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
 #define LIBHEIF_API __declspec(dllexport)
@@ -121,7 +120,10 @@ enum heif_error_code
   heif_error_Encoding_error = 9,
 
   // Application has asked for a color profile type that does not exist
-  heif_error_Color_profile_does_not_exist = 10
+  heif_error_Color_profile_does_not_exist = 10,
+
+  // Error loading a dynamic plugin
+  heif_error_Plugin_loading_error = 11
 };
 
 
@@ -271,6 +273,13 @@ enum heif_suberror_code
   // --- Encoding_error ---
 
   heif_suberror_Cannot_write_output_data = 5000,
+
+
+  // --- Plugin loading error ---
+
+  heif_suberror_Plugin_loading_error = 6000,        // a specific plugin file cannot be loaded
+  heif_suberror_Plugin_is_not_loaded = 6001,        // trying to remove a plugin that is not loaded
+  heif_suberror_Cannot_read_plugin_directory = 6002 // error while scanning the directory for plugins
 };
 
 
@@ -300,7 +309,8 @@ typedef uint32_t heif_item_id;
 // However, this should not be mixed, i.e. one part of your program does use heif_init()/heif_deinit() and another doesn't.
 // If in doubt, enclose everything with init/deinit.
 
-struct heif_init_params {
+struct heif_init_params
+{
   int version;
 
   // currently no parameters
@@ -313,6 +323,34 @@ struct heif_error heif_init(struct heif_init_params*);
 
 LIBHEIF_API
 void heif_deinit();
+
+#if defined(__linux__)
+enum heif_plugin_type
+{
+  heif_plugin_type_encoder,
+  heif_plugin_type_decoder
+};
+
+struct heif_plugin_info
+{
+  int version; // version of this info struct
+  enum heif_plugin_type type;
+  const void* plugin;
+  void* internal_handle; // for internal use only
+};
+
+LIBHEIF_API
+struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin);
+
+LIBHEIF_API
+struct heif_error heif_load_plugins(const char* directory,
+                                    const struct heif_plugin_info** out_plugins,
+                                    int* out_nPluginsLoaded,
+                                    int output_array_size);
+
+LIBHEIF_API
+struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin);
+#endif
 
 
 // ========================= file type check ======================

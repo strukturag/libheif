@@ -81,6 +81,8 @@ const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
 const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
 const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
+const int OPTION_PLUGIN_DIRECTORY = 1004;
+
 
 static struct option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -103,6 +105,7 @@ static struct option long_options[] = {
     {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
     {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
     {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
+    {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
     {0, 0,                                                       0,              0}
 };
 
@@ -1086,6 +1089,20 @@ int main(int argc, char** argv)
       case OPTION_NCLX_FULL_RANGE_FLAG:
         nclx_full_range = atoi(optarg);
         break;
+      case OPTION_PLUGIN_DIRECTORY: {
+        int nPlugins;
+        heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
+        if (error.code) {
+          std::cerr << "Error loading libheif plugins.\n";
+          return 1;
+        }
+
+        // Note: since we process the option within the loop, we can only consider the '-v' flags coming before the plugin loading option.
+        if (logging_level>0) {
+          std::cout << nPlugins << " plugins loaded from directory " << optarg << "\n";
+        }
+        break;
+      }
     }
   }
 
@@ -1101,7 +1118,6 @@ int main(int argc, char** argv)
       logging_level = 4;
     }
   }
-
 
 
   // ==============================================================================

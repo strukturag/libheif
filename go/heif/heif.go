@@ -152,6 +152,8 @@ const (
 
 	// Application has asked for a color profile type that does not exist
 	ErrorColorProfileDoesNotExist = C.heif_error_Color_profile_does_not_exist
+
+	ErrorPluginLoadingError = C.heif_error_Plugin_loading_error
 )
 
 type ErrorSubcode C.enum_heif_suberror_code
@@ -220,7 +222,13 @@ const (
 	// Overlay image completely outside of visible canvas area
 	SuberrorOverlayImageOutsideOfCanvas = C.heif_suberror_Overlay_image_outside_of_canvas
 
+	SuberrorPluginIsNotLoaded = C.heif_suberror_Plugin_is_not_loaded
+
+	SuberrorPluginLoadingError = C.heif_suberror_Plugin_loading_error
+
 	SuberrorAuxiliaryImageTypeUnspecified = C.heif_suberror_Auxiliary_image_type_unspecified
+
+	SuberrorCannotReadPluginDirectory = C.heif_suberror_Cannot_read_plugin_directory
 
 	SuberrorNoOrInvalidPrimaryItem = C.heif_suberror_No_or_invalid_primary_item
 

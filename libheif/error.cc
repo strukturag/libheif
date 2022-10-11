@@ -65,6 +65,8 @@ const char* heif::Error::get_error_string(heif_error_code err)
       return "Error during encoding or writing output file";
     case heif_error_Color_profile_does_not_exist:
       return "Color profile does not exist";
+    case heif_error_Plugin_loading_error:
+      return "Error while loading plugin";
   }
 
   assert(false);
@@ -197,6 +199,15 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     case heif_suberror_Cannot_write_output_data:
       return "Cannot write output data";
+
+      // --- Plugin_loading_error ---
+
+    case heif_suberror_Plugin_loading_error:
+      return "Plugin file cannot be loaded";
+    case heif_suberror_Plugin_is_not_loaded:
+      return "Trying to remove a plugin that is not loaded";
+    case heif_suberror_Cannot_read_plugin_directory:
+      return "Error while scanning the directory for plugins";
   }
 
   assert(false);

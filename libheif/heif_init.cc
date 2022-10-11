@@ -27,23 +27,25 @@
 
 using namespace heif;
 
+void heif_unload_all_plugins();
+
 
 static int heif_library_initialization_count = 0;
 static bool default_plugins_registered = true; // because they are implicitly registered at startup
 
 
-static std::mutex& heif_init_mutex()
+static std::recursive_mutex& heif_init_mutex()
 {
-  static std::mutex init_mutex;
+  static std::recursive_mutex init_mutex;
   return init_mutex;
 }
 
 
 struct heif_error heif_init(struct heif_init_params*)
 {
-  std::lock_guard<std::mutex> lock(heif_init_mutex());
+  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
 
-  if (heif_library_initialization_count==0 && !default_plugins_registered) {
+  if (heif_library_initialization_count == 0 && !default_plugins_registered) {
     register_default_plugins();
   }
 
@@ -55,8 +57,8 @@ struct heif_error heif_init(struct heif_init_params*)
 
 static void heif_unregister_decoder_plugins()
 {
-  for( const auto* plugin : heif::s_decoder_plugins ) {
-    if( plugin->deinit_plugin ) {
+  for (const auto* plugin : heif::s_decoder_plugins) {
+    if (plugin->deinit_plugin) {
       (*plugin->deinit_plugin)();
     }
   }
@@ -65,17 +67,31 @@ static void heif_unregister_decoder_plugins()
 
 static void heif_unregister_encoder_plugins()
 {
-  for( const auto& plugin : heif::s_encoder_descriptors ) {
-    if( plugin->plugin->cleanup_plugin ) {
+  for (const auto& plugin : heif::s_encoder_descriptors) {
+    if (plugin->plugin->cleanup_plugin) {
       (*plugin->plugin->cleanup_plugin)();
     }
   }
   heif::s_encoder_descriptors.clear();
 }
 
+static void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
+{
+  if (plugin->cleanup_plugin) {
+    (*plugin->cleanup_plugin)();
+  }
+
+  for (auto iter = heif::s_encoder_descriptors.begin() ; iter != heif::s_encoder_descriptors.end(); iter++) {
+    if (iter->get()->plugin == plugin) {
+      heif::s_encoder_descriptors.erase(iter);
+      return;
+    }
+  }
+}
+
 void heif_deinit()
 {
-  std::lock_guard<std::mutex> lock(heif_init_mutex());
+  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
 
   if (heif_library_initialization_count == 0) {
     // This case should never happen (heif_deinit() is called more often then heif_init()).
@@ -88,6 +104,197 @@ void heif_deinit()
     heif_unregister_decoder_plugins();
     heif_unregister_encoder_plugins();
     default_plugins_registered = false;
+
+    heif_unload_all_plugins();
   }
 }
 
+
+#if defined(__linux__)
+
+#include <dlfcn.h>
+#include <dirent.h>
+#include <vector>
+#include <string>
+
+struct loaded_plugin
+{
+  void* plugin_library_handle = nullptr;
+  heif_plugin_info* info = nullptr;
+  int openCnt = 0;
+};
+
+static std::vector<loaded_plugin> sLoadedPlugins;
+
+static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
+static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
+static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
+
+struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
+{
+  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+
+  void* plugin_handle = dlopen(filename, RTLD_LAZY);
+  if (!plugin_handle) {
+    //fprintf(stderr, "dlopen: %s\n", dlerror());
+    return error_dlopen;
+  }
+
+  auto* plugin_info = (heif_plugin_info*) dlsym(plugin_handle, "plugin_info");
+  if (!plugin_info) {
+    //fprintf(stderr, "dlsym: %s\n", dlerror());
+    return error_dlopen;
+  }
+
+  // --- check whether the plugin is already loaded
+  // If yes, return pointer to existing plugin.
+
+  for (auto& p : sLoadedPlugins) {
+    if (p.plugin_library_handle == plugin_handle) {
+      if (out_plugin) {
+        *out_plugin = p.info;
+        p.openCnt++;
+        return heif_error_ok;
+      }
+    }
+  }
+
+  loaded_plugin loadedPlugin;
+  loadedPlugin.plugin_library_handle = plugin_handle;
+  loadedPlugin.openCnt = 1;
+  loadedPlugin.info = plugin_info;
+  sLoadedPlugins.push_back(loadedPlugin);
+
+  *out_plugin = plugin_info;
+
+  switch (plugin_info->type) {
+    case heif_plugin_type_encoder: {
+      auto* encoder_plugin = static_cast<const heif_encoder_plugin*>(plugin_info->plugin);
+      struct heif_error err = heif_register_encoder_plugin(encoder_plugin);
+      if (err.code) {
+        return err;
+      }
+      break;
+    }
+
+    case heif_plugin_type_decoder: {
+      // TODO
+      break;
+    }
+  }
+
+  return heif_error_ok;
+}
+
+
+static void unregister_plugin(const heif_plugin_info* info)
+{
+  switch (info->type) {
+    case heif_plugin_type_encoder: {
+      auto* encoder_plugin = static_cast<const heif_encoder_plugin*>(info->plugin);
+      heif_unregister_encoder_plugin(encoder_plugin);
+      break;
+    }
+    case heif_plugin_type_decoder: {
+      // TODO
+    }
+  }
+}
+
+
+struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
+{
+  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+
+  for (size_t i = 0; i < sLoadedPlugins.size(); i++) {
+    auto& p = sLoadedPlugins[i];
+
+    if (p.info == plugin) {
+      dlclose(p.plugin_library_handle);
+      p.openCnt--;
+
+      if (p.openCnt == 0) {
+        unregister_plugin(plugin);
+
+        sLoadedPlugins[i] = sLoadedPlugins.back();
+        sLoadedPlugins.pop_back();
+      }
+
+      return heif_error_ok;
+    }
+  }
+
+  return error_plugin_not_loaded;
+}
+
+
+void heif_unload_all_plugins()
+{
+  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+
+  for (auto& p : sLoadedPlugins) {
+    unregister_plugin(p.info);
+
+    for (int i = 0; i < p.openCnt; i++) {
+      dlclose(p.plugin_library_handle);
+    }
+  }
+
+  sLoadedPlugins.clear();
+}
+
+
+struct heif_error heif_load_plugins(const char* directory,
+                                    const struct heif_plugin_info** out_plugins,
+                                    int* out_nPluginsLoaded,
+                                    int output_array_size)
+{
+  DIR* dir = opendir(directory);
+  if (dir == nullptr) {
+    return error_cannot_read_plugin_directory;
+  }
+
+  int nPlugins = 0;
+
+  struct dirent* d;
+  for (;;) {
+    d = readdir(dir);
+    if (d == nullptr) {
+      break;
+    }
+
+    if (d->d_type == DT_REG) {
+      std::string filename = directory;
+      filename += '/';
+      filename += d->d_name;
+
+      const struct heif_plugin_info* info;
+      auto err = heif_load_plugin(filename.c_str(), &info);
+      if (err.code == 0) {
+        if (out_plugins) {
+          if (nPlugins == output_array_size) {
+            break;
+          }
+
+          out_plugins[nPlugins] = info;
+        }
+
+        nPlugins++;
+      }
+    }
+  }
+
+  if (nPlugins < output_array_size) {
+    out_plugins[nPlugins] = nullptr;
+  }
+
+  if (out_nPluginsLoaded) {
+    *out_nPluginsLoaded = nPlugins;
+  }
+
+  closedir(dir);
+
+  return heif_error_ok;
+}
+
+#endif
