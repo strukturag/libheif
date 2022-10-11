@@ -282,7 +282,7 @@ struct heif_error heif_load_plugins(const char* directory,
       filename += '/';
       filename += d->d_name;
 
-      const struct heif_plugin_info* info;
+      const struct heif_plugin_info* info = nullptr;
       auto err = heif_load_plugin(filename.c_str(), &info);
       if (err.code == 0) {
         if (out_plugins) {
@@ -298,7 +298,7 @@ struct heif_error heif_load_plugins(const char* directory,
     }
   }
 
-  if (nPlugins < output_array_size) {
+  if (nPlugins < output_array_size && out_plugins) {
     out_plugins[nPlugins] = nullptr;
   }
 
