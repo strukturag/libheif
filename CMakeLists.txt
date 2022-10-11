@@ -57,6 +57,8 @@ endif()
 
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
+option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
+
 option(WITH_LIBDE265 "Build libde265 decoder" ON)
 if (WITH_LIBDE265)
     find_package(Libde265)

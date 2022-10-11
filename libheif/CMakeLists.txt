@@ -156,6 +156,12 @@ endif ()
 
 add_subdirectory(plugins)
 
+if (ENABLE_PLUGIN_LOADING AND UNIX)
+    target_compile_definitions(heif PRIVATE ENABLE_PLUGIN_LOADING=1)
+    target_link_libraries(heif PRIVATE dl)
+endif()
+
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config

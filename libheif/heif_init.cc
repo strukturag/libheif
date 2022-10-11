@@ -75,7 +75,7 @@ static void heif_unregister_encoder_plugins()
   heif::s_encoder_descriptors.clear();
 }
 
-#if defined(__linux__)
+#if defined(__linux__) && ENABLE_PLUGIN_LOADING
 // Currently only linux, as we don't have dynamic plugins for other systems yet.
 static void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
 {
@@ -115,11 +115,14 @@ void heif_deinit()
 
 #if defined(__linux__)
 
+#if ENABLE_PLUGIN_LOADING
 #include <dlfcn.h>
 #include <dirent.h>
+#endif
 #include <vector>
 #include <string>
 
+#if ENABLE_PLUGIN_LOADING
 struct loaded_plugin
 {
   void* plugin_library_handle = nullptr;
@@ -132,7 +135,11 @@ static std::vector<loaded_plugin> sLoadedPlugins;
 static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
 static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
 static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
+#else
+static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
+#endif
 
+#if ENABLE_PLUGIN_LOADING
 struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
 {
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
@@ -188,8 +195,14 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
 
   return heif_error_ok;
 }
+#else
+struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
+{
+  return heif_error_plugins_unsupported;
+}
+#endif
 
-
+#if ENABLE_PLUGIN_LOADING
 static void unregister_plugin(const heif_plugin_info* info)
 {
   switch (info->type) {
@@ -203,8 +216,9 @@ static void unregister_plugin(const heif_plugin_info* info)
     }
   }
 }
+#endif
 
-
+#if ENABLE_PLUGIN_LOADING
 struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 {
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
@@ -229,8 +243,15 @@ struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 
   return error_plugin_not_loaded;
 }
+#else
+struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
+{
+  return heif_error_plugins_unsupported;
+}
+#endif
 
 
+#if ENABLE_PLUGIN_LOADING
 void heif_unload_all_plugins()
 {
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
@@ -245,8 +266,12 @@ void heif_unload_all_plugins()
 
   sLoadedPlugins.clear();
 }
+#else
+void heif_unload_all_plugins() {}
+#endif
 
 
+#if ENABLE_PLUGIN_LOADING
 struct heif_error heif_load_plugins(const char* directory,
                                     const struct heif_plugin_info** out_plugins,
                                     int* out_nPluginsLoaded,
@@ -299,5 +324,14 @@ struct heif_error heif_load_plugins(const char* directory,
 
   return heif_error_ok;
 }
+#else
+struct heif_error heif_load_plugins(const char* directory,
+                                    const struct heif_plugin_info** out_plugins,
+                                    int* out_nPluginsLoaded,
+                                    int output_array_size)
+{
+  return heif_error_plugins_unsupported;
+}
+#endif
 
 #endif
