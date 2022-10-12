@@ -243,7 +243,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
 
 
-  // --- transfer data from aom_image_t to HeifPixelImage
+  // --- transfer data from Dav1dPicture to HeifPixelImage
 
   heif_channel channel2plane[3] = {
       heif_channel_Y,
