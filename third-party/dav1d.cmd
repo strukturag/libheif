@@ -1,6 +1,6 @@
 : # This install script was originally taken from libavif but might have been modified.
 
-: # If you want to use a local build of dav1d, you must clone the dav1d repo in this directory first, then enable CMake's AVIF_CODEC_DAV1D and AVIF_LOCAL_DAV1D options.
+: # If you want to use a local build of dav1d, you must clone the dav1d repo in this directory first, then enable CMake's WITH_DAV1D option.
 : # The git SHA below is known to work, and will occasionally be updated. Feel free to use a more recent commit.
 
 : # The odd choice of comment style in this file is to try to share this script between *nix and win32.
