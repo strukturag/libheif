@@ -108,7 +108,8 @@ Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than the version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
-For AVIF support, make sure that libaom is installed.
+For AVIF support, make sure that libaom is installed in the system or compiled
+in the `third-party` directory.
 
 ### macOS
 
@@ -142,6 +143,15 @@ cd vcpkg
 The libheif port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 
+### Adding libaom encoder/decoder for AVIF
+
+* Run the `aom.cmd` script in the `third-party` directory to download libaom and
+  compile it.
+
+When running `cmake` or `configure`, make sure that the environment variable
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/aom/dist/lib/pkgconfig`.
+
+
 ### Adding rav1e encoder for AVIF
 
 * Install `cargo`.
@@ -149,7 +159,8 @@ The libheif port in vcpkg is kept up to date by Microsoft team members and commu
 ```
 cargo install --force cargo-c
 ```
-* Run the `rav1e.cmd` script in directory `third-party` to download rav1e and compile it.
+* Run the `rav1e.cmd` script in the `third-party` directory to download rav1e
+  and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/rav1e/dist/lib/pkgconfig`.
@@ -158,7 +169,8 @@ When running `cmake` or `configure`, make sure that the environment variable
 ### Adding dav1d decoder for AVIF
 
 * Install [`meson`](https://mesonbuild.com/).
-* Run the `dav1d.cmd` script in directory `third-party` to download dav1d and compile it.
+* Run the `dav1d.cmd` script in the `third-party` directory to download dav1d
+  and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
@@ -169,7 +181,8 @@ When running `cmake` or `configure`, make sure that the environment variable
 You can either use the SVT-AV1 encoder libraries installed in the system or use a self-compiled current version.
 If you want to compile SVT-AV1 yourself,
 
-* Run the `svt.cmd` script in directory `third-party` to download SVT-AV1 and compile it.
+* Run the `svt.cmd` script in the `third-party` directory to download SVT-AV1
+  and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
