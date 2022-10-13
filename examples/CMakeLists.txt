@@ -65,7 +65,7 @@ if(UNIX OR MINGW)
       ${heif_convert_sources}
       encoder_png.cc
       encoder_png.h
-    )
+            benchmark.h benchmark.cc)
     set (additional_link_directories
       ${additional_link_directories}
       ${LIBPNG_LIBRARY_DIRS}
@@ -87,6 +87,8 @@ set (heif_info_sources
 
 set (heif_enc_sources
   heif_enc.cc
+  benchmark.h
+  benchmark.cc
 )
 
 set (heif_test_sources

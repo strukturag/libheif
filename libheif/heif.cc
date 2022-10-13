@@ -1002,7 +1002,7 @@ void heif_image_handle_release(const struct heif_image_handle* handle)
 }
 
 
-enum heif_colorspace heif_image_get_colorspace(const struct heif_image* img)
+heif_colorspace heif_image_get_colorspace(const struct heif_image* img)
 {
   return img->image->get_colorspace();
 }

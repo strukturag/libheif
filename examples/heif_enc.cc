@@ -61,6 +61,7 @@ extern "C" {
 #endif
 
 #include <assert.h>
+#include "benchmark.h"
 
 #define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
 #define JPEG_ICC_OVERHEAD_LEN  14        /* size of non-profile data in APP2 */
@@ -70,12 +71,23 @@ int thumb_alpha = 1;
 int list_encoders = 0;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
+int run_benchmark = 0;
 const char* encoderId = nullptr;
 
 uint16_t nclx_matrix_coefficients = 6;
 uint16_t nclx_colour_primaries = 2;
 uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
+
+// for benchmarking
+
+#define HAVE_GETTIMEOFDAY 1  // TODO: should be set by CMake
+
+#if HAVE_GETTIMEOFDAY
+#include <sys/time.h>
+struct timeval time_encoding_start;
+struct timeval time_encoding_end;
+#endif
 
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
 const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
@@ -106,7 +118,8 @@ static struct option long_options[] = {
     {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
     {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
     {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
-    {0, 0,                                                       0,              0}
+    {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
+    {0, 0,                                                       0,               0},
 };
 
 void show_help(const char* argv0)
@@ -145,6 +158,7 @@ void show_help(const char* argv0)
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
+            << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
             << "  -L                       switch encoder to lossless mode\n"
@@ -1191,6 +1205,8 @@ int main(int argc, char** argv)
 
   struct heif_error error;
 
+  std::shared_ptr<heif_image> primary_image;
+
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
@@ -1240,6 +1256,16 @@ int main(int argc, char** argv)
     else {
       image = loadJPEG(input_filename.c_str());
     }
+
+    if (!primary_image) {
+      primary_image = image;
+    }
+
+#if HAVE_GETTIMEOFDAY
+    if (run_benchmark) {
+      gettimeofday(&time_encoding_start, nullptr);
+    }
+#endif
 
     heif_color_profile_nclx nclx;
     error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
@@ -1341,6 +1367,12 @@ int main(int argc, char** argv)
       }
     }
 
+#if HAVE_GETTIMEOFDAY
+    if (run_benchmark) {
+      gettimeofday(&time_encoding_end, nullptr);
+    }
+#endif
+
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
   }
@@ -1351,6 +1383,21 @@ int main(int argc, char** argv)
   if (error.code) {
     std::cerr << error.message << "\n";
     return 5;
+  }
+
+  if (run_benchmark) {
+    double psnr = compute_psnr(primary_image.get(), output_filename);
+    std::cerr << "PSNR: " << psnr << " ";
+
+#if HAVE_GETTIMEOFDAY
+    double t = (double)(time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double)(time_encoding_end.tv_usec - time_encoding_start.tv_usec)/1000000.0;
+    std::cerr << "time: " << t << " ";
+#endif
+
+    std::ifstream istr(output_filename.c_str());
+    istr.seekg(0, std::ios_base::end);
+    std::streamoff size = istr.tellg();
+    std::cerr << "size: " << size << "\n";
   }
 
   return 0;
