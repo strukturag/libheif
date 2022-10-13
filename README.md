@@ -185,7 +185,8 @@ If you want to compile SVT-AV1 yourself,
   and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
+You may have to replace `linux` in this path with your system's identifier.
 
 You have to enable SVT-AV1 with CMake. You can choose between compiling the encoder support directly into libheif
 or compile it as a plugin (currently Linux only). In the latter case, you will get a shared library that you can
