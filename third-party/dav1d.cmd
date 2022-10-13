@@ -1,7 +1,7 @@
 : # This install script was originally taken from libavif but might have been modified.
 
-: # If you want to use a local build of dav1d, you must clone the dav1d repo in this directory first, then enable CMake's AVIF_CODEC_DAV1D and AVIF_LOCAL_DAV1D options.
-: # The git SHA below is known to work, and will occasionally be updated. Feel free to use a more recent commit.
+: # If you want to enable the DAV1D decoder, please check that the WITH_DAV1D CMake variable is set correctly.
+: # You will also have to set the PKG_CONFIG_PATH to "third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig" so that the local DAV1D library is found.
 
 : # The odd choice of comment style in this file is to try to share this script between *nix and win32.
 

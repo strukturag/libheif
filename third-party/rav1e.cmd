@@ -1,5 +1,8 @@
 : # This install script was originally taken from libavif but might have been modified.
 
+: # If you want to enable the RAV1E encoder, please check that the WITH_RAV1E CMake variable is set correctly.
+: # You will also have to set the PKG_CONFIG_PATH to "third-party/rav1e/dist/lib/pkgconfig" so that the local RAV1E library is found.
+
 : # The odd choice of comment style in this file is to try to share this script between *nix and win32.
 
 : # cargo must be in your PATH. (use rustup or brew to install)

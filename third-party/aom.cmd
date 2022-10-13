@@ -1,7 +1,7 @@
 : # This install script was originally taken from libavif but might have been modified.
 
-: # If you want to use a local build of libaom, you must clone the aom repo in this directory first, then enable CMake's WITH_AOM option.
-: # The git SHA below is known to work, and will occasionally be updated. Feel free to use a more recent commit.
+: # If you want to enable the AOM encoder, please check that the WITH_AOM CMake variable is set correctly.
+: # You will also have to set the PKG_CONFIG_PATH to "third-party/aom/dist/lib/pkgconfig" so that the local AOM library is found.
 
 : # The odd choice of comment style in this file is to try to share this script between *nix and win32.
 
