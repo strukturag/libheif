@@ -33,6 +33,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <algorithm>
 #include <vector>
@@ -1387,17 +1388,17 @@ int main(int argc, char** argv)
 
   if (run_benchmark) {
     double psnr = compute_psnr(primary_image.get(), output_filename);
-    std::cerr << "PSNR: " << psnr << " ";
+    std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
 
 #if HAVE_GETTIMEOFDAY
     double t = (double)(time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double)(time_encoding_end.tv_usec - time_encoding_start.tv_usec)/1000000.0;
-    std::cerr << "time: " << t << " ";
+    std::cout << "time: " << std::setprecision(1) << std::fixed << t << " ";
 #endif
 
     std::ifstream istr(output_filename.c_str());
     istr.seekg(0, std::ios_base::end);
     std::streamoff size = istr.tellg();
-    std::cerr << "size: " << size << "\n";
+    std::cout << "size: " << size << "\n";
   }
 
   return 0;
