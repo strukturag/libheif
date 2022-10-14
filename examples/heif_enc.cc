@@ -1015,7 +1015,6 @@ void set_params(struct heif_encoder* encoder, const std::vector<std::string>& pa
 static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_descriptors,
                                   int count)
 {
-  std::cout << "Encoders (first is default):\n";
   for (int i = 0; i < count; i++) {
     std::cout << "- " << heif_encoder_descriptor_get_id_name(encoder_descriptors[i])
               << " = "
@@ -1150,17 +1149,42 @@ int main(int argc, char** argv)
 
 #define MAX_ENCODERS 5
   const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
-  int count = heif_context_get_encoder_descriptors(context.get(),
-                                                   enc_av1f ? heif_compression_AV1 : heif_compression_HEVC,
-                                                   nullptr,
-                                                   encoder_descriptors, MAX_ENCODERS);
-
-  if (list_encoders) {
-    show_list_of_encoders(encoder_descriptors, count);
-    return 0;
-  }
 
   const heif_encoder_descriptor* active_encoder_descriptor = nullptr;
+  if (option_show_parameters || list_encoders == 0) {
+    std::cout << "Encoders (";
+    if (enc_av1f) {
+      std::cout << "AVIF";
+    }
+    if (!enc_av1f) {
+      std::cout << "HEIF";
+    }
+    std::cout << " is default):\n";
+  }
+
+  if (enc_av1f && encoderId == nullptr) {
+    encoderId = "aom";
+  }
+  int x = 0;
+  show:
+  int count = heif_context_get_encoder_descriptors(context.get(),
+                                                   ((!enc_av1f && encoderId[0] == 'x') ? heif_compression_HEVC :
+                                                     (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
+                                                     (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
+                                                                                         heif_compression_HEVC),
+                                                   nullptr,
+                                                   encoder_descriptors, MAX_ENCODERS);
+  if (!option_show_parameters) {
+    show_list_of_encoders(encoder_descriptors, count);
+    if ((encoderId == nullptr && enc_av1f) || list_encoders == 1) {
+      x++;
+      enc_av1f = true;
+      if (x == 1) encoderId = "aom";
+      if (x == 2) encoderId = "svt";
+      if (x == 3) return 0;
+      goto show;
+    }
+  }
   if (count > 0) {
     int idx = 0;
     if (encoderId != nullptr) {
@@ -1187,14 +1211,22 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << (enc_av1f ? "AV1" : "HEVC") << " encoder available.\n";
+    std::cerr << "No " << ((encoderId[0] == 'a') ? "HEVC" :
+                           (encoderId[0] == 'a') ? "AV1" :
+                           (encoderId[0] == 's') ? "SVT" :
+                                                   "HEVC") << " encoder available.\n";
     return 5;
   }
 
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
-    return 0;
+        x++;
+        enc_av1f = true;
+        if (x == 1) encoderId = "aom";
+        if (x == 2) encoderId = "svt";
+        if (x == 3) return 0;
+        goto show;
   }
 
 
