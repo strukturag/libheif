@@ -592,10 +592,18 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto nclx = image->image->get_color_profile_nclx();
   if (nclx) {
     svt_config.color_description_present_flag = true;
+#if SVT_AV1_VERSION_MAJOR==1
+    svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->get_colour_primaries());
+    svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->get_transfer_characteristics());
+    svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->get_matrix_coefficients());
+    svt_config.color_range = nclx->get_full_range_flag() ? EB_CR_FULL_RANGE : EB_CR_STUDIO_RANGE;
+#else
     svt_config.color_primaries = static_cast<uint8_t>(nclx->get_colour_primaries());
     svt_config.transfer_characteristics = static_cast<uint8_t>(nclx->get_transfer_characteristics());
     svt_config.matrix_coefficients = static_cast<uint8_t>(nclx->get_matrix_coefficients());
     svt_config.color_range = nclx->get_full_range_flag() ? 1 : 0;
+#endif
+    
 
     // Follow comment in svt header: set if input is HDR10 BT2020 using SMPTE ST2084.
     svt_config.high_dynamic_range_input = (bitdepth_y == 10 && // TODO: should this be >8 ?
