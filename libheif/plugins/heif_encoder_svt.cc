@@ -793,7 +793,7 @@ struct heif_error svt_get_compressed_data(void* encoder_raw, uint8_t** data, int
 static const struct heif_encoder_plugin encoder_plugin_svt
     {
         /* plugin_api_version */ 3,
-        /* compression_format */ heif_compression_AV1,
+        /* compression_format */ heif_compression_SVT,
         /* id_name */ "svt",
         /* priority */ SVT_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
