@@ -52,7 +52,7 @@ heif_enc_DEPENDENCIES = ../libheif/libheif.la
 heif_enc_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir)
 heif_enc_LDFLAGS =
 heif_enc_LDADD = ../libheif/libheif.la
-heif_enc_SOURCES = heif_enc.cc benchmark.cc
+heif_enc_SOURCES = heif_enc.cc benchmark.cc benchmark.h
 dist_man_MANS += heif-enc.1
 
 if HAVE_LIBJPEG
