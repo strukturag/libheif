@@ -192,6 +192,11 @@ You have to enable SVT-AV1 with CMake. You can choose between compiling the enco
 or compile it as a plugin (currently Linux only). In the latter case, you will get a shared library that you can
 put into a plugins folder and then load it on demand (see `heif-enc` command line options).
 
+## Encoder benchmark
+
+A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found in the Wiki page
+[AVIF encoding benchmark](https://github.com/strukturag/libheif/wiki/AVIF-Encoder-Benchmark).
+
 
 ## Language bindings
 
