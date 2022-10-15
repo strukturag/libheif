@@ -1248,7 +1248,7 @@ int main(int argc, char** argv)
 #else
     if (x != 1 && x != 2) x++;
 #endif
-    if (x == 4 + y) return 0;
+    if (x == 4) return 0;
     goto show;
   }
 
