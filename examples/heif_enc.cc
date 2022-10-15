@@ -1208,7 +1208,7 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << ((encoderId[0] == 'a') ? "HEVC" :
+    std::cerr << "No " << ((encoderId[0] == 'x') ? "HEVC" :
                            (encoderId[0] == 'a') ? "AOM" :
                            (encoderId[0] == 'r') ? "RAV1E" :
                            (encoderId[0] == 's') ? "SVT-AV1" :
