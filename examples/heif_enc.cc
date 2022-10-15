@@ -1169,11 +1169,11 @@ int main(int argc, char** argv)
   int y = 0;
   show:
   int count = heif_context_get_encoder_descriptors(context.get(),
-                                                   ((!enc_av1f && encoderId[0] == 'x') ? heif_compression_HEVC :
-                                                     (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
-                                                     (enc_av1f && encoderId[0] == 'r') ? heif_compression_AV1 :
-                                                     (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
-                                                                                         heif_compression_HEVC),
+                           ((!enc_av1f && encoderId[0] == 'x') ? heif_compression_HEVC :
+                             (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
+                             (enc_av1f && encoderId[0] == 'r') ? heif_compression_AV1 :
+                             (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
+                                                                 heif_compression_HEVC),
                                                    nullptr,
                                                    encoder_descriptors, MAX_ENCODERS);
   if (!option_show_parameters) {
@@ -1222,7 +1222,7 @@ int main(int argc, char** argv)
     count:
     x++;
     enc_av1f = true;
-#ifdef HAVE_AOM_ENCODER
+#if HAVE_AOM_ENCODER
     if (x == 1) encoderId = "aom";
 #else
     y--;
@@ -1232,7 +1232,7 @@ int main(int argc, char** argv)
 #else
     y--;
 #endif
-#ifdef HAVE_SvtEnc
+#if HAVE_SvtEnc
     if (x == 3 + y) encoderId = "svt";
 #else
     y--;
