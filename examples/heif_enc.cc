@@ -1166,10 +1166,12 @@ int main(int argc, char** argv)
     encoderId = "aom";
   }
   int x = 0;
+  int y = 0;
   show:
   int count = heif_context_get_encoder_descriptors(context.get(),
                                                    ((!enc_av1f && encoderId[0] == 'x') ? heif_compression_HEVC :
                                                      (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
+                                                     (enc_av1f && encoderId[0] == 'r') ? heif_compression_AV1 :
                                                      (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
                                                                                          heif_compression_HEVC),
                                                    nullptr,
@@ -1177,12 +1179,7 @@ int main(int argc, char** argv)
   if (!option_show_parameters) {
     show_list_of_encoders(encoder_descriptors, count);
     if ((encoderId == nullptr && enc_av1f) || list_encoders == 1) {
-      x++;
-      enc_av1f = true;
-      if (x == 1) encoderId = "aom";
-      if (x == 2) encoderId = "svt";
-      if (x == 3) return 0;
-      goto show;
+      goto count;
     }
   }
   if (count > 0) {
@@ -1212,8 +1209,9 @@ int main(int argc, char** argv)
   }
   else {
     std::cerr << "No " << ((encoderId[0] == 'a') ? "HEVC" :
-                           (encoderId[0] == 'a') ? "AV1" :
-                           (encoderId[0] == 's') ? "SVT" :
+                           (encoderId[0] == 'a') ? "AOM" :
+                           (encoderId[0] == 'r') ? "RAV1E" :
+                           (encoderId[0] == 's') ? "SVT-AV1" :
                                                    "HEVC") << " encoder available.\n";
     return 5;
   }
@@ -1221,18 +1219,26 @@ int main(int argc, char** argv)
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
-        x++;
-        enc_av1f = true;
-        if (x == 1) encoderId = "aom";
-        if (x == 2) encoderId = "svt";
-        if (x == 3) return 0;
-        goto show;
-  }
-
-
-  if (optind > argc - 1) {
-    show_help(argv[0]);
-    return 0;
+    count:
+    x++;
+    enc_av1f = true;
+#ifdef HAVE_AOM_ENCODER
+    if (x == 1) encoderId = "aom";
+#else
+    y--;
+#endif
+#if HAVE_RAV1E
+    if (x == 2 + y) encoderId = "rav1";
+#else
+    y--;
+#endif
+#ifdef HAVE_SvtEnc
+    if (x == 3 + y) encoderId = "svt";
+#else
+    y--;
+#endif
+    if (x == 4 + y) return 0;
+    goto show;
   }
 
 
