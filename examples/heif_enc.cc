@@ -1166,13 +1166,18 @@ int main(int argc, char** argv)
     encoderId = "aom";
   }
   int x = 0;
-  int y = 0;
   show:
   int count = heif_context_get_encoder_descriptors(context.get(),
                            ((!enc_av1f && encoderId[0] == 'x') ? heif_compression_HEVC :
+#if HAVE_AOM_ENCODER
                              (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
+#endif
+#if HAVE_RAV1E
                              (enc_av1f && encoderId[0] == 'r') ? heif_compression_AV1 :
+#endif
+#if HAVE_SvtEnc
                              (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
+#endif
                                                                  heif_compression_HEVC),
                                                    nullptr,
                                                    encoder_descriptors, MAX_ENCODERS);
@@ -1209,9 +1214,15 @@ int main(int argc, char** argv)
   }
   else {
     std::cerr << "No " << ((encoderId[0] == 'x') ? "HEVC" :
+#if HAVE_AOM_ENCODER
                            (encoderId[0] == 'a') ? "AOM" :
+#endif
+#if HAVE_RAV1E
                            (encoderId[0] == 'r') ? "RAV1E" :
+#endif
+#if HAVE_SvtEnc
                            (encoderId[0] == 's') ? "SVT-AV1" :
+#endif
                                                    "HEVC") << " encoder available.\n";
     return 5;
   }
@@ -1225,17 +1236,17 @@ int main(int argc, char** argv)
 #if HAVE_AOM_ENCODER
     if (x == 1) encoderId = "aom";
 #else
-    y--;
+    if (x != 3 && x != 4) x++;
 #endif
 #if HAVE_RAV1E
-    if (x == 2 + y) encoderId = "rav1";
+    if (x == 2) encoderId = "rav1";
 #else
-    y--;
+    if (x != 1 && x != 4) x++;
 #endif
 #if HAVE_SvtEnc
-    if (x == 3 + y) encoderId = "svt";
+    if (x == 3) encoderId = "svt";
 #else
-    y--;
+    if (x != 1 && x != 2) x++;
 #endif
     if (x == 4 + y) return 0;
     goto show;
