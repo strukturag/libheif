@@ -1899,7 +1899,9 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
     }
       break;
 
-    case heif_compression_AV1: {
+    case heif_compression_AV1:
+    case heif_compression_RAV1:
+    case heif_compression_SVT: {
       error = encode_image_as_av1(pixel_image,
                                   encoder,
                                   options,
