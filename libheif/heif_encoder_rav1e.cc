@@ -672,7 +672,7 @@ struct heif_error rav1e_get_compressed_data(void* encoder_raw, uint8_t** data, i
 static const struct heif_encoder_plugin encoder_plugin_rav1e
     {
         /* plugin_api_version */ 3,
-        /* compression_format */ heif_compression_AV1,
+        /* compression_format */ heif_compression_RAV1,
         /* id_name */ "rav1e",
         /* priority */ RAV1E_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
