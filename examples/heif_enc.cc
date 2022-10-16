@@ -1173,7 +1173,7 @@ int main(int argc, char** argv)
                              (enc_av1f && encoderId[0] == 'a') ? heif_compression_AV1 :
 #endif
 #if HAVE_RAV1E
-                             (enc_av1f && encoderId[0] == 'r') ? heif_compression_AV1 :
+                             (enc_av1f && encoderId[0] == 'r') ? heif_compression_RAV1 :
 #endif
 #if HAVE_SvtEnc
                              (enc_av1f && encoderId[0] == 's') ? heif_compression_SVT :
