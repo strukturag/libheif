@@ -526,11 +526,10 @@ InputImage loadJPEG(const char* filename)
 #else
 InputImage loadJPEG(const char* filename)
 {
-  InputImage img;
   std::cerr << "Cannot load JPEG because libjpeg support was not compiled.\n";
   exit(1);
 
-  return img;
+  return {};
 }
 #endif
 
@@ -546,7 +545,7 @@ user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 } // user_read_data
 
 
-std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
+InputImage loadPNG(const char* filename, int output_bit_depth)
 {
   FILE* fh = fopen(filename, "rb");
   if (!fh) {
@@ -554,6 +553,8 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
     exit(1);
   }
 
+
+  InputImage input_image;
 
   // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
 
@@ -690,6 +691,15 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   /* read rest of file, and get additional chunks in info_ptr - REQUIRED */
   png_read_end(png_ptr, info_ptr);
+
+  // --- read EXIF data
+
+  png_bytep exifPtr = nullptr;
+  png_uint_32 exifSize = 0;
+  if (png_get_eXIf_1(png_ptr, info_ptr, &exifSize, &exifPtr) == PNG_INFO_eXIf) {
+    input_image.exif.resize(exifSize);
+    memcpy(input_image.exif.data(), exifPtr, exifSize);
+  }
 
   /* clean up after the read, and free any memory allocated - REQUIRED */
   png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
@@ -870,17 +880,19 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 
   delete[] row_pointers;
 
-  return std::shared_ptr<heif_image>(image,
-                                     [](heif_image* img) { heif_image_release(img); });
+  input_image.image = std::shared_ptr<heif_image>(image,
+                                                  [](heif_image* img) { heif_image_release(img); });
+
+  return input_image;
 }
 
 #else
-std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
+InputImage loadPNG(const char* filename, int output_bit_depth)
 {
   std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
   exit(1);
 
-  return nullptr;
+  return {};
 }
 #endif
 
@@ -1342,7 +1354,7 @@ int main(int argc, char** argv)
 
     InputImage input_image;
     if (filetype == PNG) {
-      input_image.image = loadPNG(input_filename.c_str(), output_bit_depth);
+      input_image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype == Y4M) {
       input_image.image = loadY4M(input_filename.c_str());

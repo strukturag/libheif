@@ -138,6 +138,8 @@ if(LIBPNG_FOUND)
     heif_thumbnailer.cc
     encoder_png.cc
     encoder_png.h
+    ../libheif/exif.h
+    ../libheif/exif.cc
     )
 
   add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
