@@ -30,6 +30,8 @@
 #include <memory>
 
 #include <libheif/heif.h>
+#include <vector>
+
 
 class Encoder
 {
@@ -53,6 +55,8 @@ protected:
   static bool HasExifMetaData(const struct heif_image_handle* handle);
 
   static uint8_t* GetExifMetaData(const struct heif_image_handle* handle, size_t* size);
+
+  static std::vector<uint8_t> get_xmp_metadata(const struct heif_image_handle* handle);
 };
 
 #endif  // EXAMPLE_ENCODER_H

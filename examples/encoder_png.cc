@@ -23,12 +23,11 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#include <assert.h>
-#include <errno.h>
-#include <math.h>
+#include <cerrno>
 #include <png.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
 
 #include "encoder_png.h"
 #include "libheif/exif.h"
@@ -129,6 +128,17 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   }
 
 
+  // --- write XMP metadata
+
+  std::vector<uint8_t> xmp = get_xmp_metadata(handle);
+  if (!xmp.empty()) {
+    png_text xmp_text;
+    xmp_text.compression = PNG_TEXT_COMPRESSION_zTXt;
+    xmp_text.key = (char*) "XML:com.adobe.xmp";
+    xmp_text.text = (char*) xmp.data();
+    xmp_text.text_length = xmp.size();
+    png_set_text(png_ptr, info_ptr, &xmp_text, 1);
+  }
 
   png_write_info(png_ptr, info_ptr);
 

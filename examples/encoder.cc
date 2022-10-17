@@ -29,6 +29,7 @@
 #endif
 
 #include <stdlib.h>
+#include <cstring>
 
 #include "encoder.h"
 
@@ -69,4 +70,32 @@ uint8_t* Encoder::GetExifMetaData(const struct heif_image_handle* handle, size_t
   }
 
   return nullptr;
+}
+
+
+std::vector<uint8_t> Encoder::get_xmp_metadata(const struct heif_image_handle* handle)
+{
+  std::vector<uint8_t> xmp;
+
+  heif_item_id metadata_ids[16];
+  int count = heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, metadata_ids, 16);
+
+  for (int i = 0; i < count; i++) {
+    if (strcmp(heif_image_handle_get_metadata_type(handle, metadata_ids[i]), "mime") == 0 &&
+        strcmp(heif_image_handle_get_metadata_content_type(handle, metadata_ids[i]), "application/rdf+xml") == 0) {
+
+      size_t datasize = heif_image_handle_get_metadata_size(handle, metadata_ids[i]);
+      xmp.resize(datasize);
+
+      heif_error error = heif_image_handle_get_metadata(handle, metadata_ids[i], xmp.data());
+      if (error.code != heif_error_Ok) {
+        // TODO: return error
+        return {};
+      }
+
+      return xmp;
+    }
+  }
+
+  return {};
 }

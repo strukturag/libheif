@@ -701,6 +701,27 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     memcpy(input_image.exif.data(), exifPtr, exifSize);
   }
 
+  // --- read XMP data
+
+  png_textp textPtr = nullptr;
+  const png_uint_32 nTextChunks = png_get_text(png_ptr, info_ptr, &textPtr, nullptr);
+  for (png_uint_32 i = 0; i < nTextChunks; i++, textPtr++) {
+    png_size_t textLength = textPtr->text_length;
+    if ((textPtr->compression == PNG_ITXT_COMPRESSION_NONE) || (textPtr->compression == PNG_ITXT_COMPRESSION_zTXt)) {
+      textLength = textPtr->itxt_length;
+    }
+
+    if (!strcmp(textPtr->key, "XML:com.adobe.xmp")) {
+      if (textLength == 0) {
+        // TODO: error
+      }
+      else {
+        input_image.xmp.resize(textLength);
+        memcpy(input_image.xmp.data(), textPtr->text, textLength);
+      }
+    }
+  }
+
   /* clean up after the read, and free any memory allocated - REQUIRED */
   png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
 
