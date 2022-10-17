@@ -1,0 +1,136 @@
+/*
+ * HEIF codec.
+ * Copyright (c) 2022 Dirk Farin <dirk.farin@gmail.com>
+ *
+ * This file is part of libheif.
+ *
+ * libheif is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * libheif is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+#include "metadata_compression.h"
+
+
+#if WITH_DEFLATE_HEADER_COMPRESSION
+#include <zlib.h>
+#include <cstring>
+
+std::vector<uint8_t> deflate(const uint8_t* input, int size)
+{
+  std::vector<uint8_t> output;
+
+  // initialize compressor
+
+  const int outBufferSize = 8192;
+  uint8_t dst[outBufferSize];
+
+  z_stream strm;
+  memset(&strm, 0, sizeof(z_stream));
+
+  strm.avail_in = size;
+  strm.next_in = (Bytef*)input;
+
+  strm.avail_out = outBufferSize;
+  strm.next_out = (Bytef*) dst;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+  if (err != Z_OK) {
+    return {}; // TODO: return error
+  }
+
+  do {
+    strm.next_out = dst;
+    strm.avail_out = outBufferSize;
+
+    err = deflate(&strm, Z_FINISH);
+    if (err == Z_BUF_ERROR || err == Z_OK) {
+      // this is the usual case when we run out of buffer space
+      // -> do nothing
+    }
+    else if (err == Z_STREAM_ERROR) {
+      return {}; // TODO: return error
+    }
+
+
+    // append decoded data to output
+
+    output.insert(output.end(), dst, dst + outBufferSize - strm.avail_out);
+  } while (err != Z_STREAM_END);
+
+  deflateEnd(&strm);
+
+  return output;
+}
+
+
+std::vector<uint8_t> inflate(const std::vector<uint8_t>& compressed_input)
+{
+  std::vector<uint8_t> output;
+
+  // decompress data with zlib
+
+  const int outBufferSize = 8192;
+  uint8_t dst[outBufferSize];
+
+  z_stream strm;
+  memset(&strm, 0, sizeof(z_stream));
+
+  strm.avail_in = (int)compressed_input.size();
+  strm.next_in = (Bytef*) compressed_input.data();
+
+  strm.avail_out = outBufferSize;
+  strm.next_out = (Bytef*) dst;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  int err = -1;
+
+  err = inflateInit(&strm);
+  if (err != Z_OK) {
+    // TODO: return error
+    return {};
+  }
+
+  do {
+    strm.next_out = dst;
+    strm.avail_out = outBufferSize;
+
+    err = inflate(&strm, Z_FINISH);
+    if (err == Z_BUF_ERROR || err == Z_OK) {
+      // this is the usual case when we run out of buffer space
+      // -> do nothing
+    }
+    else if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
+      // TODO: return error
+      return {};
+    }
+
+
+    // append decoded data to output
+
+    output.insert(output.end(), dst, dst + outBufferSize - strm.avail_out);
+  } while (err != Z_STREAM_END);
+
+
+  inflateEnd(&strm);
+
+  return output;
+}
+#endif

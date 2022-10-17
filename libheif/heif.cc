@@ -2463,7 +2463,17 @@ struct heif_error heif_context_add_XMP_metadata(struct heif_context* ctx,
                                                 const struct heif_image_handle* image_handle,
                                                 const void* data, int size)
 {
-  Error error = ctx->context->add_XMP_metadata(image_handle->image, data, size);
+  return heif_context_add_XMP_metadata2(ctx, image_handle, data, size,
+                                        heif_metadata_compression_off);
+}
+
+
+struct heif_error heif_context_add_XMP_metadata2(struct heif_context* ctx,
+                                                 const struct heif_image_handle* image_handle,
+                                                 const void* data, int size,
+                                                 heif_metadata_compression compression)
+{
+  Error error = ctx->context->add_XMP_metadata(image_handle->image, data, size, compression);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
@@ -2479,7 +2489,7 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const char* item_type, const char* content_type)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   item_type, content_type);
+                                                   item_type, content_type, heif_metadata_compression_off);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

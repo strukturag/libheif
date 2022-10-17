@@ -297,6 +297,8 @@ const (
 
 	SuberrorUnsupportedItemConstructionMethod = C.heif_suberror_Unsupported_item_construction_method
 
+	SuberrorUnsupportedHeaderCompressionMethod = C.heif_suberror_Unsupported_header_compression_method
+
 	// --- Encoder_plugin_error ---
 
 	SuberrorUnsupportedBitDepth = C.heif_suberror_Unsupported_bit_depth

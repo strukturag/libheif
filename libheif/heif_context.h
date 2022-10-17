@@ -386,10 +386,11 @@ namespace heif {
 
     Error add_exif_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
 
-    Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
+    Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, heif_metadata_compression compression);
 
     Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                               const char* item_type, const char* content_type);
+                               const char* item_type, const char* content_type,
+                               heif_metadata_compression compression);
 
     void write(StreamWriter& writer);
 

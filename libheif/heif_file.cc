@@ -36,6 +36,8 @@
 #include <windows.h>
 #endif
 
+#include "metadata_compression.h"
+
 using namespace heif;
 
 // TODO: make this a decoder option
@@ -618,7 +620,27 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
            item_type == "iovl" ||
            item_type == "Exif" ||
            (item_type == "mime" && content_type == "application/rdf+xml")) {
-    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+
+    bool read_uncompressed = true;
+    if (item_type == "mime") {
+      std::string encoding = infe_box->get_content_encoding();
+      if (encoding == "deflate") {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+        read_uncompressed = false;
+        std::vector<uint8_t> compressed_data;
+        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        *data = inflate(compressed_data);
+#else
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_header_compression_method,
+                     encoding);
+#endif
+      }
+    }
+
+    if (read_uncompressed) {
+      error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+    }
   }
 
   if (error != Error::Ok) {

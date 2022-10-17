@@ -472,8 +472,14 @@ namespace heif {
     const std::string& get_content_type() const
     { return m_content_type; }
 
+    const std::string& get_content_encoding() const
+    { return m_content_encoding; }
+
     void set_content_type(const std::string& content_type)
     { m_content_type = content_type; }
+
+    void set_content_encoding(const std::string& content_encoding)
+    { m_content_encoding = content_encoding; }
 
     void derive_box_version() override;
 

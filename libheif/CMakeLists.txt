@@ -37,8 +37,10 @@ add_library(heif
     heif_init.cc heif_init.h
     nclx.h
     logging.h
+    metadata_compression.cc
+    metadata_compression.h
     ${libheif_headers}
-)
+    )
 
 # Needed to find libheif/heif_version.h while compiling the library
 target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
@@ -161,6 +163,11 @@ if (ENABLE_PLUGIN_LOADING AND UNIX)
     target_link_libraries(heif PRIVATE dl)
 endif()
 
+if (WITH_DEFLATE_HEADER_COMPRESSION)
+    find_library(z-lib z)
+    target_link_libraries(heif PRIVATE ${z-lib})
+    target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
+endif ()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 

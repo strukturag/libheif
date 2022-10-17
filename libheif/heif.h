@@ -264,6 +264,8 @@ enum heif_suberror_code
 
   heif_suberror_Unsupported_item_construction_method = 3004,
 
+  heif_suberror_Unsupported_header_compression_method = 3005,
+
 
   // --- Encoder_plugin_error ---
 
@@ -1468,6 +1470,13 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_thumb_image_handle);
 
+enum heif_metadata_compression
+{
+  heif_metadata_compression_off,
+  heif_metadata_compression_auto,
+  heif_metadata_compression_deflate
+};
+
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
 struct heif_error heif_context_assign_thumbnail(struct heif_context*,
@@ -1485,6 +1494,13 @@ LIBHEIF_API
 struct heif_error heif_context_add_XMP_metadata(struct heif_context*,
                                                 const struct heif_image_handle* image_handle,
                                                 const void* data, int size);
+
+// New version of heif_context_add_XMP_metadata() with data compression (experimental).
+LIBHEIF_API
+struct heif_error heif_context_add_XMP_metadata2(struct heif_context*,
+                                                 const struct heif_image_handle* image_handle,
+                                                 const void* data, int size,
+                                                 enum heif_metadata_compression compression);
 
 // Add generic, proprietary metadata to an image. You have to specify an 'item_type' that will
 // identify your metadata. 'content_type' can be an additional type, or it can be NULL.

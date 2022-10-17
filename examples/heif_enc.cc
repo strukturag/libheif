@@ -77,6 +77,7 @@ int list_encoders = 0;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
+int metadata_compression = 0;
 const char* encoderId = nullptr;
 
 uint16_t nclx_matrix_coefficients = 6;
@@ -124,6 +125,7 @@ static struct option long_options[] = {
     {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
     {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
+    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
     {0, 0,                                                       0,               0},
 };
 
@@ -163,6 +165,7 @@ void show_help(const char* argv0)
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
+            << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
@@ -1440,8 +1443,9 @@ int main(int argc, char** argv)
 
     // write XMP to HEIC
     if (!input_image.xmp.empty()) {
-      heif_context_add_XMP_metadata(context.get(), handle,
-                                    input_image.xmp.data(), (int)input_image.xmp.size());
+      heif_context_add_XMP_metadata2(context.get(), handle,
+                                     input_image.xmp.data(), (int) input_image.xmp.size(),
+                                     metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
     }
 
     if (thumbnail_bbox_size > 0) {

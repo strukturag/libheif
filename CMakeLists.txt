@@ -186,6 +186,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 
 option(WITH_EXAMPLES "Build examples" ON)
 
+option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
+
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
 endif()

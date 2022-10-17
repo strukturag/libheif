@@ -43,6 +43,7 @@
 #include "heif_avif.h"
 #include "heif_plugin_registry.h"
 #include "heif_colorconversion.h"
+#include "metadata_compression.h"
 
 using namespace heif;
 
@@ -1953,7 +1954,8 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
     if (!src_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
-  } else {
+  }
+  else {
     src_image = image;
   }
 
@@ -2210,7 +2212,8 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     if (!src_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
-  } else {
+  }
+  else {
     src_image = image;
   }
 
@@ -2280,7 +2283,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
 
     bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
-    (void)found_config;
+    (void) found_config;
 
     if (data == nullptr) {
       break;
@@ -2469,18 +2472,19 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image,
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr);
+                              "Exif", nullptr, heif_metadata_compression_off);
 }
 
 
-Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size)
+Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
+                                    heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml");
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", compression);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type)
+                                        const char* item_type, const char* content_type, heif_metadata_compression compression)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
@@ -2499,11 +2503,36 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
                                   fourcc("cdsc"), {master_image->get_id()});
 
 
-  // copy the data into the file, store the pointer to it in an iloc box entry
+  // --- metadata compression
+
+  if (compression == heif_metadata_compression_auto) {
+    compression = heif_metadata_compression_off; // currently, we don't use header compression by default
+  }
+
+  // only set metadata compression for MIME type data which has 'content_encoding' field
+  if (compression != heif_metadata_compression_off &&
+      (item_type == nullptr || strcmp(item_type, "mime") != 0)) {
+    // TODO: error, compression not supported
+  }
+
 
   std::vector<uint8_t> data_array;
-  data_array.resize(size);
-  memcpy(data_array.data(), data, size);
+  if (compression == heif_metadata_compression_deflate) {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    data_array = deflate((const uint8_t*) data, size);
+    metadata_infe_box->set_content_encoding("deflate");
+#else
+    // TODO: error
+#endif
+  }
+  else {
+    // uncompressed data, plain copy
+
+    data_array.resize(size);
+    memcpy(data_array.data(), data, size);
+  }
+
+  // copy the data into the file, store the pointer to it in an iloc box entry
 
   m_heif_file->append_iloc_data(metadata_id, data_array);
 

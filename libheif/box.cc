@@ -61,8 +61,8 @@ Fraction::Fraction(int32_t num, int32_t den)
 
 Fraction::Fraction(uint32_t num, uint32_t den)
 {
-  assert(num <= (uint32_t)std::numeric_limits<int32_t>::max());
-  assert(den <= (uint32_t)std::numeric_limits<int32_t>::max());
+  assert(num <= (uint32_t) std::numeric_limits<int32_t>::max());
+  assert(den <= (uint32_t) std::numeric_limits<int32_t>::max());
 
   *this = Fraction(int32_t(num), int32_t(den));
 }
@@ -1185,11 +1185,11 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   Extent extent;
   extent.data = data;
 
-  if (construction_method==1) {
+  if (construction_method == 1) {
     extent.offset = m_idat_offset;
     extent.length = data.size();
 
-    m_idat_offset += (int)data.size();
+    m_idat_offset += (int) data.size();
   }
 
   m_items[idx].extents.push_back(std::move(extent));
@@ -2330,16 +2330,16 @@ Error Box_clap::parse(BitstreamRange& range)
   // Note: in the standard document 14496-12(2015), it says that the offset values should also be unsigned integers,
   // but this is obviously an error. Even the accompanying standard text says that offsets may be negative.
   int32_t horizontal_offset_num = (int32_t) range.read32();
-  uint32_t horizontal_offset_den = (int32_t)range.read32();
+  uint32_t horizontal_offset_den = (int32_t) range.read32();
   int32_t vertical_offset_num = (int32_t) range.read32();
-  uint32_t vertical_offset_den = (int32_t)range.read32();
+  uint32_t vertical_offset_den = (int32_t) range.read32();
 
   if (clean_aperture_width_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
       clean_aperture_width_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
       clean_aperture_height_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
       clean_aperture_height_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
-      horizontal_offset_den > (uint32_t)std::numeric_limits<int32_t>::max() ||
-      vertical_offset_den > (uint32_t)std::numeric_limits<int32_t>::max()) {
+      horizontal_offset_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
+      vertical_offset_den > (uint32_t) std::numeric_limits<int32_t>::max()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_fractional_number,
                  "Exceeded supported value range.");
@@ -2349,8 +2349,8 @@ Error Box_clap::parse(BitstreamRange& range)
                                     clean_aperture_width_den);
   m_clean_aperture_height = Fraction(clean_aperture_height_num,
                                      clean_aperture_height_den);
-  m_horizontal_offset = Fraction(horizontal_offset_num, (int32_t)horizontal_offset_den);
-  m_vertical_offset = Fraction(vertical_offset_num, (int32_t)vertical_offset_den);
+  m_horizontal_offset = Fraction(horizontal_offset_num, (int32_t) horizontal_offset_den);
+  m_vertical_offset = Fraction(vertical_offset_num, (int32_t) vertical_offset_den);
   if (!m_clean_aperture_width.is_valid() || !m_clean_aperture_height.is_valid() ||
       !m_horizontal_offset.is_valid() || !m_vertical_offset.is_valid()) {
     return Error(heif_error_Invalid_input,

@@ -189,6 +189,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unsupported color conversion";
     case heif_suberror_Unsupported_item_construction_method:
       return "Unsupported item construction method";
+    case heif_suberror_Unsupported_header_compression_method:
+      return "Unsupported header compression method";
 
       // --- Encoder_plugin_error --
 
