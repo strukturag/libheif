@@ -78,6 +78,8 @@ libheif_la_SOURCES = \
   heif_colorconversion.h \
   heif_colorconversion.cc \
   logging.h \
+  metadata_compression.h \
+  metadata_compression.cc \
   nclx.cc \
   nclx.h
 
