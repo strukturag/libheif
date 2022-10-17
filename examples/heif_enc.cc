@@ -64,6 +64,8 @@ extern "C" {
 #include <assert.h>
 #include "benchmark.h"
 
+#define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
+#define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
 #define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
 #define JPEG_ICC_OVERHEAD_LEN  14        /* size of non-profile data in APP2 */
 
@@ -166,6 +168,15 @@ void show_help(const char* argv0)
             << "  -p chroma=444            switch off chroma subsampling\n"
             << "  --matrix_coefficients=0  encode in RGB color-space\n";
 }
+
+
+
+struct InputImage
+{
+  std::shared_ptr<heif_image> image;
+  std::vector<uint8_t> xmp;
+  std::vector<uint8_t> exif;
+};
 
 
 #if HAVE_LIBJPEG
@@ -276,8 +287,35 @@ boolean ReadICCProfileFromJPEG(j_decompress_ptr cinfo,
 }
 
 
-std::shared_ptr<heif_image> loadJPEG(const char* filename)
+static bool JPEGMarkerIsXMP(jpeg_saved_marker_ptr marker)
 {
+  return
+      marker->marker == JPEG_XMP_MARKER &&
+      marker->data_length >= strlen(JPEG_XMP_MARKER_ID) + 1 &&
+      strncmp((const char*) (marker->data), JPEG_XMP_MARKER_ID, strlen(JPEG_XMP_MARKER_ID)) == 0;
+}
+
+bool ReadXMPFromJPEG(j_decompress_ptr cinfo,
+                     std::vector<uint8_t>& xmpData)
+{
+  jpeg_saved_marker_ptr marker;
+
+  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
+    if (JPEGMarkerIsXMP(marker)) {
+      int length = (int)(marker->data_length - (strlen(JPEG_XMP_MARKER_ID) + 1));
+      xmpData.resize(length);
+      memcpy(xmpData.data(), marker->data + strlen(JPEG_XMP_MARKER_ID) + 1, length);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+InputImage loadJPEG(const char* filename)
+{
+  InputImage img;
   struct heif_image* image = nullptr;
 
 
@@ -289,6 +327,8 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
   // to store embedded icc profile
   uint32_t iccLen;
   uint8_t* iccBuffer = NULL;
+
+  std::vector<uint8_t> xmpData;
 
   // open input file
 
@@ -307,11 +347,16 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
   jpeg_stdio_src(&cinfo, infile);
 
   /* Adding this part to prepare for icc profile reading. */
-  jpeg_save_markers(&cinfo, JPEG_APP0 + 2, 0xFFFF);
+  jpeg_save_markers(&cinfo, JPEG_ICC_MARKER, 0xFFFF);
+  jpeg_save_markers(&cinfo, JPEG_XMP_MARKER, 0xFFFF);
 
   jpeg_read_header(&cinfo, TRUE);
 
   boolean embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
+  boolean embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
+  if (embeddedXMPFlag) {
+    img.xmp = xmpData;
+  }
 
   if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
     cinfo.out_color_space = JCS_GRAYSCALE;
@@ -427,17 +472,20 @@ std::shared_ptr<heif_image> loadJPEG(const char* filename)
 
   fclose(infile);
 
-  return std::shared_ptr<heif_image>(image,
+  img.image = std::shared_ptr<heif_image>(image,
                                      [](heif_image* img) { heif_image_release(img); });
+
+  return img;
 }
 
 #else
-std::shared_ptr<heif_image> loadJPEG(const char* filename)
+InputImage loadJPEG(const char* filename)
 {
+  InputImage img;
   std::cerr << "Cannot load JPEG because libjpeg support was not compiled.\n";
   exit(1);
 
-  return nullptr;
+  return img;
 }
 #endif
 
@@ -1247,16 +1295,18 @@ int main(int argc, char** argv)
       filetype = Y4M;
     }
 
-    std::shared_ptr<heif_image> image;
+    InputImage input_image;
     if (filetype == PNG) {
-      image = loadPNG(input_filename.c_str(), output_bit_depth);
+      input_image.image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype == Y4M) {
-      image = loadY4M(input_filename.c_str());
+      input_image.image = loadY4M(input_filename.c_str());
     }
     else {
-      image = loadJPEG(input_filename.c_str());
+      input_image = loadJPEG(input_filename.c_str());
     }
+
+    std::shared_ptr<heif_image> image = input_image.image;
 
     if (!primary_image) {
       primary_image = image;
@@ -1341,6 +1391,12 @@ int main(int argc, char** argv)
       heif_encoding_options_free(options);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
+    }
+
+    // write XMP to HEIC
+    if (!input_image.xmp.empty()) {
+      heif_context_add_XMP_metadata(context.get(), handle,
+                                    input_image.xmp.data(), (int)input_image.xmp.size());
     }
 
     if (thumbnail_bbox_size > 0) {
