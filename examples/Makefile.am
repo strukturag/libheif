@@ -25,7 +25,7 @@ heif_thumbnailer_DEPENDENCIES = ../libheif/libheif.la
 heif_thumbnailer_CXXFLAGS = -I$(top_srcdir) -I$(top_builddir) $(libpng_CFLAGS)
 heif_thumbnailer_LDFLAGS = $(libpng_LIBS)
 heif_thumbnailer_LDADD = ../libheif/libheif.la
-heif_thumbnailer_SOURCES = encoder.cc encoder.h heif_thumbnailer.cc encoder_png.cc encoder_png.h
+heif_thumbnailer_SOURCES = encoder.cc encoder.h heif_thumbnailer.cc encoder_png.cc encoder_png.h ../libheif/exif.h ../libheif/exif.cc
 dist_man_MANS += heif-thumbnailer.1
 endif
 
