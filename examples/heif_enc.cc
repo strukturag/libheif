@@ -64,6 +64,8 @@ extern "C" {
 #include <assert.h>
 #include "benchmark.h"
 
+#define JPEG_EXIF_MARKER  (JPEG_APP0+1)  /* JPEG marker code for EXIF */
+#define JPEG_EXIF_MARKER_LEN 6 // "Exif/0/0"
 #define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
 #define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
 #define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
@@ -313,6 +315,36 @@ bool ReadXMPFromJPEG(j_decompress_ptr cinfo,
 }
 
 
+static bool JPEGMarkerIsEXIF(jpeg_saved_marker_ptr marker)
+{
+  return marker->marker == JPEG_EXIF_MARKER &&
+         marker->data_length >= JPEG_EXIF_MARKER_LEN &&
+         GETJOCTET(marker->data[0]) == 'E' &&
+         GETJOCTET(marker->data[1]) == 'x' &&
+         GETJOCTET(marker->data[2]) == 'i' &&
+         GETJOCTET(marker->data[3]) == 'f' &&
+         GETJOCTET(marker->data[4]) == 0 &&
+         GETJOCTET(marker->data[5]) == 0;
+}
+
+bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
+                     std::vector<uint8_t>& exifData)
+{
+  jpeg_saved_marker_ptr marker;
+
+  for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
+    if (JPEGMarkerIsEXIF(marker)) {
+      int length = (int)(marker->data_length - JPEG_EXIF_MARKER_LEN);
+      exifData.resize(length);
+      memcpy(exifData.data(), marker->data + JPEG_EXIF_MARKER_LEN, length);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 InputImage loadJPEG(const char* filename)
 {
   InputImage img;
@@ -329,6 +361,7 @@ InputImage loadJPEG(const char* filename)
   uint8_t* iccBuffer = NULL;
 
   std::vector<uint8_t> xmpData;
+  std::vector<uint8_t> exifData;
 
   // open input file
 
@@ -349,6 +382,7 @@ InputImage loadJPEG(const char* filename)
   /* Adding this part to prepare for icc profile reading. */
   jpeg_save_markers(&cinfo, JPEG_ICC_MARKER, 0xFFFF);
   jpeg_save_markers(&cinfo, JPEG_XMP_MARKER, 0xFFFF);
+  jpeg_save_markers(&cinfo, JPEG_EXIF_MARKER, 0xFFFF);
 
   jpeg_read_header(&cinfo, TRUE);
 
@@ -356,6 +390,11 @@ InputImage loadJPEG(const char* filename)
   boolean embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
   if (embeddedXMPFlag) {
     img.xmp = xmpData;
+  }
+
+  boolean embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
+  if (embeddedEXIFFlag) {
+    img.exif = exifData;
   }
 
   if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
@@ -1391,6 +1430,12 @@ int main(int argc, char** argv)
       heif_encoding_options_free(options);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
+    }
+
+    // write EXIF to HEIC
+    if (!input_image.exif.empty()) {
+      heif_context_add_exif_metadata(context.get(), handle,
+                                     input_image.exif.data(), (int) input_image.exif.size());
     }
 
     // write XMP to HEIC
