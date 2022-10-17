@@ -87,6 +87,18 @@ heif_encoder_release(encoder);
 heif_context_write_to_file(context, "output.heic");
 ```
 
+Get the EXIF data from an HEIF file:
+```C
+heif_item_id exif_id;
+
+int n = heif_image_handle_get_list_of_metadata_block_IDs(image_handle, "Exif", &exif_id, 1);
+if (n==1) {
+  size_t exifSize = heif_image_handle_get_metadata_size(image_handle, exif_id);
+  uint8_t* exifData = malloc(exifSize);
+  struct heif_error error = heif_image_handle_get_metadata(image_handle, exif_id, exifData);
+}
+```
+
 See the header file `heif.h` for the complete C API.
 
 There is also a C++ API which is a header-only wrapper to the C API.
