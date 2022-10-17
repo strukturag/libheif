@@ -31,9 +31,10 @@
 #include <errno.h>
 #include <string.h>
 
-#include <iostream>
+#include <vector>
 
 #include "encoder_jpeg.h"
+#include "libheif/exif.h"
 
 JpegEncoder::JpegEncoder(int quality) : quality_(quality)
 {
@@ -46,7 +47,7 @@ void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
                                         struct heif_decoding_options* options) const
 {
   if (HasExifMetaData(handle)) {
-    options->ignore_transformations = 1;
+    options->ignore_transformations = 0;
   }
 
   options->convert_hdr_to_8bit = 1;
@@ -172,15 +173,30 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       static const uint8_t kExifMarker = JPEG_APP0 + 1;
 
       uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
-      if (skip>=6) {
-        skip = 4 + skip-6;
-      }
-      else {
-        skip = 4;
-      }
+      skip += 4;
 
       uint8_t* ptr = exifdata + skip;
       size_t size = exifsize - skip;
+
+      // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
+      modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
+
+      // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
+      if (size>0x1000000) {
+        size = 0x1000000;
+      }
+
+      std::vector<uint8_t> jpegExifMarkerData(6+size);
+      memcpy(jpegExifMarkerData.data()+6, ptr, size);
+      jpegExifMarkerData[0]='E';
+      jpegExifMarkerData[1]='x';
+      jpegExifMarkerData[2]='i';
+      jpegExifMarkerData[3]='f';
+      jpegExifMarkerData[4]=0;
+      jpegExifMarkerData[5]=0;
+
+      ptr = jpegExifMarkerData.data();
+      size = jpegExifMarkerData.size();
 
       while (size > MAX_BYTES_IN_MARKER) {
         jpeg_write_marker(&cinfo, kExifMarker, ptr,

@@ -63,6 +63,7 @@ extern "C" {
 
 #include <assert.h>
 #include "benchmark.h"
+#include "libheif/exif.h"
 
 #define JPEG_EXIF_MARKER  (JPEG_APP0+1)  /* JPEG marker code for EXIF */
 #define JPEG_EXIF_MARKER_LEN 6 // "Exif/0/0"
@@ -1437,6 +1438,8 @@ int main(int argc, char** argv)
 
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
+      modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), input_image.exif.size(), 1);
+
       error = heif_context_add_exif_metadata(context.get(), handle,
                                              input_image.exif.data(), (int) input_image.exif.size());
       if (error.code != 0) {

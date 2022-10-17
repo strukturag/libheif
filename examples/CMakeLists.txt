@@ -7,6 +7,8 @@ set (heif_convert_sources
   encoder_y4m.cc
   encoder_y4m.h
   heif_convert.cc
+  ../libheif/exif.cc
+  ../libheif/exif.cc
 )
 
 set (additional_link_directories)
@@ -87,6 +89,8 @@ set (heif_info_sources
 
 set (heif_enc_sources
   heif_enc.cc
+  ../libheif/exif.cc
+  ../libheif/exif.cc
   benchmark.h
   benchmark.cc
 )
