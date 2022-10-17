@@ -1437,15 +1437,25 @@ int main(int argc, char** argv)
 
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
-      heif_context_add_exif_metadata(context.get(), handle,
-                                     input_image.exif.data(), (int) input_image.exif.size());
+      error = heif_context_add_exif_metadata(context.get(), handle,
+                                             input_image.exif.data(), (int) input_image.exif.size());
+      if (error.code != 0) {
+        heif_encoding_options_free(options);
+        std::cerr << "Could not write EXIF metadata: " << error.message << "\n";
+        return 1;
+      }
     }
 
     // write XMP to HEIC
     if (!input_image.xmp.empty()) {
-      heif_context_add_XMP_metadata2(context.get(), handle,
+      error = heif_context_add_XMP_metadata2(context.get(), handle,
                                      input_image.xmp.data(), (int) input_image.xmp.size(),
                                      metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
+      if (error.code != 0) {
+        heif_encoding_options_free(options);
+        std::cerr << "Could not write XMP metadata: " << error.message << "\n";
+        return 1;
+      }
     }
 
     if (thumbnail_bbox_size > 0) {

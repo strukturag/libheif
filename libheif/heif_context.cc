@@ -2522,7 +2522,8 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
     data_array = deflate((const uint8_t*) data, size);
     metadata_infe_box->set_content_encoding("deflate");
 #else
-    // TODO: error
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method);
 #endif
   }
   else {
