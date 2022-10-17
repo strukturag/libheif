@@ -36,6 +36,10 @@
 #include "encoder_jpeg.h"
 #include "libheif/exif.h"
 
+#define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
+#define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
+
+
 JpegEncoder::JpegEncoder(int quality) : quality_(quality)
 {
   if (quality_ < 0 || quality_ > 100) {
@@ -166,6 +170,8 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   static const boolean kWriteAllTables = TRUE;
   jpeg_start_compress(&cinfo, kWriteAllTables);
 
+  // --- Write EXIF
+
   size_t exifsize = 0;
   uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
   if (exifdata) {
@@ -212,6 +218,20 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
     free(exifdata);
   }
+
+  // --- Write XMP
+
+  auto xmp = get_xmp_metadata(handle);
+  if (!xmp.empty()) {
+    std::vector<uint8_t> xmpWithId;
+    xmpWithId.resize(xmp.size() + strlen(JPEG_XMP_MARKER_ID)+1);
+    strcpy((char*)xmpWithId.data(), JPEG_XMP_MARKER_ID);
+    memcpy(xmpWithId.data() + strlen(JPEG_XMP_MARKER_ID) + 1, xmp.data(), xmp.size());
+
+    jpeg_write_marker(&cinfo, JPEG_XMP_MARKER, xmpWithId.data(), static_cast<unsigned int>(xmpWithId.size()));
+  }
+
+  // --- Write ICC
 
   size_t profile_size = heif_image_handle_get_raw_color_profile_size(handle);
   if (profile_size > 0) {
