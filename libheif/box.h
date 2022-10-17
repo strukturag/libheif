@@ -700,13 +700,24 @@ namespace heif {
     Box_irot(const BoxHeader& hdr) : Box(hdr)
     {}
 
+    Box_irot()
+    {
+      set_short_type(fourcc("irot"));
+      set_is_full_box(false);
+    }
+
     std::string dump(Indent&) const override;
 
     int get_rotation() const
     { return m_rotation; }
 
+    // Only multiples of 90 are allowed (0,90,180,270).
+    void set_rotation_ccw(int rot) { m_rotation = rot; }
+
   protected:
     Error parse(BitstreamRange& range) override;
+
+    Error write(StreamWriter& writer) const override;
 
   private:
     int m_rotation = 0; // in degrees (CCW)
@@ -719,6 +730,12 @@ namespace heif {
     Box_imir(const BoxHeader& hdr) : Box(hdr)
     {}
 
+    Box_imir()
+    {
+      set_short_type(fourcc("imir"));
+      set_is_full_box(false);
+    }
+
     enum class MirrorDirection : uint8_t
     {
       Vertical = 0,
@@ -728,10 +745,14 @@ namespace heif {
     MirrorDirection get_mirror_direction() const
     { return m_axis; }
 
+    void set_mirror_direction(MirrorDirection dir) { m_axis=dir; }
+
     std::string dump(Indent&) const override;
 
   protected:
     Error parse(BitstreamRange& range) override;
+
+    Error write(StreamWriter& writer) const override;
 
   private:
     MirrorDirection m_axis = MirrorDirection::Vertical;

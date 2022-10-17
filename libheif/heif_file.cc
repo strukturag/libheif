@@ -720,6 +720,65 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 }
 
 
+void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
+{
+  int rotation_ccw = 0;
+  Box_imir::MirrorDirection mirror;
+  bool has_mirror = false;
+
+  switch (orientation) {
+    case heif_orientation_normal:
+      break;
+    case heif_orientation_flip_horizontally:
+      mirror = Box_imir::MirrorDirection::Horizontal;
+      has_mirror = true;
+      break;
+    case heif_orientation_rotate_180:
+      rotation_ccw = 180;
+      break;
+    case heif_orientation_flip_vertically:
+      mirror = Box_imir::MirrorDirection::Vertical;
+      has_mirror = true;
+      break;
+    case heif_orientation_rotate_90_cw_then_flip_horizontally:
+      rotation_ccw = 270;
+      mirror = Box_imir::MirrorDirection::Horizontal;
+      has_mirror = true;
+      break;
+    case heif_orientation_rotate_90_cw:
+      rotation_ccw = 270;
+      break;
+    case heif_orientation_rotate_90_cw_then_flip_vertically:
+      rotation_ccw = 270;
+      mirror = Box_imir::MirrorDirection::Vertical;
+      has_mirror = true;
+      break;
+    case heif_orientation_rotate_270_cw:
+      rotation_ccw = 90;
+      break;
+  }
+
+  // omit rotation when angle is 0
+  if (rotation_ccw!=0) {
+    auto irot = std::make_shared<Box_irot>();
+    irot->set_rotation_ccw(rotation_ccw);
+
+    int index = m_ipco_box->append_child_box(irot);
+
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+  }
+
+  if (has_mirror) {
+    auto imir = std::make_shared<Box_imir>();
+    imir->set_mirror_direction(mirror);
+
+    int index = m_ipco_box->append_child_box(imir);
+
+    m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+  }
+}
+
+
 void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_t c3)
 {
   auto pixi = std::make_shared<Box_pixi>();

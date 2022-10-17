@@ -2272,6 +2272,18 @@ Error Box_irot::parse(BitstreamRange& range)
 }
 
 
+Error Box_irot::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write8((uint8_t)(m_rotation / 90));
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_irot::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -2296,6 +2308,18 @@ Error Box_imir::parse(BitstreamRange& range)
   }
 
   return range.get_error();
+}
+
+
+Error Box_imir::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write8(m_axis == MirrorDirection::Horizontal ? 1 : 0);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
 }
 
 

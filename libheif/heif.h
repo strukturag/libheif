@@ -44,6 +44,7 @@ extern "C" {
 //  1.10         1             2            3             1             1            1
 //  1.11         1             2            4             1             1            1
 //  1.13         1             3            4             1             1            1
+//  1.14         1             3            5             1             1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -1403,6 +1404,20 @@ int heif_encoder_has_default(struct heif_encoder*,
                              const char* parameter_name);
 
 
+// The orientation values are defined equal to the EXIF Orientation tag.
+enum heif_orientation
+{
+  heif_orientation_normal = 1,
+  heif_orientation_flip_horizontally = 2,
+  heif_orientation_rotate_180 = 3,
+  heif_orientation_flip_vertically = 4,
+  heif_orientation_rotate_90_cw_then_flip_horizontally = 5,
+  heif_orientation_rotate_90_cw = 6,
+  heif_orientation_rotate_90_cw_then_flip_vertically = 7,
+  heif_orientation_rotate_270_cw = 8
+};
+
+
 struct heif_encoding_options
 {
   uint8_t version;
@@ -1429,6 +1444,11 @@ struct heif_encoding_options
   struct heif_color_profile_nclx* output_nclx_profile;
 
   uint8_t macOS_compatibility_workaround_no_nclx_profile;
+
+  // version 5 options
+
+  // libheif will generate irot/imir boxes to match these orientations
+  enum heif_orientation image_orientation;
 };
 
 LIBHEIF_API

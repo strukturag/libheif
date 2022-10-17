@@ -182,6 +182,7 @@ struct InputImage
   std::shared_ptr<heif_image> image;
   std::vector<uint8_t> xmp;
   std::vector<uint8_t> exif;
+  heif_orientation orientation;
 };
 
 
@@ -399,6 +400,7 @@ InputImage loadJPEG(const char* filename)
   boolean embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
   if (embeddedEXIFFlag) {
     img.exif = exifData;
+    img.orientation = (heif_orientation)read_exif_orientation_tag(exifData.data(), (int)exifData.size());
   }
 
   if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
@@ -1398,6 +1400,7 @@ int main(int argc, char** argv)
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
     options->output_nclx_profile = &nclx;
+    options->image_orientation = input_image.orientation;
 
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||
@@ -1438,7 +1441,8 @@ int main(int argc, char** argv)
 
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
-      modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), input_image.exif.size(), 1);
+      // Note: we do not modify the EXIF Orientation here because we want it to match the HEIF transforms.
+      // TODO: is this a good choice? Or should we set it to 1 (normal) so that other, faulty software will not transform it once more?
 
       error = heif_context_add_exif_metadata(context.get(), handle,
                                              input_image.exif.data(), (int) input_image.exif.size());
