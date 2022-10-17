@@ -95,12 +95,9 @@ void encoder_struct_aom::add_custom_option(const custom_option& p)
 {
   // if there is already a parameter of that name, remove it from list
 
-  for (size_t i = 0; i < custom_options.size(); i++) {
-    if (custom_options[i].name == p.name) {
-      for (size_t k = i + 1; k < custom_options.size(); k++) {
-        custom_options[k - 1] = custom_options[k];
-      }
-      custom_options.pop_back();
+  for (auto iter = custom_options.begin(); iter != custom_options.end(); ++iter) {
+    if (iter->name == p.name) {
+      custom_options.erase(iter);
       break;
     }
   }
