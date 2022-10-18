@@ -87,8 +87,8 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
     (*plugin->cleanup_plugin)();
   }
 
-  for (auto iter = heif::s_encoder_descriptors.begin() ; iter != heif::s_encoder_descriptors.end(); iter++) {
-    if (iter->get()->plugin == plugin) {
+  for (auto iter = heif::s_encoder_descriptors.begin() ; iter != heif::s_encoder_descriptors.end(); ++iter) {
+    if ((*iter)->plugin == plugin) {
       heif::s_encoder_descriptors.erase(iter);
       return;
     }
