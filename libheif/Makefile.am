@@ -103,8 +103,8 @@ endif
 
 if HAVE_RAV1E
 libheif_la_SOURCES += \
-  heif_encoder_rav1e.cc \
-  heif_encoder_rav1e.h
+  plugins/heif_encoder_rav1e.cc \
+  plugins/heif_encoder_rav1e.h
 endif
 
 if HAVE_DAV1D
@@ -116,8 +116,8 @@ endif
 
 if HAVE_X265
 libheif_la_SOURCES += \
-  heif_encoder_x265.cc \
-  heif_encoder_x265.h
+  plugins/heif_encoder_x265.cc \
+  plugins/heif_encoder_x265.h
 endif
 
 libheif_la_HEADERS = \
