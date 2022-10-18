@@ -185,13 +185,13 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
 
   void* plugin_handle = dlopen(filename, RTLD_LAZY);
   if (!plugin_handle) {
-    //fprintf(stderr, "dlopen: %s\n", dlerror());
+    fprintf(stderr, "dlopen: %s\n", dlerror());
     return error_dlopen;
   }
 
   auto* plugin_info = (heif_plugin_info*) dlsym(plugin_handle, "plugin_info");
   if (!plugin_info) {
-    //fprintf(stderr, "dlsym: %s\n", dlerror());
+    fprintf(stderr, "dlsym: %s\n", dlerror());
     return error_dlopen;
   }
 

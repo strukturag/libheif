@@ -829,7 +829,7 @@ const struct heif_encoder_plugin* get_encoder_plugin_svt()
 }
 
 
-#if PLUGIN_SVTENC
+#if PLUGIN_SvtEnc
 heif_plugin_info plugin_info {
   1,
   heif_plugin_type_encoder,

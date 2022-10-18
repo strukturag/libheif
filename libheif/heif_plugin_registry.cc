@@ -36,7 +36,7 @@
 #endif
 
 #if HAVE_AOM_ENCODER
-#include "heif_encoder_aom.h"
+#include "libheif/plugins/heif_encoder_aom.h"
 #endif
 
 #if HAVE_AOM_DECODER

@@ -1,8 +1,5 @@
 
 macro(plugin_compilation name varName)
-    message("sources: " ${sources})
-    message("extra sources: " ${extraPluginSources})
-
     if (${varName}_FOUND)
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
@@ -37,8 +34,6 @@ macro(plugin_compilation name varName)
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${varName}_CFLAGS}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${varName}_CFLAGS}")
-
-        #        include_directories(SYSTEM ${${name}_INCLUDE_DIR})
     endif ()
 endmacro()
 
@@ -47,10 +42,14 @@ set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
 set(X265_extra_plugin_sources)
 plugin_compilation(x265 X265)
 
+set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
+set(AOM_ENCODER_extra_plugin_sources)
+plugin_compilation(aomenc AOM_ENCODER)
+
 set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)
 plugin_compilation(svtenc SvtEnc)
 
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
-set(RAV1E_extra_plugin_sources)
+set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E)

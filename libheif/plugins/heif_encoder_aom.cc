@@ -18,10 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif.h"
-#include "heif_plugin.h"
-#include "heif_avif.h"
-#include "heif_api_structs.h"
+#include "libheif/heif.h"
+#include "libheif/heif_plugin.h"
+#include "libheif/heif_avif.h"
+#include "libheif/heif_api_structs.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -31,6 +31,8 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <string>
+#include "heif_encoder_aom.h"
 
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
@@ -1087,3 +1089,12 @@ const struct heif_encoder_plugin* get_encoder_plugin_aom()
 {
   return &encoder_plugin_aom;
 }
+
+
+#if PLUGIN_AOM_ENCODER
+heif_plugin_info plugin_info {
+  1,
+  heif_plugin_type_encoder,
+  &encoder_plugin_aom
+};
+#endif

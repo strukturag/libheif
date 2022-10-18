@@ -24,4 +24,10 @@
 
 const struct heif_encoder_plugin* get_encoder_plugin_aom();
 
+#if PLUGIN_AOM_ENCODER
+extern "C" {
+__attribute__((unused)) LIBHEIF_API extern heif_plugin_info plugin_info;
+}
+#endif
+
 #endif

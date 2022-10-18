@@ -91,13 +91,13 @@ if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
   include_directories(SYSTEM ${AOM_INCLUDE_DIR})
   target_link_libraries(heif PRIVATE ${AOM_LIBRARIES} ${AOM_LINKDIR})
 endif()
-if(AOM_ENCODER_FOUND)
-  target_compile_definitions(heif PRIVATE HAVE_AOM_ENCODER=1)
-  target_sources(heif PRIVATE
-    heif_encoder_aom.cc
-    heif_encoder_aom.h
-  )
-endif()
+#if(AOM_ENCODER_FOUND)
+#  target_compile_definitions(heif PRIVATE HAVE_AOM_ENCODER=1)
+#  target_sources(heif PRIVATE
+#          plugins/heif_encoder_aom.cc
+#          plugins/heif_encoder_aom.h
+#  )
+#endif()
 if(AOM_DECODER_FOUND)
   target_compile_definitions(heif PRIVATE HAVE_AOM_DECODER=1)
   target_sources(heif PRIVATE
