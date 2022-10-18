@@ -18,10 +18,11 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif.h"
-#include "heif_plugin.h"
-#include "heif_avif.h"
-#include "heif_api_structs.h"
+#include "libheif/heif.h"
+#include "libheif/heif_plugin.h"
+#include "libheif/heif_avif.h"
+#include "libheif/heif_api_structs.h"
+#include "heif_encoder_rav1e.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -706,3 +707,12 @@ const struct heif_encoder_plugin* get_encoder_plugin_rav1e()
 {
   return &encoder_plugin_rav1e;
 }
+
+
+#if PLUGIN_RAV1E
+heif_plugin_info plugin_info {
+  1,
+  heif_plugin_type_encoder,
+  &encoder_plugin_rav1e
+};
+#endif

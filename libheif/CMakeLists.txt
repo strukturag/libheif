@@ -106,23 +106,6 @@ if(AOM_DECODER_FOUND)
   )
 endif()
 
-if(RAV1E_FOUND)
-    target_compile_definitions(heif PRIVATE HAVE_RAV1E=1)
-    target_sources(heif PRIVATE
-            heif_encoder_rav1e.cc
-            heif_encoder_rav1e.h
-            )
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${RAV1E_CFLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAV1E_CFLAGS}")
-
-    if (NOT "${RAV1E_LIBRARY_DIRS}" STREQUAL "")
-        set(RAV1E_LINKDIR "-L${RAV1E_LIBRARY_DIRS}")
-    endif()
-
-    include_directories(SYSTEM ${RAV1E_INCLUDE_DIR})
-    target_link_libraries(heif PRIVATE ${RAV1E_LIBRARIES} ${RAV1E_LINKDIR})
-endif()
-
 if(DAV1D_FOUND)
     target_compile_definitions(heif PRIVATE HAVE_DAV1D=1)
     target_sources(heif PRIVATE

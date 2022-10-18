@@ -44,7 +44,7 @@
 #endif
 
 #if HAVE_RAV1E
-#include "heif_encoder_rav1e.h"
+#include "libheif/plugins/heif_encoder_rav1e.h"
 #endif
 
 #if HAVE_DAV1D
@@ -103,7 +103,6 @@ void heif::register_default_plugins()
 #endif
 
 #if HAVE_SvtEnc
-  zrt rtzrtz
   heif::register_encoder(get_encoder_plugin_svt());
 #endif
 }

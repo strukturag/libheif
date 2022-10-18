@@ -24,4 +24,10 @@
 
 const struct heif_encoder_plugin* get_encoder_plugin_rav1e();
 
+#if PLUGIN_RAV1E
+extern "C" {
+__attribute__((unused)) LIBHEIF_API extern heif_plugin_info plugin_info;
+}
+#endif
+
 #endif

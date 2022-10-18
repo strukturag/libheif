@@ -43,6 +43,52 @@ if (SvtEnc_FOUND)
 endif ()
 
 
+if (RAV1E_FOUND)
+    if (WITH_RAV1E_BUILTIN)
+        target_sources(heif PRIVATE
+                heif_encoder_rav1e.cc
+                heif_encoder_rav1e.h
+                )
+        target_compile_definitions(heif PRIVATE HAVE_RAV1E=1)
+        target_include_directories(heif PRIVATE ${RAV1E_INCLUDE_DIR})
+        target_link_libraries(heif PRIVATE ${RAV1E_LIBRARIES} ${RAV1E_LINKDIR})
+    else()
+        add_library(heif-rav1e
+                SHARED
+                heif_encoder_rav1e.cc
+                heif_encoder_rav1e.h
+                ../heif_plugin.cc
+                ../box.cc    # we need this because of "class color_profile_nclx"
+                ../error.cc  # through box.cc
+                )
+        set_target_properties(heif-rav1e
+                PROPERTIES
+                VERSION ${PROJECT_VERSION}
+                SOVERSION ${PROJECT_VERSION_MAJOR})
+        target_compile_definitions(heif-rav1e
+                PUBLIC
+                LIBHEIF_EXPORTS
+                HAVE_VISIBILITY)
+        target_compile_definitions(heif-rav1e PRIVATE PLUGIN_RAV1E=1)
+        target_include_directories(heif-rav1e PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${RAV1E_INCLUDE_DIR})
+        target_link_libraries(heif-rav1e PRIVATE ${RAV1E_LIBRARIES} ${RAV1E_LINKDIR})
+
+        install(TARGETS heif-rav1e
+                LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
+                )
+    endif ()
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${RAV1E_CFLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAV1E_CFLAGS}")
+
+    if (NOT "${RAV1E_LIBRARY_DIRS}" STREQUAL "")
+        set(RAV1E_LINKDIR "-L${RAV1E_LIBRARY_DIRS}")
+    endif ()
+
+    include_directories(SYSTEM ${RAV1E_INCLUDE_DIR})
+endif ()
+
+
 
 if (X265_FOUND)
     if (WITH_X265_BUILTIN)
