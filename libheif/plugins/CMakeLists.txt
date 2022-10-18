@@ -1,133 +1,56 @@
 
+macro(plugin_compilation name varName)
+    message("sources: " ${sources})
+    message("extra sources: " ${extraPluginSources})
 
-if (SvtEnc_FOUND)
-    if (WITH_SvtEnc_BUILTIN)
-        target_sources(heif PRIVATE
-                heif_encoder_svt.cc
-                heif_encoder_svt.h
-                )
-        target_compile_definitions(heif PRIVATE HAVE_SvtEnc=1)
-        target_link_libraries(heif PRIVATE ${SvtEnc_LIBRARIES} ${SvtEnc_LINKDIR})
-    else()
-        add_library(heif-svtenc
-                SHARED
-                heif_encoder_svt.cc
-                heif_encoder_svt.h
-                ../heif_plugin.cc
-                )
-        set_target_properties(heif-svtenc
-                PROPERTIES
-                VERSION ${PROJECT_VERSION}
-                SOVERSION ${PROJECT_VERSION_MAJOR})
-        target_compile_definitions(heif-svtenc
-                PUBLIC
-                LIBHEIF_EXPORTS
-                HAVE_VISIBILITY)
-        target_compile_definitions(heif-svtenc PRIVATE PLUGIN_SVTENC=1)
-        target_include_directories(heif-svtenc PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
-        target_link_libraries(heif-svtenc PRIVATE ${SvtEnc_LIBRARIES} ${SvtEnc_LINKDIR})
+    if (${varName}_FOUND)
+        if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
+            set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
+        endif ()
 
-        install(TARGETS heif-svtenc
-                LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
-                )
+        if (WITH_${varName}_BUILTIN)
+            target_sources(heif PRIVATE ${${varName}_sources})
+            target_compile_definitions(heif PRIVATE HAVE_${varName}=1)
+            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
+            target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
+        else ()
+            add_library(heif-${name}
+                    SHARED ${${varName}_sources} ${${varName}_extra_plugin_sources}
+                    ../heif_plugin.cc
+                    )
+            set_target_properties(heif-${name}
+                    PROPERTIES
+                    VERSION ${PROJECT_VERSION}
+                    SOVERSION ${PROJECT_VERSION_MAJOR})
+            target_compile_definitions(heif-${name}
+                    PUBLIC
+                    LIBHEIF_EXPORTS
+                    HAVE_VISIBILITY)
+            target_compile_definitions(heif-${name} PRIVATE PLUGIN_${varName}=1)
+            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIR})
+            target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
+
+            install(TARGETS heif-${name}
+                    LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
+                    )
+        endif ()
+
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${varName}_CFLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${varName}_CFLAGS}")
+
+        #        include_directories(SYSTEM ${${name}_INCLUDE_DIR})
     endif ()
-
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SvtEnc_CFLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SvtEnc_CFLAGS}")
-
-    if (NOT "${SvtEnc_LIBRARY_DIRS}" STREQUAL "")
-        set(SvtEnc_LINKDIR "-L${SvtEnc_LIBRARY_DIRS}")
-    endif ()
-
-    include_directories(SYSTEM ${SvtEnc_INCLUDE_DIR})
-endif ()
+endmacro()
 
 
-if (RAV1E_FOUND)
-    if (WITH_RAV1E_BUILTIN)
-        target_sources(heif PRIVATE
-                heif_encoder_rav1e.cc
-                heif_encoder_rav1e.h
-                )
-        target_compile_definitions(heif PRIVATE HAVE_RAV1E=1)
-        target_include_directories(heif PRIVATE ${RAV1E_INCLUDE_DIR})
-        target_link_libraries(heif PRIVATE ${RAV1E_LIBRARIES} ${RAV1E_LINKDIR})
-    else()
-        add_library(heif-rav1e
-                SHARED
-                heif_encoder_rav1e.cc
-                heif_encoder_rav1e.h
-                ../heif_plugin.cc
-                ../box.cc    # we need this because of "class color_profile_nclx"
-                ../error.cc  # through box.cc
-                )
-        set_target_properties(heif-rav1e
-                PROPERTIES
-                VERSION ${PROJECT_VERSION}
-                SOVERSION ${PROJECT_VERSION_MAJOR})
-        target_compile_definitions(heif-rav1e
-                PUBLIC
-                LIBHEIF_EXPORTS
-                HAVE_VISIBILITY)
-        target_compile_definitions(heif-rav1e PRIVATE PLUGIN_RAV1E=1)
-        target_include_directories(heif-rav1e PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${RAV1E_INCLUDE_DIR})
-        target_link_libraries(heif-rav1e PRIVATE ${RAV1E_LIBRARIES} ${RAV1E_LINKDIR})
+set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
+set(X265_extra_plugin_sources)
+plugin_compilation(x265 X265)
 
-        install(TARGETS heif-rav1e
-                LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
-                )
-    endif ()
+set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)
+set(SvtEnc_extra_plugin_sources)
+plugin_compilation(svtenc SvtEnc)
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${RAV1E_CFLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAV1E_CFLAGS}")
-
-    if (NOT "${RAV1E_LIBRARY_DIRS}" STREQUAL "")
-        set(RAV1E_LINKDIR "-L${RAV1E_LIBRARY_DIRS}")
-    endif ()
-
-    include_directories(SYSTEM ${RAV1E_INCLUDE_DIR})
-endif ()
-
-
-if (X265_FOUND)
-    if (NOT "${X265_LIBRARY_DIRS}" STREQUAL "")
-        set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
-    endif ()
-
-    if (WITH_X265_BUILTIN)
-        target_sources(heif PRIVATE
-                heif_encoder_x265.cc
-                heif_encoder_x265.h
-                )
-        target_compile_definitions(heif PRIVATE HAVE_X265=1)
-        target_include_directories(heif PRIVATE ${X265_INCLUDE_DIR})
-        target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
-    else()
-        add_library(heif-x265
-                SHARED
-                heif_encoder_x265.cc
-                heif_encoder_x265.h
-                ../heif_plugin.cc
-                )
-        set_target_properties(heif-x265
-                PROPERTIES
-                VERSION ${PROJECT_VERSION}
-                SOVERSION ${PROJECT_VERSION_MAJOR})
-        target_compile_definitions(heif-x265
-                PUBLIC
-                LIBHEIF_EXPORTS
-                HAVE_VISIBILITY)
-        target_compile_definitions(heif-x265 PRIVATE PLUGIN_X265=1)
-        target_include_directories(heif-x265 PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${X265_INCLUDE_DIR})
-        target_link_libraries(heif-x265 PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
-
-        install(TARGETS heif-x265
-                LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
-                )
-    endif ()
-
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${X265_CFLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${X265_CFLAGS}")
-
-    include_directories(SYSTEM ${X265_INCLUDE_DIR})
-endif ()
+set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
+set(RAV1E_extra_plugin_sources)
+plugin_compilation(rav1e RAV1E)
