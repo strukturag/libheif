@@ -91,8 +91,8 @@ endif
 
 if HAVE_AOM_ENCODER
 libheif_la_SOURCES += \
-  heif_encoder_aom.cc \
-  heif_encoder_aom.h
+  plugins/heif_encoder_aom.cc \
+  plugins/heif_encoder_aom.h
 endif
 
 if HAVE_LIBDE265
