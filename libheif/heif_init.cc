@@ -30,7 +30,9 @@ using namespace heif;
 void heif_unload_all_plugins();
 
 #if ENABLE_PLUGIN_LOADING
+
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
+
 #endif
 
 
@@ -48,12 +50,25 @@ static std::recursive_mutex& heif_init_mutex()
 struct heif_error heif_init(struct heif_init_params*)
 {
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
-
-  if (heif_library_initialization_count == 0 && !default_plugins_registered) {
-    register_default_plugins();
-  }
+  struct heif_error err{};
 
   heif_library_initialization_count++;
+
+  if (heif_library_initialization_count == 1) {
+
+    // --- initialize builtin plugins
+
+    if (!default_plugins_registered) {
+      register_default_plugins();
+    }
+
+    // --- load plugins from default directory
+
+    err = heif_load_plugins(LIBHEIF_PLUGIN_DIRECTORY, nullptr, nullptr, 0);
+    if (err.code != 0) {
+      return err;
+    }
+  }
 
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
@@ -80,6 +95,7 @@ static void heif_unregister_encoder_plugins()
 }
 
 #if defined(__linux__) && ENABLE_PLUGIN_LOADING
+
 // Currently only linux, as we don't have dynamic plugins for other systems yet.
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
 {
@@ -94,6 +110,7 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
     }
   }
 }
+
 #endif
 
 void heif_deinit()
@@ -138,6 +155,7 @@ __attribute__((unused)) static heif_error error_cannot_read_plugin_directory{hei
 
 
 #if ENABLE_PLUGIN_LOADING
+
 __attribute__((unused)) static void unregister_plugin(const heif_plugin_info* info)
 {
   switch (info->type) {
@@ -151,6 +169,7 @@ __attribute__((unused)) static void unregister_plugin(const heif_plugin_info* in
     }
   }
 }
+
 #endif
 
 
@@ -158,6 +177,7 @@ __attribute__((unused)) static void unregister_plugin(const heif_plugin_info* in
 
 #include <dlfcn.h>
 #include <dirent.h>
+#include <cstring>
 
 struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
 {
@@ -277,7 +297,8 @@ struct heif_error heif_load_plugins(const char* directory,
       break;
     }
 
-    if (d->d_type == DT_REG) {
+    if ((d->d_type == DT_REG || d->d_type == DT_LNK) && strlen(d->d_name) > 3 &&
+        strcmp(d->d_name + strlen(d->d_name) - 3, ".so") == 0) {
       std::string filename = directory;
       filename += '/';
       filename += d->d_name;
@@ -335,4 +356,5 @@ struct heif_error heif_load_plugins(const char* directory,
 {
   return heif_error_plugins_unsupported;
 }
+
 #endif

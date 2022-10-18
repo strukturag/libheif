@@ -26,6 +26,10 @@ if (SvtEnc_FOUND)
         target_compile_definitions(heif-svtenc PRIVATE PLUGIN_SVTENC=1)
         target_include_directories(heif-svtenc PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
         target_link_libraries(heif-svtenc PRIVATE ${SvtEnc_LIBRARIES} ${SvtEnc_LINKDIR})
+
+        install(TARGETS heif-svtenc
+                LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
+                )
     endif ()
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SvtEnc_CFLAGS}")

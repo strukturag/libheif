@@ -58,6 +58,7 @@ endif()
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
+set(PLUGIN_DIRECTORY "/usr/local/lib/libheif" CACHE STRING "Plugin install directory")
 
 option(WITH_LIBDE265 "Build libde265 decoder" ON)
 if (WITH_LIBDE265)
