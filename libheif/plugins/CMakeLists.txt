@@ -1,5 +1,5 @@
 
-macro(plugin_compilation name varName)
+macro(plugin_compilation name varName defineName)
     if (${varName}_FOUND)
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
@@ -7,7 +7,7 @@ macro(plugin_compilation name varName)
 
         if (WITH_${varName}_BUILTIN)
             target_sources(heif PRIVATE ${${varName}_sources})
-            target_compile_definitions(heif PRIVATE HAVE_${varName}=1)
+            target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
             target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         else ()
@@ -23,7 +23,7 @@ macro(plugin_compilation name varName)
                     PUBLIC
                     LIBHEIF_EXPORTS
                     HAVE_VISIBILITY)
-            target_compile_definitions(heif-${name} PRIVATE PLUGIN_${varName}=1)
+            target_compile_definitions(heif-${name} PRIVATE PLUGIN_${defineName}=1)
             target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIR})
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
 
@@ -40,16 +40,16 @@ endmacro()
 
 set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
 set(X265_extra_plugin_sources)
-plugin_compilation(x265 X265)
+plugin_compilation(x265 X265 X265)
 
 set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
-set(AOM_ENCODER_extra_plugin_sources)
-plugin_compilation(aomenc AOM_ENCODER)
+set(AOM_ENCODER_extra_plugin_sources ../heif_avif.cc)
+plugin_compilation(aomenc AOM AOM_ENCODER)
 
 set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)
-plugin_compilation(svtenc SvtEnc)
+plugin_compilation(svtenc SvtEnc SvtEnc)
 
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
-plugin_compilation(rav1e RAV1E)
+plugin_compilation(rav1e RAV1E RAV1E)
