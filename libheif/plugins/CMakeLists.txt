@@ -89,8 +89,11 @@ if (RAV1E_FOUND)
 endif ()
 
 
-
 if (X265_FOUND)
+    if (NOT "${X265_LIBRARY_DIRS}" STREQUAL "")
+        set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
+    endif ()
+
     if (WITH_X265_BUILTIN)
         target_sources(heif PRIVATE
                 heif_encoder_x265.cc
@@ -114,7 +117,7 @@ if (X265_FOUND)
                 LIBHEIF_EXPORTS
                 HAVE_VISIBILITY)
         target_compile_definitions(heif-x265 PRIVATE PLUGIN_X265=1)
-        target_include_directories(heif-x265 PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
+        target_include_directories(heif-x265 PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${X265_INCLUDE_DIR})
         target_link_libraries(heif-x265 PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
 
         install(TARGETS heif-x265
@@ -124,10 +127,6 @@ if (X265_FOUND)
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${X265_CFLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${X265_CFLAGS}")
-
-    if (NOT "${X265_LIBRARY_DIRS}" STREQUAL "")
-        set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
-    endif ()
 
     include_directories(SYSTEM ${X265_INCLUDE_DIR})
 endif ()
