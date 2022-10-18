@@ -1,11 +1,11 @@
 
-macro(plugin_compilation name varName defineName)
+macro(plugin_compilation name varName optionName defineName)
     if (${varName}_FOUND)
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
 
-        if (WITH_${varName}_BUILTIN)
+        if (WITH_${optionName}_BUILTIN)
             target_sources(heif PRIVATE ${${varName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
             target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
@@ -40,16 +40,16 @@ endmacro()
 
 set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
 set(X265_extra_plugin_sources)
-plugin_compilation(x265 X265 X265)
+plugin_compilation(x265 X265 X265 X265)
 
 set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
 set(AOM_ENCODER_extra_plugin_sources ../heif_avif.cc)
-plugin_compilation(aomenc AOM AOM_ENCODER)
+plugin_compilation(aomenc AOM AOM_ENCODER AOM_ENCODER)
 
 set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)
-plugin_compilation(svtenc SvtEnc SvtEnc)
+plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
-plugin_compilation(rav1e RAV1E RAV1E)
+plugin_compilation(rav1e RAV1E RAV1E RAV1E)
