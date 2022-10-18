@@ -100,6 +100,7 @@ if (X265_FOUND)
                 heif_encoder_x265.h
                 )
         target_compile_definitions(heif PRIVATE HAVE_X265=1)
+        target_include_directories(heif PRIVATE ${X265_INCLUDE_DIR})
         target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
     else()
         add_library(heif-x265
