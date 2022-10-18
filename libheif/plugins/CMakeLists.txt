@@ -5,14 +5,16 @@ macro(plugin_compilation name varName optionName defineName)
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
 
+        message("builtin: " WITH_${optionName}_BUILTIN)
+
         if (WITH_${optionName}_BUILTIN)
-            target_sources(heif PRIVATE ${${varName}_sources})
+            target_sources(heif PRIVATE ${${optionName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
             target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         else ()
             add_library(heif-${name}
-                    SHARED ${${varName}_sources} ${${varName}_extra_plugin_sources}
+                    SHARED ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
                     ../heif_plugin.cc
                     )
             set_target_properties(heif-${name}
