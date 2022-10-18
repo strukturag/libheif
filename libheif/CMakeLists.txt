@@ -79,22 +79,6 @@ if(LIBDE265_FOUND)
     target_link_libraries(heif PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
 endif()
 
-if(X265_FOUND)
-    target_compile_definitions(heif PRIVATE HAVE_X265=1)
-    target_sources(heif PRIVATE
-        heif_encoder_x265.cc
-        heif_encoder_x265.h
-    )
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${X265_CFLAGS}")
-
-    if (NOT "${X265_LIBRARY_DIRS}" STREQUAL "")
-        set(X265_LINKDIR "-L${X265_LIBRARY_DIRS}")
-    endif()
-
-    include_directories(SYSTEM ${X265_INCLUDE_DIR})
-    target_link_libraries(heif PRIVATE ${X265_LIBRARIES} ${X265_LINKDIR})
-endif()
 
 if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${AOM_CFLAGS}")

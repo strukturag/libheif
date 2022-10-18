@@ -32,7 +32,7 @@
 #endif
 
 #if HAVE_X265
-#include "heif_encoder_x265.h"
+#include "libheif/plugins/heif_encoder_x265.h"
 #endif
 
 #if HAVE_AOM_ENCODER
@@ -103,6 +103,7 @@ void heif::register_default_plugins()
 #endif
 
 #if HAVE_SvtEnc
+  zrt rtzrtz
   heif::register_encoder(get_encoder_plugin_svt());
 #endif
 }
