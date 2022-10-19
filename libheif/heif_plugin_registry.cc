@@ -40,7 +40,7 @@
 #endif
 
 #if HAVE_AOM_DECODER
-#include "heif_decoder_aom.h"
+#include "libheif/plugins/heif_decoder_aom.h"
 #endif
 
 #if HAVE_RAV1E

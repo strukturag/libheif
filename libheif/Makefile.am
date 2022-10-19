@@ -85,8 +85,8 @@ libheif_la_SOURCES = \
 
 if HAVE_AOM_DECODER
 libheif_la_SOURCES += \
-  heif_decoder_aom.cc \
-  heif_decoder_aom.h
+  plugins/heif_decoder_aom.cc \
+  plugins/heif_decoder_aom.h
 endif
 
 if HAVE_AOM_ENCODER

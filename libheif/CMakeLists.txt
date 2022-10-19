@@ -62,32 +62,6 @@ target_compile_definitions(heif
                                LIBHEIF_EXPORTS
                                HAVE_VISIBILITY)
 
-if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${AOM_CFLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AOM_CFLAGS}")
-
-  if (NOT "${AOM_LIBRARY_DIRS}" STREQUAL "")
-    set(AOM_LINKDIR "-L${AOM_LIBRARY_DIRS}")
-  endif()
-
-  include_directories(SYSTEM ${AOM_INCLUDE_DIR})
-  target_link_libraries(heif PRIVATE ${AOM_LIBRARIES} ${AOM_LINKDIR})
-endif()
-#if(AOM_ENCODER_FOUND)
-#  target_compile_definitions(heif PRIVATE HAVE_AOM_ENCODER=1)
-#  target_sources(heif PRIVATE
-#          plugins/heif_encoder_aom.cc
-#          plugins/heif_encoder_aom.h
-#  )
-#endif()
-if(AOM_DECODER_FOUND)
-  target_compile_definitions(heif PRIVATE HAVE_AOM_DECODER=1)
-  target_sources(heif PRIVATE
-    heif_decoder_aom.cc
-    heif_decoder_aom.h
-  )
-endif()
-
 if(DAV1D_FOUND)
     target_compile_definitions(heif PRIVATE HAVE_DAV1D=1)
     target_sources(heif PRIVATE
