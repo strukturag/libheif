@@ -130,10 +130,11 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   // --- write XMP metadata
 
+  // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
   std::vector<uint8_t> xmp = get_xmp_metadata(handle);
   if (!xmp.empty()) {
     png_text xmp_text;
-    xmp_text.compression = PNG_TEXT_COMPRESSION_zTXt;
+    xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
     xmp_text.key = (char*) "XML:com.adobe.xmp";
     xmp_text.text = (char*) xmp.data();
     xmp_text.text_length = xmp.size();
