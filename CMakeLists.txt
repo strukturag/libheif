@@ -81,13 +81,13 @@ macro(plugin_option variableName packageName displayName displayType defaultPlug
     unset(msg)
 endmacro()
 
-plugin_option(LIBDE265 Libde265 "libde265" "HEIC decoder" OFF)
+plugin_option(LIBDE265 LIBDE265 "libde265" "HEIC decoder" OFF)
 plugin_option(X265 X265 "x265" "HEIC encoder" OFF)
-plugin_option(DAV1D Dav1d "Dav1d" "AVIF decoder" OFF)
+plugin_option(DAV1D DAV1D "Dav1d" "AVIF decoder" OFF)
 plugin_option(AOM_ENCODER AOM "aom" "AVIF encoder" OFF)
 plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
-plugin_option(RAV1E Rav1e "Rav1e" "AVIF encoder" ON)
+plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 
 
 # --- Create libheif pkgconfig file
