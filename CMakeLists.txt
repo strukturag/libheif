@@ -90,7 +90,8 @@ plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E Rav1e "Rav1e" "AVIF encoder" ON)
 
 
-# Create libheif pkgconfig file
+# --- Create libheif pkgconfig file
+
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix ${CMAKE_INSTALL_PREFIX})
 set(libdir ${CMAKE_INSTALL_FULL_LIBDIR})
@@ -116,9 +117,9 @@ endif()
 if (RAV1E_FOUND)
     list(APPEND REQUIRES_PRIVATE "rav1e")
 endif()
-#if (SvtEnc_FOUND)
-#    list(APPEND REQUIRES_PRIVATE "SvtEnc")
-#endif()
+if (SvtEnc_FOUND)
+    list(APPEND REQUIRES_PRIVATE "SvtEnc")
+endif()
 if (AOM_DECODER_FOUND OR DAV1D_FOUND)
     set(have_avif_decoder yes)
 else()
@@ -136,6 +137,8 @@ configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+# ---
 
 option(WITH_EXAMPLES "Build examples" ON)
 
