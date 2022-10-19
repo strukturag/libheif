@@ -153,8 +153,9 @@ static void aom_set_default_parameters(void* encoder);
 
 static const char* aom_plugin_name()
 {
-  if (strlen(aom_codec_iface_name(aom_codec_av1_cx())) < MAX_PLUGIN_NAME_LENGTH) {
-    strcpy(plugin_name, aom_codec_iface_name(aom_codec_av1_cx()));
+  const char* encoder_name = aom_codec_iface_name(aom_codec_av1_cx());
+  if (strlen(encoder_name) < MAX_PLUGIN_NAME_LENGTH) {
+    strcpy(plugin_name, encoder_name);
   }
   else {
     strcpy(plugin_name, "AOMedia AV1 encoder");
