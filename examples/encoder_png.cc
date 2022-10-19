@@ -132,11 +132,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
   std::vector<uint8_t> xmp = get_xmp_metadata(handle);
-
-  if (xmp.size() > 65502) {
-    fprintf(stderr, "XMP data too large, ExtendedXMP is not supported yet.\n");
-  }
-  else if (!xmp.empty()) {
+  if (!xmp.empty()) {
     png_text xmp_text;
     xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
     xmp_text.key = (char*) "XML:com.adobe.xmp";

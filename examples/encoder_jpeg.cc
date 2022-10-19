@@ -222,7 +222,10 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   // --- Write XMP
 
   auto xmp = get_xmp_metadata(handle);
-  if (!xmp.empty()) {
+  if (xmp.size() > 65502) {
+    fprintf(stderr, "XMP data too large, ExtendedXMP is not supported yet.\n");
+  }
+  else   if (!xmp.empty()) {
     std::vector<uint8_t> xmpWithId;
     xmpWithId.resize(xmp.size() + strlen(JPEG_XMP_MARKER_ID)+1);
     strcpy((char*)xmpWithId.data(), JPEG_XMP_MARKER_ID);
