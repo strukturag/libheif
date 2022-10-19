@@ -5,14 +5,7 @@ macro(plugin_compilation name varName optionName defineName)
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
 
-        message("builtin: " WITH_${optionName}_BUILTIN)
-
-        if (WITH_${optionName}_BUILTIN)
-            target_sources(heif PRIVATE ${${optionName}_sources})
-            target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
-            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
-            target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
-        else ()
+        if (WITH_${optionName}_PLUGIN)
             add_library(heif-${name}
                     SHARED ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
                     ../heif_plugin.cc
@@ -32,6 +25,11 @@ macro(plugin_compilation name varName optionName defineName)
             install(TARGETS heif-${name}
                     LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
                     )
+        else ()
+            target_sources(heif PRIVATE ${${optionName}_sources})
+            target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
+            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
+            target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         endif ()
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${varName}_CFLAGS}")
