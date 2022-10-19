@@ -699,6 +699,9 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   if (png_get_eXIf_1(png_ptr, info_ptr, &exifSize, &exifPtr) == PNG_INFO_eXIf) {
     input_image.exif.resize(exifSize);
     memcpy(input_image.exif.data(), exifPtr, exifSize);
+
+    // remove the EXIF orientation since it is informal only in PNG and we do not want to confuse with an orientation not matching irot/imir
+    modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int)input_image.exif.size(), 1);
   }
 
   // --- read XMP data
