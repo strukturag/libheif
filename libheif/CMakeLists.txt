@@ -62,23 +62,6 @@ target_compile_definitions(heif
                                LIBHEIF_EXPORTS
                                HAVE_VISIBILITY)
 
-if(DAV1D_FOUND)
-    target_compile_definitions(heif PRIVATE HAVE_DAV1D=1)
-    target_sources(heif PRIVATE
-            heif_decoder_dav1d.cc
-            heif_decoder_dav1d.h
-            )
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DAV1D_CFLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DAV1D_CFLAGS}")
-
-    if (NOT "${DAV1D_LIBRARY_DIRS}" STREQUAL "")
-        set(DAV1D_LINKDIR "-L${DAV1D_LIBRARY_DIRS}")
-    endif()
-
-    include_directories(SYSTEM ${DAV1D_INCLUDE_DIR})
-    target_link_libraries(heif PRIVATE ${DAV1D_LIBRARIES} ${DAV1D_LINKDIR})
-endif ()
-
 add_subdirectory(plugins)
 
 if (ENABLE_PLUGIN_LOADING AND UNIX)

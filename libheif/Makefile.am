@@ -109,8 +109,8 @@ endif
 
 if HAVE_DAV1D
 libheif_la_SOURCES += \
-  heif_decoder_dav1d.cc \
-  heif_decoder_dav1d.h
+  plugins/heif_decoder_dav1d.cc \
+  plugins/heif_decoder_dav1d.h
 endif
 
 

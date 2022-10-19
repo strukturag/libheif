@@ -60,11 +60,6 @@ LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
 set(PLUGIN_DIRECTORY "/usr/local/lib/libheif" CACHE STRING "Plugin install directory")
 
-option(WITH_DAV1D "Build dav1d decoder" ON)
-if (WITH_DAV1D)
-    find_package(Dav1d)
-endif ()
-
 macro(plugin_option variableName packageName displayName displayType defaultBuiltin)
     option(WITH_${variableName} "Build ${displayName} ${displayType}" ON)
     option(WITH_${variableName}_BUILTIN "Build ${displayName} into libheif" ${defaultBuiltin})
@@ -86,24 +81,13 @@ macro(plugin_option variableName packageName displayName displayType defaultBuil
     unset(msg)
 endmacro()
 
-plugin_option(X265 X265 "x265" "HEIC encoder" ON)
 plugin_option(LIBDE265 Libde265 "libde265" "HEIC decoder" ON)
-plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" OFF)
-plugin_option(RAV1E Rav1e "Rav1e" "AVIF encoder" OFF)
+plugin_option(X265 X265 "x265" "HEIC encoder" ON)
+plugin_option(DAV1D Dav1d "Dav1d" "AVIF decoder" ON)
 plugin_option(AOM_ENCODER LibAOM "aom" "AVIF encoder" ON)
 plugin_option(AOM_DECODER LibAOM "aom" "AVIF decoder" ON)
-
-if (AOM_DECODER_FOUND)
-    message("AVIF decoder, aom: found")
-else ()
-    message("AVIF decoder, aom: not found")
-endif ()
-
-if (DAV1D_FOUND)
-    message("AVIF decoder, dav1d: found")
-else ()
-    message("AVIF decoder, dav1d: not found")
-endif ()
+plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" OFF)
+plugin_option(RAV1E Rav1e "Rav1e" "AVIF encoder" OFF)
 
 
 # Create libheif pkgconfig file

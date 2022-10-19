@@ -48,7 +48,7 @@
 #endif
 
 #if HAVE_DAV1D
-#include "heif_decoder_dav1d.h"
+#include "libheif/plugins/heif_decoder_dav1d.h"
 #endif
 
 #if HAVE_SvtEnc
