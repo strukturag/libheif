@@ -60,11 +60,6 @@ LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
 set(PLUGIN_DIRECTORY "/usr/local/lib/libheif" CACHE STRING "Plugin install directory")
 
-option(WITH_LIBDE265 "Build libde265 decoder" ON)
-if (WITH_LIBDE265)
-    find_package(Libde265)
-endif ()
-
 option(WITH_DAV1D "Build dav1d decoder" ON)
 if (WITH_DAV1D)
     find_package(Dav1d)
@@ -92,16 +87,11 @@ macro(plugin_option variableName packageName displayName displayType defaultBuil
 endmacro()
 
 plugin_option(X265 X265 "x265" "HEIC encoder" ON)
+plugin_option(LIBDE265 Libde265 "libde265" "HEIC decoder" ON)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" OFF)
 plugin_option(RAV1E Rav1e "Rav1e" "AVIF encoder" OFF)
 plugin_option(AOM_ENCODER LibAOM "aom" "AVIF encoder" ON)
 plugin_option(AOM_DECODER LibAOM "aom" "AVIF decoder" ON)
-
-if (LIBDE265_FOUND)
-    message("HEIF decoder, libde265: found")
-else ()
-    message("HEIF decoder, libde265: not found")
-endif ()
 
 if (AOM_DECODER_FOUND)
     message("AVIF decoder, aom: found")

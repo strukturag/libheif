@@ -44,8 +44,12 @@ set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
 set(X265_extra_plugin_sources)
 plugin_compilation(x265 X265 X265 X265)
 
+set(LIBDE265_sources heif_decoder_libde265.cc heif_decoder_libde265.h)
+set(LIBDE265_extra_plugin_sources ../heif_image.cc ../error.cc)
+plugin_compilation(libde265 LIBDE265 LIBDE265 LIBDE265)
+
 set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
-set(AOM_ENCODER_extra_plugin_sources ../heif_avif.cc)
+set(AOM_ENCODER_extra_plugin_sources ../heif_avif.cc ../error.cc)
 plugin_compilation(aomenc AOM AOM_ENCODER AOM_ENCODER)
 
 set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)

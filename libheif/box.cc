@@ -36,9 +36,6 @@
 using namespace heif;
 
 
-heif::Error heif::Error::Ok(heif_error_Ok);
-
-
 Fraction::Fraction(int32_t num, int32_t den)
 {
   // Reduce resolution of fraction until we are in a safe range.

@@ -62,24 +62,6 @@ target_compile_definitions(heif
                                LIBHEIF_EXPORTS
                                HAVE_VISIBILITY)
 
-if(LIBDE265_FOUND)
-    target_compile_definitions(heif PRIVATE HAVE_LIBDE265=1)
-    target_sources(heif
-                   PRIVATE
-                       heif_decoder_libde265.cc
-                       heif_decoder_libde265.h)
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBDE265_CFLAGS}")
-
-    if (NOT "${LIBDE265_LIBRARY_DIRS}" STREQUAL "")
-        set(LIBDE265_LINKDIR "-L${LIBDE265_LIBRARY_DIRS}")
-    endif()
-
-    include_directories(SYSTEM ${LIBDE265_INCLUDE_DIR})
-    target_link_libraries(heif PRIVATE ${LIBDE265_LIBRARIES} ${LIBDE265_LINKDIR})
-endif()
-
-
 if(AOM_ENCODER_FOUND OR AOM_DECODER_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${AOM_CFLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AOM_CFLAGS}")

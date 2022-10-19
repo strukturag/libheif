@@ -27,6 +27,9 @@ const char heif::Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";
 
 
+heif::Error heif::Error::Ok(heif_error_Ok);
+
+
 heif::Error::Error() = default;
 
 

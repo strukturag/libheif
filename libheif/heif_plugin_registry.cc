@@ -28,7 +28,7 @@
 #include "heif_plugin_registry.h"
 
 #if HAVE_LIBDE265
-#include "heif_decoder_libde265.h"
+#include "libheif/plugins/heif_decoder_libde265.h"
 #endif
 
 #if HAVE_X265

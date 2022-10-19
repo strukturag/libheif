@@ -97,8 +97,8 @@ endif
 
 if HAVE_LIBDE265
 libheif_la_SOURCES += \
-  heif_decoder_libde265.cc \
-  heif_decoder_libde265.h
+  plugins/heif_decoder_libde265.cc \
+  plugins/heif_decoder_libde265.h
 endif
 
 if HAVE_RAV1E

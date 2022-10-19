@@ -227,7 +227,11 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
     }
 
     case heif_plugin_type_decoder: {
-      // TODO
+      auto* decoder_plugin = static_cast<const heif_decoder_plugin*>(plugin_info->plugin);
+      struct heif_error err = heif_register_decoder_plugin(decoder_plugin);
+      if (err.code) {
+        return err;
+      }
       break;
     }
   }
@@ -302,6 +306,7 @@ struct heif_error heif_load_plugins(const char* directory,
       std::string filename = directory;
       filename += '/';
       filename += d->d_name;
+      //printf("load %s\n", filename.c_str());
 
       const struct heif_plugin_info* info = nullptr;
       auto err = heif_load_plugin(filename.c_str(), &info);
