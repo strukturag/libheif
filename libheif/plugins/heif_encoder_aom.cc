@@ -954,6 +954,14 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
   }
 
+#if defined(AOM_CTRL_AV1E_SET_SKIP_POSTPROC_FILTERING)
+  if (cfg.g_usage == AOM_USAGE_ALL_INTRA) {
+    // Enable AV1E_SET_SKIP_POSTPROC_FILTERING for still-picture encoding,
+    // which is disabled by default.
+    aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1);
+  }
+#endif
+
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   // Apply the custom AOM encoder options.
   // These should always be applied last as they can override the values that were set above.
