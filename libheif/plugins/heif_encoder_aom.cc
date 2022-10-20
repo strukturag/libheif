@@ -838,7 +838,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   }
 
 
-  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
+  unsigned int aomUsage = 0;
 #if defined(AOM_USAGE_ALL_INTRA)
   // aom 3.1.0
   aomUsage = (encoder->realtime_mode ? AOM_USAGE_REALTIME : AOM_USAGE_ALL_INTRA);
