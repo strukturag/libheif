@@ -186,23 +186,31 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
     return err;
   }
 
-
   heif_chroma chroma;
-  if (img->fmt == AOM_IMG_FMT_I444 ||
-      img->fmt == AOM_IMG_FMT_I44416) {
-    chroma = heif_chroma_444;
-  }
-  else if (img->fmt == AOM_IMG_FMT_I422 ||
-           img->fmt == AOM_IMG_FMT_I42216) {
-    chroma = heif_chroma_422;
+  heif_colorspace colorspace;
+
+  if (img->monochrome) {
+      chroma = heif_chroma_monochrome;
+      colorspace = heif_colorspace_monochrome;
   }
   else {
-    chroma = heif_chroma_420;
+    if (img->fmt == AOM_IMG_FMT_I444 ||
+        img->fmt == AOM_IMG_FMT_I44416) {
+      chroma = heif_chroma_444;
+    }
+    else if (img->fmt == AOM_IMG_FMT_I422 ||
+             img->fmt == AOM_IMG_FMT_I42216) {
+      chroma = heif_chroma_422;
+    }
+    else {
+      chroma = heif_chroma_420;
+    }
+    colorspace = heif_colorspace_YCbCr;
   }
 
   struct heif_image* heif_img = nullptr;
   struct heif_error err = heif_image_create(img->d_w, img->d_h,
-                                            heif_colorspace_YCbCr,
+                                            colorspace,
                                             chroma,
                                             &heif_img);
   if (err.code != heif_error_Ok) {
@@ -232,6 +240,10 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
 
   for (int c = 0; c < 3; c++) {
+    if (chroma == heif_chroma_monochrome && c > 0) {
+      break;
+    }
+
     int bpp = img->bit_depth;
 
     const uint8_t* data = img->planes[c];
