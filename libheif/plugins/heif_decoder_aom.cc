@@ -239,11 +239,9 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
   };
 
 
-  for (int c = 0; c < 3; c++) {
-    if (chroma == heif_chroma_monochrome && c > 0) {
-      break;
-    }
+  int num_planes = (chroma == heif_chroma_monochrome ? 1 : 3);
 
+  for (int c = 0; c < num_planes; c++) {
     int bpp = img->bit_depth;
 
     const uint8_t* data = img->planes[c];
