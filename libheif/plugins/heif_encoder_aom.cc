@@ -838,7 +838,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   }
 
 
-  unsigned int aomUsage = 0;
+  unsigned int aomUsage = AOM_USAGE_GOOD_QUALITY;
 #if defined(AOM_USAGE_ALL_INTRA)
   // aom 3.1.0
   aomUsage = (encoder->realtime_mode ? AOM_USAGE_REALTIME : AOM_USAGE_ALL_INTRA);
@@ -865,6 +865,18 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // set still_picture and reduced_still_picture_header to 1 in the AV1 sequence
   // header OBU.
   cfg.g_limit = 1;
+
+  // Use the default settings of the new AOM_USAGE_ALL_INTRA (added in
+  // https://crbug.com/aomedia/2959).
+  //
+  // Set g_lag_in_frames to 0 to reduce the number of frame buffers (from 20
+  // to 2) in libaom's lookahead structure. This reduces memory consumption when
+  // encoding a single image.
+  cfg.g_lag_in_frames = 0;
+  // Disable automatic placement of key frames by the encoder.
+  cfg.kf_mode = AOM_KF_DISABLED;
+  // Tell libaom that all frames will be key frames.
+  cfg.kf_max_dist = 0;
 
   cfg.g_profile = inout_config.seq_profile;
   cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
