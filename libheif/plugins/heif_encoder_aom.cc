@@ -188,11 +188,10 @@ static void aom_init_parameters()
   p->version = 2;
   p->name = kParam_speed;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 5;
+  p->integer.default_value = 6;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
-
   if (aom_codec_version_major() >= 3) {
     p->integer.maximum = 9;
   }
@@ -259,11 +258,11 @@ static void aom_init_parameters()
   p->version = 2;
   p->name = kParam_min_q;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 1;
+  p->integer.default_value = 0;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
-  p->integer.minimum = 1;
-  p->integer.maximum = 62;
+  p->integer.minimum = 0;
+  p->integer.maximum = 63;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
@@ -299,8 +298,8 @@ static void aom_init_parameters()
   p->type = heif_encoder_parameter_type_integer;
   p->has_default = false;
   p->integer.have_minimum_maximum = true;
-  p->integer.minimum = 1;
-  p->integer.maximum = 62;
+  p->integer.minimum = 0;
+  p->integer.maximum = 63;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
@@ -325,6 +324,7 @@ static void aom_init_parameters()
   p->has_default = true;
   d[i++] = p++;
 
+  assert(i < MAX_NPARAMETERS + 1);
   d[i++] = nullptr;
 }
 
