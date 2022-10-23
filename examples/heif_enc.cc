@@ -860,56 +860,147 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
     exit(1);
   }
 
-  struct heif_error err;
+
   if (c == 444) {
+    struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_444,
                                             &image);
-  (void) err;
+    (void) err;
   }
   if (c == 422) {
+    struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_422,
                                             &image);
-  (void) err;
+    (void) err;
   }
   if (c == 420) {
+    struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_420,
                                             &image);
-  (void) err;
+    (void) err;
   }
   if (c == 400) {
+    struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_monochrome,
                                             &image);
-  (void) err;
+    (void) err;
   }
+
   // TODO: handle error
 
-  heif_image_add_plane(image, heif_channel_Y, w, h, b);
-  heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
-  heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
+  if (c < 444) {
+    if (c < 422) {
+      heif_image_add_plane(image, heif_channel_Y, w, h, b);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
+    } else {
+      heif_image_add_plane(image, heif_channel_Y, w, h, b);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1), b);
+    }
+  } else {
+    heif_image_add_plane(image, heif_channel_Y, w, h, b);
+    heif_image_add_plane(image, heif_channel_Cb, w, h, b);
+    heif_image_add_plane(image, heif_channel_Cr, w, h, b);
+  }
 
   int y_stride, cb_stride, cr_stride;
-  uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-  uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-  uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+  if (b == 8) {
+    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+    uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-  for (int y = 0; y < h; y++) {
-    istr.read((char*) (py + y * y_stride), w);
-  }
+    if (c < 444) {
+      if (c < 422) {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
 
-  for (int y = 0; y < (h + 1) / 2; y++) {
-    istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-  }
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
 
-  for (int y = 0; y < (h + 1) / 2; y++) {
-    istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      } else {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
+        for (int y = 0; y < (h + 1); y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      }
+    } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (py + y * y_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcb + y * cb_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcr + y * cr_stride), w);
+      }
+    }
+  } else {
+    uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint16_t* pcb = (uint16_t*)heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
+    uint16_t* pcr = (uint16_t*)heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+
+    if (c < 444) {
+      if (c < 422) {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      } else {
+        for (int y = 0; y < h; y++) {
+          istr.read((char*) (py + y * y_stride), w);
+        }
+
+        for (int y = 0; y < (h + 1) / 2; y++) {
+          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+        }
+
+        for (int y = 0; y < (h + 1); y++) {
+          istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
+        }
+      }
+    } else {
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (py + y * y_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcb + y * cb_stride), w);
+      }
+
+      for (int y = 0; y < h; y++) {
+        istr.read((char*) (pcr + y * cr_stride), w);
+      }
+    }
   }
 
   return std::shared_ptr<heif_image>(image,
