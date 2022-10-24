@@ -1374,7 +1374,7 @@ int main(int argc, char** argv)
     if (suffix == "png") {
       filetype = PNG;
     }
-    else if (suffix == "y4m") {
+    else if (suffix == "y4m" || suffix == "yuv") {
       filetype = Y4M;
     }
 
