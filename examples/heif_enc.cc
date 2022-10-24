@@ -773,7 +773,7 @@ std::shared_ptr<heif_image> loadPNG(const char* filename, int output_bit_depth)
 #endif
 
 
-std::shared_ptr<heif_image> loadY4M(const char* filename)
+std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, const std::vector<std::string>& params)
 {
   struct heif_image* image = nullptr;
 
@@ -790,76 +790,114 @@ std::shared_ptr<heif_image> loadY4M(const char* filename)
   std::string header;
   getline(istr, header);
 
-  if (header.find("YUV4MPEG2 ") != 0) {
-    std::cerr << "Input is not a Y4M file.\n";
-    exit(1);
-  }
-
   int w = -1;
   int h = -1;
   int c = -1;
-  int b = 8;
+  int b = -1;
 
-  size_t pos = 0;
-  for (;;) {
-    pos = header.find(' ', pos + 1) + 1;
-    if (pos == std::string::npos) {
-      break;
-    }
+  if (header.find("YUV4MPEG2 ") == 0) {
+    size_t pos = 0;
+    for (;;) {
+      pos = header.find(' ', pos + 1) + 1;
+      if (pos == std::string::npos) {
+        break;
+      }
 
-    size_t end = header.find_first_of(" \n", pos + 1);
-    if (end == std::string::npos) {
-      break;
-    }
+      size_t end = header.find_first_of(" \n", pos + 1);
+      if (end == std::string::npos) {
+        break;
+      }
 
-    if (end - pos <= 1) {
-      std::cerr << "Header format error in Y4M file.\n";
-      exit(1);
-    }
+      if (end - pos <= 1) {
+        std::cerr << "Header format error in Y4M file.\n";
+        exit(1);
+      }
 
-    char tag = header[pos];
-    char tag1 = header[pos + 1];
-    char tag2 = header[pos + 10];
-    std::string value1 = header.substr(pos + 1, end - pos - 1);
-    if (tag == 'W') {
-      w = atoi(value1.c_str());
-      std::cout << "width: " << value1 << "\n";
-    }
-    else if (tag == 'H') {
-      h = atoi(value1.c_str());
-      std::cout << "height: " << value1 << "\n";
-    }
-    else if (tag == 'X') {
-      if( tag1 == 'Y' && tag2 == 'P' ) {
-        std::string value2 = header.substr(pos + 7, end - pos - 10);
-        std::string value3 = header.substr(pos + 11, end - pos - 11);
+      char tag = header[pos];
+      char tag1 = header[pos + 1];
+      char tag2 = header[pos + 10];
+      char tag3 = header[pos + 4];
+      std::string value1 = header.substr(pos + 1, end - pos - 1);
+      if (tag == 'W') {
+        w = atoi(value1.c_str());
+        std::cout << "width: " << value1 << "\n";
+      }
+      else if (tag == 'H') {
+        h = atoi(value1.c_str());
+        std::cout << "height: " << value1 << "\n";
+      }
+      else if (tag == 'C' || tag == 'X') {
+        if (tag3 == 'p' || (tag1 == 'Y' && tag2 == 'P')) {
+          std::string value2 = ((tag3 == 'p') ? header.substr(pos + 1, end - pos - 4) :
+                               ((tag1 == 'Y' && tag2 == 'P') ? header.substr(pos + 7, end - pos - 10) : nullptr));
+          std::string value3 = ((tag3 == 'p') ? header.substr(pos + 5, end - pos - 5) :
+                               ((tag1 == 'Y' && tag2 == 'P') ? header.substr(pos + 11, end - pos - 11) : nullptr));
 
-        c = atoi(value2.c_str());
-        b = atoi(value3.c_str());
-        std::cout << "color: " << value2 << "\n";
-        std::cout << "depth: " << value3 << "\n";
-      } else {
-        std::string value2 = header.substr(pos + 7, end - pos - 7);
-        c = atoi(value2.c_str());
-        std::cout << "color: " << value2 << "\n";
-        std::cout << "depth: 8\n";
+          c = atoi(value2.c_str());
+          b = atoi(value3.c_str());
+          std::cout << "input depth: " << value3 << "\n";
+          std::cerr << "libheif doesn't convert YCbCr_" << value3 << "bit to RGB48.\nTry to use ffmpeg.\n";
+          exit(1);
+          std::cout << "input chroma " << value2;
+        }
+        if (tag3 == ' ' || tag1 == 'Y') {
+          std::string value2 = ((tag3 == ' ') ? header.substr(pos + 1, end - pos - 1) :
+                               ((tag1 == 'Y') ? header.substr(pos + 7, end - pos - 7) : nullptr));
+
+          c = atoi(value2.c_str());
+          b = 8;
+          std::cout << "input depth: 8\n";
+          std::cout << "input chroma " << value2;
+
+        }
+        std::string frameheader;
+        getline(istr, frameheader);
+
+        if (frameheader != "FRAME") {
+          std::cerr << "Y4M misses the frame header.\n";
+          exit(1);
+        }
+        goto chroma;
       }
     }
-  }
+  } else {
+    std::cerr << "Warming: Input is not a Y4M file.\n";
+    b = output_bit_depth;
+    std::cout << "chroma";
+    chroma:
+    for (const std::string& p : params) {
+      auto pos = p.find_first_of('=');
+      if (pos == std::string::npos || pos == 0 || pos == p.size() - 1) {
+        std::cerr << "Encoder chroma sample must be use in the format 'chroma=value'\n";
+        //exit(5);
+      }
 
-  std::string frameheader;
-  getline(istr, frameheader);
-
-  if (frameheader != "FRAME") {
-    std::cerr << "Y4M misses the frame header.\n";
-    exit(1);
+      std::string name = p.substr(0, pos);
+      std::string value = p.substr(pos + 1);
+      if (name.find("chroma") == 0) {
+        std::cout << " convert to: " << value << "\n";
+      }
+      if (value[2] == '4') {
+        c = 444;
+      }
+      if (value[2] == '2') {
+        c = 422;
+      }
+      if (value[2] == '0') {
+        c = 420;
+      }
+    }
+    if (b <= 0 && c <= 0) {
+      std::cerr << "Unknown value for bitdepth or colorsample.\n";
+      std::cerr << "If you are using yuv use input 'b' and 'p chroma=value' parameters.\n";
+      exit(1);
+    }
   }
 
   if (w < 0 || h < 0) {
     std::cerr << "Y4M has invalid frame size.\n";
     exit(1);
   }
-
 
   if (c == 444) {
     struct heif_error err;
@@ -1151,7 +1189,7 @@ int main(int argc, char** argv)
   int logging_level = 0;
   bool option_show_parameters = false;
   int thumbnail_bbox_size = 0;
-  int output_bit_depth = 10;
+  int output_bit_depth = 0;
   bool enc_av1f = false;
   bool crop_to_even_size = false;
 
@@ -1345,7 +1383,7 @@ int main(int argc, char** argv)
       image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype == Y4M) {
-      image = loadY4M(input_filename.c_str());
+      image = loadY4M(input_filename.c_str(), output_bit_depth, raw_params);
     }
     else {
       image = loadJPEG(input_filename.c_str());
