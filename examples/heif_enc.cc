@@ -88,7 +88,9 @@ int nclx_full_range = true;
 
 // for benchmarking
 
+#if !defined(_MSC_VER)
 #define HAVE_GETTIMEOFDAY 1  // TODO: should be set by CMake
+#endif
 
 #if HAVE_GETTIMEOFDAY
 #include <sys/time.h>
