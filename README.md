@@ -259,6 +259,16 @@ In order to convert `example-1.jpeg` to AVIF use:
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
 
+### How to check the default encoding codec
+
+For encoding, the codecs are listed with `heif-enc --list-encoders`. For AVIF, use `heif-enc -A --list-encoders`. The top entry is used by default.
+Example output:
+
+```sh
+$ heif-enc -A --list-encoders
+Encoders (first is default):
+- aom = AOMedia Project AV1 Encoder v3.5.0
+```
 
 ## HEIF/AVIF thumbnails for the Gnome desktop
 
