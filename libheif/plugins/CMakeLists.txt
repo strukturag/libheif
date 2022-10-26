@@ -7,7 +7,7 @@ macro(plugin_compilation name varName optionName defineName)
 
         if (WITH_${optionName}_PLUGIN)
             add_library(heif-${name}
-                    SHARED ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
+                    MODULE ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
                     ../heif_plugin.cc
                     )
             set_target_properties(heif-${name}
