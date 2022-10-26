@@ -792,8 +792,9 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
 
   int w = -1;
   int h = -1;
-  int c = -1;
-  int b = -1;
+  int c_in = -1;
+  int b_in = -1;
+  int b_out = -1;
 
   if (header.find("YUV4MPEG2 ") == 0) {
     size_t pos = 0;
@@ -833,65 +834,78 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
           std::string value3 = ((tag3 == 'p') ? header.substr(pos + 5, end - pos - 5) :
                                ((tag1 == 'Y' && tag2 == 'P') ? header.substr(pos + 11, end - pos - 11) : nullptr));
 
-          c = atoi(value2.c_str());
-          b = atoi(value3.c_str());
+          c_in = atoi(value2.c_str());
+          b_in = atoi(value3.c_str());
           std::cout << "input depth: " << value3 << "\n";
           std::cerr << "libheif doesn't convert YCbCr_" << value3 << "bit to RGB48.\nTry to use ffmpeg.\n";
           exit(1);
           std::cout << "input chroma " << value2;
-        }
-        if (tag3 == ' ' || tag1 == 'Y') {
-          std::string value2 = ((tag3 == ' ') ? header.substr(pos + 1, end - pos - 1) :
-                               ((tag1 == 'Y') ? header.substr(pos + 7, end - pos - 7) : nullptr));
+        } else if (tag1 == 'Y') {
+          std::string value2 = ((tag1 == 'Y') ? header.substr(pos + 7, end - pos - 7) : nullptr);
 
-          c = atoi(value2.c_str());
-          b = 8;
+          c_in = atoi(value2.c_str());
+          b_in = 8;
           std::cout << "input depth: 8\n";
           std::cout << "input chroma " << value2;
-
         }
-        std::string frameheader;
-        getline(istr, frameheader);
-
-        if (frameheader != "FRAME") {
-          std::cerr << "Y4M misses the frame header.\n";
-          exit(1);
-        }
-        goto chroma;
       }
+    }
+
+    std::string frameheader;
+    getline(istr, frameheader);
+
+    if (frameheader != "FRAME") {
+      std::cerr << "Y4M misses the frame header.\n";
+      exit(1);
+    }
+
+    if (output_bit_depth > 0) {
+      b_out = output_bit_depth;
+    } else {
+      b_out = b_in;
     }
   } else {
     std::cerr << "Warming: Input is not a Y4M file.\n";
-    b = output_bit_depth;
     std::cout << "chroma";
-    chroma:
     for (const std::string& p : params) {
       auto pos = p.find_first_of('=');
       if (pos == std::string::npos || pos == 0 || pos == p.size() - 1) {
         std::cerr << "Encoder chroma sample must be use in the format 'chroma=value'\n";
-        //exit(5);
+        exit(5);
       }
+    }
+    if (output_bit_depth > 0) {
+      b_out = output_bit_depth;
+    }
+  }
 
-      std::string name = p.substr(0, pos);
-      std::string value = p.substr(pos + 1);
-      if (name.find("chroma") == 0) {
-        std::cout << " convert to: " << value << "\n";
-      }
-      if (value[2] == '4') {
-        c = 444;
-      }
-      if (value[2] == '2') {
-        c = 422;
-      }
-      if (value[2] == '0') {
-        c = 420;
-      }
+  int c_out = c_in;
+  for (const std::string& p : params) {
+    auto pos = p.find_first_of('=');
+
+    std::string name = p.substr(0, pos);
+    std::string value = p.substr(pos + 1);
+    if (name.find("chroma") == 0) {
+      std::cout << " convert to: " << value << "\n";
     }
-    if (b <= 0 && c <= 0) {
-      std::cerr << "Unknown value for bitdepth or colorsample.\n";
-      std::cerr << "If you are using yuv use input 'b' and 'p chroma=value' parameters.\n";
-      exit(1);
+    if (value.find("444") == 0) {
+      c_out = 444;
     }
+    if (value.find("422") == 0) {
+      c_out = 422;
+    }
+    if (value.find("420") == 0) {
+      c_out = 420;
+    }
+    if (value.find("400") == 0) {
+      c_out = 400;
+    }
+  }
+
+  if (b_out <= 0 && c_out <= 0) {
+    std::cerr << "Unknown value for bitdepth or colorsample.\n";
+    std::cerr << "If you are using yuv use input 'b' and 'p chroma=value' parameters.\n";
+    exit(1);
   }
 
   if (w < 0 || h < 0) {
@@ -899,7 +913,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
     exit(1);
   }
 
-  if (c == 444) {
+  if (c_out == 444) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -907,7 +921,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c == 422) {
+  if (c_out == 422) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -915,7 +929,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c == 420) {
+  if (c_out == 420) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -923,7 +937,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c == 400) {
+  if (c_out == 400) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -934,30 +948,30 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
 
   // TODO: handle error
 
-  if (c < 444) {
-    if (c < 422) {
-      heif_image_add_plane(image, heif_channel_Y, w, h, b);
-      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
-      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b);
+  if (c_out < 444) {
+    if (c_out < 422) {
+      heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b_out);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b_out);
     } else {
-      heif_image_add_plane(image, heif_channel_Y, w, h, b);
-      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b);
-      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1), b);
+      heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
+      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b_out);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1), b_out);
     }
   } else {
-    heif_image_add_plane(image, heif_channel_Y, w, h, b);
-    heif_image_add_plane(image, heif_channel_Cb, w, h, b);
-    heif_image_add_plane(image, heif_channel_Cr, w, h, b);
+    heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
+    heif_image_add_plane(image, heif_channel_Cb, w, h, b_out);
+    heif_image_add_plane(image, heif_channel_Cr, w, h, b_out);
   }
 
   int y_stride, cb_stride, cr_stride;
-  if (b == 8) {
+  if (b_out == 8) {
     uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
     uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    if (c < 444) {
-      if (c < 422) {
+    if (c_out < 444) {
+      if (c_out < 422) {
         for (int y = 0; y < h; y++) {
           istr.read((char*) (py + y * y_stride), w);
         }
@@ -1000,8 +1014,8 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
     uint16_t* pcb = (uint16_t*)heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint16_t* pcr = (uint16_t*)heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    if (c < 444) {
-      if (c < 422) {
+    if (c_out < 444) {
+      if (c_out < 422) {
         for (int y = 0; y < h; y++) {
           istr.read((char*) (py + y * y_stride), w);
         }
