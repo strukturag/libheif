@@ -1,9 +1,9 @@
-cmake_minimum_required (VERSION 3.13)
+cmake_minimum_required (VERSION 3.0)
 
 project(libheif LANGUAGES C CXX VERSION 1.13.0.0)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
-cmake_policy(SET CMP0054 NEW)
+cmake_policy(VERSION 3.0...3.22)
 include(GNUInstallDirs)
 
 # The version number.
