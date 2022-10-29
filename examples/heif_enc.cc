@@ -794,8 +794,8 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
   int h = -1;
   int c_in = -1;
   int b_in = -1;
-  int b_out = -1;
 
+  struct heif_encoding_options_y4m* options_y4m = heif_encoding_options_alloc_y4m();
   if (header.find("YUV4MPEG2 ") == 0) {
     size_t pos = 0;
     for (;;) {
@@ -837,7 +837,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
           c_in = atoi(value2.c_str());
           b_in = atoi(value3.c_str());
           std::cout << "input depth: " << value3 << "\n";
-          std::cerr << "libheif doesn't convert YCbCr_" << value3 << "bit to RGB48.\nTry to use ffmpeg.\n";
+          std::cerr << "libheif doesn't convert YCbCr_" << value3 << "bit to RGB48.\nTry to use FFmpeg.\n";
           exit(1);
           std::cout << "input chroma " << value2;
         } else if (tag1 == 'Y') {
@@ -859,10 +859,25 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
       exit(1);
     }
 
-    if (output_bit_depth > 0) {
-      b_out = output_bit_depth;
-    } else {
-      b_out = b_in;
+    for (const std::string& p : params) {
+      auto pos = p.find_first_of('=');
+      std::string name = p.substr(0, pos);
+      std::string value = p.substr(pos + 1);
+      if (name.find("chroma") == 0) {
+        std::cout << " convert to: " << value << "\n";
+      }
+      if (value.find("444") == 0) {
+        options_y4m->inout_chroma = 444;
+      }
+      if (value.find("422") == 0) {
+        options_y4m->inout_chroma = 422;
+      }
+      if (value.find("420") == 0) {
+        options_y4m->inout_chroma = 420;
+      }
+      if (value.find("400") == 0) {
+        options_y4m->inout_chroma = 400;
+      }
     }
   } else {
     std::cerr << "Warming: Input is not a Y4M file.\n";
@@ -873,47 +888,43 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
         std::cerr << "Encoder chroma sample must be use in the format 'chroma=value'\n";
         exit(5);
       }
+      std::string name = p.substr(0, pos);
+      std::string value = p.substr(pos + 1);
+      if (name.find("chroma") == 0) {
+        std::cout << " convert to: " << value << "\n";
+      }
+      if (value.find("444") == 0) {
+        options_y4m->inout_chroma = c_in = 444;
+      }
+      if (value.find("422") == 0) {
+        options_y4m->inout_chroma = c_in = 422;
+      }
+      if (value.find("420") == 0) {
+        options_y4m->inout_chroma = c_in = 420;
+      }
+      if (value.find("400") == 0) {
+        options_y4m->inout_chroma = c_in = 400;
+      }
     }
-    if (output_bit_depth > 0) {
-      b_out = output_bit_depth;
-    }
+
   }
 
-  int c_out = c_in;
-  for (const std::string& p : params) {
-    auto pos = p.find_first_of('=');
-
-    std::string name = p.substr(0, pos);
-    std::string value = p.substr(pos + 1);
-    if (name.find("chroma") == 0) {
-      std::cout << " convert to: " << value << "\n";
-    }
-    if (value.find("444") == 0) {
-      c_out = 444;
-    }
-    if (value.find("422") == 0) {
-      c_out = 422;
-    }
-    if (value.find("420") == 0) {
-      c_out = 420;
-    }
-    if (value.find("400") == 0) {
-      c_out = 400;
-    }
+  if (output_bit_depth >= 8) {
+    b_in = output_bit_depth;
   }
 
-  if (b_out <= 0 && c_out <= 0) {
+  if (b_in <= 0 && c_in <= 0) {
     std::cerr << "Unknown value for bitdepth or colorsample.\n";
-    std::cerr << "If you are using yuv use input 'b' and 'p chroma=value' parameters.\n";
+    std::cerr << "If you are using YUV use input 'b' and 'p chroma=value' parameters.\n";
     exit(1);
   }
 
   if (w < 0 || h < 0) {
-    std::cerr << "Y4M has invalid frame size.\n";
+    std::cerr << "Y4M/YUV has invalid frame size.\n";
     exit(1);
   }
 
-  if (c_out == 444) {
+  if (c_in == 444) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -921,7 +932,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c_out == 422) {
+  if (c_in == 422) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -929,7 +940,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c_out == 420) {
+  if (c_in == 420) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -937,7 +948,7 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
                                             &image);
     (void) err;
   }
-  if (c_out == 400) {
+  if (c_in == 400) {
     struct heif_error err;
     err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
@@ -948,59 +959,42 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
 
   // TODO: handle error
 
-  if (c_out < 444) {
-    if (c_out < 422) {
-      heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
-      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b_out);
-      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b_out);
+  heif_image_add_plane(image, heif_channel_Y, w, h, b_in);
+  if (c_in < 444) {
+    heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b_in);
+    if (c_in < 422) {
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1) / 2, b_in);
     } else {
-      heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
-      heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, b_out);
-      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, (h + 1), b_out);
+      heif_image_add_plane(image, heif_channel_Cr, (w + 1) / 2, h, b_in);
     }
   } else {
-    heif_image_add_plane(image, heif_channel_Y, w, h, b_out);
-    heif_image_add_plane(image, heif_channel_Cb, w, h, b_out);
-    heif_image_add_plane(image, heif_channel_Cr, w, h, b_out);
+    heif_image_add_plane(image, heif_channel_Cb, w, h, b_in);
+    heif_image_add_plane(image, heif_channel_Cr, w, h, b_in);
   }
 
   int y_stride, cb_stride, cr_stride;
-  if (b_out == 8) {
+  if (b_in == 8) {
     uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
     uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    if (c_out < 444) {
-      if (c_out < 422) {
-        for (int y = 0; y < h; y++) {
-          istr.read((char*) (py + y * y_stride), w);
-        }
-
-        for (int y = 0; y < (h + 1) / 2; y++) {
-          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-        }
-
+    for (int y = 0; y < h; y++) {
+      istr.read((char*) (py + y * y_stride), w);
+    }
+    if (c_in < 444) {
+      for (int y = 0; y < (h + 1) / 2; y++) {
+        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+      }
+      if (c_in < 422) {
         for (int y = 0; y < (h + 1) / 2; y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       } else {
         for (int y = 0; y < h; y++) {
-          istr.read((char*) (py + y * y_stride), w);
-        }
-
-        for (int y = 0; y < (h + 1) / 2; y++) {
-          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-        }
-
-        for (int y = 0; y < (h + 1); y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       }
     } else {
-      for (int y = 0; y < h; y++) {
-        istr.read((char*) (py + y * y_stride), w);
-      }
-
       for (int y = 0; y < h; y++) {
         istr.read((char*) (pcb + y * cb_stride), w);
       }
@@ -1014,37 +1008,23 @@ std::shared_ptr<heif_image> loadY4M(const char* filename, int output_bit_depth, 
     uint16_t* pcb = (uint16_t*)heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
     uint16_t* pcr = (uint16_t*)heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
 
-    if (c_out < 444) {
-      if (c_out < 422) {
-        for (int y = 0; y < h; y++) {
-          istr.read((char*) (py + y * y_stride), w);
-        }
-
-        for (int y = 0; y < (h + 1) / 2; y++) {
-          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-        }
-
+    for (int y = 0; y < h; y++) {
+      istr.read((char*) (py + y * y_stride), w);
+    }
+    if (c_in < 444) {
+      for (int y = 0; y < (h + 1) / 2; y++) {
+        istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
+      }
+      if (c_in < 422) {
         for (int y = 0; y < (h + 1) / 2; y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       } else {
         for (int y = 0; y < h; y++) {
-          istr.read((char*) (py + y * y_stride), w);
-        }
-
-        for (int y = 0; y < (h + 1) / 2; y++) {
-          istr.read((char*) (pcb + y * cb_stride), (w + 1) / 2);
-        }
-
-        for (int y = 0; y < (h + 1); y++) {
           istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
         }
       }
     } else {
-      for (int y = 0; y < h; y++) {
-        istr.read((char*) (py + y * y_stride), w);
-      }
-
       for (int y = 0; y < h; y++) {
         istr.read((char*) (pcb + y * cb_stride), w);
       }
@@ -1437,6 +1417,7 @@ int main(int argc, char** argv)
 
     set_params(encoder, raw_params);
     struct heif_encoding_options* options = heif_encoding_options_alloc();
+    struct heif_encoding_options_y4m* options_y4m = heif_encoding_options_alloc_y4m();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
     options->output_nclx_profile = &nclx;
@@ -1456,6 +1437,7 @@ int main(int argc, char** argv)
       error = heif_image_crop(image.get(), 0, right, 0, bottom);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_encoding_options_free_y4m(options_y4m);
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
@@ -1474,6 +1456,7 @@ int main(int argc, char** argv)
                                       &handle);
     if (error.code != 0) {
       heif_encoding_options_free(options);
+      heif_encoding_options_free_y4m(options_y4m);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
@@ -1494,6 +1477,7 @@ int main(int argc, char** argv)
                                             &thumbnail_handle);
       if (error.code) {
         heif_encoding_options_free(options);
+        heif_encoding_options_free_y4m(options_y4m);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -1505,6 +1489,7 @@ int main(int argc, char** argv)
 
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
+    heif_encoding_options_free_y4m(options_y4m);
   }
 
   heif_encoder_release(encoder);
