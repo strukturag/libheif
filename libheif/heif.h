@@ -1361,11 +1361,22 @@ struct heif_encoding_options
   uint8_t macOS_compatibility_workaround_no_nclx_profile;
 };
 
+struct heif_encoding_options_y4m
+{
+  int inout_chroma;
+};
+
 LIBHEIF_API
 struct heif_encoding_options* heif_encoding_options_alloc();
 
 LIBHEIF_API
+struct heif_encoding_options_y4m* heif_encoding_options_alloc_y4m();
+
+LIBHEIF_API
 void heif_encoding_options_free(struct heif_encoding_options*);
+
+LIBHEIF_API
+void heif_encoding_options_free_y4m(struct heif_encoding_options_y4m*);
 
 
 // Compress the input image.
