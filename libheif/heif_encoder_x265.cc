@@ -304,12 +304,22 @@ static void x265_cleanup_plugin()
 {
 }
 
+heif_encoding_options_y4m* heif_encoding_options_alloc_y4m()
+{
+  heif_encoding_options_y4m* options_y4m = (heif_encoding_options_y4m*)malloc(sizeof(heif_encoding_options_y4m));
+
+  return options_y4m;
+}
+
+void heif_encoding_options_free_y4m(heif_encoding_options_y4m* options_y4m)
+{
+  delete options_y4m;
+}
 
 static struct heif_error x265_new_encoder(void** enc)
 {
   struct encoder_struct_x265* encoder = new encoder_struct_x265();
   struct heif_error err = heif_error_ok;
-
 
   // encoder has to be allocated in x265_encode_image, because it needs to know the image size
   encoder->encoder = nullptr;
@@ -603,13 +613,21 @@ static void x265_set_default_parameters(void* encoder)
 
 static void x265_query_input_colorspace(heif_colorspace* colorspace, heif_chroma* chroma)
 {
+  heif_encoding_options_y4m* options_y4m;
+  memset(options_y4m, 0, sizeof(heif_encoding_options_y4m));
+  //if (options_x265->inout_chroma == 400) {
   if (*colorspace == heif_colorspace_monochrome) {
     *colorspace = heif_colorspace_monochrome;
     *chroma = heif_chroma_monochrome;
-  }
-  else {
+  }  else {
     *colorspace = heif_colorspace_YCbCr;
-    *chroma = heif_chroma_420;
+    if (options_y4m->inout_chroma == 420) {
+      *chroma = heif_chroma_420;
+    } else if (options_y4m->inout_chroma == 422) {
+      *chroma = heif_chroma_422;
+    } else if (options_y4m->inout_chroma == 444) {
+      *chroma = heif_chroma_444;
+    }
   }
 }
 
@@ -652,7 +670,6 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     api->encoder_close(encoder->encoder);
     encoder->encoder = nullptr;
   }
-
 
   int bit_depth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
   bool isGreyscale = (heif_image_get_colorspace(image) == heif_colorspace_monochrome);
@@ -765,13 +782,23 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   if (chroma != heif_chroma_monochrome) {
     int w = heif_image_get_width(image, heif_channel_Y);
     int h = heif_image_get_height(image, heif_channel_Y);
-    if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
-    if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
+    //if (chroma != heif_chroma_444) { w = (w + 1) / 2; }
+    //if (chroma == heif_chroma_420) { h = (h + 1) / 2; }
 
-    assert(heif_image_get_width(image, heif_channel_Cb)==w);
-    assert(heif_image_get_width(image, heif_channel_Cr)==w);
-    assert(heif_image_get_height(image, heif_channel_Cb)==h);
-    assert(heif_image_get_height(image, heif_channel_Cr)==h);
+    //assert(heif_image_get_width(image, heif_channel_Cb)==w);
+    //assert(heif_image_get_width(image, heif_channel_Cr)==w);
+    //assert(heif_image_get_height(image, heif_channel_Cb)==h);
+    //assert(heif_image_get_height(image, heif_channel_Cr)==h);
+    if (chroma != heif_chroma_444) {
+      if (chroma == heif_chroma_420) {
+        w = (w + 1) / 2;
+        h = (h + 1) / 2;
+      }
+      if (chroma == heif_chroma_422) {
+        h = (h + 1) / 2;
+      }
+    }
+
     (void) w;
     (void) h;
   }
@@ -1013,3 +1040,11 @@ const struct heif_encoder_plugin* get_encoder_plugin_x265()
 {
   return &encoder_plugin_x265;
 }
+
+#if PLUGIN_X265
+heif_plugin_info plugin_info {
+  1,
+  heif_plugin_type_encoder,
+  &encoder_plugin_x265
+};
+#endif
