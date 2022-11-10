@@ -779,12 +779,17 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
 
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 {
-  return handle->image->get_alpha_channel() != nullptr;
+  // TODO: for now, also scan the grid tiles for alpha information (issue #708), but depending about
+  // how the discussion about this structure goes forward, we might remove this again.
+
+  return handle->context->has_alpha(handle->image->get_id());   // handle case in issue #708
+  //return handle->image->get_alpha_channel() != nullptr;       // old alpha check that fails on alpha in grid tiles
 }
 
 
 int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle* handle)
 {
+  // TODO: what about images that have the alpha in the grid tiles (issue #708) ?
   return handle->image->is_premultiplied_alpha();
 }
 

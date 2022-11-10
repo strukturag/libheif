@@ -947,6 +947,78 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
+bool HeifContext::has_alpha(heif_item_id ID) const {
+  assert(is_image(ID));
+
+  // --- has the image and auxiliary alpha image?
+
+  auto img = get_top_level_image(ID);
+  if (img->get_alpha_channel() != nullptr) {
+    return true;
+  }
+
+  // --- if the image is a 'grid', check if there is alpha in any of the tiles
+
+  std::string image_type = m_heif_file->get_item_type(ID);
+  if (image_type == "grid") {
+    std::vector<uint8_t> grid_data;
+    Error error = m_heif_file->get_compressed_image_data(ID, &grid_data);
+    if (error) {
+      return false;
+    }
+
+    ImageGrid grid;
+    Error err = grid.parse(grid_data);
+    if (err) {
+      return false;
+    }
+
+
+    auto iref_box = m_heif_file->get_iref_box();
+
+    if (!iref_box) {
+      return false;
+    }
+
+    std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
+
+    if ((int) image_references.size() != grid.get_rows() * grid.get_columns()) {
+      return false;
+    }
+
+
+    // --- check that all image IDs are valid images
+
+    for (heif_item_id tile_id : image_references) {
+      if (!is_image(tile_id)) {
+        return false;
+      }
+    }
+
+    // --- check whether at least one tile has an alpha channel
+
+    bool has_alpha = false;
+
+    for (heif_item_id tile_id : image_references) {
+      auto iter = m_all_images.find(tile_id);
+      if (iter == m_all_images.end()) {
+        return false;
+      }
+
+      const std::shared_ptr<Image> tileImg = iter->second;
+
+      has_alpha |= tileImg->get_alpha_channel() != nullptr;
+    }
+
+    return has_alpha;
+  }
+  else {
+    // TODO: what about overlays ?
+    return false;
+  }
+}
+
+
 Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
 {
   std::string image_type = m_heif_file->get_item_type(id);
@@ -1583,13 +1655,20 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   assert(src_height >= 0);
 
   heif_chroma chroma = img->get_chroma_format();
-  std::set<enum heif_channel> channels = img->get_channel_set();
 
   if (chroma != tile_img->get_chroma_format()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Wrong_tile_image_chroma_format,
                  "Image tile has different chroma format than combined image");
   }
+
+  // --- add alpha plane if we discovered a tile with alpha
+
+  if (tile_img->has_alpha() && !img->has_alpha()) {
+    img->fill_new_plane(heif_channel_Alpha, 255, w, h, tile_img->get_bits_per_pixel(heif_channel_Alpha));
+  }
+
+  std::set<enum heif_channel> channels = tile_img->get_channel_set();
 
   for (heif_channel channel : channels) {
 

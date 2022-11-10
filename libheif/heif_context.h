@@ -325,11 +325,28 @@ namespace heif {
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
+    std::shared_ptr<Image> get_top_level_image(heif_item_id id) {
+      for (auto& img : m_top_level_images) {
+        if (img->get_id() == id) {
+          return img;
+        }
+      }
+
+      return nullptr;
+    }
+
+    std::shared_ptr<const Image> get_top_level_image(heif_item_id id) const
+    {
+      return const_cast<HeifContext*>(this)->get_top_level_image(id);
+    }
+
     std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
     void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
     bool is_image(heif_item_id ID) const;
+
+    bool has_alpha(heif_item_id ID) const;
 
     Error decode_image_user(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                             heif_colorspace out_colorspace,
