@@ -9,7 +9,7 @@ HEIF and AVIF are new image file formats employing HEVC (h.265) or AV1 image cod
 best compression ratios currently possible.
 
 libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
-For AVIF, libaom, dav1d, or rav1e are used as codecs.
+For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 
 ## Supported features
@@ -112,6 +112,10 @@ There is also an experimental Go API, but this is not stable yet.
 
 This library uses either a standard autoconf/automake build system or CMake.
 
+Using autoconf/automake for compilation is deprectated.
+Starting with v1.14.0, CMake is the preferred build tool.
+While autoconf/automake might still work for some time to come, not all options are available for it.
+
 When using autoconf, run `./autogen.sh` to build the configuration scripts,
 then call `./configure` and `make`.
 Make sure that you compile and install [libde265](https://github.com/strukturag/libde265)
@@ -120,10 +124,9 @@ Preferably, download the `frame-parallel` branch of libde265, as this uses a
 more recent API than the version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
-For AVIF support, make sure that libaom is installed in the system or compiled
-in the `third-party` directory.
-
 ### macOS
+
+**Note: compiling with autotools is now deprecated. Please use cmake instead. This section has to be updated...**
 
 1. Install dependencies with Homebrew
 
@@ -132,7 +135,7 @@ in the `third-party` directory.
     ```
 
 
-1. Configure and build project
+2. Configure and build project
 
     ```
     ./autogen.sh
@@ -200,9 +203,18 @@ When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
 You may have to replace `linux` in this path with your system's identifier.
 
-You have to enable SVT-AV1 with CMake. You can choose between compiling the encoder support directly into libheif
-or compile it as a plugin (currently Linux only). In the latter case, you will get a shared library that you can
-put into a plugins folder and then load it on demand (see `heif-enc` command line options).
+You have to enable SVT-AV1 with CMake. It is not built with autotools.
+
+## Codec plugins
+
+Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin (currently Linux only).
+You can choose this individually for each codec backend in the CMake settings.
+Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
+The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.
+
+The plugins are loaded from the colon-separated list of directories stored in the environment variable `LIBHEIF_PLUGIN_PATH`.
+If this variable is empty, they are loaded from a directory specified in the CMake configuration.
+You can also add plugin directories programmatically.
 
 ## Encoder benchmark
 
