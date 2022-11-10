@@ -952,15 +952,22 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
 
   // --- has the image and auxiliary alpha image?
 
+  std::cout << "has_alpha A\n";
+
   auto img = get_top_level_image(ID);
   if (img->get_alpha_channel() != nullptr) {
+    std::cout << "has_alpha A -> yes\n";
     return true;
   }
 
   // --- if the image is a 'grid', check if there is alpha in any of the tiles
 
+  std::cout << "has_alpha B\n";
+
   std::string image_type = m_heif_file->get_item_type(ID);
   if (image_type == "grid") {
+    std::cout << "has_alpha GRID\n";
+
     std::vector<uint8_t> grid_data;
     Error error = m_heif_file->get_compressed_image_data(ID, &grid_data);
     if (error) {
@@ -982,6 +989,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
 
     std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
 
+    std::cout << "has_alpha 5\n";
+
     if ((int) image_references.size() != grid.get_rows() * grid.get_columns()) {
       return false;
     }
@@ -999,6 +1008,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
 
     bool has_alpha = false;
 
+    std::cout << "has_alpha 10\n";
+
     for (heif_item_id tile_id : image_references) {
       auto iter = m_all_images.find(tile_id);
       if (iter == m_all_images.end()) {
@@ -1009,6 +1020,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
 
       has_alpha |= tileImg->get_alpha_channel() != nullptr;
     }
+
+    std::cout << "has_alpha 15\n";
 
     return has_alpha;
   }
