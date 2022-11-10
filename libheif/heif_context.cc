@@ -391,6 +391,8 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
 HeifContext::HeifContext()
 {
+  std::cout << "constructor " << this << "\n";
+
   m_maximum_image_width_limit = MAX_IMAGE_WIDTH;
   m_maximum_image_height_limit = MAX_IMAGE_HEIGHT;
 
@@ -400,7 +402,7 @@ HeifContext::HeifContext()
 HeifContext::~HeifContext()
 {
   std::cout << "destructor " << this << "\n";
-  
+
   // Break circular references between Images (when a faulty input image has circular image references)
   for (auto& it : m_all_images) {
     std::shared_ptr<Image> image = it.second;

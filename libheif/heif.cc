@@ -784,6 +784,7 @@ int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 
   std::cerr << "has_alpha_channel\n";
   std::cerr << "has_alpha_channel " << handle->image << " " << handle->context << "\n";
+  std::cerr << "has_alpha_channel image id: " << handle->image->get_id() << "\n";
 
   return handle->context->has_alpha(handle->image->get_id());   // handle case in issue #708
   //return handle->image->get_alpha_channel() != nullptr;       // old alpha check that fails on alpha in grid tiles
