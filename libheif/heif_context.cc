@@ -965,7 +965,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
 
   std::cout << "has_alpha A\n";
 
-  auto img = get_top_level_image(ID);
+  auto imgIter = m_all_images.find(ID);
+  auto img = imgIter->second;
   std::cout << "img=" << img << "\n";
   return false;
 
