@@ -399,6 +399,8 @@ HeifContext::HeifContext()
 
 HeifContext::~HeifContext()
 {
+  std::cout << "destructor " << this << "\n";
+  
   // Break circular references between Images (when a faulty input image has circular image references)
   for (auto& it : m_all_images) {
     std::shared_ptr<Image> image = it.second;
@@ -938,7 +940,11 @@ HeifContext::Image::~Image() = default;
 
 bool HeifContext::is_image(heif_item_id ID) const
 {
+  std::cout << "test ID " << ID << "\n";
+  std::cout << "this: " << this << "\n";
+
   for (const auto& img : m_all_images) {
+    std::cout << "compare " << img.first << " " << ID << "\n";
     if (img.first == ID)
       return true;
   }
