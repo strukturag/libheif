@@ -33,6 +33,8 @@ void heif_unload_all_plugins();
 
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 
+std::vector<std::string> get_plugin_paths();
+
 #endif
 
 
@@ -50,7 +52,6 @@ static std::recursive_mutex& heif_init_mutex()
 struct heif_error heif_init(struct heif_init_params*)
 {
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
-  struct heif_error err{};
 
   heif_library_initialization_count++;
 
@@ -62,12 +63,27 @@ struct heif_error heif_init(struct heif_init_params*)
       register_default_plugins();
     }
 
-    // --- load plugins from default directory
+#if ENABLE_PLUGIN_LOADING
+    struct heif_error err{};
+    std::vector<std::string> plugin_paths = get_plugin_paths();
 
-    err = heif_load_plugins(LIBHEIF_PLUGIN_DIRECTORY, nullptr, nullptr, 0);
-    if (err.code != 0) {
-      return err;
+    if (plugin_paths.empty()) {
+      // --- load plugins from default directory
+
+      err = heif_load_plugins(LIBHEIF_PLUGIN_DIRECTORY, nullptr, nullptr, 0);
+      if (err.code != 0) {
+        return err;
+      }
     }
+    else {
+      for (const auto& dir : plugin_paths) {
+        err = heif_load_plugins(dir.c_str(), nullptr, nullptr, 0);
+        if (err.code != 0) {
+          return err;
+        }
+      }
+    }
+#endif
   }
 
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
@@ -337,6 +353,27 @@ struct heif_error heif_load_plugins(const char* directory,
   return heif_error_ok;
 }
 
+
+std::vector<std::string> get_plugin_paths()
+{
+  char* path_variable = getenv("LIBHEIF_PLUGIN_PATH");
+  if (path_variable == nullptr) {
+    return {};
+  }
+
+  // --- split LIBHEIF_PLUGIN_PATH value at ':' into separate directories
+
+  std::vector<std::string> plugin_paths;
+
+  std::istringstream paths(path_variable);
+  std::string dir;
+  while (getline(paths, dir, ':')) {
+    plugin_paths.push_back(dir);
+  }
+
+  return plugin_paths;
+}
+
 #else
 static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
 
@@ -360,6 +397,11 @@ struct heif_error heif_load_plugins(const char* directory,
                                     int output_array_size)
 {
   return heif_error_plugins_unsupported;
+}
+
+std::vector<std::string> get_plugin_paths()
+{
+  return {};
 }
 
 #endif
