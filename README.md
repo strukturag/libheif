@@ -200,9 +200,18 @@ When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
 You may have to replace `linux` in this path with your system's identifier.
 
-You have to enable SVT-AV1 with CMake. You can choose between compiling the encoder support directly into libheif
-or compile it as a plugin (currently Linux only). In the latter case, you will get a shared library that you can
-put into a plugins folder and then load it on demand (see `heif-enc` command line options).
+You have to enable SVT-AV1 with CMake. It is not built with autotools.
+
+## Codec plugins
+
+Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin (currently Linux only).
+You can choose this individually for each codec backend in the CMake settings.
+Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
+The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.
+
+The plugins are loaded from the colon-separated list of directories stored in the environment variable `LIBHEIF_PLUGIN_PATH`.
+If this variable is empty, they are loaded from a directory specified in the CMake configuration.
+You can also add plugin directories programmatically.
 
 ## Encoder benchmark
 
