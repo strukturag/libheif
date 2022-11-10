@@ -964,10 +964,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
   // --- has the image and auxiliary alpha image?
 
   std::cout << "has_alpha A\n";
-  return false;
 
   auto img = get_top_level_image(ID);
   std::cout << "img=" << img << "\n";
+  return false;
 
   if (img->get_alpha_channel() != nullptr) {
     std::cout << "has_alpha A -> yes\n";
