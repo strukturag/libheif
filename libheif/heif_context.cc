@@ -956,6 +956,7 @@ bool HeifContext::is_image(heif_item_id ID) const
 
 
 bool HeifContext::has_alpha(heif_item_id ID) const {
+  std::cout << "has_alpha()\n";
   std::cout << "has_alpha ASSERT " << is_image(ID) << "\n";
 
   assert(is_image(ID));
