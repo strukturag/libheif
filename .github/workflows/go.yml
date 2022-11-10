@@ -2,7 +2,7 @@ name: go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master test-go-crash ]
   pull_request:
     branches: [ master ]
 
