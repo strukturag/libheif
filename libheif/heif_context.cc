@@ -958,15 +958,17 @@ bool HeifContext::is_image(heif_item_id ID) const
 bool HeifContext::has_alpha(heif_item_id ID) const {
   std::cout << "has_alpha()\n";
   std::cout << "has_alpha ASSERT " << is_image(ID) << "\n";
-  return false;
 
   assert(is_image(ID));
 
   // --- has the image and auxiliary alpha image?
 
   std::cout << "has_alpha A\n";
+  return false;
 
   auto img = get_top_level_image(ID);
+  std::cout << "img=" << img << "\n";
+
   if (img->get_alpha_channel() != nullptr) {
     std::cout << "has_alpha A -> yes\n";
     return true;
