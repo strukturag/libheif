@@ -971,6 +971,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const {
     return true;
   }
 
+  return false;
+
   // --- if the image is a 'grid', check if there is alpha in any of the tiles
 
   std::cout << "has_alpha B\n";
