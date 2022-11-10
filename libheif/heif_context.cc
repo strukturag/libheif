@@ -948,11 +948,12 @@ bool HeifContext::is_image(heif_item_id ID) const
 
 
 bool HeifContext::has_alpha(heif_item_id ID) const {
+
   assert(is_image(ID));
+  auto img = m_all_images.find(ID)->second;
 
-  // --- has the image and auxiliary alpha image?
+  // --- has the image an auxiliary alpha image?
 
-  auto img = get_top_level_image(ID);
   if (img->get_alpha_channel() != nullptr) {
     return true;
   }
