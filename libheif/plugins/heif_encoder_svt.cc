@@ -624,7 +624,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   // disable 2-pass
   svt_config.rc_stats_buffer = (SvtAv1FixedBuf) {nullptr, 0};
 
-  svt_config.rate_control_mode = 0; // constant QP
+  svt_config.rate_control_mode = 0; // constant rate factor
   svt_config.qp = encoder->qp;
 
   svt_config.tile_rows = int_log2(encoder->tile_rows);
