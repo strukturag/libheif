@@ -150,3 +150,28 @@ endif()
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
 add_subdirectory (gnome)
+
+
+# --- packaging (source code)
+
+set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_SOURCE_IGNORE_FILES
+/.git/
+/.github/
+/.gitignore$
+/build/
+/cmake-build.*/
+/.deps/
+/.idea/
+/.clang-tidy
+~$
+/third-party/
+/Testing/
+/logos/
+/Makefile$
+/libtool$
+/libheif.pc$
+/config.h$
+stamp-h1$
+)
+include(CPack)
