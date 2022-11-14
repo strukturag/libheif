@@ -200,6 +200,16 @@ namespace heif {
 
     std::vector<std::shared_ptr<Box>> get_child_boxes(uint32_t short_type) const;
 
+    template <typename T>
+    std::vector<std::shared_ptr<T>> get_typed_child_boxes(uint32_t short_type) const {
+      auto boxes = get_child_boxes(short_type);
+      std::vector<std::shared_ptr<T>> typedBoxes;
+      for (const auto& box : boxes) {
+        typedBoxes.push_back(std::dynamic_pointer_cast<T>(box));
+      }
+      return typedBoxes;
+    }
+
     const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const
     { return m_children; }
 
@@ -646,6 +656,8 @@ namespace heif {
     void derive_box_version() override;
 
     Error write(StreamWriter& writer) const override;
+
+    void insert_entries_from_other_ipma_box(const Box_ipma& b);
 
   protected:
     Error parse(BitstreamRange& range) override;

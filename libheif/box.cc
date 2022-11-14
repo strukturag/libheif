@@ -2209,6 +2209,14 @@ Error Box_ipma::write(StreamWriter& writer) const
 }
 
 
+void Box_ipma::insert_entries_from_other_ipma_box(const Box_ipma& b)
+{
+  m_entries.insert(m_entries.end(),
+                   b.m_entries.begin(),
+                   b.m_entries.end());
+}
+
+
 Error Box_auxC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);

@@ -285,11 +285,15 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                  heif_suberror_No_ipco_box);
   }
 
-  m_ipma_box = std::dynamic_pointer_cast<Box_ipma>(m_iprp_box->get_child_box(fourcc("ipma")));
-  if (!m_ipma_box) {
+  auto ipma_boxes = m_iprp_box->get_typed_child_boxes<Box_ipma>(fourcc("ipma"));
+  if (ipma_boxes.empty()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipma_box);
   }
+  for (size_t i=1;i<ipma_boxes.size();i++) {
+    ipma_boxes[0]->insert_entries_from_other_ipma_box(*ipma_boxes[i]);
+  }
+  m_ipma_box = ipma_boxes[0];
 
   m_iloc_box = std::dynamic_pointer_cast<Box_iloc>(m_meta_box->get_child_box(fourcc("iloc")));
   if (!m_iloc_box) {
