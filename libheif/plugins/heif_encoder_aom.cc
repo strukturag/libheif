@@ -927,11 +927,13 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level);
 
   if (encoder->threads > 1) {
-#if defined(AV1E_SET_ROW_MT)
+#if defined(AOM_CTRL_AV1E_SET_ROW_MT)
     // aom 2.0
-    aom_codec_control(&encoder->codec, AV1E_SET_ROW_MT, 1);
+    aom_codec_control(&codec, AV1E_SET_ROW_MT, 1);
 #endif
   }
+
+  // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
 
 
   auto nclx = image->image->get_color_profile_nclx();
