@@ -532,6 +532,29 @@ void svt_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 
+void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t input_height,
+                            uint32_t* encoded_width, uint32_t* encoded_height)
+{
+  auto* encoder = (struct encoder_struct_svt*) encoder_raw;
+
+  // SVT-AV1 (as of version 1.2.1) can only create image sizes matching the chroma format. Add padding if necessary.
+
+  if (encoder->chroma == heif_chroma_420 && (input_width & 1) == 1) {
+    *encoded_width = input_width + 1;
+  }
+  else {
+    *encoded_width = input_width;
+  }
+
+  if (encoder->chroma != heif_chroma_444 && (input_height & 1) == 1) {
+    *encoded_height = input_height + 1;
+  }
+  else {
+    *encoded_height = input_height;
+  }
+}
+
+
 struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* image,
                                    heif_image_input_class input_class)
 {
@@ -540,6 +563,11 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 
   int w = heif_image_get_width(image, heif_channel_Y);
   int h = heif_image_get_height(image, heif_channel_Y);
+
+  uint32_t encoded_width, encoded_height;
+  svt_query_encoded_size(encoder_raw, w,h, &encoded_width, &encoded_height);
+
+  image->image->extend_padding_to_size(encoded_width, encoded_height);
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
   int bitdepth_y = heif_image_get_bits_per_pixel(image, heif_channel_Y);
@@ -592,7 +620,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto nclx = image->image->get_color_profile_nclx();
   if (nclx) {
     svt_config.color_description_present_flag = true;
-#if SVT_AV1_VERSION_MAJOR==1
+#if SVT_AV1_VERSION_MAJOR == 1
     svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->get_colour_primaries());
     svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->get_transfer_characteristics());
     svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->get_matrix_coefficients());
@@ -603,7 +631,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     svt_config.matrix_coefficients = static_cast<uint8_t>(nclx->get_matrix_coefficients());
     svt_config.color_range = nclx->get_full_range_flag() ? 1 : 0;
 #endif
-    
+
 
     // Follow comment in svt header: set if input is HDR10 BT2020 using SMPTE ST2084.
     svt_config.high_dynamic_range_input = (bitdepth_y == 10 && // TODO: should this be >8 ?
@@ -616,8 +644,8 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   }
 
 
-  svt_config.source_width = w;
-  svt_config.source_height = h;
+  svt_config.source_width = encoded_width;
+  svt_config.source_height = encoded_height;
   svt_config.logical_processors = encoder->threads;
 
   // disable 2-pass
@@ -672,13 +700,13 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     int stride;
     input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
     input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * h;;
+    input_buffer.n_filled_len = stride * encoded_height;
   }
   else {
     int stride;
     input_picture_buffer->luma = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Y, &stride);
     input_picture_buffer->y_stride = stride / bytesPerPixel;
-    input_buffer.n_filled_len = stride * h;
+    input_buffer.n_filled_len = stride * encoded_height;
 
     uint32_t uvHeight = (h + yShift) >> yShift;
     input_picture_buffer->cb = (uint8_t*) heif_image_get_plane_readonly(image, heif_channel_Cb, &stride);
@@ -820,7 +848,7 @@ static const struct heif_encoder_plugin encoder_plugin_svt
         /* encode_image */ svt_encode_image,
         /* get_compressed_data */ svt_get_compressed_data,
         /* query_input_colorspace (v2) */ svt_query_input_colorspace2,
-        /* query_encoded_size (v3) */ nullptr
+        /* query_encoded_size (v3) */ svt_query_encoded_size
     };
 
 const struct heif_encoder_plugin* get_encoder_plugin_svt()
@@ -830,9 +858,9 @@ const struct heif_encoder_plugin* get_encoder_plugin_svt()
 
 
 #if PLUGIN_SvtEnc
-heif_plugin_info plugin_info {
-  1,
-  heif_plugin_type_encoder,
-  &encoder_plugin_svt
+heif_plugin_info plugin_info{
+    1,
+    heif_plugin_type_encoder,
+    &encoder_plugin_svt
 };
 #endif
