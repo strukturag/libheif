@@ -286,7 +286,7 @@ if eval "test x$enable_svt != xno"; then
         AC_SUBST(svt_CFLAGS)
         AC_SUBST(svt_LIBS)
         have_svt_encoder="yes"
-        REQUIRES_PRIVATE="$REQUIRES_PRIVATE svt"
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE SvtAv1Enc"
         have_svt="yes"
     ], [have_svt="no"])
 else
