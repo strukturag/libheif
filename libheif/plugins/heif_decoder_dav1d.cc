@@ -255,11 +255,9 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
   // --- copy image data
 
-  for (int c = 0; c < 3; c++) {
-    if (chroma == heif_chroma_monochrome && c > 0) {
-      break;
-    }
+  int num_planes = (chroma == heif_chroma_monochrome ? 1 : 3);
 
+  for (int c = 0; c < num_planes; c++) {
     int bpp = frame.p.bpc;
 
     const uint8_t* data = (uint8_t*) frame.data[c];

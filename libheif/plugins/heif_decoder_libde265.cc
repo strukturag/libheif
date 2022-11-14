@@ -113,9 +113,9 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
   int bpp = de265_get_bits_per_pixel(de265img, 0);
 
-  int nPlanes = (is_mono ? 1 : 3);
+  int num_planes = (is_mono ? 1 : 3);
 
-  for (int c = 0; c < nPlanes; c++) {
+  for (int c = 0; c < num_planes; c++) {
     if (de265_get_bits_per_pixel(de265img, c) != bpp) {
       struct heif_error err = {heif_error_Unsupported_feature,
                                heif_suberror_Unsupported_color_conversion,
