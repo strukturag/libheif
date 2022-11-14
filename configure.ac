@@ -1,5 +1,5 @@
-AC_PREREQ([2.68])
-AC_INIT([libheif], [1.13.0], [opensource@struktur.de])
+AC_PREREQ([2.71])
+AC_INIT([libheif],[1.13.0],[opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
 
@@ -26,7 +26,7 @@ AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
 AC_SUBST(LIBHEIF_AGE)
 
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
@@ -192,13 +192,13 @@ AM_CONDITIONAL([HAVE_LIBJPEG], [test "x$have_libjpeg" = "xyes"])
 if eval "test x$have_libjpeg = xyes"; then
 AC_MSG_CHECKING([for jpeg_write_icc_profile])
 AC_LANG_PUSH(C++)
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     #include <stddef.h>
     #include <stdio.h>
     #include <jpeglib.h>
-],[
+]], [[
     jpeg_write_icc_profile(NULL, NULL, 0);
-],[has_jpeg_write_icc_profile=yes],[has_jpeg_write_icc_profile=no]);
+]])],[has_jpeg_write_icc_profile=yes],[has_jpeg_write_icc_profile=no]);
 AC_LANG_POP(C++)
 AC_MSG_RESULT([$has_jpeg_write_icc_profile])
 if eval "test x$has_jpeg_write_icc_profile = xyes"; then
@@ -277,6 +277,24 @@ fi
 AM_CONDITIONAL([HAVE_DAV1D], [test "x$have_dav1d" = "xyes"])
 AC_SUBST([have_dav1d])
 
+AC_ARG_ENABLE([svt], AS_HELP_STRING([--enable-svt],
+    [Enable building of svt-av1 encoder.]))
+if eval "test x$enable_svt = x" ; then enable_svt=no ; fi
+if eval "test x$enable_svt != xno"; then
+    PKG_CHECK_MODULES([svt], [SvtAv1Enc], [
+        AC_DEFINE([HAVE_SvtEnc], [1], [Whether SVT-AV1 was found.])
+        AC_SUBST(svt_CFLAGS)
+        AC_SUBST(svt_LIBS)
+        have_svt_encoder="yes"
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE svt"
+        have_svt="yes"
+    ], [have_svt="no"])
+else
+    have_svt="no"
+fi
+AM_CONDITIONAL([HAVE_SvtEnc], [test "x$have_svt" = "xyes"])
+AC_SUBST([have_svt])
+
 AC_SUBST(have_avif_decoder)
 AC_SUBST(have_avif_encoder)
 
@@ -321,6 +339,7 @@ AC_MSG_NOTICE([libaom decoder: $have_aom_decoder])
 AC_MSG_NOTICE([libaom encoder: $have_aom_encoder])
 AC_MSG_NOTICE([rav1e encoder: $have_rav1e])
 AC_MSG_NOTICE([dav1d decoder: $have_dav1d])
+AC_MSG_NOTICE([svt-av1 encoder: $have_svt])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])

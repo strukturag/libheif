@@ -29,6 +29,10 @@ if HAVE_DAV1D
 ADDITIONAL_LIBS += $(dav1d_LIBS)
 endif
 
+if HAVE_SvtEnc
+ADDITIONAL_LIBS += $(svt_LIBS)
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -40,6 +44,7 @@ libheif_la_CXXFLAGS = \
   $(x265_CFLAGS) \
   $(dav1d_CFLAGS) \
   $(rav1e_CFLAGS) \
+  $(svt_CFLAGS) \
   -DLIBHEIF_EXPORTS -I$(top_srcdir)
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
@@ -111,6 +116,12 @@ if HAVE_DAV1D
 libheif_la_SOURCES += \
   plugins/heif_decoder_dav1d.cc \
   plugins/heif_decoder_dav1d.h
+endif
+
+if HAVE_SvtEnc
+libheif_la_SOURCES += \
+  plugins/heif_encoder_svt.cc \
+  plugins/heif_encoder_svt.h
 endif
 
 
