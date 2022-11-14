@@ -165,7 +165,7 @@ set(CPACK_SOURCE_IGNORE_FILES
 /.idea/
 /.clang-tidy
 ~$
-/third-party/
+/third-party/.*/ # only exclude the sub-directories, but keep the *.cmd files
 /Testing/
 /logos/
 /Makefile$
