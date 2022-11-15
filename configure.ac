@@ -1,4 +1,4 @@
-AC_PREREQ([2.71])
+AC_PREREQ([2.68])
 AC_INIT([libheif],[1.14.0],[opensource@struktur.de])
 AC_CONFIG_SRCDIR([libheif/box.cc])
 AC_CONFIG_HEADERS([config.h])
@@ -26,7 +26,7 @@ AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
 AC_SUBST(LIBHEIF_AGE)
 
-AC_CANONICAL_TARGET
+AC_CANONICAL_SYSTEM
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
@@ -192,13 +192,13 @@ AM_CONDITIONAL([HAVE_LIBJPEG], [test "x$have_libjpeg" = "xyes"])
 if eval "test x$have_libjpeg = xyes"; then
 AC_MSG_CHECKING([for jpeg_write_icc_profile])
 AC_LANG_PUSH(C++)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+AC_TRY_COMPILE([
     #include <stddef.h>
     #include <stdio.h>
     #include <jpeglib.h>
-]], [[
+], [
     jpeg_write_icc_profile(NULL, NULL, 0);
-]])],[has_jpeg_write_icc_profile=yes],[has_jpeg_write_icc_profile=no]);
+],[has_jpeg_write_icc_profile=yes],[has_jpeg_write_icc_profile=no]);
 AC_LANG_POP(C++)
 AC_MSG_RESULT([$has_jpeg_write_icc_profile])
 if eval "test x$has_jpeg_write_icc_profile = xyes"; then
