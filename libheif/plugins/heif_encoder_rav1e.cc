@@ -76,7 +76,7 @@ static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_pl
                                                            heif_suberror_Unspecified,
                                                            "rav1e error"};
 
-static const int RAV1E_PLUGIN_PRIORITY = 50;
+static const int RAV1E_PLUGIN_PRIORITY = 20;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 

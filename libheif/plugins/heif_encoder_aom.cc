@@ -141,7 +141,7 @@ static const char* const kParam_tune_valid_values[] = {
     "psnr", "ssim", nullptr
 };
 
-static const int AOM_PLUGIN_PRIORITY = 40;
+static const int AOM_PLUGIN_PRIORITY = 60;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 

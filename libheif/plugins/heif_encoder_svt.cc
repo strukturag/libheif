@@ -76,7 +76,7 @@ static struct heif_error heif_error_codec_library_error = {heif_error_Encoder_pl
                                                            heif_suberror_Unspecified,
                                                            "SVT-AV1 error"};
 
-static const int SVT_PLUGIN_PRIORITY = 60;
+static const int SVT_PLUGIN_PRIORITY = 40;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 
