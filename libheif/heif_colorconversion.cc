@@ -457,6 +457,8 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
   uint16_t halfRange = (uint16_t) (1 << (bpp_y - 1));
   int32_t fullRange = (1 << bpp_y) - 1;
+  int limited_range_offset_int = 16 << (bpp_y - 8);
+  float limited_range_offset = static_cast<float>(limited_range_offset_int);
 
   int shiftH = chroma_h_subsampling(chroma) - 1;
   int shiftV = chroma_v_subsampling(chroma) - 1;
@@ -496,9 +498,9 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           out_b[y * out_b_stride + x] = in_cb[cy * in_cb_stride + cx];
         }
         else {
-          out_r[y * out_r_stride + x] = Pixel(((in_cr[cy * in_cr_stride + cx] * 219 + 128) >> 8) + 16);
-          out_g[y * out_g_stride + x] = Pixel(((in_y[y * in_y_stride + x] * 219 + 128) >> 8) + 16);
-          out_b[y * out_b_stride + x] = Pixel(((in_cb[cy * in_cb_stride + cx] * 219 + 128) >> 8) + 16);
+          out_r[y * out_r_stride + x] = Pixel(((in_cr[cy * in_cr_stride + cx] * 219 + 128) >> 8) + limited_range_offset_int);
+          out_g[y * out_g_stride + x] = Pixel(((in_y[y * in_y_stride + x] * 219 + 128) >> 8) + limited_range_offset_int);
+          out_b[y * out_b_stride + x] = Pixel(((in_cb[cy * in_cb_stride + cx] * 219 + 128) >> 8) + limited_range_offset_int);
         }
       }
       else if (matrix_coeffs == 8) {
@@ -520,7 +522,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         cr = static_cast<float>(in_cr[cy * in_cr_stride + cx] - halfRange);
 
         if (!full_range_flag) {
-          yv = (yv - 16) * 1.1689f;
+          yv = (yv - limited_range_offset) * 1.1689f;
           cb = cb * 1.1429f;
           cr = cr * 1.1429f;
         }
@@ -674,6 +676,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
   int32_t fullRange = (1 << bpp) - 1;
+  float limited_range_offset = static_cast<float>(16 << (bpp - 8));
 
   int matrix_coeffs = 2;
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
@@ -694,7 +697,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
           out_y[y * out_y_stride + x] = in_g[y * in_g_stride + x];
         }
         else {
-          float v = (((in_g[y * in_g_stride + x] * 219.0f) / 256) + 16);
+          float v = (((in_g[y * in_g_stride + x] * 219.0f) / 256) + limited_range_offset);
           out_y[y * out_y_stride + x] = (Pixel) clip_f_u16(v, fullRange);
         }
       }
@@ -705,7 +708,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
         float v = r * coeffs.c[0][0] + g * coeffs.c[0][1] + b * coeffs.c[0][2];
         if (!full_range_flag) {
-          v = (((v * 219) / 256) + 16);
+          v = (((v * 219) / 256) + limited_range_offset);
         }
 
         Pixel pix = (Pixel) clip_f_u16(v, fullRange);
@@ -724,9 +727,9 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         }
         else {
           out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
-              ((in_b[y * in_b_stride + x] * 219.0f) / 256) + 16, fullRange);
+              ((in_b[y * in_b_stride + x] * 219.0f) / 256) + limited_range_offset, fullRange);
           out_cr[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
-              ((in_r[y * in_b_stride + x] * 219.0f) / 256) + 16, fullRange);
+              ((in_r[y * in_b_stride + x] * 219.0f) / 256) + limited_range_offset, fullRange);
         }
       }
       else {
@@ -2808,6 +2811,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
   int32_t fullRange = (1 << bpp) - 1;
+  float limited_range_offset = static_cast<float>(16 << (bpp-8));
 
   // le=1 for little endian, le=0 for big endian
   int le = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
@@ -2834,7 +2838,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
       float v = r * coeffs.c[0][0] + g * coeffs.c[0][1] + b * coeffs.c[0][2];
 
       if (!full_range_flag) {
-        v = v * 0.85547f + 16;  // 0.85547 = 219/256
+        v = v * 0.85547f + limited_range_offset;  // 0.85547 = 219/256
       }
 
       out_y[y * out_y_stride + x] = clip_f_u16(v, fullRange);
@@ -3012,6 +3016,8 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
                                                  colorProfile->get_colour_primaries());
   }
 
+  float limited_range_offset = static_cast<float>(16 << (bpp - 8));
+
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
 
@@ -3020,7 +3026,7 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
       float cr = static_cast<float>(in_cr[y / 2 * in_cr_stride / 2 + x / 2] - (1 << (bpp - 1)));
 
       if (!full_range_flag) {
-        y_ = (y_ - 16) * 1.1689f;
+        y_ = (y_ - limited_range_offset) * 1.1689f;
         cb = cb * 1.1429f;
         cr = cr * 1.1429f;
       }
