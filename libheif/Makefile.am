@@ -188,4 +188,5 @@ file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
 
 EXTRA_DIST = \
-  CMakeLists.txt
+  CMakeLists.txt \
+  plugins/CMakeLists.txt
