@@ -78,6 +78,13 @@ if (WITH_DEFLATE_HEADER_COMPRESSION)
    endif ()
 endif ()
 
+if (ENABLE_MULTITHREADING_SUPPORT)
+    target_compile_definitions(heif PRIVATE ENABLE_MULTITHREADING_SUPPORT=1)
+    if (ENABLE_PARALLEL_TILE_DECODING)
+        target_compile_definitions(heif PRIVATE ENABLE_PARALLEL_TILE_DECODING=1)
+    endif()
+endif()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config

@@ -143,6 +143,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 option(WITH_EXAMPLES "Build examples" ON)
 
 option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
+option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
+option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)

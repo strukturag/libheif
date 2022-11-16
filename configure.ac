@@ -319,8 +319,10 @@ AC_ARG_ENABLE([multithreading], AS_HELP_STRING([--disable-multithreading],
 if eval "test x$enable_multithreading = x" ; then enable_multithreading=yes ; fi
 if eval "test x$enable_multithreading != xno"; then
     AC_MSG_NOTICE([Enable multithreading])
+    AC_DEFINE([ENABLE_MULTITHREADING_SUPPORT], [1], [Whether multithreading is supported.])
     AC_DEFINE([ENABLE_PARALLEL_TILE_DECODING], [1], [Whether we enable multithreaded decoding.])
 fi
+AC_SUBST(ENABLE_MULTITHREADING_SUPPORT)
 AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
 
 WARNING_FLAGS="-Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter -Wno-error=deprecated-declarations"

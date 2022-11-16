@@ -23,7 +23,9 @@
 #include "error.h"
 #include "heif_plugin_registry.h"
 
+#if ENABLE_MULTITHREADING_SUPPORT
 #include <mutex>
+#endif
 
 using namespace heif;
 
@@ -42,16 +44,19 @@ static int heif_library_initialization_count = 0;
 static bool default_plugins_registered = true; // because they are implicitly registered at startup
 
 
+#if ENABLE_MULTITHREADING_SUPPORT
 static std::recursive_mutex& heif_init_mutex()
 {
   static std::recursive_mutex init_mutex;
   return init_mutex;
 }
-
+#endif
 
 struct heif_error heif_init(struct heif_init_params*)
 {
+#if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+#endif
 
   heif_library_initialization_count++;
 
@@ -131,7 +136,9 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
 
 void heif_deinit()
 {
+#if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+#endif
 
   if (heif_library_initialization_count == 0) {
     // This case should never happen (heif_deinit() is called more often then heif_init()).
@@ -197,7 +204,9 @@ __attribute__((unused)) static void unregister_plugin(const heif_plugin_info* in
 
 struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
 {
+#if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+#endif
 
   void* plugin_handle = dlopen(filename, RTLD_LAZY);
   if (!plugin_handle) {
@@ -258,7 +267,9 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
 
 struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 {
+#if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+#endif
 
   for (size_t i = 0; i < sLoadedPlugins.size(); i++) {
     auto& p = sLoadedPlugins[i];
@@ -284,7 +295,9 @@ struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 
 void heif_unload_all_plugins()
 {
+#if ENABLE_MULTITHREADING_SUPPORT
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
+#endif
 
   for (auto& p : sLoadedPlugins) {
     unregister_plugin(p.info);
