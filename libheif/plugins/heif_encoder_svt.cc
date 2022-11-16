@@ -96,8 +96,6 @@ static const char* svt_plugin_name()
 
 int int_log2(int pow2_value)
 {
-  int input_value = pow2_value;
-
   int v = 0;
   while (pow2_value > 1) {
     pow2_value >>= 1;
