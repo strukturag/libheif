@@ -1,6 +1,6 @@
 
 macro(plugin_compilation name varName optionName defineName)
-    if (${varName}_FOUND)
+    if (${varName}_FOUND AND WITH_${optionName})
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
