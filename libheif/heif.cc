@@ -1364,7 +1364,7 @@ size_t heif_image_handle_get_raw_color_profile_size(const struct heif_image_hand
 }
 
 
-static const std::set<enum heif_color_primaries> known_color_primaries{
+static const std::set<typename std::underlying_type<heif_color_primaries>::type> known_color_primaries{
     heif_color_primaries_ITU_R_BT_709_5,
     heif_color_primaries_unspecified,
     heif_color_primaries_ITU_R_BT_470_6_System_M,
@@ -1386,9 +1386,9 @@ struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
   }
 
-  auto n = static_cast<heif_color_primaries>(cp);
+  auto n = static_cast<typename std::underlying_type<heif_color_primaries>::type>(cp);
   if (known_color_primaries.find(n) != known_color_primaries.end()) {
-    nclx->color_primaries = n;
+    nclx->color_primaries = static_cast<heif_color_primaries>(n);
   }
   else {
     nclx->color_primaries = heif_color_primaries_unspecified;
@@ -1399,7 +1399,7 @@ struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile
 }
 
 
-static const std::set<enum heif_transfer_characteristics> known_transfer_characteristics{
+static const std::set<typename std::underlying_type<heif_transfer_characteristics>::type> known_transfer_characteristics{
   heif_transfer_characteristic_ITU_R_BT_709_5,
   heif_transfer_characteristic_unspecified,
   heif_transfer_characteristic_ITU_R_BT_470_6_System_M,
@@ -1427,9 +1427,9 @@ struct heif_error heif_nclx_color_profile_set_transfer_characteristics(struct he
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_transfer_characteristics).error_struct(nullptr);
   }
 
-  auto n = static_cast<heif_transfer_characteristics>(tc);
+  auto n = static_cast<typename std::underlying_type<heif_transfer_characteristics>::type>(tc);
   if (known_transfer_characteristics.find(n) != known_transfer_characteristics.end()) {
-    nclx->transfer_characteristics = n;
+    nclx->transfer_characteristics = static_cast<heif_transfer_characteristics>(n);
   }
   else {
     nclx->transfer_characteristics = heif_transfer_characteristic_unspecified;
@@ -1440,7 +1440,7 @@ struct heif_error heif_nclx_color_profile_set_transfer_characteristics(struct he
 }
 
 
-static const std::set<enum heif_matrix_coefficients> known_matrix_coefficients{
+static const std::set<typename std::underlying_type<heif_matrix_coefficients>::type> known_matrix_coefficients{
     heif_matrix_coefficients_RGB_GBR,
     heif_matrix_coefficients_ITU_R_BT_709_5,
     heif_matrix_coefficients_unspecified,
@@ -1464,9 +1464,9 @@ struct heif_error heif_nclx_color_profile_set_matrix_coefficients(struct heif_co
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_matrix_coefficients).error_struct(nullptr);
   }
 
-  auto n = static_cast<heif_matrix_coefficients>(mc);
+  auto n = static_cast<typename std::underlying_type<heif_matrix_coefficients>::type>(mc);
   if (known_matrix_coefficients.find(n) != known_matrix_coefficients.end()) {
-    nclx->matrix_coefficients = n;
+    nclx->matrix_coefficients = static_cast<heif_matrix_coefficients>(n);;
   }
   else {
     nclx->matrix_coefficients = heif_matrix_coefficients_unspecified;
