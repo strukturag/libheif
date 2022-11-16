@@ -62,12 +62,16 @@ target_compile_definitions(heif
                                LIBHEIF_EXPORTS
                                HAVE_VISIBILITY)
 
-add_subdirectory(plugins)
-
 if (ENABLE_PLUGIN_LOADING AND UNIX)
+    set(PLUGIN_LOADING_SUPPORTED_AND_ENABLED TRUE)
+endif()
+
+if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
     target_compile_definitions(heif PRIVATE ENABLE_PLUGIN_LOADING=1)
     target_link_libraries(heif PRIVATE dl)
 endif()
+
+add_subdirectory(plugins)
 
 if (WITH_DEFLATE_HEADER_COMPRESSION)
    find_package(ZLIB REQUIRED)

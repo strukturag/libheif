@@ -5,7 +5,8 @@ macro(plugin_compilation name varName optionName defineName)
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
 
-        if (WITH_${optionName}_PLUGIN)
+        if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_${optionName}_PLUGIN)
+            message("Compiling '" ${name} "' as dynamic plugin")
             add_library(heif-${name}
                     MODULE ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
                     ../heif_plugin.cc
@@ -26,6 +27,7 @@ macro(plugin_compilation name varName optionName defineName)
                     LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
                     )
         else ()
+            message("Compiling '" ${name} "' as built-in backend")
             target_sources(heif PRIVATE ${${optionName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
             target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
@@ -34,6 +36,8 @@ macro(plugin_compilation name varName optionName defineName)
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${varName}_CFLAGS}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${varName}_CFLAGS}")
+    else()
+        message("Not compiling '" ${name} "' backend")
     endif ()
 endmacro()
 
