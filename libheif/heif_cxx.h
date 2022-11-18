@@ -383,14 +383,19 @@ namespace heif {
 
     enum heif_compression_format get_compression_format() const noexcept;
 
+    // DEPRECATED: typo in function name
     bool supportes_lossy_compression() const noexcept;
 
+    // DEPRECATED: typo in function name
     bool supportes_lossless_compression() const noexcept;
 
 
     // throws Error
     Encoder get_encoder() const;
 
+    bool supports_lossy_compression() const noexcept;
+
+    bool supports_lossless_compression() const noexcept;
 
   private:
     EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr)
@@ -1031,12 +1036,22 @@ namespace heif {
 
   inline bool EncoderDescriptor::supportes_lossy_compression() const noexcept
   {
-    return heif_encoder_descriptor_supportes_lossy_compression(m_descriptor);
+    return heif_encoder_descriptor_supports_lossy_compression(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supports_lossy_compression() const noexcept
+  {
+    return heif_encoder_descriptor_supports_lossy_compression(m_descriptor);
   }
 
   inline bool EncoderDescriptor::supportes_lossless_compression() const noexcept
   {
-    return heif_encoder_descriptor_supportes_lossless_compression(m_descriptor);
+    return heif_encoder_descriptor_supports_lossless_compression(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supports_lossless_compression() const noexcept
+  {
+    return heif_encoder_descriptor_supports_lossless_compression(m_descriptor);
   }
 
   inline Encoder EncoderDescriptor::get_encoder() const
