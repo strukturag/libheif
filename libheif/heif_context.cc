@@ -1245,7 +1245,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return error;
     }
 
-    error = decode_full_grid_image(ID, img, data);
+    error = decode_full_grid_image(ID, img, data, options);
     if (error) {
       return error;
     }
@@ -1396,7 +1396,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 // This function only works with RGB images.
 Error HeifContext::decode_full_grid_image(heif_item_id ID,
                                           std::shared_ptr<HeifPixelImage>& img,
-                                          const std::vector<uint8_t>& grid_data) const
+                                          const std::vector<uint8_t>& grid_data, 
+                                          const struct heif_decoding_options* options) const
 {
   ImageGrid grid;
   Error err = grid.parse(grid_data);
@@ -1551,6 +1552,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   std::deque<std::future<Error> > errs;
 #endif
+  if (options && options->start_progress) {
+    options->start_progress(heif_progress_step_load_tile, grid.get_rows() * grid.get_columns(), options->progress_user_data);
+  }
 
   for (int y = 0; y < grid.get_rows(); y++) {
     int x0 = 0;
@@ -1578,6 +1582,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       if (err) {
         return err;
       }
+      if (options && options->on_progress) {
+        options->on_progress(heif_progress_step_load_tile, reference_idx + 1, options->progress_user_data);
+      }
 #endif
 
       x0 += src_width;
@@ -1592,7 +1599,8 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 #if ENABLE_PARALLEL_TILE_DECODING
   // Process all tiles in a set of background threads.
   // Do not start more than the maximum number of threads.
-
+  
+  reference_idx = 0;
   while (tiles.empty()==false) {
 
     // If maximum number of threads running, wait until first thread finishes
@@ -1602,7 +1610,9 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       if (e) {
         return e;
       }
-
+      if (options && options->on_progress) {
+        options->on_progress(heif_progress_step_load_tile, ++reference_idx, options->progress_user_data);
+      }
       errs.pop_front();
     }
 
@@ -1624,10 +1634,16 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     if (e) {
       return e;
     }
-
+    if (options && options->on_progress) {
+      options->on_progress(heif_progress_step_load_tile, ++reference_idx, options->progress_user_data);
+    }
     errs.pop_front();
   }
 #endif
+
+  if (options && options->end_progress) {
+    options->end_progress(heif_progress_step_load_tile, options->progress_user_data);
+  }
 
   return Error::Ok;
 }
