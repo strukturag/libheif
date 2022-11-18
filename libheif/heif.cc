@@ -1769,14 +1769,14 @@ int heif_encoder_descriptor_supports_lossless_compression(const struct heif_enco
 }
 
 
-// DEPRECATED: typo in functino name
+// DEPRECATED: typo in function name
 int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->supports_lossy_compression;
 }
 
 
-// DEPRECATED: typo in functino name
+// DEPRECATED: typo in function name
 int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->supports_lossless_compression;
