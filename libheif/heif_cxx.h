@@ -284,7 +284,7 @@ namespace heif {
 
     bool is_full_range() const;
 
-    void set_color_primaties(heif_color_primaries cp);
+    void set_color_primaries(heif_color_primaries cp);
 
     void set_transfer_characteristics(heif_transfer_characteristics tc);
 
@@ -806,7 +806,7 @@ namespace heif {
   inline bool ColorProfile_nclx::is_full_range() const
   { return mProfile->full_range_flag; }
 
-  inline void ColorProfile_nclx::set_color_primaties(heif_color_primaries cp)
+  inline void ColorProfile_nclx::set_color_primaries(heif_color_primaries cp)
   { mProfile->color_primaries = cp; }
 
   inline void ColorProfile_nclx::set_transfer_characteristics(heif_transfer_characteristics tc)
