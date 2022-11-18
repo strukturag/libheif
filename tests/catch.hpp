@@ -11313,7 +11313,7 @@ namespace Catch {
     std::string TagInfo::all() const {
         size_t size = 0;
         for (auto const& spelling : spellings) {
-            // Add 2 for the brackes
+            // Add 2 for the brackets
             size += spelling.size() + 2;
         }
 
