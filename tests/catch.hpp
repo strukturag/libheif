@@ -7447,7 +7447,7 @@ namespace Catch {
         using storage_for = Detail::ObjectStorage<T, true>;
 
         template <typename T>
-        using destructable_object = Detail::ObjectStorage<T, false>;
+        using destructible_object = Detail::ObjectStorage<T, false>;
     }
 }
 
