@@ -133,7 +133,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
   std::vector<uint8_t> xmp = get_xmp_metadata(handle);
   if (!xmp.empty()) {
-    png_text xmp_text;
+    png_text xmp_text{}; // important to zero-initialize the structure so that the remaining fields are NULL !
     xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
     xmp_text.key = (char*) "XML:com.adobe.xmp";
     xmp_text.text = (char*) xmp.data();
