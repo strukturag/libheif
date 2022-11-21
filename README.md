@@ -112,7 +112,7 @@ There is also an experimental Go API, but this is not stable yet.
 
 This library uses either a standard autoconf/automake build system or CMake.
 
-Using autoconf/automake for compilation is deprectated.
+Using autoconf/automake for compilation is deprecated.
 Starting with v1.14.0, CMake is the preferred build tool.
 While autoconf/automake might still work for some time to come, not all options are available for it.
 

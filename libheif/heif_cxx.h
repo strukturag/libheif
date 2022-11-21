@@ -284,7 +284,7 @@ namespace heif {
 
     bool is_full_range() const;
 
-    void set_color_primaties(heif_color_primaries cp);
+    void set_color_primaries(heif_color_primaries cp);
 
     void set_transfer_characteristics(heif_transfer_characteristics tc);
 
@@ -383,14 +383,19 @@ namespace heif {
 
     enum heif_compression_format get_compression_format() const noexcept;
 
+    // DEPRECATED: typo in function name
     bool supportes_lossy_compression() const noexcept;
 
+    // DEPRECATED: typo in function name
     bool supportes_lossless_compression() const noexcept;
 
 
     // throws Error
     Encoder get_encoder() const;
 
+    bool supports_lossy_compression() const noexcept;
+
+    bool supports_lossless_compression() const noexcept;
 
   private:
     EncoderDescriptor(const struct heif_encoder_descriptor* descr) : m_descriptor(descr)
@@ -806,7 +811,7 @@ namespace heif {
   inline bool ColorProfile_nclx::is_full_range() const
   { return mProfile->full_range_flag; }
 
-  inline void ColorProfile_nclx::set_color_primaties(heif_color_primaries cp)
+  inline void ColorProfile_nclx::set_color_primaries(heif_color_primaries cp)
   { mProfile->color_primaries = cp; }
 
   inline void ColorProfile_nclx::set_transfer_characteristics(heif_transfer_characteristics tc)
@@ -1031,12 +1036,22 @@ namespace heif {
 
   inline bool EncoderDescriptor::supportes_lossy_compression() const noexcept
   {
-    return heif_encoder_descriptor_supportes_lossy_compression(m_descriptor);
+    return heif_encoder_descriptor_supports_lossy_compression(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supports_lossy_compression() const noexcept
+  {
+    return heif_encoder_descriptor_supports_lossy_compression(m_descriptor);
   }
 
   inline bool EncoderDescriptor::supportes_lossless_compression() const noexcept
   {
-    return heif_encoder_descriptor_supportes_lossless_compression(m_descriptor);
+    return heif_encoder_descriptor_supports_lossless_compression(m_descriptor);
+  }
+
+  inline bool EncoderDescriptor::supports_lossless_compression() const noexcept
+  {
+    return heif_encoder_descriptor_supports_lossless_compression(m_descriptor);
   }
 
   inline Encoder EncoderDescriptor::get_encoder() const

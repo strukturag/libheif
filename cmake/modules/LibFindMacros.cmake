@@ -1,7 +1,7 @@
 # Version 2.3
 # Public Domain, originally written by Lasse Kärkkäinen <tronic>
 # Maintained at https://github.com/Tronic/cmake-modules
-# Please send your improvements as pull requests on Github.
+# Please send your improvements as pull requests on GitHub.
 
 # Find another package and make it a dependency of the current package.
 # This also automatically forwards the "REQUIRED" argument.

@@ -7447,7 +7447,7 @@ namespace Catch {
         using storage_for = Detail::ObjectStorage<T, true>;
 
         template <typename T>
-        using destructable_object = Detail::ObjectStorage<T, false>;
+        using destructible_object = Detail::ObjectStorage<T, false>;
     }
 }
 
@@ -7779,7 +7779,7 @@ namespace Catch {
                 result = -erfc_inv(2.0 * p);
                 // result *= normal distribution standard deviation (1.0) * sqrt(2)
                 result *= /*sd * */ ROOT_TWO;
-                // result += normal disttribution mean (0)
+                // result += normal distribution mean (0)
                 return result;
             }
 
@@ -11313,7 +11313,7 @@ namespace Catch {
     std::string TagInfo::all() const {
         size_t size = 0;
         for (auto const& spelling : spellings) {
-            // Add 2 for the brackes
+            // Add 2 for the brackets
             size += spelling.size() + 2;
         }
 
