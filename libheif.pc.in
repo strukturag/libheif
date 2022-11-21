@@ -13,6 +13,6 @@ URL: https://github.com/strukturag/libheif
 Version: @VERSION@
 Requires:
 Requires.private: @REQUIRES_PRIVATE@
-Libs: -L@libdir@ -lheif
+Libs: -L${libdir} -lheif
 Libs.private: @LIBS@ -lstdc++
-Cflags: -I@includedir@
+Cflags: -I${includedir}
