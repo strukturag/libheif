@@ -19,8 +19,8 @@ AC_SUBST(PROJECT_VERSION_TWEAK)
 # If any interfaces have been added since the last public release, then increment age.
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 
-LIBHEIF_CURRENT=16
-LIBHEIF_REVISION=0
+LIBHEIF_CURRENT=15
+LIBHEIF_REVISION=1
 LIBHEIF_AGE=14
 AC_SUBST(LIBHEIF_CURRENT)
 AC_SUBST(LIBHEIF_REVISION)
