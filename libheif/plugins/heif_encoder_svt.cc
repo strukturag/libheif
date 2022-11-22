@@ -540,14 +540,20 @@ void svt_query_encoded_size(void* encoder_raw, uint32_t input_width, uint32_t in
 
   // SVT-AV1 (as of version 1.2.1) can only create image sizes matching the chroma format. Add padding if necessary.
 
-  if (encoder->chroma == heif_chroma_420 && (input_width & 1) == 1) {
+  if (input_width < 64) {
+    *encoded_width = 64;
+  }
+  else if (encoder->chroma == heif_chroma_420 && (input_width & 1) == 1) {
     *encoded_width = input_width + 1;
   }
   else {
     *encoded_width = input_width;
   }
 
-  if (encoder->chroma != heif_chroma_444 && (input_height & 1) == 1) {
+  if (input_height < 64) {
+    *encoded_height = 64;
+  }
+  else if (encoder->chroma != heif_chroma_444 && (input_height & 1) == 1) {
     *encoded_height = input_height + 1;
   }
   else {
