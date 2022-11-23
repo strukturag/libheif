@@ -275,8 +275,8 @@ bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_conf
     }
 
     // screen content
-    int force_screen_content_tools = 0;
-    if (reader.get_bits(1)) {
+    int force_screen_content_tools = 2;
+    if (reader.get_bits(1) == 0) {
       force_screen_content_tools = reader.get_bits(1);
     }
 
