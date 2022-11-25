@@ -42,7 +42,9 @@ struct encoder_struct_svt
   int speed = 12; // 0-13
 
   //int quality; // TODO: not sure yet how to map quality to min/max q
-  //int min_q, max_q;  // for VBR
+
+  int min_q=0;
+  int max_q=63;
   int qp = 50; // for CBR
   int threads = 4;
 
@@ -59,8 +61,8 @@ struct encoder_struct_svt
 
 //static const char* kError_out_of_memory = "Out of memory";
 
-//static const char* kParam_min_q = "min-q";
-//static const char* kParam_max_q = "max-q";
+static const char* kParam_min_q = "min-q";
+static const char* kParam_max_q = "max-q";
 static const char* kParam_qp = "qp";
 static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
@@ -218,7 +220,6 @@ static void svt_init_parameters()
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
-  /*
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_min_q;
@@ -228,7 +229,7 @@ static void svt_init_parameters()
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
   p->integer.maximum = 63;
-  p->integer.valid_values = NULL;
+  p->integer.valid_values = nullptr;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
 
@@ -241,10 +242,9 @@ static void svt_init_parameters()
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
   p->integer.maximum = 63;
-  p->integer.valid_values = NULL;
+  p->integer.valid_values = nullptr;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
-*/
 
   d[i++] = nullptr;
 }
@@ -377,8 +377,8 @@ struct heif_error svt_set_parameter_integer(void* encoder_raw, const char* name,
     return svt_set_parameter_lossless(encoder, value);
   }
 
-  //set_value(kParam_min_q, min_q);
-  //set_value(kParam_max_q, max_q);
+  set_value(kParam_min_q, min_q);
+  set_value(kParam_max_q, max_q);
   set_value(kParam_qp, qp);
   set_value(kParam_threads, threads);
   set_value(kParam_speed, speed);
@@ -399,8 +399,8 @@ struct heif_error svt_get_parameter_integer(void* encoder_raw, const char* name,
     return svt_get_parameter_lossless(encoder, value);
   }
 
-  //get_value(kParam_min_q, min_q);
-  //get_value(kParam_max_q, max_q);
+  get_value(kParam_min_q, min_q);
+  get_value(kParam_max_q, max_q);
   get_value(kParam_qp, qp);
   get_value(kParam_threads, threads);
   get_value(kParam_speed, speed);
@@ -661,6 +661,8 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.rate_control_mode = 0; // constant rate factor
   //svt_config.enable_adaptive_quantization = 0;   // 2 is CRF (the default), 0 would be CQP
   svt_config.qp = encoder->qp;
+  svt_config.min_qp_allowed = encoder->min_q;
+  svt_config.max_qp_allowed = encoder->max_q;
 
   svt_config.tile_rows = int_log2(encoder->tile_rows);
   svt_config.tile_columns = int_log2(encoder->tile_cols);
