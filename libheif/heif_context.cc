@@ -2369,7 +2369,12 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   heif_image c_api_image;
   c_api_image.image = src_image;
 
-  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
 
   for (;;) {
     uint8_t* data;
