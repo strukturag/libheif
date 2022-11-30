@@ -133,11 +133,23 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
   std::vector<uint8_t> xmp = get_xmp_metadata(handle);
   if (!xmp.empty()) {
+    // make sure that XMP string is always null terminated.
+    if (xmp.back() != 0) {
+      xmp.push_back(0);
+    }
+
+    // compute XMP string length
+    size_t text_length = 0;
+    while (xmp[text_length] != 0) {
+      text_length++;
+    }
+
     png_text xmp_text{}; // important to zero-initialize the structure so that the remaining fields are NULL !
     xmp_text.compression = PNG_ITXT_COMPRESSION_NONE;
     xmp_text.key = (char*) "XML:com.adobe.xmp";
     xmp_text.text = (char*) xmp.data();
-    xmp_text.text_length = xmp.size();
+    xmp_text.text_length = 0; // should be 0 for ITXT according the libpng documentation
+    xmp_text.itxt_length = text_length;
     png_set_text(png_ptr, info_ptr, &xmp_text, 1);
   }
 

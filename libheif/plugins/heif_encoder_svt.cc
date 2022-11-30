@@ -496,7 +496,7 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
         return heif_error_invalid_parameter_value;
     }
   }
-  
+
   return heif_error_unsupported_parameter;
 }
 
