@@ -184,7 +184,7 @@ struct InputImage
   std::shared_ptr<heif_image> image;
   std::vector<uint8_t> xmp;
   std::vector<uint8_t> exif;
-  heif_orientation orientation;
+  heif_orientation orientation = heif_orientation_normal;
 };
 
 
