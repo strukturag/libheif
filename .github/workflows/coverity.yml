@@ -6,7 +6,7 @@ on:
 
 jobs:
   scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       WITH_AOM: 1
