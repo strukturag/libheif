@@ -2158,7 +2158,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
         grid_image->mark_not_miaf_compatible();
       }
 
-      if ((encoded_width % 64) != 0 &&
+      if ((encoded_width % 64) != 0 ||
           (encoded_height % 64) != 0) {
         grid_image->mark_not_miaf_compatible();
       }
