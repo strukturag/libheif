@@ -1666,7 +1666,12 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   // --- add alpha plane if we discovered a tile with alpha
 
   if (tile_img->has_alpha() && !img->has_alpha()) {
-    img->fill_new_plane(heif_channel_Alpha, 255, w, h, tile_img->get_bits_per_pixel(heif_channel_Alpha));
+    int alpha_bpp = tile_img->get_bits_per_pixel(heif_channel_Alpha);
+    assert(alpha_bpp<=16);
+
+    uint16_t alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
+
+    img->fill_new_plane(heif_channel_Alpha, alpha_default_value, w, h, alpha_bpp);
   }
 
   std::set<enum heif_channel> channels = tile_img->get_channel_set();
