@@ -58,7 +58,7 @@ endif()
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
-set(PLUGIN_DIRECTORY "/usr/local/lib/libheif" CACHE STRING "Plugin install directory")
+set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_LIBDIR}/libheif" CACHE STRING "Plugin install directory")
 
 if (ENABLE_PLUGIN_LOADING AND UNIX)
     set(PLUGIN_LOADING_SUPPORTED_AND_ENABLED TRUE)
