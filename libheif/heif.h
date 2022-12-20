@@ -570,6 +570,11 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 LIBHEIF_API
 void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
 
+// If the maximum threads number is set to 0, the image tiles are decoded in the main thread.
+// This is different from setting it to 1, which will generate a single background thread to decode the tiles.
+// Note that this setting only affects libheif itself. The codecs itself may still use multi-threaded decoding.
+// You can use it, for example, in cases where you are decoding several images in parallel anyway you thus want
+// to minimize parallelism in each decoder.
 LIBHEIF_API
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
 
