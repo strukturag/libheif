@@ -58,10 +58,14 @@ endif()
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
-set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_LIBDIR}/libheif" CACHE STRING "Plugin install directory")
+set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_FULL_LIBDIR}/libheif" CACHE STRING "Plugin install directory")
 
 if (ENABLE_PLUGIN_LOADING AND UNIX)
     set(PLUGIN_LOADING_SUPPORTED_AND_ENABLED TRUE)
+    install(DIRECTORY DESTINATION ${PLUGIN_DIRECTORY} DIRECTORY_PERMISSIONS 
+        OWNER_WRITE OWNER_READ OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE)
 endif()
 
 macro(plugin_option variableName packageName displayName displayType defaultPlugin)
