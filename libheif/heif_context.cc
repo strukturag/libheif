@@ -1674,12 +1674,21 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
   // --- add alpha plane if we discovered a tile with alpha
 
   if (tile_img->has_alpha() && !img->has_alpha()) {
-    int alpha_bpp = tile_img->get_bits_per_pixel(heif_channel_Alpha);
-    assert(alpha_bpp<=16);
+#if ENABLE_PARALLEL_TILE_DECODING
+    // The mutex should probably be a member of heif_context, but since this is so infrequently locked, it probably doesn't matter.
+    static std::mutex m;
+    std::lock_guard<std::mutex> lock(m);
+    if (!img->has_channel(heif_channel_Alpha))	// check again, after locking
+#endif
+    {
+      int alpha_bpp = tile_img->get_bits_per_pixel(heif_channel_Alpha);
 
-    uint16_t alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
+      assert(alpha_bpp <= 16);
 
-    img->fill_new_plane(heif_channel_Alpha, alpha_default_value, w, h, alpha_bpp);
+      uint16_t alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
+
+      img->fill_new_plane(heif_channel_Alpha, alpha_default_value, w, h, alpha_bpp);
+    }
   }
 
   std::set<enum heif_channel> channels = tile_img->get_channel_set();
