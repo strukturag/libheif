@@ -60,6 +60,12 @@ namespace heif {
   };
 
 
+  struct enc_chunk {
+    uint8_t* ptr;
+    size_t size;
+  };
+
+
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
   // The class also handles automatic color-space conversion.
@@ -373,6 +379,26 @@ namespace heif {
                        const struct heif_encoding_options* options,
                        enum heif_image_input_class input_class,
                        std::shared_ptr<Image>& out_image);
+    
+    Error mux_image(const std::shared_ptr<HeifPixelImage>& image,
+                    heif_compression_format compression_format,
+                    enum heif_image_input_class input_class,
+                    struct heif_encoding_options* mux_options,
+                    uint8_t* encoded_stream,
+                    size_t encoded_stream_size,
+                    std::shared_ptr<Image>& out_image);
+
+    Error mux_image_with_hevc(const std::shared_ptr<HeifPixelImage>& image,
+                               enum heif_image_input_class input_class,
+                               struct heif_encoding_options* mux_options,
+                               uint8_t* encoded_stream,
+                               size_t encoded_stream_size,
+                               std::shared_ptr<Image>& out_image);
+    
+    Error get_nal_data(uint8_t* encoded_stream, 
+                       size_t encoded_stream_size, 
+                       size_t& encoded_stream_offset, 
+                       std::vector<enc_chunk>& chunks);
 
     Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                struct heif_encoder* encoder,

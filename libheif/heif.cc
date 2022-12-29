@@ -2383,6 +2383,45 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 }
 
 
+struct heif_error heif_context_mux_image(struct heif_context* ctx,
+                                         const struct heif_image* input_image,
+                                         heif_compression_format compression_format,
+                                         struct heif_encoding_options* mux_options,
+                                         uint8_t* encoded_stream,
+                                         size_t encoded_stream_size,
+                                         struct heif_image_handle** out_image_handle)
+{
+  std::shared_ptr<HeifContext::Image> image;
+  Error error;
+
+  error = ctx->context->mux_image(input_image->image,
+                                  compression_format,
+                                  heif_image_input_class_normal,
+                                  mux_options,
+                                  encoded_stream,
+                                  encoded_stream_size,
+                                  image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  // mark the new image as primary image
+
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(image);
+  }
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = image;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return error_Ok;
+}
+
+
+
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image_handle* master_image,
                                                 const struct heif_image_handle* thumbnail_image)
