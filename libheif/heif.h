@@ -392,6 +392,39 @@ enum heif_brand
   heif_avis
 };
 
+enum heif_image_type
+{
+  heif_image_type_hvc1,
+  heif_image_type_av01,
+  heif_image_type_grid,
+  heif_image_type_iden,
+  heif_image_type_iovl,
+  heif_image_type_none_image,
+  heif_image_type_none,   // guardian
+};
+
+struct heif_offset
+{
+  int32_t dx;
+  int32_t dy;
+};
+
+struct heif_overlay_info
+{
+  uint32_t canvas_width;
+  uint32_t canvas_height;
+
+  uint16_t bg_color_r;
+  uint16_t bg_color_g;
+  uint16_t bg_color_b;
+  uint16_t bg_color_a;
+
+  uint32_t num_items;
+  struct heif_offset *offsets;
+  heif_item_id *IDs;
+};
+
+
 // input data should be at least 12 bytes
 // DEPRECATED, use heif_read_main_brand() instead
 LIBHEIF_API
@@ -536,6 +569,9 @@ LIBHEIF_API
 int heif_context_get_number_of_top_level_images(struct heif_context* ctx);
 
 LIBHEIF_API
+int heif_context_get_number_of_images(struct heif_context* ctx);
+
+LIBHEIF_API
 int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id);
 
 // Fills in image IDs into the user-supplied int-array 'ID_array', preallocated with 'count' entries.
@@ -544,6 +580,11 @@ LIBHEIF_API
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
                                                  heif_item_id* ID_array,
                                                  int count);
+
+LIBHEIF_API
+int heif_context_get_list_of_image_IDs(struct heif_context* ctx,
+                                              heif_item_id* ID_array,
+                                              int count);
 
 LIBHEIF_API
 struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, heif_item_id* id);
@@ -559,6 +600,21 @@ LIBHEIF_API
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
                                                 struct heif_image_handle**);
+
+LIBHEIF_API
+struct heif_error heif_context_get_image_handle_from_all_images(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle**);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_image_width(struct heif_context* ctx,
+                                                    heif_item_id id,
+                                                    uint32_t* width);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_image_height(struct heif_context* ctx,
+                                                    heif_item_id id,
+                                                    uint32_t* height);
 
 // Print information about the boxes of a HEIF file to file descriptor.
 // This is for debugging and informational purposes only. You should not rely on
@@ -600,6 +656,34 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 // Get the resolution of an image.
 LIBHEIF_API
 int heif_image_handle_get_width(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+enum heif_image_type heif_image_handle_get_item_type(const struct heif_image_handle* handle, heif_item_id ID);
+
+LIBHEIF_API
+int heif_image_handle_get_compressed_image_data(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    int pad_start_pattern,
+    uint8_t **out_img,
+    size_t *out_size);
+
+LIBHEIF_API
+int heif_image_handle_fill_compressed_image_data(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    int pad_start_pattern,
+    uint8_t *out_img, 
+    size_t *out_size);
+
+LIBHEIF_API
+int heif_image_handle_get_overlay_info(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    struct heif_overlay_info *overlay_info);
+
+LIBHEIF_API
+int heif_image_handle_gcheck_not_compatible_but_moov_box(struct heif_context* ctx, const void* mem, size_t size);
+
+LIBHEIF_API
+int heif_image_handle_get_alpha_image_id(struct heif_context* ctx, const heif_item_id ID, heif_item_id *alpha_img_id);
 
 LIBHEIF_API
 int heif_image_handle_get_height(const struct heif_image_handle* handle);

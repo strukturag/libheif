@@ -197,6 +197,50 @@ std::string HeifFile::debug_dump_boxes() const
 }
 
 
+bool HeifFile::check_not_compatible_but_moov_box(const std::shared_ptr<StreamReader>& reader)
+{
+  uint64_t maxSize = std::numeric_limits<int64_t>::max();
+  heif::BitstreamRange range(reader, maxSize);
+
+  std::shared_ptr<Box_ftyp> ftyp_box;
+  bool has_moov_box = false;
+
+  for (;;) {
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+
+    // When an EOF error is returned, this is not really a fatal exception,
+    // but simply the indication that we reached the end of the file.
+    if (error != Error::Ok || range.error() || range.eof()) {
+      break;
+    }
+
+    if (fourcc("moov") == box->get_short_type()) {
+      has_moov_box = true;      
+    }
+
+    if (box->get_short_type() == fourcc("ftyp")) {
+      ftyp_box = std::dynamic_pointer_cast<Box_ftyp>(box);
+    }
+  }
+
+  if (!ftyp_box) {
+     return false;
+  }
+
+  if (!ftyp_box->has_compatible_brand(fourcc("heic")) &&
+      !ftyp_box->has_compatible_brand(fourcc("heix")) &&
+      !ftyp_box->has_compatible_brand(fourcc("mif1")) &&
+      !ftyp_box->has_compatible_brand(fourcc("avif"))) {
+    std::stringstream sstr;
+    sstr << "File does not include any supported brands.\n";
+
+    return has_moov_box;
+  }
+  
+  return false;
+}
+
 Error HeifFile::parse_heif_file(BitstreamRange& range)
 {
   // --- read all top-level boxes
