@@ -96,7 +96,7 @@ plugin_option(AOM_ENCODER AOM "aom" "AVIF encoder" OFF)
 plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
-plugin_option(FFMPEG_DECODER FFMPEG "FFMPEG" "FFMPEG hevc decoder" ON)
+plugin_option(FFMPEG_DECODER FFMPEG "FFMPEG" "FFMPEG hevc decoder with hw accel" OFF)
 
 # --- Create libheif pkgconfig file
 
