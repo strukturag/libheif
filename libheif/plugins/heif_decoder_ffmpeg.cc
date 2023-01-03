@@ -432,6 +432,22 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
           hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
   }
 
+  AVCodecParameters* hvec_codecParam = avcodec_parameters_alloc();
+  if (!hvec_codecParam) {
+      struct heif_error err = { heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess };
+      return err;
+  }
+  if (avcodec_parameters_from_context(hvec_codecParam, hvec_codecContext) < 0)
+  {
+      struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
+      return err;
+  }
+
+  uint8_t video_full_range_flag = (hvec_codecParam->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+  uint8_t color_primaries = hvec_codecParam->color_primaries;
+  uint8_t transfer_characteristics = hvec_codecParam->color_trc;
+  uint8_t matrix_coefficients = hvec_codecParam->color_space;
+
   delete hvec_data;
   av_parser_close(hvec_parser);
   avcodec_free_context(&hvec_codecContext);
@@ -439,12 +455,10 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   av_packet_free(&hvec_pkt);
 
   struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
-  //#if LIBDE265_NUMERIC_VERSION >= 0x01000700
-  //HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_color_primaries(nclx, static_cast<uint16_t>(de265_get_image_colour_primaries(image))), { heif_nclx_color_profile_free(nclx); });
-  //HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_transfer_characteristics(nclx, static_cast<uint16_t>(de265_get_image_transfer_characteristics(image))), {heif_nclx_color_profile_free(nclx);});
-  //HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_matrix_coefficients(nclx, static_cast<uint16_t>(de265_get_image_matrix_coefficients(image))), { heif_nclx_color_profile_free(nclx); });
-  //nclx->full_range_flag = (bool)de265_get_image_full_range_flag(image);
-  //#endif
+  heif_nclx_color_profile_set_color_primaries(nclx, static_cast<uint16_t>(color_primaries));
+  heif_nclx_color_profile_set_transfer_characteristics(nclx, static_cast<uint16_t>(transfer_characteristics));
+  heif_nclx_color_profile_set_matrix_coefficients(nclx, static_cast<uint16_t>(matrix_coefficients));
+  nclx->full_range_flag = (bool)video_full_range_flag;
   heif_image_set_nclx_color_profile(*out_img, nclx);
   heif_nclx_color_profile_free(nclx);
 
