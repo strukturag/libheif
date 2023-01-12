@@ -604,8 +604,10 @@ Error HeifContext::interpret_heif_file()
       if (ispe_read) {
         auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
         if (clap) {
-          image->set_resolution(clap->get_width_rounded(),
-                                clap->get_height_rounded());
+          auto width = image->get_width();
+          auto height = image->get_height();
+          image->set_resolution(clap->get_width_rounded(width),
+                                clap->get_height_rounded(height));
         }
 
         auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);

@@ -790,9 +790,9 @@ namespace heif {
     int top_rounded(int image_height) const;   // first row
     int bottom_rounded(int image_height) const; // last row included in the cropped image
 
-    int get_width_rounded() const;
+    int get_width_rounded(int image_width) const;
 
-    int get_height_rounded() const;
+    int get_height_rounded(int image_height) const;
 
     void set(uint32_t clap_width, uint32_t clap_height,
              uint32_t image_width, uint32_t image_height);

@@ -2462,18 +2462,18 @@ int Box_clap::bottom_rounded(int image_height) const
   return bottom.round();
 }
 
-int Box_clap::get_width_rounded() const
+int Box_clap::get_width_rounded(int image_width) const
 {
-  int left = (Fraction(0, 1) - (m_clean_aperture_width - 1) / 2).round();
-  int right = ((m_clean_aperture_width - 1) / 2).round();
+  int left = left_rounded(image_width);
+  int right = right_rounded(image_width);
 
   return right + 1 - left;
 }
 
-int Box_clap::get_height_rounded() const
+int Box_clap::get_height_rounded(int image_height) const
 {
-  int top = (Fraction(0, 1) - (m_clean_aperture_height - 1) / 2).round();
-  int bottom = ((m_clean_aperture_height - 1) / 2).round();
+  int top = top_rounded(image_height);
+  int bottom = bottom_rounded(image_height);
 
   return bottom + 1 - top;
 }
