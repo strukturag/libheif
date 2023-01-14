@@ -522,7 +522,7 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     rav1eRange = nclx->get_full_range_flag() ? RA_PIXEL_RANGE_FULL : RA_PIXEL_RANGE_LIMITED;
   }
 
-  int bitDepth = image->image->get_bits_per_pixel(heif_channel_Y);
+  int bitDepth = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
 
   auto rav1eConfigRaw = rav1e_config_default();
@@ -607,11 +607,11 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   //} else
   {
     int strideY;
-    const uint8_t* Y = image->image->get_plane(heif_channel_Y, &strideY);
+    const uint8_t* Y = heif_image_get_plane_readonly(image, heif_channel_Y, &strideY);
     int strideCb;
-    const uint8_t* Cb = image->image->get_plane(heif_channel_Cb, &strideCb);
+    const uint8_t* Cb = heif_image_get_plane_readonly(image, heif_channel_Cb, &strideCb);
     int strideCr;
-    const uint8_t* Cr = image->image->get_plane(heif_channel_Cr, &strideCr);
+    const uint8_t* Cr = heif_image_get_plane_readonly(image, heif_channel_Cr, &strideCr);
 
     uint32_t height = image->image->get_height();
 
