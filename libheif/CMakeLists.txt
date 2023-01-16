@@ -64,7 +64,7 @@ target_compile_definitions(heif
 
 if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
     target_compile_definitions(heif PRIVATE ENABLE_PLUGIN_LOADING=1)
-    target_link_libraries(heif PRIVATE dl)
+    target_link_libraries(heif PRIVATE ${CMAKE_DL_LIBS})
 endif()
 
 add_subdirectory(plugins)
