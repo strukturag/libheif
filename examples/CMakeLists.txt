@@ -102,7 +102,7 @@ if (PNG_FOUND)
             encoder_png.h
             ../libheif/exif.h
             ../libheif/exif.cc)
-    target_link_libraries(heif-thumbnailer heif ${LIBPNG_LIBRARIES})
+    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES})
     target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
 
     install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
