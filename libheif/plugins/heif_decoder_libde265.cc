@@ -121,6 +121,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
   for (int c = 0; c < num_planes; c++) {
     if (de265_get_bits_per_pixel(de265img, c) != bpp) {
+      heif_image_release(*image);
       err = {heif_error_Unsupported_feature,
              heif_suberror_Unsupported_color_conversion,
              "Channels with different number of bits per pixel are not supported"};
@@ -133,6 +134,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
     if (w <= 0 || h <= 0) {
+      heif_image_release(*image);
       err = {heif_error_Decoder_plugin_error,
              heif_suberror_Invalid_image_size,
              kEmptyString};
@@ -141,6 +143,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
     err = heif_image_add_plane(*image, channel2plane[c], w,h, bpp);
     if (err.code) {
+      heif_image_release(*image);
       return err;
     }
 
