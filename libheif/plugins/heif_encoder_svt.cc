@@ -514,6 +514,7 @@ static void svt_set_default_parameters(void* encoder)
           svt_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
           break;
         case heif_encoder_parameter_type_string:
+          // NOLINTNEXTLINE(build/include_what_you_use)
           svt_set_parameter_string(encoder, param->name, param->string.default_value);
           break;
       }
