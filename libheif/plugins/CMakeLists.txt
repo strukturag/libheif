@@ -58,7 +58,7 @@ set(AOM_DECODER_sources heif_decoder_aom.cc heif_decoder_aom.h)
 set(AOM_DECODER_extra_plugin_sources)
 plugin_compilation(aomdec AOM AOM_DECODER AOM_DECODER)
 
-set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
+set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h heif_avif_utils.cc heif_avif_utils.h)
 set(AOM_ENCODER_extra_plugin_sources ../heif_avif.cc ../error.cc)
 plugin_compilation(aomenc AOM AOM_ENCODER AOM_ENCODER)
 
