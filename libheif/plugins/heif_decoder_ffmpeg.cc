@@ -20,8 +20,6 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_colorconversion.h"
-#include "libheif/heif_api_structs.h"
 #include "heif_decoder_ffmpeg.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -30,8 +28,7 @@
 
 #include <assert.h>
 #include <memory>
-
-using namespace heif;
+#include <map>
 
 extern "C" 
 {
@@ -70,6 +67,7 @@ struct ffmpeg_decoder
 };
 
 static const char kEmptyString[] = "";
+static const char kSuccess[] = "Success";
 
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 200;
 
@@ -218,11 +216,15 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
 
     if ((hvec_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hvec_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P)) //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
     {
-        std::shared_ptr<HeifPixelImage> yuv_img = std::make_shared<HeifPixelImage>();
-        yuv_img->create(hvec_frame->width,
+        heif_error err;
+        err = heif_image_create(hvec_frame->width,
             hvec_frame->height,
             heif_colorspace_YCbCr,
-            heif_chroma_420);
+            heif_chroma_420,
+            image);
+        if (err.code) {
+            return err;
+        }
 
         heif_channel channel2plane[3] = {
             heif_channel_Y,
@@ -241,21 +243,21 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
             int w = (channel == 0) ? hvec_frame->width : hvec_frame->width >> 1;
             int h = (channel == 0) ? hvec_frame->height : hvec_frame->height >> 1;
             if (w <= 0 || h <= 0) {
-                struct heif_error err = { heif_error_Decoder_plugin_error,
-                                         heif_suberror_Invalid_image_size,
-                                         kEmptyString };
+                heif_image_release(*image);
+                err = { heif_error_Decoder_plugin_error,
+                       heif_suberror_Invalid_image_size,
+                       kEmptyString };
                 return err;
             }
 
-            if (!yuv_img->add_plane(channel2plane[channel], w, h, bpp)) {
-                struct heif_error err = { heif_error_Memory_allocation_error,
-                                         heif_suberror_Unspecified,
-                                         "Cannot allocate memory for image plane" };
+            err = heif_image_add_plane(*image, channel2plane[channel], w, h, bpp);
+            if (err.code) {
+                heif_image_release(*image);
                 return err;
             }
 
             int dst_stride;
-            uint8_t* dst_mem = yuv_img->get_plane(channel2plane[channel], &dst_stride);
+            uint8_t* dst_mem = heif_image_get_plane(*image, channel2plane[channel], &dst_stride);
 
             int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -264,13 +266,7 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
             }
         }
 
-
-        *image = new heif_image;
-        (*image)->image = yuv_img;
-
-        struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
-        return err;
-
+        return { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
     }
     else
     {
@@ -429,7 +425,11 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
       parse_hvec_data_size -= ret;
 
       if (hvec_pkt->size)
-          hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
+      {
+          err = hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
+          if (err.code != heif_error_Ok)
+              return err;
+      }
   }
 
   AVCodecParameters* hvec_codecParam = avcodec_parameters_alloc();
