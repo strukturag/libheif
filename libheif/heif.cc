@@ -1162,6 +1162,20 @@ int heif_image_is_premultiplied_alpha(struct heif_image* image)
 }
 
 
+struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height)
+{
+  bool mem_alloc_success = image->image->extend_padding_to_size(min_physical_width, min_physical_height);
+  if (!mem_alloc_success) {
+    return heif_error{heif_error_Memory_allocation_error,
+                      heif_suberror_Unspecified,
+                      "Cannot allocate image memory."};
+  }
+  else {
+    return heif_error{heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
+  }
+}
+
+
 struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          struct heif_image** output,
                                          int width, int height,

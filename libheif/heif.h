@@ -1566,6 +1566,14 @@ void heif_image_set_premultiplied_alpha(struct heif_image* image,
 LIBHEIF_API
 int heif_image_is_premultiplied_alpha(struct heif_image* image);
 
+// This function extends the padding of the image so that it has at least the given physical size.
+// The padding border is filled with the pixels along the right/bottom border.
+// This function may be useful if you want to process the image, but have some external padding requirements.
+// The image size will not be modified if it is already larger/equal than the given physical size.
+// I.e. you cannot assume that after calling this function, the stride will be equal to min_physical_width.
+LIBHEIF_API
+struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height);
+
 
 
 // --- register plugins

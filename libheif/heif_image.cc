@@ -283,20 +283,20 @@ bool HeifPixelImage::extend_padding_to_size(int width, int height)
 
     // extend plane size
 
-    int nbytes = (plane->m_bit_depth + 7) / 8;
+    int bytes_per_pixel = (plane->m_bit_depth + 7) / 8;
 
     for (int y = 0; y < old_height; y++) {
       for (int x = old_width; x < subsampled_width; x++) {
-        memcpy(&plane->mem[y * plane->stride + x * nbytes],
-               &plane->mem[y * plane->stride + (plane->m_width - 1) * nbytes],
-               nbytes);
+        memcpy(&plane->mem[y * plane->stride + x * bytes_per_pixel],
+               &plane->mem[y * plane->stride + (plane->m_width - 1) * bytes_per_pixel],
+               bytes_per_pixel);
       }
     }
 
     for (int y = old_height; y < subsampled_height; y++) {
       memcpy(&plane->mem[y * plane->stride],
              &plane->mem[(plane->m_height - 1) * plane->stride],
-             subsampled_width * nbytes);
+             subsampled_width * bytes_per_pixel);
     }
   }
 
