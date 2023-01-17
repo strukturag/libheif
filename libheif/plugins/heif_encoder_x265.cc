@@ -20,8 +20,9 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_api_structs.h"
 #include "heif_encoder_x265.h"
+#include <memory>
+#include <sstream>
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -40,7 +41,6 @@ extern "C" {
 
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
 static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
-static const char* kError_out_of_memory = "Out of memory";
 
 
 enum parameter_type
@@ -790,9 +790,17 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   api->param_parse(param, "psy-rd", "1.0");
   api->param_parse(param, "psy-rdoq", "1.0");
 
-  auto nclx = image->image->get_color_profile_nclx();
+  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
+  if (err.code != heif_error_Ok) {
+    nclx = nullptr;
+  }
+
+  // make sure NCLX profile is deleted at end of function
+  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
+
   if (nclx) {
-    api->param_parse(param, "range", nclx->get_full_range_flag() ? "full" : "limited");
+    api->param_parse(param, "range", nclx->full_range_flag ? "full" : "limited");
   }
   else {
     api->param_parse(param, "range", "full");
@@ -804,19 +812,19 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
     {
       std::stringstream sstr;
-      sstr << nclx->get_colour_primaries();
+      sstr << nclx->color_primaries;
       api->param_parse(param, "colorprim", sstr.str().c_str());
     }
 
     {
       std::stringstream sstr;
-      sstr << nclx->get_transfer_characteristics();
+      sstr << nclx->transfer_characteristics;
       api->param_parse(param, "transfer", sstr.str().c_str());
     }
 
     {
       std::stringstream sstr;
-      sstr << nclx->get_matrix_coefficients();
+      sstr << nclx->matrix_coefficients;
       api->param_parse(param, "colormatrix", sstr.str().c_str());
     }
   }
@@ -869,13 +877,12 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   param->sourceWidth = rounded_size(param->sourceWidth);
   param->sourceHeight = rounded_size(param->sourceHeight);
 
-  bool success = image->image->extend_padding_to_size(param->sourceWidth, param->sourceHeight);
-  if (!success) {
-    struct heif_error err = {
-        heif_error_Memory_allocation_error,
-        heif_suberror_Unspecified,
-        kError_out_of_memory
-    };
+  // Note: it is ok to cast away the const, as the image content is not changed.
+  // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
+  err = heif_image_extend_padding_to_size(const_cast<struct heif_image*>(image),
+                                          param->sourceWidth,
+                                          param->sourceHeight);
+  if (err.code) {
     return err;
   }
 
