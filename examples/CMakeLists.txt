@@ -72,8 +72,8 @@ int main() {
 
     target_link_libraries(heif-convert PRIVATE ${JPEG_LIBRARIES})
     target_link_libraries(heif-enc PRIVATE ${JPEG_LIBRARIES})
-    target_add_include_directories(heif-convert ${JPEG_INCLUDE_DIR})
-    target_add_include_directories(heif-enc ${JPEG_INCLUDE_DIR})
+    target_include_directories(heif-convert PRIVATE ${JPEG_INCLUDE_DIR})
+    target_include_directories(heif-enc PRIVATE ${JPEG_INCLUDE_DIR})
 
     target_sources(heif-convert PRIVATE encoder_jpeg.cc encoder_jpeg.h)
 endif ()
@@ -85,8 +85,8 @@ if (PNG_FOUND)
 
     target_link_libraries(heif-convert PRIVATE ${PNG_LIBRARIES})
     target_link_libraries(heif-enc PRIVATE ${PNG_LIBRARIES})
-    target_add_include_directories(heif-convert ${PNG_INCLUDE_DIR})
-    target_add_include_directories(heif-enc ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-convert PRIVATE ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-enc PRIVATE ${PNG_INCLUDE_DIR})
 
     target_sources(heif-convert PRIVATE encoder_png.cc encoder_png.h)
 endif ()
