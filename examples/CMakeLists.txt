@@ -54,6 +54,8 @@ if (JPEG_FOUND)
 
     include(${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
 
+    # this is needed for CheckCXXSourceCompiles
+    set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
     check_cxx_source_compiles("
 #include <stddef.h>
 #include <stdio.h>
