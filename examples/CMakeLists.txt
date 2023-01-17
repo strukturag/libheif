@@ -93,7 +93,7 @@ if (PNG_FOUND)
 endif ()
 
 
-if (LIBPNG_FOUND)
+if (PNG_FOUND)
     add_executable(heif-thumbnailer
             encoder.cc
             encoder.h
