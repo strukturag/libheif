@@ -21,7 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_limits.h"
-#include "libheif/heif_image.h"
+#include "libheif/common_utils.h"
 #include "heif_decoder_dav1d.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -31,6 +31,7 @@
 #include <memory>
 #include <cstring>
 #include <cassert>
+#include <cstdio>
 
 #include <dav1d/version.h>
 #include <dav1d/dav1d.h>
@@ -44,6 +45,7 @@ struct dav1d_decoder
 };
 
 static const char kEmptyString[] = "";
+static const char kSuccess[] = "Success";
 
 static const int DAV1D_PLUGIN_PRIORITY = 150;
 
@@ -264,8 +266,8 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     int stride = (int) frame.stride[c > 0 ? 1 : 0];
 
     int w, h;
-    heif::get_subsampled_size(frame.p.w, frame.p.h,
-                              channel2plane[c], chroma, &w, &h);
+    get_subsampled_size(frame.p.w, frame.p.h,
+                        channel2plane[c], chroma, &w, &h);
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
     if (err.code != heif_error_Ok) {
@@ -312,7 +314,6 @@ const struct heif_decoder_plugin* get_decoder_plugin_dav1d()
 {
   return &decoder_dav1d;
 }
-
 
 
 #if PLUGIN_DAV1D
