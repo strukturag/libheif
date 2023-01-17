@@ -72,8 +72,8 @@ int main() {
 
     target_link_libraries(heif-convert PRIVATE ${JPEG_LIBRARIES})
     target_link_libraries(heif-enc PRIVATE ${JPEG_LIBRARIES})
-    target_include_directories(heif-convert PRIVATE ${JPEG_INCLUDE_DIR})
-    target_include_directories(heif-enc PRIVATE ${JPEG_INCLUDE_DIR})
+    target_include_directories(heif-convert PRIVATE ${JPEG_INCLUDE_DIRS})
+    target_include_directories(heif-enc PRIVATE ${JPEG_INCLUDE_DIRS})
 
     target_sources(heif-convert PRIVATE encoder_jpeg.cc encoder_jpeg.h)
 endif ()
