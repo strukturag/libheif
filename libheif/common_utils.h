@@ -18,13 +18,24 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_AVIF_UTILS_H
-#define LIBHEIF_HEIF_AVIF_UTILS_H
+#ifndef LIBHEIF_COMMON_UTILS_H
+#define LIBHEIF_COMMON_UTILS_H
 
 #include <cinttypes>
 #include <libheif/heif.h>
 
+// Functions for common use in libheif and the plugins.
+
+uint8_t chroma_h_subsampling(heif_chroma c);
+
+uint8_t chroma_v_subsampling(heif_chroma c);
+
+void get_subsampled_size(int width, int height,
+                         heif_channel channel,
+                         heif_chroma chroma,
+                         int* subsampled_width, int* subsampled_height);
+
 uint8_t compute_avif_profile(int bits_per_pixel, heif_chroma chroma);
 
 
-#endif //LIBHEIF_HEIF_AVIF_UTILS_H
+#endif //LIBHEIF_COMMON_UTILS_H

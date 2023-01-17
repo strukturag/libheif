@@ -21,7 +21,7 @@
 #include "heif_image.h"
 #include "heif_avif.h"
 #include "bitstream.h"
-#include "plugins/heif_avif_utils.h"
+#include "common_utils.h"
 #include <limits>
 
 using namespace heif;

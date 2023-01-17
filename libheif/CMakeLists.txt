@@ -39,8 +39,8 @@ add_library(heif
     logging.h
     metadata_compression.cc
     metadata_compression.h
-    plugins/heif_avif_utils.cc
-    plugins/heif_avif_utils.h
+    common_utils.cc
+    common_utils.h
     ${libheif_headers}
     )
 

@@ -87,8 +87,8 @@ libheif_la_SOURCES = \
   metadata_compression.cc \
   nclx.cc \
   nclx.h \
-  plugins/heif_avif_utils.cc \
-  plugins/heif_avif_utils.h
+  common_utils.cc \
+  common_utils.h
 
 if HAVE_AOM_DECODER
 libheif_la_SOURCES += \

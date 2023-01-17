@@ -35,16 +35,7 @@
 
 namespace heif {
 
-  uint8_t chroma_h_subsampling(heif_chroma c);
-
-  uint8_t chroma_v_subsampling(heif_chroma c);
-
   heif_chroma chroma_from_subsampling(int h, int v);
-
-  void get_subsampled_size(int width, int height,
-                           heif_channel channel,
-                           heif_chroma chroma,
-                           int* subsampled_width, int* subsampled_height);
 
   bool is_chroma_with_alpha(heif_chroma chroma);
 
