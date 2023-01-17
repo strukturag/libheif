@@ -20,7 +20,6 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_api_structs.h"
 #include "heif_encoder_svt.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -31,7 +30,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
-#include <string>
+#include <memory>
 
 #include "svt-av1/EbSvtAv1.h"
 #include "svt-av1/EbSvtAv1Enc.h"
@@ -580,7 +579,14 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   uint32_t encoded_width, encoded_height;
   svt_query_encoded_size(encoder_raw, w, h, &encoded_width, &encoded_height);
 
-  image->image->extend_padding_to_size(encoded_width, encoded_height);
+  // Note: it is ok to cast away the const, as the image content is not changed.
+  // However, we have to guarantee that there are no plane pointers or stride values kept over calling the svt_encode_image() function.
+  heif_error err = heif_image_extend_padding_to_size(const_cast<struct heif_image*>(image),
+                                                     (int) encoded_width,
+                                                     (int) encoded_height);
+  if (err.code) {
+    return err;
+  }
 
   const heif_chroma chroma = heif_image_get_chroma_format(image);
   int bitdepth_y = heif_image_get_bits_per_pixel(image, heif_channel_Y);
@@ -630,14 +636,22 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.encoder_bit_depth = (uint8_t) bitdepth_y;
   //svt_config.is_16bit_pipeline = bitdepth_y > 8;
 
-  auto nclx = image->image->get_color_profile_nclx();
+  struct heif_color_profile_nclx* nclx = nullptr;
+  err = heif_image_get_nclx_color_profile(image, &nclx);
+  if (err.code != heif_error_Ok) {
+    nclx = nullptr;
+  }
+
+  // make sure NCLX profile is deleted at end of function
+  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
+
   if (nclx) {
     svt_config.color_description_present_flag = true;
 #if SVT_AV1_VERSION_MAJOR == 1
-    svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->get_colour_primaries());
-    svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->get_transfer_characteristics());
-    svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->get_matrix_coefficients());
-    svt_config.color_range = nclx->get_full_range_flag() ? EB_CR_FULL_RANGE : EB_CR_STUDIO_RANGE;
+    svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->color_primaries);
+    svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->transfer_characteristics);
+    svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->matrix_coefficients);
+    svt_config.color_range = nclx->full_range_flag ? EB_CR_FULL_RANGE : EB_CR_STUDIO_RANGE;
 #else
     svt_config.color_primaries = static_cast<uint8_t>(nclx->get_colour_primaries());
     svt_config.transfer_characteristics = static_cast<uint8_t>(nclx->get_transfer_characteristics());
@@ -648,9 +662,9 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 
     // Follow comment in svt header: set if input is HDR10 BT2020 using SMPTE ST2084.
     svt_config.high_dynamic_range_input = (bitdepth_y == 10 && // TODO: should this be >8 ?
-                                           nclx->get_colour_primaries() == heif_color_primaries_ITU_R_BT_2020_2_and_2100_0 &&
-                                           nclx->get_transfer_characteristics() == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ &&
-                                           nclx->get_matrix_coefficients() == heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance);
+                                           nclx->color_primaries == heif_color_primaries_ITU_R_BT_2020_2_and_2100_0 &&
+                                           nclx->transfer_characteristics == heif_transfer_characteristic_ITU_R_BT_2100_0_PQ &&
+                                           nclx->matrix_coefficients == heif_matrix_coefficients_ITU_R_BT_2020_2_non_constant_luminance);
   }
   else {
     svt_config.color_description_present_flag = false;
