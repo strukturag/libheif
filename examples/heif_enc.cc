@@ -158,7 +158,7 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth # bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif        encode as AVIF\n"
-            << "      --list-encoders         list all available encoders for the selected output format\n"
+            << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR  load all codec plugins in the directory\n"
             << "  -E, --even-size   [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
@@ -1143,22 +1143,58 @@ void set_params(struct heif_encoder* encoder, const std::vector<std::string>& pa
 }
 
 
-static void show_list_of_encoders(const heif_encoder_descriptor*const* encoder_descriptors,
+static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_descriptors,
                                   int count)
 {
-  std::cout << "Encoders (first is default):\n";
   for (int i = 0; i < count; i++) {
     std::cout << "- " << heif_encoder_descriptor_get_id_name(encoder_descriptors[i])
               << " = "
-              << heif_encoder_descriptor_get_name(encoder_descriptors[i])
-              << "\n";
+              << heif_encoder_descriptor_get_name(encoder_descriptors[i]);
+
+    if (i==0) {
+      std::cout << " [default]";
+    }
+
+    std::cout << "\n";
   }
 }
 
 
-class LibHeifInitializer {
+static void show_list_of_all_encoders(heif_context* context)
+{
+  for (auto compression_format : {heif_compression_AV1, heif_compression_HEVC}) {
+
+    switch (compression_format) {
+      case heif_compression_AV1:
+        std::cout << "AVIF";
+        break;
+      case heif_compression_HEVC:
+        std::cout << "HEIC";
+        break;
+      default:
+        assert(false);
+    }
+
+    std::cout << " encoders:\n";
+
+#define MAX_ENCODERS 10
+    const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
+    int count = heif_context_get_encoder_descriptors(context,
+                                                     compression_format,
+                                                     nullptr,
+                                                     encoder_descriptors, MAX_ENCODERS);
+#undef MAX_ENCODERS
+
+    show_list_of_encoders(encoder_descriptors, count);
+  }
+}
+
+
+class LibHeifInitializer
+{
 public:
   LibHeifInitializer() { heif_init(nullptr); }
+
   ~LibHeifInitializer() { heif_deinit(); }
 };
 
@@ -1279,25 +1315,30 @@ int main(int argc, char** argv)
 
   struct heif_encoder* encoder = nullptr;
 
-#define MAX_ENCODERS 5
+  if (list_encoders) {
+    show_list_of_all_encoders(context.get());
+    return 0;
+  }
+
+#define MAX_ENCODERS 10
   const heif_encoder_descriptor* encoder_descriptors[MAX_ENCODERS];
   int count = heif_context_get_encoder_descriptors(context.get(),
                                                    enc_av1f ? heif_compression_AV1 : heif_compression_HEVC,
                                                    nullptr,
                                                    encoder_descriptors, MAX_ENCODERS);
-
-  if (list_encoders) {
-    show_list_of_encoders(encoder_descriptors, count);
-    return 0;
-  }
+#undef MAX_ENCODERS
 
   const heif_encoder_descriptor* active_encoder_descriptor = nullptr;
   if (count > 0) {
     int idx = 0;
     if (encoderId != nullptr) {
       for (int i = 0; i <= count; i++) {
-        if (i==count) {
+        if (i == count) {
           std::cerr << "Unknown encoder ID. Choose one from the list below.\n";
+          if (!enc_av1f) {
+            std::cerr << "If you intended to encode to AVIF, please don't forget the -A option.\n";
+          }
+
           show_list_of_encoders(encoder_descriptors, count);
           return 5;
         }
