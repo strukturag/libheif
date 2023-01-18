@@ -1,34 +1,63 @@
 # Needed to find libheif/heif_version.h while compiling the library
 include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
 
-set (heif_convert_sources
-  encoder.cc
-  encoder.h
-  encoder_y4m.cc
-  encoder_y4m.h
-  heif_convert.cc
-  ../libheif/exif.cc
-  ../libheif/exif.cc
-)
+if (MSVC)
+    set(getopt_sources
+            ../extra/getopt.c
+            ../extra/getopt.h
+            ../extra/getopt_long.c
+            )
+    include_directories("../extra")
+endif ()
 
-set (additional_link_directories)
-set (additional_libraries)
-set (additional_includes)
 
-include (${CMAKE_ROOT}/Modules/FindJPEG.cmake)
+add_executable(heif-info ${getopt_sources}
+        heif_info.cc)
+target_link_libraries(heif-info heif)
+install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-if(JPEG_FOUND)
-add_definitions(-DHAVE_LIBJPEG=1)
-include_directories(SYSTEM ${JPEG_INCLUDE_DIR})
 
-include (${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
+add_executable(heif-convert ${getopt_sources}
+        encoder.cc
+        encoder.h
+        encoder_y4m.cc
+        encoder_y4m.h
+        heif_convert.cc
+        ../libheif/exif.cc
+        ../libheif/exif.cc)
+target_link_libraries(heif-convert PRIVATE heif)
+install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES heif-convert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
 
-# while the docs say JPEG_INCLUDE_DIRS, my FindJPEG.cmake script returns it in JPEG_INCLUDE_DIR
-set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS} ${JPEG_INCLUDE_DIR})
+add_executable(heif-enc ${getopt_sources}
+        heif_enc.cc
+        ../libheif/exif.cc
+        ../libheif/exif.cc
+        benchmark.h
+        benchmark.cc
+        encoder.cc)
+target_link_libraries(heif-enc PRIVATE heif)
+install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-check_cxx_source_compiles("
+
+add_executable(heif-test ${getopt_sources}
+        heif_test.cc)
+target_link_libraries(heif-test heif)
+
+
+find_package(JPEG)
+if (JPEG_FOUND)
+    add_definitions(-DHAVE_LIBJPEG=1)
+
+    include(${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
+
+    # this is needed for CheckCXXSourceCompiles
+    set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
+    set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS})
+    check_cxx_source_compiles("
 #include <stddef.h>
 #include <stdio.h>
 #include <jpeglib.h>
@@ -38,114 +67,44 @@ int main() {
   return 0;
 }
 " HAVE_JPEG_WRITE_ICC_PROFILE)
-if(HAVE_JPEG_WRITE_ICC_PROFILE)
-  add_definitions(-DHAVE_JPEG_WRITE_ICC_PROFILE=1)
-endif()
+    if (HAVE_JPEG_WRITE_ICC_PROFILE)
+        add_definitions(-DHAVE_JPEG_WRITE_ICC_PROFILE=1)
+    endif ()
 
-set (heif_convert_sources
-  ${heif_convert_sources}
-  encoder_jpeg.cc
-  encoder_jpeg.h
-)
-set (additional_libraries
-  ${additional_libraries}
-  ${JPEG_LIBRARIES}
-)
-set (additional_includes
-  ${additional_includes}
-  ${JPEG_INCLUDE_DIRS}
-  ${JPEG_INCLUDE_DIR}
-)
-endif()
+    target_link_libraries(heif-convert PRIVATE ${JPEG_LIBRARIES})
+    target_link_libraries(heif-enc PRIVATE ${JPEG_LIBRARIES})
+    target_include_directories(heif-convert PRIVATE ${JPEG_INCLUDE_DIRS})
+    target_include_directories(heif-enc PRIVATE ${JPEG_INCLUDE_DIRS})
 
-if(UNIX OR MINGW)
-  include (${CMAKE_ROOT}/Modules/FindPkgConfig.cmake)
-  pkg_check_modules (LIBPNG libpng)
-  if(LIBPNG_FOUND)
+    target_sources(heif-convert PRIVATE encoder_jpeg.cc encoder_jpeg.h)
+endif ()
+
+
+find_package(PNG)
+if (PNG_FOUND)
     add_definitions(-DHAVE_LIBPNG=1)
-    set (heif_convert_sources
-      ${heif_convert_sources}
-      encoder_png.cc
-      encoder_png.h
-            benchmark.h benchmark.cc)
-    set (additional_link_directories
-      ${additional_link_directories}
-      ${LIBPNG_LIBRARY_DIRS}
-    )
-    set (additional_libraries
-      ${additional_libraries}
-      ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES}
-    )
-    set (additional_includes
-      ${additional_includes}
-      ${LIBPNG_INCLUDE_DIRS}
-    )
-  endif()
-endif()
 
-set (heif_info_sources
-  heif_info.cc
-)
+    target_link_libraries(heif-convert PRIVATE ${PNG_LIBRARIES})
+    target_link_libraries(heif-enc PRIVATE ${PNG_LIBRARIES})
+    target_include_directories(heif-convert PRIVATE ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-enc PRIVATE ${PNG_INCLUDE_DIR})
 
-set (heif_enc_sources
-  heif_enc.cc
-  ../libheif/exif.cc
-  ../libheif/exif.cc
-  benchmark.h
-  benchmark.cc
-)
-
-set (heif_test_sources
-  heif_test.cc
-)
-
-if(MSVC)
-  set (getopt_sources
-    ../extra/getopt.c
-    ../extra/getopt.h
-    ../extra/getopt_long.c
-  )
-  include_directories ("../extra")
-endif()
-
-add_executable (heif-convert ${heif_convert_sources} ${getopt_sources})
-target_link_directories (heif-convert PRIVATE ${additional_link_directories})
-target_link_libraries (heif-convert heif ${additional_libraries})
-target_include_directories(heif-convert PRIVATE ${additional_includes})
-install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES heif-convert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-
-add_executable (heif-info ${heif_info_sources} ${getopt_sources})
-target_link_libraries (heif-info heif)
-install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-
-add_executable (heif-enc ${heif_enc_sources} ${getopt_sources})
-target_link_directories (heif-enc PRIVATE ${additional_link_directories})
-target_link_libraries (heif-enc heif ${additional_libraries})
-target_include_directories(heif-enc PRIVATE ${additional_includes})
-install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-
-add_executable (heif-test ${heif_test_sources} ${getopt_sources})
-target_link_libraries (heif-test heif)
+    target_sources(heif-convert PRIVATE encoder_png.cc encoder_png.h)
+endif ()
 
 
-if(LIBPNG_FOUND)
-  set (heif_thumbnailer_sources
-    encoder.cc
-    encoder.h
-    heif_thumbnailer.cc
-    encoder_png.cc
-    encoder_png.h
-    ../libheif/exif.h
-    ../libheif/exif.cc
-    )
+if (PNG_FOUND)
+    add_executable(heif-thumbnailer
+            encoder.cc
+            encoder.h
+            heif_thumbnailer.cc
+            encoder_png.cc
+            encoder_png.h
+            ../libheif/exif.h
+            ../libheif/exif.cc)
+    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES})
+    target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
 
-  add_executable (heif-thumbnailer ${heif_thumbnailer_sources})
-  target_link_directories (heif-thumbnailer PRIVATE ${LIBPNG_LIBRARY_DIRS})
-  target_link_libraries (heif-thumbnailer heif ${LIBPNG_LINK_LIBRARIES} ${LIBPNG_LIBRARIES})
-  target_include_directories(heif-thumbnailer PRIVATE ${LIBPNG_INCLUDE_DIRS})
-  install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-endif()
+    install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+endif ()
