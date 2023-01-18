@@ -52,7 +52,7 @@ find_package(JPEG)
 if (JPEG_FOUND)
     add_definitions(-DHAVE_LIBJPEG=1)
 
-    include(${CMAKE_ROOT}/Modules/CheckCXXSourceCompiles.cmake)
+    include(CheckCXXSourceCompiles)
 
     # this is needed for CheckCXXSourceCompiles
     set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARIES})
@@ -67,6 +67,9 @@ int main() {
   return 0;
 }
 " HAVE_JPEG_WRITE_ICC_PROFILE)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    unset(CMAKE_REQUIRED_INCLUDES)
+
     if (HAVE_JPEG_WRITE_ICC_PROFILE)
         add_definitions(-DHAVE_JPEG_WRITE_ICC_PROFILE=1)
     endif ()
