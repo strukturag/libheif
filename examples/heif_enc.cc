@@ -1196,7 +1196,7 @@ bool ends_with(const std::string& str, const std::string& end)
     return false;
   }
   else {
-    return str.compare(str.length() - end.length(), end.length(), end);
+    return str.compare(str.length() - end.length(), end.length(), end) == 0;
   }
 }
 
