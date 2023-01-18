@@ -151,7 +151,7 @@ You can build and install libheif using the [vcpkg](https://github.com/Microsoft
 ```
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
-./bootstrap-vcpkg.sh
+./bootstrap-vcpkg.bat
 ./vcpkg integrate install
 ./vcpkg install libheif
 ```
