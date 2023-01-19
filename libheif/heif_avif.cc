@@ -21,6 +21,7 @@
 #include "heif_image.h"
 #include "heif_avif.h"
 #include "bitstream.h"
+#include "common_utils.h"
 #include <limits>
 
 using namespace heif;
@@ -33,20 +34,7 @@ Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, const
   int bpp = image->get_bits_per_pixel(heif_channel_Y);
   heif_chroma chroma = image->get_chroma_format();
 
-  uint8_t profile;
-
-  if (bpp <= 10 &&
-      (chroma == heif_chroma_420 ||
-       chroma == heif_chroma_monochrome)) {
-    profile = 0;
-  }
-  else if (bpp <= 10 &&
-           chroma == heif_chroma_444) {
-    profile = 1;
-  }
-  else {
-    profile = 2;
-  }
+  uint8_t profile = compute_avif_profile(bpp, chroma);
 
   int width = image->get_width(heif_channel_Y);
   int height = image->get_height(heif_channel_Y);

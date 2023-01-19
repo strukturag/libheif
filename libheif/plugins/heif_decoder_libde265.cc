@@ -20,8 +20,8 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_colorconversion.h"
-#include "libheif/heif_api_structs.h"
+//#include "libheif/heif_colorconversion.h"
+//#include "libheif/heif_api_structs.h"
 #include "heif_decoder_libde265.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -34,7 +34,6 @@
 
 #include <libde265/de265.h>
 
-using namespace heif;
 
 
 struct libde265_decoder
@@ -44,6 +43,7 @@ struct libde265_decoder
 };
 
 static const char kEmptyString[] = "";
+static const char kSuccess[] = "Success";
 
 static const int LIBDE265_PLUGIN_PRIORITY = 100;
 
@@ -96,11 +96,15 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 {
   bool is_mono = (de265_get_chroma_format(de265img) == de265_chroma_mono);
 
-  std::shared_ptr<HeifPixelImage> yuv_img = std::make_shared<HeifPixelImage>();
-  yuv_img->create(de265_get_image_width(de265img, 0),
-                  de265_get_image_height(de265img, 0),
-                  is_mono ? heif_colorspace_monochrome : heif_colorspace_YCbCr,
-                  (heif_chroma) de265_get_chroma_format(de265img));
+  heif_error err;
+  err = heif_image_create(de265_get_image_width(de265img, 0),
+                          de265_get_image_height(de265img, 0),
+                          is_mono ? heif_colorspace_monochrome : heif_colorspace_YCbCr,
+                          (heif_chroma) de265_get_chroma_format(de265img),
+                          image);
+  if (err.code) {
+    return err;
+  }
 
   // --- transfer data from de265_image to HeifPixelImage
 
@@ -117,9 +121,10 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
 
   for (int c = 0; c < num_planes; c++) {
     if (de265_get_bits_per_pixel(de265img, c) != bpp) {
-      struct heif_error err = {heif_error_Unsupported_feature,
-                               heif_suberror_Unsupported_color_conversion,
-                               "Channels with different number of bits per pixel are not supported"};
+      heif_image_release(*image);
+      err = {heif_error_Unsupported_feature,
+             heif_suberror_Unsupported_color_conversion,
+             "Channels with different number of bits per pixel are not supported"};
       return err;
     }
 
@@ -129,21 +134,21 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
     int w = de265_get_image_width(de265img, c);
     int h = de265_get_image_height(de265img, c);
     if (w <= 0 || h <= 0) {
-      struct heif_error err = {heif_error_Decoder_plugin_error,
-                               heif_suberror_Invalid_image_size,
-                               kEmptyString};
+      heif_image_release(*image);
+      err = {heif_error_Decoder_plugin_error,
+             heif_suberror_Invalid_image_size,
+             kEmptyString};
       return err;
     }
 
-    if (!yuv_img->add_plane(channel2plane[c], w, h, bpp)) {
-      struct heif_error err = {heif_error_Memory_allocation_error,
-                               heif_suberror_Unspecified,
-                               "Cannot allocate memory for image plane"};
+    err = heif_image_add_plane(*image, channel2plane[c], w,h, bpp);
+    if (err.code) {
+      heif_image_release(*image);
       return err;
     }
 
     int dst_stride;
-    uint8_t* dst_mem = yuv_img->get_plane(channel2plane[c], &dst_stride);
+    uint8_t* dst_mem = heif_image_get_plane(*image, channel2plane[c], &dst_stride);
 
     int bytes_per_pixel = (bpp + 7) / 8;
 
@@ -153,11 +158,7 @@ static struct heif_error convert_libde265_image_to_heif_image(struct libde265_de
   }
 
 
-  *image = new heif_image;
-  (*image)->image = yuv_img;
-
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
-  return err;
+  return {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 }
 
 

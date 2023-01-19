@@ -21,6 +21,7 @@
 
 #include "heif_image.h"
 #include "heif_colorconversion.h"
+#include "common_utils.h"
 
 #include <cassert>
 #include <cstring>
@@ -29,44 +30,6 @@
 
 using namespace heif;
 
-
-uint8_t heif::chroma_h_subsampling(heif_chroma c)
-{
-  switch (c) {
-    case heif_chroma_monochrome:
-    case heif_chroma_444:
-      return 1;
-
-    case heif_chroma_420:
-    case heif_chroma_422:
-      return 2;
-
-    case heif_chroma_interleaved_RGB:
-    case heif_chroma_interleaved_RGBA:
-    default:
-      assert(false);
-      return 0;
-  }
-}
-
-uint8_t heif::chroma_v_subsampling(heif_chroma c)
-{
-  switch (c) {
-    case heif_chroma_monochrome:
-    case heif_chroma_444:
-    case heif_chroma_422:
-      return 1;
-
-    case heif_chroma_420:
-      return 2;
-
-    case heif_chroma_interleaved_RGB:
-    case heif_chroma_interleaved_RGBA:
-    default:
-      assert(false);
-      return 0;
-  }
-}
 
 heif_chroma heif::chroma_from_subsampling(int h, int v)
 {
@@ -227,28 +190,6 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, int bit_depth, hei
 }
 
 
-void heif::get_subsampled_size(int width, int height,
-                               heif_channel channel,
-                               heif_chroma chroma,
-                               int* subsampled_width, int* subsampled_height)
-{
-  if (channel == heif_channel_Cb ||
-      channel == heif_channel_Cr) {
-    uint8_t chromaSubH = chroma_h_subsampling(chroma);
-    uint8_t chromaSubV = chroma_v_subsampling(chroma);
-
-    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
-    *subsampled_width = (width + chromaSubH - 1) / chromaSubH;
-    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
-    *subsampled_height = (height + chromaSubV - 1) / chromaSubV;
-  }
-  else {
-    *subsampled_width = width;
-    *subsampled_height = height;
-  }
-}
-
-
 bool HeifPixelImage::extend_padding_to_size(int width, int height)
 {
   for (auto& planeIter : m_planes) {
@@ -283,20 +224,20 @@ bool HeifPixelImage::extend_padding_to_size(int width, int height)
 
     // extend plane size
 
-    int nbytes = (plane->m_bit_depth + 7) / 8;
+    int bytes_per_pixel = (plane->m_bit_depth + 7) / 8;
 
     for (int y = 0; y < old_height; y++) {
       for (int x = old_width; x < subsampled_width; x++) {
-        memcpy(&plane->mem[y * plane->stride + x * nbytes],
-               &plane->mem[y * plane->stride + (plane->m_width - 1) * nbytes],
-               nbytes);
+        memcpy(&plane->mem[y * plane->stride + x * bytes_per_pixel],
+               &plane->mem[y * plane->stride + (plane->m_width - 1) * bytes_per_pixel],
+               bytes_per_pixel);
       }
     }
 
     for (int y = old_height; y < subsampled_height; y++) {
       memcpy(&plane->mem[y * plane->stride],
              &plane->mem[(plane->m_height - 1) * plane->stride],
-             subsampled_width * nbytes);
+             subsampled_width * bytes_per_pixel);
     }
   }
 

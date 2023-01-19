@@ -2464,18 +2464,12 @@ int Box_clap::bottom_rounded(int image_height) const
 
 int Box_clap::get_width_rounded() const
 {
-  int left = (Fraction(0, 1) - (m_clean_aperture_width - 1) / 2).round();
-  int right = ((m_clean_aperture_width - 1) / 2).round();
-
-  return right + 1 - left;
+  return m_clean_aperture_width.round();
 }
 
 int Box_clap::get_height_rounded() const
 {
-  int top = (Fraction(0, 1) - (m_clean_aperture_height - 1) / 2).round();
-  int bottom = ((m_clean_aperture_height - 1) / 2).round();
-
-  return bottom + 1 - top;
+  return m_clean_aperture_height.round();
 }
 
 void Box_clap::set(uint32_t clap_width, uint32_t clap_height,

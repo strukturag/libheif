@@ -20,8 +20,7 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_avif.h"
-#include "libheif/heif_api_structs.h"
+#include "libheif/common_utils.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -32,6 +31,7 @@
 #include <cassert>
 #include <vector>
 #include <string>
+#include <memory>
 #include "heif_encoder_aom.h"
 
 #include <aom/aom_encoder.h>
@@ -858,8 +858,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     return err;
   }
 
-  heif::Box_av1C::configuration inout_config;
-  heif::fill_av1C_configuration(&inout_config, image->image);
+  int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel(image, heif_channel_Y),
+                                     heif_image_get_chroma_format(image));
 
   cfg.g_w = source_width;
   cfg.g_h = source_height;
@@ -880,7 +880,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // Tell libaom that all frames will be key frames.
   cfg.kf_max_dist = 0;
 
-  cfg.g_profile = inout_config.seq_profile;
+  cfg.g_profile = seq_profile;
   cfg.g_bit_depth = (aom_bit_depth_t) bpp_y;
   cfg.g_input_bit_depth = bpp_y;
 
@@ -938,18 +938,25 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
 
 
-  auto nclx = image->image->get_color_profile_nclx();
+  struct heif_color_profile_nclx* nclx = nullptr;
+  err = heif_image_get_nclx_color_profile(image, &nclx);
+  if (err.code != heif_error_Ok) {
+    nclx = nullptr;
+  }
+
+  // make sure NCLX profile is deleted at end of function
+  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
   // In aom, color_range defaults to limited range (0). Set it to full range (1).
-  aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->get_full_range_flag() : 1);
+  aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1);
   aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position);
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->get_colour_primaries());
-    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->get_matrix_coefficients());
-    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->get_transfer_characteristics());
+    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries);
+    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients);
+    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics);
   }
 
   aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);

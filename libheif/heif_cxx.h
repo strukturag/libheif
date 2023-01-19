@@ -286,6 +286,9 @@ namespace heif {
 
     void set_color_primaries(heif_color_primaries cp);
 
+    // DEPRECATED: typo in function name. Use set_color_primaries() instead.
+    void set_color_primaties(heif_color_primaries cp);
+
     void set_transfer_characteristics(heif_transfer_characteristics tc);
 
     void set_matrix_coefficients(heif_matrix_coefficients mc);
@@ -813,6 +816,9 @@ namespace heif {
 
   inline void ColorProfile_nclx::set_color_primaries(heif_color_primaries cp)
   { mProfile->color_primaries = cp; }
+
+  inline void ColorProfile_nclx::set_color_primaties(heif_color_primaries cp)
+  { set_color_primaries(cp); }
 
   inline void ColorProfile_nclx::set_transfer_characteristics(heif_transfer_characteristics tc)
   { mProfile->transfer_characteristics = tc; }

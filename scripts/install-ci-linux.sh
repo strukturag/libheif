@@ -194,7 +194,7 @@ if [ "$WITH_DAV1D" = "1" ]; then
 fi
 
 if [ "$WITH_RAV1E" = "1" ]; then
-    cargo install --force cargo-c
+    cargo install --force cargo-c@0.9.14+cargo-0.66
 
     export PATH="$PATH:$HOME/.cargo/bin"
     cd third-party

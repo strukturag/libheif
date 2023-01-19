@@ -20,8 +20,6 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/heif_avif.h"
-#include "libheif/heif_api_structs.h"
 #include "heif_encoder_rav1e.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -516,14 +514,21 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     }
   }
 
-  rav1eRange = RA_PIXEL_RANGE_FULL;
-  auto nclx = image->image->get_color_profile_nclx();
-  if (nclx) {
-    rav1eRange = nclx->get_full_range_flag() ? RA_PIXEL_RANGE_FULL : RA_PIXEL_RANGE_LIMITED;
+  struct heif_color_profile_nclx* nclx = nullptr;
+  heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
+  if (err.code != heif_error_Ok) {
+    nclx = nullptr;
   }
 
-  int bitDepth = image->image->get_bits_per_pixel(heif_channel_Y);
+  // make sure NCLX profile is deleted at end of function
+  auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
+  rav1eRange = RA_PIXEL_RANGE_FULL;
+  if (nclx) {
+    rav1eRange = nclx->full_range_flag ? RA_PIXEL_RANGE_FULL : RA_PIXEL_RANGE_LIMITED;
+  }
+
+  int bitDepth = heif_image_get_bits_per_pixel(image, heif_channel_Y);
 
   auto rav1eConfigRaw = rav1e_config_default();
   auto rav1eConfig = std::shared_ptr<RaConfig>(rav1eConfigRaw, [](RaConfig* c) { rav1e_config_unref(c); });
@@ -535,10 +540,10 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   if (rav1e_config_parse(rav1eConfig.get(), "still_picture", "true") == -1) {
     return heif_error_codec_library_error;
   }
-  if (rav1e_config_parse_int(rav1eConfig.get(), "width", image->image->get_width()) == -1) {
+  if (rav1e_config_parse_int(rav1eConfig.get(), "width", heif_image_get_width(image, heif_channel_Y)) == -1) {
     return heif_error_codec_library_error;
   }
-  if (rav1e_config_parse_int(rav1eConfig.get(), "height", image->image->get_height()) == -1) {
+  if (rav1e_config_parse_int(rav1eConfig.get(), "height", heif_image_get_height(image, heif_channel_Y)) == -1) {
     return heif_error_codec_library_error;
   }
   if (rav1e_config_parse_int(rav1eConfig.get(), "threads", encoder->threads) == -1) {
@@ -549,9 +554,9 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
     if (rav1e_config_set_color_description(rav1eConfig.get(),
-                                           (RaMatrixCoefficients) nclx->get_matrix_coefficients(),
-                                           (RaColorPrimaries) nclx->get_colour_primaries(),
-                                           (RaTransferCharacteristics) nclx->get_transfer_characteristics()) == -1) {
+                                           (RaMatrixCoefficients) nclx->matrix_coefficients,
+                                           (RaColorPrimaries) nclx->color_primaries,
+                                           (RaTransferCharacteristics) nclx->transfer_characteristics) == -1) {
       return heif_error_codec_library_error;
     }
   }
@@ -582,12 +587,11 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
     }
   }
 
-  auto colorProfile = image->image->get_color_profile_nclx();
-  if (auto nclxProfile = std::dynamic_pointer_cast<const heif_color_profile_nclx>(colorProfile)) {
+  if (nclx) {
     rav1e_config_set_color_description(rav1eConfig.get(),
-                                       (RaMatrixCoefficients) nclxProfile->matrix_coefficients,
-                                       (RaColorPrimaries) nclxProfile->color_primaries,
-                                       (RaTransferCharacteristics) nclxProfile->transfer_characteristics);
+                                       (RaMatrixCoefficients) nclx->matrix_coefficients,
+                                       (RaColorPrimaries) nclx->color_primaries,
+                                       (RaTransferCharacteristics) nclx->transfer_characteristics);
   }
 
   RaContext* rav1eContextRaw = rav1e_context_new(rav1eConfig.get());
@@ -607,13 +611,14 @@ struct heif_error rav1e_encode_image(void* encoder_raw, const struct heif_image*
   //} else
   {
     int strideY;
-    const uint8_t* Y = image->image->get_plane(heif_channel_Y, &strideY);
+    const uint8_t* Y = heif_image_get_plane_readonly(image, heif_channel_Y, &strideY);
     int strideCb;
-    const uint8_t* Cb = image->image->get_plane(heif_channel_Cb, &strideCb);
+    const uint8_t* Cb = heif_image_get_plane_readonly(image, heif_channel_Cb, &strideCb);
     int strideCr;
-    const uint8_t* Cr = image->image->get_plane(heif_channel_Cr, &strideCr);
+    const uint8_t* Cr = heif_image_get_plane_readonly(image, heif_channel_Cr, &strideCr);
 
-    uint32_t height = image->image->get_height();
+
+    uint32_t height = heif_image_get_height(image, heif_channel_Y);
 
     uint32_t uvHeight = (height + yShift) >> yShift;
     rav1e_frame_fill_plane(rav1eFrame.get(), 0, Y, strideY * height, strideY, byteWidth);
@@ -710,9 +715,9 @@ const struct heif_encoder_plugin* get_encoder_plugin_rav1e()
 
 
 #if PLUGIN_RAV1E
-heif_plugin_info plugin_info {
-  1,
-  heif_plugin_type_encoder,
-  &encoder_plugin_rav1e
+heif_plugin_info plugin_info{
+    1,
+    heif_plugin_type_encoder,
+    &encoder_plugin_rav1e
 };
 #endif
