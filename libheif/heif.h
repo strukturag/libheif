@@ -1476,6 +1476,15 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
+struct heif_error heif_context_mux_image(struct heif_context* ctx,
+                                         const struct heif_image* input_image,
+                                         enum heif_compression_format compression_format,
+                                         struct heif_encoding_options* mux_options,
+                                         uint8_t* encoded_stream,
+                                         size_t encoded_stream_size,
+                                         struct heif_image_handle** out_image_handle);
+
+LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);
 

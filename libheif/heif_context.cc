@@ -2034,6 +2034,359 @@ static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uin
 }
 
 
+Error HeifContext::mux_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
+                             heif_compression_format compression_format,
+                             enum heif_image_input_class input_class,
+                             struct heif_encoding_options* options,
+                             uint8_t* encoded_stream,
+                             size_t encoded_stream_size,
+                             std::shared_ptr<Image>& out_image)
+{
+  Error error;
+
+  // TODO: the hdlr box is not the right place for comments
+  // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
+  
+
+  switch (compression_format) {
+    case heif_compression_HEVC: {
+      error = mux_image_with_hevc(pixel_image,
+                                  heif_image_input_class_normal,
+                                  options,
+                                  encoded_stream,
+                                  encoded_stream_size,
+                                  out_image);
+    }
+      break;
+    
+    default:
+      return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+  }
+
+  m_heif_file->set_brand(heif_compression_HEVC,
+                         out_image->is_miaf_compatible());
+
+  return error;
+}
+
+
+
+Error HeifContext::get_nal_data(uint8_t* enc_stream, 
+                                size_t enc_size, 
+                                size_t& offset,
+                                std::vector<enc_chunk>& chunks)
+{
+  Error error;
+  uint32_t nal_start_seq = 0x01000000;
+
+  uint8_t* chunk_start = nullptr;
+  size_t chunk_size = 0;
+
+  while (offset < enc_size) {
+    chunk_size = 0;
+
+    while (offset + 4 <= enc_size) {
+      if (nal_start_seq == *((uint32_t*)(enc_stream + offset))) {
+        break;
+      }
+
+      offset += 1;
+      chunk_size += 1;
+    }
+
+    if (nal_start_seq != *((uint32_t*)(enc_stream + offset))) {
+      if (chunk_start != nullptr) {
+
+        if (offset < enc_size) {
+          chunk_size += enc_size - offset;
+        }
+
+        chunks.push_back({chunk_start, chunk_size});
+      }
+
+      break;
+    }
+
+    offset += 4;
+
+    if (chunk_start != nullptr) {
+      chunks.push_back({chunk_start, chunk_size});
+
+    }
+
+    chunk_start = enc_stream + offset;
+  }
+
+  return error;
+}
+
+
+Error HeifContext::mux_image_with_hevc(const std::shared_ptr<HeifPixelImage>& image,
+                                        enum heif_image_input_class input_class,
+                                        struct heif_encoding_options* mux_options,
+                                        uint8_t* encoded_stream,
+                                        size_t encoded_stream_size,
+                                        std::shared_ptr<Image>& out_image)
+{
+  heif_item_id image_id = m_heif_file->add_new_image("hvc1");
+  out_image = std::make_shared<Image>(this, image_id);
+
+  // --- check whether we have to convert the image color space
+
+  // heif_colorspace colorspace = image->get_colorspace();
+  // heif_chroma chroma = image->get_chroma_format();
+  auto nclx_profile = image->get_color_profile_nclx();
+  if (!nclx_profile) {
+    nclx_profile = std::make_shared<color_profile_nclx>();
+  }
+
+  // heif_colorspace colorspace = heif_colorspace_YCbCr;
+  // heif_chroma chroma = heif_chroma_420;
+
+  std::shared_ptr<HeifPixelImage> src_image;
+
+  src_image = image;
+  
+  enum heif_colorspace color_space = src_image->get_colorspace();
+
+  if (color_space == heif_colorspace_YCbCr) {
+    out_image->set_size(src_image->get_width(heif_channel_Y),
+                      src_image->get_height(heif_channel_Y));
+  } else if (color_space == heif_colorspace_RGB) {
+    if (image->get_chroma_format() == heif_chroma_444) {
+      out_image->set_size(src_image->get_width(heif_channel_G),
+                      src_image->get_height(heif_channel_G));
+    } else {
+      out_image->set_size(src_image->get_width(heif_channel_interleaved),
+                      src_image->get_height(heif_channel_interleaved));
+    }
+  } else {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
+  }
+
+
+  m_heif_file->add_hvcC_property(image_id);
+
+  int encoded_width = 0;
+  int encoded_height = 0;
+
+
+  size_t encoded_stream_offset = 0;
+
+  std::vector<enc_chunk> chunks;
+  get_nal_data(encoded_stream, encoded_stream_size, encoded_stream_offset, chunks);
+
+  for (auto &chunk : chunks) {
+    if (chunk.ptr == nullptr || chunk.size == 0) {
+      return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
+    }
+
+
+    uint8_t* data = chunk.ptr;
+    int size = (int)chunk.size;
+
+    const uint8_t NAL_SPS = 33;   // 0x21
+
+    if ((data[0] >> 1) == NAL_SPS) {
+      Box_hvcC::configuration config;
+
+      parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
+
+      m_heif_file->set_hvcC_configuration(image_id, config);
+    }
+
+    switch (data[0] >> 1) {
+      case 0x20:
+      case 0x21:
+      case 0x22:
+        m_heif_file->append_hvcC_nal_data(image_id, data, size);
+        break;
+
+      default:
+        m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
+    }
+  }
+
+  if (!encoded_width || !encoded_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
+
+  // if image size was rounded up to even size, add a 'clap' box to crop the
+  // padding border away
+
+  uint32_t rotated_width = get_rotated_width(mux_options->image_orientation, 
+    out_image->get_width(), out_image->get_height());
+  uint32_t rotated_height = get_rotated_height(mux_options->image_orientation, 
+    out_image->get_width(), out_image->get_height());
+
+  if (out_image->get_width() != encoded_width ||
+      out_image->get_height() != encoded_height) {
+    
+  #if EN_MACOS_COMPATIBILITY == 1
+    if (options->macOS_compatibility_workaround == false) {
+  #endif
+
+
+      m_heif_file->add_clap_property(image_id,
+                                     out_image->get_width(),
+                                     out_image->get_height(),
+                                     encoded_width,
+                                     encoded_height);
+
+      m_heif_file->add_orientation_properties(image_id, mux_options->image_orientation);
+      m_heif_file->add_ispe_property(image_id, rotated_width, rotated_height);
+
+      // MIAF 7.3.6.7
+
+      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                              out_image->get_height(),
+                                              src_image->get_chroma_format())) {
+        out_image->mark_not_miaf_compatible();
+      }
+  #if EN_MACOS_COMPATIBILITY == 1
+    }
+    else {
+      // --- wrap the encoded image in a grid image just to apply the cropping
+
+      heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
+      auto grid_image = std::make_shared<Image>(this, grid_image_id);
+
+      m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), {image_id});
+
+      ImageGrid grid;
+      grid.set_num_tiles(1, 1);
+      grid.set_output_size(src_image->get_width(heif_channel_Y), src_image->get_height(heif_channel_Y)); // TODO: using out_image->get_width/height() would be shorter.
+      auto grid_data = grid.write();
+
+      // MIAF 7.3.11.4.2
+
+      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                              out_image->get_height(),
+                                              src_image->get_chroma_format())) {
+        grid_image->mark_not_miaf_compatible();
+      }
+
+      if ((encoded_width % 64) != 0 ||
+          (encoded_height % 64) != 0) {
+        grid_image->mark_not_miaf_compatible();
+      }
+
+
+      m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+      m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
+      m_heif_file->add_orientation_properties(grid_image_id, mux_options->image_orientation);
+      m_heif_file->add_ispe_property(grid_image_id, rotated_width, rotated_height);
+
+      // --- now use the grid image instead of the original image
+
+      // hide the original image
+      m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
+
+      out_image = grid_image;
+
+      // now use the grid image for all further property output
+      image_id = grid_image_id;
+    }
+  #endif  // EN_MACOS_COMPATIBILITY
+  }
+  else {
+    m_heif_file->add_orientation_properties(image_id, mux_options->image_orientation);
+    m_heif_file->add_ispe_property(image_id, rotated_width, rotated_height);
+  }
+
+  // --- choose which color profile to put into 'colr' box
+
+  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    auto icc_profile = src_image->get_color_profile_icc();
+    if (icc_profile) {
+      m_heif_file->set_color_profile(image_id, icc_profile);
+    }
+
+    // save nclx profile
+
+    bool save_nclx_profile = (nclx_profile != nullptr);
+
+    // if there is an ICC profile, only save NCLX when we chose to save both profiles
+    if (icc_profile && !(mux_options->version >= 3 &&
+                         mux_options->save_two_colr_boxes_when_ICC_and_nclx_available)) {
+      save_nclx_profile = false;
+    }
+
+    // we might have turned off nclx completely because macOS/iOS cannot read it
+    if (mux_options->version >= 4 && mux_options->macOS_compatibility_workaround_no_nclx_profile) {
+      save_nclx_profile = false;
+    }
+
+    if (save_nclx_profile) {
+      m_heif_file->set_color_profile(image_id, nclx_profile);
+    }
+  }
+
+
+  // --- write PIXI property
+
+  if (src_image->get_chroma_format() == heif_chroma_monochrome) {
+    m_heif_file->add_pixi_property(image_id,
+                                   src_image->get_bits_per_pixel(heif_channel_Y), 0, 0);
+  }
+  else {
+    m_heif_file->add_pixi_property(image_id,
+                                   src_image->get_bits_per_pixel(heif_channel_Y),
+                                   src_image->get_bits_per_pixel(heif_channel_Cb),
+                                   src_image->get_bits_per_pixel(heif_channel_Cr));
+  }
+
+  m_top_level_images.push_back(out_image);
+
+
+
+  // --- If there is an alpha channel, add it as an additional image.
+  //     Save alpha after the color image because we need to know the final reference to the color image.
+
+  if (mux_options->save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
+
+#if EN_MUX_ALPHA_CHANNEL == 1 // not supported yet (it will be supported soon)
+    logdd(" %s: has alpha channel\r\n", __func__);
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+
+    if (src_image->is_premultiplied_alpha()) {
+      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
+    }
+
+    // TODO: MIAF says that the *:hevc:* urn is deprecated and we should use "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"
+    // Is this compatible to other decoders?
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
+#endif  // EN_MUX_ALPHA_CHANNEL
+  }
+
+
+  return Error::Ok;
+}
+
+
 Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options* options,
