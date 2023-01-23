@@ -21,7 +21,7 @@ macro(plugin_compilation name varName optionName defineName)
                     HAVE_VISIBILITY)
             target_compile_definitions(heif-${name} PRIVATE PLUGIN_${defineName}=1)
             target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIR})
-            target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
+            target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR} heif)
 
             install(TARGETS heif-${name}
                     LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
@@ -47,7 +47,7 @@ set(X265_extra_plugin_sources)
 plugin_compilation(x265 X265 X265 X265)
 
 set(LIBDE265_sources heif_decoder_libde265.cc heif_decoder_libde265.h)
-set(LIBDE265_extra_plugin_sources ../heif_image.cc ../error.cc)
+set(LIBDE265_extra_plugin_sources ../error.cc)
 plugin_compilation(libde265 LIBDE265 LIBDE265 LIBDE265)
 
 set(DAV1D_sources heif_decoder_dav1d.cc heif_decoder_dav1d.h)
