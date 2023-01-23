@@ -30,6 +30,9 @@
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 #include <windows.h>
+#include "plugins_windows.h"
+#else
+#include "plugins_unix.h"
 #endif
 
 using namespace heif;
@@ -40,7 +43,14 @@ void heif_unload_all_plugins();
 
 void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 
-std::vector<std::string> get_plugin_paths();
+std::vector<std::string> get_plugin_paths()
+{
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+  return get_plugin_directories_from_environment_variable_windows();
+#else
+  return get_plugin_directories_from_environment_variable_unix();
+#endif
+}
 
 #endif
 
@@ -542,48 +552,6 @@ struct heif_error heif_load_plugins(const char* directory,
 }
 #endif
 
-#if defined(__linux__)
-std::vector<std::string> get_plugin_paths()
-{
-  char* path_variable = getenv("LIBHEIF_PLUGIN_PATH");
-  if (path_variable == nullptr) {
-    return {};
-  }
-
-  // --- split LIBHEIF_PLUGIN_PATH value at ':' into separate directories
-
-  std::vector<std::string> plugin_paths;
-
-  std::istringstream paths(path_variable);
-  std::string dir;
-  while (getline(paths, dir, ':')) {
-    plugin_paths.push_back(dir);
-  }
-
-  return plugin_paths;
-}
-#else
-std::vector<std::string> get_plugin_paths()
-{
-  char* path_variable = getenv("LIBHEIF_PLUGIN_PATH");
-  if (path_variable == nullptr) {
-    return {};
-  }
-
-  // --- split LIBHEIF_PLUGIN_PATH value at ':' into separate directories
-
-  std::vector<std::string> plugin_paths;
-
-  std::istringstream paths(path_variable);
-  std::string dir;
-  while (getline(paths, dir, ';')) {
-    plugin_paths.push_back(dir);
-  }
-
-  return plugin_paths;
-}
-#endif
-
 #else
 static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
 
@@ -607,11 +575,6 @@ struct heif_error heif_load_plugins(const char* directory,
                                     int output_array_size)
 {
   return heif_error_plugins_unsupported;
-}
-
-std::vector<std::string> get_plugin_paths()
-{
-  return {};
 }
 
 #endif

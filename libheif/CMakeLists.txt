@@ -44,6 +44,12 @@ add_library(heif
     ${libheif_headers}
     )
 
+if (UNIX OR MINGW)
+    target_sources(heif PRIVATE plugins_unix.cc plugins_unix.h)
+else ()
+    target_sources(heif PRIVATE plugins_windows.cc plugins_windows.h)
+endif ()
+
 # Needed to find libheif/heif_version.h while compiling the library
 target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
 
