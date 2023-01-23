@@ -20,6 +20,7 @@
 
 
 #include "plugins_unix.h"
+#include "heif_plugin.h"
 #include <sstream>
 
 #include <dlfcn.h>
@@ -55,8 +56,6 @@ std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char
   if (dir == nullptr) {
     return {}; // TODO: return error_cannot_read_plugin_directory;
   }
-
-  int nPlugins = 0;
 
   struct dirent* d;
   for (;;) {
