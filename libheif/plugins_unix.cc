@@ -22,6 +22,10 @@
 #include "plugins_unix.h"
 #include <sstream>
 
+#include <dlfcn.h>
+#include <dirent.h>
+#include <cstring>
+
 std::vector<std::string> get_plugin_directories_from_environment_variable_unix()
 {
   char* path_variable = getenv("LIBHEIF_PLUGIN_PATH");
@@ -41,3 +45,65 @@ std::vector<std::string> get_plugin_directories_from_environment_variable_unix()
 
   return plugin_paths;
 }
+
+
+std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char* directory)
+{
+  std::vector<std::string> result;
+
+  DIR* dir = opendir(directory);
+  if (dir == nullptr) {
+    return {}; // TODO: return error_cannot_read_plugin_directory;
+  }
+
+  int nPlugins = 0;
+
+  struct dirent* d;
+  for (;;) {
+    d = readdir(dir);
+    if (d == nullptr) {
+      break;
+    }
+
+    if ((d->d_type == DT_REG || d->d_type == DT_LNK) && strlen(d->d_name) > 3 &&
+        strcmp(d->d_name + strlen(d->d_name) - 3, ".so") == 0) {
+      std::string filename = directory;
+      filename += '/';
+      filename += d->d_name;
+      //printf("load %s\n", filename.c_str());
+
+      result.push_back(filename);
+    }
+  }
+
+  closedir(dir);
+
+  return result;
+}
+
+
+heif_error heif::PluginLibrary_Unix::load_from_file(const char* filename)
+{
+  m_library_handle = dlopen(filename, RTLD_LAZY);
+  if (!m_library_handle) {
+    fprintf(stderr, "dlopen: %s\n", dlerror());
+    return error_dlopen;
+  }
+
+  m_plugin_info = (heif_plugin_info*) dlsym(m_library_handle, "plugin_info");
+  if (!m_plugin_info) {
+    fprintf(stderr, "dlsym: %s\n", dlerror());
+    return error_dlopen;
+  }
+
+  return heif_error_ok;
+}
+
+void heif::PluginLibrary_Unix::release()
+{
+  if (m_library_handle) {
+    dlclose(m_library_handle);
+    m_library_handle = nullptr;
+  }
+}
+

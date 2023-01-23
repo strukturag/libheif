@@ -20,7 +20,9 @@
 
 
 #include "plugins_windows.h"
+#include "heif_plugin.h"
 #include <sstream>
+
 
 std::vector<std::string> get_plugin_directories_from_environment_variable_windows()
 {
@@ -40,4 +42,70 @@ std::vector<std::string> get_plugin_directories_from_environment_variable_window
   }
 
   return plugin_paths;
+}
+
+
+std::vector<std::string> list_all_potential_plugins_in_directory_windows(const char* directory)
+{
+  std::vector<std::string> result;
+
+  HANDLE hFind;
+  WIN32_FIND_DATA FindFileData;
+
+  std::string findPattern{directory};
+  findPattern += "\\*.dll";
+
+#if 0
+  DIR* dir = opendir(directory);
+  if (dir == nullptr) {
+    return error_cannot_read_plugin_directory;
+  }
+#endif
+
+  int nPlugins = 0;
+
+  if ((hFind = FindFirstFile(findPattern.c_str(), &FindFileData)) != INVALID_HANDLE_VALUE) {
+    do {
+      std::string filename = directory;
+      filename += '/';
+      filename += FindFileData.cFileName;
+
+      result.push_back(filename);
+    } while (FindNextFile(hFind, &FindFileData));
+
+    FindClose(hFind);
+  }
+
+  return result;
+}
+
+
+
+heif_error heif::PluginLibrary_Windows::load_from_file(const char* filename)
+{
+  m_library_handle = LoadLibraryA(filename);
+  if (!m_library_handle) {
+    fprintf(stderr, "LoadLibraryA error: %lu\n", GetLastError());
+    return error_dlopen;
+  }
+
+  m_plugin_info = (heif_plugin_info*) GetProcAddress(m_library_handle, "plugin_info");
+  if (!m_plugin_info) {
+    fprintf(stderr, "GetProcAddress error for dll '%s': %lu\n", filename, GetLastError());
+    return error_dlopen;
+  }
+
+  // Remember filename for comparison whether the plugin was already loaded.
+  // We need this since LoadLibraryA() returns a separate instance if we load the same DLL twice.
+  m_filename = filename;
+
+  return heif_error_ok;
+}
+
+void heif::PluginLibrary_Windows::release()
+{
+  if (m_library_handle) {
+    FreeLibrary(m_library_handle);
+    m_library_handle = nullptr;
+  }
 }

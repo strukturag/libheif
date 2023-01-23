@@ -52,6 +52,15 @@ std::vector<std::string> get_plugin_paths()
 #endif
 }
 
+std::vector<std::string> list_all_potential_plugins_in_directory(const char* directory)
+{
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+  return list_all_potential_plugins_in_directory_windows(directory);
+#else
+  return list_all_potential_plugins_in_directory_unix(directory);
+#endif
+}
+
 #endif
 
 
@@ -175,28 +184,26 @@ void heif_deinit()
 
 #if ENABLE_PLUGIN_LOADING
 
-#if __linux__
-typedef void* library_handle;
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+typedef PluginLibrary_Windows PluginLibrary_SysDep;
 #else
-typedef HMODULE library_handle;
+typedef PluginLibrary_Unix PluginLibrary_SysDep;
 #endif
+
+
 
 struct loaded_plugin
 {
-  library_handle plugin_library_handle{};
+  PluginLibrary_SysDep plugin_library_handle;
   struct heif_plugin_info* info = nullptr;
   int openCnt = 0;
 };
 
 static std::vector<loaded_plugin> sLoadedPlugins;
 
-MAYBE_UNUSED static heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
-MAYBE_UNUSED static heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
-MAYBE_UNUSED static heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
-#endif
-
-
-#if ENABLE_PLUGIN_LOADING
+MAYBE_UNUSED heif_error error_dlopen{heif_error_Plugin_loading_error, heif_suberror_Plugin_loading_error, "Cannot open plugin (dlopen)."};
+MAYBE_UNUSED heif_error error_plugin_not_loaded{heif_error_Plugin_loading_error, heif_suberror_Plugin_is_not_loaded, "Trying to remove a plugin that is not loaded."};
+MAYBE_UNUSED heif_error error_cannot_read_plugin_directory{heif_error_Plugin_loading_error, heif_suberror_Cannot_read_plugin_directory, "Cannot read plugin directory."};
 
 MAYBE_UNUSED static void unregister_plugin(const heif_plugin_info* info)
 {
@@ -212,15 +219,6 @@ MAYBE_UNUSED static void unregister_plugin(const heif_plugin_info* info)
   }
 }
 
-#endif
-
-
-#if ENABLE_PLUGIN_LOADING
-
-#if defined(__linux__)
-#include <dlfcn.h>
-#include <dirent.h>
-#include <cstring>
 
 struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
 {
@@ -228,23 +226,19 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
 #endif
 
-  void* plugin_handle = dlopen(filename, RTLD_LAZY);
-  if (!plugin_handle) {
-    fprintf(stderr, "dlopen: %s\n", dlerror());
-    return error_dlopen;
+  PluginLibrary_SysDep plugin;
+  auto err = plugin.load_from_file(filename);
+  if (err.code) {
+    return err;
   }
 
-  auto* plugin_info = (heif_plugin_info*) dlsym(plugin_handle, "plugin_info");
-  if (!plugin_info) {
-    fprintf(stderr, "dlsym: %s\n", dlerror());
-    return error_dlopen;
-  }
+  heif_plugin_info* plugin_info = plugin.get_plugin_info();
 
   // --- check whether the plugin is already loaded
   // If yes, return pointer to existing plugin.
 
   for (auto& p : sLoadedPlugins) {
-    if (p.plugin_library_handle == plugin_handle) {
+    if (p.plugin_library_handle == plugin) {
       if (out_plugin) {
         *out_plugin = p.info;
         p.openCnt++;
@@ -254,14 +248,14 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
   }
 
   loaded_plugin loadedPlugin;
-  loadedPlugin.plugin_library_handle = plugin_handle;
+  loadedPlugin.plugin_library_handle = plugin;
   loadedPlugin.openCnt = 1;
   loadedPlugin.info = plugin_info;
   sLoadedPlugins.push_back(loadedPlugin);
 
   *out_plugin = plugin_info;
 
-  switch (plugin_info->type) {
+  switch (loadedPlugin.info->type) {
     case heif_plugin_type_encoder: {
       auto* encoder_plugin = static_cast<const heif_encoder_plugin*>(plugin_info->plugin);
       struct heif_error err = heif_register_encoder_plugin(encoder_plugin);
@@ -283,71 +277,7 @@ struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info
 
   return heif_error_ok;
 }
-#else
-struct heif_error heif_load_plugin(const char* filename, struct heif_plugin_info const** out_plugin)
-{
-#if ENABLE_MULTITHREADING_SUPPORT
-  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
-#endif
 
-  library_handle plugin_handle = LoadLibraryA(filename);
-  if (!plugin_handle) {
-    fprintf(stderr, "LoadLibraryA error: %lu\n", GetLastError());
-    return error_dlopen;
-  }
-
-  auto* plugin_info = (heif_plugin_info*) GetProcAddress(plugin_handle, "plugin_info");
-  if (!plugin_info) {
-    fprintf(stderr, "GetProcAddress error for dll '%s': %lu\n", filename, GetLastError());
-    return error_dlopen;
-  }
-
-  // --- check whether the plugin is already loaded
-  // If yes, return pointer to existing plugin.
-
-  for (auto& p : sLoadedPlugins) {
-    if (p.plugin_library_handle == plugin_handle) {
-      if (out_plugin) {
-        *out_plugin = p.info;
-        p.openCnt++;
-        return heif_error_ok;
-      }
-    }
-  }
-
-  loaded_plugin loadedPlugin;
-  loadedPlugin.plugin_library_handle = plugin_handle;
-  loadedPlugin.openCnt = 1;
-  loadedPlugin.info = plugin_info;
-  sLoadedPlugins.push_back(loadedPlugin);
-
-  *out_plugin = plugin_info;
-
-  switch (plugin_info->type) {
-    case heif_plugin_type_encoder: {
-      auto* encoder_plugin = static_cast<const heif_encoder_plugin*>(plugin_info->plugin);
-      struct heif_error err = heif_register_encoder_plugin(encoder_plugin);
-      if (err.code) {
-        return err;
-      }
-      break;
-    }
-
-    case heif_plugin_type_decoder: {
-      auto* decoder_plugin = static_cast<const heif_decoder_plugin*>(plugin_info->plugin);
-      struct heif_error err = heif_register_decoder_plugin(decoder_plugin);
-      if (err.code) {
-        return err;
-      }
-      break;
-    }
-  }
-
-  return heif_error_ok;
-}
-#endif
-
-#if defined(__linux__)
 struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 {
 #if ENABLE_MULTITHREADING_SUPPORT
@@ -358,7 +288,7 @@ struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
     auto& p = sLoadedPlugins[i];
 
     if (p.info == plugin) {
-      dlclose(p.plugin_library_handle);
+      p.plugin_library_handle.release();
       p.openCnt--;
 
       if (p.openCnt == 0) {
@@ -374,36 +304,7 @@ struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
 
   return error_plugin_not_loaded;
 }
-#else
-struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin)
-{
-#if ENABLE_MULTITHREADING_SUPPORT
-  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
-#endif
 
-  for (size_t i = 0; i < sLoadedPlugins.size(); i++) {
-    auto& p = sLoadedPlugins[i];
-
-    if (p.info == plugin) {
-      FreeLibrary(p.plugin_library_handle);
-      p.openCnt--;
-
-      if (p.openCnt == 0) {
-        unregister_plugin(plugin);
-
-        sLoadedPlugins[i] = sLoadedPlugins.back();
-        sLoadedPlugins.pop_back();
-      }
-
-      return heif_error_ok;
-    }
-  }
-
-  return error_plugin_not_loaded;
-}
-#endif
-
-#if defined(__linux__)
 void heif_unload_all_plugins()
 {
 #if ENABLE_MULTITHREADING_SUPPORT
@@ -414,130 +315,37 @@ void heif_unload_all_plugins()
     unregister_plugin(p.info);
 
     for (int i = 0; i < p.openCnt; i++) {
-      dlclose(p.plugin_library_handle);
+      p.plugin_library_handle.release();
     }
   }
 
   sLoadedPlugins.clear();
 }
-#else
-void heif_unload_all_plugins()
-{
-#if ENABLE_MULTITHREADING_SUPPORT
-  std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
-#endif
 
-  for (auto& p : sLoadedPlugins) {
-    unregister_plugin(p.info);
-
-    for (int i = 0; i < p.openCnt; i++) {
-      FreeLibrary(p.plugin_library_handle);
-    }
-  }
-
-  sLoadedPlugins.clear();
-}
-#endif
-
-#if defined(__linux__)
 struct heif_error heif_load_plugins(const char* directory,
                                     const struct heif_plugin_info** out_plugins,
                                     int* out_nPluginsLoaded,
                                     int output_array_size)
 {
-  DIR* dir = opendir(directory);
-  if (dir == nullptr) {
-    return error_cannot_read_plugin_directory;
-  }
+  auto libraryFiles = list_all_potential_plugins_in_directory(directory);
 
   int nPlugins = 0;
 
-  struct dirent* d;
-  for (;;) {
-    d = readdir(dir);
-    if (d == nullptr) {
-      break;
-    }
+  for (const auto& filename : libraryFiles) {
 
-    if ((d->d_type == DT_REG || d->d_type == DT_LNK) && strlen(d->d_name) > 3 &&
-        strcmp(d->d_name + strlen(d->d_name) - 3, ".so") == 0) {
-      std::string filename = directory;
-      filename += '/';
-      filename += d->d_name;
-      //printf("load %s\n", filename.c_str());
-
-      const struct heif_plugin_info* info = nullptr;
-      auto err = heif_load_plugin(filename.c_str(), &info);
-      if (err.code == 0) {
-        if (out_plugins) {
-          if (nPlugins == output_array_size) {
-            break;
-          }
-
-          out_plugins[nPlugins] = info;
+    const struct heif_plugin_info* info = nullptr;
+    auto err = heif_load_plugin(filename.c_str(), &info);
+    if (err.code == 0) {
+      if (out_plugins) {
+        if (nPlugins == output_array_size) {
+          break;
         }
 
-        nPlugins++;
+        out_plugins[nPlugins] = info;
       }
+
+      nPlugins++;
     }
-  }
-
-  if (nPlugins < output_array_size && out_plugins) {
-    out_plugins[nPlugins] = nullptr;
-  }
-
-  if (out_nPluginsLoaded) {
-    *out_nPluginsLoaded = nPlugins;
-  }
-
-  closedir(dir);
-
-  return heif_error_ok;
-}
-#else
-struct heif_error heif_load_plugins(const char* directory,
-                                    const struct heif_plugin_info** out_plugins,
-                                    int* out_nPluginsLoaded,
-                                    int output_array_size)
-{
-  HANDLE hFind;
-  WIN32_FIND_DATA FindFileData;
-
-  std::string findPattern{directory};
-  findPattern += "\\*.dll";
-
-#if 0
-  DIR* dir = opendir(directory);
-  if (dir == nullptr) {
-    return error_cannot_read_plugin_directory;
-  }
-#endif
-
-  int nPlugins = 0;
-
-  if ((hFind = FindFirstFile(findPattern.c_str(), &FindFileData)) != INVALID_HANDLE_VALUE) {
-    do {
-      std::string filename = directory;
-      filename += '/';
-      filename += FindFileData.cFileName;
-
-      const struct heif_plugin_info* info = nullptr;
-      auto err = heif_load_plugin(filename.c_str(), &info);
-      if (err.code == 0) {
-        if (out_plugins) {
-          if (nPlugins == output_array_size) {
-            break;
-          }
-
-          out_plugins[nPlugins] = info;
-        }
-
-        nPlugins++;
-      }
-
-    } while (FindNextFile(hFind, &FindFileData));
-
-    FindClose(hFind);
   }
 
   if (nPlugins < output_array_size && out_plugins) {
@@ -550,7 +358,6 @@ struct heif_error heif_load_plugins(const char* directory,
 
   return heif_error_ok;
 }
-#endif
 
 #else
 static heif_error heif_error_plugins_unsupported{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Plugins are not supported"};
