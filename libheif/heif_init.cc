@@ -29,7 +29,6 @@
 #endif
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
-#include <windows.h>
 #include "plugins_windows.h"
 #else
 #include "plugins_unix.h"
