@@ -193,5 +193,5 @@ file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
 EXTRA_DIST = \
   CMakeLists.txt \
   plugins/CMakeLists.txt \
-  plugin_unix.h \
-  plugin_windows.h
+  plugins_unix.h \
+  plugins_windows.h
