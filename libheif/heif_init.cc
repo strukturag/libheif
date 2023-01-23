@@ -28,7 +28,7 @@
 #include <mutex>
 #endif
 
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+#if defined(_WIN32)
 #include "plugins_windows.h"
 #else
 #include "plugins_unix.h"
