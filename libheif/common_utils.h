@@ -24,6 +24,13 @@
 #include <cinttypes>
 #include <libheif/heif.h>
 
+#ifdef _MSC_VER
+#define MAYBE_UNUSED
+#else
+#define MAYBE_UNUSED __attribute__((unused))
+#endif
+
+
 // Functions for common use in libheif and the plugins.
 
 uint8_t chroma_h_subsampling(heif_chroma c);

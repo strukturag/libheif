@@ -21,11 +21,13 @@
 #ifndef LIBHEIF_HEIF_DECODER_DAV1D_H
 #define LIBHEIF_HEIF_DECODER_DAV1D_H
 
+#include "libheif/common_utils.h"
+
 const struct heif_decoder_plugin* get_decoder_plugin_dav1d();
 
 #if PLUGIN_DAV1D
 extern "C" {
-__attribute__((unused)) LIBHEIF_API extern heif_plugin_info plugin_info;
+MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }
 #endif
 
