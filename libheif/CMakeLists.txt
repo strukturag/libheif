@@ -44,10 +44,10 @@ add_library(heif
     ${libheif_headers}
     )
 
-if (UNIX OR MINGW)
-    target_sources(heif PRIVATE plugins_unix.cc plugins_unix.h)
-else ()
+if (WIN32)
     target_sources(heif PRIVATE plugins_windows.cc plugins_windows.h)
+else ()
+    target_sources(heif PRIVATE plugins_unix.cc plugins_unix.h)
 endif ()
 
 # Needed to find libheif/heif_version.h while compiling the library

@@ -44,7 +44,7 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 
 std::vector<std::string> get_plugin_paths()
 {
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+#if defined(_WIN32)
   return get_plugin_directories_from_environment_variable_windows();
 #else
   return get_plugin_directories_from_environment_variable_unix();
@@ -53,7 +53,7 @@ std::vector<std::string> get_plugin_paths()
 
 std::vector<std::string> list_all_potential_plugins_in_directory(const char* directory)
 {
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+#if defined(_WIN32)
   return list_all_potential_plugins_in_directory_windows(directory);
 #else
   return list_all_potential_plugins_in_directory_unix(directory);
@@ -183,7 +183,7 @@ void heif_deinit()
 
 #if ENABLE_PLUGIN_LOADING
 
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
+#if defined(_WIN32)
 typedef PluginLibrary_Windows PluginLibrary_SysDep;
 #else
 typedef PluginLibrary_Unix PluginLibrary_SysDep;
