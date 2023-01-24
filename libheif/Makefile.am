@@ -189,6 +189,9 @@ file_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
 file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
 file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
 
+# hack, plugin_*.h files are not used by autotools, because our autotools build scripts don't support plugins, but we need it anyways
 EXTRA_DIST = \
   CMakeLists.txt \
-  plugins/CMakeLists.txt
+  plugins/CMakeLists.txt \
+  plugins_unix.h \
+  plugins_windows.h
