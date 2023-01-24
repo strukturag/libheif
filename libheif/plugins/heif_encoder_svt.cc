@@ -654,10 +654,10 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
     svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->matrix_coefficients);
     svt_config.color_range = nclx->full_range_flag ? EB_CR_FULL_RANGE : EB_CR_STUDIO_RANGE;
 #else
-    svt_config.color_primaries = static_cast<uint8_t>(nclx->get_colour_primaries());
-    svt_config.transfer_characteristics = static_cast<uint8_t>(nclx->get_transfer_characteristics());
-    svt_config.matrix_coefficients = static_cast<uint8_t>(nclx->get_matrix_coefficients());
-    svt_config.color_range = nclx->get_full_range_flag() ? 1 : 0;
+    svt_config.color_primaries = static_cast<uint8_t>(nclx->color_primaries);
+    svt_config.transfer_characteristics = static_cast<uint8_t>(nclx->transfer_characteristics);
+    svt_config.matrix_coefficients = static_cast<uint8_t>(nclx->matrix_coefficients);
+    svt_config.color_range = nclx->full_range_flag ? 1 : 0;
 #endif
 
 

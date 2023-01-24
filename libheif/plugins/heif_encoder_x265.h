@@ -21,6 +21,7 @@
 #ifndef LIBHEIF_HEIF_ENCODER_X265_H
 #define LIBHEIF_HEIF_ENCODER_X265_H
 
+#include "libheif/common_utils.h"
 
 /* Image sizes in HEVC: since HEVC does not allow for odd image dimensions when
    using chroma 4:2:0, our strategy is as follows.
@@ -37,7 +38,7 @@ const struct heif_encoder_plugin* get_encoder_plugin_x265();
 
 #if PLUGIN_X265
 extern "C" {
-__attribute__((unused)) LIBHEIF_API extern heif_plugin_info plugin_info;
+MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }
 #endif
 

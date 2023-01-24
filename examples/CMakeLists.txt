@@ -97,7 +97,7 @@ endif ()
 
 
 if (PNG_FOUND)
-    add_executable(heif-thumbnailer
+    add_executable(heif-thumbnailer ${getopt_sources}
             encoder.cc
             encoder.h
             heif_thumbnailer.cc

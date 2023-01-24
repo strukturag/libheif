@@ -213,7 +213,7 @@ You can choose this individually for each codec backend in the CMake settings.
 Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
 The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.
 
-The plugins are loaded from the colon-separated list of directories stored in the environment variable `LIBHEIF_PLUGIN_PATH`.
+The plugins are loaded from the colon-separated (semicolon-separated on Windows) list of directories stored in the environment variable `LIBHEIF_PLUGIN_PATH`.
 If this variable is empty, they are loaded from a directory specified in the CMake configuration.
 You can also add plugin directories programmatically.
 
