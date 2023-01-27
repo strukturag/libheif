@@ -1162,7 +1162,7 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 
 static void show_list_of_all_encoders(heif_context* context)
 {
-  for (auto compression_format : {heif_compression_AV1, heif_compression_HEVC}) {
+  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1}) {
 
     switch (compression_format) {
       case heif_compression_AV1:

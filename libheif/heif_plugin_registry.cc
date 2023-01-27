@@ -24,6 +24,7 @@
 
 #include <utility>
 #include <cstring>
+#include <algorithm>
 
 #include "heif_plugin_registry.h"
 
@@ -133,6 +134,7 @@ const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format
 
   return best_plugin;
 }
+
 
 void heif::register_encoder(const heif_encoder_plugin* encoder_plugin)
 {

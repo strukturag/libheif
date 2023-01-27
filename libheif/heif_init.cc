@@ -331,7 +331,6 @@ struct heif_error heif_load_plugins(const char* directory,
   int nPlugins = 0;
 
   for (const auto& filename : libraryFiles) {
-
     const struct heif_plugin_info* info = nullptr;
     auto err = heif_load_plugin(filename.c_str(), &info);
     if (err.code == 0) {

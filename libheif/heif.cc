@@ -1629,7 +1629,7 @@ struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_p
   if (!decoder_plugin) {
     return error_null_parameter;
   }
-  else if (decoder_plugin->plugin_api_version > 2) {
+  else if (decoder_plugin->plugin_api_version > 3) {
     return error_unsupported_plugin_version;
   }
 
@@ -1643,7 +1643,7 @@ struct heif_error heif_register_decoder_plugin(const heif_decoder_plugin* decode
   if (!decoder_plugin) {
     return error_null_parameter;
   }
-  else if (decoder_plugin->plugin_api_version > 2) {
+  else if (decoder_plugin->plugin_api_version > 3) {
     return error_unsupported_plugin_version;
   }
 
@@ -1761,6 +1761,71 @@ const char* heif_encoder_descriptor_get_name(const struct heif_encoder_descripto
 const char* heif_encoder_descriptor_get_id_name(const struct heif_encoder_descriptor* descriptor)
 {
   return descriptor->plugin->id_name;
+}
+
+
+int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
+                                 const struct heif_decoder_descriptor** out_decoders,
+                                 int count)
+{
+  struct decoder_with_priority {
+    const heif_decoder_plugin* plugin;
+    int priority;
+  };
+
+  std::vector<decoder_with_priority> plugins;
+  std::vector<heif_compression_format> formats;
+  if (format_filter == heif_compression_undefined) {
+    formats = { heif_compression_HEVC, heif_compression_AV1 };
+  }
+  else {
+    formats.emplace_back(format_filter);
+  }
+
+  for (const auto* plugin : s_decoder_plugins) {
+    for (auto& format : formats) {
+      int priority = plugin->does_support_format(format);
+      if (priority) {
+        plugins.push_back({plugin, priority});
+        break;
+      }
+    }
+  }
+
+  if (out_decoders == nullptr) {
+    return (int)plugins.size();
+  }
+
+  std::sort(plugins.begin(), plugins.end(), [](const decoder_with_priority& a, const decoder_with_priority& b) {
+    return a.priority > b.priority;
+  });
+
+  int nDecodersReturned = std::min(count, (int)plugins.size());
+
+  for (int i=0;i<nDecodersReturned;i++) {
+    out_decoders[i] = (heif_decoder_descriptor*)(plugins[i].plugin);
+  }
+
+  return nDecodersReturned;
+}
+
+
+const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descriptor* descriptor)
+{
+  auto decoder = (heif_decoder_plugin*)descriptor;
+  return decoder->get_plugin_name();
+}
+
+
+const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor* descriptor)
+{
+  auto decoder = (heif_decoder_plugin*)descriptor;
+  if (decoder->plugin_api_version < 3) {
+    return nullptr;
+  }
+  else {
+    return decoder->id_name;
+  }
 }
 
 

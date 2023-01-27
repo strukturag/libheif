@@ -281,7 +281,7 @@ struct heif_error aom_decode_image(void* decoder_raw, struct heif_image** out_im
 
 static const struct heif_decoder_plugin decoder_aom
     {
-        2,
+        3,
         aom_plugin_name,
         aom_init_plugin,
         aom_deinit_plugin,
@@ -290,7 +290,8 @@ static const struct heif_decoder_plugin decoder_aom
         aom_free_decoder,
         aom_push_data,
         aom_decode_image,
-        aom_set_strict_decoding
+        aom_set_strict_decoding,
+        "aom"
     };
 
 

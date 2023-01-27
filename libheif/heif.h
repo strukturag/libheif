@@ -1201,6 +1201,27 @@ struct heif_encoder_descriptor;
 // the parameters are provided.
 struct heif_encoder_parameter;
 
+struct heif_decoder_descriptor;
+
+// Get a list of available decoders. You can filter the encoders by compression format.
+// Use format_filter==heif_compression_undefined to get all available decoders.
+// The returned list of decoders is sorted by their priority (which is a plugin property).
+// The number of decoders is returned, which are not more than 'count' if (out_encoders != nullptr).
+// By setting out_encoders==nullptr, you can query the number of decoders, 'count' is ignored.
+LIBHEIF_API
+int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
+                                 const struct heif_decoder_descriptor** out_decoders,
+                                 int count);
+
+// Return a long, descriptive name of the decoder (including version information).
+LIBHEIF_API
+const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descriptor*);
+
+// Return a short, symbolic name for identifying the decoder.
+// This name should stay constant over different decoder versions.
+// Note: the returned ID may be NULL for old plugins that don't support this yet.
+LIBHEIF_API
+const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor*);
 
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.

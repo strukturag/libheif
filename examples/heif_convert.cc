@@ -84,6 +84,7 @@ static void show_help(const char* argv0)
                "      --with-exif         write EXIF metadata to file (output filename with .exif suffix)\n"
                "      --skip-exif-offset  skip EXIF metadata offset bytes\n"
                "      --no-colons         replace ':' characters in auxiliary image filenames with '_'\n"
+               "      --list-decoders     list all available decoders (built-in and plugins)\n"
                "      --quiet             do not output status messages to console\n";
 }
 
@@ -110,6 +111,7 @@ int option_no_colons = 0;
 int option_with_xmp = 0;
 int option_with_exif = 0;
 int option_skip_exif_offset = 0;
+int option_list_decoders = 0;
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -120,8 +122,37 @@ static struct option long_options[] = {
     {(char* const) "with-exif",        no_argument,       &option_with_exif,        1},
     {(char* const) "skip-exif-offset", no_argument,       &option_skip_exif_offset, 1},
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
+    {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'}
 };
+
+
+#define MAX_DECODERS 20
+
+void list_decoders(heif_compression_format format)
+{
+  const heif_decoder_descriptor* decoders[MAX_DECODERS];
+  int n = heif_get_decoder_descriptors(format, decoders, MAX_DECODERS);
+
+  for (int i=0;i<n;i++) {
+    const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
+    if (id==nullptr) {
+      id = "---";
+    }
+
+    std::cout << "- " << id << " : " << heif_decoder_descriptor_get_name(decoders[i]) << "\n";
+  }
+}
+
+
+void list_all_decoders()
+{
+  std::cout << "HEIC decoders:\n";
+  list_decoders(heif_compression_HEVC);
+
+  std::cout << "AVIF decoders:\n";
+  list_decoders(heif_compression_AV1);
+}
 
 
 class LibHeifInitializer {
@@ -162,6 +193,11 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
     }
+  }
+
+  if (option_list_decoders) {
+    list_all_decoders();
+    return 0;
   }
 
   if (optind + 2 > argc) {

@@ -381,7 +381,7 @@ static const struct heif_decoder_plugin decoder_libde265
 
 static const struct heif_decoder_plugin decoder_libde265
     {
-        2,
+        3,
         libde265_plugin_name,
         libde265_init_plugin,
         libde265_deinit_plugin,
@@ -390,7 +390,8 @@ static const struct heif_decoder_plugin decoder_libde265
         libde265_free_decoder,
         libde265_v1_push_data,
         libde265_v1_decode_image,
-        libde265_set_strict_decoding
+        libde265_set_strict_decoding,
+        "libde265"
     };
 
 #endif
