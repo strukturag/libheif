@@ -1231,6 +1231,7 @@ const char* heif_decoder_descriptor_get_name(const struct heif_decoder_descripto
 LIBHEIF_API
 const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descriptor*);
 
+// DEPRECATED: use heif_get_encoder_descriptors() instead.
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 // The returned list of encoders is sorted by their priority (which is a plugin property).
@@ -1241,6 +1242,16 @@ int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do w
                                          const char* name_filter,
                                          const struct heif_encoder_descriptor** out_encoders,
                                          int count);
+
+// Get a list of available encoders. You can filter the encoders by compression format and name.
+// Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
+// The returned list of encoders is sorted by their priority (which is a plugin property).
+// Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
+LIBHEIF_API
+int heif_get_encoder_descriptors(enum heif_compression_format format_filter,
+                                 const char* name_filter,
+                                 const struct heif_encoder_descriptor** out_encoders,
+                                 int count);
 
 // Return a long, descriptive name of the encoder (including version information).
 LIBHEIF_API

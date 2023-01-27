@@ -1740,6 +1740,15 @@ int heif_context_get_encoder_descriptors(struct heif_context* ctx,
                                          const struct heif_encoder_descriptor** out_encoder_descriptors,
                                          int count)
 {
+  return heif_get_encoder_descriptors(format, name, out_encoder_descriptors, count);
+}
+
+
+int heif_get_encoder_descriptors(enum heif_compression_format format,
+                                 const char* name,
+                                 const struct heif_encoder_descriptor** out_encoder_descriptors,
+                                 int count)
+{
   if (out_encoder_descriptors == nullptr || count <= 0) {
     return 0;
   }

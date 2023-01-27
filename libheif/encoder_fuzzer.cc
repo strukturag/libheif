@@ -151,10 +151,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 
   static const size_t kMaxEncoders = 5;
   const heif_encoder_descriptor* encoder_descriptors[kMaxEncoders];
-  int count = heif_context_get_encoder_descriptors(context.get(),
-                                                   use_avif ? heif_compression_AV1 : heif_compression_HEVC,
-                                                   nullptr,
-                                                   encoder_descriptors, kMaxEncoders);
+  int count = heif_get_encoder_descriptors(use_avif ? heif_compression_AV1 : heif_compression_HEVC,
+                                           nullptr,
+                                           encoder_descriptors, kMaxEncoders);
   assert(count >= 0);
   if (count == 0) {
     return 0;
