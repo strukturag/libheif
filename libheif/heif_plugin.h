@@ -41,6 +41,7 @@ extern "C" {
 //  1.4          1         1          2
 //  1.8          1         2          2
 //  1.13         2         3          2
+//  1.15         3         3          2
 
 
 // ====================================================================================================
@@ -106,6 +107,8 @@ struct heif_decoder_plugin
   // --- version 3 functions will follow below ... ---
 
   const char* id_name;
+
+  // --- version 4 functions will follow below ... ---
 };
 
 

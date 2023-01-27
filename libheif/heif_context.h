@@ -412,7 +412,7 @@ namespace heif {
     void write(StreamWriter& writer);
 
   private:
-    const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type) const;
+    const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id) const;
 
     std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
 

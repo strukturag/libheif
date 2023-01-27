@@ -45,6 +45,7 @@ extern "C" {
 //  1.11         1             2            4             1             1            1
 //  1.13         1             3            4             1             1            1
 //  1.14         1             3            5             1             1            1
+//  1.15         1             4            5             1             1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -1023,6 +1024,13 @@ struct heif_decoding_options
   // When enabled, an error is returned for invalid input. Otherwise, it will try its best and
   // add decoding warnings to the decoded heif_image. Default is non-strict.
   uint8_t strict_decoding;
+
+  // version 4 options
+
+  // name_id of the decoder to use for the decoding.
+  // If set to NULL (default), the highest priority decoder is chosen.
+  // The priority is defined in the plugin.
+  const char* decoder_id;
 };
 
 

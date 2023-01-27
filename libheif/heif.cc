@@ -903,14 +903,14 @@ heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
-  options->version = 3;
+  options->version = 4;
 
   options->ignore_transformations = false;
 
-  options->start_progress = NULL;
-  options->on_progress = NULL;
-  options->end_progress = NULL;
-  options->progress_user_data = NULL;
+  options->start_progress = nullptr;
+  options->on_progress = nullptr;
+  options->end_progress = nullptr;
+  options->progress_user_data = nullptr;
 
   // version 2
 
@@ -919,6 +919,10 @@ heif_decoding_options* heif_decoding_options_alloc()
   // version 3
 
   options->strict_decoding = false;
+
+  // version 4
+
+  options->decoder_id = nullptr;
 
   return options;
 }
@@ -1887,7 +1891,7 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 
 int heif_have_decoder_for_format(enum heif_compression_format format)
 {
-  auto plugin = heif::get_decoder(format);
+  auto plugin = heif::get_decoder(format, nullptr);
   return plugin != nullptr;
 }
 
