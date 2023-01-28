@@ -1152,7 +1152,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       compression = heif_compression_AV1;
     }
 
-    const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options->decoder_id);
+    const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options ? options->decoder_id : nullptr);
     if (!decoder_plugin) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
     }
