@@ -97,6 +97,31 @@ plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 
+# --- plugin_option(VVdeC VVdeC "VVdeC" "VVC decoder" OFF)
+# --- Do it manually as the VVdeC library cannot be found automatically yet.
+option(WITH_VVdeC "Build VVdeC VVC decoder" ON)
+option(WITH_VVdeC_PLUGIN "Build VVdeC as a plugin" OFF)
+if (WITH_VVdeC)
+    find_library(VVdeC_LIBRARIES NAMES vvdec PATHS ENV VVCLIB_PATH)
+    find_path(VVdeC_INCLUDE_DIR NAMES vvdec/vvdec.h PATHS ENV VVCINCLUDE_PATH)
+    message("vvdec_library: " ${VVdeC_LIBRARIES})
+    message("vvdec_include: " ${VVdeC_INCLUDE_DIR})
+    set(VVdeC_FOUND YES)
+endif ()
+
+if (${VVdeC_FOUND} AND ${WITH_VVdeC_PLUGIN} AND ${PLUGIN_LOADING_SUPPORTED_AND_ENABLED})
+    set(msg "found (plugin)")
+elseif (${VVdeC_FOUND})
+    set(msg "found (built-in)")
+elseif (WITH_VVdeC)
+    set(msg "not found")
+else()
+    set(msg "disabled")
+endif ()
+
+message("VVdeC (VVC decoder): ${msg}")
+unset(msg)
+
 
 # --- Create libheif pkgconfig file
 

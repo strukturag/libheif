@@ -34,6 +34,7 @@ macro(plugin_compilation name varName optionName defineName)
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         endif ()
 
+
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${varName}_CFLAGS}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${varName}_CFLAGS}")
     else()
@@ -69,3 +70,7 @@ plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
+
+set(VVdeC_sources heif_decoder_vvdec.cc heif_decoder_vvdec.h)
+set(VVdeC_extra_plugin_sources)
+plugin_compilation(vvdec VVdeC VVdeC VVdeC)

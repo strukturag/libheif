@@ -56,6 +56,10 @@
 #include "libheif/plugins/heif_encoder_svt.h"
 #endif
 
+#if HAVE_VVdeC
+#include "libheif/plugins/heif_decoder_vvdec.h"
+#endif
+
 
 using namespace heif;
 
@@ -105,6 +109,10 @@ void heif::register_default_plugins()
 
 #if HAVE_SvtEnc
   heif::register_encoder(get_encoder_plugin_svt());
+#endif
+
+#if HAVE_VVdeC
+  heif::register_decoder(get_decoder_plugin_vvdec());
 #endif
 }
 

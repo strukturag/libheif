@@ -154,6 +154,9 @@ void list_all_decoders()
 
   std::cout << "AVIF decoders:\n";
   list_decoders(heif_compression_AV1);
+
+  std::cout << "VVC decoders:\n";
+  list_decoders(heif_compression_VVC);
 }
 
 
