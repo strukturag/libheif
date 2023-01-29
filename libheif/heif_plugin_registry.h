@@ -67,7 +67,7 @@ namespace heif {
 
   void register_encoder(const heif_encoder_plugin* encoder_plugin);
 
-  const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type);
+  const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id);
 
   const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type);
 

@@ -297,7 +297,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
 static const struct heif_decoder_plugin decoder_dav1d
     {
-        2,
+        3,
         dav1d_plugin_name,
         dav1d_init_plugin,
         dav1d_deinit_plugin,
@@ -306,7 +306,8 @@ static const struct heif_decoder_plugin decoder_dav1d
         dav1d_free_decoder,
         dav1d_push_data,
         dav1d_decode_image,
-        dav1d_set_strict_decoding
+        dav1d_set_strict_decoding,
+        "dav1d"
     };
 
 

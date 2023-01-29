@@ -79,11 +79,13 @@ static void show_help(const char* argv0)
                "Options:\n"
                "  -h, --help              show help\n"
                "  -q, --quality           quality (for JPEG output)\n"
+               "  -d, --decoder ID        use a specific decoder (see --list-decoders)\n"
                "      --with-aux          also write auxiliary images (e.g. depth images)\n"
                "      --with-xmp          write XMP metadata to file (output filename with .xmp suffix)\n"
                "      --with-exif         write EXIF metadata to file (output filename with .exif suffix)\n"
                "      --skip-exif-offset  skip EXIF metadata offset bytes\n"
                "      --no-colons         replace ':' characters in auxiliary image filenames with '_'\n"
+               "      --list-decoders     list all available decoders (built-in and plugins)\n"
                "      --quiet             do not output status messages to console\n";
 }
 
@@ -110,18 +112,49 @@ int option_no_colons = 0;
 int option_with_xmp = 0;
 int option_with_exif = 0;
 int option_skip_exif_offset = 0;
+int option_list_decoders = 0;
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
     {(char* const) "strict",           no_argument,       0,                        's'},
+    {(char* const) "decoder",          required_argument, 0,                        'd'},
     {(char* const) "quiet",            no_argument,       &option_quiet,            1},
     {(char* const) "with-aux",         no_argument,       &option_aux,              1},
     {(char* const) "with-xmp",         no_argument,       &option_with_xmp,         1},
     {(char* const) "with-exif",        no_argument,       &option_with_exif,        1},
     {(char* const) "skip-exif-offset", no_argument,       &option_skip_exif_offset, 1},
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
+    {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'}
 };
+
+
+#define MAX_DECODERS 20
+
+void list_decoders(heif_compression_format format)
+{
+  const heif_decoder_descriptor* decoders[MAX_DECODERS];
+  int n = heif_get_decoder_descriptors(format, decoders, MAX_DECODERS);
+
+  for (int i=0;i<n;i++) {
+    const char* id = heif_decoder_descriptor_get_id_name(decoders[i]);
+    if (id==nullptr) {
+      id = "---";
+    }
+
+    std::cout << "- " << id << " : " << heif_decoder_descriptor_get_name(decoders[i]) << "\n";
+  }
+}
+
+
+void list_all_decoders()
+{
+  std::cout << "HEIC decoders:\n";
+  list_decoders(heif_compression_HEVC);
+
+  std::cout << "AVIF decoders:\n";
+  list_decoders(heif_compression_AV1);
+}
 
 
 class LibHeifInitializer {
@@ -138,12 +171,13 @@ int main(int argc, char** argv)
 
   int quality = -1;  // Use default quality.
   bool strict_decoding = false;
+  const char* decoder_id = nullptr;
 
   UNUSED(quality);  // The quality will only be used by encoders that support it.
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:s", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -151,6 +185,9 @@ int main(int argc, char** argv)
     switch (c) {
       case 'q':
         quality = atoi(optarg);
+        break;
+      case 'd':
+        decoder_id = optarg;
         break;
       case 's':
         strict_decoding = true;
@@ -162,6 +199,11 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
     }
+  }
+
+  if (option_list_decoders) {
+    list_all_decoders();
+    return 0;
   }
 
   if (optind + 2 > argc) {
@@ -316,6 +358,7 @@ int main(int argc, char** argv)
     encoder->UpdateDecodingOptions(handle, decode_options);
 
     decode_options->strict_decoding = strict_decoding;
+    decode_options->decoder_id = decoder_id;
 
     int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
     if (bit_depth < 0) {

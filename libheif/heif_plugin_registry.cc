@@ -24,6 +24,7 @@
 
 #include <utility>
 #include <cstring>
+#include <algorithm>
 
 #include "heif_plugin_registry.h"
 
@@ -125,13 +126,21 @@ void heif::register_decoder(const heif_decoder_plugin* decoder_plugin)
 }
 
 
-const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format type)
+const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format type, const char* name_id)
 {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
 
   for (const auto* plugin : s_decoder_plugins) {
+
     int priority = plugin->does_support_format(type);
+
+    if (priority > 0 && name_id && plugin->plugin_api_version >= 3) {
+      if (strcmp(name_id, plugin->id_name)==0) {
+        return plugin;
+      }
+    }
+
     if (priority > highest_priority) {
       highest_priority = priority;
       best_plugin = plugin;
@@ -140,6 +149,7 @@ const struct heif_decoder_plugin* heif::get_decoder(enum heif_compression_format
 
   return best_plugin;
 }
+
 
 void heif::register_encoder(const heif_encoder_plugin* encoder_plugin)
 {

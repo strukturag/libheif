@@ -469,7 +469,7 @@ void HeifContext::register_decoder(const heif_decoder_plugin* decoder_plugin)
 }
 
 
-const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type) const
+const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression_format type, const char* name_id) const
 {
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
@@ -477,7 +477,7 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
   // search global plugins
 
-  best_plugin = heif::get_decoder(type);
+  best_plugin = heif::get_decoder(type, name_id);
   if (best_plugin != nullptr) {
     highest_priority = best_plugin->does_support_format(type);
   }
@@ -487,6 +487,13 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
   for (const auto* plugin : m_decoder_plugins) {
     int priority = plugin->does_support_format(type);
+
+    if (priority > 0 && name_id && plugin->plugin_api_version >= 3) {
+      if (strcmp(name_id, plugin->id_name) == 0) {
+        return plugin;
+      }
+    }
+
     if (priority > highest_priority) {
       highest_priority = priority;
       best_plugin = plugin;
@@ -1145,10 +1152,12 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       compression = heif_compression_AV1;
     }
 
-    const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression);
+    const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options ? options->decoder_id : nullptr);
     if (!decoder_plugin) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
     }
+
+    std::cout << "using decoder: " << decoder_plugin->get_plugin_name() << "\n";
 
     std::vector<uint8_t> data;
     error = m_heif_file->get_compressed_image_data(ID, &data);
