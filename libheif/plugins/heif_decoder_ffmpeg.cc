@@ -467,7 +467,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 
 static const struct heif_decoder_plugin decoder_ffmpeg
     {
-        2,
+        3,
         ffmpeg_plugin_name,
         ffmpeg_init_plugin,
         ffmpeg_deinit_plugin,
@@ -476,7 +476,8 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_free_decoder,
         ffmpeg_v1_push_data,
         ffmpeg_v1_decode_image,
-        ffmpeg_set_strict_decoding
+        ffmpeg_set_strict_decoding,
+        "ffmpeg"
     };
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
