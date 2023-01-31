@@ -694,8 +694,10 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   /* read rest of file, and get additional chunks in info_ptr - REQUIRED */
   png_read_end(png_ptr, info_ptr);
 
+
   // --- read EXIF data
 
+#ifdef PNG_eXIf_SUPPORTED
   png_bytep exifPtr = nullptr;
   png_uint_32 exifSize = 0;
   if (png_get_eXIf_1(png_ptr, info_ptr, &exifSize, &exifPtr) == PNG_INFO_eXIf) {
@@ -705,6 +707,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     // remove the EXIF orientation since it is informal only in PNG and we do not want to confuse with an orientation not matching irot/imir
     modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int)input_image.exif.size(), 1);
   }
+#endif
 
   // --- read XMP data
 

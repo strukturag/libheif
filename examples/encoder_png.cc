@@ -108,6 +108,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   // --- write EXIF metadata
 
+#ifdef PNG_eXIf_SUPPORTED
   size_t exifsize = 0;
   uint8_t* exifdata = GetExifMetaData(handle, &exifsize);
   if (exifdata) {
@@ -126,7 +127,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
     free(exifdata);
   }
-
+#endif
 
   // --- write XMP metadata
 
