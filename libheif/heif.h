@@ -1207,6 +1207,16 @@ struct heif_mastering_display_colour_volume
   uint32_t min_display_mastering_luminance;
 };
 
+struct heif_decoded_mastering_display_colour_volume
+{
+  float display_primaries_x[3];
+  float display_primaries_y[3];
+  float white_point_x;
+  float white_point_y;
+  double max_display_mastering_luminance;
+  double min_display_mastering_luminance;
+};
+
 LIBHEIF_API
 int heif_image_has_mastering_display_colour_volume(const struct heif_image*);
 
@@ -1215,6 +1225,12 @@ void heif_image_get_mastering_display_colour_volume(const struct heif_image*, st
 
 LIBHEIF_API
 void heif_image_set_mastering_display_colour_volume(const struct heif_image*, const struct heif_mastering_display_colour_volume* in);
+
+// Converts the internal numeric representation of heif_mastering_display_colour_volume to the
+// normalized values, collected in heif_decoded_mastering_display_colour_volume.
+LIBHEIF_API
+struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_mastering_display_colour_volume* in,
+                                                              struct heif_decoded_mastering_display_colour_volume* out);
 
 // ====================================================================================================
 //  Encoding API

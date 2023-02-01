@@ -1049,6 +1049,58 @@ void heif_image_set_mastering_display_colour_volume(const struct heif_image* ima
   image->image->set_mdcv(*in);
 }
 
+float mdcv_coord_decode_x(uint16_t coord)
+{
+  // check for unspecified value
+  if (coord<5 || coord>37000) {
+    return 0.0f;
+  }
+
+  return (float)(coord * 0.00002);
+}
+
+float mdcv_coord_decode_y(uint16_t coord)
+{
+  // check for unspecified value
+  if (coord<5 || coord>42000) {
+    return 0.0f;
+  }
+
+  return (float)(coord * 0.00002);
+}
+
+struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_mastering_display_colour_volume* in,
+                                                              struct heif_decoded_mastering_display_colour_volume* out)
+{
+  if (in==nullptr || out==nullptr) {
+    return error_null_parameter;
+  }
+
+  for (int c=0;c<3;c++) {
+    out->display_primaries_x[c] = mdcv_coord_decode_x(in->display_primaries_x[c]);
+    out->display_primaries_y[c] = mdcv_coord_decode_y(in->display_primaries_y[c]);
+  }
+
+  out->white_point_x = mdcv_coord_decode_x(in->white_point_x);
+  out->white_point_y = mdcv_coord_decode_y(in->white_point_y);
+
+  if (in->max_display_mastering_luminance < 50000 || in->max_display_mastering_luminance > 100000000) {
+    out->max_display_mastering_luminance = 0;
+  }
+  else {
+    out->max_display_mastering_luminance = in->max_display_mastering_luminance * 0.0001;
+  }
+
+  if (in->min_display_mastering_luminance < 1 || in->min_display_mastering_luminance > 50000) {
+    out->min_display_mastering_luminance = 0;
+  }
+  else {
+    out->min_display_mastering_luminance = in->min_display_mastering_luminance * 0.0001;
+  }
+
+  return error_Ok;
+}
+
 
 void heif_image_release(const struct heif_image* img)
 {

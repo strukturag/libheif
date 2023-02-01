@@ -2027,7 +2027,7 @@ std::string Box_mdcv::dump(Indent& indent) const
   sstr << "(" << mdcv.display_primaries_x[1] << ";" << mdcv.display_primaries_y[1] << "), ";
   sstr << "(" << mdcv.display_primaries_x[2] << ";" << mdcv.display_primaries_y[2] << ")\n";
 
-  sstr << indent << "white point (x,y): (" << mdcv.white_point_y << ";" << mdcv.white_point_y << ")\n";
+  sstr << indent << "white point (x,y): (" << mdcv.white_point_x << ";" << mdcv.white_point_y << ")\n";
   sstr << indent << "max display mastering luminance: " << mdcv.max_display_mastering_luminance << "\n";
   sstr << indent << "min display mastering luminance: " << mdcv.min_display_mastering_luminance << "\n";
 

@@ -401,15 +401,19 @@ int main(int argc, char** argv)
       if (heif_image_has_mastering_display_colour_volume(image)) {
         struct heif_mastering_display_colour_volume mdcv;
         heif_image_get_mastering_display_colour_volume(image, &mdcv);
+
+        struct heif_decoded_mastering_display_colour_volume decoded_mdcv;
+        err = heif_mastering_display_colour_volume_decode(&mdcv, &decoded_mdcv);
+
         std::cout << "mastering display color volume:\n"
                   << "  display_primaries (x,y): "
-                  << "(" << mdcv.display_primaries_x[0] << ";" << mdcv.display_primaries_y[0] << "), "
-                  << "(" << mdcv.display_primaries_x[1] << ";" << mdcv.display_primaries_y[1] << "), "
-                  << "(" << mdcv.display_primaries_x[2] << ";" << mdcv.display_primaries_y[2] << ")\n";
+                  << "(" << decoded_mdcv.display_primaries_x[0] << ";" << decoded_mdcv.display_primaries_y[0] << "), "
+                  << "(" << decoded_mdcv.display_primaries_x[1] << ";" << decoded_mdcv.display_primaries_y[1] << "), "
+                  << "(" << decoded_mdcv.display_primaries_x[2] << ";" << decoded_mdcv.display_primaries_y[2] << ")\n";
 
-        std::cout << "  white point (x,y): (" << mdcv.white_point_y << ";" << mdcv.white_point_y << ")\n";
-        std::cout << "  max display mastering luminance: " << mdcv.max_display_mastering_luminance << "\n";
-        std::cout << "  min display mastering luminance: " << mdcv.min_display_mastering_luminance << "\n";
+        std::cout << "  white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
+        std::cout << "  max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
+        std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
       }
     }
 
