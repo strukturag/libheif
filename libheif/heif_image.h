@@ -125,11 +125,29 @@ namespace heif {
 
     bool extend_padding_to_size(int width, int height);
 
+    // --- clli
+
     bool has_clli() const { return m_clli.max_content_light_level != 0 || m_clli.max_pic_average_light_level != 0; }
 
     heif_content_light_level get_clli() const { return m_clli; }
 
     void set_clli(const heif_content_light_level& clli) { m_clli = clli; }
+
+    // --- mdcv
+
+    bool has_mdcv() const { return m_mdcv_set; }
+
+    heif_mastering_display_colour_volume get_mdcv() const { return m_mdcv; }
+
+    void set_mdcv(const heif_mastering_display_colour_volume& mdcv)
+    {
+      m_mdcv = mdcv;
+      m_mdcv_set = true;
+    }
+
+    void unset_mdcv() { m_mdcv_set = false; }
+
+    // --- warnings
 
     void add_warning(Error warning) { m_warnings.emplace_back(std::move(warning)); }
 
@@ -166,6 +184,8 @@ namespace heif {
     std::map<heif_channel, ImagePlane> m_planes;
 
     heif_content_light_level m_clli{};
+    heif_mastering_display_colour_volume m_mdcv{};
+    bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17
 
     std::vector<Error> m_warnings;
   };

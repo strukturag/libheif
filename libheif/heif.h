@@ -1197,6 +1197,25 @@ LIBHEIF_API
 void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
 
 
+struct heif_mastering_display_colour_volume
+{
+  uint16_t display_primaries_x[3];
+  uint16_t display_primaries_y[3];
+  uint16_t white_point_x;
+  uint16_t white_point_y;
+  uint32_t max_display_mastering_luminance;
+  uint32_t min_display_mastering_luminance;
+};
+
+LIBHEIF_API
+int heif_image_has_mastering_display_colour_volume(const struct heif_image*);
+
+LIBHEIF_API
+void heif_image_get_mastering_display_colour_volume(const struct heif_image*, struct heif_mastering_display_colour_volume* out);
+
+LIBHEIF_API
+void heif_image_set_mastering_display_colour_volume(const struct heif_image*, const struct heif_mastering_display_colour_volume* in);
+
 // ====================================================================================================
 //  Encoding API
 

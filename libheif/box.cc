@@ -504,6 +504,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_clli>(hdr);
       break;
 
+    case fourcc("mdcv"):
+      box = std::make_shared<Box_mdcv>(hdr);
+      break;
+
     default:
       box = std::make_shared<Box>(hdr);
       break;
@@ -1988,6 +1992,63 @@ Error Box_clli::write(StreamWriter& writer) const
 
   writer.write16(clli.max_content_light_level);
   writer.write16(clli.max_pic_average_light_level);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_mdcv::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  for (int c=0;c<3;c++) {
+    mdcv.display_primaries_x[c] = range.read16();
+    mdcv.display_primaries_y[c] = range.read16();
+  }
+
+  mdcv.white_point_x = range.read16();
+  mdcv.white_point_y = range.read16();
+  mdcv.max_display_mastering_luminance = range.read32();
+  mdcv.min_display_mastering_luminance = range.read32();
+
+  return range.get_error();
+}
+
+
+std::string Box_mdcv::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "display_primaries (x,y): ";
+  sstr << "(" << mdcv.display_primaries_x[0] << ";" << mdcv.display_primaries_y[0] << "), ";
+  sstr << "(" << mdcv.display_primaries_x[1] << ";" << mdcv.display_primaries_y[1] << "), ";
+  sstr << "(" << mdcv.display_primaries_x[2] << ";" << mdcv.display_primaries_y[2] << ")\n";
+
+  sstr << indent << "white point (x,y): (" << mdcv.white_point_y << ";" << mdcv.white_point_y << ")\n";
+  sstr << indent << "max display mastering luminance: " << mdcv.max_display_mastering_luminance << "\n";
+  sstr << indent << "min display mastering luminance: " << mdcv.min_display_mastering_luminance << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_mdcv::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  for (int c=0;c<3;c++) {
+    writer.write16(mdcv.display_primaries_x[c]);
+    writer.write16(mdcv.display_primaries_y[c]);
+  }
+
+  writer.write16(mdcv.white_point_x);
+  writer.write16(mdcv.white_point_y);
+
+  writer.write32(mdcv.max_display_mastering_luminance);
+  writer.write32(mdcv.min_display_mastering_luminance);
 
   prepend_header(writer, box_start);
 

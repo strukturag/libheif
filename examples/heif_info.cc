@@ -397,6 +397,20 @@ int main(int argc, char** argv)
                   << "  max content light level: " << clli.max_content_light_level << "\n"
                   << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
       }
+
+      if (heif_image_has_mastering_display_colour_volume(image)) {
+        struct heif_mastering_display_colour_volume mdcv;
+        heif_image_get_mastering_display_colour_volume(image, &mdcv);
+        std::cout << "mastering display color volume:\n"
+                  << "  display_primaries (x,y): "
+                  << "(" << mdcv.display_primaries_x[0] << ";" << mdcv.display_primaries_y[0] << "), "
+                  << "(" << mdcv.display_primaries_x[1] << ";" << mdcv.display_primaries_y[1] << "), "
+                  << "(" << mdcv.display_primaries_x[2] << ";" << mdcv.display_primaries_y[2] << ")\n";
+
+        std::cout << "  white point (x,y): (" << mdcv.white_point_y << ";" << mdcv.white_point_y << ")\n";
+        std::cout << "  max display mastering luminance: " << mdcv.max_display_mastering_luminance << "\n";
+        std::cout << "  min display mastering luminance: " << mdcv.min_display_mastering_luminance << "\n";
+      }
     }
 
     heif_image_release(image);

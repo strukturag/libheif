@@ -1217,6 +1217,29 @@ namespace heif {
   };
 
 
+  class Box_mdcv : public Box
+  {
+  public:
+    Box_mdcv()
+    {
+      set_short_type(fourcc("mdcv"));
+      set_is_full_box(false);
+    }
+
+    Box_mdcv(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    heif_mastering_display_colour_volume mdcv;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
   class color_profile
   {
   public:

@@ -1397,7 +1397,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   }
 
 
-  // attach HDR metadata
+  // attach HDR metadata to image
 
   {
     auto ipco_box = m_heif_file->get_ipco_box();
@@ -1407,6 +1407,13 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
     if (clli) {
       img->set_clli(clli->clli);
+    }
+
+    auto mdcv_box = ipco_box->get_property_for_item_ID(ID, ipma_box, fourcc("mdcv"));
+    auto mdcv = std::dynamic_pointer_cast<Box_mdcv>(mdcv_box);
+
+    if (mdcv) {
+      img->set_mdcv(mdcv->mdcv);
     }
   }
 
@@ -2078,6 +2085,17 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     clli->clli = src_image->get_clli();
 
     int index = m_heif_file->get_ipco_box()->append_child_box(clli);
+    m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+  }
+
+
+  // --- write MDCV property
+
+  if (src_image->has_mdcv()) {
+    auto mdcv = std::make_shared<Box_mdcv>();
+    mdcv->mdcv = src_image->get_mdcv();
+
+    int index = m_heif_file->get_ipco_box()->append_child_box(mdcv);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 }

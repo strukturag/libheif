@@ -1015,7 +1015,9 @@ int heif_image_has_content_light_level(const struct heif_image* image)
 
 void heif_image_get_content_light_level(const struct heif_image* image, struct heif_content_light_level* out)
 {
-  *out = image->image->get_clli();
+  if (out) {
+    *out = image->image->get_clli();
+  }
 }
 
 void heif_image_set_content_light_level(const struct heif_image* image, const struct heif_content_light_level* in)
@@ -1025,6 +1027,26 @@ void heif_image_set_content_light_level(const struct heif_image* image, const st
   }
 
   image->image->set_clli(*in);
+}
+
+
+int heif_image_has_mastering_display_colour_volume(const struct heif_image* image)
+{
+  return image->image->has_mdcv();
+}
+
+void heif_image_get_mastering_display_colour_volume(const struct heif_image* image, struct heif_mastering_display_colour_volume* out)
+{
+  *out = image->image->get_mdcv();
+}
+
+void heif_image_set_mastering_display_colour_volume(const struct heif_image* image, const struct heif_mastering_display_colour_volume* in)
+{
+  if (in==nullptr) {
+    return;
+  }
+
+  image->image->set_mdcv(*in);
 }
 
 

@@ -3280,6 +3280,10 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
       out->set_clli(in->get_clli());
     }
 
+    if (in->has_mdcv()) {
+      out->set_mdcv(in->get_mdcv());
+    }
+
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {
       out->add_warning(warning);
