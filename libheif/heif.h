@@ -1228,6 +1228,7 @@ void heif_image_set_mastering_display_colour_volume(const struct heif_image*, co
 
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the
 // normalized values, collected in heif_decoded_mastering_display_colour_volume.
+// Values that are out-of-range are decoded to 0, indicating an undefined value (as specified in ISO/IEC 23008-2).
 LIBHEIF_API
 struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_mastering_display_colour_volume* in,
                                                               struct heif_decoded_mastering_display_colour_volume* out);
