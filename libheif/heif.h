@@ -1181,6 +1181,8 @@ LIBHEIF_API
 void heif_image_release(const struct heif_image*);
 
 
+// Note: a value of 0 for any of these values indicates that the value is undefined.
+// The unit of these values is Candelas per square meter.
 struct heif_content_light_level
 {
   uint16_t max_content_light_level;
@@ -1197,6 +1199,7 @@ LIBHEIF_API
 void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
 
 
+// Note: color coordinates are defined according to the CIE 1931 definition of x as specified in ISO 11664-1 (see also ISO 11664-3 and CIE 15).
 struct heif_mastering_display_colour_volume
 {
   uint16_t display_primaries_x[3];
@@ -1207,6 +1210,7 @@ struct heif_mastering_display_colour_volume
   uint32_t min_display_mastering_luminance;
 };
 
+// The units for max_display_mastering_luminance and min_display_mastering_luminance is Candelas per square meter.
 struct heif_decoded_mastering_display_colour_volume
 {
   float display_primaries_x[3];
