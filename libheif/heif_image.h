@@ -125,6 +125,12 @@ namespace heif {
 
     bool extend_padding_to_size(int width, int height);
 
+    bool has_clli() const { return m_clli.max_content_light_level != 0 || m_clli.max_pic_average_light_level != 0; }
+
+    heif_content_light_level get_clli() const { return m_clli; }
+
+    void set_clli(const heif_content_light_level& clli) { m_clli = clli; }
+
     void add_warning(Error warning) { m_warnings.emplace_back(std::move(warning)); }
 
     const std::vector<Error>& get_warnings() const { return m_warnings; }
@@ -158,6 +164,8 @@ namespace heif {
     std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
     std::map<heif_channel, ImagePlane> m_planes;
+
+    heif_content_light_level m_clli{};
 
     std::vector<Error> m_warnings;
   };

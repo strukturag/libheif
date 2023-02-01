@@ -500,6 +500,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_pixi>(hdr);
       break;
 
+    case fourcc("clli"):
+      box = std::make_shared<Box_clli>(hdr);
+      break;
+
     default:
       box = std::make_shared<Box>(hdr);
       break;
@@ -1948,6 +1952,42 @@ Error Box_pixi::write(StreamWriter& writer) const
   for (size_t i = 0; i < m_bits_per_channel.size(); i++) {
     writer.write8(m_bits_per_channel[i]);
   }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_clli::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  clli.max_content_light_level = range.read16();
+  clli.max_pic_average_light_level = range.read16();
+
+  return range.get_error();
+}
+
+
+std::string Box_clli::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "max_content_light_level: " << clli.max_content_light_level << "\n";
+  sstr << indent << "max_pic_average_light_level: " << clli.max_pic_average_light_level << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_clli::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write16(clli.max_content_light_level);
+  writer.write16(clli.max_pic_average_light_level);
 
   prepend_header(writer, box_start);
 

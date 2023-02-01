@@ -1194,6 +1194,29 @@ namespace heif {
   };
 
 
+  class Box_clli : public Box
+  {
+  public:
+    Box_clli()
+    {
+      set_short_type(fourcc("clli"));
+      set_is_full_box(false);
+    }
+
+    Box_clli(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    heif_content_light_level clli;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
   class color_profile
   {
   public:

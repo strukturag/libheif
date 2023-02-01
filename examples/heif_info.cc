@@ -377,6 +377,30 @@ int main(int argc, char** argv)
     }
 
 
+    struct heif_image* image;
+    err = heif_decode_image(handle,
+                            &image,
+                            heif_colorspace_undefined,
+                            heif_chroma_undefined,
+                            nullptr);
+    if (err.code) {
+      heif_image_handle_release(handle);
+      std::cerr << "Could not decode image " << err.message << "\n";
+      return 1;
+    }
+
+    if (image) {
+      if (heif_image_has_content_light_level(image)) {
+        struct heif_content_light_level clli{};
+        heif_image_get_content_light_level(image, &clli);
+        std::cout << "content light level (clli):\n"
+                  << "  max content light level: " << clli.max_content_light_level << "\n"
+                  << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
+      }
+    }
+
+    heif_image_release(image);
+
     heif_image_handle_release(handle);
   }
 

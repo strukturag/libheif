@@ -1008,6 +1008,26 @@ void heif_image_add_decoding_warning(struct heif_image* image,
 }
 
 
+int heif_image_has_content_light_level(const struct heif_image* image)
+{
+  return image->image->has_clli();
+}
+
+void heif_image_get_content_light_level(const struct heif_image* image, struct heif_content_light_level* out)
+{
+  *out = image->image->get_clli();
+}
+
+void heif_image_set_content_light_level(const struct heif_image* image, const struct heif_content_light_level* in)
+{
+  if (in==nullptr) {
+    return;
+  }
+
+  image->image->set_clli(*in);
+}
+
+
 void heif_image_release(const struct heif_image* img)
 {
   delete img;

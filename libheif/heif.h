@@ -1181,6 +1181,22 @@ LIBHEIF_API
 void heif_image_release(const struct heif_image*);
 
 
+struct heif_content_light_level
+{
+  uint16_t max_content_light_level;
+  uint16_t max_pic_average_light_level;
+};
+
+LIBHEIF_API
+int heif_image_has_content_light_level(const struct heif_image*);
+
+LIBHEIF_API
+void heif_image_get_content_light_level(const struct heif_image*, struct heif_content_light_level* out);
+
+LIBHEIF_API
+void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
+
+
 // ====================================================================================================
 //  Encoding API
 
