@@ -210,9 +210,9 @@ static bool JPEGMarkerIsIcc(jpeg_saved_marker_ptr marker)
       GETJOCTET(marker->data[11]) == 0x0;
 }
 
-boolean ReadICCProfileFromJPEG(j_decompress_ptr cinfo,
-                               JOCTET** icc_data_ptr,
-                               unsigned int* icc_data_len)
+bool ReadICCProfileFromJPEG(j_decompress_ptr cinfo,
+                            JOCTET** icc_data_ptr,
+                            unsigned int* icc_data_len)
 {
   jpeg_saved_marker_ptr marker;
   int num_markers = 0;
@@ -393,13 +393,13 @@ InputImage loadJPEG(const char* filename)
 
   jpeg_read_header(&cinfo, TRUE);
 
-  boolean embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
-  boolean embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
+  bool embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
+  bool embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
   if (embeddedXMPFlag) {
     img.xmp = xmpData;
   }
 
-  boolean embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
+  bool embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
   if (embeddedEXIFFlag) {
     img.exif = exifData;
     img.orientation = (heif_orientation)read_exif_orientation_tag(exifData.data(), (int)exifData.size());
