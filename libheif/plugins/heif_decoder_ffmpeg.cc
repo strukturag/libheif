@@ -40,17 +40,17 @@ public:
     NalUnit();
     ~NalUnit();
     bool set_data(const unsigned char* in_data, int n);
-    int size() const { return data_size; }
+    int size() const { return nal_data_size; }
     int unit_type() const { return nal_unit_type;  }
-    const unsigned char* data() const { return nal_data; }
+    const unsigned char* data() const { return nal_data_ptr; }
     int bitExtracted(int number, int bits_count, int position_nr)
     {
         return (((1 << bits_count) - 1) & (number >> (position_nr - 1)));
     }
 private:
-    unsigned char* nal_data;
+    const unsigned char* nal_data_ptr;
     int nal_unit_type;
-    int data_size;
+    int nal_data_size;
 };
 
 struct ffmpeg_decoder
@@ -134,23 +134,21 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
 
 NalUnit::NalUnit()
 {
-    nal_data = NULL;
+    nal_data_ptr = NULL;
     nal_unit_type = 0;
-    data_size = 0;
+    nal_data_size = 0;
 }
 
 NalUnit::~NalUnit()
 {
-    free(nal_data);
+
 }
 
 bool NalUnit::set_data(const unsigned char* in_data, int n)
 {
-    unsigned char* newbuffer = (unsigned char*)malloc(n);
-    memcpy(newbuffer, in_data, n);
-    nal_data = newbuffer;
-    nal_unit_type = bitExtracted(newbuffer[0], 6, 2);
-    data_size = n;
+    nal_data_ptr = in_data;
+    nal_unit_type = bitExtracted(nal_data_ptr[0], 6, 2);
+    nal_data_size = n;
     return true;
 }
 
@@ -366,6 +364,12 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   hvec_data_ptr += hvec_AnnexB_StartCode_size;
   memcpy(hvec_data_ptr, heif_idrpic_data, heif_idrpic_size);
 
+  //decoder->NalMap not needed anymore
+  for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
+      delete current->second;
+  }
+  decoder->NalMap.clear();
+
   const AVCodec* hvec_codec;
   AVCodecParserContext* hvec_parser;
   AVCodecContext* hvec_codecContext = NULL;
@@ -447,6 +451,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   uint8_t color_primaries = hvec_codecParam->color_primaries;
   uint8_t transfer_characteristics = hvec_codecParam->color_trc;
   uint8_t matrix_coefficients = hvec_codecParam->color_space;
+  avcodec_parameters_free(&hvec_codecParam);
 
   delete hvec_data;
   av_parser_close(hvec_parser);
