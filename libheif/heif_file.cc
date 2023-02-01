@@ -152,6 +152,13 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
       break;
 
+    case heif_compression_VVC:
+      m_ftyp_box->set_major_brand(fourcc("vvic"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(fourcc("vvic"));
+      break;
+
     default:
       break;
   }
@@ -459,6 +466,22 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
       }
       else {
         return 10;
+      }
+    }
+  }
+
+  // VVC
+
+  if (image_type == "vvc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+    if (vvcC_box) {
+      Box_vvcC::configuration config = vvcC_box->get_configuration();
+      if (config.bit_depth_present_flag) {
+        return config.bit_depth;
+      }
+      else {
+        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
       }
     }
   }

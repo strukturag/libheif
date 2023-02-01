@@ -206,6 +206,9 @@ heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
   else if (strcmp(brand, "avis") == 0) {
     return heif_avis;
   }
+  else if (strcmp(brand, "vvic") == 0) {
+    return heif_vvic;
+  }
   else {
     return heif_unknown_brand;
   }
@@ -1794,7 +1797,7 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
   std::vector<decoder_with_priority> plugins;
   std::vector<heif_compression_format> formats;
   if (format_filter == heif_compression_undefined) {
-    formats = { heif_compression_HEVC, heif_compression_AV1 };
+    formats = { heif_compression_HEVC, heif_compression_AV1, heif_compression_VVC };
   }
   else {
     formats.emplace_back(format_filter);

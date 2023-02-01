@@ -510,7 +510,8 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "grid" ||
           item_type == "iden" ||
           item_type == "iovl" ||
-          item_type == "av01");
+          item_type == "av01" ||
+          item_type == "vvc1");
 }
 
 
