@@ -3284,6 +3284,12 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
       out->set_mdcv(in->get_mdcv());
     }
 
+    if (in->has_nonsquare_pixel_ratio()) {
+      uint32_t h,v;
+      in->get_pixel_ratio(&h, &v);
+      out->set_pixel_ratio(h,v);
+    }
+
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {
       out->add_warning(warning);

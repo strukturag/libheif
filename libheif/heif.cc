@@ -1102,6 +1102,17 @@ struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_
 }
 
 
+void heif_image_get_pixel_aspect_ratio(const struct heif_image* image, uint32_t* aspect_h, uint32_t* aspect_v)
+{
+  image->image->get_pixel_ratio(aspect_h, aspect_v);
+}
+
+void heif_image_set_pixel_aspect_ratio(struct heif_image* image, uint32_t aspect_h, uint32_t aspect_v)
+{
+  image->image->set_pixel_ratio(aspect_h, aspect_v);
+}
+
+
 void heif_image_release(const struct heif_image* img)
 {
   delete img;

@@ -1233,6 +1233,12 @@ LIBHEIF_API
 struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_mastering_display_colour_volume* in,
                                                               struct heif_decoded_mastering_display_colour_volume* out);
 
+LIBHEIF_API
+void heif_image_get_pixel_aspect_ratio(const struct heif_image*, uint32_t* aspect_h, uint32_t* aspect_v);
+
+LIBHEIF_API
+void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, uint32_t aspect_v);
+
 // ====================================================================================================
 //  Encoding API
 

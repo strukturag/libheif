@@ -1194,6 +1194,30 @@ namespace heif {
   };
 
 
+  class Box_pasp : public Box
+  {
+  public:
+    Box_pasp()
+    {
+      set_short_type(fourcc("pasp"));
+      set_is_full_box(false);
+    }
+
+    Box_pasp(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    uint32_t hSpacing = 1;
+    uint32_t vSpacing = 1;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
   class Box_clli : public Box
   {
   public:

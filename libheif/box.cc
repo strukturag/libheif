@@ -500,6 +500,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_pixi>(hdr);
       break;
 
+    case fourcc("pasp"):
+      box = std::make_shared<Box_pasp>(hdr);
+      break;
+
     case fourcc("clli"):
       box = std::make_shared<Box_clli>(hdr);
       break;
@@ -1956,6 +1960,42 @@ Error Box_pixi::write(StreamWriter& writer) const
   for (size_t i = 0; i < m_bits_per_channel.size(); i++) {
     writer.write8(m_bits_per_channel[i]);
   }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_pasp::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  hSpacing = range.read32();
+  vSpacing = range.read32();
+
+  return range.get_error();
+}
+
+
+std::string Box_pasp::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "hSpacing: " << hSpacing << "\n";
+  sstr << indent << "vSpacing: " << vSpacing << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_pasp::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(hSpacing);
+  writer.write32(vSpacing);
 
   prepend_header(writer, box_start);
 

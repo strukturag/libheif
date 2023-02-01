@@ -1397,11 +1397,14 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   }
 
 
-  // attach HDR metadata to image
+  // --- attach metadata to image
 
   {
     auto ipco_box = m_heif_file->get_ipco_box();
     auto ipma_box = m_heif_file->get_ipma_box();
+
+    // CLLI
+
     auto clli_box = ipco_box->get_property_for_item_ID(ID, ipma_box, fourcc("clli"));
     auto clli = std::dynamic_pointer_cast<Box_clli>(clli_box);
 
@@ -1409,11 +1412,22 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       img->set_clli(clli->clli);
     }
 
+    // MDCV
+
     auto mdcv_box = ipco_box->get_property_for_item_ID(ID, ipma_box, fourcc("mdcv"));
     auto mdcv = std::dynamic_pointer_cast<Box_mdcv>(mdcv_box);
 
     if (mdcv) {
       img->set_mdcv(mdcv->mdcv);
+    }
+
+    // PASP
+
+    auto pasp_box = ipco_box->get_property_for_item_ID(ID, ipma_box, fourcc("pasp"));
+    auto pasp = std::dynamic_pointer_cast<Box_pasp>(pasp_box);
+
+    if (pasp) {
+      img->set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
     }
   }
 
@@ -2075,6 +2089,17 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
                                    src_image->get_bits_per_pixel(heif_channel_Y),
                                    src_image->get_bits_per_pixel(heif_channel_Cb),
                                    src_image->get_bits_per_pixel(heif_channel_Cr));
+  }
+
+
+  // --- write PASP property
+
+  if (src_image->has_nonsquare_pixel_ratio()) {
+    auto pasp = std::make_shared<Box_pasp>();
+    src_image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
+
+    int index = m_heif_file->get_ipco_box()->append_child_box(pasp);
+    m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
 

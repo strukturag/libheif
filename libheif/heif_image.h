@@ -125,6 +125,20 @@ namespace heif {
 
     bool extend_padding_to_size(int width, int height);
 
+    // --- pixel aspect ratio
+
+    bool has_nonsquare_pixel_ratio() const { return m_PixelAspectRatio_h != m_PixelAspectRatio_v; }
+
+    void get_pixel_ratio(uint32_t* h, uint32_t* v) const {
+      *h = m_PixelAspectRatio_h;
+      *v = m_PixelAspectRatio_v;
+    }
+
+    void set_pixel_ratio(uint32_t h, uint32_t v) {
+      m_PixelAspectRatio_h = h;
+      m_PixelAspectRatio_v = v;
+    }
+
     // --- clli
 
     bool has_clli() const { return m_clli.max_content_light_level != 0 || m_clli.max_pic_average_light_level != 0; }
@@ -183,6 +197,8 @@ namespace heif {
 
     std::map<heif_channel, ImagePlane> m_planes;
 
+    uint32_t m_PixelAspectRatio_h = 1;
+    uint32_t m_PixelAspectRatio_v = 1;
     heif_content_light_level m_clli{};
     heif_mastering_display_colour_volume m_mdcv{};
     bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17

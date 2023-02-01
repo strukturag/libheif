@@ -390,6 +390,12 @@ int main(int argc, char** argv)
     }
 
     if (image) {
+      uint32_t aspect_h, aspect_v;
+      heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
+      if (aspect_h != aspect_v) {
+        std::cout << "pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
+      }
+
       if (heif_image_has_content_light_level(image)) {
         struct heif_content_light_level clli{};
         heif_image_get_content_light_level(image, &clli);
