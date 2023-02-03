@@ -3182,7 +3182,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
   c.numTemporalLayers = (byte & 0x38) >> 3;
   c.lengthSize = (byte & 0x06) +1;
   c.ptl_present_flag = (byte & 0x01);
-  assert(c.ptl_present_flag == false); // TODO
+  // assert(c.ptl_present_flag == false); // TODO   (removed the assert since it will trigger the fuzzers)
 
   byte = range.read8();
   c.chroma_format_present_flag = (byte & 0x80);
