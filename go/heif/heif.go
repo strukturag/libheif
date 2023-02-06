@@ -50,6 +50,9 @@ const (
 	CompressionAV1       = C.heif_compression_AV1
 	CompressionAVC       = C.heif_compression_AVC
 	CompressionJPEG      = C.heif_compression_JPEG
+	CompressionJPEG2000  = C.heif_compression_JPEG2000
+	CompressionVVC       = C.heif_compression_VVC
+	CompressionEVC       = C.heif_compression_EVC
 )
 
 type Chroma C.enum_heif_chroma
