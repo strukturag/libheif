@@ -296,10 +296,12 @@ to update the gdk-pixbuf loader database.
 * [darktable](https://www.darktable.org)
 * [digiKam 7.0.0](https://www.digikam.org/)
 * [libvips](https://github.com/libvips/libvips)
+* [libGD](https://libgd.github.io/)
 * [Kodi HEIF image decoder plugin](https://kodi.wiki/view/Add-on:HEIF_image_decoder)
 * [bimg](https://github.com/h2non/bimg)
 * [GDAL](https://gdal.org/drivers/raster/heif.html)
 * [OpenImageIO](https://sites.google.com/site/openimageio/)
+* [XnView](https://www.xnview.com)
 
 ## Sponsors
 
