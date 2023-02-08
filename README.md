@@ -219,7 +219,7 @@ You can also add plugin directories programmatically.
 
 ## Encoder benchmark
 
-A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found in the Wiki page
+A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the Wiki page
 [AVIF encoding benchmark](https://github.com/strukturag/libheif/wiki/AVIF-Encoder-Benchmark).
 
 
