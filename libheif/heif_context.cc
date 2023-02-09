@@ -1568,6 +1568,11 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     bpp = tileImg->get_luma_bits_per_pixel();
   }
 
+  if (bpp < 8 || bpp > 16) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_pixi_box,
+                 "Invalid bits per pixel in pixi box.");
+  }
 
   if (tile_chroma == heif_chroma_monochrome) {
     img->add_plane(heif_channel_Y, w, h, bpp);
