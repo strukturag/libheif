@@ -69,7 +69,13 @@ std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char
       break;
     }
 
-    if ((d->d_type == DT_REG || d->d_type == DT_LNK || d->d_type == DT_UNKNOWN) && strlen(d->d_name) > 3 &&
+    bool correct_filetype = true;
+#ifdef DT_REG
+    correct_filetype = (d->d_type == DT_REG || d->d_type == DT_LNK || d->d_type == DT_UNKNOWN);
+#endif
+
+    if (correct_filetype &&
+	strlen(d->d_name) > 3 &&
         strcmp(d->d_name + strlen(d->d_name) - 3, ".so") == 0) {
       std::string filename = directory;
       filename += '/';
