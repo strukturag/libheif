@@ -26,7 +26,9 @@
 #include <dlfcn.h>
 #include <cstring>
 
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 #include <dirent.h>
 
 
