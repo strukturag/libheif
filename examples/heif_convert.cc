@@ -142,7 +142,7 @@ void list_decoders(heif_compression_format format)
       id = "---";
     }
 
-    std::cout << "- " << id << " : " << heif_decoder_descriptor_get_name(decoders[i]) << "\n";
+    std::cout << "- " << id << " = " << heif_decoder_descriptor_get_name(decoders[i]) << "\n";
   }
 }
 
