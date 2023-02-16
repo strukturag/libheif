@@ -136,6 +136,21 @@ static gboolean stop_load(gpointer context, GError** error)
   pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, has_alpha, 8, width, height, stride, release_heif_image,
                                     img);
 
+  size_t profile_size = heif_image_handle_get_raw_color_profile_size(hdl);
+  if(profile_size) {
+    guchar *profile_data = (guchar *)g_malloc0(profile_size);
+    err = heif_image_handle_get_raw_color_profile(hdl, profile_data);
+    if (err.code == heif_error_Ok) {
+      gchar *profile_base64 = g_base64_encode(profile_data, profile_size);
+      gdk_pixbuf_set_option(pixbuf, "icc-profile", profile_base64);
+      g_free(profile_base64);
+      g_free(profile_data);
+    }
+    else {
+      g_warning("%s", err.message);
+    }
+  }
+  
   if (hpc->prepare_func) {
     (*hpc->prepare_func)(pixbuf, NULL, hpc->user_data);
   }
