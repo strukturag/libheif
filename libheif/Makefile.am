@@ -194,4 +194,6 @@ EXTRA_DIST = \
   CMakeLists.txt \
   plugins/CMakeLists.txt \
   plugins_unix.h \
-  plugins_windows.h
+  plugins_unix.cc \
+  plugins_windows.h \
+  plugins_windows.cc
