@@ -62,9 +62,7 @@ std::vector<std::string> list_all_potential_plugins_in_directory_windows(const c
   }
 #endif
 
-  int nPlugins = 0;
-
-  if ((hFind = FindFirstFile(findPattern.c_str(), &FindFileData)) != INVALID_HANDLE_VALUE) {
+ if ((hFind = FindFirstFile(findPattern.c_str(), &FindFileData)) != INVALID_HANDLE_VALUE) {
     do {
       std::string filename = directory;
       filename += '/';
