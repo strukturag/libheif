@@ -50,7 +50,7 @@ Fraction::Fraction(int32_t num, int32_t den)
     denominator /= 2;
   }
 
-  while (numerator > MAX_FRACTION_VALUE || numerator < -MAX_FRACTION_VALUE) {
+  while (denominator > 1 && (numerator > MAX_FRACTION_VALUE || numerator < -MAX_FRACTION_VALUE)) {
     numerator /= 2;
     denominator /= 2;
   }
