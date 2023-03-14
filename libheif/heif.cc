@@ -2479,7 +2479,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 
 static void set_default_options(heif_encoding_options& options)
 {
-  options.version = 5;
+  options.version = 6;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = true;
@@ -2487,6 +2487,7 @@ static void set_default_options(heif_encoding_options& options)
   options.output_nclx_profile = nullptr;
   options.macOS_compatibility_workaround_no_nclx_profile = true;
   options.image_orientation = heif_orientation_normal;
+  options.enable_sharp_yuv = false;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
@@ -2494,6 +2495,8 @@ static void copy_options(heif_encoding_options& options, const heif_encoding_opt
   set_default_options(options);
 
   switch (input_options.version) {
+    case 6:
+      options.enable_sharp_yuv = input_options.enable_sharp_yuv;
     case 5:
       options.image_orientation = input_options.image_orientation;
     case 4:

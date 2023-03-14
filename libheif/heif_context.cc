@@ -2160,7 +2160,11 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile);
+    int output_bpp = 0; // same as input
+    ColorConversionOptions color_conversion_options;
+    color_conversion_options.enable_sharp_yuv = options->enable_sharp_yuv;
+    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
+                                   output_bpp, color_conversion_options);
     if (!src_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -2410,7 +2414,11 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
-    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile);
+    int output_bpp = 0; // same as input
+    ColorConversionOptions color_conversion_options;
+    color_conversion_options.enable_sharp_yuv = options->enable_sharp_yuv;
+    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
+                                   output_bpp, color_conversion_options);
     if (!src_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }

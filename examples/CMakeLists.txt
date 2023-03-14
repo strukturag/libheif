@@ -39,6 +39,9 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.cc
         encoder.cc)
 target_link_libraries(heif-enc PRIVATE heif)
+if (LIBSHARPYUV_FOUND)
+    target_compile_definitions(heif-enc PRIVATE HAVE_LIBSHARPYUV=1)
+endif()
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 

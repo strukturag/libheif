@@ -97,6 +97,19 @@ plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 
+# Libsharpyuv
+option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
+if (WITH_LIBSHARPYUV)
+    find_package(libsharpyuv)
+endif ()
+if (LIBSHARPYUV_FOUND)
+    message("libsharpyuv: found")
+elseif (WITH_${variableName})
+    message("libsharpyuv: not found")
+else()
+    message("libsharpyuv: disabled")
+endif ()
+
 
 # --- Create libheif pkgconfig file
 
@@ -129,6 +142,9 @@ if (RAV1E_FOUND AND NOT WITH_RAV1E_PLUGIN)
 endif()
 if (SvtEnc_FOUND AND NOT WITH_SvtEnc_PLUGIN)
     list(APPEND REQUIRES_PRIVATE "SvtAv1Enc")
+endif()
+if (LIBSHARPYUV_FOUND)
+    list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
 set(VERSION ${PROJECT_VERSION})

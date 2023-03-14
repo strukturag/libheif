@@ -33,6 +33,10 @@ if HAVE_SvtEnc
 ADDITIONAL_LIBS += $(svt_LIBS)
 endif
 
+if HAVE_LIBSHARPYUV
+ADDITIONAL_LIBS += $(libsharpyuv_LIBS)
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -45,6 +49,7 @@ libheif_la_CXXFLAGS = \
   $(dav1d_CFLAGS) \
   $(rav1e_CFLAGS) \
   $(svt_CFLAGS) \
+  $(libsharpyuv_CFLAGS) \
   -DLIBHEIF_EXPORTS -I$(top_srcdir)
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
