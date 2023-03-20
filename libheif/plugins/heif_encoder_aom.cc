@@ -858,7 +858,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     return err;
   }
 
-  int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel(image, heif_channel_Y),
+  int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel_range(image, heif_channel_Y),
                                      heif_image_get_chroma_format(image));
 
   cfg.g_w = source_width;
