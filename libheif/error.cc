@@ -204,6 +204,12 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 
     case heif_suberror_Cannot_write_output_data:
       return "Cannot write output data";
+    case heif_suberror_Encoder_initialization:
+      return "Initialization problem";
+    case heif_suberror_Encoder_encoding:
+      return "Encoding problem";
+    case heif_suberror_Encoder_cleanup:
+      return "Cleanup problem";
 
       // --- Plugin_loading_error ---
 

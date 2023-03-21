@@ -118,8 +118,16 @@ void encoder_struct_aom::add_custom_option(std::string name, std::string value)
 }
 #endif
 
-//static const char* kError_out_of_memory = "Out of memory";
-static const char* kError_encode_frame = "Failed to encode frame";
+static const char* kError_undefined_error = "Undefined AOM error";
+
+static const char* error_or_undefined(const char* aom_error) {
+  if (aom_error) {
+    return aom_error;
+  }
+  else {
+    return kError_undefined_error;
+  }
+}
 
 static const char* kParam_min_q = "min-q";
 static const char* kParam_max_q = "max-q";
@@ -702,8 +710,8 @@ static heif_error encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
   if (res != AOM_CODEC_OK) {
     struct heif_error err = {
         heif_error_Encoder_plugin_error,
-        heif_suberror_Unspecified,
-        kError_encode_frame
+        heif_suberror_Encoder_encoding,
+        error_or_undefined(aom_codec_error_detail(codec))
     };
     return err;
   }
@@ -853,8 +861,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_codec_err_t res = aom_codec_enc_config_default(iface, &cfg, aomUsage);
   if (res) {
     err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Unspecified,
-           "Failed to get default codec config"};
+           heif_suberror_Encoder_initialization,
+           error_or_undefined(aom_codec_error_detail(&codec))};
     return err;
   }
 
@@ -912,8 +920,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Unspecified,
-           "Failed to initialize encoder"};
+           heif_suberror_Encoder_initialization,
+           error_or_undefined(aom_codec_error_detail(&codec))};
     return err;
   }
 
@@ -1019,8 +1027,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   res = aom_codec_encode(&codec, NULL, -1, 0, flags);
   if (res != AOM_CODEC_OK) {
     err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Unspecified,
-           kError_encode_frame};
+           heif_suberror_Encoder_encoding,
+           error_or_undefined(aom_codec_error_detail(&codec))};
     return err;
   }
 
@@ -1055,9 +1063,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   aom_img_free(&input_image);
 
   if (aom_codec_destroy(&codec)) {
+    // Note: do not call aom_codec_error_detail(), because it is not set in aom_codec_destroy(). (see #788)
     err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Unspecified,
-           "Failed to destroy codec"};
+           heif_suberror_Encoder_cleanup,
+           kError_undefined_error};
     return err;
   }
 

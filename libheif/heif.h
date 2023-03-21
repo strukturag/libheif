@@ -281,6 +281,10 @@ enum heif_suberror_code
 
   heif_suberror_Cannot_write_output_data = 5000,
 
+  heif_suberror_Encoder_initialization = 5001,
+  heif_suberror_Encoder_encoding = 5002,
+  heif_suberror_Encoder_cleanup = 5003,
+
 
   // --- Plugin loading error ---
 

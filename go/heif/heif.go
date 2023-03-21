@@ -309,6 +309,12 @@ const (
 	// --- Encoding_error ---
 
 	SuberrorCannotWriteOutputData = C.heif_suberror_Cannot_write_output_data
+
+    SuberrorEncoderInitialization = C.heif_suberror_Encoder_initialization
+
+    SuberrorEncoderEncoding = C.heif_suberror_Encoder_encoding
+
+    SuberrorEncoderCleanup = C.heif_suberror_Encoder_cleanup
 )
 
 type HeifError struct {
