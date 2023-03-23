@@ -36,6 +36,7 @@
 
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
+#include <mutex>
 
 // Detect whether the aom_codec_set_option() function is available.
 // See https://aomedia.googlesource.com/aom/+/c1d42fe6615c96fc929257ed53c41fa094f38836%5E%21/aom/aom_codec.h.
@@ -53,6 +54,13 @@ struct custom_option
 
 struct encoder_struct_aom
 {
+  ~encoder_struct_aom()
+  {
+    for (auto* error : aom_errors) {
+      delete[] error;
+    }
+  }
+
   // --- parameters
 
   bool realtime_mode;
@@ -90,9 +98,17 @@ struct encoder_struct_aom
 
   std::vector<uint8_t> compressedData;
   bool data_read = false;
+
+  // --- error message copies
+
+  std::mutex aom_errors_mutex;
+  std::vector<const char*> aom_errors;
+
+  const char* set_aom_error(const char* aom_error_detail);
 };
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
+
 void encoder_struct_aom::add_custom_option(const custom_option& p)
 {
   // if there is already a parameter of that name, remove it from list
@@ -111,18 +127,30 @@ void encoder_struct_aom::add_custom_option(const custom_option& p)
 
 void encoder_struct_aom::add_custom_option(std::string name, std::string value)
 {
-    custom_option p;
-    p.name = name;
-    p.value = value;
-    add_custom_option(p);
+  custom_option p;
+  p.name = name;
+  p.value = value;
+  add_custom_option(p);
 }
+
 #endif
 
 static const char* kError_undefined_error = "Undefined AOM error";
+static const char* kError_codec_enc_config_default = "Error creating the default encoder config";
 
-static const char* error_or_undefined(const char* aom_error) {
+const char* encoder_struct_aom::set_aom_error(const char* aom_error)
+{
   if (aom_error) {
-    return aom_error;
+    // We have to make a copy because the error returned from aom_codec_error_detail() is only valid
+    // while the codec structure exists.
+
+    char* err_copy = new char[strlen(aom_error) + 1];
+    strcpy(err_copy, aom_error);
+
+    std::lock_guard<std::mutex> lock(aom_errors_mutex);
+    aom_errors.push_back(err_copy);
+
+    return err_copy;
   }
   else {
     return kError_undefined_error;
@@ -699,7 +727,7 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 
-static heif_error encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
+static heif_error encode_frame(encoder_struct_aom* encoder, aom_codec_ctx_t* codec, aom_image_t* img)
 {
   //aom_codec_iter_t iter = NULL;
   int frame_index = 0; // only encoding a single frame
@@ -711,8 +739,9 @@ static heif_error encode_frame(aom_codec_ctx_t* codec, aom_image_t* img)
     struct heif_error err = {
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
-        error_or_undefined(aom_codec_error_detail(codec))
+        encoder->set_aom_error(aom_codec_error_detail(codec))
     };
+    aom_codec_destroy(codec);
     return err;
   }
 
@@ -862,12 +891,12 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (res) {
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
-           error_or_undefined(aom_codec_error_detail(&codec))};
+           kError_codec_enc_config_default};
     return err;
   }
 
   int seq_profile = compute_avif_profile(heif_image_get_bits_per_pixel_range(image, heif_channel_Y),
-                                     heif_image_get_chroma_format(image));
+                                         heif_image_get_chroma_format(image));
 
   cfg.g_w = source_width;
   cfg.g_h = source_height;
@@ -921,7 +950,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
-           error_or_undefined(aom_codec_error_detail(&codec))};
+           encoder->set_aom_error(aom_codec_error_detail(&codec))};
+    aom_codec_destroy(&codec);
     return err;
   }
 
@@ -991,7 +1021,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- encode frame
 
-  err = encode_frame(&codec, &input_image); //, frame_count++, flags, writer);
+  err = encode_frame(encoder, &codec, &input_image); //, frame_count++, flags, writer);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -1028,7 +1058,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (res != AOM_CODEC_OK) {
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_encoding,
-           error_or_undefined(aom_codec_error_detail(&codec))};
+           encoder->set_aom_error(aom_codec_error_detail(&codec))};
+    aom_codec_destroy(&codec);
     return err;
   }
 
