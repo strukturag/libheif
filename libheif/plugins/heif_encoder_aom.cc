@@ -137,6 +137,7 @@ void encoder_struct_aom::add_custom_option(std::string name, std::string value)
 
 static const char* kError_undefined_error = "Undefined AOM error";
 static const char* kError_codec_enc_config_default = "Error creating the default encoder config";
+static const char* kError_aom_codec_enc_init="Error creating the AOM codec";
 
 const char* encoder_struct_aom::set_aom_error(const char* aom_error)
 {
@@ -950,8 +951,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
-           encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    aom_codec_destroy(&codec);
+           //encoder->set_aom_error(aom_codec_error_detail(&codec))};
+           kError_aom_codec_enc_init};
     return err;
   }
 
