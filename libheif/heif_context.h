@@ -65,7 +65,7 @@ namespace heif {
   public:
     virtual std::string toString() const = 0;
     
-    virtual ~Region() {};
+    virtual ~Region() = default;
 
     uint8_t geometry_type;
   };
@@ -75,7 +75,7 @@ namespace heif {
   public:
     Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
     
-    std::string toString() const;
+    std::string toString() const override;
   
     int32_t x;
     int32_t y;
@@ -86,7 +86,7 @@ namespace heif {
   public:
     Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
     
-    std::string toString() const;
+    std::string toString() const override;
   
     int32_t x;
     int32_t y;
