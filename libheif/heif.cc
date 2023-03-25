@@ -1740,6 +1740,76 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 }
 
 
+unsigned int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
+{
+  return static_cast<unsigned int>(handle->image->get_region_items().size());
+}
+
+unsigned int heif_image_handle_get_list_of_region_item_IDs(const struct heif_image_handle* handle,
+                                                  heif_item_id* ids, unsigned int count)
+{
+  unsigned int cnt = 0;
+  for (const auto& metadata : handle->image->get_region_items()) {
+      if (cnt < count) {
+        ids[cnt] = metadata->item_id;
+        cnt++;
+      }
+    }
+
+  return cnt;
+}
+
+
+unsigned int heif_image_handle_get_region_item_reference_width(const struct heif_image_handle* handle,
+                                                               heif_item_id id)
+{
+  for (auto& region_item : handle->image->get_region_items()) {
+    if (region_item->item_id == id) {
+      return region_item->reference_width;
+    }
+  }
+  return 0;
+}
+
+
+unsigned int heif_image_handle_get_region_item_reference_height(const struct heif_image_handle* handle,
+                                                                heif_item_id id)
+{
+  for (auto& region_item : handle->image->get_region_items()) {
+    if (region_item->item_id == id) {
+      return region_item->reference_height;
+    }
+  }
+  return 0;
+}
+
+
+unsigned int heif_image_handle_get_region_item_number_of_regions(const struct heif_image_handle* handle,
+                                                                 heif_item_id id)
+{
+  for (auto& region_item : handle->image->get_region_items()) {
+    if (region_item->item_id == id) {
+      return (unsigned int)region_item->m_regions.size();
+    }
+  }
+  return 0;
+}
+
+
+const char* heif_image_handle_get_region_item_region_as_string(const struct heif_image_handle* handle,
+                                                               heif_item_id id,
+                                                               unsigned int region_index)
+{
+  for (auto& region_item : handle->image->get_region_items()) {
+    if (region_item->item_id == id) {
+      std::shared_ptr<Region> region = region_item->m_regions[region_index];
+      std::string str = region->toString();
+      return strdup(str.c_str());
+    }
+  }
+  return "";
+}
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

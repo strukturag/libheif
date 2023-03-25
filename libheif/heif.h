@@ -221,6 +221,8 @@ enum heif_suberror_code
 
   heif_suberror_Unknown_NCLX_matrix_coefficients = 135,
 
+  // Invalid specification of region item
+  heif_suberror_Invalid_region_data = 136,
 
   // --- Memory_allocation_error ---
 
@@ -1162,6 +1164,41 @@ struct heif_error heif_image_set_nclx_color_profile(struct heif_image* image,
 // TODO: this function does not make any sense yet, since we currently cannot modify existing HEIF files.
 //LIBHEIF_API
 //void heif_image_remove_color_profile(struct heif_image* image);
+
+
+// ------ region items and annotations
+// See ISO/IEC 23008-12:2022 Section 6.10 "Region items and region annotations"
+
+// How many region items are attached to an image.
+LIBHEIF_API
+unsigned int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle);
+
+// The item IDs for the region items
+LIBHEIF_API
+unsigned int heif_image_handle_get_list_of_region_item_IDs(const struct heif_image_handle* handle,
+                                                           heif_item_id* ids, unsigned int count);
+
+// Get the reference width for the region item.
+LIBHEIF_API
+unsigned int heif_image_handle_get_region_item_reference_width(const struct heif_image_handle* handle,
+                                                               heif_item_id region_item_id);
+
+// Get the reference height for the region item.
+LIBHEIF_API
+unsigned int heif_image_handle_get_region_item_reference_height(const struct heif_image_handle* handle,
+                                                                heif_item_id region_item_id);
+
+// Get the number of regions within the region item.
+LIBHEIF_API
+unsigned int heif_image_handle_get_region_item_number_of_regions(const struct heif_image_handle* handle,
+                                                                 heif_item_id region_item_id);
+
+// Get a description of the region.
+// Caller is responsible for free()ing the returned C string.
+LIBHEIF_API
+const char* heif_image_handle_get_region_item_region_as_string(const struct heif_image_handle* handle,
+                                                               heif_item_id region_item_id,
+                                                               unsigned int region_index);
 
 // Fills the image decoding warnings into the provided 'out_warnings' array.
 // The size of the array has to be provided in max_output_buffer_entries.

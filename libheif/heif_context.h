@@ -21,6 +21,7 @@
 #ifndef LIBHEIF_HEIF_CONTEXT_H
 #define LIBHEIF_HEIF_CONTEXT_H
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -59,6 +60,50 @@ namespace heif {
     std::vector<uint8_t> m_data;
   };
 
+  class Region
+  {
+  public:
+    virtual std::string toString() const = 0;
+    
+    virtual ~Region() {};
+
+    uint8_t geometry_type;
+  };
+
+  class PointRegion : public Region
+  {
+  public:
+    Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
+    
+    std::string toString() const;
+  
+    int32_t x;
+    int32_t y;
+  };
+
+  class RectangleRegion : public Region
+  {
+  public:
+    Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
+    
+    std::string toString() const;
+  
+    int32_t x;
+    int32_t y;
+    uint32_t width;
+    uint32_t height;
+  };
+
+  class RegionItem
+  {
+  public:
+    Error parse(const std::vector<uint8_t>& data);
+
+    heif_item_id item_id;
+    uint32_t reference_width;
+    uint32_t reference_height;
+    std::vector<std::shared_ptr<Region>> m_regions;
+  };
 
   // This is a higher-level view than HeifFile.
   // Images are grouped logically into main images and their thumbnails.
@@ -256,6 +301,16 @@ namespace heif {
       const std::vector<std::shared_ptr<ImageMetadata>>& get_metadata() const { return m_metadata; }
 
 
+      // --- region items
+
+      void add_region_item(std::shared_ptr<RegionItem> region_item)
+      {
+        m_region_items.push_back(std::move(region_item));
+      }
+
+      const std::vector<std::shared_ptr<RegionItem>>& get_region_items() const { return m_region_items; }
+
+
       // --- miaf
 
       void mark_not_miaf_compatible() { m_miaf_compatible = false; }
@@ -321,6 +376,8 @@ namespace heif {
       std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
       bool m_miaf_compatible = true;
+
+      std::vector<std::shared_ptr<RegionItem>> m_region_items;
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }

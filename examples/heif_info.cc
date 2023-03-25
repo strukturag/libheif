@@ -376,6 +376,26 @@ int main(int argc, char** argv)
       printf("  none\n");
     }
 
+    int numRegionItems = heif_image_handle_get_number_of_region_items(handle);
+    printf("region annotations:\n");
+    if (numRegionItems > 0) {
+      std::vector<heif_item_id> ids(numRegionItems);
+      heif_image_handle_get_list_of_region_item_IDs(handle, ids.data(), numRegionItems);
+      for (int i = 0; i < numRegionItems; i++) {
+        unsigned int reference_width = heif_image_handle_get_region_item_reference_width(handle, ids[i]);
+        unsigned int reference_height = heif_image_handle_get_region_item_reference_height(handle, ids[i]);
+        unsigned int numRegions = heif_image_handle_get_region_item_number_of_regions(handle, ids[i]);
+        printf("  id: %u, reference_width: %u, reference_height: %u, %u regions\n", ids[i], reference_width, reference_height, numRegions);
+        for (unsigned int j = 0; j < numRegions; j++) {
+          const char* regionAsString = heif_image_handle_get_region_item_region_as_string(handle, ids[i], j);
+          printf("    %s\n", regionAsString);
+          free((void*)regionAsString);
+        }
+      }
+    }
+    else {
+      printf("  none\n");
+    }
 
     struct heif_image* image;
     err = heif_decode_image(handle,
