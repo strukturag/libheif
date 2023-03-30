@@ -727,28 +727,6 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 
-static heif_error encode_frame(encoder_struct_aom* encoder, aom_codec_ctx_t* codec, aom_image_t* img)
-{
-  //aom_codec_iter_t iter = NULL;
-  int frame_index = 0; // only encoding a single frame
-  int flags = 0; // no flags
-
-  //const aom_codec_cx_pkt_t *pkt = NULL;
-  const aom_codec_err_t res = aom_codec_encode(codec, img, frame_index, 1, flags);
-  if (res != AOM_CODEC_OK) {
-    struct heif_error err = {
-        heif_error_Encoder_plugin_error,
-        heif_suberror_Encoder_encoding,
-        encoder->set_aom_error(aom_codec_error_detail(codec))
-    };
-    aom_codec_destroy(codec);
-    return err;
-  }
-
-  return heif_error_ok;
-}
-
-
 struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* image,
                                    heif_image_input_class input_class)
 {
@@ -1022,7 +1000,20 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- encode frame
 
-  err = encode_frame(encoder, &codec, &input_image); //, frame_count++, flags, writer);
+  res = aom_codec_encode(&codec, &input_image,
+                         0, // only encoding a single frame
+                         1,
+                         0); // no flags
+  if (res != AOM_CODEC_OK) {
+    err = {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Encoder_encoding,
+        encoder->set_aom_error(aom_codec_error_detail(&codec))
+    };
+    aom_codec_destroy(&codec);
+    return err;
+  }
+
 
   // Note: we are freeing the input image directly after use.
   // This covers the usual success case and also all error cases that occur below.
