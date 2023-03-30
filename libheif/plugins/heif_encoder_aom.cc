@@ -1004,6 +1004,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
                          0, // only encoding a single frame
                          1,
                          0); // no flags
+
+  // Note: we are freeing the input image directly after use.
+  // This covers the usual success case and also all error cases that occur below.
+  aom_img_free(&input_image);
+
   if (res != AOM_CODEC_OK) {
     err = {
         heif_error_Encoder_plugin_error,
@@ -1011,15 +1016,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
         encoder->set_aom_error(aom_codec_error_detail(&codec))
     };
     aom_codec_destroy(&codec);
-    return err;
-  }
-
-
-  // Note: we are freeing the input image directly after use.
-  // This covers the usual success case and also all error cases that occur below.
-  aom_img_free(&input_image);
-
-  if (err.code != heif_error_Ok) {
     return err;
   }
 
