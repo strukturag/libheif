@@ -1023,6 +1023,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // --- encode frame
 
   err = encode_frame(encoder, &codec, &input_image); //, frame_count++, flags, writer);
+  aom_img_free(&input_image);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -1091,8 +1092,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
 
   // --- clean up
-
-  aom_img_free(&input_image);
 
   if (aom_codec_destroy(&codec)) {
     // Note: do not call aom_codec_error_detail(), because it is not set in aom_codec_destroy(). (see #788)
