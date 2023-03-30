@@ -1023,7 +1023,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // --- encode frame
 
   err = encode_frame(encoder, &codec, &input_image); //, frame_count++, flags, writer);
+
+  // Note: we are freeing the input image directly after use.
+  // This covers the usual success case and also all error cases that occur below.
   aom_img_free(&input_image);
+
   if (err.code != heif_error_Ok) {
     return err;
   }
