@@ -21,6 +21,7 @@
 #ifndef LIBHEIF_BOX_H
 #define LIBHEIF_BOX_H
 
+#include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -1391,6 +1392,79 @@ namespace heif {
     std::shared_ptr<const color_profile> m_color_profile;
   };
 
+  class Box_cmpd : public Box
+  {
+  public:
+    Box_cmpd()
+    {
+      set_short_type(fourcc("cmpd"));
+      set_is_full_box(false);
+    }
+
+    Box_cmpd(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    struct Component
+    {
+      uint16_t m_component_type;
+      std::string m_component_type_uri;
+    };
+
+    std::vector<Component> m_components;
+  };
+
+  class Box_uncC : public Box
+  {
+  public:
+    Box_uncC()
+    {
+      set_short_type(fourcc("uncC"));
+      set_is_full_box(false);
+    }
+
+    Box_uncC(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    std::string dump(Indent&) const override;
+
+    bool get_headers(std::vector<uint8_t>* dest) const;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+    uint32_t m_profile;
+
+    struct Component
+    {
+      uint16_t m_component_index;
+      uint8_t m_component_bit_depth_minus_one;
+      uint8_t m_component_format;
+      uint8_t m_component_align_size;
+    };
+    std::vector<Component> m_components;
+    uint8_t m_sampling_type;
+    uint8_t m_interleave_type;
+    uint8_t m_block_size;
+    bool m_components_little_endian;
+    bool m_block_pad_lsb;
+    bool m_block_little_endian;
+    bool m_block_reversed;
+    bool m_pad_unknown;
+    uint8_t m_pixel_size;
+    uint32_t m_row_align_size;
+    uint32_t m_tile_align_size;
+    uint32_t m_num_tile_cols_minus_one;
+    uint32_t m_num_tile_rows_minus_one;
+  };
 }
 
 #endif
