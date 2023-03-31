@@ -961,7 +961,7 @@ enum heif_compression_format
   heif_compression_VVC = 5,
   heif_compression_EVC = 6,
   heif_compression_JPEG2000 = 7,  // ISO/IEC 15444-16:2021
-  heif_compression_UNCOMPRESSED = 8 // ISO/IEC 23001-17:2023
+  heif_compression_uncompressed = 8 // ISO/IEC 23001-17:2023
 };
 
 enum heif_chroma

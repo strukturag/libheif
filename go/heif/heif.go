@@ -53,7 +53,7 @@ const (
 	CompressionJPEG2000     = C.heif_compression_JPEG2000
 	CompressionVVC          = C.heif_compression_VVC
 	CompressionEVC          = C.heif_compression_EVC
-	CompressionUNCOMPRESSED = C.heif_compression_UNCOMPRESSED
+	CompressionUncompressed = C.heif_compression_uncompressed
 )
 
 type Chroma C.enum_heif_chroma
