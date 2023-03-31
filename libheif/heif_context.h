@@ -84,6 +84,19 @@ namespace heif {
 
     Error read_from_memory(const void* data, size_t size, bool copy);
 
+    Error get_image_type(heif_item_id ID, std::string &out_item_type);
+
+    uint8_t *get_compressed_image_data(heif_item_id ID, bool pad_start_pattern, size_t *out_size) const;
+
+    Error fill_compressed_image_data(heif_item_id ID, bool pad_start_pattern, uint8_t *out_buff, size_t *out_size) const;
+
+    Error get_overlay_info(heif_item_id ID,
+                          struct heif_overlay_info &overlay_info) const;
+    
+    bool check_not_compatible_but_moov_box(const void* data, size_t size, bool copy);
+
+    bool get_alpha_image_id(heif_item_id ID, heif_item_id &alpha_img_id) const;
+
     class Image : public ErrorBuffer
     {
     public:
@@ -324,6 +337,8 @@ namespace heif {
     };
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
+
+    std::map<heif_item_id, std::shared_ptr<Image>> get_images() { return m_all_images; }
 
     std::shared_ptr<Image> get_top_level_image(heif_item_id id) {
       for (auto& img : m_top_level_images) {

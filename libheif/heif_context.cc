@@ -954,6 +954,16 @@ bool HeifContext::is_image(heif_item_id ID) const
   return false;
 }
 
+bool HeifContext::get_alpha_image_id(heif_item_id ID, heif_item_id &alpha_img_id) const {
+  auto img = m_all_images.find(ID)->second;
+  auto alpha_img = img->get_alpha_channel();
+  if (alpha_img == nullptr) {
+    return false;
+  }
+
+  alpha_img_id = alpha_img->get_id();
+  return true;
+}
 
 bool HeifContext::has_alpha(heif_item_id ID) const {
 
@@ -1123,6 +1133,125 @@ Error HeifContext::decode_image_user(heif_item_id ID,
 }
 
 
+
+Error HeifContext::get_image_type(heif_item_id ID, std::string &out_item_type) {
+  std::string image_type = m_heif_file->get_item_type(ID);
+  if ("" == image_type) {
+    return Error(heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value);
+  }
+
+  out_item_type = image_type;
+  return Error::Ok;
+}
+
+uint8_t *HeifContext::get_compressed_image_data(heif_item_id ID, bool pad_start_pattern, size_t *out_size) const {
+  std::vector<uint8_t> data;
+  Error error = m_heif_file->get_compressed_image_data(ID, &data);
+  if (error) {
+    return NULL;
+  }
+
+  // TODO: 
+  //    add exception handling code for grid image
+  //    it works only with hvc1 image type
+
+
+  size_t out_offset = 0;
+  size_t buff_size = data.size();
+  uint8_t *out_buff = new uint8_t[buff_size + 4];
+  *out_size = 0;
+
+  if (true == pad_start_pattern) {
+    uint32_t nal_start_seq = 0x01000000;
+    const uint8_t* cdata = (const uint8_t*) data.data();
+    size_t ptr = 0;
+    
+    while (ptr < buff_size) {
+      if (4 > buff_size - ptr) {
+        delete [] out_buff;
+        return NULL;
+      }
+
+      uint32_t nal_size = (cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]);
+      ptr += 4;
+
+
+      if (nal_size > buff_size - ptr) {
+        delete [] out_buff;
+        return NULL;
+      }
+
+      *((uint32_t *)(out_buff + out_offset)) = nal_start_seq;
+      out_offset += 4;
+      *out_size += 4;
+
+      memcpy(out_buff + out_offset, cdata + ptr, nal_size);
+      out_offset += nal_size;
+      *out_size += nal_size;
+
+      ptr += nal_size;
+    }
+  } else {
+    for (uint32_t i = 0; i < buff_size; ++i) {
+      out_buff[i + out_offset] = data[i];
+    }
+
+    *out_size = buff_size;
+  }
+
+  return out_buff;
+}
+
+Error HeifContext::fill_compressed_image_data(heif_item_id ID, bool pad_start_pattern, uint8_t *out_buff, size_t *out_size) const {
+  std::vector<uint8_t> data;
+  Error error = m_heif_file->get_compressed_image_data(ID, &data);
+  if (error) {
+    return Error(heif_error_Input_does_not_exist, heif_suberror_No_item_data);
+  }
+
+  size_t out_offset = 0;
+  size_t buff_size = data.size();
+
+  *out_size = 0;
+
+  if (true == pad_start_pattern) {
+    uint32_t nal_start_seq = 0x01000000;
+    const uint8_t* cdata = (const uint8_t*) data.data();
+    size_t ptr = 0;
+    
+
+    while (ptr < buff_size) {
+      if (4 > buff_size - ptr) {
+        return Error(heif_error_Invalid_input, heif_suberror_Invalid_image_size);
+      }
+
+      uint32_t nal_size = (cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]);
+      ptr += 4;
+
+      if (nal_size > buff_size - ptr) {
+        return Error(heif_error_Invalid_input, heif_suberror_Invalid_image_size);
+      }
+
+      *((uint32_t *)(out_buff + out_offset)) = nal_start_seq;
+      out_offset += 4;
+      *out_size += 4;
+
+      memcpy(out_buff + out_offset, cdata + ptr, nal_size);
+      out_offset += nal_size;
+      *out_size += nal_size;
+
+      ptr += nal_size;
+    }
+  } else {
+    for (uint32_t i = 0; i < buff_size; ++i) {
+      out_buff[i + out_offset] = data[i];
+    }
+
+    *out_size = buff_size;
+  }
+
+  return Error::Ok;
+}
 Error HeifContext::decode_image_planar(heif_item_id ID,
                                        std::shared_ptr<HeifPixelImage>& img,
                                        heif_colorspace out_colorspace,
@@ -1910,6 +2039,86 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   return err;
 }
 
+Error HeifContext::get_overlay_info(heif_item_id ID,
+                                    struct heif_overlay_info &overlay_info) const
+{
+  std::string image_type = m_heif_file->get_item_type(ID);
+  if (image_type == "iovl") {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box,
+                 "No iref box available, but needed for iovl image");
+  }
+
+  std::vector<uint8_t> overlay_data;
+  Error error = m_heif_file->get_compressed_image_data(ID, &overlay_data);
+  if (error) {
+    return error;
+  }
+
+  // find the IDs this image is composed of
+  auto iref_box = m_heif_file->get_iref_box();
+  if (!iref_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box,
+                 "No iref box available, but needed for iovl image");
+  }
+
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
+
+  ImageOverlay overlay;
+  Error err = overlay.parse(image_references.size(), overlay_data);
+  if (err) {
+    return err;
+  }
+
+  if (image_references.size() != overlay.get_num_offsets()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_overlay_data,
+                 "Number of image offsets does not match the number of image references");
+  }
+
+  uint32_t w = overlay.get_canvas_width();
+  uint32_t h = overlay.get_canvas_height();
+
+  overlay_info.canvas_height = w;
+  overlay_info.canvas_height = h;
+
+  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
+    std::stringstream sstr;
+    sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
+         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
+
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Security_limit_exceeded,
+                 sstr.str());
+  }
+
+  uint16_t bkg_color[4];
+  overlay.get_background_color(bkg_color);
+
+  overlay_info.bg_color_r = bkg_color[0];
+  overlay_info.bg_color_g = bkg_color[1];
+  overlay_info.bg_color_b = bkg_color[2];
+  overlay_info.bg_color_a = bkg_color[3];
+
+  overlay_info.num_items = image_references.size();
+  overlay_info.offsets = (struct heif_offset *)malloc(sizeof(struct heif_offset) * overlay_info.num_items);
+  overlay_info.IDs = (heif_item_id *)malloc(sizeof(heif_item_id) * overlay_info.num_items);
+
+  for (size_t i = 0; i < image_references.size(); i++) {
+    overlay.get_offset(i, &overlay_info.offsets[i].dx, &overlay_info.offsets[i].dy);
+    overlay_info.IDs[i] = image_references[i];
+  }
+
+  return err;
+}
+
+bool HeifContext::check_not_compatible_but_moov_box(const void* data, size_t size, bool copy)
+{
+  auto input_stream = std::make_shared<StreamReader_memory>((const uint8_t*) data, size, copy);
+
+  return m_heif_file->check_not_compatible_but_moov_box(input_stream);
+}
 
 static std::shared_ptr<HeifPixelImage>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image)

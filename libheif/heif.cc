@@ -546,6 +546,12 @@ int heif_context_get_number_of_top_level_images(heif_context* ctx)
 }
 
 
+int heif_context_get_number_of_images(heif_context* ctx)
+{
+  return (int) ctx->context->get_images().size();
+}
+
+
 int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
                                                  heif_item_id* ID_array,
                                                  int count)
@@ -561,6 +567,29 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
   int n = (int) std::min(count, (int) imgs.size());
   for (int i = 0; i < n; i++) {
     ID_array[i] = imgs[i]->get_id();
+  }
+
+  return n;
+}
+
+
+int heif_context_get_list_of_image_IDs(struct heif_context* ctx,
+                                              heif_item_id* ID_array,
+                                              int count)
+{
+  if (ID_array == nullptr || count == 0 || ctx == nullptr) {
+    return 0;
+  }
+
+  // fill in ID values into output array
+
+  const std::map<heif_item_id, std::shared_ptr<HeifContext::Image>> imgs = ctx->context->get_images();
+  int n = (int) std::min(count, (int) imgs.size());
+
+  int i = 0;
+  for (auto itor = imgs.begin(); itor != imgs.end(); itor++) {
+    ID_array[i] = itor->second->get_id();
+    i += 1;
   }
 
   return n;
@@ -596,6 +625,103 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
   (*imgHdl)->image = image;
   (*imgHdl)->context = ctx->context;
 
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_context_get_image_handle_from_all_images2(struct heif_context* ctx,
+                                                heif_item_id id,
+                                                struct heif_image_handle** imgHdl)
+{
+  if (!imgHdl) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
+  }
+
+  std::map<heif_item_id, std::shared_ptr<HeifContext::Image>> images = ctx->context->get_images();
+
+  std::shared_ptr<HeifContext::Image> image;
+  for (auto& img : images) {
+    if (img.first == id) {
+      image = img.second;
+      break;
+    }
+  }
+
+  if (!image) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
+  *imgHdl = new heif_image_handle();
+  (*imgHdl)->image = image;
+  (*imgHdl)->context = ctx->context;
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_context_get_image_handle_from_all_images(struct heif_context* ctx,
+                                                                heif_item_id id,
+                                                                struct heif_image_handle** imgHdl)
+{
+  if (!imgHdl) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
+  }
+
+  std::map<heif_item_id, std::shared_ptr<HeifContext::Image>> images = ctx->context->get_images();
+
+  auto itor = images.find(id);
+  if (itor == images.end()) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
+  auto image = itor->second;
+
+  *imgHdl = new heif_image_handle();
+  (*imgHdl)->image = image;
+  (*imgHdl)->context = ctx->context;
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_image_handle_get_image_width(struct heif_context* ctx,
+                                                    heif_item_id id,
+                                                    uint32_t* width)
+{
+  std::map<heif_item_id, std::shared_ptr<HeifContext::Image>> images = ctx->context->get_images();
+  auto itor = images.find(id);
+  if (itor == images.end()) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
+  auto image = itor->second;
+  *width = image->get_width();
+  
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_image_handle_get_image_height(struct heif_context* ctx,
+                                                    heif_item_id id,
+                                                    uint32_t* height)
+{
+  std::map<heif_item_id, std::shared_ptr<HeifContext::Image>> images = ctx->context->get_images();
+  auto itor = images.find(id);
+  if (itor == images.end()) {
+    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
+    return err.error_struct(ctx->context.get());
+  }
+
+  auto image = itor->second;
+  *height = image->get_height();
+  
   return Error::Ok.error_struct(ctx->context.get());
 }
 
@@ -749,6 +875,97 @@ int heif_image_handle_get_width(const struct heif_image_handle* handle)
   else {
     return 0;
   }
+}
+
+enum heif_image_type heif_image_handle_get_item_type(const struct heif_image_handle* handle, heif_item_id ID) {
+  heif_image_type image_type = heif_image_type_none;
+  std::string item_type;
+
+  Error err = handle->context->get_image_type(ID, item_type);
+  if (err.error_code != heif_error_Ok) {
+    return heif_image_type_none;
+  }
+
+  if (item_type == "hvc1") {
+    image_type = heif_image_type_hvc1;
+  } else if (item_type == "av01") {
+    image_type = heif_image_type_av01;
+  } else if (item_type == "grid") {
+    image_type = heif_image_type_grid;
+  } else if (item_type == "iden") {
+    image_type = heif_image_type_iden;
+  } else if (item_type == "iovl") {
+    image_type = heif_image_type_iovl;
+  }
+
+  return image_type;
+}
+
+int heif_image_handle_get_compressed_image_data(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    int pad_start_pattern,
+    uint8_t **out_img, 
+    size_t *out_size)
+{
+  heif_item_id id = handle->image->get_id();
+  uint8_t *img = handle->context->get_compressed_image_data(id, pad_start_pattern, out_size);
+  if (NULL == img) {
+    return 0;
+  }
+
+  *out_img = img;
+  return 1;
+}
+
+
+int heif_image_handle_fill_compressed_image_data(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    int pad_start_pattern,
+    uint8_t *out_img, 
+    size_t *out_size)
+{
+  heif_item_id id = handle->image->get_id();
+  Error err = handle->context->fill_compressed_image_data(id, pad_start_pattern, out_img, out_size);
+  if (err.error_code != heif_error_Ok) {
+    return 0;
+  }
+
+  return 1;
+}
+
+
+int heif_image_handle_get_overlay_info(const struct heif_image_handle* handle,
+    heif_item_id ID,
+    struct heif_overlay_info *overlay_info)
+{
+  if (NULL == overlay_info) {
+    return 0;
+  }
+
+  Error err = handle->context->get_overlay_info(ID, *overlay_info);
+  if (err.error_code != heif_error_Ok) {
+    return 0;
+  }
+
+  return 1;
+}
+
+
+int heif_image_handle_gcheck_not_compatible_but_moov_box(struct heif_context* ctx, const void* mem, size_t size)
+{
+  if (ctx->context->check_not_compatible_but_moov_box(mem, size, true) == true) {
+    return 1;
+  }
+  return 0;
+}
+
+
+int heif_image_handle_get_alpha_image_id(struct heif_context* ctx, const heif_item_id ID, heif_item_id *alpha_img_id) {
+  if (false == ctx->context->get_alpha_image_id(ID, *alpha_img_id)) {
+    return 0;
+  }
+
+  return 1;
 }
 
 

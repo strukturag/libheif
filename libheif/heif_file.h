@@ -58,6 +58,8 @@ namespace heif {
 
     Error read_from_memory(const void* data, size_t size, bool copy);
 
+    bool check_not_compatible_but_moov_box(const std::shared_ptr<StreamReader>& reader);
+
     void new_empty_file();
 
     void set_brand(heif_compression_format format, bool miaf_compatible);
