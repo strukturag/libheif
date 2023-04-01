@@ -454,6 +454,14 @@ namespace heif {
                                const std::vector<uint8_t>& overlay_data) const;
 
     Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
+
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+    Error decode_uncompressed_image(heif_item_id ID,
+                                    std::shared_ptr<HeifPixelImage>& img,
+                                    const std::vector<uint8_t>& uncompressed_data) const;
+
+    heif_chroma get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const;
+#endif
   };
 }
 

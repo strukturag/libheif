@@ -1408,14 +1408,17 @@ namespace heif {
 
     Error write(StreamWriter& writer) const override;
 
-  protected:
-    Error parse(BitstreamRange& range) override;
-
     struct Component
     {
-      uint16_t m_component_type;
-      std::string m_component_type_uri;
+      uint16_t component_type;
+      std::string component_type_uri;
     };
+
+    const std::vector<Component>& get_components() const
+    { return m_components; }
+
+  protected:
+    Error parse(BitstreamRange& range) override;
 
     std::vector<Component> m_components;
   };
@@ -1438,18 +1441,25 @@ namespace heif {
 
     Error write(StreamWriter& writer) const override;
 
+    struct Component
+    {
+      uint16_t component_index;
+      uint8_t component_bit_depth_minus_one;
+      uint8_t component_format;
+      uint8_t component_align_size;
+    };
+
+    const std::vector<Component>& get_components() const
+    { return m_components; }
+
+    uint8_t get_interleave_type()
+    { return m_interleave_type; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 
     uint32_t m_profile;
 
-    struct Component
-    {
-      uint16_t m_component_index;
-      uint8_t m_component_bit_depth_minus_one;
-      uint8_t m_component_format;
-      uint8_t m_component_align_size;
-    };
     std::vector<Component> m_components;
     uint8_t m_sampling_type;
     uint8_t m_interleave_type;

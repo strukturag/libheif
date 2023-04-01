@@ -19,13 +19,16 @@
  */
 
 #include "heif_file.h"
+#include "libheif/box.h"
 
+#include <cstdint>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 
@@ -486,9 +489,54 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     }
   }
 
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+  // Uncompressed
+
+  if (image_type == "unci") {
+    auto box1 = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("uncC"));
+    std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
+    auto box2 = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("cmpd"));
+    std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
+    if (uncC_box && cmpd_box) {
+      return get_luma_bits_per_pixel_from_configuration_unci(uncC_box, cmpd_box);
+    }
+  }
+#endif
+
   return -1;
 }
 
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+int HeifFile::get_luma_bits_per_pixel_from_configuration_unci(std::shared_ptr<Box_uncC> uncC, std::shared_ptr<Box_cmpd> cmpd) const
+{
+  int luma_bits = 0;
+  int alternate_channel_bits = 0;
+  for (Box_uncC::Component component: uncC->get_components())
+  {
+    uint16_t component_index = component.component_index;
+    auto component_type = cmpd->get_components()[component_index].component_type;
+    switch(component_type) {
+      case 0: // monochrome
+      case 4: // red
+      case 5: // green
+      case 6: // blue
+        alternate_channel_bits = std::max(alternate_channel_bits, component.component_bit_depth_minus_one + 1);
+        break;
+      case 1: // luma (Y)
+        luma_bits = std::max(luma_bits, component.component_bit_depth_minus_one + 1);
+        break;
+      // TODO: there are other things we'll need to handle eventually, like palette.
+    }
+  }
+  if (luma_bits > 0) {
+    return luma_bits;
+  } else if (alternate_channel_bits > 0) {
+    return alternate_channel_bits;
+  } else {
+    return 8;
+  }
+}
+#endif
 
 int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const
 {
