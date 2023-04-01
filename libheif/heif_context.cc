@@ -18,6 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "libheif/box.h"
+#include "libheif/error.h"
+#include "libheif/heif.h"
+#include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -511,6 +515,9 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "iden" ||
           item_type == "iovl" ||
           item_type == "av01" ||
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+          item_type == "unci" ||
+#endif
           item_type == "vvc1");
 }
 
@@ -1275,6 +1282,18 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (error) {
       return error;
     }
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+  } else if (image_type == "unci") {
+    std::vector<uint8_t> data;
+    error = m_heif_file->get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+    error = decode_uncompressed_image(ID, img, data);
+    if (error) {
+      return error;
+    }
+#endif
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
@@ -2739,3 +2758,106 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
 
   return Error::Ok;
 }
+
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+Error HeifContext::decode_uncompressed_image(heif_item_id ID,
+                                            std::shared_ptr<HeifPixelImage>& img,
+                                            const std::vector<uint8_t>& uncompressed_data) const
+{
+  // Get the properties for this item
+  std::vector<heif::Box_ipco::Property> item_properties;
+  Error error = m_heif_file->get_properties(ID, item_properties);
+  if (error) {
+    return error;
+  }
+  uint32_t width;
+  uint32_t height;
+  bool found_ispe = false;
+  std::shared_ptr<Box_cmpd> cmpd;
+  std::shared_ptr<Box_uncC> uncC;
+  for (const auto& prop : item_properties) {
+    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+    if (ispe) {
+      width = ispe->get_width();
+      height = ispe->get_height();
+
+      if (width >= m_maximum_image_width_limit || height >= m_maximum_image_height_limit) {
+        std::stringstream sstr;
+        sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+            << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
+
+        return Error(heif_error_Memory_allocation_error,
+                     heif_suberror_Security_limit_exceeded,
+                     sstr.str());
+      }
+      found_ispe = true;
+    }
+
+    auto maybe_cmpd = std::dynamic_pointer_cast<Box_cmpd>(prop.property);
+    if (maybe_cmpd) {
+      cmpd = maybe_cmpd;
+    }
+
+    auto maybe_uncC = std::dynamic_pointer_cast<Box_uncC>(prop.property);
+    if (maybe_uncC) {
+      uncC = maybe_uncC;
+    }
+  }
+
+  if (found_ispe && cmpd && uncC) {
+    img = std::make_shared<HeifPixelImage>();
+    // TODO: translate uncC into colourspace and chroma
+    heif_chroma chroma = get_heif_chroma_uncompressed(uncC, cmpd);
+    img->create(width, height,
+                heif_colorspace_RGB,
+                chroma);
+    for (Box_uncC::Component component: uncC->get_components())
+    {
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      if (component_type == 4) {
+        img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
+      } else if (component_type == 5) {
+        img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
+      } else if (component_type == 6) {
+        img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
+      }
+      // TODO: other component types
+    }
+    // TODO: properly interpret uncompressed_data per uncC config, plane order, subsampling etc.
+    int stride;
+    uint8_t* red_plane = img->get_plane(heif_channel_R, &stride);
+    memcpy(red_plane, uncompressed_data.data(), width * height);
+    uint8_t* green_plane = img->get_plane(heif_channel_G, &stride);
+    memcpy(green_plane, uncompressed_data.data() + (width * height), width * height);
+    uint8_t* blue_plane = img->get_plane(heif_channel_B, &stride);
+    memcpy(blue_plane, uncompressed_data.data() + 2 * (width * height), width * height);
+  } else {
+    // return some error about malformed uncompressed file
+  }
+  return Error::Ok;
+}
+
+heif_chroma HeifContext::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const
+{
+  heif_chroma chroma = heif_chroma_undefined; 
+  std::vector<uint16_t> components;
+  for (Box_uncC::Component component: uncC->get_components())
+  {
+    uint16_t component_index = component.component_index;
+    uint16_t component_type = cmpd->get_components()[component_index].component_type;
+    components.push_back(component_type);
+  }
+  if (components == std::vector<uint16_t>{4, 5, 6}) {
+    if (uncC->get_interleave_type() == 0) {
+      // Planar RGB
+      chroma = heif_chroma_444;
+    } else if (uncC->get_interleave_type() == 1) {
+      // Interleaved RGB
+      chroma = heif_chroma_interleaved_RGB;
+    }
+  }
+  // TODO: more combinations
+  return chroma;
+}
+#endif
