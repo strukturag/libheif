@@ -2931,7 +2931,43 @@ Error HeifContext::decode_uncompressed_image(heif_item_id ID,
 
 Error HeifContext::uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const
 {
-  // TODO: check components
+  for (Box_uncC::Component component: uncC->get_components())
+  {
+    uint16_t component_index = component.component_index;
+    uint16_t component_type = cmpd->get_components()[component_index].component_type;
+    if ((component_type == 0) || (component_type > 7))
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_bit_depth_minus_one + 1 != 8)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_bit_depth_minus_one " << ((int) component.component_bit_depth_minus_one) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_format != 0)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_align_size != 0)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+  }
   if (uncC->get_sampling_type() != 0)
   {
     std::stringstream sstr;
