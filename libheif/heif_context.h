@@ -460,7 +460,10 @@ namespace heif {
                                     std::shared_ptr<HeifPixelImage>& img,
                                     const std::vector<uint8_t>& uncompressed_data) const;
 
-    heif_chroma get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const;
+    Error uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const;
+
+    Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma *out_chroma, heif_colorspace *out_colourspace) const;
+
 #endif
   };
 }

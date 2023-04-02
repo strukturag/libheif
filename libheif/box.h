@@ -1452,9 +1452,44 @@ namespace heif {
     const std::vector<Component>& get_components() const
     { return m_components; }
 
+    uint8_t get_sampling_type()
+    { return m_sampling_type; }
+
     uint8_t get_interleave_type()
     { return m_interleave_type; }
 
+    uint8_t get_block_size()
+    { return m_block_size; }
+
+    bool is_components_little_endian()
+    { return m_components_little_endian; }
+
+    bool is_block_pad_lsb()
+    { return m_block_pad_lsb; }
+
+    bool is_block_little_endian()
+    { return m_block_little_endian; }
+
+    bool is_block_reversed()
+    { return m_block_reversed; }
+
+    bool is_pad_unknown()
+    { return m_pad_unknown; }
+
+    uint8_t get_pixel_size()
+    { return m_pixel_size; }
+
+    uint32_t get_row_align_size()
+    { return m_row_align_size; }
+
+    uint32_t get_tile_align_size()
+    { return m_tile_align_size; }
+
+    uint32_t get_number_of_tile_columns()
+    { return m_num_tile_cols_minus_one + 1; }
+
+    uint32_t get_number_of_tile_rows()
+    { return m_num_tile_rows_minus_one + 1; }
   protected:
     Error parse(BitstreamRange& range) override;
 
