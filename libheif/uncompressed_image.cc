@@ -182,6 +182,153 @@ namespace heif {
   }
 
 
+  static Error uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
+  {
+    for (Box_uncC::Component component : uncC->get_components()) {
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      if ((component_type == 0) || (component_type > 7)) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     sstr.str());
+      }
+      if (component.component_bit_depth_minus_one + 1 != 8) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_bit_depth_minus_one " << ((int) component.component_bit_depth_minus_one) << " is not implemented yet";
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     sstr.str());
+      }
+      if (component.component_format != 0) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     sstr.str());
+      }
+      if (component.component_align_size != 0) {
+        std::stringstream sstr;
+        sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     sstr.str());
+      }
+    }
+    if (uncC->get_sampling_type() != 0) {
+      std::stringstream sstr;
+      sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if ((uncC->get_interleave_type() != 0) && (uncC->get_interleave_type() != 1)) {
+      std::stringstream sstr;
+      sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (uncC->get_block_size() != 0) {
+      std::stringstream sstr;
+      sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (uncC->is_components_little_endian()) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Uncompressed components_little_endian == 1 is not implemented yet");
+    }
+    if (uncC->is_block_pad_lsb()) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Uncompressed block_pad_lsb == 1 is not implemented yet");
+    }
+    if (uncC->is_block_little_endian()) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Uncompressed block_little_endian == 1 is not implemented yet");
+    }
+    if (uncC->is_block_reversed()) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Uncompressed block_reversed == 1 is not implemented yet");
+    }
+    if (uncC->get_pixel_size() != 0) {
+      std::stringstream sstr;
+      sstr << "Uncompressed pixel_size of " << ((int) uncC->get_pixel_size()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (uncC->get_row_align_size() != 0) {
+      std::stringstream sstr;
+      sstr << "Uncompressed row_align_size of " << ((int) uncC->get_row_align_size()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (uncC->get_tile_align_size() != 0) {
+      std::stringstream sstr;
+      sstr << "Uncompressed tile_align_size of " << ((int) uncC->get_tile_align_size()) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if ((uncC->get_number_of_tile_columns() != 1) || (uncC->get_number_of_tile_rows() != 1)) {
+      std::stringstream sstr;
+      sstr << "Uncompressed tiled images with " << uncC->get_number_of_tile_columns() << " columns by " << uncC->get_number_of_tile_rows() << " rows is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    return Error::Ok;
+  }
+
+
+  static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace)
+  {
+    *out_chroma = heif_chroma_undefined;
+    *out_colourspace = heif_colorspace_undefined;
+    std::vector<uint16_t> components;
+    for (Box_uncC::Component component : uncC->get_components()) {
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      components.push_back(component_type);
+    }
+    // TODO: make this work for any order
+    if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}) || (components == std::vector<uint16_t>{4, 5, 6, 7}) ||
+        (components == std::vector<uint16_t>{7, 6, 5, 4})) {
+      *out_chroma = heif_chroma_444;
+      *out_colourspace = heif_colorspace_RGB;
+    }
+    if (components == std::vector<uint16_t>{1, 2, 3}) {
+      if (uncC->get_interleave_type() == 0) {
+        // Planar YCbCr
+        *out_chroma = heif_chroma_444;
+        *out_colourspace = heif_colorspace_YCbCr;
+      }
+    }
+    // TODO: more combinations
+    if (*out_chroma == heif_chroma_undefined) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Could not determine chroma");
+    }
+    else if (*out_colourspace == heif_colorspace_undefined) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Could not determine colourspace");
+    }
+    else {
+      return Error::Ok;
+    }
+  }
+
+
 
   int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
   {
@@ -337,7 +484,7 @@ namespace heif {
         // Source is planar
         for (uint32_t c = 0; c < channels.size(); c++) {
           int stride;
-          uint8_t* dst = img->get_plane(channels[i], &stride);
+          uint8_t* dst = img->get_plane(channels[c], &stride);
           memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
         }
       }
@@ -365,151 +512,6 @@ namespace heif {
                    "Missing key boxes for uncompressed codec");
     }
     return Error::Ok;
-  }
-
-  Error UncompressedImageDecoder::uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
-  {
-    for (Box_uncC::Component component : uncC->get_components()) {
-      uint16_t component_index = component.component_index;
-      uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      if ((component_type == 0) || (component_type > 7)) {
-        std::stringstream sstr;
-        sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_data_version,
-                     sstr.str());
-      }
-      if (component.component_bit_depth_minus_one + 1 != 8) {
-        std::stringstream sstr;
-        sstr << "Uncompressed image with component_bit_depth_minus_one " << ((int) component.component_bit_depth_minus_one) << " is not implemented yet";
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_data_version,
-                     sstr.str());
-      }
-      if (component.component_format != 0) {
-        std::stringstream sstr;
-        sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_data_version,
-                     sstr.str());
-      }
-      if (component.component_align_size != 0) {
-        std::stringstream sstr;
-        sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_data_version,
-                     sstr.str());
-      }
-    }
-    if (uncC->get_sampling_type() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if ((uncC->get_interleave_type() != 0) && (uncC->get_interleave_type() != 1)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (uncC->get_block_size() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (uncC->is_components_little_endian()) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed components_little_endian == 1 is not implemented yet");
-    }
-    if (uncC->is_block_pad_lsb()) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed block_pad_lsb == 1 is not implemented yet");
-    }
-    if (uncC->is_block_little_endian()) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed block_little_endian == 1 is not implemented yet");
-    }
-    if (uncC->is_block_reversed()) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Uncompressed block_reversed == 1 is not implemented yet");
-    }
-    if (uncC->get_pixel_size() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed pixel_size of " << ((int) uncC->get_pixel_size()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (uncC->get_row_align_size() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed row_align_size of " << ((int) uncC->get_row_align_size()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if (uncC->get_tile_align_size() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed tile_align_size of " << ((int) uncC->get_tile_align_size()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    if ((uncC->get_number_of_tile_columns() != 1) || (uncC->get_number_of_tile_rows() != 1)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed tiled images with " << uncC->get_number_of_tile_columns() << " columns by " << uncC->get_number_of_tile_rows() << " rows is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
-    return Error::Ok;
-  }
-
-  Error UncompressedImageDecoder::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace)
-  {
-    *out_chroma = heif_chroma_undefined;
-    *out_colourspace = heif_colorspace_undefined;
-    std::vector<uint16_t> components;
-    for (Box_uncC::Component component : uncC->get_components()) {
-      uint16_t component_index = component.component_index;
-      uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      components.push_back(component_type);
-    }
-    // TODO: make this work for any order
-    if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}) || (components == std::vector<uint16_t>{4, 5, 6, 7}) ||
-        (components == std::vector<uint16_t>{7, 6, 5, 4})) {
-      *out_chroma = heif_chroma_444;
-      *out_colourspace = heif_colorspace_RGB;
-    }
-    if (components == std::vector<uint16_t>{1, 2, 3}) {
-      if (uncC->get_interleave_type() == 0) {
-        // Planar YCbCr
-        *out_chroma = heif_chroma_444;
-        *out_colourspace = heif_colorspace_YCbCr;
-      }
-    }
-    // TODO: more combinations
-    if (*out_chroma == heif_chroma_undefined) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Could not determine chroma");
-    }
-    else if (*out_colourspace == heif_colorspace_undefined) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   "Could not determine colourspace");
-    }
-    else {
-      return Error::Ok;
-    }
   }
 
 }

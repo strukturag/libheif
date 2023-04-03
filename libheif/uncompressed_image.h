@@ -148,10 +148,6 @@ namespace heif {
                                            uint32_t maximum_image_width_limit,
                                            uint32_t maximum_image_height_limit,
                                            const std::vector<uint8_t>& uncompressed_data);
-
-    static Error uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd);
-
-    static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace);
   };
 }
 
