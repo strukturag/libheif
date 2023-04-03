@@ -25,6 +25,18 @@
 
 #include "uncompressed_image.h"
 
+enum Components {
+  Component_Monochrome = 0,
+  Component_Y = 1,
+  Component_Cb = 2,
+  Component_Cr = 3,
+  Component_Red = 4,
+  Component_Green = 5,
+  Component_Blue = 6,
+  Component_Alpha = 7
+};
+
+
 namespace heif {
 
   Error Box_cmpd::parse(BitstreamRange& range)
@@ -294,23 +306,24 @@ namespace heif {
     *out_chroma = heif_chroma_undefined;
     *out_colourspace = heif_colorspace_undefined;
 
-    std::vector<uint16_t> components;
+    // each 1-bit represents an existing component in the image
+    uint16_t componentSet = 0;
+
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
       uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      components.push_back(component_type);
+
+      componentSet |= (1 << component_type);
     }
 
     // TODO: make this work for any order
-    if ((components == std::vector<uint16_t>{4, 5, 6}) ||
-        (components == std::vector<uint16_t>{6, 5, 4}) ||
-        (components == std::vector<uint16_t>{4, 5, 6, 7}) ||
-        (components == std::vector<uint16_t>{7, 6, 5, 4})) {
+    if (componentSet == ((1 << Component_Red) | (1 << Component_Green) | (1 << Component_Blue)) ||
+        componentSet == ((1 << Component_Red) | (1 << Component_Green) | (1 << Component_Blue) | (1 << Component_Alpha))) {
       *out_chroma = heif_chroma_444;
       *out_colourspace = heif_colorspace_RGB;
     }
 
-    if (components == std::vector<uint16_t>{1, 2, 3}) {
+    if (componentSet == ((1 << Component_Y) | (1 << Component_Cb) | (1 << Component_Cr))) {
       if (uncC->get_interleave_type() == 0) {
         // Planar YCbCr
         *out_chroma = heif_chroma_444;
@@ -355,13 +368,13 @@ namespace heif {
       uint16_t component_index = component.component_index;
       auto component_type = cmpd_box->get_components()[component_index].component_type;
       switch (component_type) {
-        case 0: // monochrome
-        case 4: // red
-        case 5: // green
-        case 6: // blue
+        case Component_Monochrome:
+        case Component_Red:
+        case Component_Green:
+        case Component_Blue:
           alternate_channel_bits = std::max(alternate_channel_bits, component.component_bit_depth_minus_one + 1);
           break;
-        case 1: // luma (Y)
+        case Component_Y:
           luma_bits = std::max(luma_bits, component.component_bit_depth_minus_one + 1);
           break;
           // TODO: there are other things we'll need to handle eventually, like palette.
@@ -463,41 +476,42 @@ namespace heif {
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
       uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      if (component_type == 1) {
+      if (component_type == Component_Y) {
         img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Y);
         channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
       }
-      else if (component_type == 2) {
+      else if (component_type == Component_Cb) {
         img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cb);
         channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
       }
-      else if (component_type == 3) {
+      else if (component_type == Component_Cr) {
         img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cr);
         channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
       }
-      else if (component_type == 4) {
+      else if (component_type == Component_Red) {
         img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_R);
         channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
       }
-      else if (component_type == 5) {
+      else if (component_type == Component_Green) {
         img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_G);
         channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
       }
-      else if (component_type == 6) {
+      else if (component_type == Component_Blue) {
         img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_B);
         channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
       }
-      else if (component_type == 7) {
+      else if (component_type == Component_Alpha) {
         img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Alpha);
         channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
       }
+
       // TODO: other component types
       componentOffset++;
     }
@@ -532,5 +546,4 @@ namespace heif {
 
     return Error::Ok;
   }
-
 }
