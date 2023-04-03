@@ -332,10 +332,10 @@ namespace heif {
       uint32_t bytes_per_channel = width * height;
       if (uncC->get_interleave_type() == 0) {
         // Source is planar
-        for (uint32_t i = 0; i < channels.size(); i++) {
+        for (uint32_t c = 0; c < channels.size(); c++) {
           int stride;
           uint8_t* dst = img->get_plane(channels[i], &stride);
-          memcpy(dst, uncompressed_data.data() + i * bytes_per_channel, bytes_per_channel);
+          memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
         }
       }
       else if (uncC->get_interleave_type() == 1) {
@@ -346,10 +346,10 @@ namespace heif {
         // TODO: we can only do this if we are 8 bits
         long unsigned int pixel_stride = channel_to_pixelOffset.size();
         const uint8_t* src = uncompressed_data.data();
-        for (uint32_t i = 0; i < channels.size(); i++) {
-          int pixel_offset = channel_to_pixelOffset[channels[i]];
+        for (uint32_t c = 0; c < channels.size(); c++) {
+          int pixel_offset = channel_to_pixelOffset[channels[c]];
           int stride;
-          uint8_t* dst = img->get_plane(channels[i], &stride);
+          uint8_t* dst = img->get_plane(channels[c], &stride);
           for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
             dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
           }
