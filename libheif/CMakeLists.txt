@@ -6,7 +6,7 @@ set(libheif_headers
     heif.h
     heif_cxx.h
     heif_plugin.h
-    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
+    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h plugins/heif_encoder_uncompressed.cc plugins/heif_encoder_uncompressed.h)
 
 add_library(heif
     bitstream.cc
@@ -102,6 +102,10 @@ if (ENABLE_UNCOMPRESSED_DECODER)
     target_sources(heif PRIVATE
             uncompressed_image.h
             uncompressed_image.cc)
+endif()
+
+if (ENABLE_UNCOMPRESSED_ENCODER)
+    target_compile_definitions(heif PRIVATE ENABLE_UNCOMPRESSED_ENCODER=1)
 endif()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)

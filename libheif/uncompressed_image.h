@@ -26,6 +26,7 @@
 #include "bitstream.h"
 #include "heif_image.h"
 #include "heif_file.h"
+#include "heif_context.h"
 
 #include <string>
 #include <vector>
@@ -137,7 +138,7 @@ namespace heif {
   };
 
 
-  class UncompressedImageDecoder
+  class UncompressedImageCodec
   {
   public:
     static int get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID);
@@ -148,6 +149,12 @@ namespace heif {
                                            uint32_t maximum_image_width_limit,
                                            uint32_t maximum_image_height_limit,
                                            const std::vector<uint8_t>& uncompressed_data);
+
+    static Error encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
+                                           const std::shared_ptr<HeifPixelImage>& src_image,
+                                           void* encoder_struct,
+                                           const struct heif_encoding_options* options,
+                                           std::shared_ptr<HeifContext::Image> out_image);
   };
 }
 
