@@ -97,6 +97,7 @@ plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 
+option(ENABLE_UNCOMPRESSED_DECODER "Support internal ISO/IEC 23001-17 uncompressed decoder" OFF)
 
 # --- Create libheif pkgconfig file
 

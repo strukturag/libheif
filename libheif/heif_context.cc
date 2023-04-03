@@ -18,6 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "libheif/box.h"
+#include "libheif/error.h"
+#include "libheif/heif.h"
+#include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -511,6 +515,9 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "iden" ||
           item_type == "iovl" ||
           item_type == "av01" ||
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+          item_type == "unci" ||
+#endif
           item_type == "vvc1");
 }
 
@@ -1275,6 +1282,18 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (error) {
       return error;
     }
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+  } else if (image_type == "unci") {
+    std::vector<uint8_t> data;
+    error = m_heif_file->get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+    error = decode_uncompressed_image(ID, img, data);
+    if (error) {
+      return error;
+    }
+#endif
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
@@ -2739,3 +2758,317 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
 
   return Error::Ok;
 }
+
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+Error HeifContext::decode_uncompressed_image(heif_item_id ID,
+                                             std::shared_ptr<HeifPixelImage>& img,
+                                             const std::vector<uint8_t>& uncompressed_data) const
+{
+  // Get the properties for this item
+  std::vector<heif::Box_ipco::Property> item_properties;
+  Error error = m_heif_file->get_properties(ID, item_properties);
+  if (error) {
+    return error;
+  }
+  uint32_t width = 0;
+  uint32_t height = 0;
+  bool found_ispe = false;
+  std::shared_ptr<Box_cmpd> cmpd;
+  std::shared_ptr<Box_uncC> uncC;
+  for (const auto& prop : item_properties) {
+    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+    if (ispe) {
+      width = ispe->get_width();
+      height = ispe->get_height();
+
+      if (width >= m_maximum_image_width_limit || height >= m_maximum_image_height_limit) {
+        std::stringstream sstr;
+        sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+            << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
+
+        return Error(heif_error_Memory_allocation_error,
+                     heif_suberror_Security_limit_exceeded,
+                     sstr.str());
+      }
+      found_ispe = true;
+    }
+
+    auto maybe_cmpd = std::dynamic_pointer_cast<Box_cmpd>(prop.property);
+    if (maybe_cmpd) {
+      cmpd = maybe_cmpd;
+    }
+
+    auto maybe_uncC = std::dynamic_pointer_cast<Box_uncC>(prop.property);
+    if (maybe_uncC) {
+      uncC = maybe_uncC;
+    }
+  }
+
+  if (found_ispe && cmpd && uncC) {
+    error = uncompressed_image_is_supported(uncC, cmpd);
+    if (error) {
+      return error;
+    }
+    img = std::make_shared<HeifPixelImage>();
+    heif_chroma chroma;
+    heif_colorspace colourspace;
+    error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
+    if (error) {
+      return error;
+    }
+    img->create(width, height,
+                colourspace,
+                chroma);
+    std::vector<heif_channel> channels;
+    std::map<heif_channel, uint32_t> channel_to_pixelOffset;
+    uint32_t i = 0;
+    for (Box_uncC::Component component: uncC->get_components())
+    {
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      if (component_type == 1)
+      {
+        img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Y);
+        channel_to_pixelOffset.emplace(heif_channel_Y, i);
+      }
+      else if (component_type == 2)
+      {
+        img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cb);
+        channel_to_pixelOffset.emplace(heif_channel_Cb, i);
+      }
+      else if (component_type == 3)
+      {
+        img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cr);
+        channel_to_pixelOffset.emplace(heif_channel_Cr, i);
+      }
+      else if (component_type == 4)
+      {
+        img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_R);
+        channel_to_pixelOffset.emplace(heif_channel_R, i);
+      }
+      else if (component_type == 5)
+      {
+        img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_G);
+        channel_to_pixelOffset.emplace(heif_channel_G, i);
+      }
+      else if (component_type == 6)
+      {
+        img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_B);
+        channel_to_pixelOffset.emplace(heif_channel_B, i);
+      }
+      else if (component_type == 7)
+      {
+        img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Alpha);
+        channel_to_pixelOffset.emplace(heif_channel_Alpha, i);
+      }
+      // TODO: other component types
+      i++;
+    }
+    // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
+    uint32_t bytes_per_channel = width * height;
+    if (uncC->get_interleave_type() == 0)
+    {
+      // Source is planar
+      for(uint32_t i = 0; i < channels.size(); i++) {
+        int stride;
+        uint8_t* dst = img->get_plane(channels[i], &stride);
+        memcpy(dst, uncompressed_data.data() + i * bytes_per_channel, bytes_per_channel);
+      }
+    } 
+    else if (uncC->get_interleave_type() == 1)
+    {
+      // Source is pixel interleaved
+
+      // TODO: we need to be smarter about block size, etc
+
+      // TODO: we can only do this if we are 8 bits
+      long unsigned int pixel_stride = channel_to_pixelOffset.size();
+      const uint8_t* src = uncompressed_data.data();
+      for (uint32_t i = 0; i < channels.size(); i++)
+      {
+        int pixel_offset = channel_to_pixelOffset[channels[i]];
+        int stride;
+        uint8_t* dst = img->get_plane(channels[i], &stride);
+        for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++)
+        {
+          dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
+        }
+      }
+    }
+  } else {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Missing key boxes for uncompressed codec");
+  }
+  return Error::Ok;
+}
+
+Error HeifContext::uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd) const
+{
+  for (Box_uncC::Component component: uncC->get_components())
+  {
+    uint16_t component_index = component.component_index;
+    uint16_t component_type = cmpd->get_components()[component_index].component_type;
+    if ((component_type == 0) || (component_type > 7))
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_bit_depth_minus_one + 1 != 8)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_bit_depth_minus_one " << ((int) component.component_bit_depth_minus_one) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_format != 0)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+    if (component.component_align_size != 0)
+    {
+      std::stringstream sstr;
+      sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   sstr.str());
+    }
+  }
+  if (uncC->get_sampling_type() != 0)
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if ((uncC->get_interleave_type() != 0) && (uncC->get_interleave_type() != 1))
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if (uncC->get_block_size() != 0)
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if (uncC->is_components_little_endian()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Uncompressed components_little_endian == 1 is not implemented yet");
+  }
+  if (uncC->is_block_pad_lsb()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Uncompressed block_pad_lsb == 1 is not implemented yet");
+  }
+  if (uncC->is_block_little_endian()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Uncompressed block_little_endian == 1 is not implemented yet");
+  }
+  if (uncC->is_block_reversed()) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Uncompressed block_reversed == 1 is not implemented yet");
+  }
+  if (uncC->get_pixel_size() != 0)
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed pixel_size of " << ((int) uncC->get_pixel_size()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if (uncC->get_row_align_size() != 0)
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed row_align_size of " << ((int) uncC->get_row_align_size()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if (uncC->get_tile_align_size() != 0)
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed tile_align_size of " << ((int) uncC->get_tile_align_size()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  if ((uncC->get_number_of_tile_columns() != 1) || (uncC->get_number_of_tile_rows() != 1))
+  {
+    std::stringstream sstr;
+    sstr << "Uncompressed tiled images with " << uncC->get_number_of_tile_columns() << " columns by " << uncC->get_number_of_tile_rows() << " rows is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+  return Error::Ok;
+}
+
+Error HeifContext::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma *out_chroma, heif_colorspace *out_colourspace) const
+{
+  *out_chroma = heif_chroma_undefined;
+  *out_colourspace = heif_colorspace_undefined;
+  std::vector<uint16_t> components;
+  for (Box_uncC::Component component: uncC->get_components())
+  {
+    uint16_t component_index = component.component_index;
+    uint16_t component_type = cmpd->get_components()[component_index].component_type;
+    components.push_back(component_type);
+  }
+  // TODO: make this work for any order
+  if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}) || (components == std::vector<uint16_t>{4, 5, 6, 7}) || (components == std::vector<uint16_t>{7, 6, 5, 4}))
+  {
+    *out_chroma = heif_chroma_444;
+    *out_colourspace = heif_colorspace_RGB;
+  }
+  if (components == std::vector<uint16_t>{1, 2, 3})
+  {
+    if (uncC->get_interleave_type() == 0) {
+      // Planar YCbCr
+      *out_chroma = heif_chroma_444;
+      *out_colourspace = heif_colorspace_YCbCr;
+    }
+  }
+  // TODO: more combinations
+  if (*out_chroma == heif_chroma_undefined)
+  {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Could not determine chroma");
+  }
+  else if (*out_colourspace == heif_colorspace_undefined)
+  {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Could not determine colourspace");
+  }
+  else
+  {
+    return Error::Ok;
+  }
+}
+#endif

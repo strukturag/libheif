@@ -194,6 +194,8 @@ namespace heif {
     Error parse_heif_file(BitstreamRange& bitstream);
 
     std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
+
+    int get_luma_bits_per_pixel_from_configuration_unci(std::shared_ptr<Box_uncC> uncC, std::shared_ptr<Box_cmpd> cmpd) const;
   };
 
 }

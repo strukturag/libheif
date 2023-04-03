@@ -3506,11 +3506,11 @@ Error Box_cmpd::parse(BitstreamRange& range)
 
   for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
-    component.m_component_type = range.read16();
-    if (component.m_component_type >= 0x8000) {
-      component.m_component_type_uri = range.read_string();
+    component.component_type = range.read16();
+    if (component.component_type >= 0x8000) {
+      component.component_type_uri = range.read_string();
     } else {
-      component.m_component_type_uri = std::string();
+      component.component_type_uri = std::string();
     }
     m_components.push_back(component);
   }
@@ -3524,9 +3524,9 @@ std::string Box_cmpd::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   for (const auto& component : m_components) {
-    sstr << indent << "component_type: " << component.m_component_type << "\n";
-    if (component.m_component_type >= 0x8000) {
-      sstr << indent << "| component_type_uri: " << component.m_component_type_uri << "\n";
+    sstr << indent << "component_type: " << component.component_type << "\n";
+    if (component.component_type >= 0x8000) {
+      sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
     }
   }
 
@@ -3539,9 +3539,9 @@ Error Box_cmpd::write(StreamWriter& writer) const
 
   writer.write16((uint16_t)m_components.size());
   for (const auto& component : m_components) {
-    writer.write16(component.m_component_type);
-    if (component.m_component_type >= 0x8000) {
-      writer.write(component.m_component_type_uri);
+    writer.write16(component.component_type);
+    if (component.component_type >= 0x8000) {
+      writer.write(component.component_type_uri);
     }
   }
 
@@ -3559,10 +3559,10 @@ Error Box_uncC::parse(BitstreamRange& range)
 
   for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
-    component.m_component_index = range.read16();
-    component.m_component_bit_depth_minus_one = range.read8();
-    component.m_component_format = range.read8();
-    component.m_component_align_size = range.read8();
+    component.component_index = range.read16();
+    component.component_bit_depth_minus_one = range.read8();
+    component.component_format = range.read8();
+    component.component_align_size = range.read8();
     m_components.push_back(component);
   }
 
@@ -3605,10 +3605,10 @@ std::string Box_uncC::dump(Indent& indent) const
   sstr << "\n";
 
   for (const auto& component : m_components) {
-    sstr << indent << "component_index: " << component.m_component_index << "\n";
-    sstr << indent << "component_bit_depth_minus_one: " << (int)component.m_component_bit_depth_minus_one << "\n";
-    sstr << indent << "component_format: " << (int)component.m_component_format << "\n";
-    sstr << indent << "component_align_size: " << (int)component.m_component_align_size << "\n";
+    sstr << indent << "component_index: " << component.component_index << "\n";
+    sstr << indent << "component_bit_depth_minus_one: " << (int)component.component_bit_depth_minus_one << "\n";
+    sstr << indent << "component_format: " << (int)component.component_format << "\n";
+    sstr << indent << "component_align_size: " << (int)component.component_align_size << "\n";
   }
 
   sstr << indent << "sampling_type: " << (int)m_sampling_type << "\n";
