@@ -24,8 +24,11 @@
 #include <map>
 
 #include "uncompressed_image.h"
+#include "plugins/heif_encoder_uncompressed.h"
 
-enum Components {
+
+enum Components
+{
   Component_Monochrome = 0,
   Component_Y = 1,
   Component_Cb = 2,
@@ -349,7 +352,7 @@ namespace heif {
   }
 
 
-  int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
+  int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
   {
     auto ipco = heif_file.get_ipco_box();
     auto ipma = heif_file.get_ipma_box();
@@ -392,12 +395,12 @@ namespace heif {
   }
 
 
-  Error UncompressedImageDecoder::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
-                                                            heif_item_id ID,
-                                                            std::shared_ptr<HeifPixelImage>& img,
-                                                            uint32_t maximum_image_width_limit,
-                                                            uint32_t maximum_image_height_limit,
-                                                            const std::vector<uint8_t>& uncompressed_data)
+  Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
+                                                          heif_item_id ID,
+                                                          std::shared_ptr<HeifPixelImage>& img,
+                                                          uint32_t maximum_image_width_limit,
+                                                          uint32_t maximum_image_height_limit,
+                                                          const std::vector<uint8_t>& uncompressed_data)
   {
     // Get the properties for this item
     // We need: ispe, cmpd, uncC
@@ -546,4 +549,69 @@ namespace heif {
 
     return Error::Ok;
   }
+
+
+  Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
+                                                          const std::shared_ptr<HeifPixelImage>& src_image,
+                                                          void* encoder_struct,
+                                                          const struct heif_encoding_options* options,
+                                                          std::shared_ptr<HeifContext::Image> out_image)
+  {
+    //encoder_struct_uncompressed* encoder = (encoder_struct_uncompressed*)encoder_struct;
+
+    printf("UNCOMPRESSED\n");
+
+#if 0
+    Box_uncC::configuration config;
+
+    // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+    // TODO: maybe we can remove this later.
+    fill_av1C_configuration(&config, src_image);
+
+    heif_image c_api_image;
+    c_api_image.image = src_image;
+
+    struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+    if (err.code) {
+      return Error(err.code,
+                   err.subcode,
+                   err.message);
+    }
+
+    for (;;) {
+      uint8_t* data;
+      int size;
+
+      encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+      bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
+      (void) found_config;
+
+      if (data == nullptr) {
+        break;
+      }
+
+      std::vector<uint8_t> vec;
+      vec.resize(size);
+      memcpy(vec.data(), data, size);
+
+      m_heif_file->append_iloc_data(image_id, vec);
+    }
+
+    m_heif_file->add_av1C_property(image_id);
+    m_heif_file->set_av1C_configuration(image_id, config);
+
+    //m_heif_file->add_orientation_properties(image_id, options->image_orientation);
+
+    uint32_t input_width, input_height;
+    input_width = src_image->get_width();
+    input_height = src_image->get_height();
+    m_heif_file->add_ispe_property(image_id,
+                                   get_rotated_width(options->image_orientation, input_width, input_height),
+                                   get_rotated_height(options->image_orientation, input_width, input_height));
+#endif
+
+    return Error::Ok;
+  }
+
 }

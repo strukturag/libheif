@@ -325,7 +325,8 @@ namespace heif {
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
-    std::shared_ptr<Image> get_top_level_image(heif_item_id id) {
+    std::shared_ptr<Image> get_top_level_image(heif_item_id id)
+    {
       for (auto& img : m_top_level_images) {
         if (img->get_id() == id) {
           return img;
@@ -385,6 +386,12 @@ namespace heif {
                               const struct heif_encoding_options* options,
                               enum heif_image_input_class input_class,
                               std::shared_ptr<Image>& out_image);
+
+    Error encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
+                                       struct heif_encoder* encoder,
+                                       const struct heif_encoding_options* options,
+                                       enum heif_image_input_class input_class,
+                                       std::shared_ptr<Image> out_image);
 
     // write PIXI, CLLI, MDVC
     void write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id);

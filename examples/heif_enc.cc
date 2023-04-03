@@ -93,7 +93,9 @@ int nclx_full_range = true;
 #endif
 
 #if HAVE_GETTIMEOFDAY
+
 #include <sys/time.h>
+
 struct timeval time_encoding_start;
 struct timeval time_encoding_end;
 #endif
@@ -106,30 +108,33 @@ const int OPTION_PLUGIN_DIRECTORY = 1004;
 
 
 static struct option long_options[] = {
-    {(char* const) "help",                    no_argument,       0,              'h'},
-    {(char* const) "quality",                 required_argument, 0,              'q'},
-    {(char* const) "output",                  required_argument, 0,              'o'},
-    {(char* const) "lossless",                no_argument,       0,              'L'},
-    {(char* const) "thumb",                   required_argument, 0,              't'},
-    {(char* const) "verbose",                 no_argument,       0,              'v'},
-    {(char* const) "params",                  no_argument,       0,              'P'},
-    {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
-    {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
-    {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoder",                 no_argument,       0,              'e'},
-    {(char* const) "bit-depth",               required_argument, 0,              'b'},
-    {(char* const) "even-size",               no_argument,       0,              'E'},
-    {(char* const) "avif",                    no_argument,       0,              'A'},
-    {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
-    {(char* const) "colour_primaries",        required_argument, 0,              OPTION_NCLX_COLOUR_PRIMARIES},
-    {(char* const) "transfer_characteristic", required_argument, 0,              OPTION_NCLX_TRANSFER_CHARACTERISTIC},
-    {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
-    {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
-    {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
-    {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
-    {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
-    {0, 0,                                                       0,               0},
+    {(char* const) "help",                        no_argument,       0,                     'h'},
+    {(char* const) "quality",                     required_argument, 0,                     'q'},
+    {(char* const) "output",                      required_argument, 0,                     'o'},
+    {(char* const) "lossless",                    no_argument,       0,                     'L'},
+    {(char* const) "thumb",                       required_argument, 0,                     't'},
+    {(char* const) "verbose",                     no_argument,       0,                     'v'},
+    {(char* const) "params",                      no_argument,       0,                     'P'},
+    {(char* const) "no-alpha",                    no_argument,       &master_alpha,         0},
+    {(char* const) "no-thumb-alpha",              no_argument,       &thumb_alpha,          0},
+    {(char* const) "list-encoders",               no_argument,       &list_encoders,        1},
+    {(char* const) "encoder",                     no_argument,       0,                     'e'},
+    {(char* const) "bit-depth",                   required_argument, 0,                     'b'},
+    {(char* const) "even-size",                   no_argument,       0,                     'E'},
+    {(char* const) "avif",                        no_argument,       0,                     'A'},
+#if ENABLE_UNCOMPRESSED_ENCODER
+    {(char* const) "uncompressed",                no_argument,       0,                     'U'},
+#endif
+    {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
+    {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
+    {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
+    {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
+    {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
+    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
+    {0, 0,                                                           0,                     0},
 };
 
 void show_help(const char* argv0)
@@ -152,12 +157,15 @@ void show_help(const char* argv0)
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
             << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
-            << "  -o, --output      output filename (optional)\n"
-            << "  -v, --verbose     enable logging output (more -v will increase logging level)\n"
-            << "  -P, --params      show all encoder parameters\n"
-            << "  -b, --bit-depth # bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
-            << "  -p                set encoder parameter (NAME=VALUE)\n"
-            << "  -A, --avif        encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "  -o, --output          output filename (optional)\n"
+            << "  -v, --verbose         enable logging output (more -v will increase logging level)\n"
+            << "  -P, --params          show all encoder parameters\n"
+            << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
+            << "  -p                    set encoder parameter (NAME=VALUE)\n"
+            << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+#if ENABLE_UNCOMPRESSED_ENCODER
+            << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+#endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR  load all codec plugins in the directory\n"
@@ -176,7 +184,6 @@ void show_help(const char* argv0)
             << "  -p chroma=444            switch off chroma subsampling\n"
             << "  --matrix_coefficients=0  encode in RGB color-space\n";
 }
-
 
 
 struct InputImage
@@ -311,7 +318,7 @@ bool ReadXMPFromJPEG(j_decompress_ptr cinfo,
 
   for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
     if (JPEGMarkerIsXMP(marker)) {
-      int length = (int)(marker->data_length - (strlen(JPEG_XMP_MARKER_ID) + 1));
+      int length = (int) (marker->data_length - (strlen(JPEG_XMP_MARKER_ID) + 1));
       xmpData.resize(length);
       memcpy(xmpData.data(), marker->data + strlen(JPEG_XMP_MARKER_ID) + 1, length);
       return true;
@@ -335,13 +342,13 @@ static bool JPEGMarkerIsEXIF(jpeg_saved_marker_ptr marker)
 }
 
 bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
-                     std::vector<uint8_t>& exifData)
+                      std::vector<uint8_t>& exifData)
 {
   jpeg_saved_marker_ptr marker;
 
   for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
     if (JPEGMarkerIsEXIF(marker)) {
-      int length = (int)(marker->data_length - JPEG_EXIF_MARKER_LEN);
+      int length = (int) (marker->data_length - JPEG_EXIF_MARKER_LEN);
       exifData.resize(length);
       memcpy(exifData.data(), marker->data + JPEG_EXIF_MARKER_LEN, length);
       return true;
@@ -402,7 +409,7 @@ InputImage loadJPEG(const char* filename)
   bool embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
   if (embeddedEXIFFlag) {
     img.exif = exifData;
-    img.orientation = (heif_orientation)read_exif_orientation_tag(exifData.data(), (int)exifData.size());
+    img.orientation = (heif_orientation) read_exif_orientation_tag(exifData.data(), (int) exifData.size());
   }
 
   if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
@@ -520,7 +527,7 @@ InputImage loadJPEG(const char* filename)
   fclose(infile);
 
   img.image = std::shared_ptr<heif_image>(image,
-                                     [](heif_image* img) { heif_image_release(img); });
+                                          [](heif_image* img) { heif_image_release(img); });
 
   return img;
 }
@@ -705,7 +712,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     memcpy(input_image.exif.data(), exifPtr, exifSize);
 
     // remove the EXIF orientation since it is informal only in PNG and we do not want to confuse with an orientation not matching irot/imir
-    modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int)input_image.exif.size(), 1);
+    modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int) input_image.exif.size(), 1);
   }
 #endif
 
@@ -759,7 +766,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
   bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
 
-  if (band == 1 && bit_depth==8) {
+  if (band == 1 && bit_depth == 8) {
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_monochrome,
                             heif_chroma_monochrome,
@@ -795,7 +802,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     }
   }
   else if (band == 1) {
-    assert(bit_depth>8);
+    assert(bit_depth > 8);
 
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_monochrome,
@@ -809,13 +816,13 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
     int y_stride;
     int a_stride = 0;
-    uint16_t* py = (uint16_t*)heif_image_get_plane(image, heif_channel_Y, &y_stride);
+    uint16_t* py = (uint16_t*) heif_image_get_plane(image, heif_channel_Y, &y_stride);
     uint16_t* pa = nullptr;
 
     if (has_alpha) {
       heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, output_bit_depth);
 
-      pa = (uint16_t*)heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
+      pa = (uint16_t*) heif_image_get_plane(image, heif_channel_Alpha, &a_stride);
     }
 
     y_stride /= 2;
@@ -1061,8 +1068,8 @@ void list_encoder_parameters(heif_encoder* encoder)
         if (num_valid_values > 0) {
           std::cerr << ", {";
 
-          for (int p=0;p<num_valid_values;p++) {
-            if (p>0) {
+          for (int p = 0; p < num_valid_values; p++) {
+            if (p > 0) {
               std::cerr << ", ";
             }
 
@@ -1154,7 +1161,7 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
               << " = "
               << heif_encoder_descriptor_get_name(encoder_descriptors[i]);
 
-    if (i==0) {
+    if (i == 0) {
       std::cout << " [default]";
     }
 
@@ -1165,7 +1172,11 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1}) {
+  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1
+#if ENABLE_UNCOMPRESSED_ENCODER
+                                  , heif_compression_uncompressed
+#endif
+  }) {
 
     switch (compression_format) {
       case heif_compression_AV1:
@@ -1173,6 +1184,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
+        break;
+      case heif_compression_uncompressed:
+        std::cout << "uncompressed";
         break;
       default:
         assert(false);
@@ -1242,6 +1256,7 @@ int main(int argc, char** argv)
   int thumbnail_bbox_size = 0;
   int output_bit_depth = 10;
   bool force_enc_av1f = false;
+  bool force_enc_uncompressed = false;
   bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
@@ -1249,7 +1264,11 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:"
+#if ENABLE_UNCOMPRESSED_ENCODER
+        "U"
+#endif
+        , long_options, &option_index);
     if (c == -1)
       break;
 
@@ -1284,6 +1303,11 @@ int main(int argc, char** argv)
       case 'A':
         force_enc_av1f = true;
         break;
+#if ENABLE_UNCOMPRESSED_ENCODER
+        case 'U':
+        force_enc_uncompressed = true;
+        break;
+#endif
       case 'E':
         crop_to_even_size = true;
         break;
@@ -1291,13 +1315,13 @@ int main(int argc, char** argv)
         encoderId = optarg;
         break;
       case OPTION_NCLX_MATRIX_COEFFICIENTS:
-        nclx_matrix_coefficients = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_matrix_coefficients = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_COLOUR_PRIMARIES:
-        nclx_colour_primaries = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_colour_primaries = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_TRANSFER_CHARACTERISTIC:
-        nclx_transfer_characteristic = (uint16_t)strtoul(optarg, nullptr, 0);
+        nclx_transfer_characteristic = (uint16_t) strtoul(optarg, nullptr, 0);
         break;
       case OPTION_NCLX_FULL_RANGE_FLAG:
         nclx_full_range = atoi(optarg);
@@ -1311,7 +1335,7 @@ int main(int argc, char** argv)
         }
 
         // Note: since we process the option within the loop, we can only consider the '-v' flags coming before the plugin loading option.
-        if (logging_level>0) {
+        if (logging_level > 0) {
           std::cout << nPlugins << " plugins loaded from directory " << optarg << "\n";
         }
         break;
@@ -1322,6 +1346,10 @@ int main(int argc, char** argv)
   if (quality < 0 || quality > 100) {
     std::cerr << "Invalid quality factor. Must be between 0 and 100.\n";
     return 5;
+  }
+
+  if (force_enc_av1f && force_enc_uncompressed) {
+    std::cerr << "Choose at most one output compression format.\n";
   }
 
   if (logging_level > 0) {
@@ -1354,6 +1382,9 @@ int main(int argc, char** argv)
 
   if (force_enc_av1f) {
     compressionFormat = heif_compression_AV1;
+  }
+  else if (force_enc_uncompressed) {
+    compressionFormat = heif_compression_uncompressed;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);
@@ -1408,7 +1439,7 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << (compressionFormat==heif_compression_AV1 ? "AV1" : "HEVC") << " encoder available.\n";
+    std::cerr << "No " << (compressionFormat == heif_compression_AV1 ? "AV1" : "HEVC") << " encoder available.\n";
     return 5;
   }
 
@@ -1435,7 +1466,7 @@ int main(int argc, char** argv)
         filename_without_suffix = input_filename;
       }
 
-      output_filename = filename_without_suffix + (compressionFormat==heif_compression_AV1 ? ".avif" : ".heic");
+      output_filename = filename_without_suffix + (compressionFormat == heif_compression_AV1 ? ".avif" : ".heic");
     }
 
 
@@ -1519,7 +1550,7 @@ int main(int argc, char** argv)
     set_params(encoder, raw_params);
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
-    options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
+    options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
 
@@ -1577,8 +1608,8 @@ int main(int argc, char** argv)
     // write XMP to HEIC
     if (!input_image.xmp.empty()) {
       error = heif_context_add_XMP_metadata2(context.get(), handle,
-                                     input_image.xmp.data(), (int) input_image.xmp.size(),
-                                     metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
+                                             input_image.xmp.data(), (int) input_image.xmp.size(),
+                                             metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
       if (error.code != 0) {
         heif_encoding_options_free(options);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
@@ -1634,7 +1665,7 @@ int main(int argc, char** argv)
     std::cout << "PSNR: " << std::setprecision(2) << std::fixed << psnr << " ";
 
 #if HAVE_GETTIMEOFDAY
-    double t = (double)(time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double)(time_encoding_end.tv_usec - time_encoding_start.tv_usec)/1000000.0;
+    double t = (double) (time_encoding_end.tv_sec - time_encoding_start.tv_sec) + (double) (time_encoding_end.tv_usec - time_encoding_start.tv_usec) / 1000000.0;
     std::cout << "time: " << std::setprecision(1) << std::fixed << t << " ";
 #endif
 
