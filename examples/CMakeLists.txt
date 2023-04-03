@@ -10,10 +10,11 @@ if (MSVC)
     include_directories("../extra")
 endif ()
 
+find_package(Threads)
 
 add_executable(heif-info ${getopt_sources}
         heif_info.cc)
-target_link_libraries(heif-info heif)
+target_link_libraries(heif-info heif ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
@@ -26,7 +27,7 @@ add_executable(heif-convert ${getopt_sources}
         heif_convert.cc
         ../libheif/exif.cc
         ../libheif/exif.cc)
-target_link_libraries(heif-convert PRIVATE heif)
+target_link_libraries(heif-convert PRIVATE heif ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-convert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
@@ -38,14 +39,14 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.h
         benchmark.cc
         encoder.cc)
-target_link_libraries(heif-enc PRIVATE heif)
+target_link_libraries(heif-enc PRIVATE heif ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 
 add_executable(heif-test ${getopt_sources}
         heif_test.cc)
-target_link_libraries(heif-test heif)
+target_link_libraries(heif-test heif ${CMAKE_THREAD_LIBS_INIT})
 
 
 find_package(JPEG)
