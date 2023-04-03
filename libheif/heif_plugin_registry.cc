@@ -109,7 +109,9 @@ void heif::register_default_plugins()
   heif::register_encoder(get_encoder_plugin_svt());
 #endif
 
+#if ENABLE_UNCOMPRESSED_ENCODER
   heif::register_encoder(get_encoder_plugin_uncompressed());
+#endif
 }
 
 
