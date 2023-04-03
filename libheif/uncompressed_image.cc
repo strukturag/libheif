@@ -180,14 +180,25 @@ namespace heif {
 
 
 
-  int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(std::shared_ptr<Box_uncC> uncC, std::shared_ptr<Box_cmpd> cmpd)
+  int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
   {
+    auto ipco = heif_file.get_ipco_box();
+    auto ipma = heif_file.get_ipma_box();
+
+    auto box1 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("uncC"));
+    std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
+    auto box2 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("cmpd"));
+    std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
+    if (!uncC_box || !cmpd_box) {
+      return -1;
+    }
+
     int luma_bits = 0;
     int alternate_channel_bits = 0;
-    for (Box_uncC::Component component: uncC->get_components())
+    for (Box_uncC::Component component: uncC_box->get_components())
     {
       uint16_t component_index = component.component_index;
-      auto component_type = cmpd->get_components()[component_index].component_type;
+      auto component_type = cmpd_box->get_components()[component_index].component_type;
       switch(component_type) {
         case 0: // monochrome
         case 4: // red
