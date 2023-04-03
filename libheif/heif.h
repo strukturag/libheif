@@ -1574,6 +1574,11 @@ struct heif_encoding_options
 
   // version 6 options
 
+  // TODO: clearly define the semantics. Even when this is turned on, it currently does not execute in all cases
+  //       because the implementation is only for the RGB24 interleaved case, but not for the planar case.
+  //       Moreover, chroma 4:2:2 is not handled (neither is 4:4:4).
+  //       Ideally, sharp YUV should be used in all conversion paths.
+  //       We should also have bilinear YUV->RGB to match this.
   // Enable 'sharp' RGB to YUV420 conversion (if compiled in). Makes edges look
   // sharper when using YUV 420 with bilinear chroma upsampling.
   uint8_t enable_sharp_yuv; // default: false
