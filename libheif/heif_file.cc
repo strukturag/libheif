@@ -497,13 +497,8 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   // Uncompressed
 
   if (image_type == "unci") {
-    auto box1 = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("uncC"));
-    std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
-    auto box2 = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("cmpd"));
-    std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
-    if (uncC_box && cmpd_box) {
-      return UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(uncC_box, cmpd_box);
-    }
+    int bpp = UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(*this, imageID);
+    return bpp;
   }
 #endif
 

@@ -97,7 +97,13 @@ namespace heif {
     std::shared_ptr<Box_ipco> get_ipco_box()
     { return m_ipco_box; }
 
+    std::shared_ptr<Box_ipco> get_ipco_box() const
+    { return m_ipco_box; }
+
     std::shared_ptr<Box_ipma> get_ipma_box()
+    { return m_ipma_box; }
+
+    std::shared_ptr<Box_ipma> get_ipma_box() const
     { return m_ipma_box; }
 
     Error get_properties(heif_item_id imageID,
