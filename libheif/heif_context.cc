@@ -2588,6 +2588,7 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                 enum heif_image_input_class input_class,
                                                 std::shared_ptr<Image> out_image)
 {
+#if ENABLE_UNCOMPRESSED_ENCODER
   heif_item_id image_id = m_heif_file->add_new_image("unci");
   out_image = std::make_shared<Image>(this, image_id);
 
@@ -2598,7 +2599,7 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                                 out_image);
 
   m_top_level_images.push_back(out_image);
-
+#endif
   //write_image_metadata(src_image, image_id);
 
   return Error::Ok;
