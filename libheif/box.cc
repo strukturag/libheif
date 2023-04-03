@@ -34,6 +34,9 @@
 #include <cstring>
 #include <cassert>
 
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+#include "uncompressed_image.h"
+#endif
 
 using namespace heif;
 
@@ -131,7 +134,7 @@ uint32_t from_fourcc(const char* string)
           (string[3]));
 }
 
-static std::string to_fourcc(uint32_t code)
+std::string heif::to_fourcc(uint32_t code)
 {
   std::string str("    ");
   str[0] = static_cast<char>((code >> 24) & 0xFF);
@@ -514,6 +517,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_mdcv>(hdr);
       break;
 
+#ifdef ENABLE_UNCOMPRESSED_DECODER
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>(hdr);
       break;
@@ -521,6 +525,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
     case fourcc("uncC"):
       box = std::make_shared<Box_uncC>(hdr);
       break;
+#endif
 
     default:
       box = std::make_shared<Box>(hdr);
@@ -3500,155 +3505,3 @@ std::string Box_url::dump(Indent& indent) const
   return sstr.str();
 }
 
-Error Box_cmpd::parse(BitstreamRange& range)
-{
-  int component_count = range.read16();
-
-  for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
-    Component component;
-    component.component_type = range.read16();
-    if (component.component_type >= 0x8000) {
-      component.component_type_uri = range.read_string();
-    } else {
-      component.component_type_uri = std::string();
-    }
-    m_components.push_back(component);
-  }
-
-  return range.get_error();
-}
-
-std::string Box_cmpd::dump(Indent& indent) const
-{
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-
-  for (const auto& component : m_components) {
-    sstr << indent << "component_type: " << component.component_type << "\n";
-    if (component.component_type >= 0x8000) {
-      sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
-    }
-  }
-
-  return sstr.str();
-}
-
-Error Box_cmpd::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  writer.write16((uint16_t)m_components.size());
-  for (const auto& component : m_components) {
-    writer.write16(component.component_type);
-    if (component.component_type >= 0x8000) {
-      writer.write(component.component_type_uri);
-    }
-  }
-
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
-}
-
-Error Box_uncC::parse(BitstreamRange& range)
-{
-  parse_full_box_header(range);
-  m_profile = range.read32();
-
-  int component_count = range.read16();
-
-  for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
-    Component component;
-    component.component_index = range.read16();
-    component.component_bit_depth_minus_one = range.read8();
-    component.component_format = range.read8();
-    component.component_align_size = range.read8();
-    m_components.push_back(component);
-  }
-
-  m_sampling_type = range.read8();
-
-  m_interleave_type = range.read8();
-
-  m_block_size = range.read8();
-
-  uint8_t flags = range.read8();
-  m_components_little_endian = !!(flags & 0x80);
-  m_block_pad_lsb = !!(flags & 0x40);
-  m_block_little_endian = !!(flags & 0x20);
-  m_block_reversed = !!(flags & 0x10);
-  m_pad_unknown = !!(flags & 0x08);
-
-  m_pixel_size = range.read8();
-
-  m_row_align_size = range.read32();
-
-  m_tile_align_size = range.read32();
-
-  m_num_tile_cols_minus_one = range.read32();
-
-  m_num_tile_rows_minus_one = range.read32();
-
-  return range.get_error();
-}
-
-
-std::string Box_uncC::dump(Indent& indent) const
-{
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-
-  sstr << indent << "profile: " << m_profile;
-  if (m_profile != 0) {
-    sstr << " (" << to_fourcc(m_profile) << ")";
-  }
-  sstr << "\n";
-
-  for (const auto& component : m_components) {
-    sstr << indent << "component_index: " << component.component_index << "\n";
-    sstr << indent << "component_bit_depth_minus_one: " << (int)component.component_bit_depth_minus_one << "\n";
-    sstr << indent << "component_format: " << (int)component.component_format << "\n";
-    sstr << indent << "component_align_size: " << (int)component.component_align_size << "\n";
-  }
-
-  sstr << indent << "sampling_type: " << (int)m_sampling_type << "\n";
-
-  sstr << indent << "interleave_type: " << (int)m_interleave_type << "\n";
-
-  sstr << indent << "block_size: " << (int)m_block_size << "\n";
-
-  sstr << indent << "components_little_endian: " << m_components_little_endian << "\n";
-  sstr << indent << "block_pad_lsb: " << m_block_pad_lsb << "\n";
-  sstr << indent << "block_little_endian: " << m_block_little_endian << "\n";
-  sstr << indent << "block_reversed: " << m_block_reversed << "\n";
-  sstr << indent << "pad_unknown: " << m_pad_unknown << "\n";
-
-  sstr << indent << "pixel_size: " << (int)m_pixel_size << "\n";
-
-  sstr << indent << "row_align_size: " << m_row_align_size << "\n";
-
-  sstr << indent << "tile_align_size: " << m_tile_align_size << "\n";
-
-  sstr << indent << "num_tile_cols_minus_one: " << m_num_tile_cols_minus_one << "\n";
-
-  sstr << indent << "num_tile_rows_minus_one: " << m_num_tile_rows_minus_one << "\n";
-
-  return sstr.str();
-}
-
-bool Box_uncC::get_headers(std::vector<uint8_t>* dest) const
-{
-  // TODO: component_bit_depth?
-  return true;
-}
-
-Error Box_uncC::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  writer.write32(m_profile);
-  // TODO: this is not complete
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
-}

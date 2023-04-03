@@ -51,6 +51,8 @@ namespace heif {
 
 #define fourcc(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
 
+  std::string to_fourcc(uint32_t code);
+
   /*
     constexpr uint32_t fourcc(const char* string)
     {
@@ -1392,124 +1394,6 @@ namespace heif {
     std::shared_ptr<const color_profile> m_color_profile;
   };
 
-  class Box_cmpd : public Box
-  {
-  public:
-    Box_cmpd()
-    {
-      set_short_type(fourcc("cmpd"));
-      set_is_full_box(false);
-    }
-
-    Box_cmpd(const BoxHeader& hdr) : Box(hdr)
-    {}
-
-    std::string dump(Indent&) const override;
-
-    Error write(StreamWriter& writer) const override;
-
-    struct Component
-    {
-      uint16_t component_type;
-      std::string component_type_uri;
-    };
-
-    const std::vector<Component>& get_components() const
-    { return m_components; }
-
-  protected:
-    Error parse(BitstreamRange& range) override;
-
-    std::vector<Component> m_components;
-  };
-
-  class Box_uncC : public Box
-  {
-  public:
-    Box_uncC()
-    {
-      set_short_type(fourcc("uncC"));
-      set_is_full_box(false);
-    }
-
-    Box_uncC(const BoxHeader& hdr) : Box(hdr)
-    {}
-
-    std::string dump(Indent&) const override;
-
-    bool get_headers(std::vector<uint8_t>* dest) const;
-
-    Error write(StreamWriter& writer) const override;
-
-    struct Component
-    {
-      uint16_t component_index;
-      uint8_t component_bit_depth_minus_one;
-      uint8_t component_format;
-      uint8_t component_align_size;
-    };
-
-    const std::vector<Component>& get_components() const
-    { return m_components; }
-
-    uint8_t get_sampling_type()
-    { return m_sampling_type; }
-
-    uint8_t get_interleave_type()
-    { return m_interleave_type; }
-
-    uint8_t get_block_size()
-    { return m_block_size; }
-
-    bool is_components_little_endian()
-    { return m_components_little_endian; }
-
-    bool is_block_pad_lsb()
-    { return m_block_pad_lsb; }
-
-    bool is_block_little_endian()
-    { return m_block_little_endian; }
-
-    bool is_block_reversed()
-    { return m_block_reversed; }
-
-    bool is_pad_unknown()
-    { return m_pad_unknown; }
-
-    uint8_t get_pixel_size()
-    { return m_pixel_size; }
-
-    uint32_t get_row_align_size()
-    { return m_row_align_size; }
-
-    uint32_t get_tile_align_size()
-    { return m_tile_align_size; }
-
-    uint32_t get_number_of_tile_columns()
-    { return m_num_tile_cols_minus_one + 1; }
-
-    uint32_t get_number_of_tile_rows()
-    { return m_num_tile_rows_minus_one + 1; }
-  protected:
-    Error parse(BitstreamRange& range) override;
-
-    uint32_t m_profile;
-
-    std::vector<Component> m_components;
-    uint8_t m_sampling_type;
-    uint8_t m_interleave_type;
-    uint8_t m_block_size;
-    bool m_components_little_endian;
-    bool m_block_pad_lsb;
-    bool m_block_little_endian;
-    bool m_block_reversed;
-    bool m_pad_unknown;
-    uint8_t m_pixel_size;
-    uint32_t m_row_align_size;
-    uint32_t m_tile_align_size;
-    uint32_t m_num_tile_cols_minus_one;
-    uint32_t m_num_tile_rows_minus_one;
-  };
 }
 
 #endif
