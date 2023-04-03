@@ -27,6 +27,10 @@
 #include "heif_image.h"
 #include "heif_file.h"
 
+#include <string>
+#include <vector>
+#include <memory>
+
 
 namespace heif {
   class Box_cmpd : public Box

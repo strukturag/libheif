@@ -20,6 +20,9 @@
 
 
 #include <cstring>
+#include <algorithm>
+#include <map>
+
 #include "uncompressed_image.h"
 
 namespace heif {
