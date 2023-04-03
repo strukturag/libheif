@@ -79,6 +79,7 @@ int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
 int metadata_compression = 0;
+int sharp_yuv = 0;
 const char* encoderId = nullptr;
 
 uint16_t nclx_matrix_coefficients = 6;
@@ -129,6 +130,9 @@ static struct option long_options[] = {
     {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
+#ifdef HAVE_LIBSHARPYUV
+    {(char* const) "enable-sharp-yuv",        no_argument,       &sharp_yuv,      1},
+#endif
     {0, 0,                                                       0,               0},
 };
 
@@ -169,6 +173,10 @@ void show_help(const char* argv0)
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+#ifdef HAVE_LIBSHARPYUV
+            << "  --enable-sharp-yuv        enable 'sharp' RGB to YUV420 conversion (makes edges look sharper \n"
+            << "                            when using YUV420 with bilinear chroma upsampling)\n"
+#endif
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
@@ -1522,6 +1530,7 @@ int main(int argc, char** argv)
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
+    options->enable_sharp_yuv = (uint8_t) sharp_yuv;
 
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||

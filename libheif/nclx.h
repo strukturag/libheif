@@ -45,6 +45,8 @@ namespace heif {
   struct Kr_Kb
   {
     float Kr = 0, Kb = 0;
+
+    static Kr_Kb defaults();
   };
 
   Kr_Kb get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx);

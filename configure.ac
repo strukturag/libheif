@@ -298,6 +298,23 @@ AC_SUBST([have_svt])
 AC_SUBST(have_avif_decoder)
 AC_SUBST(have_avif_encoder)
 
+AC_ARG_ENABLE([libsharpyuv], AS_HELP_STRING([--disable-libsharpyuv],
+    [Disable building with libsharpyuv.]))
+if eval "test x$enable_libsharpyuv = x" ; then enable_libsharpyuv=yes ; fi
+if eval "test x$enable_libsharpyuv != xno"; then
+    PKG_CHECK_MODULES([libsharpyuv], [libsharpyuv], [
+        AC_DEFINE([HAVE_LIBSHARPYUV], [1], [Whether libsharpyuv was found.])
+        AC_SUBST(libsharpyuv_CFLAGS)
+        AC_SUBST(libsharpyuv_LIBS)
+        REQUIRES_PRIVATE="$REQUIRES_PRIVATE libsharpyuv"
+        have_libsharpyuv="yes"
+    ], [have_libsharpyuv="no"])
+else
+    have_libsharpyuv="no"
+fi
+AM_CONDITIONAL([HAVE_LIBSHARPYUV], [test "x$have_libsharpyuv" = "xyes"])
+AC_SUBST([have_libsharpyuv])
+
 AC_ARG_ENABLE([libfuzzer], AS_HELP_STRING([--enable-libfuzzer],
     [Enable fuzzing with libFuzzer.]), [], [enable_libfuzzer=no])
 if eval "test x$enable_libfuzzer != xno"; then
@@ -344,6 +361,7 @@ AC_MSG_NOTICE([dav1d decoder: $have_dav1d])
 AC_MSG_NOTICE([svt-av1 encoder: $have_svt])
 AC_MSG_NOTICE([libde265 decoder: $have_libde265])
 AC_MSG_NOTICE([libx265 encoder: $have_x265])
+AC_MSG_NOTICE([libsharpyuv: $have_libsharpyuv])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])

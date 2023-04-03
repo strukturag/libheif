@@ -99,6 +99,19 @@ plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 
 option(ENABLE_UNCOMPRESSED_DECODER "Support internal ISO/IEC 23001-17 uncompressed decoder" OFF)
 
+# Libsharpyuv
+option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
+if (WITH_LIBSHARPYUV)
+    find_package(libsharpyuv)
+endif ()
+if (LIBSHARPYUV_FOUND)
+    message("libsharpyuv: found")
+elseif (WITH_${variableName})
+    message("libsharpyuv: not found")
+else()
+    message("libsharpyuv: disabled")
+endif ()
+
 # --- Create libheif pkgconfig file
 
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -130,6 +143,9 @@ if (RAV1E_FOUND AND NOT WITH_RAV1E_PLUGIN)
 endif()
 if (SvtEnc_FOUND AND NOT WITH_SvtEnc_PLUGIN)
     list(APPEND REQUIRES_PRIVATE "SvtAv1Enc")
+endif()
+if (LIBSHARPYUV_FOUND)
+    list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
 set(VERSION ${PROJECT_VERSION})

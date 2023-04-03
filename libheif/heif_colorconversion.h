@@ -85,6 +85,8 @@ namespace heif {
   struct ColorConversionOptions
   {
     ColorConversionCriterion criterion = ColorConversionCriterion::Balanced;
+    // Enable "sharp" RGB->YUV conversion (if compiled in).
+    bool enable_sharp_yuv = false;
   };
 
 
@@ -139,5 +141,6 @@ namespace heif {
                                                      heif_colorspace colorspace,
                                                      heif_chroma chroma,
                                                      const std::shared_ptr<const color_profile_nclx>& target_profile,
-                                                     int output_bpp = 0);
+                                                     int output_bpp = 0,
+                                                     const ColorConversionOptions& options = ColorConversionOptions());
 }

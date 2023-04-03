@@ -65,6 +65,15 @@ heif::primaries heif::get_colour_primaries(uint16_t primaries_idx)
   }
 }
 
+heif::Kr_Kb heif::Kr_Kb::defaults()
+{
+  Kr_Kb kr_kb;
+  // Rec 601.
+  kr_kb.Kr = 0.2990f;
+  kr_kb.Kb = 0.1140f;
+  return kr_kb;
+}
+
 
 heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
 {
@@ -186,7 +195,7 @@ heif::RGB_to_YCbCr_coefficients heif::RGB_to_YCbCr_coefficients::defaults()
 {
   RGB_to_YCbCr_coefficients coeffs;
   coeffs.defined = true;
-
+  // Rec 601 full. Kr=0.2990f Kb=0.1140f.
   coeffs.c[0][0] = 0.299f;
   coeffs.c[0][1] = 0.587f;
   coeffs.c[0][2] = 0.114f;

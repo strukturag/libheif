@@ -1571,6 +1571,12 @@ struct heif_encoding_options
 
   // libheif will generate irot/imir boxes to match these orientations
   enum heif_orientation image_orientation;
+
+  // version 6 options
+
+  // Enable 'sharp' RGB to YUV420 conversion (if compiled in). Makes edges look
+  // sharper when using YUV 420 with bilinear chroma upsampling.
+  uint8_t enable_sharp_yuv; // default: false
 };
 
 LIBHEIF_API
