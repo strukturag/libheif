@@ -41,6 +41,8 @@ add_library(heif
     metadata_compression.h
     common_utils.cc
     common_utils.h
+    region.cc
+    region.h
     ${libheif_headers}
     )
 

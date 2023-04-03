@@ -1716,6 +1716,88 @@ int heif_encoder_descriptor_supportes_lossy_compression(const struct heif_encode
 LIBHEIF_API
 int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_encoder_descriptor*);
 
+
+// --- region items and annotations
+
+// See ISO/IEC 23008-12:2022 Section 6.10 "Region items and region annotations"
+
+// EXPERIMENTAL: API is not stable and open for discussion.
+
+struct heif_region_item;
+
+struct heif_region;
+
+struct heif_region_annotation;
+
+// How many region items are attached to an image.
+LIBHEIF_API
+int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle);
+
+// Get the region_item assigned to an image.
+// Returns the number of region items outputted.
+LIBHEIF_API
+int heif_image_handle_get_list_of_region_items(const struct heif_image_handle* handle,
+                                               struct heif_region_item* items, int max_count);
+
+
+enum heif_region_type
+{
+  heif_region_type_point,
+  heif_region_type_rectangle,
+  heif_region_type_ellipse,
+  heif_region_type_polygon,  // also includes polyline (as a non-closed polygon)
+  heif_region_type_mask
+};
+
+LIBHEIF_API
+int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item);
+
+LIBHEIF_API
+int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
+                                         struct heif_region* regions, int max_count);
+
+LIBHEIF_API
+int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
+
+LIBHEIF_API
+int heif_region_item_get_list_of_annotations(const struct heif_region_item* region_item,
+                                             struct heif_region_annotation* annotations, int max_count);
+
+
+LIBHEIF_API
+enum heif_region_type heif_region_get_type(const struct heif_region* region);
+
+LIBHEIF_API
+struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y);
+
+LIBHEIF_API
+struct heif_error heif_region_get_rectangle(const struct heif_region* region, int32_t* x, int32_t* y, int32_t* width, int32_t* height);
+
+
+enum heif_region_annotation_type
+{
+  heif_region_annotation_type_user_description,
+  heif_region_annotation_type_image
+};
+
+LIBHEIF_API
+enum heif_region_annotation_type heif_region_annotation_get_type(const struct heif_region_annotation* annotation);
+
+
+// When receiving this from the library, we have to free all the strings. The library makes a copy.
+// When passing this to the library, the library will also make a copy and we have to free our strings.
+struct heif_region_annotation_user_description {
+  const char* lang;
+  const char* name;
+  const char* description;
+  const char* tags;
+};
+
+LIBHEIF_API
+struct heif_error heif_region_annotation_get_user_description(const struct heif_region_annotation* annotation,
+                                                              struct heif_region_annotation_user_description* out);
+
+
 #ifdef __cplusplus
 }
 #endif
