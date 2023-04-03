@@ -182,7 +182,7 @@ namespace heif {
   }
 
 
-  static Error uncompressed_image_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
+  static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
   {
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
@@ -293,18 +293,23 @@ namespace heif {
   {
     *out_chroma = heif_chroma_undefined;
     *out_colourspace = heif_colorspace_undefined;
+
     std::vector<uint16_t> components;
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
       uint16_t component_type = cmpd->get_components()[component_index].component_type;
       components.push_back(component_type);
     }
+
     // TODO: make this work for any order
-    if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}) || (components == std::vector<uint16_t>{4, 5, 6, 7}) ||
+    if ((components == std::vector<uint16_t>{4, 5, 6}) ||
+        (components == std::vector<uint16_t>{6, 5, 4}) ||
+        (components == std::vector<uint16_t>{4, 5, 6, 7}) ||
         (components == std::vector<uint16_t>{7, 6, 5, 4})) {
       *out_chroma = heif_chroma_444;
       *out_colourspace = heif_colorspace_RGB;
     }
+
     if (components == std::vector<uint16_t>{1, 2, 3}) {
       if (uncC->get_interleave_type() == 0) {
         // Planar YCbCr
@@ -312,7 +317,9 @@ namespace heif {
         *out_colourspace = heif_colorspace_YCbCr;
       }
     }
+
     // TODO: more combinations
+
     if (*out_chroma == heif_chroma_undefined) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
@@ -327,7 +334,6 @@ namespace heif {
       return Error::Ok;
     }
   }
-
 
 
   int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
@@ -345,11 +351,10 @@ namespace heif {
 
     int luma_bits = 0;
     int alternate_channel_bits = 0;
-    for (Box_uncC::Component component: uncC_box->get_components())
-    {
+    for (Box_uncC::Component component : uncC_box->get_components()) {
       uint16_t component_index = component.component_index;
       auto component_type = cmpd_box->get_components()[component_index].component_type;
-      switch(component_type) {
+      switch (component_type) {
         case 0: // monochrome
         case 4: // red
         case 5: // green
@@ -364,9 +369,11 @@ namespace heif {
     }
     if (luma_bits > 0) {
       return luma_bits;
-    } else if (alternate_channel_bits > 0) {
+    }
+    else if (alternate_channel_bits > 0) {
       return alternate_channel_bits;
-    } else {
+    }
+    else {
       return 8;
     }
   }
@@ -380,6 +387,8 @@ namespace heif {
                                                             const std::vector<uint8_t>& uncompressed_data)
   {
     // Get the properties for this item
+    // We need: ispe, cmpd, uncC
+
     std::vector<heif::Box_ipco::Property> item_properties;
     Error error = heif_file->get_properties(ID, item_properties);
     if (error) {
@@ -419,98 +428,108 @@ namespace heif {
       }
     }
 
-    if (found_ispe && cmpd && uncC) {
-      error = uncompressed_image_is_supported(uncC, cmpd);
-      if (error) {
-        return error;
-      }
-      img = std::make_shared<HeifPixelImage>();
-      heif_chroma chroma;
-      heif_colorspace colourspace;
-      error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
-      if (error) {
-        return error;
-      }
-      img->create(width, height,
-                  colourspace,
-                  chroma);
-      std::vector<heif_channel> channels;
-      std::map<heif_channel, uint32_t> channel_to_pixelOffset;
-      uint32_t i = 0;
-      for (Box_uncC::Component component : uncC->get_components()) {
-        uint16_t component_index = component.component_index;
-        uint16_t component_type = cmpd->get_components()[component_index].component_type;
-        if (component_type == 1) {
-          img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Y);
-          channel_to_pixelOffset.emplace(heif_channel_Y, i);
-        }
-        else if (component_type == 2) {
-          img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Cb);
-          channel_to_pixelOffset.emplace(heif_channel_Cb, i);
-        }
-        else if (component_type == 3) {
-          img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Cr);
-          channel_to_pixelOffset.emplace(heif_channel_Cr, i);
-        }
-        else if (component_type == 4) {
-          img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_R);
-          channel_to_pixelOffset.emplace(heif_channel_R, i);
-        }
-        else if (component_type == 5) {
-          img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_G);
-          channel_to_pixelOffset.emplace(heif_channel_G, i);
-        }
-        else if (component_type == 6) {
-          img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_B);
-          channel_to_pixelOffset.emplace(heif_channel_B, i);
-        }
-        else if (component_type == 7) {
-          img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Alpha);
-          channel_to_pixelOffset.emplace(heif_channel_Alpha, i);
-        }
-        // TODO: other component types
-        i++;
-      }
-      // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
-      uint32_t bytes_per_channel = width * height;
-      if (uncC->get_interleave_type() == 0) {
-        // Source is planar
-        for (uint32_t c = 0; c < channels.size(); c++) {
-          int stride;
-          uint8_t* dst = img->get_plane(channels[c], &stride);
-          memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
-        }
-      }
-      else if (uncC->get_interleave_type() == 1) {
-        // Source is pixel interleaved
 
-        // TODO: we need to be smarter about block size, etc
+    // if we miss a required box, show error
 
-        // TODO: we can only do this if we are 8 bits
-        long unsigned int pixel_stride = channel_to_pixelOffset.size();
-        const uint8_t* src = uncompressed_data.data();
-        for (uint32_t c = 0; c < channels.size(); c++) {
-          int pixel_offset = channel_to_pixelOffset[channels[c]];
-          int stride;
-          uint8_t* dst = img->get_plane(channels[c], &stride);
-          for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
-            dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
-          }
-        }
-      }
-    }
-    else {
+    if (!found_ispe || !cmpd || !uncC) {
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
-                   "Missing key boxes for uncompressed codec");
+                   "Missing required box for uncompressed codec");
     }
+
+
+    // check if we support the type of image
+
+    error = uncompressed_image_type_is_supported(uncC, cmpd);
+    if (error) {
+      return error;
+    }
+
+    img = std::make_shared<HeifPixelImage>();
+    heif_chroma chroma;
+    heif_colorspace colourspace;
+    error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
+    if (error) {
+      return error;
+    }
+    img->create(width, height,
+                colourspace,
+                chroma);
+
+    std::vector<heif_channel> channels;
+    std::map<heif_channel, uint32_t> channel_to_pixelOffset;
+
+    uint32_t componentOffset = 0;
+    for (Box_uncC::Component component : uncC->get_components()) {
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      if (component_type == 1) {
+        img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Y);
+        channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
+      }
+      else if (component_type == 2) {
+        img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cb);
+        channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
+      }
+      else if (component_type == 3) {
+        img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cr);
+        channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
+      }
+      else if (component_type == 4) {
+        img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_R);
+        channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
+      }
+      else if (component_type == 5) {
+        img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_G);
+        channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
+      }
+      else if (component_type == 6) {
+        img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_B);
+        channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
+      }
+      else if (component_type == 7) {
+        img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Alpha);
+        channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
+      }
+      // TODO: other component types
+      componentOffset++;
+    }
+
+    // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
+    uint32_t bytes_per_channel = width * height;
+    if (uncC->get_interleave_type() == 0) {
+      // Source is planar
+      for (uint32_t c = 0; c < channels.size(); c++) {
+        int stride;
+        uint8_t* dst = img->get_plane(channels[c], &stride);
+        memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
+      }
+    }
+    else if (uncC->get_interleave_type() == 1) {
+      // Source is pixel interleaved
+
+      // TODO: we need to be smarter about block size, etc
+
+      // TODO: we can only do this if we are 8 bits
+      long unsigned int pixel_stride = channel_to_pixelOffset.size();
+      const uint8_t* src = uncompressed_data.data();
+      for (uint32_t c = 0; c < channels.size(); c++) {
+        int pixel_offset = channel_to_pixelOffset[channels[c]];
+        int stride;
+        uint8_t* dst = img->get_plane(channels[c], &stride);
+        for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
+          dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
+        }
+      }
+    }
+
     return Error::Ok;
   }
 
