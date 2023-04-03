@@ -2819,109 +2819,90 @@ Error HeifContext::decode_uncompressed_image(heif_item_id ID,
     img->create(width, height,
                 colourspace,
                 chroma);
-    if (chroma == heif_chroma_444)
+    std::vector<heif_channel> channels;
+    std::map<heif_channel, uint32_t> channel_to_pixelOffset;
+    uint32_t i = 0;
+    for (Box_uncC::Component component: uncC->get_components())
     {
-      std::vector<heif_channel> channels;
-      for (Box_uncC::Component component: uncC->get_components())
+      uint16_t component_index = component.component_index;
+      uint16_t component_type = cmpd->get_components()[component_index].component_type;
+      if (component_type == 1)
       {
-        uint16_t component_index = component.component_index;
-        uint16_t component_type = cmpd->get_components()[component_index].component_type;
-        if (component_type == 1)
-        {
-          img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Y);
-        }
-        else if (component_type == 2)
-        {
-          img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Cb);
-        }
-        else if (component_type == 3)
-        {
-          img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Cr);
-        }
-        else if (component_type == 4)
-        {
-          img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_R);
-        }
-        else if (component_type == 5)
-        {
-          img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_G);
-        }
-        else if (component_type == 6)
-        {
-          img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_B);
-        }
-        else if (component_type == 7)
-        {
-          img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
-          channels.push_back(heif_channel_Alpha);
-        }
-        // TODO: other component types
+        img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Y);
+        channel_to_pixelOffset.emplace(heif_channel_Y, i);
       }
-      // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
-      uint32_t bytes_per_channel = width * height;
+      else if (component_type == 2)
+      {
+        img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cb);
+        channel_to_pixelOffset.emplace(heif_channel_Cb, i);
+      }
+      else if (component_type == 3)
+      {
+        img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Cr);
+        channel_to_pixelOffset.emplace(heif_channel_Cr, i);
+      }
+      else if (component_type == 4)
+      {
+        img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_R);
+        channel_to_pixelOffset.emplace(heif_channel_R, i);
+      }
+      else if (component_type == 5)
+      {
+        img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_G);
+        channel_to_pixelOffset.emplace(heif_channel_G, i);
+      }
+      else if (component_type == 6)
+      {
+        img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_B);
+        channel_to_pixelOffset.emplace(heif_channel_B, i);
+      }
+      else if (component_type == 7)
+      {
+        img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
+        channels.push_back(heif_channel_Alpha);
+        channel_to_pixelOffset.emplace(heif_channel_Alpha, i);
+      }
+      // TODO: other component types
+      i++;
+    }
+    // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
+    uint32_t bytes_per_channel = width * height;
+    if (uncC->get_interleave_type() == 0)
+    {
+      // Source is planar
       for(uint32_t i = 0; i < channels.size(); i++) {
         int stride;
         uint8_t* dst = img->get_plane(channels[i], &stride);
         memcpy(dst, uncompressed_data.data() + i * bytes_per_channel, bytes_per_channel);
       }
     } 
-    else if ((chroma == heif_chroma_interleaved_RGB) || (chroma == heif_chroma_interleaved_RGBA))
+    else if (uncC->get_interleave_type() == 1)
     {
-      bool has_alpha = (chroma == heif_chroma_interleaved_RGBA);
+      // Source is pixel interleaved
+
       // TODO: we need to be smarter about block size, etc
-      img->add_plane(heif_channel_interleaved, width, height, has_alpha ? 32 : 24);
-      int stride;
-      uint8_t* interleaved_plane = img->get_plane(heif_channel_interleaved, &stride);
-      uint32_t redOffset = 0;
-      uint32_t greenOffset = 0;
-      uint32_t blueOffset = 0;
-      uint32_t alphaOffset = 0;
-      int i = 0;
-      for (Box_uncC::Component component: uncC->get_components())
+
+      // TODO: we can only do this if we are 8 bits
+      long unsigned int pixel_stride = channel_to_pixelOffset.size();
+      const uint8_t* src = uncompressed_data.data();
+      for (uint32_t i = 0; i < channels.size(); i++)
       {
-        uint16_t component_index = component.component_index;
-        uint16_t component_type = cmpd->get_components()[component_index].component_type;
-        if (component_type == 4) {
-          redOffset = i;
-        } else if (component_type == 5) {
-          greenOffset = i;
-        } else if (component_type == 6) {
-          blueOffset = i;
-        } else if (component_type == 7) {
-          alphaOffset = i;
-        }
-        i++;
-      }
-      if ((redOffset == 0) && (greenOffset == 1) && (blueOffset == 2))
-      {
-        // TODO: we can only do this if we are 8 bits
-        memcpy(interleaved_plane, uncompressed_data.data(), width * height * (has_alpha ? 4 : 3));
-      }
-      else
-      {
-        const uint8_t* src = uncompressed_data.data();
+        int pixel_offset = channel_to_pixelOffset[channels[i]];
+        int stride;
+        uint8_t* dst = img->get_plane(channels[i], &stride);
         for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++)
         {
-          // TODO: we can only do this if we are 8 bits
-          int pixel_stride = (has_alpha ? 4: 3);
-          interleaved_plane[pixel_stride * pixelIndex]     = src[pixel_stride * pixelIndex + redOffset];
-          interleaved_plane[pixel_stride * pixelIndex + 1] = src[pixel_stride * pixelIndex + greenOffset];
-          interleaved_plane[pixel_stride * pixelIndex + 2] = src[pixel_stride * pixelIndex + blueOffset];
-          if (has_alpha)
-          {
-            interleaved_plane[pixel_stride * pixelIndex + 3] = src[pixel_stride * pixelIndex + alphaOffset];
-          }
+          dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
         }
       }
     }
   } else {
-    // return some error about malformed uncompressed file
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Missing key boxes for uncompressed codec");
@@ -3059,29 +3040,10 @@ Error HeifContext::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC,
     components.push_back(component_type);
   }
   // TODO: make this work for any order
-  if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}))
+  if ((components == std::vector<uint16_t>{4, 5, 6}) || (components == std::vector<uint16_t>{6, 5, 4}) || (components == std::vector<uint16_t>{4, 5, 6, 7}) || (components == std::vector<uint16_t>{7, 6, 5, 4}))
   {
-    if (uncC->get_interleave_type() == 0) {
-      // Planar RGB
-      *out_chroma = heif_chroma_444;
-      *out_colourspace = heif_colorspace_RGB;
-    } else if (uncC->get_interleave_type() == 1) {
-      // Interleaved RGB
-      *out_chroma = heif_chroma_interleaved_RGB;
-      *out_colourspace = heif_colorspace_RGB;
-    }
-  }
-  if (components == std::vector<uint16_t>{4, 5, 6, 7})
-  {
-    if (uncC->get_interleave_type() == 0) {
-      // Planar RGBA
-      *out_chroma = heif_chroma_444;
-      *out_colourspace = heif_colorspace_RGB;
-    } else if (uncC->get_interleave_type() == 1) {
-      // Interleaved RGBA
-      *out_chroma = heif_chroma_interleaved_RGBA;
-      *out_colourspace = heif_colorspace_RGB;
-    }
+    *out_chroma = heif_chroma_444;
+    *out_colourspace = heif_colorspace_RGB;
   }
   if (components == std::vector<uint16_t>{1, 2, 3})
   {
