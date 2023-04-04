@@ -19,6 +19,7 @@
  */
 
 
+#include <cstdint>
 #include <cstring>
 #include <algorithm>
 #include <map>
@@ -293,13 +294,6 @@ namespace heif {
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if ((uncC->get_number_of_tile_columns() != 1) || (uncC->get_number_of_tile_rows() != 1)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed tiled images with " << uncC->get_number_of_tile_columns() << " columns by " << uncC->get_number_of_tile_rows() << " rows is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
     return Error::Ok;
   }
 
@@ -521,12 +515,36 @@ namespace heif {
 
     // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
     uint32_t bytes_per_channel = width * height;
+    uint32_t numTileColumns = uncC->get_number_of_tile_columns();
+    uint32_t numTileRows = uncC->get_number_of_tile_rows();
+    uint32_t tile_width = width / numTileColumns;
+    uint32_t tile_height = height / numTileRows;
+    long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
     if (uncC->get_interleave_type() == 0) {
       // Source is planar
       for (uint32_t c = 0; c < channels.size(); c++) {
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
-        memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
+        if ((numTileRows == 1) && (numTileColumns == 1))
+        {
+          memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
+        }
+        else
+        {
+          int pixel_offset = channel_to_pixelOffset[channels[c]];
+          for (uint32_t row = 0; row < height; row++)
+          {
+            for (uint32_t col = 0; col < width; col += tile_width)
+            {
+              uint32_t tile_idx_y = row / tile_height;
+              uint32_t tile_idx_x = col / tile_width;
+              uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
+              long unsigned int src_offset = tile_idx * bytes_per_tile + pixel_offset * tile_width * tile_height;
+              long unsigned int dst_offset = row * width + col;
+              memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+            }
+          }
+        }
       }
     }
     else if (uncC->get_interleave_type() == 1) {
@@ -541,8 +559,19 @@ namespace heif {
         int pixel_offset = channel_to_pixelOffset[channels[c]];
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
-        for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
-          dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
+        for (uint32_t row = 0; row < height; row++)
+        {
+          uint32_t tile_idx_y = row / tile_height;
+          for (uint32_t col = 0; col < width; col ++)
+          {
+            uint32_t pixelIndex = row * width + col;
+            uint32_t pixelTileIndex = pixelIndex % (tile_width * tile_height);
+            uint32_t tile_idx_x = col / tile_width;
+            uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
+            long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
+            long unsigned int src_offset = tile_base_offset + pixel_stride * pixelTileIndex + pixel_offset;
+            dst[pixelIndex] = src[src_offset];
+          }
         }
       }
     }
