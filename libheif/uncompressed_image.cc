@@ -28,21 +28,21 @@
 #include "plugins/heif_encoder_uncompressed.h"
 
 
-enum ComponentTypes
+enum heif_component_type
 {
-  Component_Type_Monochrome = 0,
-  Component_Type_Y = 1,
-  Component_Type_Cb = 2,
-  Component_Type_Cr = 3,
-  Component_Type_Red = 4,
-  Component_Type_Green = 5,
-  Component_Type_Blue = 6,
-  Component_Type_Alpha = 7,
-  Component_Type_Depth = 8,
-  Component_Type_Disparity = 9,
-  Component_Type_Palette = 10,
-  Component_Type_Filter_Array = 11,
-  Component_Type_Padded = 12
+  heif_component_type_monochrome = 0,
+  heif_component_type_Y = 1,
+  heif_component_type_Cb = 2,
+  heif_component_type_Cr = 3,
+  heif_component_type_red = 4,
+  heif_component_type_green = 5,
+  heif_component_type_blue = 6,
+  heif_component_type_alpha = 7,
+  heif_component_type_depth = 8,
+  heif_component_type_disparity = 9,
+  heif_component_type_palette = 10,
+  heif_component_type_filter_array = 11,
+  heif_component_type_padded = 12
 };
 
 
@@ -318,13 +318,13 @@ namespace heif {
       componentSet |= (1 << component_type);
     }
 
-    if (componentSet == ((1 << Component_Type_Red) | (1 << Component_Type_Green) | (1 << Component_Type_Blue)) ||
-        componentSet == ((1 << Component_Type_Red) | (1 << Component_Type_Green) | (1 << Component_Type_Blue) | (1 << Component_Type_Alpha))) {
+    if (componentSet == ((1 << heif_component_type_red) | (1 << heif_component_type_green) | (1 << heif_component_type_blue)) ||
+        componentSet == ((1 << heif_component_type_red) | (1 << heif_component_type_green) | (1 << heif_component_type_blue) | (1 << heif_component_type_alpha))) {
       *out_chroma = heif_chroma_444;
       *out_colourspace = heif_colorspace_RGB;
     }
 
-    if (componentSet == ((1 << Component_Type_Y) | (1 << Component_Type_Cb) | (1 << Component_Type_Cr))) {
+    if (componentSet == ((1 << heif_component_type_Y) | (1 << heif_component_type_Cb) | (1 << heif_component_type_Cr))) {
       if (uncC->get_interleave_type() == 0) {
         // Planar YCbCr
         *out_chroma = heif_chroma_444;
@@ -369,13 +369,13 @@ namespace heif {
       uint16_t component_index = component.component_index;
       auto component_type = cmpd_box->get_components()[component_index].component_type;
       switch (component_type) {
-        case Component_Type_Monochrome:
-        case Component_Type_Red:
-        case Component_Type_Green:
-        case Component_Type_Blue:
+        case heif_component_type_monochrome:
+        case heif_component_type_red:
+        case heif_component_type_green:
+        case heif_component_type_blue:
           alternate_channel_bits = std::max(alternate_channel_bits, component.component_bit_depth_minus_one + 1);
           break;
-        case Component_Type_Y:
+        case heif_component_type_Y:
           luma_bits = std::max(luma_bits, component.component_bit_depth_minus_one + 1);
           break;
           // TODO: there are other things we'll need to handle eventually, like palette.
@@ -477,37 +477,37 @@ namespace heif {
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
       uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      if (component_type == Component_Type_Y) {
+      if (component_type == heif_component_type_Y) {
         img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Y);
         channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
       }
-      else if (component_type == Component_Type_Cb) {
+      else if (component_type == heif_component_type_Cb) {
         img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cb);
         channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
       }
-      else if (component_type == Component_Type_Cr) {
+      else if (component_type == heif_component_type_Cr) {
         img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cr);
         channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
       }
-      else if (component_type == Component_Type_Red) {
+      else if (component_type == heif_component_type_red) {
         img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_R);
         channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
       }
-      else if (component_type == Component_Type_Green) {
+      else if (component_type == heif_component_type_green) {
         img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_G);
         channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
       }
-      else if (component_type == Component_Type_Blue) {
+      else if (component_type == heif_component_type_blue) {
         img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_B);
         channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
       }
-      else if (component_type == Component_Type_Alpha) {
+      else if (component_type == heif_component_type_alpha) {
         img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Alpha);
         channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
