@@ -27,7 +27,10 @@
 #include <algorithm>
 
 #include "heif_plugin_registry.h"
+
+#ifdef ENABLE_UNCOMPRESSED_ENCODER
 #include "libheif/plugins/heif_encoder_uncompressed.h"
+#endif
 
 #if HAVE_LIBDE265
 #include "libheif/plugins/heif_decoder_libde265.h"
