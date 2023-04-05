@@ -284,6 +284,8 @@ namespace heif {
         }
       };
 
+      Error read_transformations(struct heif_transformations* transformations) const;
+
     private:
       HeifContext* m_heif_context;
 

@@ -124,6 +124,84 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 }
 
 
+static void transform_crop(struct heif_transformations* transformations,
+  int left, int top, int width, int height, int img_width, int img_height)
+{
+  uint8_t tag_to_bitmask[9] = {
+    0b000, 0b000, 0b001, 0b011, 0b010, 0b100, 0b110, 0b111, 0b101
+  };
+  uint8_t bitmask = tag_to_bitmask[transformations->orientation_tag];
+
+  if (bitmask & 0b100) {
+    int tmp1 = left;
+    int tmp2 = width;
+    left = top;
+    width = height;
+    top = tmp1;
+    height = tmp2;
+  }
+  if (bitmask & 0b001) {
+    left = img_width - (left + width);
+  }
+  if (bitmask & 0b010) {
+    top = img_height - (top + height);
+  }
+
+  left = left < 0 ? 0 : (left >= img_width ? img_width - 1 : left);
+  top = top < 0 ? 0 : (top >= img_height ? img_height - 1 : top);
+  width = width < 0 ? 0 : (width > img_width - left ? img_width - left : width);
+  height = height < 0 ? 0 : (height > img_height - top ? img_height - top : height);
+
+  transformations->crop_left = (uint32_t) left;
+  transformations->crop_top = (uint32_t) top;
+  transformations->crop_width = (uint32_t) width;
+  transformations->crop_height = (uint32_t) height;
+}
+
+
+static void transform_orientation(struct heif_transformations* transformations,
+  uint8_t angle, bool horizontal, bool vertical)
+{
+  /* EXIF orientation tag values decomposed by operations
+    1: 0b000: NONE
+    2: 0b001: FLIP_LEFT_RIGHT
+    3: 0b011: ROTATE_180
+    4: 0b010: FLIP_TOP_BOTTOM
+    5: 0b100: TRANSPOSE
+    6: 0b110: ROTATE_270_CCW
+    7: 0b111: TRANSVERSE
+    8: 0b101: ROTATE_90_CCW
+  */
+  uint8_t tag_to_bitmask[9] = {
+    0b000, 0b000, 0b001, 0b011, 0b010, 0b100, 0b110, 0b111, 0b101
+  };
+  uint8_t bitmask_to_tag[8] = {1, 2, 4, 3, 5, 8, 6, 7};
+  
+  // angle * 90 specifies the angle (counterclockwise) in degrees.
+  uint8_t rotation_to_bitmask[4] = {0b000, 0b101, 0b011, 0b110};
+  uint8_t operation = rotation_to_bitmask[angle & 0b011];
+  if (horizontal) {
+    operation ^= 0b001;
+  }
+  if (vertical) {
+    operation ^= 0b010;
+  }
+
+  uint8_t bitmask = tag_to_bitmask[transformations->orientation_tag];
+
+  // If bitmask contatins transposition, swap first two bits of operation
+  if (bitmask & 0b100) {
+    uint8_t bit0 = operation & 0b001;
+    uint8_t bit1 = operation & 0b010;
+    operation = (operation & 0b100) | (uint8_t) (bit0 << 1) | (uint8_t) (bit1 >> 1);
+  }
+  bitmask ^= operation;
+
+  transformations->orientation_tag = bitmask_to_tag[bitmask];
+}
+
+
+
 class ImageGrid
 {
 public:
@@ -1093,6 +1171,61 @@ int HeifContext::Image::get_chroma_bits_per_pixel() const
 
   // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
   return m_heif_context->m_heif_file->get_chroma_bits_per_pixel_from_configuration(id);
+}
+
+
+Error HeifContext::Image::read_transformations(struct heif_transformations* transformations) const
+{
+  std::vector<Box_ipco::Property> properties;
+  Error err = m_heif_context->m_heif_file->get_properties(m_id, properties);
+  if (err) {
+    return err;
+  }
+
+  transformations->version = 1;
+  transformations->crop_left = 0;
+  transformations->crop_top = 0;
+  transformations->crop_width = m_ispe_width;
+  transformations->crop_height = m_ispe_height;
+  transformations->orientation_tag = 0;
+
+  // Use this flag to match HeifContext::interpret_heif_file logic
+  bool ispe_read = false;
+  for (const auto& property : properties) {
+    auto ispe = std::dynamic_pointer_cast<Box_ispe>(property.property);
+    if (ispe) {
+      ispe_read = true;
+    }
+    if (!ispe_read)
+      continue;
+
+    auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
+    if (irot) {
+      transform_orientation(transformations,
+        (irot->get_rotation() / 90) & 0x3, false, false);
+    }
+
+    auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
+    if (imir) {
+      transform_orientation(transformations, 0,
+        imir->get_mirror_direction() == Box_imir::MirrorDirection::Horizontal,
+        imir->get_mirror_direction() == Box_imir::MirrorDirection::Vertical);
+    }
+
+    auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+    if (clap) {
+      transform_crop(
+        transformations,
+        clap->left_rounded(m_ispe_width),
+        clap->right_rounded(m_ispe_height),
+        clap->get_width_rounded(),
+        clap->get_height_rounded(),
+        m_ispe_width, m_ispe_height
+      );
+    }
+  }
+  
+  return Error::Ok;
 }
 
 
