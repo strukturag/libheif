@@ -143,6 +143,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
+option(WITH_TESTS "Build tests" ON)
 
 option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
@@ -150,6 +151,10 @@ option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode ti
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
+endif()
+if(WITH_TESTS)
+    include(CTest)
+    add_subdirectory (tests)
 endif()
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
