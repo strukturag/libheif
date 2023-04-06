@@ -355,7 +355,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
                                     std::shared_ptr<Box_iref>& iref_box,
                                     std::unordered_set<heif_item_id>& parent_items) const {
-  if (parent_items.contains(ID)) {
+  if (parent_items.find(ID) != parent_items.end()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Item_reference_cycle,
                  "Image reference cycle");
