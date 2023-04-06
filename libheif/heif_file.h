@@ -32,6 +32,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <unordered_set>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <mutex>
@@ -198,6 +199,10 @@ namespace heif {
 
 
     Error parse_heif_file(BitstreamRange& bitstream);
+
+    Error check_for_ref_cycle(heif_item_id ID,
+                              std::shared_ptr<Box_iref>& iref_box,
+                              std::unordered_set<heif_item_id>& parent_items) const;
 
     std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
   };

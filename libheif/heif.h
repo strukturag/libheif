@@ -253,6 +253,9 @@ enum heif_suberror_code
   // The value for the given parameter is not in the valid range.
   heif_suberror_Invalid_parameter_value = 2006,
 
+  // Image reference cycle found in iref
+  heif_suberror_Item_reference_cycle = 2007,
+
 
   // --- Unsupported_feature ---
 

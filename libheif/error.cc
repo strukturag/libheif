@@ -179,6 +179,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unsupported parameter";
     case heif_suberror_Invalid_parameter_value:
       return "Invalid parameter value";
+    case heif_suberror_Item_reference_cycle:
+      return "Image reference cycle";
 
       // --- Unsupported_feature ---
 
