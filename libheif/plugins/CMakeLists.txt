@@ -4,6 +4,7 @@ macro(plugin_compilation name varName optionName defineName)
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
+        # message("-------------WITH_${optionName}_PLUGIN = ${WITH_${optionName}_PLUGIN}")
 
         if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_${optionName}_PLUGIN)
             message("Compiling '" ${name} "' as dynamic plugin")
@@ -20,7 +21,7 @@ macro(plugin_compilation name varName optionName defineName)
                     LIBHEIF_EXPORTS
                     HAVE_VISIBILITY)
             target_compile_definitions(heif-${name} PRIVATE PLUGIN_${defineName}=1)
-            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIR})
+            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIR} ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR} heif)
 
             install(TARGETS heif-${name}
@@ -30,7 +31,7 @@ macro(plugin_compilation name varName optionName defineName)
             message("Compiling '" ${name} "' as built-in backend")
             target_sources(heif PRIVATE ${${optionName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
-            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
+            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR} ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         endif ()
 
@@ -69,3 +70,12 @@ plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
+
+set(OpenJPEG_sources heif_encoder_openjpeg.cc heif_encoder_openjpeg.h)
+set(OpenJPEG_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
+plugin_compilation(OpenJPEG OPENJPEG OpenJPEG   OPENJPEG)
+#                  name     varName  optionName defineName
+# name - for printing
+# varName - Determined by .cmake file
+# optionName - must match <option_name>_sources <filename>.cc
+# defineName - #define in the C code

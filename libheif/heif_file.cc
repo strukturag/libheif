@@ -927,6 +927,16 @@ Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configur
   }
 }
 
+std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id) 
+{
+  auto j2kH = std::make_shared<Box_j2kH>();
+  int index = m_ipco_box->append_child_box(j2kH);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+  return j2kH;
+}
+
 
 void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method)
 {

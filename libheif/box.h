@@ -1394,6 +1394,53 @@ namespace heif {
     std::shared_ptr<const color_profile> m_color_profile;
   };
 
+  class Box_j2kH : public Box {
+    // The body of this property consists of the permissible contents of a 
+    // JP2 Header box as specified in Rec. ITU-T T.800 |ISO/IEC 15444-1.
+    public:
+    Box_j2kH() {
+      set_short_type(fourcc("j2kH"));
+      set_is_full_box(false);
+    }
+    Box_j2kH(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    std::string dump(Indent&) const override;
+
+    protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+  class Box_cdef : public Box {
+    public:
+    Box_cdef() {
+        set_short_type(fourcc("cdef"));
+        set_is_full_box(false);
+      }
+    Box_cdef(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    struct Channel
+    {
+      uint16_t index;       // The index as defined within the cmap box (if present). 
+      uint16_t type;        // The type of data (color, opacity, etc).
+      uint16_t association; // Identifies each channel as RGB, YUV, Grey, etc. 
+    };
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+    void set_channels(heif_chroma);
+
+    protected:
+    Error parse(BitstreamRange& range) override;
+
+    private:
+    std::vector<Channel> m_channels;
+
+  };
+
 }
 
 #endif
