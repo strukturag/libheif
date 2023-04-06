@@ -74,8 +74,9 @@ plugin_compilation(rav1e RAV1E RAV1E RAV1E)
 set(OpenJPEG_sources heif_encoder_openjpeg.cc heif_encoder_openjpeg.h)
 set(OpenJPEG_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
 plugin_compilation(OpenJPEG OPENJPEG OpenJPEG   OPENJPEG)
-#                  name     varName  optionName defineName
-# name - for printing
-# varName - Determined by .cmake file
-# optionName - must match <option_name>_sources <filename>.cc
-# defineName - #define in the C code
+
+if (ENABLE_UNCOMPRESSED_ENCODER)
+    target_sources(heif PRIVATE
+            heif_encoder_uncompressed.h
+            heif_encoder_uncompressed.cc)
+endif()

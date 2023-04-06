@@ -519,9 +519,7 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "iden" ||
           item_type == "iovl" ||
           item_type == "av01" ||
-#ifdef ENABLE_UNCOMPRESSED_DECODER
           item_type == "unci" ||
-#endif
           item_type == "vvc1");
 }
 
@@ -1293,12 +1291,12 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (error) {
       return error;
     }
-    error = UncompressedImageDecoder::decode_uncompressed_image(m_heif_file,
-                                                                ID,
-                                                                img,
-                                                                m_maximum_image_width_limit,
-                                                                m_maximum_image_height_limit,
-                                                                data);
+    error = UncompressedImageCodec::decode_uncompressed_image(m_heif_file,
+                                                              ID,
+                                                              img,
+                                                              m_maximum_image_width_limit,
+                                                              m_maximum_image_height_limit,
+                                                              data);
     if (error) {
       return error;
     }
@@ -2094,6 +2092,15 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       }
       break;
 
+    case heif_compression_uncompressed: {
+      error = encode_image_as_uncompressed(pixel_image,
+                                  encoder,
+                                  options,
+                                  heif_image_input_class_normal,
+                                  out_image);
+    }
+      break;
+
     default:
       return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
   }
@@ -2625,6 +2632,30 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   return Error::Ok;
   
 }
+
+Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
+                                                struct heif_encoder* encoder,
+                                                const struct heif_encoding_options* options,
+                                                enum heif_image_input_class input_class,
+                                                std::shared_ptr<Image> out_image)
+{
+#if ENABLE_UNCOMPRESSED_ENCODER
+  heif_item_id image_id = m_heif_file->add_new_image("unci");
+  out_image = std::make_shared<Image>(this, image_id);
+
+  Error err = UncompressedImageCodec::encode_uncompressed_image(m_heif_file,
+                                                                src_image,
+                                                                encoder->encoder,
+                                                                options,
+                                                                out_image);
+
+  m_top_level_images.push_back(out_image);
+#endif
+  //write_image_metadata(src_image, image_id);
+
+  return Error::Ok;
+}
+
 
 void HeifContext::set_primary_image(const std::shared_ptr<Image>& image)
 {

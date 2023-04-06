@@ -19,21 +19,30 @@
  */
 
 
+#include <cstdint>
 #include <cstring>
 #include <algorithm>
 #include <map>
 
 #include "uncompressed_image.h"
+#include "plugins/heif_encoder_uncompressed.h"
 
-enum Components {
-  Component_Monochrome = 0,
-  Component_Y = 1,
-  Component_Cb = 2,
-  Component_Cr = 3,
-  Component_Red = 4,
-  Component_Green = 5,
-  Component_Blue = 6,
-  Component_Alpha = 7
+
+enum heif_component_type
+{
+  heif_component_type_monochrome = 0,
+  heif_component_type_Y = 1,
+  heif_component_type_Cb = 2,
+  heif_component_type_Cr = 3,
+  heif_component_type_red = 4,
+  heif_component_type_green = 5,
+  heif_component_type_blue = 6,
+  heif_component_type_alpha = 7,
+  heif_component_type_depth = 8,
+  heif_component_type_disparity = 9,
+  heif_component_type_palette = 10,
+  heif_component_type_filter_array = 11,
+  heif_component_type_padded = 12
 };
 
 
@@ -290,13 +299,6 @@ namespace heif {
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if ((uncC->get_number_of_tile_columns() != 1) || (uncC->get_number_of_tile_rows() != 1)) {
-      std::stringstream sstr;
-      sstr << "Uncompressed tiled images with " << uncC->get_number_of_tile_columns() << " columns by " << uncC->get_number_of_tile_rows() << " rows is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
     return Error::Ok;
   }
 
@@ -316,14 +318,13 @@ namespace heif {
       componentSet |= (1 << component_type);
     }
 
-    // TODO: make this work for any order
-    if (componentSet == ((1 << Component_Red) | (1 << Component_Green) | (1 << Component_Blue)) ||
-        componentSet == ((1 << Component_Red) | (1 << Component_Green) | (1 << Component_Blue) | (1 << Component_Alpha))) {
+    if (componentSet == ((1 << heif_component_type_red) | (1 << heif_component_type_green) | (1 << heif_component_type_blue)) ||
+        componentSet == ((1 << heif_component_type_red) | (1 << heif_component_type_green) | (1 << heif_component_type_blue) | (1 << heif_component_type_alpha))) {
       *out_chroma = heif_chroma_444;
       *out_colourspace = heif_colorspace_RGB;
     }
 
-    if (componentSet == ((1 << Component_Y) | (1 << Component_Cb) | (1 << Component_Cr))) {
+    if (componentSet == ((1 << heif_component_type_Y) | (1 << heif_component_type_Cb) | (1 << heif_component_type_Cr))) {
       if (uncC->get_interleave_type() == 0) {
         // Planar YCbCr
         *out_chroma = heif_chroma_444;
@@ -349,7 +350,7 @@ namespace heif {
   }
 
 
-  int UncompressedImageDecoder::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
+  int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
   {
     auto ipco = heif_file.get_ipco_box();
     auto ipma = heif_file.get_ipma_box();
@@ -368,13 +369,13 @@ namespace heif {
       uint16_t component_index = component.component_index;
       auto component_type = cmpd_box->get_components()[component_index].component_type;
       switch (component_type) {
-        case Component_Monochrome:
-        case Component_Red:
-        case Component_Green:
-        case Component_Blue:
+        case heif_component_type_monochrome:
+        case heif_component_type_red:
+        case heif_component_type_green:
+        case heif_component_type_blue:
           alternate_channel_bits = std::max(alternate_channel_bits, component.component_bit_depth_minus_one + 1);
           break;
-        case Component_Y:
+        case heif_component_type_Y:
           luma_bits = std::max(luma_bits, component.component_bit_depth_minus_one + 1);
           break;
           // TODO: there are other things we'll need to handle eventually, like palette.
@@ -392,12 +393,12 @@ namespace heif {
   }
 
 
-  Error UncompressedImageDecoder::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
-                                                            heif_item_id ID,
-                                                            std::shared_ptr<HeifPixelImage>& img,
-                                                            uint32_t maximum_image_width_limit,
-                                                            uint32_t maximum_image_height_limit,
-                                                            const std::vector<uint8_t>& uncompressed_data)
+  Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
+                                                          heif_item_id ID,
+                                                          std::shared_ptr<HeifPixelImage>& img,
+                                                          uint32_t maximum_image_width_limit,
+                                                          uint32_t maximum_image_height_limit,
+                                                          const std::vector<uint8_t>& uncompressed_data)
   {
     // Get the properties for this item
     // We need: ispe, cmpd, uncC
@@ -476,37 +477,37 @@ namespace heif {
     for (Box_uncC::Component component : uncC->get_components()) {
       uint16_t component_index = component.component_index;
       uint16_t component_type = cmpd->get_components()[component_index].component_type;
-      if (component_type == Component_Y) {
+      if (component_type == heif_component_type_Y) {
         img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Y);
         channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
       }
-      else if (component_type == Component_Cb) {
+      else if (component_type == heif_component_type_Cb) {
         img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cb);
         channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
       }
-      else if (component_type == Component_Cr) {
+      else if (component_type == heif_component_type_Cr) {
         img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Cr);
         channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
       }
-      else if (component_type == Component_Red) {
+      else if (component_type == heif_component_type_red) {
         img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_R);
         channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
       }
-      else if (component_type == Component_Green) {
+      else if (component_type == heif_component_type_green) {
         img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_G);
         channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
       }
-      else if (component_type == Component_Blue) {
+      else if (component_type == heif_component_type_blue) {
         img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_B);
         channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
       }
-      else if (component_type == Component_Alpha) {
+      else if (component_type == heif_component_type_alpha) {
         img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
         channels.push_back(heif_channel_Alpha);
         channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
@@ -518,12 +519,36 @@ namespace heif {
 
     // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
     uint32_t bytes_per_channel = width * height;
+    uint32_t numTileColumns = uncC->get_number_of_tile_columns();
+    uint32_t numTileRows = uncC->get_number_of_tile_rows();
+    uint32_t tile_width = width / numTileColumns;
+    uint32_t tile_height = height / numTileRows;
+    long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
     if (uncC->get_interleave_type() == 0) {
       // Source is planar
       for (uint32_t c = 0; c < channels.size(); c++) {
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
-        memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
+        if ((numTileRows == 1) && (numTileColumns == 1))
+        {
+          memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
+        }
+        else
+        {
+          int pixel_offset = channel_to_pixelOffset[channels[c]];
+          for (uint32_t row = 0; row < height; row++)
+          {
+            for (uint32_t col = 0; col < width; col += tile_width)
+            {
+              uint32_t tile_idx_y = row / tile_height;
+              uint32_t tile_idx_x = col / tile_width;
+              uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
+              long unsigned int src_offset = tile_idx * bytes_per_tile + pixel_offset * tile_width * tile_height;
+              long unsigned int dst_offset = row * width + col;
+              memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+            }
+          }
+        }
       }
     }
     else if (uncC->get_interleave_type() == 1) {
@@ -538,12 +563,88 @@ namespace heif {
         int pixel_offset = channel_to_pixelOffset[channels[c]];
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
-        for (uint32_t pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
-          dst[pixelIndex] = src[pixel_stride * pixelIndex + pixel_offset];
+        for (uint32_t row = 0; row < height; row++)
+        {
+          uint32_t tile_idx_y = row / tile_height;
+          for (uint32_t col = 0; col < width; col ++)
+          {
+            uint32_t pixelIndex = row * width + col;
+            uint32_t pixelTileIndex = pixelIndex % (tile_width * tile_height);
+            uint32_t tile_idx_x = col / tile_width;
+            uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
+            long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
+            long unsigned int src_offset = tile_base_offset + pixel_stride * pixelTileIndex + pixel_offset;
+            dst[pixelIndex] = src[src_offset];
+          }
         }
       }
     }
 
     return Error::Ok;
   }
+
+
+  Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
+                                                          const std::shared_ptr<HeifPixelImage>& src_image,
+                                                          void* encoder_struct,
+                                                          const struct heif_encoding_options* options,
+                                                          std::shared_ptr<HeifContext::Image> out_image)
+  {
+    //encoder_struct_uncompressed* encoder = (encoder_struct_uncompressed*)encoder_struct;
+
+    printf("UNCOMPRESSED\n");
+
+#if 0
+    Box_uncC::configuration config;
+
+    // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+    // TODO: maybe we can remove this later.
+    fill_av1C_configuration(&config, src_image);
+
+    heif_image c_api_image;
+    c_api_image.image = src_image;
+
+    struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+    if (err.code) {
+      return Error(err.code,
+                   err.subcode,
+                   err.message);
+    }
+
+    for (;;) {
+      uint8_t* data;
+      int size;
+
+      encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+      bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
+      (void) found_config;
+
+      if (data == nullptr) {
+        break;
+      }
+
+      std::vector<uint8_t> vec;
+      vec.resize(size);
+      memcpy(vec.data(), data, size);
+
+      m_heif_file->append_iloc_data(image_id, vec);
+    }
+
+    m_heif_file->add_av1C_property(image_id);
+    m_heif_file->set_av1C_configuration(image_id, config);
+
+    //m_heif_file->add_orientation_properties(image_id, options->image_orientation);
+
+    uint32_t input_width, input_height;
+    input_width = src_image->get_width();
+    input_height = src_image->get_height();
+    m_heif_file->add_ispe_property(image_id,
+                                   get_rotated_width(options->image_orientation, input_width, input_height),
+                                   get_rotated_height(options->image_orientation, input_width, input_height));
+#endif
+
+    return Error::Ok;
+  }
+
 }
