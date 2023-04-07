@@ -221,6 +221,9 @@ enum heif_suberror_code
 
   heif_suberror_Unknown_NCLX_matrix_coefficients = 135,
 
+  // Invalid specification of region item
+  heif_suberror_Invalid_region_data = 136,
+
 
   // --- Memory_allocation_error ---
 
@@ -1770,22 +1773,12 @@ int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_enc
 
 // EXPERIMENTAL: API is not stable and open for discussion.
 
-struct heif_region_item;
-
-struct heif_region;
-
-struct heif_region_annotation;
-
-// How many region items are attached to an image.
-LIBHEIF_API
-int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle);
-
-// Get the region_item assigned to an image.
-// Returns the number of region items outputted.
-LIBHEIF_API
-int heif_image_handle_get_list_of_region_items(const struct heif_image_handle* handle,
-                                               struct heif_region_item* items, int max_count);
-
+struct heif_region_item
+{
+  uint32_t item_id;
+  uint32_t reference_width;
+  uint32_t reference_height;
+};
 
 enum heif_region_type
 {
@@ -1796,12 +1789,34 @@ enum heif_region_type
   heif_region_type_mask
 };
 
+struct heif_region
+{
+  unsigned long int idx;
+  enum heif_region_type region_type;
+};
+
+struct heif_region_annotation;
+
+// How many region items are attached to an image.
 LIBHEIF_API
-int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item);
+long unsigned int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle);
+
+// Get the region_item assigned to an image.
+// Returns the number of region items outputted.
+LIBHEIF_API
+long unsigned int heif_image_handle_get_list_of_region_items(const struct heif_image_handle* handle,
+                                                             struct heif_region_item* items,
+                                                             long unsigned int max_count);
 
 LIBHEIF_API
-int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
-                                         struct heif_region* regions, int max_count);
+long unsigned int heif_region_item_get_number_of_regions(const struct heif_image_handle* handle,
+                                                         const struct heif_region_item* region_item);
+
+LIBHEIF_API
+long unsigned int heif_region_item_get_list_of_regions(const struct heif_image_handle* handle,
+                                                       const struct heif_region_item* region_item,
+                                                       struct heif_region* regions,
+                                                       long unsigned int max_count);
 
 LIBHEIF_API
 int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
@@ -1815,10 +1830,16 @@ LIBHEIF_API
 enum heif_region_type heif_region_get_type(const struct heif_region* region);
 
 LIBHEIF_API
-struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y);
+struct heif_error heif_region_get_point(const struct heif_image_handle* handle,
+                                        const struct heif_region_item* region_item,
+                                        const struct heif_region* region, int32_t* x, int32_t* y);
 
 LIBHEIF_API
-struct heif_error heif_region_get_rectangle(const struct heif_region* region, int32_t* x, int32_t* y, int32_t* width, int32_t* height);
+struct heif_error heif_region_get_rectangle(const struct heif_image_handle* handle,
+                                            const struct heif_region_item* region_item,
+                                            const struct heif_region* region,
+                                            int32_t* x, int32_t* y,
+                                            uint32_t* width, uint32_t* height);
 
 
 enum heif_region_annotation_type

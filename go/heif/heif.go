@@ -282,6 +282,8 @@ const (
 
 	SuberrorInvalidPixiBox = C.heif_suberror_Invalid_pixi_box
 
+	SuberrorInvalidRegionData = C.heif_suberror_Invalid_region_data
+
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
 
 	SuberrorUnknownNCLXColorPrimaries = C.heif_suberror_Unknown_NCLX_color_primaries

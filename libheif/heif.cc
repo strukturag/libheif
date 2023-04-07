@@ -18,6 +18,9 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "libheif/heif_plugin.h"
+#include "libheif/region.h"
+#include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -2832,4 +2835,101 @@ void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int max
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads)
 {
   ctx->context->set_max_decoding_threads(max_threads);
+}
+
+long unsigned int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
+{
+  return handle->image->get_region_items().size();
+}
+
+long unsigned int heif_image_handle_get_list_of_region_items(const struct heif_image_handle* handle,
+                                                             struct heif_region_item* items,
+                                                             long unsigned int max_count)
+{
+  long unsigned int i;
+  for (i = 0; ((i < max_count) && (i < handle->image->get_region_items().size())); i++)
+  {
+    const std::shared_ptr<heif::RegionItem> item = handle->image->get_region_items()[i];
+    items[i].item_id = item->item_id;
+    items[i].reference_height = item->reference_height;
+    items[i].reference_width = item->reference_width;
+  }
+  return i;
+}
+
+long unsigned int heif_region_item_get_number_of_regions(const struct heif_image_handle* handle,
+                                                         const struct heif_region_item* region_item)
+{
+  for (const std::shared_ptr<heif::RegionItem>&item: handle->image->get_region_items())
+  {
+    if (region_item->item_id == item->item_id)
+    {
+      return item->get_number_of_regions();
+    }
+  }
+  return 0;
+}
+
+long unsigned int heif_region_item_get_list_of_regions(const struct heif_image_handle* handle,
+                                                       const struct heif_region_item* region_item,
+                                                       struct heif_region* regions,
+                                                       long unsigned int max_count)
+{
+  for (const std::shared_ptr<heif::RegionItem>&item: handle->image->get_region_items())
+  {
+    if (region_item->item_id == item->item_id)
+    {
+      long unsigned int i;
+      for (i = 0; ((i < max_count) && (i < item->get_regions().size())); i++)
+      {
+        const std::shared_ptr<heif::RegionGeometry> region = item->get_regions()[i];
+        regions[i].idx = i;
+        regions[i].region_type = region->getRegionType();
+      }
+      return i;
+    }
+  }
+  return 0;
+}
+
+struct heif_error heif_region_get_point(const struct heif_image_handle* handle,
+                                        const struct heif_region_item* region_item,
+                                        const struct heif_region* region, int32_t* x, int32_t* y)
+{
+  for (const std::shared_ptr<heif::RegionItem>&item: handle->image->get_region_items())
+  {
+    if (region_item->item_id == item->item_id)
+    {
+      const std::shared_ptr<heif::RegionGeometry> regionGeometry = item->get_regions()[region->idx];
+      // TODO: sanity checks.
+      const std::shared_ptr<heif::RegionGeometry_Point> point = std::dynamic_pointer_cast<heif::RegionGeometry_Point>(regionGeometry);
+      *x = point->x;
+      *y = point->y;
+      return heif_error_ok;
+    }
+  }
+  return heif_error_invalid_parameter_value;
+}
+
+struct heif_error heif_region_get_rectangle(const struct heif_image_handle* handle,
+                                            const struct heif_region_item* region_item,
+                                            const struct heif_region* region,
+                                            int32_t* x, int32_t* y,
+                                            uint32_t* width, uint32_t* height)
+{
+  for (const std::shared_ptr<heif::RegionItem>&item: handle->image->get_region_items())
+  {
+    if (region_item->item_id == item->item_id)
+    {
+      const std::shared_ptr<heif::RegionGeometry> regionGeometry = item->get_regions()[region->idx];
+      // TODO: sanity checks.
+      const std::shared_ptr<heif::RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<heif::RegionGeometry_Rectangle>(regionGeometry);
+      *x = rect->x;
+      *y = rect->y;
+      *width = rect->width;
+      *height = rect->height;
+      return heif_error_ok;
+    }
+  }
+  return heif_error_invalid_parameter_value;
 }
