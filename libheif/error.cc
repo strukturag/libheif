@@ -156,6 +156,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unknown NCLX transfer characteristics";
     case heif_suberror_Unknown_NCLX_matrix_coefficients:
       return "Unknown NCLX matrix coefficients";
+    case heif_suberror_Invalid_region_data:
+      return "Invalid region item data";
 
 
       // --- Memory_allocation_error ---

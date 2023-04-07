@@ -249,6 +249,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_parameter", heif_suberror_Unsupported_parameter)
     .value("heif_suberror_Invalid_parameter_value", heif_suberror_Invalid_parameter_value)
     .value("heif_suberror_Invalid_pixi_box", heif_suberror_Invalid_pixi_box)
+    .value("heif_suberror_Invalid_region_data", heif_suberror_Invalid_region_data)
     .value("heif_suberror_Unsupported_codec", heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type", heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version", heif_suberror_Unsupported_data_version)

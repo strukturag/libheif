@@ -376,6 +376,46 @@ int main(int argc, char** argv)
       printf("  none\n");
     }
 
+    long unsigned int numRegionItems = heif_image_handle_get_number_of_region_items(handle);
+    printf("region annotations:\n");
+    if (numRegionItems > 0) {
+      std::vector<heif_region_item> region_items(numRegionItems);
+      heif_image_handle_get_list_of_region_items(handle, region_items.data(), numRegionItems);
+      for (heif_region_item region_item : region_items)
+      {
+        long unsigned int numRegions =  heif_region_item_get_number_of_regions(handle, &region_item);
+        printf("  id: %u, reference_width: %u, reference_height: %u, %lu regions\n",
+               region_item.item_id,
+               region_item.reference_width,
+               region_item.reference_height,
+               numRegions);
+        std::vector<heif_region> regions(numRegions);
+        numRegions = heif_region_item_get_list_of_regions(handle, &region_item, regions.data(), numRegions);
+        for (long unsigned int j = 0; j < numRegions; j++)
+        {
+          printf("    region %lu\n", j);
+          if (regions[j].region_type == heif_region_type_point)
+          {
+            int32_t x;
+            int32_t y;
+            heif_region_get_point(handle, &region_item, &(regions[j]), &x, &y);
+            printf("      point [x=%i, y=%i]\n", x, y);
+          }
+          else if (regions[j].region_type == heif_region_type_rectangle)
+          {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            heif_region_get_rectangle(handle, &region_item, &(regions[j]), &x, &y, &w, &h);
+            printf("      rectangle [x=%i, y=%i, w=%u, h=%u]\n", x, y, w, h);
+          }
+        }
+      }
+    }
+    else {
+      printf("  none\n");
+    }
 
     struct heif_image* image;
     err = heif_decode_image(handle,

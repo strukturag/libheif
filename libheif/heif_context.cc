@@ -885,6 +885,10 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
+    // skip region annotations, handled next
+    if (item_type == "rgan") {
+      continue;
+    }
     std::string content_type = m_heif_file->get_content_type(id);
 
     // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
@@ -935,6 +939,43 @@ Error HeifContext::interpret_heif_file()
           }
 
           img_iter->second->set_is_premultiplied_alpha(true);;
+        }
+      }
+    }
+  }
+
+  // --- read region item and assign to image(s)
+
+  for (heif_item_id id : image_IDs) {
+    std::string item_type = m_heif_file->get_item_type(id);
+    if (item_type == "rgan") {
+      std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
+      region_item->item_id = id;
+      std::vector<uint8_t> region_data;
+      Error err = m_heif_file->get_compressed_image_data(id, &(region_data));
+      if (err) {
+        return err;
+      }
+      region_item->parse(region_data);
+      if (iref_box) {
+        std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+        for (const auto& ref : references) {
+          if (ref.header.get_short_type() == fourcc("cdsc")) {
+            std::vector<uint32_t> refs = ref.to_item_ID;
+            if (refs.size() != 1) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Unspecified,
+                           "Region item not correctly assigned to image");
+            }
+            uint32_t image_id = refs[0];
+            auto img_iter = m_all_images.find(image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Region item assigned to non-existing image");
+            }
+            img_iter->second->add_region_item(region_item);
+          }
         }
       }
     }
