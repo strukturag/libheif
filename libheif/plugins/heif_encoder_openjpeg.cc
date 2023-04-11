@@ -10,6 +10,8 @@
 #include <string>
 using namespace std;
 
+
+static const int OPJ_PLUGIN_PRIORITY = 80;
 static struct heif_error error_Ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
 struct encoder_struct_opj {
@@ -25,7 +27,7 @@ struct encoder_struct_opj {
   // --- output
 
   std::vector<uint8_t> compressedData;
-
+  bool data_read = false;
 
   // --- parameters
 
@@ -130,9 +132,9 @@ struct heif_error opj_get_parameter_string(void* encoder, const char* name, char
 }
 
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
+  //TODO
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.
-
 }
 
 static OPJ_SIZE_T global_variable = 0;
@@ -333,66 +335,77 @@ static vector<uint8_t> generate_codestream(const uint8_t* data, uint32_t width, 
 }
 
 struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* image, enum heif_image_input_class image_class) {
-  // Encode an image.
-  // After pushing an image into the encoder, you should call get_compressed_data() to
-  // get compressed data until it returns a NULL data pointer.
-
-
   
-  //VARIABLES
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
-  // heif_chroma chroma = heif_image_get_chroma_format(image);
-  // heif_colorspace colorspace = heif_image_get_colorspace(image);
-  unsigned int width = heif_image_get_primary_width(image);
-  unsigned int height = heif_image_get_primary_height(image);
-  unsigned int numcomps = 3;
+  heif_chroma chroma = heif_image_get_chroma_format(image);
+  heif_colorspace colorspace = heif_image_get_colorspace(image);
+  struct heif_error err;
+
+  uint32_t numcomps;
   heif_channel channel;
-  int stride = 0;
-
-  encoder->compressedData.clear(); //Fixes issue when encoding multiple images and old data persists.
-
-  //SET CHANNEL
-  int has_channel = heif_image_has_channel(image, heif_channel_interleaved);
-  if (has_channel) {
+  if (chroma == heif_chroma_interleaved_RGB) {
     channel = heif_channel_interleaved;
-  } else {
-    printf("WARNING - non-interleaved images not yet implemented: %s, LINE: %d\n", __FILE__, __LINE__);
+    numcomps = 3;
+  } 
+  else {
+    err = { heif_error_Unsupported_feature, 
+            heif_suberror_Unsupported_data_version, 
+            "Chroma not yet supported"};
+    return err;
   }
-  
-  
+
+  if (colorspace == heif_colorspace_RGB) {
+    //
+  }
+  else {
+    err = { heif_error_Unsupported_feature, 
+            heif_suberror_Unsupported_data_version,
+            "Colorspace not yet supported"};
+    return err;
+  }
+
+
 
   //GET PIXEL DATA
+  int stride = 0;
   const uint8_t* src_data = heif_image_get_plane_readonly(image, channel, &stride);
 
   //GET CODESTREAM
-  // vector<uint8_t> codestream = get_codestream(write_idf);
-  vector<uint8_t> codestream = generate_codestream(src_data, width, height, numcomps);
+  unsigned int width = heif_image_get_primary_width(image);
+  unsigned int height = heif_image_get_primary_height(image);
+  // vector<uint8_t> codestream = generate_codestream(src_data, width, height, numcomps);
+  encoder->compressedData.clear(); //Fixes issue when encoding multiple images and old data persists.
+  encoder->compressedData = generate_codestream(src_data, width, height, numcomps);
 
-
-  //GET CODESTREAM
-
-  for (size_t i = 0; i < codestream.size(); i++) {
-    uint8_t x = codestream[i];
-    encoder->compressedData.push_back(x);
-  }
+  // for (size_t i = 0; i < codestream.size(); i++) {
+  //   uint8_t x = codestream[i];
+  //   encoder->compressedData.push_back(x);
+  // }
+  // // encoder->compressedData.
 
   return error_Ok;
 }
 
 struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int* size, enum heif_encoded_data_type* type) {
   // Get a packet of decoded data. The data format depends on the codec.
-  // For HEVC, each packet shall contain exactly one NAL, starting with the NAL header without startcode.
   
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
 
-  *size = (int) encoder->compressedData.size();
-  *data = encoder->compressedData.data();
+  if (encoder->data_read) {
+    *size = 0;
+    *data = nullptr;
+  } 
+  else {
+    *size = (int) encoder->compressedData.size();
+    *data = encoder->compressedData.data();
+    encoder->data_read = true;
+  }
 
   return error_Ok;
 }
 
 void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
-// --- version 2 ---
+  //TODO
 }
 
 void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height, uint32_t* encoded_width, uint32_t* encoded_height) {
@@ -410,7 +423,7 @@ static const struct heif_encoder_plugin encoder_plugin_openjpeg
         /* plugin_api_version */ 3,
         /* compression_format */ heif_compression_JPEG2000,
         /* id_name */ "OpenJPEG",
-        /* priority */ 100,
+        /* priority */ OPJ_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ false,
         /* supports_lossless_compression */ true,
         /* get_plugin_name */ opj_plugin_name,
