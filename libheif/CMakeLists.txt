@@ -77,6 +77,7 @@ target_compile_definitions(heif
 if(WITH_TESTS)
     # Same as the 'heif' target, but with all symbols exported.
     # Used by tests to test private APIs.
+    # TODO: doesn't seem to work on windows?
     add_library(heif_internal ${libheif_sources})
     target_include_directories(heif_internal PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
     target_include_directories(heif_internal
@@ -84,6 +85,7 @@ if(WITH_TESTS)
                                     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}>
                                     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
                                     $<INSTALL_INTERFACE:include>)
+    target_compile_definitions(heif_internal PUBLIC LIBHEIF_EXPORTS)
     set_target_properties(heif_internal PROPERTIES CXX_VISIBILITY_PRESET default)
 endif()
 

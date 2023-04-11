@@ -143,7 +143,14 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
-option(WITH_TESTS "Build tests" ON)
+
+if (WIN32)
+    # Tests are off by default on windows as they currently fail to build.
+    # TODO: fix tests on windows.
+    option(WITH_TESTS "Build tests" OFF)
+else()
+    option(WITH_TESTS "Build tests" ON)
+endif()
 
 option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
