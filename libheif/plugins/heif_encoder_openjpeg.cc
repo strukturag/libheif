@@ -258,7 +258,8 @@ static heif_error generate_codestream(const uint8_t* data, vector<uint8_t>& code
   uint8_t* out_data = (uint8_t*) malloc(size);
   opj_stream_t* l_stream = 00;
 
-  l_stream = opj_stream_create(OPJ_J2K_STREAM_CHUNK_SIZE, WRITE_JP2);
+  // l_stream = opj_stream_create(OPJ_J2K_STREAM_CHUNK_SIZE, WRITE_JP2);
+  l_stream = opj_stream_create(size, WRITE_JP2);
 
   opj_stream_set_user_data(l_stream, out_data, opj_close_from_buffer);
   opj_stream_set_write_function(l_stream, (opj_stream_write_fn) opj_write_from_buffer);
