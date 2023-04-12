@@ -48,6 +48,18 @@ add_executable(heif-test ${getopt_sources}
         heif_test.cc)
 target_link_libraries(heif-test heif ${CMAKE_THREAD_LIBS_INIT})
 
+# **********************NGIIS DELETE**********************
+set (ngiss_encode_sources 
+  ngiis_encode.cpp 
+  ../libheif/plugins/heif_encoder_openjpeg.cc
+)
+add_executable (ngiis-encode  ${ngiss_encode_sources})
+target_link_directories (ngiis-encode PRIVATE ${additional_link_directories})
+target_link_libraries (ngiis-encode heif ${additional_libraries})
+target_include_directories(ngiis-encode PRIVATE ${additional_includes})
+install(TARGETS ngiis-encode RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES ngiis-encode.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+# **********************NGIIS DELETE**********************
 
 find_package(JPEG)
 if (JPEG_FOUND)
