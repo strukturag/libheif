@@ -10,7 +10,6 @@
 #include <string>
 using namespace std;
 
-#define WRITE_JP2 0
 
 static const int OPJ_PLUGIN_PRIORITY = 80;
 static struct heif_error error_Ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
@@ -129,14 +128,20 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
 }
 
 
-// OpenJPEG takes a pointer to this function
-static OPJ_SIZE_T opj_write_from_buffer(void* source_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw) {
-  uint8_t* source = (uint8_t*) source_raw;
+// OpenJPEG will encode a portion of the image and then call this function
+// @param src_data_raw - Newly encoded bytes provided by OpenJPEG
+// @param nb_bytes - The number of bytes or size of src_data_raw
+// @param encoder_raw - Out the new
+// @return - The number of bytes successfuly transfered
+static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw) {
+  uint8_t* src_data = (uint8_t*) src_data_raw;
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
 
   for (int i = 0; i < nb_bytes; i++) {
-    encoder->codestream.push_back(source[i]);
+    encoder->codestream.push_back(src_data[i]);
   }
+
+  return nb_bytes;
 }
 
 static void opj_close_from_buffer(void* p_user_data) {
@@ -213,10 +218,12 @@ static opj_image_t *create_opj_image(const unsigned char *src_data, int width, i
 // @param encoder - The function will output codestream in encoder->codestream
 static heif_error generate_codestream(const uint8_t* data, struct encoder_struct_opj* encoder, int width, int height, int numcomps) {
 
+  heif_error error;
+  OPJ_BOOL success;
 	opj_cparameters_t parameters;
 	opj_set_default_encoder_parameters(&parameters);
-	int sub_dx = parameters.subsampling_dx;
-	int sub_dy = parameters.subsampling_dy;
+
+
   #if 0
   //Insert a human readable comment into the codestream
 	if (parameters.cp_comment == NULL) {
@@ -230,52 +237,63 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
   }
   #endif
 
-  if (parameters.tcp_numlayers == 0) {
-    parameters.tcp_rates[0] = 0;
-    parameters.tcp_numlayers++;
-    parameters.cp_disto_alloc = 1;
+
+	opj_image_t *image = create_opj_image(data, width, height, numcomps, parameters.subsampling_dx, parameters.subsampling_dy);
+  if (image == nullptr) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create OpenJPEG image"};
+    return error;
   }
 
 
-  //Create opj image
-	opj_image_t *image = create_opj_image(data, width, height, numcomps, sub_dx, sub_dy);
-
-
-	parameters.tcp_mct = image->numcomps == 3 ? 1 : 0;
-
-	OPJ_CODEC_FORMAT codec_format = OPJ_CODEC_J2K; // OPJ_CODEC_JP2;
+  //OPJ_CODEC_J2K - Only generate the codestream
+  //OPJ_CODEC_JP2 - Generate the entire jp2 file (which contains a codestream)
+	OPJ_CODEC_FORMAT codec_format = OPJ_CODEC_J2K; 
 	opj_codec_t* codec = opj_create_compress(codec_format);
+	success = opj_setup_encoder(codec, &parameters, image);
+  if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to setup OpenJPEG encoder"};
+    return error;
+  }
 
-	opj_setup_encoder(codec, &parameters, image);
 
+  //Create Stream
   size_t size = width * height * numcomps;
-  opj_stream_t* l_stream = 00;
-
-  l_stream = opj_stream_create(size, WRITE_JP2);
-
-  opj_stream_set_user_data(l_stream, encoder, opj_close_from_buffer);
-  opj_stream_set_write_function(l_stream, (opj_stream_write_fn) opj_write_from_buffer);
-  // opj_stream_set_user_data_length(l_stream, 0);
-
-	opj_stream_t *stream = l_stream;
-  heif_error error;
+  const bool READ_DATA = false; //We want to write to a buffer, not read from one
+  opj_stream_t* stream = opj_stream_create(size, READ_DATA);
 	if (stream == NULL) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
   }
 
 
-	if (!opj_start_compress(codec, image, stream)) {
+  // When OpenJPEG encodes the image, it will pass the 'encoder' into the write function
+  opj_stream_set_user_data(stream, encoder, opj_close_from_buffer);
+
+  // Tell OpenJPEG how and where to write the output data
+  opj_stream_set_write_function(stream, (opj_stream_write_fn) opj_write_from_buffer);
+
+  // TODO: should we use this function?
+  // opj_stream_set_user_data_length(stream, 0);
+
+
+
+  success = opj_start_compress(codec, image, stream);
+	if (!success) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_start_compress()"};
     return error;
   }
 
-	if (!opj_encode(codec, stream)) {
+  success = opj_encode(codec, stream);
+	if (!success) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_encode()"};
     return error;
   }
 
-	opj_end_compress(codec, stream);
+	success = opj_end_compress(codec, stream);
+	if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_end_compress()"};
+    return error;
+  }
 
   return error_Ok;
 }
