@@ -137,7 +137,7 @@ static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes,
   uint8_t* src_data = (uint8_t*) src_data_raw;
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
 
-  for (int i = 0; i < nb_bytes; i++) {
+  for (size_t i = 0; i < nb_bytes; i++) {
     encoder->codestream.push_back(src_data[i]);
   }
 
@@ -182,7 +182,7 @@ static opj_image_t *create_opj_image(const unsigned char *src_data, int width, i
   image->x1 = (width - 1) * sub_dx + 1;
   image->y1 = (height - 1) * sub_dy + 1;
 
-	int *r, *g, *b, *a;
+	int *r, *g, *b;
 	bool is_rgb;
 	if (band_count == 3) {
     is_rgb = 1;
@@ -195,8 +195,8 @@ static opj_image_t *create_opj_image(const unsigned char *src_data, int width, i
   }
 
 	const unsigned char *cs = src_data;
-	unsigned int max = height * width;
-	for (int i = 0; i < max; ++i) {
+	int max = height * width;
+	for (int i = 0; i < max; i++) {
 	  if (is_rgb) {
       *r++ = (int)*cs++; 
       *g++ = (int)*cs++; 
