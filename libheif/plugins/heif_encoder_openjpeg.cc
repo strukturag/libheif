@@ -204,7 +204,6 @@ static opj_image_t *create_opj_image(const unsigned char *src_data, int width, i
    }
 
 	return image;
-
 } 
 
 
@@ -312,6 +311,8 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   unsigned int width = stride / numcmops;
   unsigned int height = heif_image_get_primary_height(image);
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
+
+  //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
   err = generate_codestream(src_data, encoder, width, height, numcomps);
 
   return err;
