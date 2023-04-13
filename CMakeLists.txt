@@ -69,12 +69,8 @@ if (ENABLE_PLUGIN_LOADING)
 endif()
 
 macro(plugin_option variableName packageName displayName displayType defaultPlugin)
-    message("-------------defaultPlugin = ${defaultPlugin}")
-    message("-------------WITH_${variableName}_PLUGIN = ${WITH_${variableName}_PLUGIN}")
     option(WITH_${variableName} "Build ${displayName} ${displayType}" ON)
     option(WITH_${variableName}_PLUGIN "Build ${displayName} as a plugin" ${defaultPlugin})
-    message("-------------WITH_${variableName}_PLUGIN = ${WITH_${variableName}_PLUGIN}")
-
     if (WITH_${variableName})
         find_package(${packageName})
     endif ()
