@@ -2611,11 +2611,12 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
     uint8_t* data;
     int size;
     
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+    
     if (data == NULL) {
       break;
     }
 
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
     std::vector<uint8_t> vec;
     vec.resize(size);
     memcpy(vec.data(), data, size);
