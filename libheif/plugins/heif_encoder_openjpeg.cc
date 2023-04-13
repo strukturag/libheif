@@ -21,7 +21,7 @@ struct encoder_struct_opj {
 
   // --- output
 
-  std::vector<uint8_t> compressedData;
+  std::vector<uint8_t> codestream; //contains encoded pixel data
   bool data_read = false;
 
   // --- parameters
@@ -204,7 +204,7 @@ static opj_image_t *to_opj_image(const unsigned char *buf, int width, int height
 } 
 
 
-static heif_error generate_codestream(const uint8_t* data, vector<uint8_t>& codestream, int width, int height, int numcomps) {
+static heif_error generate_codestream(const uint8_t* data, struct encoder_struct_opj* encoder, int width, int height, int numcomps) {
 
 	opj_cparameters_t parameters;
 	opj_set_default_encoder_parameters(&parameters);
@@ -280,7 +280,7 @@ static heif_error generate_codestream(const uint8_t* data, vector<uint8_t>& code
 	opj_end_compress(codec, stream);
 
   for (OPJ_SIZE_T i = 0; i < global_variable; i++) {
-    codestream.push_back(out_data[i]);
+    encoder->codestream.push_back(out_data[i]);
   }
 
   return error_Ok;
@@ -323,8 +323,8 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
   const uint8_t* src_data = heif_image_get_plane_readonly(image, channel, &stride);
   unsigned int width = heif_image_get_primary_width(image);
   unsigned int height = heif_image_get_primary_height(image);
-  encoder->compressedData.clear(); //Fixes issue when encoding multiple images and old data persists.
-  err = generate_codestream(src_data, encoder->compressedData, width, height, numcomps);
+  encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
+  err = generate_codestream(src_data, encoder, width, height, numcomps);
 
   return err;
 }
@@ -339,8 +339,8 @@ struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int
     *data = nullptr;
   } 
   else {
-    *size = (int) encoder->compressedData.size();
-    *data = encoder->compressedData.data();
+    *size = (int) encoder->codestream.size();
+    *data = encoder->codestream.data();
     encoder->data_read = true;
   }
 
