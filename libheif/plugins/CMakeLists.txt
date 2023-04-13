@@ -4,7 +4,6 @@ macro(plugin_compilation name varName optionName defineName)
         if (NOT "${${varName}_LIBRARY_DIRS}" STREQUAL "")
             set(${varName}_LINKDIR "-L${${varName}_LIBRARY_DIRS}")
         endif ()
-        # message("-------------WITH_${optionName}_PLUGIN = ${WITH_${optionName}_PLUGIN}")
 
         if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_${optionName}_PLUGIN)
             message("Compiling '" ${name} "' as dynamic plugin")
