@@ -132,8 +132,7 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
 
 static OPJ_SIZE_T global_variable = 0;
 
-static OPJ_SIZE_T opj_write_from_buffer(void * source, OPJ_SIZE_T nb_bytes, void * dest)
-{
+static OPJ_SIZE_T opj_write_from_buffer(void* source, OPJ_SIZE_T nb_bytes, void* dest) {
     printf("%s()  - nb_bytes: %ld = 0x%lx\n", __FUNCTION__, nb_bytes, nb_bytes);
     memcpy(dest, source, nb_bytes);
     global_variable += nb_bytes;
@@ -146,49 +145,38 @@ static void opj_close_from_buffer(void* p_user_data)
     fclose(p_file);
 }
 
-static opj_image_t *to_opj_image(const unsigned char *buf, 
-                                 int width, int height, 
-                                 int nr_comp, int sub_dx, 
-                                 int sub_dy) {
-	const unsigned char *cs;
-	opj_image_t *image;
-	int *r, *g, *b, *a;
-	int has_rgb, comp;
-	unsigned int i, max;
-	opj_image_cmptparm_t cmptparm[4];
+static opj_image_t *to_opj_image(const unsigned char *buf, int width, int height, 
+                                int band_count, int sub_dx, int sub_dy) {
 
-	memset(&cmptparm, 0, 4 * sizeof(opj_image_cmptparm_t));
-
-	for (comp = 0; comp < nr_comp; ++comp) {
-    cmptparm[comp].prec = 8;
-    cmptparm[comp].bpp = 8;
-    cmptparm[comp].sgnd = 0;
-    cmptparm[comp].dx = sub_dx;
-    cmptparm[comp].dy = sub_dy;
-    cmptparm[comp].w = width;
-    cmptparm[comp].h = height;
+	opj_image_cmptparm_t component_params[4];
+	memset(&component_params, 0, 4 * sizeof(opj_image_cmptparm_t));
+	for (int comp = 0; comp < band_count; ++comp) {
+    component_params[comp].prec = 8;
+    component_params[comp].bpp = 8;
+    component_params[comp].sgnd = 0;
+    component_params[comp].dx = sub_dx;
+    component_params[comp].dy = sub_dy;
+    component_params[comp].w = width;
+    component_params[comp].h = height;
    }
 
-  {
-	  OPJ_COLOR_SPACE csp = (nr_comp > 2?OPJ_CLRSPC_SRGB:OPJ_CLRSPC_GRAY);
-	  image = opj_image_create(nr_comp, &cmptparm[0], csp);
-  }
-
+  OPJ_COLOR_SPACE colorspace = (band_count > 2 ? OPJ_CLRSPC_SRGB: OPJ_CLRSPC_GRAY);
+	opj_image_t *image = opj_image_create(band_count, &component_params[0], colorspace);
 	if (image == NULL) {
-	  fprintf(stderr, "%d: got no image\n",__LINE__);
+    // Failed to create image
 	  return NULL;
   }
 
+  // ???????
   image->x0 = 0;
   image->y0 = 0;
   image->x1 = (width - 1) * sub_dx + 1;
   image->y1 = (height - 1) * sub_dy + 1;
 
-	r = g = b = a = NULL; 
-
-
-	if (nr_comp == 3) {
-    has_rgb = 1;
+	int *r, *g, *b, *a;
+	bool is_rgb;
+	if (band_count == 3) {
+    is_rgb = 1;
     r = image->comps[0].data;
     g = image->comps[1].data;
     b = image->comps[2].data;
@@ -197,10 +185,10 @@ static opj_image_t *to_opj_image(const unsigned char *buf,
 	  r = image->comps[0].data;
   }
 
-	cs = buf;
-	max = height * width;
-	for (i = 0; i < max; ++i) {
-	  if (has_rgb) {
+	const unsigned char *cs = buf;
+	unsigned int max = height * width;
+	for (int i = 0; i < max; ++i) {
+	  if (is_rgb) {
       *r++ = (int)*cs++; 
       *g++ = (int)*cs++; 
       *b++ = (int)*cs++;
