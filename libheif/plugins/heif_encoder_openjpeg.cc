@@ -308,7 +308,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
 
   int stride = 0; //Number of bytes per row
   const uint8_t* src_data = heif_image_get_plane_readonly(image, channel, &stride);
-  unsigned int width = stride / numcmops;
+  unsigned int width = stride / numcomps;
   unsigned int height = heif_image_get_primary_height(image);
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
