@@ -130,13 +130,13 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
   // comes as close to the input colorspace/chroma as possible.
 }
 
-static OPJ_SIZE_T global_variable = 0;
+static OPJ_SIZE_T opj_write_from_buffer(void* source_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw) {
+  uint8_t* source = (uint8_t*) source_raw;
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
 
-static OPJ_SIZE_T opj_write_from_buffer(void* source, OPJ_SIZE_T nb_bytes, void* dest) {
-    printf("%s()  - nb_bytes: %ld = 0x%lx\n", __FUNCTION__, nb_bytes, nb_bytes);
-    memcpy(dest, source, nb_bytes);
-    global_variable += nb_bytes;
-    return nb_bytes;
+  for (int i = 0; i < nb_bytes; i++) {
+    encoder->codestream.push_back(source[i]);
+  }
 }
 
 static void opj_close_from_buffer(void* p_user_data)
@@ -243,45 +243,33 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
 	opj_setup_encoder(codec, &parameters, image);
 
   size_t size = width * height * numcomps;
-  uint8_t* out_data = (uint8_t*) malloc(size);
   opj_stream_t* l_stream = 00;
 
-  // l_stream = opj_stream_create(OPJ_J2K_STREAM_CHUNK_SIZE, WRITE_JP2);
   l_stream = opj_stream_create(size, WRITE_JP2);
 
-  opj_stream_set_user_data(l_stream, out_data, opj_close_from_buffer);
+  opj_stream_set_user_data(l_stream, encoder, opj_close_from_buffer);
   opj_stream_set_write_function(l_stream, (opj_stream_write_fn) opj_write_from_buffer);
   // opj_stream_set_user_data_length(l_stream, 0);
 
 	opj_stream_t *stream = l_stream;
   heif_error error;
 	if (stream == NULL) {
-    error = { heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Failed to create opj_stream_t"};
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
   }
 
 
 	if (!opj_start_compress(codec, image, stream)) {
-    error = { heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Failed opj_start_compress()"};
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_start_compress()"};
     return error;
   }
 
 	if (!opj_encode(codec, stream)) {
-    error = { heif_error_Encoding_error,
-              heif_suberror_Unspecified,
-              "Failed opj_encode()"};
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_encode()"};
     return error;
   }
 
 	opj_end_compress(codec, stream);
-
-  for (OPJ_SIZE_T i = 0; i < global_variable; i++) {
-    encoder->codestream.push_back(out_data[i]);
-  }
 
   return error_Ok;
 }
