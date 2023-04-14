@@ -1398,7 +1398,7 @@ namespace heif {
    * User Description property.
    *
    * Permits the association of items or entity groups with a user-defined name, description and tags;
-   * there may be multiple usch properties, each with a different language code.
+   * there may be multiple udes properties, each with a different language code.
    *
    * See ISO/IEC 23008-12:2022(E) Section 6.5.20.
    */
