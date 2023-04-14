@@ -201,6 +201,9 @@ namespace heif {
     Error parse_heif_file(BitstreamRange& bitstream);
 
     Error check_for_ref_cycle(heif_item_id ID,
+                              std::shared_ptr<Box_iref>& iref_box) const;
+
+    Error check_for_ref_cycle_recursion(heif_item_id ID,
                               std::shared_ptr<Box_iref>& iref_box,
                               std::unordered_set<heif_item_id>& parent_items) const;
 

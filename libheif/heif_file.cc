@@ -319,8 +319,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
   m_iref_box = std::dynamic_pointer_cast<Box_iref>(m_meta_box->get_child_box(fourcc("iref")));
   if (m_iref_box) {
-    std::unordered_set<heif_item_id> parent_items;
-    Error error = check_for_ref_cycle(get_primary_image_ID(), m_iref_box, parent_items);
+    Error error = check_for_ref_cycle(get_primary_image_ID(), m_iref_box);
     if (error) {
       return error;
     }
@@ -353,6 +352,14 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
+                                    std::shared_ptr<Box_iref>& iref_box) const
+{
+  std::unordered_set<heif_item_id> parent_items;
+  return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
+}
+
+
+Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
                                     std::shared_ptr<Box_iref>& iref_box,
                                     std::unordered_set<heif_item_id>& parent_items) const {
   if (parent_items.find(ID) != parent_items.end()) {
@@ -364,7 +371,7 @@ Error HeifFile::check_for_ref_cycle(heif_item_id ID,
 
   std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
   for (heif_item_id reference_idx : image_references) {
-    Error error = check_for_ref_cycle(reference_idx, iref_box, parent_items);
+    Error error = check_for_ref_cycle_recursion(reference_idx, iref_box, parent_items);
     if (error) {
       return error;
     }
