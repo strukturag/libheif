@@ -253,6 +253,8 @@ enum heif_suberror_code
   // The value for the given parameter is not in the valid range.
   heif_suberror_Invalid_parameter_value = 2006,
 
+  // Error in property specification
+  heif_suberror_Invalid_property = 2007,
 
   // --- Unsupported_feature ---
 
@@ -308,6 +310,7 @@ struct heif_error
 
 
 typedef uint32_t heif_item_id;
+typedef uint32_t heif_property_id;
 
 
 
@@ -798,6 +801,9 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  heif_item_id metadata_id,
                                                  void* out_data);
 
+
+// ------------------------- color profiles -------------------------
+
 enum heif_color_profile_type
 {
   heif_color_profile_type_not_present = 0,
@@ -938,6 +944,43 @@ LIBHEIF_API
 struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
                                                     struct heif_color_profile_nclx** out_data);
 
+
+// ------------------------- item properties -------------------------
+
+enum heif_item_property_type {
+//  heif_item_property_unknown = -1,
+  heif_item_property_type_invalid = 0,
+  heif_item_property_type_user_description = 1
+};
+
+LIBHEIF_API
+int heif_item_get_properties_of_type(const struct heif_context* context,
+                                     heif_item_id id,
+                                     enum heif_item_property_type type,
+                                     heif_property_id* out_list,
+                                     int count);
+
+// The strings are managed by libheif. They will be deleted in heif_property_user_description_release().
+struct heif_property_user_description
+{
+  int version;
+
+  // version 1
+
+  const char* lang;
+  const char* name;
+  const char* description;
+  const char* tags;
+};
+
+LIBHEIF_API
+struct heif_error heif_item_get_user_description(const struct heif_context* context,
+                                                 heif_item_id itemId,
+                                                 heif_property_id propertyId,
+                                                 struct heif_property_user_description** out);
+
+LIBHEIF_API
+void heif_property_user_description_release(struct heif_property_user_description*);
 
 
 // ========================= heif_image =========================

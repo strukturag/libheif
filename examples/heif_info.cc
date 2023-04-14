@@ -377,6 +377,37 @@ int main(int argc, char** argv)
     }
 
 
+    // --- properties
+
+    printf("properties:\n");
+
+    // user descriptions
+
+#define MAX_PROPERTIES 50
+    heif_property_id propertyIds[MAX_PROPERTIES];
+    int count;
+    count = heif_item_get_properties_of_type(ctx.get(), IDs[i], heif_item_property_type_user_description,
+                                             propertyIds, MAX_PROPERTIES);
+
+    if (count>0) {
+      for (int p=0;p<count;p++) {
+        struct heif_property_user_description* udes;
+        err = heif_item_get_user_description(ctx.get(), IDs[i], propertyIds[p], &udes);
+        if (err.code) {
+          std::cerr << "Error reading udes " << IDs[i] << "/" << propertyIds[p] << "\n";
+        }
+        else {
+          printf("  user description:\n");
+          printf("    lang: %s\n",udes->lang);
+          printf("    name: %s\n",udes->name);
+          printf("    description: %s\n", udes->description);
+          printf("    tags: %s\n", udes->tags);
+
+          heif_property_user_description_release(udes);
+        }
+      }
+    }
+
     struct heif_image* image;
     err = heif_decode_image(handle,
                             &image,
