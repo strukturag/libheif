@@ -219,7 +219,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
   ops.push_back(std::make_shared<Op_to_sdr_planes>());
 
-  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr_Sharp>());
+  ops.push_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
 

@@ -299,9 +299,42 @@ TEST_CASE("Color conversion", "[heif_image]") {
       .only_use_preferred_chroma_algorithm = true};
 
 #ifdef HAVE_LIBSHARPYUV
+  TestConversion("### interleaved RGB -> YCbCr 420 with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, false, 8},
+                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
+                 sharp_yuv_options);
   TestConversion("### interleaved RGBA -> YCbCr 420 with sharp yuv",
                  {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
+                 {heif_colorspace_YCbCr, heif_chroma_420, true, 8},
+                 sharp_yuv_options);
+  TestConversion("### interleaved RGB 10bit -> YCbCr 420 10bit with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 8},
                  {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
+                 sharp_yuv_options);
+
+  TestConversion("### interleaved RGBA 12bit big endian -> YCbCr 420 12bit with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_BE, true, 12},
+                 {heif_colorspace_YCbCr, heif_chroma_420, true, 12},
+                 sharp_yuv_options);
+  TestConversion("### interleaved RGBA 12bit little endian -> YCbCr 420 12bit with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_LE, true, 12},
+                 {heif_colorspace_YCbCr, heif_chroma_420, true, 12},
+                 sharp_yuv_options);
+  TestConversion("### planar RGB -> YCbCr 420 with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_444, false, 8},
+                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
+                 sharp_yuv_options);
+  TestConversion("### planar RGBA -> YCbCr 420 with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_444, true, 8},
+                 {heif_colorspace_YCbCr, heif_chroma_420, true, 8},
+                 sharp_yuv_options);
+  TestConversion("### planar RGB 10bit -> YCbCr 420 10bit with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_444, false, 10},
+                 {heif_colorspace_YCbCr, heif_chroma_420, false, 10},
+                 sharp_yuv_options);
+  TestConversion("### planar RGBA 10bit -> YCbCr 420 10bit with sharp yuv",
+                 {heif_colorspace_RGB, heif_chroma_444, true, 10},
+                 {heif_colorspace_YCbCr, heif_chroma_420, true, 10},
                  sharp_yuv_options);
 #else
   // Should fail if libsharpyuv is not compiled in.

@@ -24,7 +24,7 @@
 #include "colorconversion.h"
 
 
-class Op_RGB24_32_to_YCbCr_Sharp : public ColorConversionOperation
+class Op_Any_RGB_to_YCbCr_420_Sharp : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
