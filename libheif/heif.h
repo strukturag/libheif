@@ -256,6 +256,10 @@ enum heif_suberror_code
   // Error in property specification
   heif_suberror_Invalid_property = 2007,
 
+  // Image reference cycle found in iref
+  heif_suberror_Item_reference_cycle = 2008,
+
+
   // --- Unsupported_feature ---
 
   // Image was coded with an unsupported compression method.
