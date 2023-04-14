@@ -238,6 +238,12 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
     layer_level_present[i] = reader.get_bits(1);
   }
 
+  if (nMaxSubLayersMinus1 > 0) {
+    for (int i = nMaxSubLayersMinus1; i < 8; i++) {
+      reader.skip_bits(2);   
+    }
+  }
+
   for (int i = 0; i < nMaxSubLayersMinus1; i++) {
     if (layer_profile_present[i]) {
       reader.skip_bits(2 + 1 + 5);
