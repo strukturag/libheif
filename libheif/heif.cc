@@ -1740,6 +1740,117 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
 }
 
 
+
+int heif_item_get_properties_of_type(const struct heif_context* context,
+                                     heif_item_id id,
+                                     heif_item_property_type type,
+                                     heif_property_id* out_list,
+                                     int count)
+{
+  auto file = context->context->get_heif_file();
+
+  std::vector<Box_ipco::Property> properties;
+  Error err = file->get_properties(id, properties);
+  if (err) {
+    // We do not pass the error, because a missing ipco should have been detected already when reading the file.
+    return 0;
+  }
+
+  if (out_list==nullptr) {
+    return 0;
+  }
+
+  int out_idx = 0;
+  int property_id = 1;
+
+  for (const auto& property : properties) {
+    switch (type) {
+      case heif_item_property_type_user_description: {
+        auto udes = std::dynamic_pointer_cast<Box_udes>(property.property);
+        if (udes) {
+          if (out_list && out_idx < count) {
+            out_list[out_idx] = property_id;
+          }
+
+          out_idx++;
+        }
+
+        break;
+      }
+
+      case heif_item_property_type_invalid:
+        break;
+    }
+
+    property_id++;
+  }
+
+  return out_idx;
+}
+
+
+static char* create_c_string_copy(const std::string s)
+{
+  char* copy = new char[s.length()+1];
+  strcpy(copy, s.data());
+  return copy;
+}
+
+
+struct heif_error heif_item_get_user_description(const struct heif_context* context,
+                                                 heif_item_id itemId,
+                                                 heif_property_id propertyId,
+                                                 struct heif_property_user_description** out)
+{
+  if (!out) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<Box_ipco::Property> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId-1 < 0 || propertyId-1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto udes = std::dynamic_pointer_cast<Box_udes>(properties[propertyId-1].property);
+  if (!udes) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
+  }
+
+  auto* udes_c = new heif_property_user_description();
+  udes_c->version = 1;
+  udes_c->lang = create_c_string_copy(udes->get_lang());
+  udes_c->name = create_c_string_copy(udes->get_name());
+  udes_c->description = create_c_string_copy(udes->get_description());
+  udes_c->tags = create_c_string_copy(udes->get_tags());
+
+  *out = udes_c;
+
+  return error_Ok;
+}
+
+
+void heif_property_user_description_release(struct heif_property_user_description* udes)
+{
+  if (udes==nullptr) {
+    return;
+  }
+
+  delete[] udes->lang;
+  delete[] udes->name;
+  delete[] udes->description;
+  delete[] udes->tags;
+
+  delete udes;
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

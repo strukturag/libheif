@@ -323,6 +323,8 @@ namespace heif {
       bool m_miaf_compatible = true;
     };
 
+    std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }
+
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
     std::shared_ptr<Image> get_top_level_image(heif_item_id id)

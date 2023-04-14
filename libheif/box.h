@@ -1394,6 +1394,109 @@ namespace heif {
     std::shared_ptr<const color_profile> m_color_profile;
   };
 
+  /**
+   * User Description property.
+   *
+   * Permits the association of items or entity groups with a user-defined name, description and tags;
+   * there may be multiple udes properties, each with a different language code.
+   *
+   * See ISO/IEC 23008-12:2022(E) Section 6.5.20.
+   */
+  class Box_udes : public Box
+  {
+  public:
+    Box_udes()
+    {
+      set_short_type(fourcc("udes"));
+      set_is_full_box(true);
+    }
+
+    Box_udes(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+    /**
+     * Language tag.
+     *
+     * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+     * Examples: "en-AU", "de-DE", or "zh-CN“.
+     * When is empty, the language is unknown or not undefined.
+     */
+    std::string get_lang() const
+    { return m_lang; }
+
+    /**
+     * Set the language tag.
+     *
+     * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+     * Examples: "en-AU", "de-DE", or "zh-CN“.
+     */
+    void set_lang(const std::string lang)
+    { m_lang = lang; }
+
+    /**
+     * Name.
+     *
+     * Human readable name for the item or group being described.
+     * May be empty, indicating no name is applicable.
+     */
+     std::string get_name() const
+     { return m_name; }
+
+     /**
+     * Set the name.
+     *
+     * Human readable name for the item or group being described.
+     */
+     void set_name(const std::string name)
+     { m_name = name; }
+
+     /**
+      * Description.
+      *
+      * Human readable description for the item or group.
+      * May be empty, indicating no description has been provided.
+      */
+    std::string get_description() const
+    { return m_description; }
+
+    /**
+     * Set the description.
+     *
+     * Human readable description for the item or group.
+     */
+    void set_description(const std::string description)
+    { m_description = description; }
+
+    /**
+     * Tags.
+     *
+     * Comma separated user defined tags applicable to the item or group.
+     * May be empty, indicating no tags have been assigned.
+     */
+    std::string get_tags() const
+    { return m_tags; }
+
+    /**
+     * Set the tags.
+     *
+     * Comma separated user defined tags applicable to the item or group.
+     */
+    void set_tags(const std::string tags)
+    { m_tags = tags; }
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+
+  private:
+    std::string m_lang;
+    std::string m_name;
+    std::string m_description;
+    std::string m_tags;
+  };
 }
 
 #endif
