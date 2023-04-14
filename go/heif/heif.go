@@ -278,6 +278,8 @@ const (
 
 	SuberrorInvalidProperty = C.heif_suberror_Invalid_property
 
+	SuberrorItemReferenceCycle = C.heif_suberror_Item_reference_cycle
+
 	SuberrorInvalidPixiBox = C.heif_suberror_Invalid_pixi_box
 
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
