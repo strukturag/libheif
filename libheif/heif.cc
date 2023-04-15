@@ -907,36 +907,68 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 }
 
 
+void fill_default_decoding_options(heif_decoding_options& options)
+{
+  options.version = 5;
+
+  options.ignore_transformations = false;
+
+  options.start_progress = nullptr;
+  options.on_progress = nullptr;
+  options.end_progress = nullptr;
+  options.progress_user_data = nullptr;
+
+  // version 2
+
+  options.convert_hdr_to_8bit = false;
+
+  // version 3
+
+  options.strict_decoding = false;
+
+  // version 4
+
+  options.decoder_id = nullptr;
+
+  // version 5
+
+  options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
+}
+
+
+static void copy_options(heif_decoding_options& options, const heif_decoding_options& input_options)
+{
+  switch (input_options.version) {
+    case 5:
+      options.color_conversion_options = input_options.color_conversion_options;
+      // fallthrough
+    case 4:
+      options.decoder_id = input_options.decoder_id;
+      // fallthrough
+    case 3:
+      options.strict_decoding = input_options.strict_decoding;
+      // fallthrough
+    case 2:
+      options.convert_hdr_to_8bit = input_options.convert_hdr_to_8bit;
+      // fallthrough
+    case 1:
+      options.ignore_transformations = input_options.ignore_transformations;
+
+      options.start_progress = input_options.start_progress;
+      options.on_progress = input_options.on_progress;
+      options.end_progress = input_options.end_progress;
+      options.progress_user_data = input_options.progress_user_data;
+  }
+}
+
+
 heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
 
-  options->version = 4;
-
-  options->ignore_transformations = false;
-
-  options->start_progress = nullptr;
-  options->on_progress = nullptr;
-  options->end_progress = nullptr;
-  options->progress_user_data = nullptr;
-
-  // version 2
-
-  options->convert_hdr_to_8bit = false;
-
-  // version 3
-
-  options->strict_decoding = false;
-
-  // version 4
-
-  options->decoder_id = nullptr;
-
-  // version 5
-
-  options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
-  options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
-  options->color_conversion_options.only_use_preferred_chroma_algorithm = false;
+  fill_default_decoding_options(*options);
 
   return options;
 }
@@ -952,16 +984,21 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     struct heif_image** out_img,
                                     heif_colorspace colorspace,
                                     heif_chroma chroma,
-                                    const struct heif_decoding_options* options)
+                                    const struct heif_decoding_options* input_options)
 {
   std::shared_ptr<HeifPixelImage> img;
 
   heif_item_id id = in_handle->image->get_id();
 
+  heif_decoding_options dec_options;
+  if (input_options != nullptr) {
+    copy_options(dec_options, *input_options);
+  }
+
   Error err = in_handle->context->decode_image_user(id, img,
                                                     colorspace,
                                                     chroma,
-                                                    options);
+                                                    dec_options);
   if (err.error_code != heif_error_Ok) {
     return err.error_struct(in_handle->image.get());
   }
@@ -2501,8 +2538,6 @@ static void set_default_options(heif_encoding_options& options)
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
 {
-  set_default_options(options);
-
   switch (input_options.version) {
     case 6:
       options.color_conversion_options = input_options.color_conversion_options;
@@ -2554,10 +2589,8 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  if (input_options == nullptr) {
-    set_default_options(options);
-  }
-  else {
+  set_default_options(options);
+  if (input_options) {
     copy_options(options, *input_options);
 
     if (options.output_nclx_profile == nullptr) {
@@ -2579,7 +2612,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   error = ctx->context->encode_image(input_image->image,
                                      encoder,
-                                     &options,
+                                     options,
                                      heif_image_input_class_normal,
                                      image);
   if (error != Error::Ok) {
@@ -2615,16 +2648,17 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image* image,
                                                 const struct heif_image_handle* image_handle,
                                                 struct heif_encoder* encoder,
-                                                const struct heif_encoding_options* options,
+                                                const struct heif_encoding_options* input_options,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_image_handle)
 {
   std::shared_ptr<HeifContext::Image> thumbnail_image;
 
-  heif_encoding_options default_options;
-  if (options == nullptr) {
-    set_default_options(default_options);
-    options = &default_options;
+  heif_encoding_options options;
+  set_default_options(options);
+
+  if (input_options != nullptr) {
+    copy_options(options, *input_options);
   }
 
   Error error = ctx->context->encode_thumbnail(image->image,

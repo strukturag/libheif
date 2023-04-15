@@ -31,8 +31,10 @@
 #include <cmath>
 
 #ifdef HAVE_LIBSHARPYUV
+
 #include <sharpyuv/sharpyuv.h>
 #include <sharpyuv/sharpyuv_csp.h>
+
 #endif
 
 using namespace heif;
@@ -161,19 +163,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
                                            const ColorState& target_state,
-                                           const ColorConversionOptions& options)
+                                           const heif_color_conversion_options& options)
 {
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
@@ -184,7 +186,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
+  //ColorConversionCosts costs;
 
   // --- convert to RGBA (with alpha)
 
@@ -193,16 +195,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = 8;
 
-  if (input_state.has_alpha == false &&
-      target_state.has_alpha == false) {
-    costs = ColorConversionCosts(0.1f, 0.0f, 0.25f);
-  }
-  else {
-    costs = ColorConversionCosts(0.1f, 0.0f, 0.0f);
-  }
-
-  states.push_back({output_state, costs});
-
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   // --- convert to RGB (without alpha)
 
@@ -211,15 +204,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = false;
   output_state.bits_per_pixel = 8;
 
-  if (input_state.has_alpha == true &&
-      target_state.has_alpha == true) {
-    // do not use this conversion because we would lose the alpha channel
-  }
-  else {
-    costs = ColorConversionCosts(0.2f, 0.0f, 0.0f);
-  }
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -228,7 +213,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                        const ColorState& target_state,
-                                       const ColorConversionOptions& options)
+                                       const heif_color_conversion_options& options)
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
   bool want_alpha = target_state.has_alpha;
@@ -328,12 +313,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
@@ -341,7 +326,7 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
-                                               const ColorConversionOptions& options)
+                                               const heif_color_conversion_options& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -356,7 +341,6 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RGB
 
@@ -365,9 +349,7 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -377,7 +359,7 @@ template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
-                                           const ColorConversionOptions& options)
+                                           const heif_color_conversion_options& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -556,12 +538,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
@@ -569,13 +551,13 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
-                                               const ColorConversionOptions& options)
+                                               const heif_color_conversion_options& options)
 {
   // this Op only implements the nearest-neighbor algorithm
 
   if (target_state.chroma != heif_chroma_444) {
-    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
-        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+    if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.only_use_preferred_chroma_algorithm) {
       return {};
     }
   }
@@ -594,7 +576,6 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to YCbCr
 
@@ -603,9 +584,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.75f, 0.5f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -615,7 +594,7 @@ template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
-                                           const ColorConversionOptions& options)
+                                           const heif_color_conversion_options& options)
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -807,19 +786,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const ColorConversionOptions& options)
+                                             const heif_color_conversion_options& options)
 {
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
@@ -841,7 +820,6 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RGB
 
@@ -850,9 +828,7 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = false;
   output_state.bits_per_pixel = 8;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -861,7 +837,7 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                          const ColorState& target_state,
-                                         const ColorConversionOptions& options)
+                                         const heif_color_conversion_options& options)
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -926,19 +902,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const ColorConversionOptions& options)
+                                             const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -961,7 +937,6 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RGB
 
@@ -970,9 +945,7 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = 8;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -981,7 +954,7 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                          const ColorState& target_state,
-                                         const ColorConversionOptions& options)
+                                         const heif_color_conversion_options& options)
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -1065,19 +1038,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
                                                   const ColorState& target_state,
-                                                  const ColorConversionOptions& options)
+                                                  const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1090,7 +1063,6 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RRGGBB_BE
 
@@ -1100,9 +1072,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-    costs = {0.5f, 0.0f, 0.0f};
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -1113,9 +1083,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
 
   return states;
@@ -1125,7 +1093,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                               const ColorState& target_state,
-                                              const ColorConversionOptions& options)
+                                              const heif_color_conversion_options& options)
 {
   if (input->get_bits_per_pixel(heif_channel_R) == 8 ||
       input->get_bits_per_pixel(heif_channel_G) == 8 ||
@@ -1232,19 +1200,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
                                               const ColorState& target_state,
-                                              const ColorConversionOptions& options)
+                                              const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1257,7 +1225,6 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RRGGBB_BE
 
@@ -1267,9 +1234,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-    costs = {0.5f, 0.0f, 0.0f};
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -1280,9 +1245,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
 
   return states;
@@ -1292,7 +1255,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                           const ColorState& target_state,
-                                          const ColorConversionOptions& options)
+                                          const heif_color_conversion_options& options)
 {
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
       input->get_bits_per_pixel(heif_channel_G) != 8 ||
@@ -1380,19 +1343,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
                                                   const ColorState& target_state,
-                                                  const ColorConversionOptions& options)
+                                                  const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1406,7 +1369,6 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RRGGBB_BE
 
@@ -1416,9 +1378,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
                             input_state.chroma == heif_chroma_interleaved_RRGGBBAA_BE);
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.2f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
 
   return states;
@@ -1428,7 +1388,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                               const ColorState& target_state,
-                                              const ColorConversionOptions& options)
+                                              const heif_color_conversion_options& options)
 {
   bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
                     input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE);
@@ -1509,19 +1469,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_state,
                                                     const ColorState& target_state,
-                                                    const ColorConversionOptions& options)
+                                                    const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1536,7 +1496,6 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- swap RRGGBB
 
@@ -1554,9 +1513,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
     output_state.has_alpha = false;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-    costs = {0.1f, 0.0f, 0.0f};
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -1576,9 +1533,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
     output_state.has_alpha = true;
     output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-    costs = {0.1f, 0.0f, 0.0f};
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -1589,7 +1544,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                 const ColorState& target_state,
-                                                const ColorConversionOptions& options)
+                                                const heif_color_conversion_options& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -1614,7 +1569,7 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
   }
 
   if (!outimg->add_plane(heif_channel_interleaved, width, height,
-                    input->get_bits_per_pixel(heif_channel_interleaved))) {
+                         input->get_bits_per_pixel(heif_channel_interleaved))) {
     return nullptr;
   }
 
@@ -1647,19 +1602,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const ColorConversionOptions& options)
+                                            const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1671,7 +1626,6 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to YCbCr420
 
@@ -1680,9 +1634,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.1f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_OptimizedSoftware});
 
   return states;
 }
@@ -1691,7 +1643,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                         const ColorState& target_state,
-                                        const ColorConversionOptions& options)
+                                        const heif_color_conversion_options& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -1800,19 +1752,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const ColorConversionOptions& options)
+                                            const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -1826,7 +1778,6 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to RGB24
 
@@ -1836,9 +1787,7 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
     output_state.has_alpha = false;
     output_state.bits_per_pixel = 8;
 
-    costs = {0.1f, 0.0f, 0.0f};
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -1849,9 +1798,7 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = 8;
 
-  costs = {0.15f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -1860,7 +1807,7 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                         const ColorState& target_state,
-                                        const ColorConversionOptions& options)
+                                        const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -1937,25 +1884,25 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const ColorConversionOptions& options)
+                                             const heif_color_conversion_options& options)
 {
   // this Op only implements the nearest-neighbor algorithm
 
   if (target_state.chroma != heif_chroma_444) {
-    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
-        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+    if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.only_use_preferred_chroma_algorithm) {
       return {};
     }
   }
@@ -1983,7 +1930,6 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
 
   // --- convert RGB24
@@ -1994,9 +1940,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     output_state.has_alpha = false;
     output_state.bits_per_pixel = 8;
 
-    costs = {0.75f, 0.5f, 0.0f};  // quality not good since we subsample chroma without filtering
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -2008,9 +1952,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     output_state.has_alpha = true;
     output_state.bits_per_pixel = 8;
 
-    costs = {0.75f, 0.5f, 0.0f};  // quality not good since we subsample chroma without filtering
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
   return states;
@@ -2048,7 +1990,7 @@ inline void set_chroma_pixels(uint8_t* out_cb, uint8_t* out_cr,
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                          const ColorState& target_state,
-                                         const ColorConversionOptions& options)
+                                         const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2278,30 +2220,31 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 }
 
 #ifdef HAVE_LIBSHARPYUV
+
 class Op_RGB24_32_to_YCbCr_Sharp : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state,
-                                             const ColorState& target_state,
-                                             const ColorConversionOptions& options)
+                                                   const ColorState& target_state,
+                                                   const heif_color_conversion_options& options)
 {
   // this Op only implements the sharp_yuv algorithm
 
-  if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_sharp_yuv &&
-      options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+  if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_sharp_yuv &&
+      options.only_use_preferred_chroma_algorithm) {
     return {};
   }
 
@@ -2324,8 +2267,6 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  // Slow but good quality. Uses some extra memory.
-  ColorConversionCosts costs = {2.0f, 1.0f, 0.5f};
 
   // --- convert RGB24
 
@@ -2334,7 +2275,7 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
     output_state.chroma = heif_chroma_420;
     output_state.has_alpha = false;
     output_state.bits_per_pixel = 8;
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Slow});
   }
 
   // --- convert RGB32
@@ -2344,7 +2285,7 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
     output_state.chroma = heif_chroma_420;
     output_state.has_alpha = true;
     output_state.bits_per_pixel = 8;
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Slow});
   }
 
   return states;
@@ -2352,8 +2293,9 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                         const ColorState& target_state,
-                                         const ColorConversionOptions& options) {
+                                               const ColorState& target_state,
+                                               const heif_color_conversion_options& options)
+{
   int width = input->get_width();
   int height = input->get_height();
 
@@ -2436,6 +2378,7 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
 
   return outimg;
 }
+
 #endif
 
 
@@ -2445,19 +2388,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_state,
                                                     const ColorState& target_state,
-                                                    const ColorConversionOptions& options)
+                                                    const heif_color_conversion_options& options)
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -2482,7 +2425,6 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert RGB24
 
@@ -2492,9 +2434,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     output_state.has_alpha = false;
     output_state.bits_per_pixel = 8;
 
-    costs = {0.75f, 0.5f, 0.0f};  // quality not good since we subsample chroma without filtering
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
 
@@ -2506,9 +2446,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     output_state.has_alpha = true;
     output_state.bits_per_pixel = 8;
 
-    costs = {0.75f, 0.5f, 0.0f};  // quality not good since we subsample chroma without filtering
-
-    states.push_back({output_state, costs});
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
   return states;
@@ -2518,7 +2456,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                 const ColorState& target_state,
-                                                const ColorConversionOptions& options)
+                                                const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2603,19 +2541,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const ColorConversionOptions& options)
+                                            const heif_color_conversion_options& options)
 {
   // only drop alpha plane if it is not needed in output
 
@@ -2631,16 +2569,13 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- drop alpha plane
 
   output_state = input_state;
   output_state.has_alpha = false;
 
-  costs = {0.1f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Trivial});
 
   return states;
 }
@@ -2649,7 +2584,7 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_drop_alpha_plane::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                         const ColorState& target_state,
-                                        const ColorConversionOptions& options)
+                                        const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -2681,19 +2616,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
                                          const ColorState& target_state,
-                                         const ColorConversionOptions& options)
+                                         const heif_color_conversion_options& options)
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -2706,16 +2641,13 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- increase bit depth
 
   output_state = input_state;
   output_state.bits_per_pixel = target_state.bits_per_pixel;
 
-  costs = {0.2f, 0.0f, 0.5f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -2724,7 +2656,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                      const ColorState& target_state,
-                                     const ColorConversionOptions& options)
+                                     const heif_color_conversion_options& options)
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -2780,19 +2712,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
                                          const ColorState& target_state,
-                                         const ColorConversionOptions& options)
+                                         const heif_color_conversion_options& options)
 {
   if ((input_state.chroma != heif_chroma_monochrome &&
        input_state.chroma != heif_chroma_420 &&
@@ -2802,19 +2734,20 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  if (target_state.bits_per_pixel != 8) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- decrease bit depth
 
   output_state = input_state;
   output_state.bits_per_pixel = 8;
 
-  costs = {0.2f, 0.0f, 0.5f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -2823,7 +2756,7 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                      const ColorState& target_state,
-                                     const ColorConversionOptions& options)
+                                     const heif_color_conversion_options& options)
 {
 
   auto outimg = std::make_shared<HeifPixelImage>();
@@ -2883,25 +2816,25 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                                     const ColorState& target_state,
-                                                    const ColorConversionOptions& options)
+                                                    const heif_color_conversion_options& options)
 {
   // this Op only implements the nearest-neighbor algorithm
 
   if (target_state.chroma != heif_chroma_444) {
-    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
-        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+    if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.only_use_preferred_chroma_algorithm) {
       return {};
     }
   }
@@ -2929,7 +2862,6 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to YCbCr
 
@@ -2938,9 +2870,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
   output_state.has_alpha = input_state.has_alpha;  // we generate an alpha plane if the source contains data
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -2949,7 +2879,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                 const ColorState& target_state,
-                                                const ColorConversionOptions& options)
+                                                const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -3004,7 +2934,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
   int32_t fullRange = (1 << bpp) - 1;
-  float limited_range_offset = static_cast<float>(16 << (bpp-8));
+  float limited_range_offset = static_cast<float>(16 << (bpp - 8));
 
   // le=1 for little endian, le=0 for big endian
   int le = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
@@ -3094,19 +3024,19 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const ColorConversionOptions& options) override;
+                         const heif_color_conversion_options& options) override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const ColorConversionOptions& options) override;
+                     const heif_color_conversion_options& options) override;
 };
 
 
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
                                                 const ColorState& target_state,
-                                                const ColorConversionOptions& options)
+                                                const heif_color_conversion_options& options)
 {
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
@@ -3124,7 +3054,6 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
-  ColorConversionCosts costs;
 
   // --- convert to YCbCr
 
@@ -3134,9 +3063,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
 
   output_state.colorspace = heif_colorspace_RGB;
@@ -3145,9 +3072,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  costs = {0.5f, 0.0f, 0.0f};
-
-  states.push_back({output_state, costs});
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -3156,7 +3081,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                             const ColorState& target_state,
-                                            const ColorConversionOptions& options)
+                                            const heif_color_conversion_options& options)
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -3267,7 +3192,7 @@ struct Node
 
 bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
                                                  const ColorState& target_state,
-                                                 const ColorConversionOptions& options)
+                                                 const heif_color_conversion_options& options)
 {
   m_operations.clear();
 
@@ -3319,13 +3244,13 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   std::vector<Node> processed_states;
   std::vector<Node> border_states;
-  border_states.push_back({-1, nullptr, {input_state, ColorConversionCosts()}});
+  border_states.push_back({-1, nullptr, {input_state, 0}});
 
   while (!border_states.empty()) {
     size_t minIdx = -1;
-    float minCost;
+    int minCost;
     for (size_t i = 0; i < border_states.size(); i++) {
-      float cost = border_states[i].color_state.costs.total(options.criterion);
+      int cost = border_states[i].color_state.speed_costs;
       if (i == 0 || cost < minCost) {
         minIdx = i;
         minCost = cost;
@@ -3409,14 +3334,14 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
               // if we reached the same border node with a lower cost, replace the border node
 
-              ColorConversionCosts new_op_costs = out_state.costs + processed_states.back().color_state.costs;
+              int new_op_costs = out_state.speed_costs + processed_states.back().color_state.speed_costs;
 
-              if (s.color_state.costs.total(options.criterion) > new_op_costs.total(options.criterion)) {
+              if (s.color_state.speed_costs > new_op_costs) {
                 s = {(int) (processed_states.size() - 1),
                      op_ptr,
                      out_state};
 
-                s.color_state.costs = new_op_costs;
+                s.color_state.speed_costs = new_op_costs;
               }
               break;
             }
@@ -3428,7 +3353,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
         if (!state_exists) {
           ColorStateWithCost s = out_state;
-          s.costs = s.costs + processed_states.back().color_state.costs;
+          s.speed_costs = s.speed_costs + processed_states.back().color_state.speed_costs;
 
           border_states.push_back({(int) (processed_states.size() - 1), op_ptr, s});
         }
@@ -3483,9 +3408,9 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
     }
 
     if (in->has_nonsquare_pixel_ratio()) {
-      uint32_t h,v;
+      uint32_t h, v;
       in->get_pixel_ratio(&h, &v);
-      out->set_pixel_ratio(h,v);
+      out->set_pixel_ratio(h, v);
     }
 
     const auto& warnings = in->get_warnings();
@@ -3505,7 +3430,7 @@ std::shared_ptr<HeifPixelImage> heif::convert_colorspace(const std::shared_ptr<H
                                                          heif_chroma target_chroma,
                                                          const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                          int output_bpp,
-                                                         const ColorConversionOptions& options)
+                                                         const heif_color_conversion_options& options)
 {
   // --- check that input image is valid
 

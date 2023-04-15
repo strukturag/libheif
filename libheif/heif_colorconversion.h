@@ -37,64 +37,29 @@ namespace heif {
     ColorState() = default;
 
     ColorState(heif_colorspace colorspace, heif_chroma chroma, bool has_alpha, int bits_per_pixel)
-        : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel)
-    {}
+        : colorspace(colorspace), chroma(chroma), has_alpha(has_alpha), bits_per_pixel(bits_per_pixel) {}
 
     bool operator==(const ColorState&) const;
   };
 
 
-  enum class ColorConversionCriterion
+  // These are some integer constants for typical color conversion Op speed costs.
+  // The integer value is the speed cost. Any other integer can be assigned to the speed cost.
+  enum SpeedCosts
   {
-    Speed,
-    Quality,
-    Memory,
-    Balanced
-  };
-
-
-  struct ColorConversionCosts
-  {
-    ColorConversionCosts() = default;
-
-    ColorConversionCosts(float _speed, float _quality, float _memory)
-    {
-      speed = _speed;
-      quality = _quality;
-      memory = _memory;
-    }
-
-    float speed = 0;
-    float quality = 0;
-    float memory = 0;
-
-    ColorConversionCosts operator+(const ColorConversionCosts& b) const
-    {
-      return {speed + b.speed,
-              quality + b.quality,
-              memory + b.memory};
-    }
-
-    float total(ColorConversionCriterion) const
-    {
-      return speed * 0.3f + quality * 0.6f + memory * 0.1f;
-    }
-  };
-
-
-  // TODO: replace ColorConversionOptions by heif_color_conversion_options
-  struct ColorConversionOptions
-  {
-    ColorConversionCriterion criterion = ColorConversionCriterion::Balanced;
-
-    struct heif_color_conversion_options color_conversion_options;
+    SpeedCosts_Trivial = 1,
+    SpeedCosts_Hardware = 2,
+    SpeedCosts_OptimizedSoftware = 5+1,
+    SpeedCosts_Unoptimized = 10+1,
+    SpeedCosts_Slow = 15+1
   };
 
 
   struct ColorStateWithCost
   {
     ColorState color_state;
-    ColorConversionCosts costs;
+
+    int speed_costs;
   };
 
 
@@ -110,12 +75,12 @@ namespace heif {
     virtual std::vector<ColorStateWithCost>
     state_after_conversion(const ColorState& input_state,
                            const ColorState& target_state,
-                           const ColorConversionOptions& options = ColorConversionOptions()) = 0;
+                           const heif_color_conversion_options& options) = 0;
 
     virtual std::shared_ptr<HeifPixelImage>
     convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                        const ColorState& target_state,
-                       const ColorConversionOptions& options = ColorConversionOptions()) = 0;
+                       const heif_color_conversion_options& options) = 0;
   };
 
 
@@ -124,7 +89,7 @@ namespace heif {
   public:
     bool construct_pipeline(const ColorState& input_state,
                             const ColorState& target_state,
-                            const ColorConversionOptions& options = ColorConversionOptions());
+                            const heif_color_conversion_options& options);
 
     std::shared_ptr<HeifPixelImage>
     convert_image(const std::shared_ptr<HeifPixelImage>& input);
@@ -134,7 +99,7 @@ namespace heif {
   private:
     std::vector<std::shared_ptr<ColorConversionOperation>> m_operations;
     ColorState m_target_state;
-    ColorConversionOptions m_options;
+    heif_color_conversion_options m_options;
   };
 
 
@@ -142,6 +107,6 @@ namespace heif {
                                                      heif_colorspace colorspace,
                                                      heif_chroma chroma,
                                                      const std::shared_ptr<const color_profile_nclx>& target_profile,
-                                                     int output_bpp = 0,
-                                                     const ColorConversionOptions& options = ColorConversionOptions());
+                                                     int output_bpp,
+                                                     const heif_color_conversion_options& options);
 }
