@@ -571,6 +571,15 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
                                                const ColorConversionOptions& options)
 {
+  // this Op only implements the nearest-neighbor algorithm
+
+  if (target_state.chroma != heif_chroma_444) {
+    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+      return {};
+    }
+  }
+
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
   if ((input_state.bits_per_pixel != 8) != hdr) {
@@ -1942,6 +1951,15 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
                                              const ColorConversionOptions& options)
 {
+  // this Op only implements the nearest-neighbor algorithm
+
+  if (target_state.chroma != heif_chroma_444) {
+    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+      return {};
+    }
+  }
+
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
   if (input_state.colorspace != heif_colorspace_RGB ||
@@ -2280,6 +2298,13 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
                                              const ColorState& target_state,
                                              const ColorConversionOptions& options)
 {
+  // this Op only implements the sharp_yuv algorithm
+
+  if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_sharp_yuv &&
+      options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+    return {};
+  }
+
   if (input_state.colorspace != heif_colorspace_RGB ||
       (input_state.chroma != heif_chroma_interleaved_RGB &&
        input_state.chroma != heif_chroma_interleaved_RGBA)) {
@@ -2872,6 +2897,15 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
                                                     const ColorState& target_state,
                                                     const ColorConversionOptions& options)
 {
+  // this Op only implements the nearest-neighbor algorithm
+
+  if (target_state.chroma != heif_chroma_444) {
+    if (options.color_conversion_options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
+        options.color_conversion_options.only_use_preferred_chroma_algorithm) {
+      return {};
+    }
+  }
+
   if (input_state.colorspace != heif_colorspace_RGB ||
       !(input_state.chroma == heif_chroma_interleaved_RRGGBB_BE ||
         input_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
@@ -3266,25 +3300,14 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
   ops.push_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
 
-  if (m_options.color_conversion_options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_sharp_yuv ||
-      !m_options.color_conversion_options.only_use_preferred_chroma_algorithm)
-  {
 #ifdef HAVE_LIBSHARPYUV
-    ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr_Sharp>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr_Sharp>());
 #endif
-  }
 
-  // TODO: these checks should be in the Ops themselves, because we can enable all of them when chroma is 4:4:4, for example.
-
-  if (m_options.color_conversion_options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_nearest_neighbor ||
-      !m_options.color_conversion_options.only_use_preferred_chroma_algorithm)
-  {
-    ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
-    ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
-    ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
-    ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
-  }
-
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
+  ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
 
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());

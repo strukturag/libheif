@@ -1530,7 +1530,15 @@ int main(int argc, char** argv)
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t)two_colr_boxes;
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
-    options->color_conversion_options.preferred_chroma_downsampling_algorithm = sharp_yuv ? heif_chroma_downsampling_sharp_yuv : heif_chroma_downsampling_average;
+
+    if (sharp_yuv) {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+    }
+    else {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true; // TODO: set this to 'false' when our optimization works
+    }
 
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||
