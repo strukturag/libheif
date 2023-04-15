@@ -82,11 +82,12 @@ namespace heif {
   };
 
 
+  // TODO: replace ColorConversionOptions by heif_color_conversion_options
   struct ColorConversionOptions
   {
     ColorConversionCriterion criterion = ColorConversionCriterion::Balanced;
-    // Enable "sharp" RGB->YUV conversion (if compiled in).
-    bool enable_sharp_yuv = false;
+
+    struct heif_color_conversion_options color_conversion_options;
   };
 
 

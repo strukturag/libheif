@@ -98,7 +98,8 @@ TEST_CASE( "Color conversion", "[heif_image]" ) {
 
   printf("--- interleaved RGBA -> YCbCr 420 with sharp yuv\n");
 
-  ColorConversionOptions sharp_yuv_options{.enable_sharp_yuv = true};
+  ColorConversionOptions sharp_yuv_options{.color_conversion_options.only_use_preferred_chroma_algorithm = true,
+                                           .color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv};
   success = pipeline.construct_pipeline( { heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8 },
                                          { heif_colorspace_YCbCr, heif_chroma_420, false, 8 },
                                          sharp_yuv_options);

@@ -932,6 +932,12 @@ heif_decoding_options* heif_decoding_options_alloc()
 
   options->decoder_id = nullptr;
 
+  // version 5
+
+  options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options->color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
   return options;
 }
 
@@ -2487,7 +2493,10 @@ static void set_default_options(heif_encoding_options& options)
   options.output_nclx_profile = nullptr;
   options.macOS_compatibility_workaround_no_nclx_profile = true;
   options.image_orientation = heif_orientation_normal;
-  options.enable_sharp_yuv = false;
+
+  options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+  options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
@@ -2496,9 +2505,11 @@ static void copy_options(heif_encoding_options& options, const heif_encoding_opt
 
   switch (input_options.version) {
     case 6:
-      options.enable_sharp_yuv = input_options.enable_sharp_yuv;
+      options.color_conversion_options = input_options.color_conversion_options;
+      // fallthrough
     case 5:
       options.image_orientation = input_options.image_orientation;
+      // fallthrough
     case 4:
       options.output_nclx_profile = input_options.output_nclx_profile;
       options.macOS_compatibility_workaround_no_nclx_profile = input_options.macOS_compatibility_workaround_no_nclx_profile;

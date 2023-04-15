@@ -3265,17 +3265,28 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_mono_to_RGB24_32>());
   ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
   ops.push_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
-  if (m_options.enable_sharp_yuv) {
+
+  if (m_options.color_conversion_options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_sharp_yuv ||
+      !m_options.color_conversion_options.only_use_preferred_chroma_algorithm)
+  {
 #ifdef HAVE_LIBSHARPYUV
     ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr_Sharp>());
 #endif
-  } else {
+  }
+
+  // TODO: these checks should be in the Ops themselves, because we can enable all of them when chroma is 4:4:4, for example.
+
+  if (m_options.color_conversion_options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_nearest_neighbor ||
+      !m_options.color_conversion_options.only_use_preferred_chroma_algorithm)
+  {
     ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
-    ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
     ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
     ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
     ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   }
+
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
+
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
   ops.push_back(std::make_shared<Op_to_sdr_planes>());

@@ -1012,6 +1012,34 @@ enum heif_progress_step
 };
 
 
+enum heif_chroma_downsampling_algorithm {
+  heif_chroma_downsampling_nearest_neighbor = 1,
+  heif_chroma_downsampling_average = 2,
+
+  // Combine with 'heif_chroma_upsampling_bilinear' for best quality.
+  // Makes edges look sharper when using YUV 420 with bilinear chroma upsampling.
+  heif_chroma_downsampling_sharp_yuv = 3
+};
+
+enum heif_chroma_upsampling_algorithm {
+  heif_chroma_upsampling_nearest_neighbor = 1,
+  heif_chroma_upsampling_bilinear = 2
+};
+
+struct heif_color_conversion_options
+{
+  uint8_t version;
+
+  // --- version 1 options
+
+  enum heif_chroma_downsampling_algorithm preferred_chroma_downsampling_algorithm;
+  enum heif_chroma_upsampling_algorithm preferred_chroma_upsampling_algorithm;
+
+  // When set to 'false', libheif may also use a different algorithm if the preferred one is not available.
+  uint8_t only_use_preferred_chroma_algorithm;
+};
+
+
 struct heif_decoding_options
 {
   uint8_t version;
@@ -1046,6 +1074,11 @@ struct heif_decoding_options
   // If set to NULL (default), the highest priority decoder is chosen.
   // The priority is defined in the plugin.
   const char* decoder_id;
+
+
+  // version 5 options
+
+  struct heif_color_conversion_options color_conversion_options;
 };
 
 
@@ -1579,9 +1612,9 @@ struct heif_encoding_options
   //       Moreover, chroma 4:2:2 is not handled (neither is 4:4:4).
   //       Ideally, sharp YUV should be used in all conversion paths.
   //       We should also have bilinear YUV->RGB to match this.
-  // Enable 'sharp' RGB to YUV420 conversion (if compiled in). Makes edges look
-  // sharper when using YUV 420 with bilinear chroma upsampling.
-  uint8_t enable_sharp_yuv; // default: false
+  // Enable 'sharp' RGB to YUV420 conversion (if compiled in).
+
+  struct heif_color_conversion_options color_conversion_options;
 };
 
 LIBHEIF_API

@@ -2190,7 +2190,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
     ColorConversionOptions color_conversion_options;
-    color_conversion_options.enable_sharp_yuv = options->enable_sharp_yuv;
+    color_conversion_options.color_conversion_options = options->color_conversion_options;
     src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
                                    output_bpp, color_conversion_options);
     if (!src_image) {
@@ -2444,7 +2444,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
     ColorConversionOptions color_conversion_options;
-    color_conversion_options.enable_sharp_yuv = options->enable_sharp_yuv;
+    color_conversion_options.color_conversion_options = options->color_conversion_options;
     src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
                                    output_bpp, color_conversion_options);
     if (!src_image) {
