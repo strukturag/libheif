@@ -20,7 +20,7 @@
 
 
 #include "heif_image.h"
-#include "heif_colorconversion.h"
+#include "libheif/color-conversion/colorconversion.h"
 #include "common_utils.h"
 
 #include <cassert>

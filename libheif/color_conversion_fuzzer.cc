@@ -23,7 +23,7 @@
 #include <sstream>
 
 #include "bitstream.h"
-#include "heif_colorconversion.h"
+#include "libheif/color-conversion/colorconversion.h"
 #include "heif_image.h"
 
 static bool is_valid_chroma(uint8_t chroma)

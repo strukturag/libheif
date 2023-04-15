@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "libheif/heif_colorconversion.h"
+#include "libheif/color-conversion/colorconversion.h"
 
 
 using namespace heif;

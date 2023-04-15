@@ -46,7 +46,7 @@
 #include "heif_hevc.h"
 #include "heif_avif.h"
 #include "heif_plugin_registry.h"
-#include "heif_colorconversion.h"
+#include "libheif/color-conversion/colorconversion.h"
 #include "metadata_compression.h"
 
 #ifdef ENABLE_UNCOMPRESSED_DECODER
