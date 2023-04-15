@@ -103,7 +103,19 @@ TEST_CASE( "Color conversion", "[heif_image]" ) {
                                          { heif_colorspace_YCbCr, heif_chroma_420, false, 8 },
                                          sharp_yuv_options);
 
+#ifdef HAVE_LIBSHARPYUV
   REQUIRE( success );
+#else
+  REQUIRE( !success );  // Should fail if libsharpyuv is not compiled in.
+#endif
+
+  printf("--- interleaved RGBA -> YCbCr 422 with sharp yuv (not supported!)\n");
+
+  success = pipeline.construct_pipeline( { heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8 },
+                                         { heif_colorspace_YCbCr, heif_chroma_422, false, 8 },
+                                         sharp_yuv_options);
+
+  REQUIRE( !success );  // Should fail!
 
   printf("--- RGB planes 10bit -> interleaved RGB 10 bitlittle endain\n");
 
