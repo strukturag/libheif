@@ -63,4 +63,13 @@ struct heif_encoder
 };
 
 
+struct heif_region_item
+{
+  std::shared_ptr<heif::HeifContext> context;
+
+  uint32_t region_item_id;
+  uint32_t reference_width;  // TODO: move me into the internal region items
+  uint32_t reference_height;
+};
+
 #endif

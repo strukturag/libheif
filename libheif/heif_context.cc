@@ -974,7 +974,8 @@ Error HeifContext::interpret_heif_file()
                            heif_suberror_Nonexisting_item_referenced,
                            "Region item assigned to non-existing image");
             }
-            img_iter->second->add_region_item(region_item);
+            img_iter->second->add_region_item_id(id);
+            m_region_items.push_back(region_item);
           }
         }
       }

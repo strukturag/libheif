@@ -286,15 +286,9 @@ namespace heif {
         }
       };
 
+      void add_region_item_id(heif_item_id id) { m_region_item_ids.push_back(id); }
 
-      // --- region items
-
-      void add_region_item(std::shared_ptr<RegionItem> region_item)
-      {
-        m_region_items.push_back(std::move(region_item));
-      }
-
-      const std::vector<std::shared_ptr<RegionItem>>& get_region_items() const { return m_region_items; }
+      const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
 
     private:
       HeifContext* m_heif_context;
@@ -334,7 +328,7 @@ namespace heif {
 
       bool m_miaf_compatible = true;
 
-      std::vector<std::shared_ptr<RegionItem>> m_region_items;
+      std::vector<heif_item_id> m_region_item_ids;
     };
 
     std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }
@@ -435,6 +429,24 @@ namespace heif {
                                const char* item_type, const char* content_type,
                                heif_metadata_compression compression);
 
+
+    // --- region items
+
+    void add_region_item(std::shared_ptr<RegionItem> region_item)
+    {
+      m_region_items.push_back(std::move(region_item));
+    }
+
+    std::shared_ptr<RegionItem> get_region_item(heif_item_id id) const
+    {
+      for (auto& item : m_region_items) {
+        if (item->item_id == id)
+          return item;
+      }
+
+      return nullptr;
+    }
+
     void write(StreamWriter& writer);
 
   private:
@@ -456,6 +468,8 @@ namespace heif {
 
     uint32_t m_maximum_image_width_limit;
     uint32_t m_maximum_image_height_limit;
+
+    std::vector<std::shared_ptr<RegionItem>> m_region_items;
 
     Error interpret_heif_file();
 
