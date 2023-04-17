@@ -2910,7 +2910,7 @@ int heif_region_item_get_list_of_regions(const struct heif_region_item* region_i
     out_regions[i] = region;
   }
 
-  return 0;
+  return num;
 }
 
 void heif_region_release(const struct heif_region* region)
