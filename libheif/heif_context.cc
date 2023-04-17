@@ -1361,8 +1361,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     error = ipco_box->get_properties_for_item_ID(ID, ipma_box, properties);
 
     for (const auto& property : properties) {
-      auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
-      if (rot) {
+      if (property.property->get_short_type() == fourcc("irot")) {
+        auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
         std::shared_ptr<HeifPixelImage> rotated_img;
         error = img->rotate_ccw(rot->get_rotation(), rotated_img);
         if (error) {
@@ -1373,8 +1373,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
-      if (mirror) {
+      if (property.property->get_short_type() == fourcc("imir")) {
+        auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
         error = img->mirror_inplace(mirror->get_mirror_direction());
         if (error) {
           return error;
@@ -1382,8 +1382,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
-      if (clap) {
+      if (property.property->get_short_type() == fourcc("clap")) {
+        auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
         std::shared_ptr<HeifPixelImage> clap_img;
 
         int img_width = img->get_width();

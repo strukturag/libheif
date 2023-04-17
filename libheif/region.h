@@ -37,7 +37,7 @@ class RegionItem
 public:
   Error parse(const std::vector<uint8_t>& data);
 
-  long unsigned int get_number_of_regions() { return mRegions.size(); }
+  int get_number_of_regions() { return (int)mRegions.size(); }
 
   std::vector<std::shared_ptr<RegionGeometry>> get_regions() { return mRegions; }
 
@@ -136,5 +136,36 @@ private:
   std::shared_ptr<heif::HeifPixelImage> mCachedMask;
 };
 #endif
+
+
+namespace heif {
+  class HeifFile;
+}
+
+
+class RegionCoordinateTransform
+{
+public:
+  static RegionCoordinateTransform create(std::shared_ptr<heif::HeifFile> file,
+                                          heif_item_id item_id,
+                                          int reference_width, int reference_height);
+
+  struct Point
+  {
+    double x, y;
+  };
+
+  struct Extent
+  {
+    double x, y;
+  };
+
+  Point transform_point(Point);
+
+  Extent transform_extent(Extent);
+
+private:
+  double a = 1.0, b = 0.0, c = 0.0, d = 1.0, tx = 0.0, ty = 0.0;
+};
 
 #endif //LIBHEIF_REGION_H

@@ -1856,7 +1856,7 @@ enum heif_item_property_type heif_item_get_property_type(const struct heif_conte
     return heif_item_property_type_invalid;
   }
 
-  auto property = properties[propertyId-1].property;
+  auto property = properties[propertyId - 1].property;
   return (enum heif_item_property_type) property->get_short_type();
 }
 
@@ -3034,9 +3034,11 @@ int heif_image_handle_get_list_of_region_item_ids(const struct heif_image_handle
 struct heif_region_item* heif_context_get_region_item(const struct heif_context* context,
                                                       heif_item_id region_item_id)
 {
+  auto r = context->context->get_region_item(region_item_id);
+
   heif_region_item* item = new heif_region_item();
   item->context = context->context;
-  item->region_item_id = region_item_id;
+  item->region_item = r;
   return item;
 }
 
@@ -3049,7 +3051,7 @@ void heif_region_item_release(struct heif_region_item* region_item)
 
 void heif_region_item_get_reference_size(struct heif_region_item* region_item, uint32_t* width, uint32_t* height)
 {
-  auto r = region_item->context->get_region_item(region_item->region_item_id);
+  auto r = region_item->context->get_region_item(region_item->region_item->item_id);
   if (*width) *width = r->reference_width;
   if (*height) *height = r->reference_height;
 }
@@ -3057,30 +3059,21 @@ void heif_region_item_get_reference_size(struct heif_region_item* region_item, u
 
 int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item)
 {
-  auto item = region_item->context->get_region_item(region_item->region_item_id);
-  if (item) {
-    return (int) item->get_number_of_regions();
-  }
-
-  return 0;
+  return region_item->region_item->get_number_of_regions();
 }
 
 int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
                                          struct heif_region** out_regions,
                                          int max_count)
 {
-  auto item = region_item->context->get_region_item(region_item->region_item_id);
-  if (!item) {
-    return 0;
-  }
-
-  auto regions = item->get_regions();
+  auto regions = region_item->region_item->get_regions();
   int num = std::min(max_count, (int) regions.size());
 
   for (int i = 0; i < num; i++) {
     auto region = new heif_region();
     region->context = region_item->context;
-    region->parent_region_item_id = region_item->region_item_id;
+    //region->parent_region_item_id = region_item->region_item->item_id;
+    region->region_item = region_item->region_item;
     region->region = regions[i];
 
     out_regions[i] = region;
@@ -3110,10 +3103,37 @@ enum heif_region_type heif_region_get_type(const struct heif_region* region)
 
 struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y)
 {
+  if (!x || !y) {
+    return heif_error_invalid_parameter_value;
+  }
+
   const std::shared_ptr<RegionGeometry_Point> point = std::dynamic_pointer_cast<RegionGeometry_Point>(region->region);
   if (point) {
     *x = point->x;
     *y = point->y;
+    return heif_error_ok;
+  }
+
+  return heif_error_invalid_parameter_value;
+}
+
+
+struct heif_error heif_region_get_point_scaled(const struct heif_region* region, double* x, double* y,
+                                               heif_item_id image_id)
+{
+  if (!x || !y) {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_Point> point = std::dynamic_pointer_cast<RegionGeometry_Point>(region->region);
+  if (point) {
+    auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
+                                               region->region_item->reference_width,
+                                               region->region_item->reference_height);
+    RegionCoordinateTransform::Point p = t.transform_point({(double) point->x, (double) point->y});
+    *x = p.x;
+    *y = p.y;
+
     return heif_error_ok;
   }
 
@@ -3138,6 +3158,31 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
 }
 
 
+struct heif_error heif_region_get_rectangle_scaled(const struct heif_region* region,
+                                                   double* x, double* y,
+                                                   double* width, double* height,
+                                                   heif_item_id image_id)
+{
+  const std::shared_ptr<RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<RegionGeometry_Rectangle>(region->region);
+  if (rect) {
+    auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
+                                               region->region_item->reference_width,
+                                               region->region_item->reference_height);
+
+    RegionCoordinateTransform::Point p = t.transform_point({(double) rect->x, (double) rect->y});
+    RegionCoordinateTransform::Extent e = t.transform_extent({(double) rect->width, (double) rect->height});
+
+    *x = p.x;
+    *y = p.y;
+    *width = e.x;
+    *height = e.y;
+    return heif_error_ok;
+  }
+
+  return heif_error_invalid_parameter_value;
+}
+
+
 struct heif_error heif_region_get_ellipse(const struct heif_region* region,
                                           int32_t* x, int32_t* y,
                                           uint32_t* radius_x, uint32_t* radius_y)
@@ -3154,6 +3199,30 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
   return heif_error_invalid_parameter_value;
 }
 
+
+struct heif_error heif_region_get_ellipse_scaled(const struct heif_region* region,
+                                                   double* x, double* y,
+                                                   double* radius_x, double* radius_y,
+                                                   heif_item_id image_id)
+{
+  const std::shared_ptr<RegionGeometry_Ellipse> ellipse = std::dynamic_pointer_cast<RegionGeometry_Ellipse>(region->region);
+  if (ellipse) {
+    auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
+                                               region->region_item->reference_width,
+                                               region->region_item->reference_height);
+
+    RegionCoordinateTransform::Point p = t.transform_point({(double) ellipse->x, (double) ellipse->y});
+    RegionCoordinateTransform::Extent e = t.transform_extent({(double) ellipse->radius_x, (double) ellipse->radius_y});
+
+    *x = p.x;
+    *y = p.y;
+    *radius_x = e.x;
+    *radius_y = e.y;
+    return heif_error_ok;
+  }
+
+  return heif_error_invalid_parameter_value;
+}
 
 int heif_region_get_polygon_num_points(const struct heif_region* region)
 {
@@ -3176,6 +3245,29 @@ void heif_region_get_polygon_points(const struct heif_region* region, int32_t* p
     for (int i = 0; i < (int) polygon->points.size(); i++) {
       pts[2 * i + 0] = polygon->points[i].x;
       pts[2 * i + 1] = polygon->points[i].y;
+    }
+  }
+}
+
+
+void heif_region_get_polygon_points_scaled(const struct heif_region* region, double* pts, heif_item_id image_id)
+{
+  if (pts == nullptr) {
+    return;
+  }
+
+  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (polygon) {
+    auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
+                                               region->region_item->reference_width,
+                                               region->region_item->reference_height);
+
+    for (int i = 0; i < (int) polygon->points.size(); i++) {
+      RegionCoordinateTransform::Point p = t.transform_point({(double) polygon->points[i].x,
+                                                              (double) polygon->points[i].y});
+
+      pts[2 * i + 0] = p.x;
+      pts[2 * i + 1] = p.y;
     }
   }
 }

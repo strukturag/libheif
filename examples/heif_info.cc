@@ -457,6 +457,14 @@ int main(int argc, char** argv)
             uint32_t h;
             heif_region_get_rectangle(regions[j], &x, &y, &w, &h);
             printf("      rectangle [x=%i, y=%i, w=%u, h=%u]\n", x, y, w, h);
+#if 0
+            double dx;
+            double dy;
+            double dw;
+            double dh;
+            heif_region_get_rectangle_scaled(regions[j], &dx, &dy, &dw, &dh, IDs[i]);
+            printf("      rectangle [x=%lf, y=%lf, w=%lf, h=%lf]\n", dx, dy, dw, dh);
+#endif
           }
         }
 

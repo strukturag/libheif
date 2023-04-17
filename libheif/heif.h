@@ -961,11 +961,11 @@ enum heif_item_property_type
 {
 //  heif_item_property_unknown = -1,
   heif_item_property_type_invalid = 0,
-  heif_item_property_type_user_description = heif_fourcc('u','d','e','s'),
-  heif_item_property_type_transform_mirror = heif_fourcc('i','m','i','r'),
-  heif_item_property_type_transform_rotation = heif_fourcc('i','r','o','t'),
-  heif_item_property_type_transform_crop = heif_fourcc('c','l','a','p'),
-  heif_item_property_type_image_size = heif_fourcc('i','s','p','e')
+  heif_item_property_type_user_description = heif_fourcc('u', 'd', 'e', 's'),
+  heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
+  heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
+  heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
 };
 
 // The strings are managed by libheif. They will be deleted in heif_property_user_description_release().
@@ -1882,9 +1882,19 @@ LIBHEIF_API
 struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y);
 
 LIBHEIF_API
+struct heif_error heif_region_get_point_scaled(const struct heif_region* region, double* x, double* y,
+                                               heif_item_id image_id);
+
+LIBHEIF_API
 struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height);
+
+LIBHEIF_API
+struct heif_error heif_region_get_rectangle_scaled(const struct heif_region* region,
+                                                   double* x, double* y,
+                                                   double* width, double* height,
+                                                   heif_item_id image_id);
 
 LIBHEIF_API
 struct heif_error heif_region_get_ellipse(const struct heif_region* region,
@@ -1892,11 +1902,24 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
                                           uint32_t* radius_x, uint32_t* radius_y);
 
 LIBHEIF_API
+struct heif_error heif_region_get_ellipse_scaled(const struct heif_region* region,
+                                                 double* x, double* y,
+                                                 double* radius_x, double* radius_y,
+                                                 heif_item_id image_id);
+
+LIBHEIF_API
 int heif_region_get_polygon_num_points(const struct heif_region* region);
 
+// Point coordinates are stored in the output array 'pts'. This must have twice as many entries as there are points.
+// Each point is stored as consecutive x and y positions.
 LIBHEIF_API
 void heif_region_get_polygon_points(const struct heif_region* region,
                                     int32_t* pts);
+
+LIBHEIF_API
+void heif_region_get_polygon_points_scaled(const struct heif_region* region,
+                                           double* pts,
+                                           heif_item_id image_id);
 
 LIBHEIF_API
 uint8_t heif_region_get_polygon_closed(const struct heif_region* region);
