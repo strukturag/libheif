@@ -28,101 +28,113 @@
 #include "libheif/heif.h"
 
 
-namespace heif
+class RegionGeometry;
+
+using heif::Error;
+
+class RegionItem
 {
-  class RegionGeometry;
+public:
+  Error parse(const std::vector<uint8_t>& data);
+
+  long unsigned int get_number_of_regions() { return mRegions.size(); }
+
+  std::vector<std::shared_ptr<RegionGeometry>> get_regions() { return mRegions; }
+
+  uint32_t item_id;
+  uint32_t reference_width;
+  uint32_t reference_height;
+
+private:
+
+  std::vector<std::shared_ptr<RegionGeometry>> mRegions;
+};
 
 
-  class RegionItem
+class RegionGeometry
+{
+public:
+  virtual ~RegionGeometry() = default;
+
+  virtual heif_region_type getRegionType() = 0;
+
+  virtual Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) = 0;
+
+protected:
+  uint32_t parse_unsigned(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset);
+
+  int32_t parse_signed(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset);
+};
+
+class RegionGeometry_Point : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+
+  heif_region_type getRegionType() override { return heif_region_type_point; }
+
+  int32_t x, y;
+};
+
+class RegionGeometry_Rectangle : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+
+  heif_region_type getRegionType() override { return heif_region_type_rectangle; }
+
+  int32_t x, y;
+  uint32_t width, height;
+};
+
+class RegionGeometry_Ellipse : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+
+  heif_region_type getRegionType() override { return heif_region_type_ellipse; }
+
+  int32_t x, y;
+  uint32_t radius_x, radius_y;
+};
+
+class RegionGeometry_Polygon : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+
+  heif_region_type getRegionType() override { return heif_region_type_polygon; }
+
+  struct Point
   {
-  public:
-    Error parse(const std::vector<uint8_t>& data);
-
-    long unsigned int get_number_of_regions()
-    { return mRegions.size(); }
-
-    std::vector<std::shared_ptr<RegionGeometry>> get_regions()
-    { return mRegions; }
-
-    uint32_t item_id;
-    uint32_t reference_width;
-    uint32_t reference_height;
-
-  private:
-
-    std::vector<std::shared_ptr<RegionGeometry>> mRegions;
+    int32_t x, y;
   };
 
+  bool closed = true;
+  std::vector<Point> points;
+};
 
-  class RegionGeometry
-  {
-  public:
-    virtual ~RegionGeometry() = default;
-    virtual heif_region_type getRegionType() = 0;
+#if 0
+// TODO
 
-  protected:
-    uint32_t parse_unsigned(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
-    int32_t parse_signed(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
-  };
+class RegionGeometry_Mask : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override {return {};} // TODO
 
-  class RegionGeometry_Point : public RegionGeometry
-  {
-  public:
-    Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
+  int32_t x,y;
+  uint32_t width, height;
 
-    heif_region_type getRegionType() override
-    { return heif_region_type_point; }
+  // The mask may be decoded lazily on-the-fly.
+  std::shared_ptr<heif::HeifPixelImage> get_mask() const { return {}; } // TODO
 
-    int32_t x,y;
-  };
+private:
+  enum class EncodingMethod {
+    Inline, Referenced
+  } mEncodingMethod;
 
-  class RegionGeometry_Rectangle : public RegionGeometry
-  {
-  public:
-    Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset);
-
-    heif_region_type getRegionType() override
-    { return heif_region_type_rectangle; }
-
-    int32_t x,y;
-    uint32_t width,height;
-  };
-
-  class RegionGeometry_Ellipse : public RegionGeometry
-  {
-  public:
-    int32_t x,y;
-    uint32_t radius_x, radius_y;
-  };
-
-  class RegionGeometry_Polygon : public RegionGeometry
-  {
-  public:
-    struct Point
-    {
-      int32_t x, y;
-    };
-
-    bool closed = true;
-    std::vector<Point> points;
-  };
-
-  class RegionGeometry_Mask : public RegionGeometry
-  {
-  public:
-    int32_t x,y;
-    uint32_t width, height;
-
-    // The mask may be decoded lazily on-the-fly.
-    std::shared_ptr<heif::HeifPixelImage> get_mask() const { return {}; } // TODO
-
-  private:
-    enum class EncodingMethod {
-      Inline, Referenced
-    } mEncodingMethod;
-
-    std::shared_ptr<heif::HeifPixelImage> mCachedMask;
-  };
-}
+  std::shared_ptr<heif::HeifPixelImage> mCachedMask;
+};
+#endif
 
 #endif //LIBHEIF_REGION_H

@@ -21,8 +21,6 @@
 #include "region.h"
 #include "error.h"
 
-namespace heif
-{
 
 Error RegionItem::parse(const std::vector<uint8_t> &data)
 {
@@ -67,32 +65,48 @@ Error RegionItem::parse(const std::vector<uint8_t> &data)
     uint8_t geometry_type = data[dataOffset];
     dataOffset += 1;
 
+    std::shared_ptr<RegionGeometry> region;
+
     if (geometry_type == 0)
     {
-      std::shared_ptr<RegionGeometry_Point> point = std::make_shared<RegionGeometry_Point>();
-      Error error = point->parse(data, field_size, &dataOffset);
-      if (error)
-      {
-        return error;
-      }
-      mRegions.push_back(point);
+      region = std::make_shared<RegionGeometry_Point>();
     }
     else if (geometry_type == 1)
     {
-      std::shared_ptr<RegionGeometry_Rectangle> rectangle = std::make_shared<RegionGeometry_Rectangle>();
-      Error error = rectangle->parse(data, field_size, &dataOffset);
-      if (error)
-      {
-        return error;
-      }
-      mRegions.push_back(rectangle);
+      region = std::make_shared<RegionGeometry_Rectangle>();
+    }
+    else if (geometry_type == 2)
+    {
+      region = std::make_shared<RegionGeometry_Ellipse>();
+    }
+    else if (geometry_type == 3)
+    {
+      auto polygon = std::make_shared<RegionGeometry_Polygon>();
+      polygon->closed = true;
+      region = polygon;
+    }
+    else if (geometry_type == 6)
+    {
+      auto polygon = std::make_shared<RegionGeometry_Polygon>();
+      polygon->closed = false;
+      region = polygon;
     }
     else
     {
       //     // TODO: this isn't going to work - we can only exit here.
       //   std::cout << "ignoring unsupported region geometry type: "
       //             << (int)geometry_type << std::endl;
+
+      continue;
     }
+
+    Error error = region->parse(data, field_size, &dataOffset);
+    if (error)
+    {
+      return error;
+    }
+
+    mRegions.push_back(region);
   }
   return Error::Ok;
 }
@@ -169,4 +183,47 @@ Error RegionGeometry_Rectangle::parse(const std::vector<uint8_t> &data,
   return Error::Ok;
 }
 
-} // namespace heif
+
+Error RegionGeometry_Ellipse::parse(const std::vector<uint8_t>& data,
+                                    int field_size,
+                                    unsigned int* dataOffset)
+{
+  unsigned int bytesRequired = (field_size / 8) * 4;
+  if (data.size() - *dataOffset < bytesRequired) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for ellipse region");
+  }
+  x = parse_signed(data, field_size, dataOffset);
+  y = parse_signed(data, field_size, dataOffset);
+  radius_x = parse_unsigned(data, field_size, dataOffset);
+  radius_y = parse_unsigned(data, field_size, dataOffset);
+  return Error::Ok;
+}
+
+
+Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
+                                    int field_size,
+                                    unsigned int* dataOffset)
+{
+  unsigned int bytesRequired1 = (field_size / 8) * 1;
+  if (data.size() - *dataOffset < bytesRequired1) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for polygon");
+  }
+
+  uint32_t numPoints = parse_unsigned(data, field_size, dataOffset);
+  unsigned int bytesRequired2 = (field_size / 8) * numPoints * 2;
+  if (data.size() - *dataOffset < bytesRequired2) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for polygon");
+  }
+
+  for (uint32_t i = 0; i < numPoints; i++) {
+    Point p;
+    p.x = parse_signed(data, field_size, dataOffset);
+    p.y = parse_signed(data, field_size, dataOffset);
+    points.push_back(p);
+  }
+
+  return Error::Ok;
+}
