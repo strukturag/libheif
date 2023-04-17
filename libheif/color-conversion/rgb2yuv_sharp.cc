@@ -41,6 +41,8 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
 #ifdef HAVE_LIBSHARPYUV
   // this Op only implements the sharp_yuv algorithm
 
+  // Note: no input alpha channel required. It will be filled up with 0xFF.
+
   if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_sharp_yuv &&
       options.only_use_preferred_chroma_algorithm) {
     return {};
@@ -66,25 +68,11 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
 
   ColorState output_state;
 
-  // --- convert RGB24
-
-  if (input_state.chroma == heif_chroma_interleaved_RGB) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_420;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = 8;
-    states.push_back({output_state, SpeedCosts_Slow});
-  }
-
-  // --- convert RGB32
-
-  if (input_state.chroma == heif_chroma_interleaved_RGBA) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_420;
-    output_state.has_alpha = true;
-    output_state.bits_per_pixel = 8;
-    states.push_back({output_state, SpeedCosts_Slow});
-  }
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = heif_chroma_420;
+  output_state.has_alpha = target_state.has_alpha;
+  output_state.bits_per_pixel = 8;
+  states.push_back({output_state, SpeedCosts_Slow});
 
   return states;
 #else
@@ -114,7 +102,8 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
   int chroma_width = (width + chromaSubH - 1) / chromaSubH;
   int chroma_height = (height + chromaSubV - 1) / chromaSubV;
 
-  const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+  bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+  bool want_alpha = target_state.has_alpha;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, 8) ||
       !outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8) ||
@@ -122,7 +111,7 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
     return nullptr;
   }
 
-  if (has_alpha) {
+  if (want_alpha) {
     if (!outimg->add_plane(heif_channel_Alpha, width, height, 8)) {
       return nullptr;
     }
@@ -166,14 +155,12 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
     return nullptr;
   }
 
-  if (has_alpha) {
+  if (want_alpha) {
     int out_a_stride;
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        uint8_t a = in_p[y * in_stride + x * 4 + 3];
-
-        // alpha
+        uint8_t a = has_alpha ? in_p[y * in_stride + x * 4 + 3] : 0xff;
         out_a[y * out_a_stride + x] = a;
       }
     }
