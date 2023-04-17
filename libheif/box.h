@@ -1215,6 +1215,75 @@ namespace heif {
   };
 
 
+  class Box_lsel : public Box
+  {
+  public:
+    Box_lsel()
+    {
+      set_short_type(fourcc("lsel"));
+      set_is_full_box(false);
+    }
+
+    Box_lsel(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    uint16_t layer_id = 0;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_a1op : public Box
+  {
+  public:
+    Box_a1op()
+    {
+      set_short_type(fourcc("a1op"));
+      set_is_full_box(false);
+    }
+
+    Box_a1op(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    uint8_t op_index = 0;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_a1lx : public Box
+  {
+  public:
+    Box_a1lx()
+    {
+      set_short_type(fourcc("a1lx"));
+      set_is_full_box(false);
+    }
+
+    Box_a1lx(const BoxHeader& hdr) : Box(hdr)
+    {}
+
+    uint32_t layer_size[3]{};
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
   class Box_clli : public Box
   {
   public:
