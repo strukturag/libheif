@@ -77,7 +77,7 @@ struct heif_region
 {
   std::shared_ptr<heif::HeifContext> context; // TODO: do we need this ?
   heif_item_id parent_region_item_id; // TODO: do we need this ?
-  std::shared_ptr<heif::RegionGeometry> region;
+  std::shared_ptr<RegionGeometry> region;
 };
 
 #endif

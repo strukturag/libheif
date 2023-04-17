@@ -2934,7 +2934,7 @@ enum heif_region_type heif_region_get_type(const struct heif_region* region)
 
 struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y)
 {
-  const std::shared_ptr<heif::RegionGeometry_Point> point = std::dynamic_pointer_cast<heif::RegionGeometry_Point>(region->region);
+  const std::shared_ptr<RegionGeometry_Point> point = std::dynamic_pointer_cast<RegionGeometry_Point>(region->region);
   if (point) {
     *x = point->x;
     *y = point->y;
@@ -2949,7 +2949,7 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height)
 {
-  const std::shared_ptr<heif::RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<heif::RegionGeometry_Rectangle>(region->region);
+  const std::shared_ptr<RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<RegionGeometry_Rectangle>(region->region);
   if (rect) {
     *x = rect->x;
     *y = rect->y;
@@ -2959,4 +2959,58 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
   }
 
   return heif_error_invalid_parameter_value;
+}
+
+
+struct heif_error heif_region_get_ellipse(const struct heif_region* region,
+                                          int32_t* x, int32_t* y,
+                                          uint32_t* radius_x, uint32_t* radius_y)
+{
+  const std::shared_ptr<RegionGeometry_Ellipse> ellipse = std::dynamic_pointer_cast<RegionGeometry_Ellipse>(region->region);
+  if (ellipse) {
+    *x = ellipse->x;
+    *y = ellipse->y;
+    *radius_x = ellipse->radius_x;
+    *radius_y = ellipse->radius_y;
+    return heif_error_ok;
+  }
+
+  return heif_error_invalid_parameter_value;
+}
+
+
+int heif_region_get_polygon_num_points(const struct heif_region* region)
+{
+  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (polygon) {
+    return (int)polygon->points.size();
+  }
+  return 0;
+}
+
+
+void heif_region_get_polygon_points(const struct heif_region* region, int32_t* pts)
+{
+  if (pts==nullptr) {
+    return;
+  }
+
+  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (polygon) {
+    for (int i = 0; i < (int) polygon->points.size(); i++) {
+      pts[2*i+0] = polygon->points[i].x;
+      pts[2*i+1] = polygon->points[i].y;
+    }
+  }
+}
+
+
+uint8_t heif_region_get_polygon_closed(const struct heif_region* region)
+{
+  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (polygon) {
+    return polygon->closed;
+  }
+
+  return false;
 }

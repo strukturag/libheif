@@ -1821,7 +1821,7 @@ LIBHEIF_API
 void heif_region_release(const struct heif_region* region);
 
 LIBHEIF_API
-void heif_region_release_many(const struct heif_region*const* regions, int num);
+void heif_region_release_many(const struct heif_region* const* regions, int num);
 
 
 LIBHEIF_API
@@ -1834,6 +1834,21 @@ LIBHEIF_API
 struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height);
+
+LIBHEIF_API
+struct heif_error heif_region_get_ellipse(const struct heif_region* region,
+                                          int32_t* x, int32_t* y,
+                                          uint32_t* radius_x, uint32_t* radius_y);
+
+LIBHEIF_API
+int heif_region_get_polygon_num_points(const struct heif_region* region);
+
+LIBHEIF_API
+void heif_region_get_polygon_points(const struct heif_region* region,
+                                    int32_t* pts);
+
+LIBHEIF_API
+uint8_t heif_region_get_polygon_closed(const struct heif_region* region);
 
 #if 0
 struct heif_region_annotation;
