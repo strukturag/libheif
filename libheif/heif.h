@@ -1787,8 +1787,6 @@ enum heif_region_type
 
 struct heif_region;
 
-struct heif_region_annotation;
-
 // How many region items are attached to an image.
 LIBHEIF_API
 int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* image_handle);
@@ -1825,13 +1823,6 @@ void heif_region_release(const struct heif_region* region);
 LIBHEIF_API
 void heif_region_release_many(const struct heif_region*const* regions, int num);
 
-LIBHEIF_API
-int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
-
-LIBHEIF_API
-int heif_region_item_get_list_of_annotations(const struct heif_region_item* region_item,
-                                             struct heif_region_annotation* annotations, int max_count);
-
 
 LIBHEIF_API
 enum heif_region_type heif_region_get_type(const struct heif_region* region);
@@ -1844,12 +1835,21 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height);
 
+#if 0
+struct heif_region_annotation;
 
 enum heif_region_annotation_type
 {
   heif_region_annotation_type_user_description,
   heif_region_annotation_type_image
 };
+
+LIBHEIF_API
+int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
+
+LIBHEIF_API
+int heif_region_item_get_list_of_annotations(const struct heif_region_item* region_item,
+                                             struct heif_region_annotation* annotations, int max_count);
 
 LIBHEIF_API
 enum heif_region_annotation_type heif_region_annotation_get_type(const struct heif_region_annotation* annotation);
@@ -1868,7 +1868,7 @@ struct heif_region_annotation_user_description
 LIBHEIF_API
 struct heif_error heif_region_annotation_get_user_description(const struct heif_region_annotation* annotation,
                                                               struct heif_region_annotation_user_description* out);
-
+#endif
 
 #ifdef __cplusplus
 }
