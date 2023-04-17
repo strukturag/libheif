@@ -3540,6 +3540,8 @@ Error Box_udes::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
   return Error::Ok;
 }
+
+
 std::string Box_j2kH::dump(Indent& indent) const {
   std::string s = "TODO - box.cc - j2kH::dump()\n"; 
   return s;
@@ -3607,6 +3609,7 @@ Error Box_cdef::parse(BitstreamRange& range) {
 
   return range.get_error();
 }
+
 
 void Box_cdef::set_channels(heif_chroma chroma) {
 
