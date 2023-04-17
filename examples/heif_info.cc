@@ -197,8 +197,6 @@ int main(int argc, char** argv)
         heif_free_list_of_compatible_brands(brands);
       }
     }
-
-    std::cout << "\n";
   }
 
   // ==============================================================================
@@ -232,6 +230,8 @@ int main(int argc, char** argv)
   heif_context_get_list_of_top_level_image_IDs(ctx.get(), IDs.data(), numImages);
 
   for (int i = 0; i < numImages; i++) {
+    std::cout << "\n";
+
     struct heif_image_handle* handle;
     struct heif_error err = heif_context_get_image_handle(ctx.get(), IDs[i], &handle);
     if (err.code) {
@@ -378,6 +378,50 @@ int main(int argc, char** argv)
       printf("  none\n");
     }
 
+    // --- transforms
+
+#define MAX_PROPERTIES 50
+    heif_property_id transforms[MAX_PROPERTIES];
+    int nTransforms = heif_item_get_transformation_properties(ctx.get(),
+                                                              IDs[i],
+                                                              transforms,
+                                                              MAX_PROPERTIES);
+    printf("transformations:\n");
+    int image_width = heif_image_handle_get_ispe_width(handle);
+    int image_height = heif_image_handle_get_ispe_height(handle);
+
+    if (nTransforms) {
+      for (int k = 0; k < nTransforms; k++) {
+        switch (heif_item_get_property_type(ctx.get(), IDs[i], transforms[k])) {
+          case heif_item_property_type_transform_mirror:
+            printf("  mirror: %s\n", heif_item_get_property_transform_mirror(ctx.get(), IDs[i], transforms[k]) == heif_transform_mirror_direction_horizontal ? "horizontal" : "vertical");
+            break;
+          case heif_item_property_type_transform_rotation: {
+            int angle = heif_item_get_property_transform_rotation_ccw(ctx.get(), IDs[i], transforms[k]);
+            printf("  angle (ccw): %d\n", angle);
+            if (angle==90 || angle==270) {
+              std::swap(image_width, image_height);
+            }
+            break;
+          }
+          case heif_item_property_type_transform_crop: {
+            int left,top,right,bottom;
+            heif_item_get_property_transform_crop_borders(ctx.get(), IDs[i], transforms[k], image_width, image_height,
+                                                          &left, &top, &right, &bottom);
+            printf("  crop: left=%d top=%d right=%d bottom=%d\n", left,top,right,bottom);
+            break;
+          }
+          default:
+            assert(false);
+        }
+      }
+    }
+    else {
+      printf("  none\n");
+    }
+
+    // --- regions
+
     int numRegionItems = heif_image_handle_get_number_of_region_items(handle);
     printf("region annotations:\n");
     if (numRegionItems > 0) {
@@ -419,7 +463,6 @@ int main(int argc, char** argv)
         heif_region_release_many(regions.data(), numRegions);
         heif_region_item_release(region_item);
 
-#define MAX_PROPERTIES 50
         heif_property_id properties[MAX_PROPERTIES];
         int nDescr = heif_item_get_properties_of_type(ctx.get(),
                                                       region_item_id,
@@ -429,10 +472,10 @@ int main(int argc, char** argv)
 
         for (int k = 0; k < nDescr; k++) {
           heif_property_user_description* udes;
-          err = heif_item_get_user_description(ctx.get(),
-                                               region_item_id,
-                                               properties[k],
-                                               &udes);
+          err = heif_item_get_property_user_description(ctx.get(),
+                                                        region_item_id,
+                                                        properties[k],
+                                                        &udes);
           if (err.code == 0) {
             printf("      user description:\n");
             printf("        lang: %s\n", udes->lang);
@@ -462,7 +505,7 @@ int main(int argc, char** argv)
     if (count > 0) {
       for (int p = 0; p < count; p++) {
         struct heif_property_user_description* udes;
-        err = heif_item_get_user_description(ctx.get(), IDs[i], propertyIds[p], &udes);
+        err = heif_item_get_property_user_description(ctx.get(), IDs[i], propertyIds[p], &udes);
         if (err.code) {
           std::cerr << "Error reading udes " << IDs[i] << "/" << propertyIds[p] << "\n";
         }

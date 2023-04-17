@@ -803,26 +803,26 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
   int rotation_ccw = 0;
-  Box_imir::MirrorDirection mirror;
+  heif_transform_mirror_direction mirror;
   bool has_mirror = false;
 
   switch (orientation) {
     case heif_orientation_normal:
       break;
     case heif_orientation_flip_horizontally:
-      mirror = Box_imir::MirrorDirection::Horizontal;
+      mirror = heif_transform_mirror_direction_horizontal;
       has_mirror = true;
       break;
     case heif_orientation_rotate_180:
       rotation_ccw = 180;
       break;
     case heif_orientation_flip_vertically:
-      mirror = Box_imir::MirrorDirection::Vertical;
+      mirror = heif_transform_mirror_direction_horizontal;
       has_mirror = true;
       break;
     case heif_orientation_rotate_90_cw_then_flip_horizontally:
       rotation_ccw = 270;
-      mirror = Box_imir::MirrorDirection::Horizontal;
+      mirror = heif_transform_mirror_direction_horizontal;
       has_mirror = true;
       break;
     case heif_orientation_rotate_90_cw:
@@ -830,7 +830,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
       break;
     case heif_orientation_rotate_90_cw_then_flip_vertically:
       rotation_ccw = 270;
-      mirror = Box_imir::MirrorDirection::Vertical;
+      mirror = heif_transform_mirror_direction_horizontal;
       has_mirror = true;
       break;
     case heif_orientation_rotate_270_cw:

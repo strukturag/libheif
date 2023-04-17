@@ -565,7 +565,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
 }
 
 
-Error HeifPixelImage::mirror_inplace(bool horizontal)
+Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
 {
   for (auto& plane_pair : m_planes) {
     ImagePlane& plane = plane_pair.second;
@@ -583,7 +583,7 @@ Error HeifPixelImage::mirror_inplace(bool horizontal)
     int stride = plane.stride;
     uint8_t* data = plane.mem;
 
-    if (horizontal) {
+    if (direction == heif_transform_mirror_direction_horizontal) {
       for (int y = 0; y < h; y++) {
         for (int x = 0; x < w / 2; x++)
           std::swap(data[y * stride + x], data[y * stride + w - 1 - x]);

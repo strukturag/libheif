@@ -2468,10 +2468,10 @@ Error Box_imir::parse(BitstreamRange& range)
 
   uint8_t axis = range.read8();
   if (axis & 1) {
-    m_axis = MirrorDirection::Horizontal;
+    m_axis = heif_transform_mirror_direction_horizontal;
   }
   else {
-    m_axis = MirrorDirection::Vertical;
+    m_axis = heif_transform_mirror_direction_vertical;
   }
 
   return range.get_error();
@@ -2482,7 +2482,7 @@ Error Box_imir::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write8(m_axis == MirrorDirection::Horizontal ? 1 : 0);
+  writer.write8(m_axis);
 
   prepend_header(writer, box_start);
 
@@ -2497,10 +2497,10 @@ std::string Box_imir::dump(Indent& indent) const
 
   sstr << indent << "mirror direction: ";
   switch (m_axis) {
-    case MirrorDirection::Vertical:
+    case heif_transform_mirror_direction_vertical:
       sstr << "vertical\n";
       break;
-    case MirrorDirection::Horizontal:
+    case heif_transform_mirror_direction_horizontal:
       sstr << "horizontal\n";
       break;
   }
@@ -3540,3 +3540,4 @@ Error Box_udes::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
   return Error::Ok;
 }
+
