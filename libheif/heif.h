@@ -1785,11 +1785,7 @@ enum heif_region_type
   heif_region_type_mask
 };
 
-struct heif_region
-{
-  unsigned long int idx;
-  enum heif_region_type region_type;
-};
+struct heif_region;
 
 struct heif_region_annotation;
 
@@ -1817,10 +1813,17 @@ void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* wid
 LIBHEIF_API
 int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item);
 
+// You will have to release all returned heif_region objects with heif_region_release() or heif_region_release_many().
 LIBHEIF_API
 int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
-                                         struct heif_region* regions,
+                                         struct heif_region** regions,
                                          int max_count);
+
+LIBHEIF_API
+void heif_region_release(const struct heif_region* region);
+
+LIBHEIF_API
+void heif_region_release_many(const struct heif_region*const* regions, int num);
 
 LIBHEIF_API
 int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
@@ -1834,12 +1837,10 @@ LIBHEIF_API
 enum heif_region_type heif_region_get_type(const struct heif_region* region);
 
 LIBHEIF_API
-struct heif_error heif_region_get_point(const struct heif_region_item* region_item,
-                                        const struct heif_region* region, int32_t* x, int32_t* y);
+struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y);
 
 LIBHEIF_API
-struct heif_error heif_region_get_rectangle(const struct heif_region_item* region_item,
-                                            const struct heif_region* region,
+struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height);
 

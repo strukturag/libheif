@@ -2890,31 +2890,52 @@ int heif_region_item_get_number_of_regions(const struct heif_region_item* region
 }
 
 int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
-                                         struct heif_region* regions,
+                                         struct heif_region** out_regions,
                                          int max_count)
 {
   auto item = region_item->context->get_region_item(region_item->region_item_id);
-  if (item) {
-    int i;
-    for (i = 0; ((i < max_count) && (i < (int)item->get_regions().size())); i++) {
-      const std::shared_ptr<heif::RegionGeometry> region = item->get_regions()[i];
-      regions[i].idx = i;
-      regions[i].region_type = region->getRegionType();
-    }
-    return i;
+  if (!item) {
+    return 0;
+  }
+
+  auto regions = item->get_regions();
+  int num = std::min(max_count, (int) regions.size());
+
+  for (int i = 0; i < num; i++) {
+    auto region = new heif_region();
+    region->context = region_item->context;
+    region->parent_region_item_id = region_item->region_item_id;
+    region->region = regions[i];
+
+    out_regions[i] = region;
   }
 
   return 0;
 }
 
-struct heif_error heif_region_get_point(const struct heif_region_item* region_item,
-                                        const struct heif_region* region, int32_t* x, int32_t* y)
+void heif_region_release(const struct heif_region* region)
 {
-  auto item = region_item->context->get_region_item(region_item->region_item_id);
-  if (item) {
-    const std::shared_ptr<heif::RegionGeometry> regionGeometry = item->get_regions()[region->idx];
-    // TODO: sanity checks.
-    const std::shared_ptr<heif::RegionGeometry_Point> point = std::dynamic_pointer_cast<heif::RegionGeometry_Point>(regionGeometry);
+  delete region;
+}
+
+void heif_region_release_many(const struct heif_region* const* regions, int num)
+{
+  for (int i = 0; i < num; i++) {
+    delete regions[i];
+  }
+}
+
+
+enum heif_region_type heif_region_get_type(const struct heif_region* region)
+{
+  return region->region->getRegionType();
+}
+
+
+struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y)
+{
+  const std::shared_ptr<heif::RegionGeometry_Point> point = std::dynamic_pointer_cast<heif::RegionGeometry_Point>(region->region);
+  if (point) {
     *x = point->x;
     *y = point->y;
     return heif_error_ok;
@@ -2923,16 +2944,13 @@ struct heif_error heif_region_get_point(const struct heif_region_item* region_it
   return heif_error_invalid_parameter_value;
 }
 
-struct heif_error heif_region_get_rectangle(const struct heif_region_item* region_item,
-                                            const struct heif_region* region,
+
+struct heif_error heif_region_get_rectangle(const struct heif_region* region,
                                             int32_t* x, int32_t* y,
                                             uint32_t* width, uint32_t* height)
 {
-  auto item = region_item->context->get_region_item(region_item->region_item_id);
-  if (item) {
-    const std::shared_ptr<heif::RegionGeometry> regionGeometry = item->get_regions()[region->idx];
-    // TODO: sanity checks.
-    const std::shared_ptr<heif::RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<heif::RegionGeometry_Rectangle>(regionGeometry);
+  const std::shared_ptr<heif::RegionGeometry_Rectangle> rect = std::dynamic_pointer_cast<heif::RegionGeometry_Rectangle>(region->region);
+  if (rect) {
     *x = rect->x;
     *y = rect->y;
     *width = rect->width;

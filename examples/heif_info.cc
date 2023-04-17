@@ -393,29 +393,32 @@ int main(int argc, char** argv)
                reference_width,
                reference_height,
                numRegions);
-        std::vector<heif_region> regions(numRegions);
+
+        std::vector<heif_region*> regions(numRegions);
         numRegions = heif_region_item_get_list_of_regions(region_item, regions.data(), numRegions);
         for (int j = 0; j < numRegions; j++)
         {
           printf("    region %d\n", j);
-          if (regions[j].region_type == heif_region_type_point)
+          heif_region_type type = heif_region_get_type(regions[j]);
+          if (type == heif_region_type_point)
           {
             int32_t x;
             int32_t y;
-            heif_region_get_point(region_item, &(regions[j]), &x, &y);
+            heif_region_get_point(regions[j], &x, &y);
             printf("      point [x=%i, y=%i]\n", x, y);
           }
-          else if (regions[j].region_type == heif_region_type_rectangle)
+          else if (type == heif_region_type_rectangle)
           {
             int32_t x;
             int32_t y;
             uint32_t w;
             uint32_t h;
-            heif_region_get_rectangle(region_item, &(regions[j]), &x, &y, &w, &h);
+            heif_region_get_rectangle(regions[j], &x, &y, &w, &h);
             printf("      rectangle [x=%i, y=%i, w=%u, h=%u]\n", x, y, w, h);
           }
         }
 
+        heif_region_release_many(regions.data(), numRegions);
         heif_region_item_release(region_item);
       }
     }
