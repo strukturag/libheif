@@ -19,13 +19,16 @@
  */
 
 #include "heif_file.h"
+#include "libheif/box.h"
 
+#include <cstdint>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 
@@ -37,6 +40,10 @@
 #endif
 
 #include "metadata_compression.h"
+
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+#include "uncompressed_image.h"
+#endif
 
 using namespace heif;
 
@@ -311,6 +318,12 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   m_idat_box = std::dynamic_pointer_cast<Box_idat>(m_meta_box->get_child_box(fourcc("idat")));
 
   m_iref_box = std::dynamic_pointer_cast<Box_iref>(m_meta_box->get_child_box(fourcc("iref")));
+  if (m_iref_box) {
+    Error error = check_for_ref_cycle(get_primary_image_ID(), m_iref_box);
+    if (error) {
+      return error;
+    }
+  }
 
   m_iinf_box = std::dynamic_pointer_cast<Box_iinf>(m_meta_box->get_child_box(fourcc("iinf")));
   if (!m_iinf_box) {
@@ -334,6 +347,37 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     m_infe_boxes.insert(std::make_pair(infe_box->get_item_ID(), infe_box));
   }
 
+  return Error::Ok;
+}
+
+
+Error HeifFile::check_for_ref_cycle(heif_item_id ID,
+                                    std::shared_ptr<Box_iref>& iref_box) const
+{
+  std::unordered_set<heif_item_id> parent_items;
+  return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
+}
+
+
+Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
+                                    std::shared_ptr<Box_iref>& iref_box,
+                                    std::unordered_set<heif_item_id>& parent_items) const {
+  if (parent_items.find(ID) != parent_items.end()) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Item_reference_cycle,
+                 "Image reference cycle");
+  }
+  parent_items.insert(ID);
+
+  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
+  for (heif_item_id reference_idx : image_references) {
+    Error error = check_for_ref_cycle_recursion(reference_idx, iref_box, parent_items);
+    if (error) {
+      return error;
+    }
+  }
+
+  parent_items.erase(ID);
   return Error::Ok;
 }
 
@@ -485,6 +529,15 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
       }
     }
   }
+
+#ifdef ENABLE_UNCOMPRESSED_DECODER
+  // Uncompressed
+
+  if (image_type == "unci") {
+    int bpp = UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(*this, imageID);
+    return bpp;
+  }
+#endif
 
   return -1;
 }

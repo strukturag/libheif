@@ -69,3 +69,10 @@ plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
+
+
+if (ENABLE_UNCOMPRESSED_ENCODER)
+    target_sources(heif PRIVATE
+            heif_encoder_uncompressed.h
+            heif_encoder_uncompressed.cc)
+endif()

@@ -28,6 +28,10 @@
 
 #include "heif_plugin_registry.h"
 
+#ifdef ENABLE_UNCOMPRESSED_ENCODER
+#include "libheif/plugins/heif_encoder_uncompressed.h"
+#endif
+
 #if HAVE_LIBDE265
 #include "libheif/plugins/heif_decoder_libde265.h"
 #endif
@@ -42,6 +46,7 @@
 
 #if HAVE_AOM_DECODER
 #include "libheif/plugins/heif_decoder_aom.h"
+
 #endif
 
 #if HAVE_RAV1E
@@ -105,6 +110,10 @@ void heif::register_default_plugins()
 
 #if HAVE_SvtEnc
   heif::register_encoder(get_encoder_plugin_svt());
+#endif
+
+#if ENABLE_UNCOMPRESSED_ENCODER
+  heif::register_encoder(get_encoder_plugin_uncompressed());
 #endif
 }
 

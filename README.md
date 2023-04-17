@@ -123,8 +123,6 @@ then call `./configure` and `make`.
 
 Make sure that you compile and install [libde265](https://github.com/strukturag/libde265)
 first, so that the configuration script will find this.
-Preferably, download the `frame-parallel` branch of libde265, as this uses a
-more recent API than the version in the `master` branch.
 Also install x265 and its development files if you want to use HEIF encoding.
 
 ### macOS

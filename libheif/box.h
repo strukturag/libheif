@@ -51,6 +51,8 @@ namespace heif {
 
 #define fourcc(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
 
+  std::string to_fourcc(uint32_t code);
+
   /*
     constexpr uint32_t fourcc(const char* string)
     {
@@ -1392,78 +1394,108 @@ namespace heif {
     std::shared_ptr<const color_profile> m_color_profile;
   };
 
-  class Box_cmpd : public Box
+  /**
+   * User Description property.
+   *
+   * Permits the association of items or entity groups with a user-defined name, description and tags;
+   * there may be multiple udes properties, each with a different language code.
+   *
+   * See ISO/IEC 23008-12:2022(E) Section 6.5.20.
+   */
+  class Box_udes : public Box
   {
   public:
-    Box_cmpd()
+    Box_udes()
     {
-      set_short_type(fourcc("cmpd"));
-      set_is_full_box(false);
+      set_short_type(fourcc("udes"));
+      set_is_full_box(true);
     }
 
-    Box_cmpd(const BoxHeader& hdr) : Box(hdr)
+    Box_udes(const BoxHeader& hdr) : Box(hdr)
     {}
 
     std::string dump(Indent&) const override;
 
     Error write(StreamWriter& writer) const override;
 
+    /**
+     * Language tag.
+     *
+     * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+     * Examples: "en-AU", "de-DE", or "zh-CN“.
+     * When is empty, the language is unknown or not undefined.
+     */
+    std::string get_lang() const
+    { return m_lang; }
+
+    /**
+     * Set the language tag.
+     *
+     * An RFC 5646 compliant language identifier for the language of the text contained in the other properties.
+     * Examples: "en-AU", "de-DE", or "zh-CN“.
+     */
+    void set_lang(const std::string lang)
+    { m_lang = lang; }
+
+    /**
+     * Name.
+     *
+     * Human readable name for the item or group being described.
+     * May be empty, indicating no name is applicable.
+     */
+     std::string get_name() const
+     { return m_name; }
+
+     /**
+     * Set the name.
+     *
+     * Human readable name for the item or group being described.
+     */
+     void set_name(const std::string name)
+     { m_name = name; }
+
+     /**
+      * Description.
+      *
+      * Human readable description for the item or group.
+      * May be empty, indicating no description has been provided.
+      */
+    std::string get_description() const
+    { return m_description; }
+
+    /**
+     * Set the description.
+     *
+     * Human readable description for the item or group.
+     */
+    void set_description(const std::string description)
+    { m_description = description; }
+
+    /**
+     * Tags.
+     *
+     * Comma separated user defined tags applicable to the item or group.
+     * May be empty, indicating no tags have been assigned.
+     */
+    std::string get_tags() const
+    { return m_tags; }
+
+    /**
+     * Set the tags.
+     *
+     * Comma separated user defined tags applicable to the item or group.
+     */
+    void set_tags(const std::string tags)
+    { m_tags = tags; }
+
   protected:
     Error parse(BitstreamRange& range) override;
 
-    struct Component
-    {
-      uint16_t m_component_type;
-      std::string m_component_type_uri;
-    };
-
-    std::vector<Component> m_components;
-  };
-
-  class Box_uncC : public Box
-  {
-  public:
-    Box_uncC()
-    {
-      set_short_type(fourcc("uncC"));
-      set_is_full_box(false);
-    }
-
-    Box_uncC(const BoxHeader& hdr) : Box(hdr)
-    {}
-
-    std::string dump(Indent&) const override;
-
-    bool get_headers(std::vector<uint8_t>* dest) const;
-
-    Error write(StreamWriter& writer) const override;
-
-  protected:
-    Error parse(BitstreamRange& range) override;
-
-    uint32_t m_profile;
-
-    struct Component
-    {
-      uint16_t m_component_index;
-      uint8_t m_component_bit_depth_minus_one;
-      uint8_t m_component_format;
-      uint8_t m_component_align_size;
-    };
-    std::vector<Component> m_components;
-    uint8_t m_sampling_type;
-    uint8_t m_interleave_type;
-    uint8_t m_block_size;
-    bool m_components_little_endian;
-    bool m_block_pad_lsb;
-    bool m_block_little_endian;
-    bool m_block_reversed;
-    bool m_pad_unknown;
-    uint8_t m_pixel_size;
-    uint32_t m_row_align_size;
-    uint32_t m_tile_align_size;
-    uint32_t m_num_tile_cols_minus_one;
-    uint32_t m_num_tile_rows_minus_one;
+  private:
+    std::string m_lang;
+    std::string m_name;
+    std::string m_description;
+    std::string m_tags;
   };
 }
 

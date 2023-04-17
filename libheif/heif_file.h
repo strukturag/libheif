@@ -32,6 +32,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <unordered_set>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <mutex>
@@ -97,7 +98,13 @@ namespace heif {
     std::shared_ptr<Box_ipco> get_ipco_box()
     { return m_ipco_box; }
 
+    std::shared_ptr<Box_ipco> get_ipco_box() const
+    { return m_ipco_box; }
+
     std::shared_ptr<Box_ipma> get_ipma_box()
+    { return m_ipma_box; }
+
+    std::shared_ptr<Box_ipma> get_ipma_box() const
     { return m_ipma_box; }
 
     Error get_properties(heif_item_id imageID,
@@ -192,6 +199,13 @@ namespace heif {
 
 
     Error parse_heif_file(BitstreamRange& bitstream);
+
+    Error check_for_ref_cycle(heif_item_id ID,
+                              std::shared_ptr<Box_iref>& iref_box) const;
+
+    Error check_for_ref_cycle_recursion(heif_item_id ID,
+                              std::shared_ptr<Box_iref>& iref_box,
+                              std::unordered_set<heif_item_id>& parent_items) const;
 
     std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
   };
