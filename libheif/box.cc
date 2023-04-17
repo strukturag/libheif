@@ -517,6 +517,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_mdcv>(hdr);
       break;
 
+    case fourcc("udes"):
+      box = std::make_shared<Box_udes>(hdr);
+      break;
+
 #ifdef ENABLE_UNCOMPRESSED_DECODER
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>(hdr);
@@ -3505,7 +3509,37 @@ std::string Box_url::dump(Indent& indent) const
   return sstr.str();
 }
 
+Error Box_udes::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+  m_lang = range.read_string();
+  m_name = range.read_string();
+  m_description = range.read_string();
+  m_tags = range.read_string();
+  return range.get_error();
+}
 
+std::string Box_udes::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "lang: " << m_lang << "\n";
+  sstr << indent << "name: " << m_name << "\n";
+  sstr << indent << "description: " << m_description << "\n";
+  sstr << indent << "tags: " << m_lang << "\n";
+  return sstr.str();
+}
+
+Error Box_udes::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write(m_lang);
+  writer.write(m_name);
+  writer.write(m_description);
+  writer.write(m_tags);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
 std::string Box_j2kH::dump(Indent& indent) const {
   std::string s = "TODO - box.cc - j2kH::dump()\n"; 
   return s;

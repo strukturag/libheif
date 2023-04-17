@@ -156,6 +156,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unknown NCLX transfer characteristics";
     case heif_suberror_Unknown_NCLX_matrix_coefficients:
       return "Unknown NCLX matrix coefficients";
+    case heif_suberror_Invalid_region_data:
+      return "Invalid region item data";
 
 
       // --- Memory_allocation_error ---
@@ -179,6 +181,10 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Unsupported parameter";
     case heif_suberror_Invalid_parameter_value:
       return "Invalid parameter value";
+    case heif_suberror_Invalid_property:
+      return "Invalid property";
+    case heif_suberror_Item_reference_cycle:
+      return "Image reference cycle";
 
       // --- Unsupported_feature ---
 

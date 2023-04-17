@@ -36,6 +36,8 @@
 
 #include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
 
+#include "region.h"
+
 namespace heif {
   class HeifContext;
 }
@@ -284,6 +286,10 @@ namespace heif {
         }
       };
 
+      void add_region_item_id(heif_item_id id) { m_region_item_ids.push_back(id); }
+
+      const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
+
     private:
       HeifContext* m_heif_context;
 
@@ -321,7 +327,11 @@ namespace heif {
       std::shared_ptr<const color_profile_raw> m_color_profile_icc;
 
       bool m_miaf_compatible = true;
+
+      std::vector<heif_item_id> m_region_item_ids;
     };
+
+    std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }
 
     std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
@@ -425,6 +435,24 @@ namespace heif {
                                const char* item_type, const char* content_type,
                                heif_metadata_compression compression);
 
+
+    // --- region items
+
+    void add_region_item(std::shared_ptr<RegionItem> region_item)
+    {
+      m_region_items.push_back(std::move(region_item));
+    }
+
+    std::shared_ptr<RegionItem> get_region_item(heif_item_id id) const
+    {
+      for (auto& item : m_region_items) {
+        if (item->item_id == id)
+          return item;
+      }
+
+      return nullptr;
+    }
+
     void write(StreamWriter& writer);
 
   private:
@@ -446,6 +474,8 @@ namespace heif {
 
     uint32_t m_maximum_image_width_limit;
     uint32_t m_maximum_image_height_limit;
+
+    std::vector<std::shared_ptr<RegionItem>> m_region_items;
 
     Error interpret_heif_file();
 

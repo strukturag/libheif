@@ -88,7 +88,9 @@ libheif_la_SOURCES = \
   nclx.cc \
   nclx.h \
   common_utils.cc \
-  common_utils.h
+  common_utils.h \
+  region.h \
+  region.cc
 
 if HAVE_AOM_DECODER
 libheif_la_SOURCES += \
