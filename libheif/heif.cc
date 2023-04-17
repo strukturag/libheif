@@ -609,6 +609,12 @@ int heif_image_handle_is_primary_image(const struct heif_image_handle* handle)
 }
 
 
+heif_item_id heif_image_handle_get_item_id(const struct heif_image_handle* handle)
+{
+  return handle->image->get_id();
+}
+
+
 int heif_image_handle_get_number_of_thumbnails(const struct heif_image_handle* handle)
 {
   return (int) handle->image->get_thumbnails().size();
@@ -1897,6 +1903,32 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
   udes_c->tags = create_c_string_copy(udes->get_tags());
 
   *out = udes_c;
+
+  return error_Ok;
+}
+
+
+LIBHEIF_API
+struct heif_error heif_item_set_property_user_description(const struct heif_context* context,
+                                                          heif_item_id itemId,
+                                                          const struct heif_property_user_description* description,
+                                                          heif_property_id* out_propertyId)
+{
+  if (!context || !description) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  auto udes = std::make_shared<Box_udes>();
+  udes->set_lang(description->lang);
+  udes->set_name(description->name);
+  udes->set_description(description->description);
+  udes->set_tags(description->tags);
+
+  heif_property_id id = context->context->add_property(itemId, udes);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
 
   return error_Ok;
 }

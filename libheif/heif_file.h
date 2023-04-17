@@ -149,6 +149,8 @@ namespace heif {
 
     void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2=0, uint8_t c3=0);
 
+    heif_property_id add_property(heif_item_id id, std::shared_ptr<Box> property);
+
     void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 
     void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);

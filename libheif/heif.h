@@ -619,6 +619,9 @@ void heif_image_handle_release(const struct heif_image_handle*);
 LIBHEIF_API
 int heif_image_handle_is_primary_image(const struct heif_image_handle* handle);
 
+LIBHEIF_API
+heif_item_id heif_image_handle_get_item_id(const struct heif_image_handle* handle);
+
 // Get the resolution of an image.
 LIBHEIF_API
 int heif_image_handle_get_width(const struct heif_image_handle* handle);
@@ -983,6 +986,12 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
                                                           heif_item_id itemId,
                                                           heif_property_id propertyId,
                                                           struct heif_property_user_description** out);
+
+LIBHEIF_API
+struct heif_error heif_item_set_property_user_description(const struct heif_context* context,
+                                                          heif_item_id itemId,
+                                                          const struct heif_property_user_description* description,
+                                                          heif_property_id* out_propertyId);
 
 LIBHEIF_API
 int heif_item_get_properties_of_type(const struct heif_context* context,

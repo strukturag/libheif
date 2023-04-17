@@ -429,6 +429,7 @@ namespace heif {
                                const char* item_type, const char* content_type,
                                heif_metadata_compression compression);
 
+    heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property);
 
     // --- region items
 

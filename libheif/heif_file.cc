@@ -800,6 +800,16 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 }
 
 
+heif_property_id HeifFile::add_property(heif_item_id id, std::shared_ptr<Box> property)
+{
+  int index = m_ipco_box->append_child_box(property);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+  return index + 1;
+}
+
+
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
   int rotation_ccw = 0;

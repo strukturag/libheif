@@ -2841,3 +2841,10 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
   return Error::Ok;
 }
 
+
+heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property)
+{
+  heif_property_id id = m_heif_file->add_property(targetItem, property);
+
+  return id;
+}
