@@ -19,6 +19,8 @@
  */
 
 #include <cassert>
+#include <memory>
+#include <vector>
 #include "rgb2yuv_sharp.h"
 
 #ifdef HAVE_LIBSHARPYUV
@@ -28,12 +30,12 @@
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
 
-#endif
-
 static inline bool PlatformIsBigEndian() {
   int i = 1;
   return !*((char*)&i);
 }
+
+#endif
 
 std::vector<ColorStateWithCost>
 Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
