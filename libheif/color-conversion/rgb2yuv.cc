@@ -20,6 +20,8 @@
 
 #include <cstring>
 #include <cassert>
+#include <memory>
+#include <vector>
 #include "rgb2yuv.h"
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
@@ -736,7 +738,9 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   }
 
   if (want_alpha) {
-    assert(bytes_per_pixel == 4);
+    if (has_alpha) {
+      assert(bytes_per_pixel == 4);
+    }
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
