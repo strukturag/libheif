@@ -60,6 +60,11 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
   uint8_t region_count = data[dataOffset];
   dataOffset += 1;
   for (int i = 0; i < region_count; i++) {
+    if (data.size() <= dataOffset) {
+      return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                   "Region data incomplete");
+    }
+
     uint8_t geometry_type = data[dataOffset];
     dataOffset += 1;
 
