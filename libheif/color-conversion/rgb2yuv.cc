@@ -20,6 +20,8 @@
 
 #include <cstring>
 #include <cassert>
+#include <memory>
+#include <vector>
 #include "rgb2yuv.h"
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
@@ -488,29 +490,12 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
 
   ColorState output_state;
 
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = target_state.chroma;
+  output_state.has_alpha = target_state.has_alpha;
+  output_state.bits_per_pixel = 8;
 
-  // --- convert RGB24
-
-  if (input_state.chroma == heif_chroma_interleaved_RGB) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = target_state.chroma;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = 8;
-
-    states.push_back({output_state, SpeedCosts_Unoptimized});
-  }
-
-
-  // --- convert RGB32
-
-  if (input_state.chroma == heif_chroma_interleaved_RGBA) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = target_state.chroma;
-    output_state.has_alpha = true;
-    output_state.bits_per_pixel = 8;
-
-    states.push_back({output_state, SpeedCosts_Unoptimized});
-  }
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -555,6 +540,7 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   int chroma_height = (height + chromaSubV - 1) / chromaSubV;
 
   const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+  const bool want_alpha = target_state.has_alpha;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, 8) ||
       !outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8) ||
@@ -562,7 +548,7 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
     return nullptr;
   }
 
-  if (has_alpha) {
+  if (want_alpha) {
     if (!outimg->add_plane(heif_channel_Alpha, width, height, 8)) {
       return nullptr;
     }
@@ -580,7 +566,7 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
 
-  if (has_alpha) {
+  if (want_alpha) {
     out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
   else {
@@ -751,12 +737,14 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
     }
   }
 
-  if (has_alpha) {
-    assert(bytes_per_pixel == 4);
+  if (want_alpha) {
+    if (has_alpha) {
+      assert(bytes_per_pixel == 4);
+    }
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        uint8_t a = in_p[y * in_stride + x * 4 + 3];
+        uint8_t a = has_alpha ? in_p[y * in_stride + x * 4 + 3] : 0xff;
 
         // alpha
         out_a[y * out_a_stride + x] = a;
@@ -797,28 +785,12 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
 
   ColorState output_state;
 
-  // --- convert RGB24
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = heif_chroma_444;
+  output_state.has_alpha = target_state.has_alpha;
+  output_state.bits_per_pixel = 8;
 
-  if (input_state.chroma == heif_chroma_interleaved_RGB) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_444;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = 8;
-
-    states.push_back({output_state, SpeedCosts_Unoptimized});
-  }
-
-
-  // --- convert RGB32
-
-  if (input_state.chroma == heif_chroma_interleaved_RGBA) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_444;
-    output_state.has_alpha = true;
-    output_state.bits_per_pixel = 8;
-
-    states.push_back({output_state, SpeedCosts_Unoptimized});
-  }
+  states.push_back({output_state, SpeedCosts_Unoptimized});
 
   return states;
 }
@@ -837,6 +809,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
 
   const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+  const bool want_alpha = target_state.has_alpha;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, 8) ||
       !outimg->add_plane(heif_channel_Cb, width, height, 8) ||
@@ -844,7 +817,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
     return nullptr;
   }
 
-  if (has_alpha) {
+  if (want_alpha) {
     if (!outimg->add_plane(heif_channel_Alpha, width, height, 8)) {
       return nullptr;
     }
@@ -862,41 +835,28 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
   out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
 
-  if (has_alpha) {
+  if (want_alpha) {
     out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
 
 
   assert(target_state.nclx_profile);
   assert(target_state.nclx_profile->get_matrix_coefficients() == 0);
+  int bytes_per_pixel = (has_alpha ? 4 : 3);
 
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      uint8_t r = in_p[y * in_stride + x * bytes_per_pixel + 0];
+      uint8_t g = in_p[y * in_stride + x * bytes_per_pixel + 1];
+      uint8_t b = in_p[y * in_stride + x * bytes_per_pixel + 2];
 
-  if (!has_alpha) {
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        uint8_t r = in_p[y * in_stride + x * 3 + 0];
-        uint8_t g = in_p[y * in_stride + x * 3 + 1];
-        uint8_t b = in_p[y * in_stride + x * 3 + 2];
+      out_y[y * out_y_stride + x] = g;
+      out_cb[y * out_cb_stride + x] = b;
+      out_cr[y * out_cr_stride + x] = r;
 
-        out_y[y * out_y_stride + x] = g;
-        out_cb[y * out_cb_stride + x] = b;
-        out_cr[y * out_cr_stride + x] = r;
-      }
-    }
-  }
-  else {
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        uint8_t r = in_p[y * in_stride + x * 4 + 0];
-        uint8_t g = in_p[y * in_stride + x * 4 + 1];
-        uint8_t b = in_p[y * in_stride + x * 4 + 2];
-        uint8_t a = in_p[y * in_stride + x * 4 + 3];
-
-        out_y[y * out_y_stride + x] = g;
-        out_cb[y * out_cb_stride + x] = b;
-        out_cr[y * out_cr_stride + x] = r;
-
-        // alpha
+      if (want_alpha) {
+        uint8_t a =
+            has_alpha ? in_p[y * in_stride + x * bytes_per_pixel + 3] : 0xff;
         out_a[y * out_a_stride + x] = a;
       }
     }

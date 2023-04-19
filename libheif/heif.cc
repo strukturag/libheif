@@ -993,6 +993,8 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
   heif_decoding_options dec_options;
   if (input_options != nullptr) {
     copy_options(dec_options, *input_options);
+  } else {
+    fill_default_decoding_options(dec_options);
   }
 
   Error err = in_handle->context->decode_image_user(id, img,

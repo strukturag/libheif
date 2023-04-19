@@ -198,6 +198,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   std::vector<std::shared_ptr<ColorConversionOperation>> ops;
   ops.push_back(std::make_shared<Op_RGB_to_RGB24_32>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_RGB>());
   ops.push_back(std::make_shared<Op_YCbCr_to_RGB<uint16_t>>());
   ops.push_back(std::make_shared<Op_YCbCr_to_RGB<uint8_t>>());
   ops.push_back(std::make_shared<Op_YCbCr420_to_RGB24>());
@@ -218,7 +219,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
   ops.push_back(std::make_shared<Op_to_sdr_planes>());
 
-  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr_Sharp>());
+  ops.push_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
 
@@ -228,10 +229,10 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   while (!border_states.empty()) {
     size_t minIdx = -1;
-    int minCost;
+    int minCost = std::numeric_limits<int>::max();
     for (size_t i = 0; i < border_states.size(); i++) {
       int cost = border_states[i].color_state.speed_costs;
-      if (i == 0 || cost < minCost) {
+      if (cost < minCost) {
         minIdx = i;
         minCost = cost;
       }

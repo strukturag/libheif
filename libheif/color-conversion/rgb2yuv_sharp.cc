@@ -19,6 +19,8 @@
  */
 
 #include <cassert>
+#include <memory>
+#include <vector>
 #include "rgb2yuv_sharp.h"
 
 #ifdef HAVE_LIBSHARPYUV
@@ -28,27 +30,52 @@
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
 
+static inline bool PlatformIsBigEndian() {
+  int i = 1;
+  return !*((char*)&i);
+}
+
 #endif
 
-
-
-
 std::vector<ColorStateWithCost>
-Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state,
-                                                   const ColorState& target_state,
-                                                   const heif_color_conversion_options& options)
-{
+Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
+    const ColorState& input_state, const ColorState& target_state,
+    const heif_color_conversion_options& options) {
 #ifdef HAVE_LIBSHARPYUV
   // this Op only implements the sharp_yuv algorithm
+
+  // Note: no input alpha channel required. It will be filled up with 0xFF.
 
   if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_sharp_yuv &&
       options.only_use_preferred_chroma_algorithm) {
     return {};
   }
 
+  // Only endianness matching the platform's is supported.
+  const bool big_endian = PlatformIsBigEndian();
+  const heif_chroma hdr_chroma = big_endian ? heif_chroma_interleaved_RRGGBB_BE
+                                            : heif_chroma_interleaved_RRGGBB_LE;
+  const heif_chroma hdr_with_alpha_chroma =
+      big_endian ? heif_chroma_interleaved_RRGGBBAA_BE
+                 : heif_chroma_interleaved_RRGGBBAA_LE;
+
   if (input_state.colorspace != heif_colorspace_RGB ||
-      (input_state.chroma != heif_chroma_interleaved_RGB &&
-       input_state.chroma != heif_chroma_interleaved_RGBA)) {
+      (
+       input_state.chroma != heif_chroma_444 &&  // Planar input.
+       input_state.chroma != heif_chroma_interleaved_RGB &&
+       input_state.chroma != heif_chroma_interleaved_RGBA &&
+       input_state.chroma != hdr_chroma &&
+       input_state.chroma != hdr_with_alpha_chroma)) {
+    return {};
+  }
+
+  if (input_state.bits_per_pixel != 8 && input_state.bits_per_pixel != 10 &&
+      input_state.bits_per_pixel != 12 && input_state.bits_per_pixel != 16) {
+    return {};
+  }
+
+  if (target_state.bits_per_pixel != 8 && target_state.bits_per_pixel != 10 &&
+      target_state.bits_per_pixel != 12) {
     return {};
   }
 
@@ -66,25 +93,11 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
 
   ColorState output_state;
 
-  // --- convert RGB24
-
-  if (input_state.chroma == heif_chroma_interleaved_RGB) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_420;
-    output_state.has_alpha = false;
-    output_state.bits_per_pixel = 8;
-    states.push_back({output_state, SpeedCosts_Slow});
-  }
-
-  // --- convert RGB32
-
-  if (input_state.chroma == heif_chroma_interleaved_RGBA) {
-    output_state.colorspace = heif_colorspace_YCbCr;
-    output_state.chroma = heif_chroma_420;
-    output_state.has_alpha = true;
-    output_state.bits_per_pixel = 8;
-    states.push_back({output_state, SpeedCosts_Slow});
-  }
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = heif_chroma_420;
+  output_state.has_alpha = target_state.has_alpha;
+  output_state.bits_per_pixel = target_state.bits_per_pixel;
+  states.push_back({output_state, SpeedCosts_Slow});
 
   return states;
 #else
@@ -92,48 +105,92 @@ Op_RGB24_32_to_YCbCr_Sharp::state_after_conversion(const ColorState& input_state
 #endif
 }
 
-
 std::shared_ptr<HeifPixelImage>
-Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                               const ColorState& target_state,
-                                               const heif_color_conversion_options& options)
-{
+Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
+    const std::shared_ptr<const HeifPixelImage>& input,
+    const ColorState& target_state,
+    const heif_color_conversion_options& options) {
 #ifdef HAVE_LIBSHARPYUV
   int width = input->get_width();
   int height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  auto chroma = target_state.chroma;
-  assert(chroma == heif_chroma_420);  // Only 420 is supported by libsharpyuv.
-  uint8_t chromaSubH = chroma_h_subsampling(chroma);
-  uint8_t chromaSubV = chroma_v_subsampling(chroma);
+  heif_chroma input_chroma = input->get_chroma_format();
+  heif_chroma output_chroma = target_state.chroma;
+  assert(output_chroma == heif_chroma_420);  // Only 420 is supported by libsharpyuv.
+  uint8_t chromaSubH = chroma_h_subsampling(output_chroma);
+  uint8_t chromaSubV = chroma_v_subsampling(output_chroma);
 
-  outimg->create(width, height, heif_colorspace_YCbCr, chroma);
+  outimg->create(width, height, heif_colorspace_YCbCr, output_chroma);
 
   int chroma_width = (width + chromaSubH - 1) / chromaSubH;
   int chroma_height = (height + chromaSubV - 1) / chromaSubV;
 
-  const bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_32bit);
+  bool has_alpha =
+      input->get_chroma_format() == heif_chroma_interleaved_RGBA ||
+      input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
+      input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE ||
+      (input->get_chroma_format() == heif_chroma_444 &&
+       input->has_channel(heif_channel_Alpha));
+  bool want_alpha = target_state.has_alpha;
 
-  if (!outimg->add_plane(heif_channel_Y, width, height, 8) ||
-      !outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, 8) ||
-      !outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, 8)) {
+  int output_bits = target_state.bits_per_pixel;
+  if (!outimg->add_plane(heif_channel_Y, width, height, output_bits) ||
+      !outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, output_bits) ||
+      !outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, output_bits)) {
     return nullptr;
   }
 
-  if (has_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, 8)) {
+  if (want_alpha) {
+    if (!outimg->add_plane(heif_channel_Alpha, width, height, output_bits)) {
       return nullptr;
     }
   }
 
-  int in_stride = 0;
-  const uint8_t* in_p = input->get_plane(heif_channel_interleaved, &in_stride);
+  int input_bytes_per_sample =
+      (input_chroma == heif_chroma_interleaved_RGB ||
+       input_chroma == heif_chroma_interleaved_RGBA ||
+       (input_chroma == heif_chroma_444 &&
+        input->get_bits_per_pixel(heif_channel_R) <= 8))
+          ? 1
+          : 2;
 
-  const uint8_t* in_r = &in_p[0];
-  const uint8_t* in_g = &in_p[1];
-  const uint8_t* in_b = &in_p[2];
+  const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
+  int in_stride = 0;
+  int in_a_stride = 0;
+  bool planar_input = input_chroma == heif_chroma_444;
+  int input_bits = 0;
+  if (planar_input) {
+    int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
+    in_r = input->get_plane(heif_channel_R, &in_r_stride);
+    in_g = input->get_plane(heif_channel_G, &in_g_stride);
+    in_b = input->get_plane(heif_channel_B, &in_b_stride);
+    // The stride must be the same for all channels.
+    if (in_r_stride != in_g_stride || in_r_stride != in_b_stride) {
+      return nullptr;
+    }
+    in_stride = in_r_stride;
+    // Bpp must also be the same.
+    input_bits = input->get_bits_per_pixel(heif_channel_R);
+    if (input_bits != input->get_bits_per_pixel(heif_channel_G) ||
+        input_bits != input->get_bits_per_pixel(heif_channel_B)) {
+      return nullptr;
+    }
+    if (has_alpha) {
+      in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
+    }
+  } else {
+    const uint8_t* in_p = input->get_plane(heif_channel_interleaved, &in_stride);
+    input_bits = input->get_bits_per_pixel(heif_channel_interleaved);
+    in_r = &in_p[input_bytes_per_sample * 0];
+    in_g = &in_p[input_bytes_per_sample * 1];
+    in_b = &in_p[input_bytes_per_sample * 2];
+    if (has_alpha) {
+      in_a = &in_p[input_bytes_per_sample * 3];
+      in_a_stride = in_stride;
+    }
+  }
 
   int out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
   uint8_t* out_y = outimg->get_plane(heif_channel_Y, &out_y_stride);
@@ -148,33 +205,47 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
         heif::get_Kr_Kb(target_state.nclx_profile->get_matrix_coefficients(),
                         target_state.nclx_profile->get_colour_primaries());
   }
-  int rgb_bit_depth = 8;
+
   SharpYuvColorSpace color_space = {
-      kr_kb.Kr, kr_kb.Kb, rgb_bit_depth,
+      kr_kb.Kr, kr_kb.Kb, input_bits,
       full_range_flag ? kSharpYuvRangeFull : kSharpYuvRangeLimited};
   SharpYuvConversionMatrix yuv_matrix;
   SharpYuvComputeConversionMatrix(&color_space, &yuv_matrix);
-
-  int bytes_per_pixel = (has_alpha ? 4 : 3);
+  int input_bytes_per_pixel = (has_alpha ? 4 : 3) * input_bytes_per_sample;
+  int rgb_step = planar_input ? input_bytes_per_sample : input_bytes_per_pixel;
 
   int sharpyuv_ok =
-      SharpYuvConvert(in_r, in_g, in_b, bytes_per_pixel, in_stride,
-                      rgb_bit_depth, out_y, out_y_stride, out_cb, out_cb_stride,
-                      out_cr, out_cr_stride, target_state.bits_per_pixel,
+      SharpYuvConvert(in_r, in_g, in_b, rgb_step, in_stride,
+                      input_bits, out_y, out_y_stride, out_cb, out_cb_stride,
+                      out_cr, out_cr_stride, output_bits,
                       input->get_width(), input->get_height(), &yuv_matrix);
   if (!sharpyuv_ok) {
     return nullptr;
   }
 
-  if (has_alpha) {
+  if (want_alpha) {
+    int le = (input_chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
+              input_chroma == heif_chroma_interleaved_RRGGBB_LE ||
+              (planar_input && !PlatformIsBigEndian()))
+                 ? 1
+                 : 0;
     int out_a_stride;
+
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+    uint16_t alpha_max = static_cast<uint16_t>((1 << output_bits) - 1);
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        uint8_t a = in_p[y * in_stride + x * 4 + 3];
-
-        // alpha
-        out_a[y * out_a_stride + x] = a;
+        const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
+        (void)in;
+        if (output_bits == 8) {
+          uint8_t a = has_alpha ? in[0] : 0xff;
+          out_a[y * out_a_stride + x] = a; // XXX maybe change precision
+        } else {
+          // 16 bit alpha.
+          uint16_t a = has_alpha ? (uint16_t)((in[0 + le] << 8) | in[1 - le]) : alpha_max;
+          uint16_t* out_a16 = reinterpret_cast<uint16_t*>(out_a);
+          out_a16[y * out_a_stride / 2 + x] = a;  // XXX maybe change precision
+        }
       }
     }
   }
@@ -184,5 +255,3 @@ Op_RGB24_32_to_YCbCr_Sharp::convert_colorspace(const std::shared_ptr<const HeifP
   return nullptr;
 #endif
 }
-
-

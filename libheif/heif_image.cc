@@ -395,13 +395,16 @@ void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, in
 {
   add_plane(dst_channel, width, height, bpp);
 
+  int num_interleaved = num_interleaved_pixels_per_plane(m_chroma);
+
   if (bpp == 8) {
     uint8_t* dst;
     int dst_stride = 0;
     dst = get_plane(dst_channel, &dst_stride);
+    int width_bytes = width * num_interleaved;
 
     for (int y = 0; y < height; y++) {
-      memset(dst + y * dst_stride, value, width);
+      memset(dst + y * dst_stride, value, width_bytes);
     }
   }
   else {
@@ -412,7 +415,7 @@ void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, in
     dst_stride /= 2;
 
     for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
+      for (int x = 0; x < width * num_interleaved; x++) {
         dst[y * dst_stride + x] = value;
       }
     }
