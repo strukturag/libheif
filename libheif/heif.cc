@@ -991,10 +991,11 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
   heif_item_id id = in_handle->image->get_id();
 
   heif_decoding_options dec_options;
+  fill_default_decoding_options(dec_options);
+
   if (input_options != nullptr) {
+    // overwrite the (possibly lower version) input options over the default options
     copy_options(dec_options, *input_options);
-  } else {
-    fill_default_decoding_options(dec_options);
   }
 
   Error err = in_handle->context->decode_image_user(id, img,
