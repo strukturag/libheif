@@ -29,6 +29,7 @@
 #include <iostream>
 #include <set>
 #include <cmath>
+#include <limits>
 #include "rgb2yuv.h"
 #include "rgb2yuv_sharp.h"
 #include "yuv2rgb.h"
@@ -40,8 +41,8 @@
 
 using namespace heif;
 
-#define DEBUG_ME 0
-#define DEBUG_PIPELINE_CREATION 0
+#define DEBUG_ME 1
+#define DEBUG_PIPELINE_CREATION 1
 
 #define USE_CENTER_CHROMA_422 0
 
@@ -218,6 +219,8 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());
   ops.push_back(std::make_shared<Op_to_hdr_planes>());
   ops.push_back(std::make_shared<Op_to_sdr_planes>());
+  ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>>());
 
   ops.push_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
 
