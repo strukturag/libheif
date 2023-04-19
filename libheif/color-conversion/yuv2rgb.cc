@@ -786,13 +786,16 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
    *  The right and bottom border are not processed when the size is odd.
    *  Then, each 2x2 square between 4 chroma samples is computed in one iteration.
    *
+   *  Upsampling weights are 3/4, 1/4. For example:
+   *    A = 3/4*3/4 * C1 + 3/4*1/4 * C2 + 1/4*3/4 * C3 + 1/4*1/4 * C4
+   *
    *    +---+---+---+---+
    *    | b | b | b | b |
-   *    +---C---+---C---+
-   *    | b |   |   | b |
+   *    +---C1--+---C2--+
+   *    | b | A |   | b |
    *    +---+---+---+---+
    *    | b |   |   | b |
-   *    +---C---+---C---+
+   *    +---C3--+---C4--+
    *    | b | b | b | b |
    *    +---+---+---+---+
    */
