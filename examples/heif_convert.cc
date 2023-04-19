@@ -87,7 +87,7 @@ static void show_help(const char* argv0)
                "      --no-colons                replace ':' characters in auxiliary image filenames with '_'\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "      --quiet                    do not output status messages to console\n"
-               "  -C, --chroma-downsampling ALGO Force chroma downsampling algorithm (nn = nearest-neighbor / bilinear)\n";
+               "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n";
 }
 
 
@@ -115,7 +115,7 @@ int option_with_exif = 0;
 int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
 
-std::string chroma_downsampling;
+std::string chroma_upsampling;
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -129,7 +129,7 @@ static struct option long_options[] = {
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'},
-    {(char* const) "chroma-downsampling", required_argument, 0,                     'C'},
+    {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
 };
 
 
@@ -203,15 +203,15 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'C':
-        chroma_downsampling = optarg;
-        if (chroma_downsampling != "nn" &&
-            chroma_downsampling != "nearest-neighbor" &&
-            chroma_downsampling != "bilinear") {
-          fprintf(stderr, "Undefined chroma downsampling algorithm.\n");
+        chroma_upsampling = optarg;
+        if (chroma_upsampling != "nn" &&
+            chroma_upsampling != "nearest-neighbor" &&
+            chroma_upsampling != "bilinear") {
+          fprintf(stderr, "Undefined chroma upsampling algorithm.\n");
           exit(5);
         }
-        if (chroma_downsampling == "nn") { // abbreviation
-          chroma_downsampling = "nearest-neighbor";
+        if (chroma_upsampling == "nn") { // abbreviation
+          chroma_upsampling = "nearest-neighbor";
         }
         break;
     }
@@ -376,11 +376,11 @@ int main(int argc, char** argv)
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
 
-    if (chroma_downsampling=="nearest-neighbor") {
+    if (chroma_upsampling=="nearest-neighbor") {
       decode_options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_nearest_neighbor;
       decode_options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
-    else if (chroma_downsampling=="bilinear") {
+    else if (chroma_upsampling=="bilinear") {
       decode_options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
       decode_options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }

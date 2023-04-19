@@ -79,8 +79,8 @@ int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
 int metadata_compression = 0;
-int sharp_yuv = 0;
 const char* encoderId = nullptr;
+std::string chroma_downsampling;
 
 uint16_t nclx_matrix_coefficients = 6;
 uint16_t nclx_colour_primaries = 2;
@@ -130,8 +130,8 @@ static struct option long_options[] = {
     {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
-#ifdef HAVE_LIBSHARPYUV
-    {(char* const) "enable-sharp-yuv",        no_argument,       &sharp_yuv,      1},
+#if HAVE_LIBSHARPYUV
+    {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
 #endif
     {0, 0,                                                       0,               0},
 };
@@ -174,8 +174,8 @@ void show_help(const char* argv0)
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
 #ifdef HAVE_LIBSHARPYUV
-            << "  --enable-sharp-yuv        enable 'sharp' RGB to YUV420 conversion (makes edges look sharper \n"
-            << "                            when using YUV420 with bilinear chroma upsampling)\n"
+            << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / sharp-yuv)\n"
+            << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
 #endif
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "\n"
@@ -1257,7 +1257,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -1324,6 +1324,18 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case 'C':
+        chroma_downsampling = optarg;
+        if (chroma_downsampling != "nn" &&
+            chroma_downsampling != "nearest-neighbor" &&
+            chroma_downsampling != "bilinear") {
+          fprintf(stderr, "Undefined chroma downsampling algorithm.\n");
+          exit(5);
+        }
+        if (chroma_downsampling == "nn") { // abbreviation
+          chroma_downsampling = "nearest-neighbor";
+        }
+        break;
     }
   }
 
@@ -1531,13 +1543,13 @@ int main(int argc, char** argv)
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
 
-    if (sharp_yuv) {
+    if (chroma_downsampling == "sharp-yuv") {
       options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
       options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
-    else {
+    else if (chroma_downsampling == "nearest-neighbor") {
       options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
-      options->color_conversion_options.only_use_preferred_chroma_algorithm = true; // TODO: set this to 'false' when our optimization works
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
 
     if (crop_to_even_size) {
