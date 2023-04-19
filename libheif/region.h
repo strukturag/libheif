@@ -103,7 +103,10 @@ class RegionGeometry_Polygon : public RegionGeometry
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
 
-  heif_region_type getRegionType() override { return heif_region_type_polygon; }
+  heif_region_type getRegionType() override
+  {
+    return closed ? heif_region_type_polygon : heif_region_type_polyline;
+  }
 
   struct Point
   {
