@@ -3224,7 +3224,8 @@ struct heif_error heif_region_get_ellipse_scaled(const struct heif_region* regio
   return heif_error_invalid_parameter_value;
 }
 
-int heif_region_get_polygon_num_points(const struct heif_region* region)
+
+static int heif_region_get_poly_num_points(const struct heif_region* region)
 {
   const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
   if (polygon) {
@@ -3234,51 +3235,80 @@ int heif_region_get_polygon_num_points(const struct heif_region* region)
 }
 
 
-void heif_region_get_polygon_points(const struct heif_region* region, int32_t* pts)
+int heif_region_get_polygon_num_points(const struct heif_region* region)
 {
-  if (pts == nullptr) {
-    return;
-  }
-
-  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
-  if (polygon) {
-    for (int i = 0; i < (int) polygon->points.size(); i++) {
-      pts[2 * i + 0] = polygon->points[i].x;
-      pts[2 * i + 1] = polygon->points[i].y;
-    }
-  }
+  return heif_region_get_poly_num_points(region);
 }
 
 
-void heif_region_get_polygon_points_scaled(const struct heif_region* region, double* pts, heif_item_id image_id)
+int heif_region_get_polyline_num_points(const struct heif_region* region)
+{
+  return heif_region_get_poly_num_points(region);
+}
+
+
+static struct heif_error heif_region_get_poly_points(const struct heif_region* region, int32_t* pts)
 {
   if (pts == nullptr) {
-    return;
+    return heif_error_invalid_parameter_value;
   }
 
-  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
-  if (polygon) {
+  const std::shared_ptr<RegionGeometry_Polygon> poly = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (poly) {
+    for (int i = 0; i < (int) poly->points.size(); i++) {
+      pts[2 * i + 0] = poly->points[i].x;
+      pts[2 * i + 1] = poly->points[i].y;
+    }
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
+}
+
+
+struct heif_error heif_region_get_polygon_points(const struct heif_region* region, int32_t* pts)
+{
+  return heif_region_get_poly_points(region, pts);
+}
+
+
+struct heif_error heif_region_get_polyline_points(const struct heif_region* region, int32_t* pts)
+{
+  return heif_region_get_poly_points(region, pts);
+}
+
+
+static struct heif_error heif_region_get_poly_points_scaled(const struct heif_region* region, double* pts, heif_item_id image_id)
+{
+  if (pts == nullptr) {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_Polygon> poly = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
+  if (poly) {
     auto t = RegionCoordinateTransform::create(region->context->get_heif_file(), image_id,
                                                region->region_item->reference_width,
                                                region->region_item->reference_height);
 
-    for (int i = 0; i < (int) polygon->points.size(); i++) {
-      RegionCoordinateTransform::Point p = t.transform_point({(double) polygon->points[i].x,
-                                                              (double) polygon->points[i].y});
+    for (int i = 0; i < (int) poly->points.size(); i++) {
+      RegionCoordinateTransform::Point p = t.transform_point({(double) poly->points[i].x,
+                                                              (double) poly->points[i].y});
 
       pts[2 * i + 0] = p.x;
       pts[2 * i + 1] = p.y;
     }
+    return heif_error_ok;
   }
+  return heif_error_invalid_parameter_value;
 }
 
 
-uint8_t heif_region_get_polygon_closed(const struct heif_region* region)
+struct heif_error heif_region_get_polygon_points_scaled(const struct heif_region* region, double* pts, heif_item_id image_id)
 {
-  const std::shared_ptr<RegionGeometry_Polygon> polygon = std::dynamic_pointer_cast<RegionGeometry_Polygon>(region->region);
-  if (polygon) {
-    return polygon->closed;
-  }
-
-  return false;
+  return heif_region_get_poly_points_scaled(region, pts, image_id);
 }
+
+struct heif_error heif_region_get_polyline_points_scaled(const struct heif_region* region, double* pts, heif_item_id image_id)
+{
+  return heif_region_get_poly_points_scaled(region, pts, image_id);
+}
+

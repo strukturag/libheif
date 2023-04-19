@@ -1832,8 +1832,9 @@ enum heif_region_type
   heif_region_type_point,
   heif_region_type_rectangle,
   heif_region_type_ellipse,
-  heif_region_type_polygon,  // also includes polyline (as a non-closed polygon)
-  heif_region_type_mask
+  heif_region_type_polygon,
+  heif_region_type_mask,
+  heif_region_type_polyline
 };
 
 struct heif_region;
@@ -1910,19 +1911,28 @@ struct heif_error heif_region_get_ellipse_scaled(const struct heif_region* regio
 LIBHEIF_API
 int heif_region_get_polygon_num_points(const struct heif_region* region);
 
+LIBHEIF_API
+int heif_region_get_polyline_num_points(const struct heif_region* region);
+
 // Point coordinates are stored in the output array 'pts'. This must have twice as many entries as there are points.
 // Each point is stored as consecutive x and y positions.
 LIBHEIF_API
-void heif_region_get_polygon_points(const struct heif_region* region,
-                                    int32_t* pts);
+struct heif_error heif_region_get_polygon_points(const struct heif_region* region,
+                                                 int32_t* pts);
 
 LIBHEIF_API
-void heif_region_get_polygon_points_scaled(const struct heif_region* region,
-                                           double* pts,
-                                           heif_item_id image_id);
+struct heif_error heif_region_get_polygon_points_scaled(const struct heif_region* region,
+                                                        double* pts,
+                                                        heif_item_id image_id);
 
 LIBHEIF_API
-uint8_t heif_region_get_polygon_closed(const struct heif_region* region);
+struct heif_error heif_region_get_polyline_points(const struct heif_region* region,
+                                                  int32_t* pts);
+
+LIBHEIF_API
+struct heif_error heif_region_get_polyline_points_scaled(const struct heif_region* region,
+                                                         double* pts,
+                                                         heif_item_id image_id);
 
 #if 0
 struct heif_region_annotation;
