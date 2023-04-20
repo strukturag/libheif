@@ -78,11 +78,6 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 }
 
 
-// TODO: we need the additional 'downsample' template parameter to pass through the planning decision whether
-//       this stage should downsample or keep 4:4:4. This wouldn't be necessary if 'target_state' would represent the
-//       actual state we obtained during the planning phase.
-//       Hence, we should save these states and use them when executing the pipeline.
-
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
