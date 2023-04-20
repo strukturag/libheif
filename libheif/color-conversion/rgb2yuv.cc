@@ -1039,19 +1039,19 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   if (height & 1) {
     for (int x = 0; x < width - 1; x += 2) {
-      out_cb[(cheight - 1) * out_cb_stride + x / 2] = (in_cb[(height - 1) * in_cb_stride + x] +
-                                                       in_cb[(height - 1) * in_cb_stride + x + 1] + 1) / 2;
-      out_cr[(cheight - 1) * out_cr_stride + x / 2] = (in_cr[(height - 1) * in_cr_stride + x] +
-                                                       in_cr[(height - 1) * in_cr_stride + x + 1] + 1) / 2;
+      out_cb[(cheight - 1) * out_cb_stride + x / 2] = (Pixel) ((in_cb[(height - 1) * in_cb_stride + x] +
+                                                                in_cb[(height - 1) * in_cb_stride + x + 1] + 1) / 2);
+      out_cr[(cheight - 1) * out_cr_stride + x / 2] = (Pixel) ((in_cr[(height - 1) * in_cr_stride + x] +
+                                                                in_cr[(height - 1) * in_cr_stride + x + 1] + 1) / 2);
     }
   }
 
   if (width & 1) {
     for (int y = 0; y < height - 1; y += 2) {
-      out_cb[(y / 2) * out_cb_stride + cwidth - 1] = (in_cb[(y + 0) * in_cb_stride + width - 1] +
-                                                      in_cb[(y + 1) * in_cb_stride + width - 1] + 1) / 2;
-      out_cr[(y / 2) * out_cr_stride + cwidth - 1] = (in_cr[(y + 0) * in_cr_stride + width - 1] +
-                                                      in_cr[(y + 1) * in_cr_stride + width - 1] + 1) / 2;
+      out_cb[(y / 2) * out_cb_stride + cwidth - 1] = (Pixel) ((in_cb[(y + 0) * in_cb_stride + width - 1] +
+                                                               in_cb[(y + 1) * in_cb_stride + width - 1] + 1) / 2);
+      out_cr[(y / 2) * out_cr_stride + cwidth - 1] = (Pixel) ((in_cr[(y + 0) * in_cr_stride + width - 1] +
+                                                               in_cr[(y + 1) * in_cr_stride + width - 1] + 1) / 2);
     }
   }
 
