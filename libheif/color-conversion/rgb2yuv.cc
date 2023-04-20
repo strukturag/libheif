@@ -1035,7 +1035,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
     out_a_stride /= 2;
   }
 
-  // --- fill right and bottom borders of the image size is odd
+  // --- fill right and bottom borders if the image size is odd
 
   if (height & 1) {
     for (int x = 0; x < width - 1; x += 2) {
