@@ -24,9 +24,8 @@
 #include "rgb2yuv_sharp.h"
 
 #ifdef HAVE_LIBSHARPYUV
-
-#include "third-party/libwebp/build/dist/include/webp/sharpyuv/sharpyuv.h"
-#include "third-party/libwebp/build/dist/include/webp/sharpyuv/sharpyuv_csp.h"
+#include <sharpyuv/sharpyuv.h>
+#include <sharpyuv/sharpyuv_csp.h>
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
 
