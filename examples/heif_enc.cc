@@ -1360,7 +1360,8 @@ int main(int argc, char** argv)
         chroma_downsampling = optarg;
         if (chroma_downsampling != "nn" &&
             chroma_downsampling != "nearest-neighbor" &&
-            chroma_downsampling != "bilinear") {
+            chroma_downsampling != "average" &&
+            chroma_downsampling != "sharp-yuv") {
           fprintf(stderr, "Undefined chroma downsampling algorithm.\n");
           exit(5);
         }
@@ -1582,7 +1583,11 @@ int main(int argc, char** argv)
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
 
-    if (chroma_downsampling == "sharp-yuv") {
+    if (chroma_downsampling == "average") {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+    }
+    else if (chroma_downsampling == "sharp-yuv") {
       options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
       options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
