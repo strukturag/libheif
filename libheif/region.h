@@ -147,10 +147,20 @@ public:
   std::vector<Point> points;
 };
 
+class RegionGeometry_ReferencedMask : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override;
+
+  heif_region_type getRegionType() override { return heif_region_type_referenced_mask; }
+
+  int32_t x,y;
+  uint32_t width, height;
+};
+
 #if 0
 // TODO
-
-class RegionGeometry_Mask : public RegionGeometry
+class RegionGeometry_InlineMask : public RegionGeometry
 {
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override {return {};} // TODO
@@ -158,14 +168,12 @@ public:
   int32_t x,y;
   uint32_t width, height;
 
+  heif_region_type getRegionType() override { return heif_region_type_inline_mask; }
+
   // The mask may be decoded lazily on-the-fly.
   std::shared_ptr<heif::HeifPixelImage> get_mask() const { return {}; } // TODO
 
 private:
-  enum class EncodingMethod {
-    Inline, Referenced
-  } mEncodingMethod;
-
   std::shared_ptr<heif::HeifPixelImage> mCachedMask;
 };
 #endif

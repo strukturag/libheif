@@ -3714,3 +3714,25 @@ Error Box_udes::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
+Error Box_mskC::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+  m_bits_per_pixel = range.read8();
+  return range.get_error();
+}
+
+std::string Box_mskC::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "bits_per_pixel: " << ((int)m_bits_per_pixel) << "\n";
+  return sstr.str();
+}
+
+Error Box_mskC::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write8(m_bits_per_pixel);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}

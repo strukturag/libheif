@@ -550,6 +550,7 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "iovl" ||
           item_type == "av01" ||
           item_type == "unci" ||
+          item_type == "mski" ||
           item_type == "vvc1");
 }
 

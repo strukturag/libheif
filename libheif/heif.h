@@ -2016,6 +2016,11 @@ struct heif_error heif_region_get_polyline_points_scaled(const struct heif_regio
                                                          double* pts,
                                                          heif_item_id image_id);
 
+LIBHEIF_API
+struct heif_error heif_region_get_referenced_mask(const struct heif_region* region,
+                                                  int32_t* x, int32_t* y,
+                                                  uint32_t* width, uint32_t* height);
+
 #if 0
 struct heif_region_annotation;
 

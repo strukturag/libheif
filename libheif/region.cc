@@ -22,6 +22,8 @@
 #include "error.h"
 #include "heif_file.h"
 #include "box.h"
+#include "libheif/heif.h"
+#include <cstdint>
 #include <utility>
 
 
@@ -84,6 +86,14 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
       polygon->closed = true;
       region = polygon;
     }
+    else if (geometry_type == heif_region_type_referenced_mask) {
+      region = std::make_shared<RegionGeometry_ReferencedMask>();
+    }
+  #if 0
+    else if (geometry_type == heif_region_type_inline_mask) {
+      region = std::make_shared<RegionGeometry_InlineMask>();
+    }
+  #endif
     else if (geometry_type == heif_region_type_polyline) {
       auto polygon = std::make_shared<RegionGeometry_Polygon>();
       polygon->closed = false;
@@ -185,18 +195,11 @@ int32_t RegionGeometry::parse_signed(const std::vector<uint8_t>& data,
                                      int field_size,
                                      unsigned int* dataOffset)
 {
-  // TODO: fix this for negative values
-  int32_t x;
   if (field_size == 32) {
-    x = ((data[*dataOffset] << 24) | (data[*dataOffset + 1] << 16) |
-         (data[*dataOffset + 2] << 8) | (data[*dataOffset + 3]));
-    *dataOffset = *dataOffset + 4;
+    return (int32_t)parse_unsigned(data, field_size, dataOffset);
+  } else {
+    return (int16_t)parse_unsigned(data, field_size, dataOffset);
   }
-  else {
-    x = ((data[*dataOffset] << 8) | (data[*dataOffset + 1]));
-    *dataOffset = *dataOffset + 2;
-  }
-  return x;
 }
 
 Error RegionGeometry_Point::parse(const std::vector<uint8_t>& data,
@@ -335,6 +338,21 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
   return Error::Ok;
 }
 
+Error RegionGeometry_ReferencedMask::parse(const std::vector<uint8_t>& data,
+                                          int field_size,
+                                          unsigned int* dataOffset)
+{
+  unsigned int bytesRequired = (field_size / 8) * 4;
+  if (data.size() - *dataOffset < bytesRequired) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for referenced mask region");
+  }
+  x = parse_signed(data, field_size, dataOffset);
+  y = parse_signed(data, field_size, dataOffset);
+  width = parse_unsigned(data, field_size, dataOffset);
+  height = parse_unsigned(data, field_size, dataOffset);
+  return Error::Ok;
+}
 
 bool RegionGeometry_Polygon::encode_needs_32bit() const
 {
