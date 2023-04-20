@@ -402,151 +402,153 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 
   switch (hdr.get_short_type()) {
     case fourcc("ftyp"):
-      box = std::make_shared<Box_ftyp>(hdr);
+      box = std::make_shared<Box_ftyp>();
       break;
 
     case fourcc("meta"):
-      box = std::make_shared<Box_meta>(hdr);
+      box = std::make_shared<Box_meta>();
       break;
 
     case fourcc("hdlr"):
-      box = std::make_shared<Box_hdlr>(hdr);
+      box = std::make_shared<Box_hdlr>();
       break;
 
     case fourcc("pitm"):
-      box = std::make_shared<Box_pitm>(hdr);
+      box = std::make_shared<Box_pitm>();
       break;
 
     case fourcc("iloc"):
-      box = std::make_shared<Box_iloc>(hdr);
+      box = std::make_shared<Box_iloc>();
       break;
 
     case fourcc("iinf"):
-      box = std::make_shared<Box_iinf>(hdr);
+      box = std::make_shared<Box_iinf>();
       break;
 
     case fourcc("infe"):
-      box = std::make_shared<Box_infe>(hdr);
+      box = std::make_shared<Box_infe>();
       break;
 
     case fourcc("iprp"):
-      box = std::make_shared<Box_iprp>(hdr);
+      box = std::make_shared<Box_iprp>();
       break;
 
     case fourcc("ipco"):
-      box = std::make_shared<Box_ipco>(hdr);
+      box = std::make_shared<Box_ipco>();
       break;
 
     case fourcc("ipma"):
-      box = std::make_shared<Box_ipma>(hdr);
+      box = std::make_shared<Box_ipma>();
       break;
 
     case fourcc("ispe"):
-      box = std::make_shared<Box_ispe>(hdr);
+      box = std::make_shared<Box_ispe>();
       break;
 
     case fourcc("auxC"):
-      box = std::make_shared<Box_auxC>(hdr);
+      box = std::make_shared<Box_auxC>();
       break;
 
     case fourcc("irot"):
-      box = std::make_shared<Box_irot>(hdr);
+      box = std::make_shared<Box_irot>();
       break;
 
     case fourcc("imir"):
-      box = std::make_shared<Box_imir>(hdr);
+      box = std::make_shared<Box_imir>();
       break;
 
     case fourcc("clap"):
-      box = std::make_shared<Box_clap>(hdr);
+      box = std::make_shared<Box_clap>();
       break;
 
     case fourcc("iref"):
-      box = std::make_shared<Box_iref>(hdr);
+      box = std::make_shared<Box_iref>();
       break;
 
     case fourcc("hvcC"):
-      box = std::make_shared<Box_hvcC>(hdr);
+      box = std::make_shared<Box_hvcC>();
       break;
 
     case fourcc("av1C"):
-      box = std::make_shared<Box_av1C>(hdr);
+      box = std::make_shared<Box_av1C>();
       break;
 
     case fourcc("vvcC"):
-      box = std::make_shared<Box_vvcC>(hdr);
+      box = std::make_shared<Box_vvcC>();
       break;
 
     case fourcc("idat"):
-      box = std::make_shared<Box_idat>(hdr);
+      box = std::make_shared<Box_idat>();
       break;
 
     case fourcc("grpl"):
-      box = std::make_shared<Box_grpl>(hdr);
+      box = std::make_shared<Box_grpl>();
       break;
 
     case fourcc("dinf"):
-      box = std::make_shared<Box_dinf>(hdr);
+      box = std::make_shared<Box_dinf>();
       break;
 
     case fourcc("dref"):
-      box = std::make_shared<Box_dref>(hdr);
+      box = std::make_shared<Box_dref>();
       break;
 
     case fourcc("url "):
-      box = std::make_shared<Box_url>(hdr);
+      box = std::make_shared<Box_url>();
       break;
 
     case fourcc("colr"):
-      box = std::make_shared<Box_colr>(hdr);
+      box = std::make_shared<Box_colr>();
       break;
 
     case fourcc("pixi"):
-      box = std::make_shared<Box_pixi>(hdr);
+      box = std::make_shared<Box_pixi>();
       break;
 
     case fourcc("pasp"):
-      box = std::make_shared<Box_pasp>(hdr);
+      box = std::make_shared<Box_pasp>();
       break;
 
     case fourcc("lsel"):
-      box = std::make_shared<Box_lsel>(hdr);
+      box = std::make_shared<Box_lsel>();
       break;
 
     case fourcc("a1op"):
-      box = std::make_shared<Box_a1op>(hdr);
+      box = std::make_shared<Box_a1op>();
       break;
 
     case fourcc("a1lx"):
-      box = std::make_shared<Box_a1lx>(hdr);
+      box = std::make_shared<Box_a1lx>();
       break;
 
     case fourcc("clli"):
-      box = std::make_shared<Box_clli>(hdr);
+      box = std::make_shared<Box_clli>();
       break;
 
     case fourcc("mdcv"):
-      box = std::make_shared<Box_mdcv>(hdr);
+      box = std::make_shared<Box_mdcv>();
       break;
 
     case fourcc("udes"):
-      box = std::make_shared<Box_udes>(hdr);
+      box = std::make_shared<Box_udes>();
       break;
 
 #ifdef ENABLE_UNCOMPRESSED_DECODER
     case fourcc("cmpd"):
-      box = std::make_shared<Box_cmpd>(hdr);
+      box = std::make_shared<Box_cmpd>();
       break;
 
     case fourcc("uncC"):
-      box = std::make_shared<Box_uncC>(hdr);
+      box = std::make_shared<Box_uncC>();
       break;
 #endif
 
     default:
-      box = std::make_shared<Box>(hdr);
+      box = std::make_shared<Box>();
       break;
   }
+
+  box->set_short_header(hdr);
 
   if (hdr.get_box_size() < hdr.get_header_size()) {
     std::stringstream sstr;

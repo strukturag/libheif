@@ -43,8 +43,6 @@ namespace heif {
       set_is_full_box(false);
     }
 
-    Box_cmpd(const BoxHeader& hdr) : Box(hdr) {}
-
     std::string dump(Indent&) const override;
 
     Error write(StreamWriter& writer) const override;
@@ -71,8 +69,6 @@ namespace heif {
       set_short_type(fourcc("uncC"));
       set_is_full_box(false);
     }
-
-    Box_uncC(const BoxHeader& hdr) : Box(hdr) {}
 
     std::string dump(Indent&) const override;
 
