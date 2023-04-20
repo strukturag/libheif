@@ -76,18 +76,21 @@ public:
   virtual std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) = 0;
+                         const heif_color_conversion_options& options) const = 0;
 
   virtual std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) = 0;
+                     const heif_color_conversion_options& options) const = 0;
 };
 
 
 class ColorConversionPipeline
 {
 public:
+  static void init_ops();
+  static void release_ops();
+
   bool construct_pipeline(const ColorState& input_state,
                           const ColorState& target_state,
                           const heif_color_conversion_options& options);
@@ -98,7 +101,9 @@ public:
   void debug_dump_pipeline() const;
 
 private:
-  std::vector<std::shared_ptr<ColorConversionOperation>> m_operations;
+  static std::vector<ColorConversionOperation*> m_operation_pool;
+
+  std::vector<const ColorConversionOperation*> m_operations;
   ColorState m_target_state;
   heif_color_conversion_options m_options;
 };

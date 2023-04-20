@@ -25,7 +25,7 @@
 std::vector<ColorStateWithCost>
 Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const heif_color_conversion_options& options)
+                                            const heif_color_conversion_options& options) const
 {
   if (input_state.colorspace != heif_colorspace_monochrome ||
       input_state.chroma != heif_chroma_monochrome) {
@@ -52,7 +52,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                         const ColorState& target_state,
-                                        const heif_color_conversion_options& options)
+                                        const heif_color_conversion_options& options) const
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -158,7 +158,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
 std::vector<ColorStateWithCost>
 Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
-                                            const heif_color_conversion_options& options)
+                                            const heif_color_conversion_options& options) const
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
@@ -201,7 +201,7 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                         const ColorState& target_state,
-                                        const heif_color_conversion_options& options)
+                                        const heif_color_conversion_options& options) const
 {
   int width = input->get_width();
   int height = input->get_height();

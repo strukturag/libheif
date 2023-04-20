@@ -40,7 +40,8 @@ static inline bool PlatformIsBigEndian() {
 std::vector<ColorStateWithCost>
 Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     const ColorState& input_state, const ColorState& target_state,
-    const heif_color_conversion_options& options) {
+    const heif_color_conversion_options& options) const
+{
 #ifdef HAVE_LIBSHARPYUV
   // this Op only implements the sharp_yuv algorithm
 
@@ -109,7 +110,7 @@ std::shared_ptr<HeifPixelImage>
 Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const std::shared_ptr<const HeifPixelImage>& input,
     const ColorState& target_state,
-    const heif_color_conversion_options& options) {
+    const heif_color_conversion_options& options) const {
 #ifdef HAVE_LIBSHARPYUV
   int width = input->get_width();
   int height = input->get_height();

@@ -23,6 +23,7 @@
 #include "error.h"
 #include "heif_plugin_registry.h"
 #include "common_utils.h"
+#include "libheif/color-conversion/colorconversion.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 #include <mutex>
@@ -84,6 +85,8 @@ struct heif_error heif_init(struct heif_init_params*)
   heif_library_initialization_count++;
 
   if (heif_library_initialization_count == 1) {
+
+    ColorConversionPipeline::init_ops();
 
     // --- initialize builtin plugins
 
@@ -173,6 +176,8 @@ void heif_deinit()
     default_plugins_registered = false;
 
     heif_unload_all_plugins();
+
+    ColorConversionPipeline::release_ops();
   }
 }
 

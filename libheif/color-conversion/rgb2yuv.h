@@ -33,12 +33,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) override;
+                         const heif_color_conversion_options& options) const override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) override;
+                     const heif_color_conversion_options& options) const override;
 };
 
 template class Op_RGB_to_YCbCr<uint8_t, true>;
@@ -54,12 +54,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) override;
+                         const heif_color_conversion_options& options) const override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) override;
+                     const heif_color_conversion_options& options) const override;
 };
 
 
@@ -69,12 +69,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) override;
+                         const heif_color_conversion_options& options) const override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) override;
+                     const heif_color_conversion_options& options) const override;
 };
 
 
@@ -84,12 +84,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) override;
+                         const heif_color_conversion_options& options) const override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) override;
+                     const heif_color_conversion_options& options) const override;
 };
 
 
@@ -100,12 +100,12 @@ public:
   std::vector<ColorStateWithCost>
   state_after_conversion(const ColorState& input_state,
                          const ColorState& target_state,
-                         const heif_color_conversion_options& options) override;
+                         const heif_color_conversion_options& options) const override;
 
   std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) override;
+                     const heif_color_conversion_options& options) const override;
 };
 
 template class Op_YCbCr444_to_YCbCr420_average<uint8_t>;

@@ -29,7 +29,7 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
-                                               const heif_color_conversion_options& options)
+                                               const heif_color_conversion_options& options) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -71,7 +71,7 @@ template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
-                                           const heif_color_conversion_options& options)
+                                           const heif_color_conversion_options& options) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -247,7 +247,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const heif_color_conversion_options& options)
+                                             const heif_color_conversion_options& options) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -295,7 +295,7 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                          const ColorState& target_state,
-                                         const heif_color_conversion_options& options)
+                                         const heif_color_conversion_options& options) const
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -357,7 +357,7 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
                                              const ColorState& target_state,
-                                             const heif_color_conversion_options& options)
+                                             const heif_color_conversion_options& options) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -406,7 +406,7 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                          const ColorState& target_state,
-                                         const heif_color_conversion_options& options)
+                                         const heif_color_conversion_options& options) const
 {
   if (input->get_bits_per_pixel(heif_channel_Y) != 8 ||
       input->get_bits_per_pixel(heif_channel_Cb) != 8 ||
@@ -487,7 +487,7 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 std::vector<ColorStateWithCost>
 Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
                                                 const ColorState& target_state,
-                                                const heif_color_conversion_options& options)
+                                                const heif_color_conversion_options& options) const
 {
   // this Op only implements the nearest-neighbor algorithm
 
@@ -541,7 +541,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                             const ColorState& target_state,
-                                            const heif_color_conversion_options& options)
+                                            const heif_color_conversion_options& options) const
 {
   int width = input->get_width();
   int height = input->get_height();
@@ -638,7 +638,7 @@ template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState& input_state,
                                                const ColorState& target_state,
-                                               const heif_color_conversion_options& options)
+                                               const heif_color_conversion_options& options) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -687,7 +687,7 @@ template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
-                                           const heif_color_conversion_options& options)
+                                           const heif_color_conversion_options& options) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
