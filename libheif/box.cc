@@ -3044,7 +3044,24 @@ std::string Box_hvcC::dump(Indent& indent) const
   sstr << indent << "general_level_idc: " << ((int) c.general_level_idc) << "\n"
        << indent << "min_spatial_segmentation_idc: " << c.min_spatial_segmentation_idc << "\n"
        << indent << "parallelism_type: " << ((int) c.parallelism_type) << "\n"
-       << indent << "chroma_format: " << ((int) c.chroma_format) << "\n"
+      << indent << "chroma_format: ";
+
+  switch (c.chroma_format) {
+    case 1:
+      sstr << "4:2:0";
+      break;
+    case 2:
+      sstr << "4:2:2";
+      break;
+    case 3:
+      sstr << "4:4:4";
+      break;
+    default:
+      sstr << ((int) c.chroma_format);
+      break;
+  }
+
+  sstr << "\n"
        << indent << "bit_depth_luma: " << ((int) c.bit_depth_luma) << "\n"
        << indent << "bit_depth_chroma: " << ((int) c.bit_depth_chroma) << "\n"
        << indent << "avg_frame_rate: " << c.avg_frame_rate << "\n"

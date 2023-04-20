@@ -288,6 +288,13 @@ EMSCRIPTEN_BINDINGS(libheif) {
     // Aliases
     .value("heif_chroma_interleaved_24bit", heif_chroma_interleaved_24bit)
     .value("heif_chroma_interleaved_32bit", heif_chroma_interleaved_32bit);
+    emscripten::enum_<heif_chroma_downsampling_algorithm>("heif_chroma_downsampling_algorithm")
+    .value("heif_chroma_downsampling_average", heif_chroma_downsampling_average)
+    .value("heif_chroma_downsampling_nearest_neighbor", heif_chroma_downsampling_nearest_neighbor)
+    .value("heif_chroma_downsampling_sharp_yuv", heif_chroma_downsampling_sharp_yuv);
+    emscripten::enum_<heif_chroma_upsampling_algorithm>("heif_chroma_upsampling_algorithm")
+    .value("heif_chroma_upsampling_bilinear", heif_chroma_upsampling_bilinear)
+    .value("heif_chroma_upsampling_nearest_neighbor", heif_chroma_upsampling_nearest_neighbor)
     emscripten::enum_<heif_colorspace>("heif_colorspace")
     .value("heif_colorspace_undefined", heif_colorspace_undefined)
     .value("heif_colorspace_YCbCr", heif_colorspace_YCbCr)

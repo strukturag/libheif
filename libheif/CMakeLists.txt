@@ -18,7 +18,6 @@ set(libheif_sources
     heif_image.cc
     heif_hevc.cc
     heif_avif.cc
-    heif_colorconversion.cc
     heif_plugin_registry.cc
     heif_plugin.cc
     nclx.cc
@@ -31,7 +30,6 @@ set(libheif_sources
     heif_image.h
     heif_hevc.h
     heif_avif.h
-    heif_colorconversion.h
     heif_plugin_registry.h
     heif_limits.h
     heif_init.cc heif_init.h
@@ -43,6 +41,22 @@ set(libheif_sources
     common_utils.h
     region.cc
     region.h
+    color-conversion/colorconversion.cc
+    color-conversion/colorconversion.h
+    color-conversion/rgb2yuv.cc
+    color-conversion/rgb2yuv.h
+    color-conversion/rgb2yuv_sharp.cc
+    color-conversion/rgb2yuv_sharp.h
+    color-conversion/yuv2rgb.cc
+    color-conversion/yuv2rgb.h
+    color-conversion/rgb2rgb.cc
+    color-conversion/rgb2rgb.h
+    color-conversion/monochrome.cc
+    color-conversion/monochrome.h
+    color-conversion/hdr_sdr.cc
+    color-conversion/hdr_sdr.h
+    color-conversion/alpha.cc
+    color-conversion/alpha.h
     ${libheif_headers}
     )
 
@@ -97,6 +111,15 @@ if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
 endif()
 
 add_subdirectory(plugins)
+
+if (LIBSHARPYUV_FOUND)
+    message("Compiling in 'libhsharpyuv'")
+    target_compile_definitions(heif PRIVATE HAVE_LIBSHARPYUV=1)
+    target_include_directories(heif PRIVATE ${LIBSHARPYUV_INCLUDE_DIR})
+    target_link_libraries(heif PRIVATE ${LIBSHARPYUV_LIBRARIES} ${LIBSHARPYUV_LINKDIR})
+else()
+    message("Not compiling 'libhsharpyuv'")
+endif()
 
 if (WITH_DEFLATE_HEADER_COMPRESSION)
    find_package(ZLIB REQUIRED)

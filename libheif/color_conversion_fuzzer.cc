@@ -23,7 +23,7 @@
 #include <sstream>
 
 #include "bitstream.h"
-#include "heif_colorconversion.h"
+#include "libheif/color-conversion/colorconversion.h"
 #include "heif_image.h"
 
 static bool is_valid_chroma(uint8_t chroma)
@@ -240,10 +240,18 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     }
   }
 
+  // TODO: also fuzz these parameters.
+  int output_bpp = 0; // Same as input.
+  heif_encoding_options* options = heif_encoding_options_alloc();
+
   auto out_image = convert_colorspace(in_image,
                                       static_cast<heif_colorspace>(out_colorspace),
                                       static_cast<heif_chroma>(out_chroma),
-                                      nullptr);
+                                      nullptr,
+                                      output_bpp,
+                                      options->color_conversion_options);
+  heif_encoding_options_free(options);
+
   if (!out_image) {
     // Conversion is not supported.
     return 0;

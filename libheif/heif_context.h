@@ -362,11 +362,11 @@ namespace heif {
     Error decode_image_user(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                             heif_colorspace out_colorspace,
                             heif_chroma out_chroma,
-                            const struct heif_decoding_options* options = nullptr) const;
+                            const struct heif_decoding_options& options) const;
 
     Error decode_image_planar(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
                               heif_colorspace out_colorspace,
-                              const struct heif_decoding_options* options,
+                              const struct heif_decoding_options& options,
                               bool alphaImage) const;
 
     std::string debug_dump_boxes() const;
@@ -381,25 +381,25 @@ namespace heif {
 
     Error encode_image(const std::shared_ptr<HeifPixelImage>& image,
                        struct heif_encoder* encoder,
-                       const struct heif_encoding_options* options,
+                       const struct heif_encoding_options& options,
                        enum heif_image_input_class input_class,
                        std::shared_ptr<Image>& out_image);
 
     Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                struct heif_encoder* encoder,
-                               const struct heif_encoding_options* options,
+                               const struct heif_encoding_options& options,
                                enum heif_image_input_class input_class,
                                std::shared_ptr<Image>& out_image);
 
     Error encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& image,
                               struct heif_encoder* encoder,
-                              const struct heif_encoding_options* options,
+                              const struct heif_encoding_options& options,
                               enum heif_image_input_class input_class,
                               std::shared_ptr<Image>& out_image);
 
     Error encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                        struct heif_encoder* encoder,
-                                       const struct heif_encoding_options* options,
+                                       const struct heif_encoding_options& options,
                                        enum heif_image_input_class input_class,
                                        std::shared_ptr<Image> out_image);
 
@@ -417,7 +417,7 @@ namespace heif {
 
     Error encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
                            struct heif_encoder* encoder,
-                           const struct heif_encoding_options* options,
+                           const struct heif_encoding_options& options,
                            int bbox_size,
                            std::shared_ptr<Image>& out_image_handle);
 
@@ -478,18 +478,22 @@ namespace heif {
 
     Error decode_full_grid_image(heif_item_id ID,
                                  std::shared_ptr<HeifPixelImage>& img,
-                                 const std::vector<uint8_t>& grid_data) const;
+                                 const std::vector<uint8_t>& grid_data,
+                                 const heif_decoding_options& options) const;
 
     Error decode_and_paste_tile_image(heif_item_id tileID,
                                       const std::shared_ptr<HeifPixelImage>& out_image,
-                                      int x0, int y0) const;
+                                      int x0, int y0,
+                                      const heif_decoding_options& options) const;
 
     Error decode_derived_image(heif_item_id ID,
-                               std::shared_ptr<HeifPixelImage>& img) const;
+                               std::shared_ptr<HeifPixelImage>& img,
+                               const heif_decoding_options& options) const;
 
     Error decode_overlay_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img,
-                               const std::vector<uint8_t>& overlay_data) const;
+                               const std::vector<uint8_t>& overlay_data,
+                               const heif_decoding_options& options) const;
 
     Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
   };

@@ -153,7 +153,7 @@ namespace heif {
     static Error encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                            const std::shared_ptr<HeifPixelImage>& src_image,
                                            void* encoder_struct,
-                                           const struct heif_encoding_options* options,
+                                           const struct heif_encoding_options& options,
                                            std::shared_ptr<HeifContext::Image> out_image);
   };
 }
