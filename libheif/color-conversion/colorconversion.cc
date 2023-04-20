@@ -212,8 +212,10 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
   ops.push_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
   ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
-  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
-  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t,true>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t,true>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t,false>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t,false>>());
   ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
   ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
   ops.push_back(std::make_shared<Op_drop_alpha_plane>());

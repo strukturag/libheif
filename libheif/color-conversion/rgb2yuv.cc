@@ -27,21 +27,12 @@
 #include "libheif/common_utils.h"
 
 
-template<class Pixel>
+template<class Pixel, bool downsample>
 std::vector<ColorStateWithCost>
-Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
-                                               const ColorState& target_state,
-                                               const heif_color_conversion_options& options)
+Op_RGB_to_YCbCr<Pixel, downsample>::state_after_conversion(const ColorState& input_state,
+                                                           const ColorState& target_state,
+                                                           const heif_color_conversion_options& options)
 {
-  // this Op only implements the nearest-neighbor algorithm
-
-  if (target_state.chroma != heif_chroma_444) {
-    if (options.preferred_chroma_downsampling_algorithm != heif_chroma_downsampling_nearest_neighbor &&
-        options.only_use_preferred_chroma_algorithm) {
-      return {};
-    }
-  }
-
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
   if ((input_state.bits_per_pixel != 8) != hdr) {
@@ -59,20 +50,46 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 
   // --- convert to YCbCr
 
-  output_state.colorspace = heif_colorspace_YCbCr;
-  output_state.chroma = target_state.chroma;
-  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  // This Op only implements the nearest-neighbor downsampling algorithm, but it can still convert to 4:4:4.
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  if (target_state.chroma != heif_chroma_444 &&
+      (options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_nearest_neighbor ||
+       !options.only_use_preferred_chroma_algorithm)) {
+
+    if (downsample) {
+      output_state.colorspace = heif_colorspace_YCbCr;
+      output_state.chroma = target_state.chroma;
+      output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+      output_state.bits_per_pixel = input_state.bits_per_pixel;
+
+      states.push_back({output_state, SpeedCosts_Unoptimized});
+    }
+  }
+  else {
+    // --- convert to YCbCr 4:4:4
+
+    if (!downsample) {
+      output_state.colorspace = heif_colorspace_YCbCr;
+      output_state.chroma = heif_chroma_444;
+      output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+      output_state.bits_per_pixel = input_state.bits_per_pixel;
+
+      states.push_back({output_state, SpeedCosts_Unoptimized});
+    }
+  }
 
   return states;
 }
 
 
-template<class Pixel>
+// TODO: we need the additional 'downsample' template parameter to pass through the planning decision whether
+//       this stage should downsample or keep 4:4:4. This wouldn't be necessary if 'target_state' would represent the
+//       actual state we obtained during the planning phase.
+//       Hence, we should save these states and use them when executing the pipeline.
+
+template<class Pixel, bool downsample>
 std::shared_ptr<HeifPixelImage>
-Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+Op_RGB_to_YCbCr<Pixel, downsample>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
                                            const heif_color_conversion_options& options)
 {
@@ -81,7 +98,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int width = input->get_width();
   int height = input->get_height();
 
-  heif_chroma chroma = target_state.chroma;
+  heif_chroma chroma = downsample ? target_state.chroma : heif_chroma_444;
   int subH = chroma_h_subsampling(chroma);
   int subV = chroma_v_subsampling(chroma);
 
@@ -967,7 +984,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+  outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
 
   int cwidth = (width+1)/2;
   int cheight = (height+1)/2;
@@ -1046,6 +1063,9 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   // --- averaging filter
 
+  memset(out_cb, 128, out_cb_stride*cheight);
+  memset(out_cr, 128, out_cr_stride*cheight);
+
   int x, y;
   for (y = 0; y < height-1; y += 2) {
     for (x = 0; x < width-1; x += 2) {
@@ -1058,8 +1078,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
       Pixel cb11 = in_cb[(y + 1) * in_cb_stride + x + 1];
       Pixel cr11 = in_cr[(y + 1) * in_cr_stride + x + 1];
 
-      out_cb[(y/2) * out_cb_stride + x/2] = (cb00 + cb01 + cb10 + cb11 + 2) / 4;
-      out_cr[(y/2) * out_cr_stride + x/2] = (cr00 + cr01 + cr10 + cr11 + 2) / 4;
+      out_cb[(y/2) * out_cb_stride + x/2] = (Pixel)((cb00 + cb01 + cb10 + cb11 + 2) / 4);
+      out_cr[(y/2) * out_cr_stride + x/2] = (Pixel)((cr00 + cr01 + cr10 + cr11 + 2) / 4);
     }
   }
 

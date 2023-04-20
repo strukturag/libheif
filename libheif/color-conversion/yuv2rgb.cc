@@ -843,15 +843,15 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
       Pixel cb11 = in_cb[(cy + 1) * in_cb_stride + cx + 1];
       Pixel cr11 = in_cr[(cy + 1) * in_cr_stride + cx + 1];
 
-      out_cb[(y + 0) * out_cb_stride + x + 0] = (cb00 * 3 * 3 + cb01 * 1 * 3 + cb10 * 3 * 1 + cb11 * 1 * 1 + 8) / 16;
-      out_cb[(y + 0) * out_cb_stride + x + 1] = (cb00 * 1 * 3 + cb01 * 3 * 3 + cb10 * 1 * 1 + cb11 * 3 * 1 + 8) / 16;
-      out_cb[(y + 1) * out_cb_stride + x + 0] = (cb00 * 3 * 1 + cb01 * 1 * 1 + cb10 * 3 * 3 + cb11 * 1 * 3 + 8) / 16;
-      out_cb[(y + 1) * out_cb_stride + x + 1] = (cb00 * 1 * 1 + cb01 * 3 * 1 + cb10 * 1 * 3 + cb11 * 3 * 3 + 8) / 16;
+      out_cb[(y + 0) * out_cb_stride + x + 0] = (Pixel)((cb00 * 3 * 3 + cb01 * 1 * 3 + cb10 * 3 * 1 + cb11 * 1 * 1 + 8) / 16);
+      out_cb[(y + 0) * out_cb_stride + x + 1] = (Pixel)((cb00 * 1 * 3 + cb01 * 3 * 3 + cb10 * 1 * 1 + cb11 * 3 * 1 + 8) / 16);
+      out_cb[(y + 1) * out_cb_stride + x + 0] = (Pixel)((cb00 * 3 * 1 + cb01 * 1 * 1 + cb10 * 3 * 3 + cb11 * 1 * 3 + 8) / 16);
+      out_cb[(y + 1) * out_cb_stride + x + 1] = (Pixel)((cb00 * 1 * 1 + cb01 * 3 * 1 + cb10 * 1 * 3 + cb11 * 3 * 3 + 8) / 16);
 
-      out_cr[(y + 0) * out_cr_stride + x + 0] = (cr00 * 3 * 3 + cr01 * 1 * 3 + cr10 * 3 * 1 + cr11 * 1 * 1 + 8) / 16;
-      out_cr[(y + 0) * out_cr_stride + x + 1] = (cr00 * 1 * 3 + cr01 * 3 * 3 + cr10 * 1 * 1 + cr11 * 3 * 1 + 8) / 16;
-      out_cr[(y + 1) * out_cr_stride + x + 0] = (cr00 * 3 * 1 + cr01 * 1 * 1 + cr10 * 3 * 3 + cr11 * 1 * 3 + 8) / 16;
-      out_cr[(y + 1) * out_cr_stride + x + 1] = (cr00 * 1 * 1 + cr01 * 3 * 1 + cr10 * 1 * 3 + cr11 * 3 * 3 + 8) / 16;
+      out_cr[(y + 0) * out_cr_stride + x + 0] = (Pixel)((cr00 * 3 * 3 + cr01 * 1 * 3 + cr10 * 3 * 1 + cr11 * 1 * 1 + 8) / 16);
+      out_cr[(y + 0) * out_cr_stride + x + 1] = (Pixel)((cr00 * 1 * 3 + cr01 * 3 * 3 + cr10 * 1 * 1 + cr11 * 3 * 1 + 8) / 16);
+      out_cr[(y + 1) * out_cr_stride + x + 0] = (Pixel)((cr00 * 3 * 1 + cr01 * 1 * 1 + cr10 * 3 * 3 + cr11 * 1 * 3 + 8) / 16);
+      out_cr[(y + 1) * out_cr_stride + x + 1] = (Pixel)((cr00 * 1 * 1 + cr01 * 3 * 1 + cr10 * 1 * 3 + cr11 * 3 * 3 + 8) / 16);
     }
   }
 
