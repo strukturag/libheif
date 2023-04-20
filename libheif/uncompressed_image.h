@@ -40,7 +40,6 @@ namespace heif {
     Box_cmpd()
     {
       set_short_type(fourcc("cmpd"));
-      set_is_full_box(false);
     }
 
     std::string dump(Indent&) const override;
@@ -67,7 +66,6 @@ namespace heif {
     Box_uncC()
     {
       set_short_type(fourcc("uncC"));
-      set_is_full_box(false);
     }
 
     std::string dump(Indent&) const override;

@@ -277,27 +277,56 @@ size_t heif::Box::reserve_box_header_space(StreamWriter& writer, bool data64bit)
 
   int header_size = calculate_header_size(data64bit);
 
-  // TODO: TEMP HACK
-  if (is_full_box_header()) {
-    header_size += 4;
-  }
-
   writer.skip(header_size);
 
   return start_pos;
 }
 
 
+size_t heif::FullBox::reserve_box_header_space(StreamWriter& writer, bool data64bit) const
+{
+  size_t start_pos = Box::reserve_box_header_space(writer, data64bit);
+
+  writer.skip(4);
+
+  return start_pos;
+}
+
+
+heif::Error heif::FullBox::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
+{
+  auto err = Box::write_header(writer, total_size, data64bit);
+  if (err) {
+    return err;
+  }
+
+  assert((get_flags() & ~0x00FFFFFF) == 0);
+
+  writer.write32((get_version() << 24) | get_flags());
+
+  return Error::Ok;
+}
+
+
 heif::Error heif::Box::prepend_header(StreamWriter& writer, size_t box_start, bool data64bit) const
 {
   size_t total_size = writer.data_size() - box_start;
-  bool large_size = (total_size > 0xFFFFFFFF);
-
-
-
-  // --- write header
 
   writer.set_position(box_start);
+
+  auto err = write_header(writer, total_size, data64bit);
+
+  writer.set_position_to_end();  // Note: should we move to the end of the box after writing the header?
+
+  return err;
+}
+
+
+heif::Error heif::Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
+{
+  bool large_size = (total_size > 0xFFFFFFFF);
+
+  // --- write header
 
   if (large_size && !data64bit) {
     // Note: as an alternative, we could return an error here. If it fails, the user has to try again with 64 bit.
@@ -323,13 +352,13 @@ heif::Error heif::Box::prepend_header(StreamWriter& writer, size_t box_start, bo
     writer.write(get_type());
   }
 
+#if 0
   if (is_full_box_header()) {
     assert((get_flags() & ~0x00FFFFFF) == 0);
 
     writer.write32((get_version() << 24) | get_flags());
   }
-
-  writer.set_position_to_end();  // Note: should we move to the end of the box after writing the header?
+#endif
 
   return Error::Ok;
 }
@@ -341,7 +370,7 @@ std::string BoxHeader::dump(Indent& indent) const
   sstr << indent << "Box: " << get_type_string() << " -----\n";
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
 
-  if (m_is_full_box) {
+  if (is_full_box_header()) {
     sstr << indent << "version: " << ((int) m_version) << "\n"
          << indent << "flags: " << std::hex << m_flags << "\n";
   }
@@ -381,7 +410,7 @@ Error BoxHeader::parse_full_box_header(BitstreamRange& range)
   uint32_t data = range.read32();
   m_version = static_cast<uint8_t>(data >> 24);
   m_flags = data & 0x00FFFFFF;
-  m_is_full_box = true;
+  //m_is_full_box = true;
 
   m_header_size += 4;
 
