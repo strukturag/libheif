@@ -103,8 +103,13 @@ public:
 private:
   static std::vector<ColorConversionOperation*> m_operation_pool;
 
-  std::vector<const ColorConversionOperation*> m_operations;
-  ColorState m_target_state;
+  struct ConversionStep {
+    const ColorConversionOperation* operation;
+    ColorState output_state;
+  };
+
+  std::vector<ConversionStep> m_conversion_steps;
+
   heif_color_conversion_options m_options;
 };
 

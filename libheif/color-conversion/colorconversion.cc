@@ -231,9 +231,8 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
                                                  const ColorState& target_state,
                                                  const heif_color_conversion_options& options)
 {
-  m_operations.clear();
+  m_conversion_steps.clear();
 
-  m_target_state = target_state;
   m_options = options;
 
   if (input_state == target_state) {
@@ -294,16 +293,20 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
         len++;
       }
 
-      m_operations.resize(len);
+      m_conversion_steps.resize(len);
 
       idx = processed_states.size() - 1;
       int step = 0;
       while (idx > 0) {
-        m_operations[len - 1 - step] = processed_states[idx].op;
+        m_conversion_steps[len - 1 - step].operation = processed_states[idx].op;
+        m_conversion_steps[len - 1 - step].output_state = processed_states[idx].color_state.color_state;
+
         //printf("cost: %f\n",processed_states[idx].color_state.costs.total(options.criterion));
         idx = processed_states[idx].prev_processed_idx;
         step++;
       }
+
+      assert(m_conversion_steps.back().output_state == target_state);
 
 #if DEBUG_ME
       debug_dump_pipeline();
@@ -379,8 +382,8 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
 void ColorConversionPipeline::debug_dump_pipeline() const
 {
-  for (const auto& op_ptr : m_operations) {
-    auto& op = *op_ptr;
+  for (const auto& step : m_conversion_steps) {
+    auto& op = *step.operation;
     std::cerr << "> " << typeid(op).name() << "\n";
   }
 }
@@ -391,21 +394,21 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
   std::shared_ptr<HeifPixelImage> in = input;
   std::shared_ptr<HeifPixelImage> out = in;
 
-  for (const auto& op_ptr : m_operations) {
+  for (const auto& step : m_conversion_steps) {
 
 #if DEBUG_ME
     std::cerr << "input spec: ";
     print_spec(std::cerr, in);
 #endif
 
-    out = op_ptr->convert_colorspace(in, m_target_state, m_options);
+    out = step.operation->convert_colorspace(in, step.output_state, m_options);
     if (!out) {
       return nullptr; // TODO: we should return a proper error
     }
 
     // --- pass the color profiles to the new image
 
-    out->set_color_profile_nclx(m_target_state.nclx_profile);
+    out->set_color_profile_nclx(step.output_state.nclx_profile);
     out->set_color_profile_icc(in->get_color_profile_icc());
 
     out->set_premultiplied_alpha(in->is_premultiplied_alpha());
