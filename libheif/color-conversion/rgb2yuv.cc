@@ -27,11 +27,11 @@
 #include "libheif/common_utils.h"
 
 
-template<class Pixel, bool downsample>
+template<class Pixel>
 std::vector<ColorStateWithCost>
-Op_RGB_to_YCbCr<Pixel, downsample>::state_after_conversion(const ColorState& input_state,
-                                                           const ColorState& target_state,
-                                                           const heif_color_conversion_options& options) const
+Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
+                                               const ColorState& target_state,
+                                               const heif_color_conversion_options& options) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -56,26 +56,22 @@ Op_RGB_to_YCbCr<Pixel, downsample>::state_after_conversion(const ColorState& inp
       (options.preferred_chroma_downsampling_algorithm == heif_chroma_downsampling_nearest_neighbor ||
        !options.only_use_preferred_chroma_algorithm)) {
 
-    if (downsample) {
-      output_state.colorspace = heif_colorspace_YCbCr;
-      output_state.chroma = target_state.chroma;
-      output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-      output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.colorspace = heif_colorspace_YCbCr;
+    output_state.chroma = target_state.chroma;
+    output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+    output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-      states.push_back({output_state, SpeedCosts_Unoptimized});
-    }
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
   else {
     // --- convert to YCbCr 4:4:4
 
-    if (!downsample) {
-      output_state.colorspace = heif_colorspace_YCbCr;
-      output_state.chroma = heif_chroma_444;
-      output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
-      output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.colorspace = heif_colorspace_YCbCr;
+    output_state.chroma = heif_chroma_444;
+    output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+    output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-      states.push_back({output_state, SpeedCosts_Unoptimized});
-    }
+    states.push_back({output_state, SpeedCosts_Unoptimized});
   }
 
   return states;
@@ -87,9 +83,9 @@ Op_RGB_to_YCbCr<Pixel, downsample>::state_after_conversion(const ColorState& inp
 //       actual state we obtained during the planning phase.
 //       Hence, we should save these states and use them when executing the pipeline.
 
-template<class Pixel, bool downsample>
+template<class Pixel>
 std::shared_ptr<HeifPixelImage>
-Op_RGB_to_YCbCr<Pixel, downsample>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                            const ColorState& target_state,
                                            const heif_color_conversion_options& options) const
 {
@@ -98,7 +94,7 @@ Op_RGB_to_YCbCr<Pixel, downsample>::convert_colorspace(const std::shared_ptr<con
   int width = input->get_width();
   int height = input->get_height();
 
-  heif_chroma chroma = downsample ? target_state.chroma : heif_chroma_444;
+  heif_chroma chroma = target_state.chroma;
   int subH = chroma_h_subsampling(chroma);
   int subV = chroma_v_subsampling(chroma);
 

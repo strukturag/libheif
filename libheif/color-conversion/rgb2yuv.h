@@ -26,7 +26,7 @@
 #include <memory>
 
 
-template<class Pixel, bool downsample>
+template<class Pixel>
 class Op_RGB_to_YCbCr : public ColorConversionOperation
 {
 public:
@@ -41,10 +41,8 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-template class Op_RGB_to_YCbCr<uint8_t, true>;
-template class Op_RGB_to_YCbCr<uint16_t, true>;
-template class Op_RGB_to_YCbCr<uint8_t, false>;
-template class Op_RGB_to_YCbCr<uint16_t, false>;
+template class Op_RGB_to_YCbCr<uint8_t>;
+template class Op_RGB_to_YCbCr<uint16_t>;
 
 
 
