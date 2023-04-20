@@ -158,12 +158,6 @@ namespace heif {
     { return m_is_full_box; }
 
 
-    // --- writing
-
-    size_t reserve_box_header_space(StreamWriter& writer) const;
-
-    Error prepend_header(StreamWriter&, size_t box_start) const;
-
   private:
     uint64_t m_size = 0;
     uint32_t m_header_size = 0;
@@ -187,6 +181,9 @@ namespace heif {
     void set_short_header(const BoxHeader& hdr) {
       *(BoxHeader*)this = hdr;
     }
+
+    // header size without the FullBox fields (if applicable)
+    int calculate_header_size(bool data64bit) const;
 
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
@@ -235,6 +232,13 @@ namespace heif {
     Error write_children(StreamWriter& writer) const;
 
     std::string dump_children(Indent&) const;
+
+
+    virtual size_t reserve_box_header_space(StreamWriter& writer, bool data64bit = false) const;
+
+    // --- writing
+
+    virtual Error prepend_header(StreamWriter&, size_t box_start, bool data64bit = false) const;
   };
 
 
