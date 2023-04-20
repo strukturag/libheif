@@ -57,7 +57,7 @@ bool EndiannessMatchesPlatform(heif_chroma chroma) {
 uint16_t SwapBytes(uint16_t v) {
   const uint8_t hi = static_cast<uint8_t>((v & 0xff00) >> 8);
   const uint8_t lo = static_cast<uint8_t>(v & 0x00ff);
-  return (lo << 8) | hi;
+  return (uint16_t)((lo << 8) | hi);
 }
 
 uint16_t SwapBytesIfNeeded(uint16_t v, heif_chroma chroma) {
