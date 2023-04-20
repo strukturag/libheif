@@ -75,6 +75,21 @@ const (
 	ChromaInterleaved32Bit = C.heif_chroma_interleaved_32bit
 )
 
+type ChromaDownsamplingAlgorithm C.enum_heif_chroma_downsampling_algorithm
+
+const (
+	ChromaDownsamplingAverage         = C.heif_chroma_downsampling_average
+	ChromaDownsamplingNearestNeighbor = C.heif_chroma_downsampling_nearest_neighbor
+	ChromaDownsamplingSharpYUV        = C.heif_chroma_downsampling_sharp_yuv
+)
+
+type ChromaUpsamplingAlgorithm C.enum_heif_chroma_upsampling_algorithm
+
+const (
+	ChromaUpsamplingNearestNeighbor = C.heif_chroma_upsampling_nearest_neighbor
+	ChromaUpsamplingBilinear        = C.heif_chroma_upsampling_bilinear
+)
+
 type Colorspace C.enum_heif_colorspace
 
 const (

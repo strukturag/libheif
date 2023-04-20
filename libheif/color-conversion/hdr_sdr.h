@@ -23,6 +23,8 @@
 
 
 #include "colorconversion.h"
+#include <vector>
+#include <memory>
 
 class Op_to_hdr_planes : public ColorConversionOperation
 {

@@ -22,6 +22,8 @@
 #define LIBHEIF_RGB2RGB_H
 
 #include "colorconversion.h"
+#include <vector>
+#include <memory>
 
 
 class Op_RGB_to_RGB24_32 : public ColorConversionOperation

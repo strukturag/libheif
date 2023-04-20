@@ -22,6 +22,8 @@
 #define LIBHEIF_RGB2YUV_SHARP_H
 
 #include "colorconversion.h"
+#include <vector>
+#include <memory>
 
 
 class Op_Any_RGB_to_YCbCr_420_Sharp : public ColorConversionOperation

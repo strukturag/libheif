@@ -22,6 +22,8 @@
 #define LIBHEIF_COLORCONVERSION_MONOCHROME_H
 
 #include "colorconversion.h"
+#include <vector>
+#include <memory>
 
 
 class Op_mono_to_YCbCr420 : public ColorConversionOperation
