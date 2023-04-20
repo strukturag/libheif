@@ -1063,9 +1063,6 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   // --- averaging filter
 
-  memset(out_cb, 128, out_cb_stride*cheight);
-  memset(out_cr, 128, out_cr_stride*cheight);
-
   int x, y;
   for (y = 0; y < height-1; y += 2) {
     for (x = 0; x < width-1; x += 2) {
