@@ -194,7 +194,7 @@ std::string heif::BoxHeader::get_type_string() const
 }
 
 
-heif::Error heif::BoxHeader::parse(BitstreamRange& range)
+heif::Error heif::BoxHeader::parse_header(BitstreamRange& range)
 {
   StreamReader::grow_status status;
   status = range.wait_for_available_bytes(8);
@@ -352,14 +352,6 @@ heif::Error heif::Box::write_header(StreamWriter& writer, size_t total_size, boo
     writer.write(get_type());
   }
 
-#if 0
-  if (is_full_box_header()) {
-    assert((get_flags() & ~0x00FFFFFF) == 0);
-
-    writer.write32((get_version() << 24) | get_flags());
-  }
-#endif
-
   return Error::Ok;
 }
 
@@ -369,11 +361,6 @@ std::string BoxHeader::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << indent << "Box: " << get_type_string() << " -----\n";
   sstr << indent << "size: " << get_box_size() << "   (header size: " << get_header_size() << ")\n";
-
-  if (is_full_box_header()) {
-    sstr << indent << "version: " << ((int) m_version) << "\n"
-         << indent << "flags: " << std::hex << m_flags << "\n";
-  }
 
   return sstr.str();
 }
@@ -405,7 +392,7 @@ Error Box::parse(BitstreamRange& range)
 }
 
 
-Error BoxHeader::parse_full_box_header(BitstreamRange& range)
+Error FullBox::parse_full_box_header(BitstreamRange& range)
 {
   uint32_t data = range.read32();
   m_version = static_cast<uint8_t>(data >> 24);
@@ -421,7 +408,7 @@ Error BoxHeader::parse_full_box_header(BitstreamRange& range)
 Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
 {
   BoxHeader hdr;
-  Error err = hdr.parse(range);
+  Error err = hdr.parse_header(range);
   if (err) {
     return err;
   }
@@ -649,6 +636,19 @@ std::string Box::dump(Indent& indent) const
   std::ostringstream sstr;
 
   sstr << BoxHeader::dump(indent);
+
+  return sstr.str();
+}
+
+
+std::string FullBox::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << Box::dump(indent);
+
+  sstr << indent << "version: " << ((int) m_version) << "\n"
+       << indent << "flags: " << std::hex << m_flags << "\n";
 
   return sstr.str();
 }
@@ -2813,7 +2813,7 @@ Error Box_iref::parse(BitstreamRange& range)
   while (!range.eof()) {
     Reference ref;
 
-    Error err = ref.header.parse(range);
+    Error err = ref.header.parse_header(range);
     if (err != Error::Ok) {
       return err;
     }
@@ -3560,7 +3560,7 @@ Error Box_grpl::parse(BitstreamRange& range)
 
   while (!range.eof()) {
     EntityGroup group;
-    Error err = group.header.parse(range);
+    Error err = group.header.parse_header(range);
     if (err != Error::Ok) {
       return err;
     }

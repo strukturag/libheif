@@ -60,7 +60,7 @@ namespace heif {
     std::vector<Component> m_components;
   };
 
-  class Box_uncC : public Box
+  class Box_uncC : public FullBox
   {
   public:
     Box_uncC()

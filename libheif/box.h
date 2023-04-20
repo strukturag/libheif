@@ -130,29 +130,10 @@ namespace heif {
     { m_type = type; }
 
 
-    Error parse(BitstreamRange& range);
+    Error parse_header(BitstreamRange& range);
 
     virtual std::string dump(Indent&) const;
 
-
-    // --- full box
-
-    Error parse_full_box_header(BitstreamRange& range);
-
-    uint8_t get_version() const
-    { return m_version; }
-
-    void set_version(uint8_t version)
-    { m_version = version; }
-
-    uint32_t get_flags() const
-    { return m_flags; }
-
-    void set_flags(uint32_t flags)
-    { m_flags = flags; }
-
-    //void set_is_full_box(bool flag = true)
-    //{ m_is_full_box = flag; }
 
     virtual bool is_full_box_header() const
     { return false; }
@@ -160,16 +141,12 @@ namespace heif {
 
   private:
     uint64_t m_size = 0;
-    uint32_t m_header_size = 0;
 
     uint32_t m_type = 0;
     std::vector<uint8_t> m_uuid_type;
 
-
-    //bool m_is_full_box = false;
-
-    uint8_t m_version = 0;
-    uint32_t m_flags = 0;
+  protected:
+    uint32_t m_header_size = 0;
   };
 
 
@@ -190,8 +167,7 @@ namespace heif {
     virtual Error write(StreamWriter& writer) const;
 
     // check, which box version is required and set this in the (full) box header
-    virtual void derive_box_version()
-    { set_version(0); }
+    virtual void derive_box_version() {}
 
     void derive_box_version_recursive();
 
@@ -250,6 +226,26 @@ namespace heif {
     bool is_full_box_header() const override
     { return true; }
 
+    std::string dump(Indent& indent) const override;
+
+    void derive_box_version() override
+    { set_version(0); }
+
+
+    Error parse_full_box_header(BitstreamRange& range);
+
+    uint8_t get_version() const
+    { return m_version; }
+
+    void set_version(uint8_t version)
+    { m_version = version; }
+
+    uint32_t get_flags() const
+    { return m_flags; }
+
+    void set_flags(uint32_t flags)
+    { m_flags = flags; }
+
   protected:
 
     // --- writing
@@ -257,6 +253,11 @@ namespace heif {
     size_t reserve_box_header_space(StreamWriter& writer, bool data64bit = false) const override;
 
     Error write_header(StreamWriter&, size_t total_size, bool data64bit = false) const override;
+
+
+  private:
+    uint8_t m_version = 0;
+    uint32_t m_flags = 0;
   };
 
 
@@ -1048,7 +1049,7 @@ namespace heif {
 
     struct EntityGroup
     {
-      BoxHeader header;
+      FullBox header;
       uint32_t group_id;
 
       std::vector<heif_item_id> entity_ids;
@@ -1068,7 +1069,7 @@ namespace heif {
   };
 
 
-  class Box_dref : public Box
+  class Box_dref : public FullBox
   {
   public:
     std::string dump(Indent&) const override;
@@ -1078,7 +1079,7 @@ namespace heif {
   };
 
 
-  class Box_url : public Box
+  class Box_url : public FullBox
   {
   public:
     std::string dump(Indent&) const override;
