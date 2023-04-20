@@ -411,6 +411,12 @@ public:
                                      enum heif_image_input_class input_class,
                                      std::shared_ptr<Image> out_image);
 
+  Error encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& src_image,
+                             struct heif_encoder* encoder,
+                             const struct heif_encoding_options& options,
+                             enum heif_image_input_class input_class,
+                             std::shared_ptr<Image>& out_image);
+
   // write PIXI, CLLI, MDVC
   void write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id);
 
@@ -457,6 +463,8 @@ public:
 
     return nullptr;
   }
+
+  void add_region_referenced_mask_ref(heif_item_id region_item_id, heif_item_id mask_item_id);
 
   void write(StreamWriter& writer);
 

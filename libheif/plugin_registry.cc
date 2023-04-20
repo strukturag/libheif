@@ -72,6 +72,8 @@
 #include "libheif/plugins/encoder_jpeg.h"
 #endif
 
+#include "libheif/plugins/encoder_mask.h"
+
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
 std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
@@ -134,6 +136,8 @@ void register_default_plugins()
 #if WITH_UNCOMPRESSED_CODEC
   register_encoder(get_encoder_plugin_uncompressed());
 #endif
+
+register_encoder(get_encoder_plugin_mask());
 }
 
 

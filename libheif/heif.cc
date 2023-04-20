@@ -3305,6 +3305,61 @@ struct heif_error heif_region_item_add_region_polyline(struct heif_region_item* 
 }
 
 
+struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region_item* item,
+                                                              int32_t x, int32_t y,
+                                                              uint32_t width, uint32_t height,
+                                                              heif_item_id mask_item_id,
+                                                              struct heif_region** out_region)
+{
+  auto region = std::make_shared<RegionGeometry_ReferencedMask>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+  region->referenced_item = mask_item_id;
+
+  item->region_item->add_region(region);
+
+  if (out_region) {
+    *out_region = create_region(region, item);
+  }
+
+  /* When the geometry 'mask' of a region is represented by a mask stored in
+   * another image item the image item containing the mask shall be identified
+   * by an item reference of type 'mask' from the region item to the image item
+   * containing the mask. */
+  std::shared_ptr<HeifContext> ctx = item->context;
+  ctx->add_region_referenced_mask_ref(item->region_item->item_id, mask_item_id);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_item* item,
+                                                          int32_t x, int32_t y,
+                                                          uint32_t width, uint32_t height,
+                                                          uint8_t* mask_data,
+                                                          unsigned long mask_data_len,
+                                                          struct heif_region** out_region)
+{
+  auto region = std::make_shared<RegionGeometry_InlineMask>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+  region->mask_data.resize(mask_data_len);
+  std::memcpy(region->mask_data.data(), mask_data, region->mask_data.size());
+
+  item->region_item->add_region(region);
+
+  if (out_region) {
+    *out_region = create_region(region, item);
+  }
+
+  return error_Ok;
+}
+
+
 void heif_region_release(const struct heif_region* region)
 {
   delete region;
@@ -3533,5 +3588,60 @@ struct heif_error heif_region_get_polygon_points_transformed(const struct heif_r
 struct heif_error heif_region_get_polyline_points_transformed(const struct heif_region* region, double* pts, heif_item_id image_id)
 {
   return heif_region_get_poly_points_scaled(region, pts, image_id);
+}
+
+struct heif_error heif_region_get_referenced_mask(const struct heif_region* region,
+                                                  int32_t* x, int32_t* y,
+                                                  uint32_t* width, uint32_t* height,
+                                                  heif_item_id *mask_item_id)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr) || (mask_item_id == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_ReferencedMask> mask = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    *mask_item_id = mask->referenced_item;
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
+}
+
+unsigned long int heif_region_get_inline_mask_data_len(const struct heif_region* region)
+{
+  const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
+  if (mask) {
+    return mask->mask_data.size();
+  }
+  return 0;
+}
+
+struct heif_error heif_region_get_inline_mask(const struct heif_region* region,
+                                              int32_t* x, int32_t* y,
+                                              uint32_t* width, uint32_t* height,
+                                              uint8_t* data)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    memcpy(data, mask->mask_data.data(), mask->mask_data.size());
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
 }
 

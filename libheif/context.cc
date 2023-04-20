@@ -21,6 +21,7 @@
 #include "libheif/box.h"
 #include "libheif/error.h"
 #include "libheif/heif.h"
+#include "libheif/region.h"
 #include <cstdint>
 
 #if defined(HAVE_CONFIG_H)
@@ -48,6 +49,7 @@
 #include "avif.h"
 #include "plugin_registry.h"
 #include "libheif/color-conversion/colorconversion.h"
+#include "mask_image.h"
 #include "metadata_compression.h"
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -459,11 +461,17 @@ void HeifContext::reset_to_empty_heif()
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
   std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
+  box->set_hidden_item(true);
 
   auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
   add_region_item(regionItem);
 
   return regionItem;
+}
+
+void HeifContext::add_region_referenced_mask_ref(heif_item_id region_item_id, heif_item_id mask_item_id)
+{
+  m_heif_file->add_iref_reference(region_item_id, fourcc("mask"), {mask_item_id});
 }
 
 void HeifContext::write(StreamWriter& writer)
@@ -507,7 +515,8 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "unci" ||
           item_type == "vvc1" ||
           item_type == "jpeg" ||
-          (item_type == "mime" && content_type == "image/jpeg"));
+          (item_type == "mime" && content_type == "image/jpeg") ||
+          item_type == "mski");
 }
 
 
@@ -963,6 +972,31 @@ Error HeifContext::interpret_heif_file()
             img_iter->second->add_region_item_id(id);
             m_region_items.push_back(region_item);
           }
+          /* When the geometry 'mask' of a region is represented by a mask stored in
+          * another image item the image item containing the mask shall be identified
+          * by an item reference of type 'mask' from the region item to the image item
+          * containing the mask. */
+          if (ref.header.get_short_type() == fourcc("mask")) {
+            std::vector<uint32_t> refs = ref.to_item_ID;
+            int mask_index = 0;
+            for (int j = 0; j < region_item->get_number_of_regions(); j++) {
+              if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
+                std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
+                uint32_t mask_image_id = refs[mask_index];
+                assert(is_image(mask_image_id));
+                mask_geometry->referenced_item = mask_image_id;
+                auto mask_image = m_all_images.find(mask_image_id)->second;
+                if (mask_geometry->width == 0) {
+                  mask_geometry->width = mask_image->get_ispe_width();
+                }
+                if (mask_geometry->height == 0) {
+                  mask_geometry->height = mask_image->get_ispe_height();
+                }
+                mask_index += 1;
+                remove_top_level_image(mask_image);
+              }
+            }
+          }
         }
       }
     }
@@ -1365,6 +1399,23 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return error;
     }
 #endif
+  }
+  else if (image_type == "mski") {
+    std::vector<uint8_t> data;
+    error = m_heif_file->get_compressed_image_data(ID, &data);
+    if (error) {
+      std::cout << "mski error 1" << std::endl;
+      return error;
+    }
+    error = MaskImageCodec::decode_mask_image(m_heif_file,
+                                              ID,
+                                              img,
+                                              m_maximum_image_width_limit,
+                                              m_maximum_image_height_limit,
+                                              data);
+    if (error) {
+      return error;
+    }
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
@@ -2171,6 +2222,15 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
     }
       break;
 
+    case heif_compression_mask: {
+      error = encode_image_as_mask(pixel_image,
+                                  encoder,
+                                  options,
+                                  heif_image_input_class_normal,
+                                  out_image);
+    }
+      break;
+
     default:
       return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
   }
@@ -2836,6 +2896,26 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
 #endif
   //write_image_metadata(src_image, image_id);
 
+  return Error::Ok;
+}
+
+
+Error HeifContext::encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& src_image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options& options,
+                                        enum heif_image_input_class input_class,
+                                        std::shared_ptr<Image>& out_image)
+{
+  heif_item_id image_id = m_heif_file->add_new_hidden_image("mski");
+  out_image = std::make_shared<Image>(this, image_id);
+  Error err = MaskImageCodec::encode_mask_image(m_heif_file,
+                                                src_image,
+                                                encoder->encoder,
+                                                options,
+                                                out_image);
+  m_top_level_images.push_back(out_image);
+  m_all_images[image_id] = out_image;
+  write_image_metadata(src_image, image_id);
   return Error::Ok;
 }
 
