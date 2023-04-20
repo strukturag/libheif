@@ -195,14 +195,17 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
                                     int field_size,
                                     unsigned int* dataOffset)
 {
-  unsigned int bytesRequired1 = (field_size / 8) * 1;
+  uint32_t bytesRequired1 = (field_size / 8) * 1;
   if (data.size() - *dataOffset < bytesRequired1) {
     return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
                  "Insufficient data remaining for polygon");
   }
 
+  // Note: we need to do the calculation in uint64_t because numPoints may be any 32-bit number
+  // and it is multiplied by (at most) 8.
+
   uint32_t numPoints = parse_unsigned(data, field_size, dataOffset);
-  unsigned int bytesRequired2 = (field_size / 8) * numPoints * 2;
+  uint64_t bytesRequired2 = (field_size / 8) * uint64_t(numPoints) * 2;
   if (data.size() - *dataOffset < bytesRequired2) {
     return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
                  "Insufficient data remaining for polygon");
