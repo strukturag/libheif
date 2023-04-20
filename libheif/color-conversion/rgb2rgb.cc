@@ -491,7 +491,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
   out_g = (uint16_t*) outimg->get_plane(heif_channel_G, &out_g_stride);
   out_b = (uint16_t*) outimg->get_plane(heif_channel_B, &out_b_stride);
 
-  if (has_alpha) {
+  if (want_alpha) {
     out_a = (uint16_t*) outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
 
