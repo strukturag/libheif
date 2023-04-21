@@ -55,8 +55,18 @@ static int usage(const char* command)
 }
 
 
+class LibHeifInitializer {
+public:
+  LibHeifInitializer() { heif_init(nullptr); }
+  ~LibHeifInitializer() { heif_deinit(); }
+};
+
+
 int main(int argc, char** argv)
 {
+  // This takes care of initializing libheif and also deinitializing it at the end to free all resources.
+  LibHeifInitializer initializer;
+
   int opt;
   int size = 512; // default thumbnail size
   bool thumbnail_from_primary_image_only = false;
