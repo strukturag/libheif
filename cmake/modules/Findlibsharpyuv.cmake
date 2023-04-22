@@ -18,7 +18,7 @@ set(LIBSHARPYUV_PROCESS_INCLUDES LIBSHARPYUV_INCLUDE_DIR)
 libfind_process(LIBSHARPYUV)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LIBSHARPYUV
+find_package_handle_standard_args(libsharpyuv
     REQUIRED_VARS
         LIBSHARPYUV_INCLUDE_DIR
         LIBSHARPYUV_LIBRARIES
