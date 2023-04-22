@@ -23,7 +23,7 @@ set -e
 # Use script from https://chromium.googlesource.com/chromium/src/tools/clang/
 # to download prebuilt version of clang. This commit defines which version of
 # the script should be used (and thus defines the version of clang).
-COMMIT_HASH=f30572cab0ed7d31dc5547e709670ac9d252c6c0
+COMMIT_HASH=55676aed71dd450595d83f107d24cb31c00160b3
 
 DEST=$1
 
