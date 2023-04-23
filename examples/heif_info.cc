@@ -514,11 +514,11 @@ int main(int argc, char** argv)
                                                         properties[k],
                                                         &udes);
           if (err.code == 0) {
-            printf("      user description:\n");
-            printf("        lang: %s\n", udes->lang);
-            printf("        name: %s\n", udes->name);
-            printf("        description: %s\n", udes->description);
-            printf("        tags: %s\n", udes->tags);
+            printf("    user description:\n");
+            printf("      lang: %s\n", udes->lang);
+            printf("      name: %s\n", udes->name);
+            printf("      description: %s\n", udes->description);
+            printf("      tags: %s\n", udes->tags);
             heif_property_user_description_release(udes);
           }
         }
