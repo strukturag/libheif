@@ -428,7 +428,8 @@ int main(int argc, char** argv)
       std::vector<heif_item_id> region_items(numRegionItems);
       heif_image_handle_get_list_of_region_item_ids(handle, region_items.data(), numRegionItems);
       for (heif_item_id region_item_id : region_items) {
-        struct heif_region_item* region_item = heif_context_get_region_item(ctx.get(), region_item_id);
+        struct heif_region_item* region_item;
+        err = heif_context_get_region_item(ctx.get(), region_item_id, &region_item);
 
         uint32_t reference_width, reference_height;
         heif_region_item_get_reference_size(region_item, &reference_width, &reference_height);
@@ -466,7 +467,35 @@ int main(int argc, char** argv)
             printf("      rectangle [x=%lf, y=%lf, w=%lf, h=%lf]\n", dx, dy, dw, dh);
 #endif
           }
-        }
+          else if (type == heif_region_type_ellipse) {
+            int32_t x;
+            int32_t y;
+            uint32_t rx;
+            uint32_t ry;
+            heif_region_get_ellipse(regions[j], &x, &y, &rx, &ry);
+            printf("      ellipse [x=%i, y=%i, r_x=%u, r_y=%u]\n", x, y, rx, ry);
+          }
+          else if (type == heif_region_type_polygon) {
+            int32_t numPoints = heif_region_get_polygon_num_points(regions[j]);
+            std::vector<int32_t> pts(numPoints);
+            heif_region_get_polygon_points(regions[j], pts.data());
+            printf("      polygon [");
+            for (int p=0;p<numPoints;p++) {
+              printf("(%d;%d)", pts[2*p+0], pts[2*p+1]);
+            }
+            printf("]\n");
+          }
+          else if (type == heif_region_type_polyline) {
+            int32_t numPoints = heif_region_get_polyline_num_points(regions[j]);
+            std::vector<int32_t> pts(numPoints);
+            heif_region_get_polyline_points(regions[j], pts.data());
+            printf("      polyline [");
+            for (int p=0;p<numPoints;p++) {
+              printf("(%d;%d)", pts[2*p+0], pts[2*p+1]);
+            }
+            printf("]\n");
+          }
+      }
 
         heif_region_release_many(regions.data(), numRegions);
         heif_region_item_release(region_item);

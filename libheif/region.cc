@@ -70,21 +70,21 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
 
     std::shared_ptr<RegionGeometry> region;
 
-    if (geometry_type == 0) {
+    if (geometry_type == heif_region_type_point) {
       region = std::make_shared<RegionGeometry_Point>();
     }
-    else if (geometry_type == 1) {
+    else if (geometry_type == heif_region_type_rectangle) {
       region = std::make_shared<RegionGeometry_Rectangle>();
     }
-    else if (geometry_type == 2) {
+    else if (geometry_type == heif_region_type_ellipse) {
       region = std::make_shared<RegionGeometry_Ellipse>();
     }
-    else if (geometry_type == 3) {
+    else if (geometry_type == heif_region_type_polygon) {
       auto polygon = std::make_shared<RegionGeometry_Polygon>();
       polygon->closed = true;
       region = polygon;
     }
-    else if (geometry_type == 6) {
+    else if (geometry_type == heif_region_type_polyline) {
       auto polygon = std::make_shared<RegionGeometry_Polygon>();
       polygon->closed = false;
       region = polygon;
@@ -106,6 +106,63 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
   }
   return Error::Ok;
 }
+
+Error RegionItem::encode(std::vector<uint8_t>& result) const
+{
+  heif::StreamWriter writer;
+
+  writer.write8(0);
+
+  // --- compute required field size
+
+  int field_size_bytes = 2;
+
+  if (reference_width <= 0xFFFF &&
+      reference_height <= 0xFFFF) {
+    field_size_bytes = 4;
+  }
+
+  if (field_size_bytes != 4) {
+    for (auto& region : mRegions) {
+      if (region->encode_needs_32bit()) {
+        field_size_bytes = 4;
+        break;
+      }
+    }
+  }
+
+  // --- write flags
+
+  uint8_t flags = 0;
+
+  if (field_size_bytes == 4) {
+    flags |= 1;
+  }
+
+  writer.write8(flags);
+
+  // --- write reference size
+
+  writer.write(field_size_bytes, reference_width);
+  writer.write(field_size_bytes, reference_height);
+
+  // --- write regions
+
+  if (mRegions.size() >= 256) {
+    return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, ""); // TODO
+  }
+
+  writer.write8((uint8_t) mRegions.size());
+
+  for (auto& region : mRegions) {
+    region->encode(writer, field_size_bytes);
+  }
+
+  result = writer.get_data();
+
+  return Error::Ok;
+}
+
 
 uint32_t RegionGeometry::parse_unsigned(const std::vector<uint8_t>& data,
                                         int field_size,
@@ -157,6 +214,32 @@ Error RegionGeometry_Point::parse(const std::vector<uint8_t>& data,
   return Error::Ok;
 }
 
+
+static bool exceeds_s16(int32_t v)
+{
+  return (v > 32767 || v < -32768);
+}
+
+static bool exceeds_u16(uint32_t v)
+{
+  return v > 0xFFFF;
+}
+
+
+bool RegionGeometry_Point::encode_needs_32bit() const
+{
+  return exceeds_s16(x) || exceeds_s16(y);
+}
+
+
+void RegionGeometry_Point::encode(heif::StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(heif_region_type_point);
+  writer.write(field_size_bytes, x);
+  writer.write(field_size_bytes, y);
+}
+
+
 Error RegionGeometry_Rectangle::parse(const std::vector<uint8_t>& data,
                                       int field_size,
                                       unsigned int* dataOffset)
@@ -174,6 +257,21 @@ Error RegionGeometry_Rectangle::parse(const std::vector<uint8_t>& data,
 }
 
 
+bool RegionGeometry_Rectangle::encode_needs_32bit() const
+{
+  return exceeds_s16(x) || exceeds_s16(y) || exceeds_u16(width) || exceeds_u16(height);
+}
+
+
+void RegionGeometry_Rectangle::encode(heif::StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(heif_region_type_rectangle);
+  writer.write(field_size_bytes, x);
+  writer.write(field_size_bytes, y);
+  writer.write(field_size_bytes, width);
+  writer.write(field_size_bytes, height);
+}
+
 Error RegionGeometry_Ellipse::parse(const std::vector<uint8_t>& data,
                                     int field_size,
                                     unsigned int* dataOffset)
@@ -189,6 +287,22 @@ Error RegionGeometry_Ellipse::parse(const std::vector<uint8_t>& data,
   radius_y = parse_unsigned(data, field_size, dataOffset);
   return Error::Ok;
 }
+
+bool RegionGeometry_Ellipse::encode_needs_32bit() const
+{
+  return exceeds_s16(x) || exceeds_s16(y) || exceeds_u16(radius_x) || exceeds_u16(radius_y);
+}
+
+
+void RegionGeometry_Ellipse::encode(heif::StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(heif_region_type_ellipse);
+  writer.write(field_size_bytes, x);
+  writer.write(field_size_bytes, y);
+  writer.write(field_size_bytes, radius_x);
+  writer.write(field_size_bytes, radius_y);
+}
+
 
 
 Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
@@ -222,6 +336,35 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
 }
 
 
+bool RegionGeometry_Polygon::encode_needs_32bit() const
+{
+  if (exceeds_u16(points.size())) {
+    return true;
+  }
+
+  for (auto& p : points) {
+    if (exceeds_s16(p.x) || exceeds_s16(p.y)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+void RegionGeometry_Polygon::encode(heif::StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(closed ? heif_region_type_polygon : heif_region_type_polyline);
+
+  writer.write(field_size_bytes, points.size());
+
+  for (auto& p : points) {
+    writer.write(field_size_bytes, p.x);
+    writer.write(field_size_bytes, p.y);
+  }
+}
+
+
 RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif::HeifFile> file,
                                                             heif_item_id item_id,
                                                             int reference_width, int reference_height)
@@ -249,8 +392,8 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif
   }
 
   RegionCoordinateTransform transform;
-  transform.a = image_width / (double)reference_width;
-  transform.d = image_height / (double)reference_height;
+  transform.a = image_width / (double) reference_width;
+  transform.d = image_height / (double) reference_height;
 
   for (auto& property : properties) {
     switch (property.property->get_short_type()) {

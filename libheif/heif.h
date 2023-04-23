@@ -1114,7 +1114,8 @@ enum heif_progress_step
 };
 
 
-enum heif_chroma_downsampling_algorithm {
+enum heif_chroma_downsampling_algorithm
+{
   heif_chroma_downsampling_nearest_neighbor = 1,
   heif_chroma_downsampling_average = 2,
 
@@ -1123,7 +1124,8 @@ enum heif_chroma_downsampling_algorithm {
   heif_chroma_downsampling_sharp_yuv = 3
 };
 
-enum heif_chroma_upsampling_algorithm {
+enum heif_chroma_upsampling_algorithm
+{
   heif_chroma_upsampling_nearest_neighbor = 1,
   heif_chroma_upsampling_bilinear = 2
 };
@@ -1873,12 +1875,13 @@ struct heif_region_item;
 
 enum heif_region_type
 {
-  heif_region_type_point,
-  heif_region_type_rectangle,
-  heif_region_type_ellipse,
-  heif_region_type_polygon,
-  heif_region_type_mask,
-  heif_region_type_polyline
+  heif_region_type_point = 0,
+  heif_region_type_rectangle = 1,
+  heif_region_type_ellipse = 2,
+  heif_region_type_polygon = 3,
+  heif_region_type_referenced_mask = 4,  // TODO: or should we keep 'referenced/inline' an implementation detail that is not exposed?
+  heif_region_type_inline_mask = 5,
+  heif_region_type_polyline = 6
 };
 
 struct heif_region;
@@ -1895,8 +1898,9 @@ int heif_image_handle_get_list_of_region_item_ids(const struct heif_image_handle
                                                   int max_count);
 
 LIBHEIF_API
-struct heif_region_item* heif_context_get_region_item(const struct heif_context* context,
-                                                      heif_item_id region_item_id);
+struct heif_error heif_context_get_region_item(const struct heif_context* context,
+                                               heif_item_id region_item_id,
+                                               struct heif_region_item** out);
 
 LIBHEIF_API
 void heif_region_item_release(struct heif_region_item*);
@@ -1912,6 +1916,35 @@ LIBHEIF_API
 int heif_region_item_get_list_of_regions(const struct heif_region_item* region_item,
                                          struct heif_region** regions,
                                          int max_count);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* image_handle,
+                                                    uint32_t reference_width, uint32_t reference_height,
+                                                    struct heif_region_item** out_region_item);
+
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_point(struct heif_region_item*,
+                                                    int32_t x, int32_t y);
+
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item*,
+                                                    int32_t x, int32_t y,
+                                                    uint32_t width, uint32_t height);
+
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item*,
+                                                      int32_t x, int32_t y,
+                                                      uint32_t radius_x, uint32_t radius_y);
+
+// pts[] is an array of 2*nPoints, each pair representing x and y.
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_polygon(struct heif_region_item*,
+                                                      const int32_t* pts, int nPoints);
+
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_polyline(struct heif_region_item*,
+                                                       const int32_t* pts, int nPoints);
+
 
 LIBHEIF_API
 void heif_region_release(const struct heif_region* region);

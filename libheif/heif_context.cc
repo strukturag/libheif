@@ -457,8 +457,38 @@ void HeifContext::reset_to_empty_heif()
   m_primary_image.reset();
 }
 
+heif_item_id HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
+{
+  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
+
+  auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
+  add_region_item(regionItem);
+
+  return box->get_item_ID();
+}
+
 void HeifContext::write(StreamWriter& writer)
 {
+  // --- serialize regions
+
+  for (auto& image : m_all_images) {
+    for (auto region : image.second->get_region_item_ids()) {
+      m_heif_file->add_iref_reference(region,
+                                      fourcc("cdsc"), {image.first});
+    }
+  }
+
+  for (auto& region : m_region_items) {
+    std::vector<uint8_t> data_array;
+    Error err = region->encode(data_array);
+    // TODO: err
+
+    m_heif_file->append_iloc_data(region->item_id, data_array);
+  }
+
+
+  // --- write to file
+
   m_heif_file->write(writer);
 }
 
@@ -2220,6 +2250,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 {
   heif_item_id image_id = m_heif_file->add_new_image("hvc1");
   out_image = std::make_shared<Image>(this, image_id);
+  m_all_images[image_id] = out_image;
 
 
   // --- check whether we have to convert the image color space
@@ -2472,6 +2503,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
 
   out_image = std::make_shared<Image>(this, image_id);
   m_top_level_images.push_back(out_image);
+  m_all_images[image_id] = out_image;
 
   // --- check whether we have to convert the image color space
 
@@ -2650,6 +2682,7 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                                 out_image);
 
   m_top_level_images.push_back(out_image);
+  m_all_images[image_id] = out_image;
 #endif
   //write_image_metadata(src_image, image_id);
 

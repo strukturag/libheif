@@ -56,6 +56,7 @@
 #else
 
 #include <unistd.h>
+#include <cassert>
 
 #endif
 
@@ -3082,15 +3083,26 @@ int heif_image_handle_get_list_of_region_item_ids(const struct heif_image_handle
 }
 
 
-struct heif_region_item* heif_context_get_region_item(const struct heif_context* context,
-                                                      heif_item_id region_item_id)
+struct heif_error heif_context_get_region_item(const struct heif_context* context,
+                                               heif_item_id region_item_id,
+                                               struct heif_region_item** out)
 {
+  if (out==nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument"};
+  }
+
   auto r = context->context->get_region_item(region_item_id);
+
+  if (r==nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced, "Region item does not exist"};
+  }
 
   heif_region_item* item = new heif_region_item();
   item->context = context->context;
   item->region_item = r;
-  return item;
+  *out = item;
+
+  return error_Ok;
 }
 
 
@@ -3132,6 +3144,114 @@ int heif_region_item_get_list_of_regions(const struct heif_region_item* region_i
 
   return num;
 }
+
+
+struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* image_handle,
+                                                    uint32_t reference_width, uint32_t reference_height,
+                                                    struct heif_region_item** out_region_item)
+{
+  heif_item_id regionItemId = image_handle->context->add_region_item(reference_width, reference_height);
+  image_handle->image->add_region_item_id(regionItemId);
+
+  std::shared_ptr<RegionItem> regionItem = image_handle->context->get_region_item(regionItemId);
+
+  if (out_region_item) {
+    auto r = image_handle->context->get_region_item(regionItemId);
+    assert(r);
+
+    heif_region_item* item = new heif_region_item();
+    item->context = image_handle->context;
+    item->region_item = r;
+
+    *out_region_item = item;
+  }
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_point(struct heif_region_item* item,
+                                                    int32_t x, int32_t y)
+{
+  auto region = std::make_shared<RegionGeometry_Point>();
+  region->x = x;
+  region->y = y;
+
+  item->region_item->add_region(region);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item* item,
+                                                        int32_t x, int32_t y,
+                                                        uint32_t width, uint32_t height)
+{
+  auto region = std::make_shared<RegionGeometry_Rectangle>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+
+  item->region_item->add_region(region);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item* item,
+                                                      int32_t x, int32_t y,
+                                                      uint32_t radius_x, uint32_t radius_y)
+{
+  auto region = std::make_shared<RegionGeometry_Ellipse>();
+  region->x = x;
+  region->y = y;
+  region->radius_x = radius_x;
+  region->radius_y = radius_y;
+
+  item->region_item->add_region(region);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_polygon(struct heif_region_item* item,
+                                                      const int32_t* pts, int nPoints)
+{
+  auto region = std::make_shared<RegionGeometry_Polygon>();
+  region->points.resize(nPoints);
+
+  for (int i=0;i<nPoints;i++) {
+    region->points[i].x = pts[2*i+0];
+    region->points[i].y = pts[2*i+1];
+  }
+
+  region->closed = true;
+
+  item->region_item->add_region(region);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_polyline(struct heif_region_item* item,
+                                                       const int32_t* pts, int nPoints)
+{
+  auto region = std::make_shared<RegionGeometry_Polygon>();
+  region->points.resize(nPoints);
+
+  for (int i=0;i<nPoints;i++) {
+    region->points[i].x = pts[2*i+0];
+    region->points[i].y = pts[2*i+1];
+  }
+
+  region->closed = false;
+
+  item->region_item->add_region(region);
+
+  return error_Ok;
+}
+
 
 void heif_region_release(const struct heif_region* region)
 {
@@ -3252,9 +3372,9 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
 
 
 struct heif_error heif_region_get_ellipse_scaled(const struct heif_region* region,
-                                                   double* x, double* y,
-                                                   double* radius_x, double* radius_y,
-                                                   heif_item_id image_id)
+                                                 double* x, double* y,
+                                                 double* radius_x, double* radius_y,
+                                                 heif_item_id image_id)
 {
   const std::shared_ptr<RegionGeometry_Ellipse> ellipse = std::dynamic_pointer_cast<RegionGeometry_Ellipse>(region->region);
   if (ellipse) {
