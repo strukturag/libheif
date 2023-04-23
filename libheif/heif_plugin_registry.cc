@@ -28,7 +28,7 @@
 
 #include "heif_plugin_registry.h"
 
-#ifdef ENABLE_UNCOMPRESSED_ENCODER
+#if ENABLE_UNCOMPRESSED
 #include "libheif/plugins/heif_encoder_uncompressed.h"
 #endif
 
@@ -112,7 +112,7 @@ void heif::register_default_plugins()
   heif::register_encoder(get_encoder_plugin_svt());
 #endif
 
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if ENABLE_UNCOMPRESSED
   heif::register_encoder(get_encoder_plugin_uncompressed());
 #endif
 }

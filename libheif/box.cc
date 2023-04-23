@@ -35,10 +35,8 @@
 #include <cstring>
 #include <cassert>
 
-#ifdef ENABLE_UNCOMPRESSED_DECODER
-
+#if ENABLE_UNCOMPRESSED
 #include "uncompressed_image.h"
-
 #endif
 
 using namespace heif;
@@ -552,7 +550,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_udes>();
       break;
 
-#ifdef ENABLE_UNCOMPRESSED_DECODER
+#if ENABLE_UNCOMPRESSED
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>();
       break;
