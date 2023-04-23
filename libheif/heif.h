@@ -1905,6 +1905,9 @@ struct heif_error heif_context_get_region_item(const struct heif_context* contex
                                                struct heif_region_item** out);
 
 LIBHEIF_API
+heif_item_id heif_region_item_get_id(struct heif_region_item*);
+
+LIBHEIF_API
 void heif_region_item_release(struct heif_region_item*);
 
 LIBHEIF_API

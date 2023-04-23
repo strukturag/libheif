@@ -3106,6 +3106,16 @@ struct heif_error heif_context_get_region_item(const struct heif_context* contex
 }
 
 
+heif_item_id heif_region_item_get_id(struct heif_region_item* region_item)
+{
+  if (region_item == nullptr) {
+    return -1;
+  }
+
+  return region_item->region_item->item_id;
+}
+
+
 void heif_region_item_release(struct heif_region_item* region_item)
 {
   delete region_item;
