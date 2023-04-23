@@ -149,7 +149,7 @@ Error RegionItem::encode(std::vector<uint8_t>& result) const
   // --- write regions
 
   if (mRegions.size() >= 256) {
-    return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, ""); // TODO
+    return Error(heif_error_Encoding_error, heif_suberror_Too_many_regions);
   }
 
   writer.write8((uint8_t) mRegions.size());
@@ -338,7 +338,7 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
 
 bool RegionGeometry_Polygon::encode_needs_32bit() const
 {
-  if (exceeds_u16(points.size())) {
+  if (exceeds_u16((uint32_t)points.size())) {
     return true;
   }
 

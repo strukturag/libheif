@@ -216,6 +216,8 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
       return "Encoding problem";
     case heif_suberror_Encoder_cleanup:
       return "Cleanup problem";
+    case heif_suberror_Too_many_regions:
+      return "Too many regions (>255) in an 'rgan' item.";
 
       // --- Plugin_loading_error ---
 

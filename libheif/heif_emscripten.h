@@ -206,6 +206,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Encoder_initialization", heif_suberror_Encoder_initialization)
     .value("heif_suberror_Encoder_encoding", heif_suberror_Encoder_encoding)
     .value("heif_suberror_Encoder_cleanup", heif_suberror_Encoder_cleanup)
+    .value("heif_suberror_Too_many_regions", heif_suberror_Too_many_regions)
     .value("heif_suberror_End_of_data", heif_suberror_End_of_data)
     .value("heif_suberror_Invalid_box_size", heif_suberror_Invalid_box_size)
     .value("heif_suberror_No_ftyp_box", heif_suberror_No_ftyp_box)

@@ -3115,8 +3115,9 @@ void heif_region_item_release(struct heif_region_item* region_item)
 void heif_region_item_get_reference_size(struct heif_region_item* region_item, uint32_t* width, uint32_t* height)
 {
   auto r = region_item->context->get_region_item(region_item->region_item->item_id);
-  if (*width) *width = r->reference_width;
-  if (*height) *height = r->reference_height;
+
+  if (width) *width = r->reference_width;
+  if (height) *height = r->reference_height;
 }
 
 

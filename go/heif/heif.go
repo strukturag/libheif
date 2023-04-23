@@ -337,6 +337,8 @@ const (
 	SuberrorEncoderEncoding = C.heif_suberror_Encoder_encoding
 
 	SuberrorEncoderCleanup = C.heif_suberror_Encoder_cleanup
+
+	SuberrorTooManyRegions = C.heif_suberror_Too_many_regions
 )
 
 type HeifError struct {

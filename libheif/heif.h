@@ -294,6 +294,8 @@ enum heif_suberror_code
   heif_suberror_Encoder_encoding = 5002,
   heif_suberror_Encoder_cleanup = 5003,
 
+  heif_suberror_Too_many_regions = 5004,
+
 
   // --- Plugin loading error ---
 
