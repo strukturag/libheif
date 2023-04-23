@@ -142,6 +142,10 @@ if (ENABLE_UNCOMPRESSED_DECODER)
     target_sources(heif PRIVATE
             uncompressed_image.h
             uncompressed_image.cc)
+    target_compile_definitions(heif_internal PRIVATE ENABLE_UNCOMPRESSED_DECODER=1)
+    target_sources(heif_internal PRIVATE
+            uncompressed_image.h
+            uncompressed_image.cc)
 endif()
 
 if (ENABLE_UNCOMPRESSED_ENCODER)

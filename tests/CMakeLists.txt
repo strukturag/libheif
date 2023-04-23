@@ -8,5 +8,10 @@ macro(add_libheif_test TEST_FILE)
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
 endmacro()
 
+file(COPY data/uncompressed_rgb3.heif DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY data/uncompressed_planar_tiled.heif DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 add_libheif_test(conversion)
 add_libheif_test(encode)
+add_libheif_test(uncompressed_decode)
+
