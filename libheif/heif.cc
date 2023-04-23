@@ -3494,3 +3494,26 @@ struct heif_error heif_region_get_polyline_points_scaled(const struct heif_regio
   return heif_region_get_poly_points_scaled(region, pts, image_id);
 }
 
+struct heif_error heif_region_get_referenced_mask(const struct heif_region* region,
+                                                  int32_t* x, int32_t* y,
+                                                  uint32_t* width, uint32_t* height,
+                                                  heif_item_id *mask_item_id)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr) || (mask_item_id == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_ReferencedMask> mask = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    // TODO: mask_item_id
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
+}
+
