@@ -477,7 +477,7 @@ int main(int argc, char** argv)
           }
           else if (type == heif_region_type_polygon) {
             int32_t numPoints = heif_region_get_polygon_num_points(regions[j]);
-            std::vector<int32_t> pts(numPoints);
+            std::vector<int32_t> pts(numPoints*2);
             heif_region_get_polygon_points(regions[j], pts.data());
             printf("      polygon [");
             for (int p=0;p<numPoints;p++) {
@@ -487,7 +487,7 @@ int main(int argc, char** argv)
           }
           else if (type == heif_region_type_polyline) {
             int32_t numPoints = heif_region_get_polyline_num_points(regions[j]);
-            std::vector<int32_t> pts(numPoints);
+            std::vector<int32_t> pts(numPoints*2);
             heif_region_get_polyline_points(regions[j], pts.data());
             printf("      polyline [");
             for (int p=0;p<numPoints;p++) {
