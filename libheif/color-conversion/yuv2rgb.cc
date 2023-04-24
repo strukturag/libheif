@@ -39,6 +39,9 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
       return {};
     }
   }
+  if (input_state.chroma == heif_chroma_monochrome) {
+    return {};
+  }
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 

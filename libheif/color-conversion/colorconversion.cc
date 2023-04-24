@@ -30,6 +30,7 @@
 #include <set>
 #include <cmath>
 #include <limits>
+#include <string>
 #include "rgb2yuv.h"
 #include "rgb2yuv_sharp.h"
 #include "yuv2rgb.h"
@@ -298,7 +299,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
       assert(m_conversion_steps.back().output_state == target_state);
 
 #if DEBUG_ME
-      debug_dump_pipeline();
+      std::cerr << debug_dump_pipeline();
 #endif
 
       return true;
@@ -367,13 +368,15 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 }
 
 
-void ColorConversionPipeline::debug_dump_pipeline() const
+std::string ColorConversionPipeline::debug_dump_pipeline() const
 {
-  std::cerr << "final pipeline has " << m_conversion_steps.size() << " steps:\n";
+  std::ostringstream ostr;
+  ostr << "final pipeline has " << m_conversion_steps.size() << " steps:\n";
   for (const auto& step : m_conversion_steps) {
     auto& op = *step.operation;
-    std::cerr << "> " << typeid(op).name() << "\n";
+    ostr << "> " << typeid(op).name() << "\n";
   }
+  return ostr.str();
 }
 
 

@@ -27,7 +27,8 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
                                             const heif_color_conversion_options& options) const
 {
-  if (input_state.colorspace != heif_colorspace_monochrome ||
+  if ((input_state.colorspace != heif_colorspace_monochrome &&
+       input_state.colorspace != heif_colorspace_YCbCr) ||
       input_state.chroma != heif_chroma_monochrome) {
     return {};
   }

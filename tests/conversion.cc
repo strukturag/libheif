@@ -231,6 +231,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
 
   ColorConversionPipeline pipeline;
   REQUIRE(pipeline.construct_pipeline(input_state, target_state, options));
+  INFO(pipeline.debug_dump_pipeline());
 
   auto in_image = std::make_shared<heif::HeifPixelImage>();
   // Width and height are multiples of 4.
@@ -301,7 +302,7 @@ void TestFailingConversion(const std::string& test_name,
 std::vector<heif_chroma> GetValidChroma(heif_colorspace colorspace) {
   switch (colorspace) {
     case heif_colorspace_YCbCr:
-      return {/*heif_chroma_monochrome, */heif_chroma_420, heif_chroma_422,
+      return {heif_chroma_monochrome, heif_chroma_420, heif_chroma_422,
               heif_chroma_444};
     case heif_colorspace_RGB:
       return {heif_chroma_444,
@@ -393,10 +394,12 @@ TEST_CASE("All conversions", "[heif_image]") {
   // To debug a particular combination, hardcoe the ColorState values
   // instead:
   // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
-  // ColorState dst_state = ...
+  // ColorState dst_state(...);
 
   // Converting to monochrome is not supported at the moment.
-  if (dst_state.colorspace == heif_colorspace_monochrome) return;
+  if (dst_state.colorspace == heif_colorspace_monochrome ||
+      dst_state.chroma == heif_chroma_monochrome)
+    return;
 
   std::ostringstream os;
   os << "from: " << src_state << "\nto:   " << dst_state;
