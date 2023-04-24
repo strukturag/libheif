@@ -156,6 +156,7 @@ public:
 
   int32_t x,y;
   uint32_t width, height;
+  heif_item_id referenced_item;
 };
 
 #if 0

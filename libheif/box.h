@@ -1465,18 +1465,14 @@ namespace heif {
    * that provides information required to generate the mask of the associated mask
    * item.
    */
-  class Box_mskC : public Box
+  class Box_mskC : public FullBox
   {
   public:
 
     Box_mskC()
     {
       set_short_type(fourcc("mskC"));
-      set_is_full_box(true);
     }
-
-    Box_mskC(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 

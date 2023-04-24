@@ -21,6 +21,7 @@
 #include "libheif/box.h"
 #include "libheif/error.h"
 #include "libheif/heif.h"
+#include "libheif/region.h"
 #include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -1007,6 +1008,22 @@ Error HeifContext::interpret_heif_file()
             }
             img_iter->second->add_region_item_id(id);
             m_region_items.push_back(region_item);
+          }
+          /* When the geometry 'mask' of a region is represented by a mask stored in
+          * another image item the image item containing the mask shall be identified
+          * by an item reference of type 'mask' from the region item to the image item
+          * containing the mask. */
+          if (ref.header.get_short_type() == fourcc("mask")) {
+            std::vector<uint32_t> refs = ref.to_item_ID;
+            int mask_index = 0;
+            for (int j = 0; j < region_item->get_number_of_regions(); j++) {
+              if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
+                std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
+                uint32_t mask_image_id = refs[mask_index];
+                mask_geometry->referenced_item = mask_image_id;
+                mask_index += 1;
+              }
+            }
           }
         }
       }

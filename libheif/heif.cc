@@ -3511,7 +3511,7 @@ struct heif_error heif_region_get_referenced_mask(const struct heif_region* regi
     *y = mask->y;
     *width = mask->width;
     *height = mask->height;
-    // TODO: mask_item_id
+    *mask_item_id = mask->referenced_item;
     return heif_error_ok;
   }
   return heif_error_invalid_parameter_value;
