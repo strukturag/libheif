@@ -80,11 +80,14 @@ int premultiplied_alpha = 0;
 int run_benchmark = 0;
 int metadata_compression = 0;
 const char* encoderId = nullptr;
+std::string chroma_downsampling;
 
 uint16_t nclx_matrix_coefficients = 6;
 uint16_t nclx_colour_primaries = 2;
 uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
+
+std::string property_pitm_description;
 
 // for benchmarking
 
@@ -105,36 +108,40 @@ const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
 const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 const int OPTION_PLUGIN_DIRECTORY = 1004;
-
+const int OPTION_PITM_DESCRIPTION = 1005;
 
 static struct option long_options[] = {
-    {(char* const) "help",                        no_argument,       0,                     'h'},
-    {(char* const) "quality",                     required_argument, 0,                     'q'},
-    {(char* const) "output",                      required_argument, 0,                     'o'},
-    {(char* const) "lossless",                    no_argument,       0,                     'L'},
-    {(char* const) "thumb",                       required_argument, 0,                     't'},
-    {(char* const) "verbose",                     no_argument,       0,                     'v'},
-    {(char* const) "params",                      no_argument,       0,                     'P'},
-    {(char* const) "no-alpha",                    no_argument,       &master_alpha,         0},
-    {(char* const) "no-thumb-alpha",              no_argument,       &thumb_alpha,          0},
-    {(char* const) "list-encoders",               no_argument,       &list_encoders,        1},
-    {(char* const) "encoder",                     no_argument,       0,                     'e'},
-    {(char* const) "bit-depth",                   required_argument, 0,                     'b'},
-    {(char* const) "even-size",                   no_argument,       0,                     'E'},
-    {(char* const) "avif",                        no_argument,       0,                     'A'},
+    {(char* const) "help",                    no_argument,       0,              'h'},
+    {(char* const) "quality",                 required_argument, 0,              'q'},
+    {(char* const) "output",                  required_argument, 0,              'o'},
+    {(char* const) "lossless",                no_argument,       0,              'L'},
+    {(char* const) "thumb",                   required_argument, 0,              't'},
+    {(char* const) "verbose",                 no_argument,       0,              'v'},
+    {(char* const) "params",                  no_argument,       0,              'P'},
+    {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
+    {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
+    {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
+    {(char* const) "encoder",                 no_argument,       0,              'e'},
+    {(char* const) "bit-depth",               required_argument, 0,              'b'},
+    {(char* const) "even-size",               no_argument,       0,              'E'},
+    {(char* const) "avif",                    no_argument,       0,              'A'},
 #if ENABLE_UNCOMPRESSED_ENCODER
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
-    {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
-    {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
-    {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
-    {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
-    {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
-    {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
-    {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
-    {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
-    {0, 0,                                                           0,                     0},
+    {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",        required_argument, 0,              OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic", required_argument, 0,              OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
+    {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
+    {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
+    {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
+    {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
+    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
+    {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
+#if HAVE_LIBSHARPYUV
+    {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
+#endif
+    {0, 0,                                                       0,               0},
 };
 
 void show_help(const char* argv0)
@@ -177,7 +184,13 @@ void show_help(const char* argv0)
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+#ifdef HAVE_LIBSHARPYUV
+            << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / sharp-yuv)\n"
+            << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
+#endif
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
+            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
+
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
             << "  -L                       switch encoder to lossless mode\n"
@@ -1264,7 +1277,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
 #if ENABLE_UNCOMPRESSED_ENCODER
         "U"
 #endif
@@ -1326,6 +1339,9 @@ int main(int argc, char** argv)
       case OPTION_NCLX_FULL_RANGE_FLAG:
         nclx_full_range = atoi(optarg);
         break;
+      case OPTION_PITM_DESCRIPTION:
+        property_pitm_description = optarg;
+        break;
       case OPTION_PLUGIN_DIRECTORY: {
         int nPlugins;
         heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
@@ -1340,6 +1356,19 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case 'C':
+        chroma_downsampling = optarg;
+        if (chroma_downsampling != "nn" &&
+            chroma_downsampling != "nearest-neighbor" &&
+            chroma_downsampling != "average" &&
+            chroma_downsampling != "sharp-yuv") {
+          fprintf(stderr, "Undefined chroma downsampling algorithm.\n");
+          exit(5);
+        }
+        if (chroma_downsampling == "nn") { // abbreviation
+          chroma_downsampling = "nearest-neighbor";
+        }
+        break;
     }
   }
 
@@ -1554,6 +1583,19 @@ int main(int argc, char** argv)
     options->output_nclx_profile = &nclx;
     options->image_orientation = input_image.orientation;
 
+    if (chroma_downsampling == "average") {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+    }
+    else if (chroma_downsampling == "sharp-yuv") {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+    }
+    else if (chroma_downsampling == "nearest-neighbor") {
+      options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
+      options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
+    }
+
     if (crop_to_even_size) {
       if (heif_image_get_primary_width(image.get()) == 1 ||
           heif_image_get_primary_height(image.get()) == 1) {
@@ -1653,6 +1695,30 @@ int main(int argc, char** argv)
   }
 
   heif_encoder_release(encoder);
+
+  if (!property_pitm_description.empty()) {
+    heif_image_handle* primary_image_handle;
+    struct heif_error err = heif_context_get_primary_image_handle(context.get(), &primary_image_handle);
+    if (err.code) {
+      std::cerr << "No primary image set, cannot set user description\n";
+      return 5;
+    }
+
+    heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
+
+    heif_property_user_description udes;
+    udes.lang = "";
+    udes.name = "";
+    udes.tags = "";
+    udes.description = property_pitm_description.c_str();
+    err = heif_item_set_property_user_description(context.get(), pitm_id, &udes, nullptr);
+    if (err.code) {
+      std::cerr << "Cannot set user description\n";
+      return 5;
+    }
+
+    heif_image_handle_release(primary_image_handle);
+  }
 
   error = heif_context_write_to_file(context.get(), output_filename.c_str());
   if (error.code) {

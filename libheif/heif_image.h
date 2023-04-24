@@ -102,7 +102,7 @@ namespace heif {
     Error rotate_ccw(int angle_degrees,
                      std::shared_ptr<HeifPixelImage>& out_img);
 
-    Error mirror_inplace(bool horizontal);
+    Error mirror_inplace(heif_transform_mirror_direction);
 
     Error crop(int left, int right, int top, int bottom,
                std::shared_ptr<HeifPixelImage>& out_img) const;

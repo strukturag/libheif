@@ -45,4 +45,29 @@ void get_subsampled_size(int width, int height,
 uint8_t compute_avif_profile(int bits_per_pixel, heif_chroma chroma);
 
 
+inline uint8_t clip_int_u8(int x)
+{
+  if (x < 0) return 0;
+  if (x > 255) return 255;
+  return static_cast<uint8_t>(x);
+}
+
+
+inline uint16_t clip_f_u16(float fx, int32_t maxi)
+{
+  long x = (long int) (fx + 0.5f);
+  if (x < 0) return 0;
+  if (x > maxi) return (uint16_t) maxi;
+  return static_cast<uint16_t>(x);
+}
+
+
+inline uint8_t clip_f_u8(float fx)
+{
+  long x = (long int) (fx + 0.5f);
+  if (x < 0) return 0;
+  if (x > 255) return 255;
+  return static_cast<uint8_t>(x);
+}
+
 #endif //LIBHEIF_COMMON_UTILS_H

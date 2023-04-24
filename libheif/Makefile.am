@@ -33,6 +33,10 @@ if HAVE_SvtEnc
 ADDITIONAL_LIBS += $(svt_LIBS)
 endif
 
+if HAVE_LIBSHARPYUV
+ADDITIONAL_LIBS += $(libsharpyuv_LIBS)
+endif
+
 libheif_la_CPPFLAGS =
 libheif_la_CFLAGS = \
   $(CFLAG_VISIBILITY) \
@@ -45,6 +49,7 @@ libheif_la_CXXFLAGS = \
   $(dav1d_CFLAGS) \
   $(rav1e_CFLAGS) \
   $(svt_CFLAGS) \
+  $(libsharpyuv_CFLAGS) \
   -DLIBHEIF_EXPORTS -I$(top_srcdir)
 libheif_la_LIBADD = $(ADDITIONAL_LIBS)
 
@@ -56,6 +61,22 @@ endif
 libheif_la_SOURCES = \
   bitstream.h \
   bitstream.cc \
+  color-conversion/colorconversion.cc \
+  color-conversion/colorconversion.h \
+  color-conversion/rgb2yuv.cc \
+  color-conversion/rgb2yuv.h \
+  color-conversion/rgb2yuv_sharp.cc \
+  color-conversion/rgb2yuv_sharp.h \
+  color-conversion/yuv2rgb.cc \
+  color-conversion/yuv2rgb.h \
+  color-conversion/rgb2rgb.cc \
+  color-conversion/rgb2rgb.h \
+  color-conversion/monochrome.cc \
+  color-conversion/monochrome.h \
+  color-conversion/hdr_sdr.cc \
+  color-conversion/hdr_sdr.h \
+  color-conversion/alpha.cc \
+  color-conversion/alpha.h \
   box.h \
   box.cc \
   error.h \
@@ -80,8 +101,6 @@ libheif_la_SOURCES = \
   heif_plugin_registry.cc \
   heif_plugin.h \
   heif_plugin.cc \
-  heif_colorconversion.h \
-  heif_colorconversion.cc \
   logging.h \
   metadata_compression.h \
   metadata_compression.cc \

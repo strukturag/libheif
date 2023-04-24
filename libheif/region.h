@@ -35,18 +35,28 @@ using heif::Error;
 class RegionItem
 {
 public:
+  RegionItem() = default;
+
+  RegionItem(heif_item_id itemId, uint32_t ref_width, uint32_t ref_height)
+      : item_id(itemId), reference_width(ref_width), reference_height(ref_height) {}
+
   Error parse(const std::vector<uint8_t>& data);
 
-  long unsigned int get_number_of_regions() { return mRegions.size(); }
+  Error encode(std::vector<uint8_t>& result) const;
+
+  int get_number_of_regions() { return (int)mRegions.size(); }
 
   std::vector<std::shared_ptr<RegionGeometry>> get_regions() { return mRegions; }
 
-  uint32_t item_id;
-  uint32_t reference_width;
-  uint32_t reference_height;
+  void add_region(const std::shared_ptr<RegionGeometry>& region) {
+    mRegions.push_back(region);
+  }
+
+  heif_item_id item_id = 0;
+  uint32_t reference_width = 0;
+  uint32_t reference_height = 0;
 
 private:
-
   std::vector<std::shared_ptr<RegionGeometry>> mRegions;
 };
 
@@ -60,6 +70,10 @@ public:
 
   virtual Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) = 0;
 
+  virtual bool encode_needs_32bit() const { return false; }
+
+  virtual void encode(heif::StreamWriter&, int field_size_bytes) const {}
+
 protected:
   uint32_t parse_unsigned(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset);
 
@@ -71,6 +85,10 @@ class RegionGeometry_Point : public RegionGeometry
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
 
+  bool encode_needs_32bit() const override;
+
+  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+
   heif_region_type getRegionType() override { return heif_region_type_point; }
 
   int32_t x, y;
@@ -80,6 +98,10 @@ class RegionGeometry_Rectangle : public RegionGeometry
 {
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
+
+  bool encode_needs_32bit() const override;
+
+  void encode(heif::StreamWriter&, int field_size_bytes) const override;
 
   heif_region_type getRegionType() override { return heif_region_type_rectangle; }
 
@@ -92,6 +114,10 @@ class RegionGeometry_Ellipse : public RegionGeometry
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
 
+  bool encode_needs_32bit() const override;
+
+  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+
   heif_region_type getRegionType() override { return heif_region_type_ellipse; }
 
   int32_t x, y;
@@ -103,7 +129,14 @@ class RegionGeometry_Polygon : public RegionGeometry
 public:
   Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset) override;
 
-  heif_region_type getRegionType() override { return heif_region_type_polygon; }
+  bool encode_needs_32bit() const override;
+
+  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+
+  heif_region_type getRegionType() override
+  {
+    return closed ? heif_region_type_polygon : heif_region_type_polyline;
+  }
 
   struct Point
   {
@@ -136,5 +169,36 @@ private:
   std::shared_ptr<heif::HeifPixelImage> mCachedMask;
 };
 #endif
+
+
+namespace heif {
+  class HeifFile;
+}
+
+
+class RegionCoordinateTransform
+{
+public:
+  static RegionCoordinateTransform create(std::shared_ptr<heif::HeifFile> file,
+                                          heif_item_id item_id,
+                                          int reference_width, int reference_height);
+
+  struct Point
+  {
+    double x, y;
+  };
+
+  struct Extent
+  {
+    double x, y;
+  };
+
+  Point transform_point(Point);
+
+  Extent transform_extent(Extent);
+
+private:
+  double a = 1.0, b = 0.0, c = 0.0, d = 1.0, tx = 0.0, ty = 0.0;
+};
 
 #endif //LIBHEIF_REGION_H

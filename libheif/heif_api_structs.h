@@ -66,17 +66,15 @@ struct heif_encoder
 struct heif_region_item
 {
   std::shared_ptr<heif::HeifContext> context;
-
-  uint32_t region_item_id;
-  uint32_t reference_width;  // TODO: move me into the internal region items
-  uint32_t reference_height;
+  std::shared_ptr<RegionItem> region_item;
 };
 
 
 struct heif_region
 {
-  std::shared_ptr<heif::HeifContext> context; // TODO: do we need this ?
-  heif_item_id parent_region_item_id; // TODO: do we need this ?
+  std::shared_ptr<heif::HeifContext> context; // we need this to perform coordinate transformation
+  //heif_item_id parent_region_item_id; // we need this to perform coordinate transformation
+  std::shared_ptr<RegionItem> region_item;
   std::shared_ptr<RegionGeometry> region;
 };
 

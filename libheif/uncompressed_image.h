@@ -40,10 +40,7 @@ namespace heif {
     Box_cmpd()
     {
       set_short_type(fourcc("cmpd"));
-      set_is_full_box(false);
     }
-
-    Box_cmpd(const BoxHeader& hdr) : Box(hdr) {}
 
     std::string dump(Indent&) const override;
 
@@ -63,16 +60,13 @@ namespace heif {
     std::vector<Component> m_components;
   };
 
-  class Box_uncC : public Box
+  class Box_uncC : public FullBox
   {
   public:
     Box_uncC()
     {
       set_short_type(fourcc("uncC"));
-      set_is_full_box(false);
     }
-
-    Box_uncC(const BoxHeader& hdr) : Box(hdr) {}
 
     std::string dump(Indent&) const override;
 
@@ -153,7 +147,7 @@ namespace heif {
     static Error encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                            const std::shared_ptr<HeifPixelImage>& src_image,
                                            void* encoder_struct,
-                                           const struct heif_encoding_options* options,
+                                           const struct heif_encoding_options& options,
                                            std::shared_ptr<HeifContext::Image> out_image);
   };
 }

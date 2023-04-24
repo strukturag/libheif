@@ -130,52 +130,23 @@ namespace heif {
     { m_type = type; }
 
 
-    Error parse(BitstreamRange& range);
+    Error parse_header(BitstreamRange& range);
 
     virtual std::string dump(Indent&) const;
 
 
-    // --- full box
+    virtual bool is_full_box_header() const
+    { return false; }
 
-    Error parse_full_box_header(BitstreamRange& range);
-
-    uint8_t get_version() const
-    { return m_version; }
-
-    void set_version(uint8_t version)
-    { m_version = version; }
-
-    uint32_t get_flags() const
-    { return m_flags; }
-
-    void set_flags(uint32_t flags)
-    { m_flags = flags; }
-
-    void set_is_full_box(bool flag = true)
-    { m_is_full_box = flag; }
-
-    bool is_full_box_header() const
-    { return m_is_full_box; }
-
-
-    // --- writing
-
-    size_t reserve_box_header_space(StreamWriter& writer) const;
-
-    Error prepend_header(StreamWriter&, size_t box_start) const;
 
   private:
     uint64_t m_size = 0;
-    uint32_t m_header_size = 0;
 
     uint32_t m_type = 0;
     std::vector<uint8_t> m_uuid_type;
 
-
-    bool m_is_full_box = false;
-
-    uint8_t m_version = 0;
-    uint32_t m_flags = 0;
+  protected:
+    uint32_t m_header_size = 0;
   };
 
 
@@ -184,16 +155,19 @@ namespace heif {
   public:
     Box() = default;
 
-    Box(const BoxHeader& hdr) : BoxHeader(hdr)
-    {}
+    void set_short_header(const BoxHeader& hdr) {
+      *(BoxHeader*)this = hdr;
+    }
+
+    // header size without the FullBox fields (if applicable)
+    int calculate_header_size(bool data64bit) const;
 
     static Error read(BitstreamRange& range, std::shared_ptr<heif::Box>* box);
 
     virtual Error write(StreamWriter& writer) const;
 
     // check, which box version is required and set this in the (full) box header
-    virtual void derive_box_version()
-    { set_version(0); }
+    virtual void derive_box_version() {}
 
     void derive_box_version_recursive();
 
@@ -234,6 +208,56 @@ namespace heif {
     Error write_children(StreamWriter& writer) const;
 
     std::string dump_children(Indent&) const;
+
+
+    // --- writing
+
+    virtual size_t reserve_box_header_space(StreamWriter& writer, bool data64bit = false) const;
+
+    Error prepend_header(StreamWriter&, size_t box_start, bool data64bit = false) const;
+
+    virtual Error write_header(StreamWriter&, size_t total_box_size, bool data64bit = false) const;
+  };
+
+
+  class FullBox : public Box
+  {
+  public:
+    bool is_full_box_header() const override
+    { return true; }
+
+    std::string dump(Indent& indent) const override;
+
+    void derive_box_version() override
+    { set_version(0); }
+
+
+    Error parse_full_box_header(BitstreamRange& range);
+
+    uint8_t get_version() const
+    { return m_version; }
+
+    void set_version(uint8_t version)
+    { m_version = version; }
+
+    uint32_t get_flags() const
+    { return m_flags; }
+
+    void set_flags(uint32_t flags)
+    { m_flags = flags; }
+
+  protected:
+
+    // --- writing
+
+    size_t reserve_box_header_space(StreamWriter& writer, bool data64bit = false) const override;
+
+    Error write_header(StreamWriter&, size_t total_size, bool data64bit = false) const override;
+
+
+  private:
+    uint8_t m_version = 0;
+    uint32_t m_flags = 0;
   };
 
 
@@ -243,11 +267,7 @@ namespace heif {
     Box_ftyp()
     {
       set_short_type(fourcc("ftyp"));
-      set_is_full_box(false);
     }
-
-    Box_ftyp(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -278,17 +298,13 @@ namespace heif {
   };
 
 
-  class Box_meta : public Box
+  class Box_meta : public FullBox
   {
   public:
     Box_meta()
     {
       set_short_type(fourcc("meta"));
-      set_is_full_box(true);
     }
-
-    Box_meta(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -297,17 +313,13 @@ namespace heif {
   };
 
 
-  class Box_hdlr : public Box
+  class Box_hdlr : public FullBox
   {
   public:
     Box_hdlr()
     {
       set_short_type(fourcc("hdlr"));
-      set_is_full_box(true);
     }
-
-    Box_hdlr(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -332,17 +344,13 @@ namespace heif {
   };
 
 
-  class Box_pitm : public Box
+  class Box_pitm : public FullBox
   {
   public:
     Box_pitm()
     {
       set_short_type(fourcc("pitm"));
-      set_is_full_box(true);
     }
-
-    Box_pitm(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -364,17 +372,13 @@ namespace heif {
   };
 
 
-  class Box_iloc : public Box
+  class Box_iloc : public FullBox
   {
   public:
     Box_iloc()
     {
       set_short_type(fourcc("iloc"));
-      set_is_full_box(true);
     }
-
-    Box_iloc(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -448,17 +452,13 @@ namespace heif {
   };
 
 
-  class Box_infe : public Box
+  class Box_infe : public FullBox
   {
   public:
     Box_infe()
     {
       set_short_type(fourcc("infe"));
-      set_is_full_box(true);
     }
-
-    Box_infe(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -516,17 +516,13 @@ namespace heif {
   };
 
 
-  class Box_iinf : public Box
+  class Box_iinf : public FullBox
   {
   public:
     Box_iinf()
     {
       set_short_type(fourcc("iinf"));
-      set_is_full_box(true);
     }
-
-    Box_iinf(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -548,11 +544,7 @@ namespace heif {
     Box_iprp()
     {
       set_short_type(fourcc("iprp"));
-      set_is_full_box(false);
     }
-
-    Box_iprp(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -567,15 +559,11 @@ namespace heif {
     Box_ipco()
     {
       set_short_type(fourcc("ipco"));
-      set_is_full_box(false);
     }
-
-    Box_ipco(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct Property
     {
-      bool essential;
+      bool essential; // TODO: move this into PropertyBox and remove Property completely
       std::shared_ptr<Box> property;
     };
 
@@ -594,17 +582,13 @@ namespace heif {
   };
 
 
-  class Box_ispe : public Box
+  class Box_ispe : public FullBox
   {
   public:
     Box_ispe()
     {
       set_short_type(fourcc("ispe"));
-      set_is_full_box(true);
     }
-
-    Box_ispe(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     uint32_t get_width() const
     { return m_image_width; }
@@ -631,17 +615,13 @@ namespace heif {
   };
 
 
-  class Box_ipma : public Box
+  class Box_ipma : public FullBox
   {
   public:
     Box_ipma()
     {
       set_short_type(fourcc("ipma"));
-      set_is_full_box(true);
     }
-
-    Box_ipma(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -675,17 +655,13 @@ namespace heif {
   };
 
 
-  class Box_auxC : public Box
+  class Box_auxC : public FullBox
   {
   public:
     Box_auxC()
     {
       set_short_type(fourcc("auxC"));
-      set_is_full_box(true);
     }
-
-    Box_auxC(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     const std::string& get_aux_type() const
     { return m_aux_type; }
@@ -712,13 +688,9 @@ namespace heif {
   class Box_irot : public Box
   {
   public:
-    Box_irot(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     Box_irot()
     {
       set_short_type(fourcc("irot"));
-      set_is_full_box(false);
     }
 
     std::string dump(Indent&) const override;
@@ -726,7 +698,7 @@ namespace heif {
     int get_rotation() const
     { return m_rotation; }
 
-    // Only multiples of 90 are allowed (0,90,180,270).
+    // Only these multiples of 90 are allowed: 0, 90, 180, 270.
     void set_rotation_ccw(int rot) { m_rotation = rot; }
 
   protected:
@@ -742,25 +714,15 @@ namespace heif {
   class Box_imir : public Box
   {
   public:
-    Box_imir(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     Box_imir()
     {
       set_short_type(fourcc("imir"));
-      set_is_full_box(false);
     }
 
-    enum class MirrorDirection : uint8_t
-    {
-      Vertical = 0,
-      Horizontal = 1
-    };
-
-    MirrorDirection get_mirror_direction() const
+    heif_transform_mirror_direction get_mirror_direction() const
     { return m_axis; }
 
-    void set_mirror_direction(MirrorDirection dir) { m_axis=dir; }
+    void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis=dir; }
 
     std::string dump(Indent&) const override;
 
@@ -770,7 +732,7 @@ namespace heif {
     Error write(StreamWriter& writer) const override;
 
   private:
-    MirrorDirection m_axis = MirrorDirection::Vertical;
+    heif_transform_mirror_direction m_axis = heif_transform_mirror_direction_vertical;
   };
 
 
@@ -780,11 +742,7 @@ namespace heif {
     Box_clap()
     {
       set_short_type(fourcc("clap"));
-      set_is_full_box(false);
     }
-
-    Box_clap(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -813,17 +771,13 @@ namespace heif {
   };
 
 
-  class Box_iref : public Box
+  class Box_iref : public FullBox
   {
   public:
     Box_iref()
     {
       set_short_type(fourcc("iref"));
-      set_is_full_box(true);
     }
-
-    Box_iref(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct Reference
     {
@@ -862,11 +816,7 @@ namespace heif {
     Box_hvcC()
     {
       set_short_type(fourcc("hvcC"));
-      set_is_full_box(false);
     }
-
-    Box_hvcC(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct configuration
     {
@@ -935,11 +885,7 @@ namespace heif {
     Box_av1C()
     {
       set_short_type(fourcc("av1C"));
-      set_is_full_box(false);
     }
-
-    Box_av1C(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct configuration
     {
@@ -998,11 +944,7 @@ namespace heif {
     Box_vvcC()
     {
       set_short_type(fourcc("vvcC"));
-      set_is_full_box(false);
     }
-
-    Box_vvcC(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct configuration
     {
@@ -1070,9 +1012,6 @@ namespace heif {
   class Box_idat : public Box
   {
   public:
-    Box_idat(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     std::string dump(Indent&) const override;
 
     Error read_data(const std::shared_ptr<StreamReader>& istr,
@@ -1103,9 +1042,6 @@ namespace heif {
   class Box_grpl : public Box
   {
   public:
-    Box_grpl(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     std::string dump(Indent&) const override;
 
   protected:
@@ -1113,7 +1049,7 @@ namespace heif {
 
     struct EntityGroup
     {
-      BoxHeader header;
+      FullBox header;
       uint32_t group_id;
 
       std::vector<heif_item_id> entity_ids;
@@ -1126,9 +1062,6 @@ namespace heif {
   class Box_dinf : public Box
   {
   public:
-    Box_dinf(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     std::string dump(Indent&) const override;
 
   protected:
@@ -1136,12 +1069,9 @@ namespace heif {
   };
 
 
-  class Box_dref : public Box
+  class Box_dref : public FullBox
   {
   public:
-    Box_dref(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     std::string dump(Indent&) const override;
 
   protected:
@@ -1149,12 +1079,9 @@ namespace heif {
   };
 
 
-  class Box_url : public Box
+  class Box_url : public FullBox
   {
   public:
-    Box_url(const BoxHeader& hdr) : Box(hdr)
-    {}
-
     std::string dump(Indent&) const override;
 
   protected:
@@ -1163,17 +1090,13 @@ namespace heif {
     std::string m_location;
   };
 
-  class Box_pixi : public Box
+  class Box_pixi : public FullBox
   {
   public:
     Box_pixi()
     {
       set_short_type(fourcc("pixi"));
-      set_is_full_box(true);
     }
-
-    Box_pixi(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     int get_num_channels() const
     { return (int) m_bits_per_channel.size(); }
@@ -1203,14 +1126,67 @@ namespace heif {
     Box_pasp()
     {
       set_short_type(fourcc("pasp"));
-      set_is_full_box(false);
     }
-
-    Box_pasp(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     uint32_t hSpacing = 1;
     uint32_t vSpacing = 1;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_lsel : public Box
+  {
+  public:
+    Box_lsel()
+    {
+      set_short_type(fourcc("lsel"));
+    }
+
+    uint16_t layer_id = 0;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_a1op : public Box
+  {
+  public:
+    Box_a1op()
+    {
+      set_short_type(fourcc("a1op"));
+    }
+
+    uint8_t op_index = 0;
+
+    std::string dump(Indent&) const override;
+
+    Error write(StreamWriter& writer) const override;
+
+  protected:
+    Error parse(BitstreamRange& range) override;
+  };
+
+
+  class Box_a1lx : public Box
+  {
+  public:
+    Box_a1lx()
+    {
+      set_short_type(fourcc("a1lx"));
+    }
+
+    uint32_t layer_size[3]{};
 
     std::string dump(Indent&) const override;
 
@@ -1227,11 +1203,7 @@ namespace heif {
     Box_clli()
     {
       set_short_type(fourcc("clli"));
-      set_is_full_box(false);
     }
-
-    Box_clli(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     heif_content_light_level clli;
 
@@ -1250,11 +1222,7 @@ namespace heif {
     Box_mdcv()
     {
       set_short_type(fourcc("mdcv"));
-      set_is_full_box(false);
     }
-
-    Box_mdcv(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     heif_mastering_display_colour_volume mdcv;
 
@@ -1367,11 +1335,7 @@ namespace heif {
     Box_colr()
     {
       set_short_type(fourcc("colr"));
-      set_is_full_box(false);
     }
-
-    Box_colr(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -1402,17 +1366,13 @@ namespace heif {
    *
    * See ISO/IEC 23008-12:2022(E) Section 6.5.20.
    */
-  class Box_udes : public Box
+  class Box_udes : public FullBox
   {
   public:
     Box_udes()
     {
       set_short_type(fourcc("udes"));
-      set_is_full_box(true);
     }
-
-    Box_udes(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
