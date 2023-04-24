@@ -2250,7 +2250,6 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 {
   heif_item_id image_id = m_heif_file->add_new_image("hvc1");
   out_image = std::make_shared<Image>(this, image_id);
-  m_all_images[image_id] = out_image;
 
 
   // --- check whether we have to convert the image color space
@@ -2451,6 +2450,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   write_image_metadata(src_image, image_id);
 
   m_top_level_images.push_back(out_image);
+  m_all_images[image_id] = out_image;
 
 
 
