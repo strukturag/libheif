@@ -301,6 +301,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     }
   }
 
+  if (target_state.chroma != heif_chroma_420) {
+    return {};
+  }
+
 
   std::vector<ColorStateWithCost> states;
 
@@ -907,6 +911,10 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
     if (input_state.nclx_profile->get_matrix_coefficients() == 0) {
       return {};
     }
+  }
+
+  if (target_state.chroma != heif_chroma_420) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;

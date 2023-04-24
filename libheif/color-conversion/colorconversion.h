@@ -43,6 +43,7 @@ struct ColorState
   bool operator==(const ColorState&) const;
 };
 
+std::ostream& operator<<(std::ostream& ostr, const ColorState& state);
 
 // These are some integer constants for typical color conversion Op speed costs.
 // The integer value is the speed cost. Any other integer can be assigned to the speed cost.
