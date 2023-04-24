@@ -399,7 +399,7 @@ namespace heif {
 
     Error encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
                                    struct heif_encoder* encoder,
-                                   const struct heif_encoding_options* options,
+                                   const struct heif_encoding_options& options,
                                    enum heif_image_input_class input_class,
                                    std::shared_ptr<Image>& out_image);
                                    

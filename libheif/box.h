@@ -1457,16 +1457,15 @@ namespace heif {
     std::string m_description;
     std::string m_tags;
   };
+  
+  
   class Box_j2kH : public Box {
     // The body of this property consists of the permissible contents of a 
     // JP2 Header box as specified in Rec. ITU-T T.800 |ISO/IEC 15444-1.
     public:
     Box_j2kH() {
       set_short_type(fourcc("j2kH"));
-      set_is_full_box(false);
     }
-    Box_j2kH(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     std::string dump(Indent&) const override;
 
@@ -1474,14 +1473,12 @@ namespace heif {
     Error parse(BitstreamRange& range) override;
   };
 
+  
   class Box_cdef : public Box {
     public:
     Box_cdef() {
         set_short_type(fourcc("cdef"));
-        set_is_full_box(false);
       }
-    Box_cdef(const BoxHeader& hdr) : Box(hdr)
-    {}
 
     struct Channel
     {

@@ -3770,7 +3770,7 @@ Error Box_cdef::write(StreamWriter& writer) const {
 
 
 Error Box_cdef::parse(BitstreamRange& range) {
-  parse_full_box_header(range);
+  // parse_full_box_header(range);
 
   uint16_t channel_count = range.read16();
 
