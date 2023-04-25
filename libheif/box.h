@@ -1457,39 +1457,6 @@ namespace heif {
     std::string m_description;
     std::string m_tags;
   };
-
-  /**
-   * Mask Configuration Property (mskC).
-   *
-   * Each mask image item (mski) shall have an associated MaskConfigurationProperty
-   * that provides information required to generate the mask of the associated mask
-   * item.
-   */
-  class Box_mskC : public FullBox
-  {
-  public:
-
-    Box_mskC()
-    {
-      set_short_type(fourcc("mskC"));
-    }
-
-    std::string dump(Indent&) const override;
-
-    Error write(StreamWriter& writer) const override;
-
-    uint8_t get_bits_per_pixel() const
-    { return m_bits_per_pixel; }
-
-    void set_bits_per_pixel(uint8_t bits_per_pixel)
-    { m_bits_per_pixel = bits_per_pixel; }
-
-  protected:
-    Error parse(BitstreamRange& range) override;
-
-  private:
-    uint8_t m_bits_per_pixel;
-  };
 }
 
 #endif

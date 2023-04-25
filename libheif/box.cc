@@ -27,6 +27,7 @@
 #include "box.h"
 #include "heif_limits.h"
 #include "nclx.h"
+#include "mask_image.h"
 
 #include <iomanip>
 #include <utility>
@@ -559,6 +560,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
       box = std::make_shared<Box_uncC>();
       break;
 #endif
+
+    case fourcc("mskC"):
+      box = std::make_shared<Box_mskC>();
+      break;
 
     default:
       box = std::make_shared<Box>();
@@ -3714,25 +3719,3 @@ Error Box_udes::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
-Error Box_mskC::parse(BitstreamRange& range)
-{
-  parse_full_box_header(range);
-  m_bits_per_pixel = range.read8();
-  return range.get_error();
-}
-
-std::string Box_mskC::dump(Indent& indent) const
-{
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << indent << "bits_per_pixel: " << ((int)m_bits_per_pixel) << "\n";
-  return sstr.str();
-}
-
-Error Box_mskC::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-  writer.write8(m_bits_per_pixel);
-  prepend_header(writer, box_start);
-  return Error::Ok;
-}

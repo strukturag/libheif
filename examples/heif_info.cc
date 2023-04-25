@@ -485,6 +485,15 @@ int main(int argc, char** argv)
             }
             printf("]\n");
           }
+          else if (type == heif_region_type_referenced_mask) {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            heif_item_id referenced_item;
+            heif_region_get_referenced_mask(regions[j], &x, &y, &w, &h, &referenced_item);
+            printf("      referenced mask [x=%i, y=%i, w=%u, h=%u, item=%u]\n", x, y, w, h, referenced_item);
+          }
           else if (type == heif_region_type_polyline) {
             int32_t numPoints = heif_region_get_polyline_num_points(regions[j]);
             std::vector<int32_t> pts(numPoints*2);

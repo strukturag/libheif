@@ -102,6 +102,8 @@ libheif_la_SOURCES = \
   heif_plugin.h \
   heif_plugin.cc \
   logging.h \
+  mask_image.h \
+  mask_image.cc \
   metadata_compression.h \
   metadata_compression.cc \
   nclx.cc \

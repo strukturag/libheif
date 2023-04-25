@@ -48,6 +48,7 @@
 #include "heif_avif.h"
 #include "heif_plugin_registry.h"
 #include "libheif/color-conversion/colorconversion.h"
+#include "mask_image.h"
 #include "metadata_compression.h"
 
 #if ENABLE_UNCOMPRESSED
@@ -1020,8 +1021,17 @@ Error HeifContext::interpret_heif_file()
               if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
                 std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
                 uint32_t mask_image_id = refs[mask_index];
+                assert(is_image(mask_image_id));
                 mask_geometry->referenced_item = mask_image_id;
+                auto mask_image = m_all_images.find(mask_image_id)->second;
+                if (mask_geometry->width == 0) {
+                  mask_geometry->width = mask_image->get_ispe_width();
+                }
+                if (mask_geometry->height == 0) {
+                  mask_geometry->height = mask_image->get_ispe_height();
+                }
                 mask_index += 1;
+                remove_top_level_image(mask_image);
               }
             }
           }
@@ -1392,6 +1402,23 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return error;
     }
 #endif
+  }
+  else if (image_type == "mski") {
+    std::vector<uint8_t> data;
+    error = m_heif_file->get_compressed_image_data(ID, &data);
+    if (error) {
+      std::cout << "mski error 1" << std::endl;
+      return error;
+    }
+    error = MaskImageCodec::decode_mask_image(m_heif_file,
+                                              ID,
+                                              img,
+                                              m_maximum_image_width_limit,
+                                              m_maximum_image_height_limit,
+                                              data);
+    if (error) {
+      return error;
+    }
   }
   else {
     // Should not reach this, was already rejected by "get_image_data".
