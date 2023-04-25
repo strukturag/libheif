@@ -103,7 +103,7 @@ static bool read_plane_interleaved(heif::BitstreamRange* range,
   return true;
 }
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+static int test(const uint8_t* data, size_t size)
 {
   auto reader = std::make_shared<heif::StreamReader_memory>(data, size, false);
   heif::BitstreamRange range(reader, size);
@@ -264,4 +264,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   assert(out_image->get_colorspace() ==
          static_cast<heif_colorspace>(out_colorspace));
   return 0;
+}
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
+  heif_init(nullptr);
+  int retVal = test(data, size);
+  heif_deinit();
+
+  return retVal;
 }
