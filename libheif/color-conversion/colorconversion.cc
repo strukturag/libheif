@@ -30,6 +30,7 @@
 #include <set>
 #include <cmath>
 #include <limits>
+#include <string>
 #include "rgb2yuv.h"
 #include "rgb2yuv_sharp.h"
 #include "yuv2rgb.h"
@@ -135,18 +136,6 @@ static void __attribute__ ((unused)) print_spec(std::ostream& ostr, const std::s
   ostr << "\n";
 }
 
-
-static void __attribute__ ((unused)) print_state(std::ostream& ostr, const ColorState& state)
-{
-  ostr << "colorspace=" << state.colorspace
-       << " chroma=" << state.chroma;
-
-  ostr << " bpp(R)=" << state.bits_per_pixel;
-  ostr << " alpha=" << (state.has_alpha ? "yes" : "no");
-  ostr << " nclx=" << (state.nclx_profile ? "yes" : "no");
-  ostr << "\n";
-}
-
 #endif
 
 
@@ -175,6 +164,12 @@ struct Node
   ColorStateWithCost color_state;
 };
 
+std::ostream& operator<<(std::ostream& ostr, const ColorState& state) {
+  return ostr << "colorspace=" << state.colorspace << " chroma=" << state.chroma
+              << " bpp(R)=" << state.bits_per_pixel
+              << " alpha=" << (state.has_alpha ? "yes" : "no")
+              << " nclx=" << (state.nclx_profile ? "yes" : "no");
+}
 
 std::vector<ColorConversionOperation*> ColorConversionPipeline::m_operation_pool;
 
@@ -239,10 +234,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
 #if DEBUG_ME
   std::cerr << "--- construct_pipeline\n";
-  std::cerr << "from: ";
-  print_state(std::cerr, input_state);
-  std::cerr << "to: ";
-  print_state(std::cerr, target_state);
+  std::cerr << "from: " << input_state << "\nto: " << target_state << "\n";
 #endif
 
   init_ops(); // to be sure these are initialized even without heif_init()
@@ -277,8 +269,8 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
     border_states.pop_back();
 
 #if DEBUG_PIPELINE_CREATION
-    std::cerr << "- expand node: ";
-    print_state(std::cerr, processed_states.back().color_state.color_state);
+    std::cerr << "- expand node: " << processed_states.back().color_state.color_state
+        << " with cost " << processed_states.back().color_state.speed_costs << " \n";
 #endif
 
     if (processed_states.back().color_state.color_state == target_state) {
@@ -307,7 +299,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
       assert(m_conversion_steps.back().output_state == target_state);
 
 #if DEBUG_ME
-      debug_dump_pipeline();
+      std::cerr << debug_dump_pipeline();
 #endif
 
       return true;
@@ -327,9 +319,9 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
                                                        target_state,
                                                        options);
       for (const auto& out_state : out_states) {
+        int new_op_costs = out_state.speed_costs + processed_states.back().color_state.speed_costs;
 #if DEBUG_PIPELINE_CREATION
-        std::cerr << "--- ";
-        print_state(std::cerr, out_state.color_state);
+        std::cerr << "--- " << out_state.color_state << " with cost " << new_op_costs << "\n";
 #endif
 
         bool state_exists = false;
@@ -346,8 +338,6 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
               state_exists = true;
 
               // if we reached the same border node with a lower cost, replace the border node
-
-              int new_op_costs = out_state.speed_costs + processed_states.back().color_state.speed_costs;
 
               if (s.color_state.speed_costs > new_op_costs) {
                 s = {(int) (processed_states.size() - 1),
@@ -378,12 +368,15 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 }
 
 
-void ColorConversionPipeline::debug_dump_pipeline() const
+std::string ColorConversionPipeline::debug_dump_pipeline() const
 {
+  std::ostringstream ostr;
+  ostr << "final pipeline has " << m_conversion_steps.size() << " steps:\n";
   for (const auto& step : m_conversion_steps) {
     auto& op = *step.operation;
-    std::cerr << "> " << typeid(op).name() << "\n";
+    ostr << "> " << typeid(op).name() << "\n";
   }
+  return ostr.str();
 }
 
 
@@ -462,8 +455,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   // check for valid target YCbCr chroma formats
 
   if (target_colorspace == heif_colorspace_YCbCr) {
-    if (target_chroma != heif_chroma_monochrome &&
-        target_chroma != heif_chroma_420 &&
+    if (target_chroma != heif_chroma_420 &&
         target_chroma != heif_chroma_422 &&
         target_chroma != heif_chroma_444) {
       return nullptr;

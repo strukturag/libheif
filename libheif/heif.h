@@ -1077,10 +1077,10 @@ enum heif_chroma
   heif_chroma_444 = 3,
   heif_chroma_interleaved_RGB = 10,
   heif_chroma_interleaved_RGBA = 11,
-  heif_chroma_interleaved_RRGGBB_BE = 12,
-  heif_chroma_interleaved_RRGGBBAA_BE = 13,
-  heif_chroma_interleaved_RRGGBB_LE = 14,
-  heif_chroma_interleaved_RRGGBBAA_LE = 15
+  heif_chroma_interleaved_RRGGBB_BE = 12,   // HDR, big endian.
+  heif_chroma_interleaved_RRGGBBAA_BE = 13, // HDR, big endian.
+  heif_chroma_interleaved_RRGGBB_LE = 14,   // HDR, little endian.
+  heif_chroma_interleaved_RRGGBBAA_LE = 15  // HDR, little endian.
 };
 
 // DEPRECATED ENUM NAMES
@@ -1091,8 +1091,21 @@ enum heif_chroma
 enum heif_colorspace
 {
   heif_colorspace_undefined = 99,
+  // Should be used with a heif_chroma value in:
+  // * heif_chroma_444
+  // * heif_chroma_422
+  // * heif_chroma_420
   heif_colorspace_YCbCr = 0,
+  // Should be used with a heif_chroma value in:
+  // * heif_chroma_444 (for planar RGB)
+  // * heif_chroma_interleaved_RGB
+  // * heif_chroma_interleaved_RGBA
+  // * heif_chroma_interleaved_RRGGBB_BE
+  // * heif_chroma_interleaved_RRGGBBAA_BE
+  // * heif_chroma_interleaved_RRGGBB_LE
+  // * heif_chroma_interleaved_RRGGBBAA_LE
   heif_colorspace_RGB = 1,
+  // Should be used with heif_chroma value: heif_chroma_monochrome
   heif_colorspace_monochrome = 2
 };
 

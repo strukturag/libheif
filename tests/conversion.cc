@@ -24,10 +24,10 @@
   SOFTWARE.
 */
 
+#include <iomanip>
 #include "catch.hpp"
 #include "libheif/color-conversion/colorconversion.h"
 #include "libheif/heif_image.h"
-
 
 using namespace heif;
 
@@ -65,6 +65,50 @@ uint16_t SwapBytesIfNeeded(uint16_t v, heif_chroma chroma) {
 }
 
 template <typename T>
+std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
+  heif_chroma chroma = image.get_chroma_format();
+  int num_interleaved = num_interleaved_pixels_per_plane(chroma);
+  bool is_interleaved = num_interleaved > 1;
+  int max_cols = is_interleaved ? 3 : 10;
+  int max_rows = 10;
+  int width = std::min(image.get_width(channel), max_cols);
+  int height = std::min(image.get_height(channel), max_rows);
+  int stride;
+  const T* p = (T*)image.get_plane(channel, &stride);
+  stride /= sizeof(T);
+  int digits = (int)std::ceil(std::log10(1 << image.get_bits_per_pixel(channel))) + 1;
+
+  std::ostringstream os;
+  os << std::string(digits, ' ');
+  int header_width = digits * num_interleaved - 1 + (is_interleaved ? 3 : 0);
+  for (int x = 0; x < width; ++x) {
+    os << "|" << std::left << std::setw(header_width) << std::to_string(x);
+  }
+  os << "\n";
+  for (int y = 0; y < height; ++y) {
+    os << std::left << std::setw(digits) << std::to_string(y) << "|";
+    for (int x = 0; x < width; ++x) {
+      if (is_interleaved) os << "(";
+      for (int k = 0; k < num_interleaved; ++k) {
+        int v = SwapBytesIfNeeded(p[y * stride + x * num_interleaved + k], chroma);
+        os << std::left << std::setw(digits) << std::to_string(v);
+      }
+      if (is_interleaved) os << ") ";
+    }
+    os << "\n";
+  }
+  return os.str();
+}
+
+std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
+ if (image.get_bits_per_pixel(channel) <= 8) {
+    return PrintChannel<uint8_t>(image, channel);
+ } else {
+    return PrintChannel<uint16_t>(image, channel);
+ }
+}
+
+template <typename T>
 double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
                heif_channel channel, bool skip_alpha) {
   int w = original.get_width(channel);
@@ -94,7 +138,7 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   double psnr = 10 * log10(max * max / mse);
   if (psnr < 0.) return 0.;
   if (psnr > 100.) return 100.;
- return psnr;
+  return psnr;
 }
 
 double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
@@ -172,7 +216,8 @@ bool MakeTestImage(const ColorState& state, int width, int height,
   for (size_t i = 0; i < planes.size(); ++i) {
     const Plane& plane = planes[i];
     int half_max = (1 << (plane.bit_depth -1));
-    uint16_t value = SwapBytesIfNeeded(static_cast<uint16_t>(half_max + i * 10 + i), state.chroma);
+    uint16_t value = SwapBytesIfNeeded(
+        static_cast<uint16_t>(half_max + i * 10 + i), state.chroma);
     image->fill_new_plane(plane.channel, value, plane.width, plane.height,
                           plane.bit_depth);
   }
@@ -183,10 +228,10 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
                     const ColorState& target_state,
                     const heif_color_conversion_options& options) {
   INFO(test_name);
-  printf("\n\n%s\n", test_name.c_str());
 
   ColorConversionPipeline pipeline;
   REQUIRE(pipeline.construct_pipeline(input_state, target_state, options));
+  INFO(pipeline.debug_dump_pipeline());
 
   auto in_image = std::make_shared<heif::HeifPixelImage>();
   // Width and height are multiples of 4.
@@ -202,7 +247,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   CHECK(out_image->get_chroma_format() == target_state.chroma);
   CHECK(out_image->has_alpha() == target_state.has_alpha);
   for (const Plane& plane : GetPlanes(target_state, width, height)) {
-    INFO("Plane " << plane.channel);
+    INFO("Channel: " << plane.channel);
     int stride;
     CHECK(out_image->get_plane(plane.channel, &stride) != nullptr);
     CHECK(out_image->get_bits_per_pixel(plane.channel) ==
@@ -217,15 +262,30 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
         reverse_pipeline.convert_image(out_image);
     REQUIRE(recovered_image != nullptr);
     bool skip_alpha = !input_state.has_alpha || !target_state.has_alpha;
-    double expected_psnr = input_state.colorspace == target_state.colorspace ? 100. : 45.;
+    bool expect_lossless =
+        input_state.colorspace == target_state.colorspace &&
+        input_state.bits_per_pixel == target_state.bits_per_pixel &&
+        (input_state.chroma == target_state.chroma ||
+         (input_state.chroma != heif_chroma_420 &&
+          input_state.chroma != heif_chroma_422 &&
+          target_state.chroma != heif_chroma_420 &&
+          target_state.chroma != heif_chroma_422));
+    double expected_psnr = expect_lossless ? 100. : 40.;
+
     for (const Plane& plane : GetPlanes(input_state, width, height)) {
       if (skip_alpha && plane.channel == heif_channel_Alpha) continue;
-      INFO("Plane " << plane.channel);
+      INFO("Channel: " << plane.channel);
+      INFO("Original:\n" << PrintChannel(*in_image, plane.channel));
+      INFO("Recovered:\n" << PrintChannel(*recovered_image, plane.channel));
+      for (const Plane& converted_plane :
+           GetPlanes(target_state, width, height)) {
+        UNSCOPED_INFO("Converted channel "
+                      << converted_plane.channel << ":\n"
+                      << PrintChannel(*out_image, converted_plane.channel));
+      }
       double psnr = GetPsnr(*in_image, *recovered_image, plane.channel, skip_alpha);
       CHECK(psnr >= expected_psnr);
     }
-  } else {
-    WARN("no reverse conversion available to test round trip");
   }
 }
 
@@ -238,60 +298,114 @@ void TestFailingConversion(const std::string& test_name,
       pipeline.construct_pipeline(input_state, target_state, options));
 }
 
-TEST_CASE("Color conversion", "[heif_image]") {
+// Returns the list of valid heif_chroma values for a given colorspace.
+std::vector<heif_chroma> GetValidChroma(heif_colorspace colorspace) {
+  switch (colorspace) {
+    case heif_colorspace_YCbCr:
+      return {heif_chroma_420, heif_chroma_422, heif_chroma_444};
+    case heif_colorspace_RGB:
+      return {heif_chroma_444,
+              heif_chroma_interleaved_RGB,
+              heif_chroma_interleaved_RGBA,
+              heif_chroma_interleaved_RRGGBB_BE,
+              heif_chroma_interleaved_RRGGBBAA_BE,
+              heif_chroma_interleaved_RRGGBB_LE,
+              heif_chroma_interleaved_RRGGBBAA_LE};
+    case heif_colorspace_monochrome:
+      return {heif_chroma_monochrome};
+    default:
+      return {};
+  }
+}
+
+// Returns the list of valid has_alpha values for a given heif_chroma.
+std::vector<bool> GetValidHasAlpha(heif_chroma chroma) {
+  switch (chroma) {
+    case heif_chroma_monochrome:
+    case heif_chroma_420:
+    case heif_chroma_422:
+    case heif_chroma_444:
+      return {false, true};
+    case heif_chroma_interleaved_RGB:
+    case heif_chroma_interleaved_RRGGBB_BE:
+    case heif_chroma_interleaved_RRGGBB_LE:
+      return {false};
+    case heif_chroma_interleaved_RGBA:
+    case heif_chroma_interleaved_RRGGBBAA_BE:
+    case heif_chroma_interleaved_RRGGBBAA_LE:
+      return {true};
+    default:
+      return {};
+  }
+}
+
+// Returns some valid bits per pixels values for a given heif_chroma.
+std::vector<int> GetValidBitsPerPixel(heif_chroma chroma) {
+  const std::vector<int> sdr = {8};
+  const std::vector<int> hdr = {12};
+  const std::vector<int> both = {8, 12};
+  switch (chroma) {
+    case heif_chroma_monochrome:
+    case heif_chroma_420:
+    case heif_chroma_422:
+    case heif_chroma_444:
+      return both;
+    case heif_chroma_interleaved_RGB:
+    case heif_chroma_interleaved_RGBA:
+      return sdr;
+    case heif_chroma_interleaved_RRGGBB_BE:
+    case heif_chroma_interleaved_RRGGBB_LE:
+    case heif_chroma_interleaved_RRGGBBAA_BE:
+    case heif_chroma_interleaved_RRGGBBAA_LE:
+      return hdr;
+    default:
+      return {};
+  }
+}
+
+// Returns of list of all valid ColorState (valid combinations
+// of a heif_colorspace/heif_chroma/has_alpha/bpp).
+std::vector<ColorState> GetAllColorStates() {
+  std::vector<ColorState> color_states;
+  for (heif_colorspace colorspace : {heif_colorspace_YCbCr, heif_colorspace_RGB, heif_colorspace_monochrome}) {
+    for (heif_chroma chroma : GetValidChroma(colorspace)) {
+      for (bool has_alpha : GetValidHasAlpha(chroma)) {
+        for (int bits_per_pixel : GetValidBitsPerPixel(chroma)) {
+          ColorState color_state(colorspace, chroma, has_alpha, bits_per_pixel);
+          color_states.push_back(color_state);
+        }
+      }
+    }
+  }
+  return color_states;
+}
+
+TEST_CASE("All conversions", "[heif_image]") {
   heif_color_conversion_options basic_options = {
       .preferred_chroma_downsampling_algorithm =
           heif_chroma_downsampling_average,
       .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
       .only_use_preferred_chroma_algorithm = false};
 
-  TestConversion("### RGB planes -> interleaved",
-                 {heif_colorspace_RGB, heif_chroma_444, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 8},
-                 basic_options);
+  // Test all source and destination state combinations.
+  ColorState src_state = GENERATE(from_range(GetAllColorStates()));
+  ColorState dst_state = GENERATE(from_range(GetAllColorStates()));
+  // To debug a particular combination, hardcoe the ColorState values
+  // instead:
+  // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
+  // ColorState dst_state(...);
 
-  TestConversion("### YCbCr420 -> RGB",
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 8},
-                 basic_options);
+  // Converting to monochrome is not supported at the moment.
+  if (dst_state.colorspace == heif_colorspace_monochrome ||
+      dst_state.chroma == heif_chroma_monochrome)
+    return;
 
-  TestConversion("### YCbCr420 -> RGBA",
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
-                 basic_options);
+  std::ostringstream os;
+  os << "from: " << src_state << "\nto:   " << dst_state;
+  TestConversion(os.str(), src_state, dst_state, basic_options);
+}
 
-  TestConversion("### YCbCr420 10bit -> RGB planes 10bit",
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 10},
-                 {heif_colorspace_RGB, heif_chroma_444, false, 10},
-                 basic_options);
-
-  TestConversion(
-      "### RGB planes 10bit -> interleaved big endian",
-      {heif_colorspace_RGB, heif_chroma_444, false, 10},
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_BE, true, 10},
-      basic_options);
-
-  TestConversion(
-      "### RGB planes 10bit -> interleaved little endian",
-      {heif_colorspace_RGB, heif_chroma_444, false, 10},
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBBAA_LE, true, 10},
-      basic_options);
-
-  TestConversion("### monochrome colorspace -> interleaved RGB",
-                 {heif_colorspace_monochrome, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 8},
-                 basic_options);
-
-  TestConversion("### monochrome colorspace -> RGBA",
-                 {heif_colorspace_monochrome, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
-                 basic_options);
-
-  TestConversion("### interleaved RGBA -> YCbCr 420",
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
-                 basic_options);
-
+TEST_CASE("Sharp yuv conversion", "[heif_image]") {
   heif_color_conversion_options sharp_yuv_options{
       .preferred_chroma_downsampling_algorithm =
           heif_chroma_downsampling_sharp_yuv,
@@ -348,50 +462,4 @@ TEST_CASE("Color conversion", "[heif_image]") {
       "### interleaved RGBA -> YCbCr 422 with sharp yuv (not supported!)",
       {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
       {heif_colorspace_YCbCr, heif_chroma_422, false, 8}, sharp_yuv_options);
-
-  TestConversion(
-      "### RGB planes 10bit -> interleaved RGB 10bit little endian",
-      {heif_colorspace_RGB, heif_chroma_444, false, 10},
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 10},
-      basic_options);
-
-  TestConversion(
-      "### interleaved RGB 12bit little endian -> RGB planes 12bit",
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 12},
-      {heif_colorspace_RGB, heif_chroma_444, false, 12}, basic_options);
-
-  TestConversion("### RGB planes 12bit -> YCbCr 420 12bit",
-                 {heif_colorspace_RGB, heif_chroma_444, false, 12},
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 12},
-                 basic_options);
-
-  TestConversion(
-      "### interleaved RGB 12bit big endian -> YCbCr 420 12bit",
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_BE, false, 12},
-      {heif_colorspace_YCbCr, heif_chroma_420, false, 12}, basic_options);
-
-  TestConversion(
-      "### interleaved RGB 12bit little endian -> YCbCr 420 12bit",
-      {heif_colorspace_RGB, heif_chroma_interleaved_RRGGBB_LE, false, 12},
-      {heif_colorspace_YCbCr, heif_chroma_420, false, 12}, basic_options);
-
-  TestConversion("### monochrome YCbCr -> interleaved RGB",
-                 {heif_colorspace_YCbCr, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGB, false, 8},
-                 basic_options);
-
-  TestConversion("### monochrome YCbCr -> YCbCr with alpha",
-                 {heif_colorspace_monochrome, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_YCbCr, heif_chroma_444, true, 8},
-                 basic_options);
-
-  TestConversion("### monochrome YCbCr -> YCbCr 420",
-                 {heif_colorspace_monochrome, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
-                 basic_options);
-
-  TestConversion("### monochrome YCbCr -> YCbCr 420 with alpha",
-                 {heif_colorspace_monochrome, heif_chroma_monochrome, false, 8},
-                 {heif_colorspace_YCbCr, heif_chroma_420, true, 8},
-                 basic_options);
 }

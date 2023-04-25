@@ -23,6 +23,7 @@
 
 #include "libheif/heif_image.h"
 #include <memory>
+#include <string>
 #include <vector>
 
 using namespace heif;
@@ -43,6 +44,7 @@ struct ColorState
   bool operator==(const ColorState&) const;
 };
 
+std::ostream& operator<<(std::ostream& ostr, const ColorState& state);
 
 // These are some integer constants for typical color conversion Op speed costs.
 // The integer value is the speed cost. Any other integer can be assigned to the speed cost.
@@ -98,7 +100,7 @@ public:
   std::shared_ptr<HeifPixelImage>
   convert_image(const std::shared_ptr<HeifPixelImage>& input);
 
-  void debug_dump_pipeline() const;
+  std::string debug_dump_pipeline() const;
 
 private:
   static std::vector<ColorConversionOperation*> m_operation_pool;
