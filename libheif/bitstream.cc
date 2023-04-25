@@ -218,10 +218,10 @@ uint32_t BitstreamRange::read32()
     return 0;
   }
 
-  return ((buf[0] << 24) |
-          (buf[1] << 16) |
-          (buf[2] << 8) |
-          (buf[3]));
+  return (uint32_t) ((buf[0] << 24) |
+                     (buf[1] << 16) |
+                     (buf[2] << 8) |
+                     (buf[3]));
 }
 
 
