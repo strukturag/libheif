@@ -27,8 +27,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
                                             const ColorState& target_state,
                                             const heif_color_conversion_options& options) const
 {
-  if ((input_state.colorspace != heif_colorspace_monochrome &&
-       input_state.colorspace != heif_colorspace_YCbCr) ||
+  if (input_state.colorspace != heif_colorspace_monochrome ||
       input_state.chroma != heif_chroma_monochrome) {
     return {};
   }
@@ -163,8 +162,7 @@ Op_mono_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 {
   // Note: no input alpha channel required. It will be filled up with 0xFF.
 
-  if ((input_state.colorspace != heif_colorspace_monochrome &&
-       input_state.colorspace != heif_colorspace_YCbCr) ||
+  if (input_state.colorspace != heif_colorspace_monochrome ||
       input_state.chroma != heif_chroma_monochrome ||
       input_state.bits_per_pixel != 8) {
     return {};

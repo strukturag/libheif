@@ -39,17 +39,17 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
       return {};
     }
   }
-  if (input_state.chroma == heif_chroma_monochrome) {
+
+  if (input_state.colorspace != heif_colorspace_YCbCr ||
+      (input_state.chroma != heif_chroma_444 &&
+       input_state.chroma != heif_chroma_422 &&
+       input_state.chroma != heif_chroma_420)) {
     return {};
   }
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
   if ((input_state.bits_per_pixel != 8) != hdr) {
-    return {};
-  }
-
-  if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
   }
 

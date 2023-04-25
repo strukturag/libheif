@@ -302,8 +302,7 @@ void TestFailingConversion(const std::string& test_name,
 std::vector<heif_chroma> GetValidChroma(heif_colorspace colorspace) {
   switch (colorspace) {
     case heif_colorspace_YCbCr:
-      return {heif_chroma_monochrome, heif_chroma_420, heif_chroma_422,
-              heif_chroma_444};
+      return {heif_chroma_420, heif_chroma_422, heif_chroma_444};
     case heif_colorspace_RGB:
       return {heif_chroma_444,
               heif_chroma_interleaved_RGB,

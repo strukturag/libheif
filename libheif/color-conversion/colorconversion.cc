@@ -455,8 +455,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   // check for valid target YCbCr chroma formats
 
   if (target_colorspace == heif_colorspace_YCbCr) {
-    if (target_chroma != heif_chroma_monochrome &&
-        target_chroma != heif_chroma_420 &&
+    if (target_chroma != heif_chroma_420 &&
         target_chroma != heif_chroma_422 &&
         target_chroma != heif_chroma_444) {
       return nullptr;
