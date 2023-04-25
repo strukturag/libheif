@@ -2688,8 +2688,43 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   out_image = std::make_shared<Image>(this, image_id);
   m_top_level_images.push_back(out_image);
 
+
+  // TODO: simplify the color-conversion part. It's the same for each codec.
+  // ---begin---
+  heif_colorspace colorspace = image->get_colorspace();
+  heif_chroma chroma = image->get_chroma_format();
+  auto color_profile = image->get_color_profile_nclx();
+  if (!color_profile) {
+    color_profile = std::make_shared<color_profile_nclx>();
+  }
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
+
+
+  if (encoder->plugin->plugin_api_version >= 2) {
+    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
+  }
+  else {
+    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
+  }
+
+  std::shared_ptr<HeifPixelImage> src_image;
+  if (colorspace != image->get_colorspace() ||
+      chroma != image->get_chroma_format()) {
+    // @TODO: use color profile when converting
+    int output_bpp = 0; // same as input
+    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
+                                   output_bpp, options.color_conversion_options);
+    if (!src_image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
+  }
+  else {
+    src_image = image;
+  }
+  // ---end---
+
+
   //Encode Image
-  std::shared_ptr<HeifPixelImage> src_image = image;
   heif_image c_api_image;
   c_api_image.image = src_image;
   encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);

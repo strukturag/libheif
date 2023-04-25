@@ -703,7 +703,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
   else if (item_type == "j2k1") {
-    assert(false); // TODO
+    // TODO
   }
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
            item_type == "grid" ||

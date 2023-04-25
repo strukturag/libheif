@@ -144,6 +144,9 @@ struct heif_error opj_get_parameter_string(void* encoder, const char* name, char
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.
+
+  *inout_colorspace = heif_colorspace_RGB;
+  *inout_chroma = heif_chroma_interleaved_RGB;
 }
 
 
@@ -374,7 +377,8 @@ struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int
 }
 
 void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
-  //TODO
+  *inout_colorspace = heif_colorspace_RGB;
+  *inout_chroma = heif_chroma_interleaved_RGB;
 }
 
 void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height, uint32_t* encoded_width, uint32_t* encoded_height) {
