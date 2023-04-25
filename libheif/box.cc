@@ -298,7 +298,7 @@ heif::Error heif::FullBox::write_header(StreamWriter& writer, size_t total_size,
     return err;
   }
 
-  assert((get_flags() & ~0x00FFFFFF) == 0);
+  assert((get_flags() & ~0x00FFFFFFU) == 0);
 
   writer.write32((get_version() << 24) | get_flags());
 
