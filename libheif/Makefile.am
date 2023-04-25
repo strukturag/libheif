@@ -154,6 +154,14 @@ libheif_la_SOURCES += \
   plugins/heif_encoder_x265.h
 endif
 
+if ENABLE_UNCOMPRESSED
+libheif_la_SOURCES += \
+  uncompressed_image.cc \
+  uncompressed_image.h \
+  plugins/heif_encoder_uncompressed.cc \
+  plugins/heif_encoder_uncompressed.h
+endif
+
 libheif_la_HEADERS = \
   heif.h \
   heif_plugin.h \

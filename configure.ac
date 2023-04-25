@@ -342,6 +342,19 @@ fi
 AC_SUBST(ENABLE_MULTITHREADING_SUPPORT)
 AC_SUBST(ENABLE_PARALLEL_TILE_DECODING)
 
+AC_ARG_ENABLE([uncompressed], AS_HELP_STRING([--enable-uncompressed],
+    [Enable uncompressed decoding.]), [], [enable_uncompressed=no])
+if eval "test x$enable_uncompressed == x" ; then enable_uncompressed=yes ; fi
+if eval "test x$enable_uncompressed == xyes"; then
+    AC_MSG_NOTICE([Enable uncompressed codec])
+    AC_DEFINE([ENABLE_UNCOMPRESSED], [1], [Whether uncompressed codec is enabled.])
+fi
+AM_CONDITIONAL([ENABLE_UNCOMPRESSED], [test "x$enable_uncompressed" == "xyes"])
+AC_SUBST(ENABLE_UNCOMPRESSED)
+
+AC_CONFIG_LINKS([tests/uncompressed_rgb3.heif:tests/data/uncompressed_rgb3.heif])
+AC_CONFIG_LINKS([tests/uncompressed_planar_tiled.heif:tests/data/uncompressed_planar_tiled.heif])
+
 WARNING_FLAGS="-Wall -Werror -Wsign-compare -Wconversion -Wno-sign-conversion -Wno-error=conversion -Wno-error=unused-parameter -Wno-error=deprecated-declarations"
 
 CXXFLAGS="$CXXFLAGS $WARNING_FLAGS"
@@ -365,6 +378,7 @@ AC_MSG_NOTICE([libsharpyuv: $have_libsharpyuv])
 AC_MSG_NOTICE([JPEG output: $have_libjpeg])
 AC_MSG_NOTICE([PNG output: $have_libpng])
 AC_MSG_NOTICE([GdkPixbuf2 loader: $have_gdkpixbuf2])
+AC_MSG_NOTICE([Uncompressed: $enable_uncompressed])
 AC_MSG_NOTICE([Examples: $enable_examples])
 AC_MSG_NOTICE([Tests: $enable_tests (tests will cause 'visibility' to be turned off)])
 AC_MSG_NOTICE([---------------------------------------])

@@ -529,7 +529,7 @@ namespace heif {
       for (uint32_t c = 0; c < channels.size(); c++) {
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
-        if ((numTileRows == 1) && (numTileColumns == 1))
+        if ((numTileRows == 1) && (numTileColumns == 1) && (((uint32_t)stride) == width))
         {
           memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
         }
@@ -544,7 +544,7 @@ namespace heif {
               uint32_t tile_idx_x = col / tile_width;
               uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
               long unsigned int src_offset = tile_idx * bytes_per_tile + pixel_offset * tile_width * tile_height;
-              long unsigned int dst_offset = row * width + col;
+              long unsigned int dst_offset = row * stride + col;
               memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
             }
           }
@@ -566,15 +566,22 @@ namespace heif {
         for (uint32_t row = 0; row < height; row++)
         {
           uint32_t tile_idx_y = row / tile_height;
-          for (uint32_t col = 0; col < width; col ++)
+          uint32_t col = 0;
+          for (col = 0; col < width; col ++)
           {
-            uint32_t pixelIndex = row * width + col;
-            uint32_t pixelTileIndex = pixelIndex % (tile_width * tile_height);
+            uint32_t srcPixelIndex = row * width + col;
+            uint32_t srcPixelTileIndex = srcPixelIndex % (tile_width * tile_height);
             uint32_t tile_idx_x = col / tile_width;
             uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
             long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
-            long unsigned int src_offset = tile_base_offset + pixel_stride * pixelTileIndex + pixel_offset;
-            dst[pixelIndex] = src[src_offset];
+            long unsigned int src_offset = tile_base_offset + pixel_stride * srcPixelTileIndex + pixel_offset;
+            uint32_t dstPixelIndex = row * stride + col;
+            dst[dstPixelIndex] = src[src_offset];
+          }
+          for (; col < (uint32_t)stride; col++)
+          {
+            uint32_t dstPixelIndex = row * stride + col;
+            dst[dstPixelIndex] = 0;
           }
         }
       }
