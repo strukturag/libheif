@@ -4,7 +4,6 @@ SUBDIRS = \
     libheif \
     examples \
     extra \
-    fuzzing \
     gdk-pixbuf \
     gnome \
     go \
