@@ -39,7 +39,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -62,7 +61,7 @@ set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_FULL_LIBDIR}/libheif" CACHE STRING "Plugin
 
 if (ENABLE_PLUGIN_LOADING)
     set(PLUGIN_LOADING_SUPPORTED_AND_ENABLED TRUE)
-    install(DIRECTORY DESTINATION ${PLUGIN_DIRECTORY} DIRECTORY_PERMISSIONS 
+    install(DIRECTORY DESTINATION ${PLUGIN_DIRECTORY} DIRECTORY_PERMISSIONS
         OWNER_WRITE OWNER_READ OWNER_EXECUTE
         GROUP_READ GROUP_EXECUTE
         WORLD_READ WORLD_EXECUTE)
@@ -159,17 +158,25 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 
 option(WITH_EXAMPLES "Build examples" ON)
 
-if (WIN32)
-    # Tests are off by default on windows as they currently fail to build.
-    # TODO: fix tests on windows.
-    option(WITH_TESTS "Build tests" OFF)
-else()
-    option(WITH_TESTS "Build tests" ON)
-endif()
+# Tests are off by default. If you switch them on, also switch off WITH_REDUCED_VISIBILITY.
+# TODO: fix tests on windows.
+option(WITH_TESTS "Build tests" OFF)
+
+option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
 option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
+
+if (WITH_TESTS AND WITH_REDUCED_VISIBILITY)
+    message(FATAL_ERROR "Tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+endif()
+
+if (WITH_REDUCED_VISIBILITY)
+    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+else ()
+    set(CMAKE_CXX_VISIBILITY_PRESET default)
+endif ()
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
