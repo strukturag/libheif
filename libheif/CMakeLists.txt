@@ -99,7 +99,7 @@ add_subdirectory(plugins)
 
 if (LIBSHARPYUV_FOUND)
     message("Compiling in 'libhsharpyuv'")
-    target_compile_definitions(heif PRIVATE HAVE_LIBSHARPYUV=1)
+    target_compile_definitions(heif PUBLIC HAVE_LIBSHARPYUV=1)
     target_include_directories(heif PRIVATE ${LIBSHARPYUV_INCLUDE_DIR})
     target_link_libraries(heif PRIVATE ${LIBSHARPYUV_LIBRARIES} ${LIBSHARPYUV_LINKDIR})
 else()
