@@ -298,26 +298,6 @@ void TestFailingConversion(const std::string& test_name,
       pipeline.construct_pipeline(input_state, target_state, options));
 }
 
-// Returns the list of valid heif_chroma values for a given colorspace.
-std::vector<heif_chroma> GetValidChroma(heif_colorspace colorspace) {
-  switch (colorspace) {
-    case heif_colorspace_YCbCr:
-      return {heif_chroma_420, heif_chroma_422, heif_chroma_444};
-    case heif_colorspace_RGB:
-      return {heif_chroma_444,
-              heif_chroma_interleaved_RGB,
-              heif_chroma_interleaved_RGBA,
-              heif_chroma_interleaved_RRGGBB_BE,
-              heif_chroma_interleaved_RRGGBBAA_BE,
-              heif_chroma_interleaved_RRGGBB_LE,
-              heif_chroma_interleaved_RRGGBBAA_LE};
-    case heif_colorspace_monochrome:
-      return {heif_chroma_monochrome};
-    default:
-      return {};
-  }
-}
-
 // Returns the list of valid has_alpha values for a given heif_chroma.
 std::vector<bool> GetValidHasAlpha(heif_chroma chroma) {
   switch (chroma) {
@@ -368,7 +348,7 @@ std::vector<int> GetValidBitsPerPixel(heif_chroma chroma) {
 std::vector<ColorState> GetAllColorStates() {
   std::vector<ColorState> color_states;
   for (heif_colorspace colorspace : {heif_colorspace_YCbCr, heif_colorspace_RGB, heif_colorspace_monochrome}) {
-    for (heif_chroma chroma : GetValidChroma(colorspace)) {
+    for (heif_chroma chroma : get_valid_chroma_values_for_colorspace(colorspace)) {
       for (bool has_alpha : GetValidHasAlpha(chroma)) {
         for (int bits_per_pixel : GetValidBitsPerPixel(chroma)) {
           ColorState color_state(colorspace, chroma, has_alpha, bits_per_pixel);

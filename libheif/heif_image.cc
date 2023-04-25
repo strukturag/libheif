@@ -102,6 +102,30 @@ bool heif::is_integer_multiple_of_chroma_size(int width,
 }
 
 
+std::vector<heif_chroma> heif::get_valid_chroma_values_for_colorspace(heif_colorspace colorspace)
+{
+  switch (colorspace) {
+    case heif_colorspace_YCbCr:
+      return {heif_chroma_420, heif_chroma_422, heif_chroma_444};
+
+    case heif_colorspace_RGB:
+      return {heif_chroma_444,
+              heif_chroma_interleaved_RGB,
+              heif_chroma_interleaved_RGBA,
+              heif_chroma_interleaved_RRGGBB_BE,
+              heif_chroma_interleaved_RRGGBBAA_BE,
+              heif_chroma_interleaved_RRGGBB_LE,
+              heif_chroma_interleaved_RRGGBBAA_LE};
+
+    case heif_colorspace_monochrome:
+      return {heif_chroma_monochrome};
+
+    default:
+      return {};
+  }
+}
+
+
 void HeifPixelImage::create(int width, int height, heif_colorspace colorspace, heif_chroma chroma)
 {
   m_width = width;

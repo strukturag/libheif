@@ -45,6 +45,8 @@ namespace heif {
                                           int height,
                                           heif_chroma chroma);
 
+  // Returns the list of valid heif_chroma values for a given colorspace.
+  std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
 
   class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                          public ErrorBuffer
