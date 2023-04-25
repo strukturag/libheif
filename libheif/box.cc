@@ -2677,9 +2677,9 @@ Error Box_clap::parse(BitstreamRange& range)
   // Note: in the standard document 14496-12(2015), it says that the offset values should also be unsigned integers,
   // but this is obviously an error. Even the accompanying standard text says that offsets may be negative.
   int32_t horizontal_offset_num = (int32_t) range.read32();
-  uint32_t horizontal_offset_den = (int32_t) range.read32();
+  uint32_t horizontal_offset_den = (uint32_t) range.read32();
   int32_t vertical_offset_num = (int32_t) range.read32();
-  uint32_t vertical_offset_den = (int32_t) range.read32();
+  uint32_t vertical_offset_den = (uint32_t) range.read32();
 
   if (clean_aperture_width_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
       clean_aperture_width_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
