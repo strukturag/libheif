@@ -111,38 +111,40 @@ const int OPTION_PLUGIN_DIRECTORY = 1004;
 const int OPTION_PITM_DESCRIPTION = 1005;
 
 static struct option long_options[] = {
-    {(char* const) "help",                    no_argument,       0,              'h'},
-    {(char* const) "quality",                 required_argument, 0,              'q'},
-    {(char* const) "output",                  required_argument, 0,              'o'},
-    {(char* const) "lossless",                no_argument,       0,              'L'},
-    {(char* const) "thumb",                   required_argument, 0,              't'},
-    {(char* const) "verbose",                 no_argument,       0,              'v'},
-    {(char* const) "params",                  no_argument,       0,              'P'},
-    {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
-    {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
-    {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoder",                 no_argument,       0,              'e'},
-    {(char* const) "bit-depth",               required_argument, 0,              'b'},
-    {(char* const) "even-size",               no_argument,       0,              'E'},
-    {(char* const) "avif",                    no_argument,       0,              'A'},
+    {(char* const) "help",                        no_argument,       0,                     'h'},
+    {(char* const) "quality",                     required_argument, 0,                     'q'},
+    {(char* const) "output",                      required_argument, 0,                     'o'},
+    {(char* const) "lossless",                    no_argument,       0,                     'L'},
+    {(char* const) "thumb",                       required_argument, 0,                     't'},
+    {(char* const) "verbose",                     no_argument,       0,                     'v'},
+    {(char* const) "params",                      no_argument,       0,                     'P'},
+    {(char* const) "no-alpha",                    no_argument,       &master_alpha,         0},
+    {(char* const) "no-thumb-alpha",              no_argument,       &thumb_alpha,          0},
+    {(char* const) "list-encoders",               no_argument,       &list_encoders,        1},
+    {(char* const) "encoder",                     no_argument,       0,                     'e'},
+    {(char* const) "bit-depth",                   required_argument, 0,                     'b'},
+    {(char* const) "even-size",                   no_argument,       0,                     'E'},
+    {(char* const) "avif",                        no_argument,       0,                     'A'},
+    {(char* const) "jpeg2000",                    no_argument,       0,                     'J'},
 #if ENABLE_UNCOMPRESSED_ENCODER
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
-    {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
-    {(char* const) "colour_primaries",        required_argument, 0,              OPTION_NCLX_COLOUR_PRIMARIES},
-    {(char* const) "transfer_characteristic", required_argument, 0,              OPTION_NCLX_TRANSFER_CHARACTERISTIC},
-    {(char* const) "full_range_flag",         required_argument, 0,              OPTION_NCLX_FULL_RANGE_FLAG},
-    {(char* const) "enable-two-colr-boxes",   no_argument,       &two_colr_boxes, 1},
-    {(char* const) "premultiplied-alpha",     no_argument,       &premultiplied_alpha, 1},
-    {(char* const) "plugin-directory",        required_argument, 0,              OPTION_PLUGIN_DIRECTORY},
-    {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
-    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
+    {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
+    {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
+    {(char* const) "transfer_characteristic",     required_argument, 0,                     OPTION_NCLX_TRANSFER_CHARACTERISTIC},
+    {(char* const) "full_range_flag",             required_argument, 0,                     OPTION_NCLX_FULL_RANGE_FLAG},
+    {(char* const) "enable-two-colr-boxes",       no_argument,       &two_colr_boxes,       1},
+    {(char* const) "premultiplied-alpha",         no_argument,       &premultiplied_alpha,  1},
+    {(char* const) "plugin-directory",            required_argument, 0,                     OPTION_PLUGIN_DIRECTORY},
+    {(char* const) "benchmark",                   no_argument,       &run_benchmark,        1},
+    {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
 #if HAVE_LIBSHARPYUV
     {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
 #endif
-    {0, 0,                                                       0,               0},
+    {0, 0,                                                           0,                     0},
 };
+
 
 void show_help(const char* argv0)
 {
@@ -170,9 +172,10 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
-#if ENABLE_UNCOMPRESSED_ENCODER
+            << "  -J, --jpeg2000        encode as JPEG2000 (not needed if output filename with .avif suffix is provided)\n"
+            #if ENABLE_UNCOMPRESSED_ENCODER
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
-#endif
+            #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR  load all codec plugins in the directory\n"
@@ -184,10 +187,10 @@ void show_help(const char* argv0)
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
-#ifdef HAVE_LIBSHARPYUV
+            #ifdef HAVE_LIBSHARPYUV
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
-#endif
+            #endif
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
 
@@ -1187,8 +1190,9 @@ static void show_list_of_all_encoders()
 {
   for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1
 #if ENABLE_UNCOMPRESSED_ENCODER
-                                  , heif_compression_uncompressed
+      , heif_compression_uncompressed
 #endif
+      , heif_compression_JPEG2000
   }) {
 
     switch (compression_format) {
@@ -1197,6 +1201,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
+        break;
+      case heif_compression_JPEG2000:
+        std::cout << "JPEG2000";
         break;
       case heif_compression_uncompressed:
         std::cout << "uncompressed";
@@ -1270,6 +1277,7 @@ int main(int argc, char** argv)
   int output_bit_depth = 10;
   bool force_enc_av1f = false;
   bool force_enc_uncompressed = false;
+  bool force_enc_jpeg2000 = false;
   bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
@@ -1277,7 +1285,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:J"
 #if ENABLE_UNCOMPRESSED_ENCODER
         "U"
 #endif
@@ -1315,6 +1323,9 @@ int main(int argc, char** argv)
         break;
       case 'A':
         force_enc_av1f = true;
+        break;
+      case 'J':
+        force_enc_jpeg2000 = true;
         break;
 #if ENABLE_UNCOMPRESSED_ENCODER
         case 'U':
@@ -1377,7 +1388,7 @@ int main(int argc, char** argv)
     return 5;
   }
 
-  if (force_enc_av1f && force_enc_uncompressed) {
+  if ((force_enc_av1f ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg2000 ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
   }
 
@@ -1414,6 +1425,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_uncompressed) {
     compressionFormat = heif_compression_uncompressed;
+  }
+  else if (force_enc_jpeg2000) {
+    compressionFormat = heif_compression_JPEG2000;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);
