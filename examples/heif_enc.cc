@@ -1248,8 +1248,22 @@ heif_compression_format guess_compression_format_from_filename(const std::string
   else if (ends_with(filename_lowercase, ".heic")) {
     return heif_compression_HEVC;
   }
+  else if (ends_with(filename_lowercase, ".hej2")) {
+    return heif_compression_JPEG2000;
+  }
   else {
     return heif_compression_undefined;
+  }
+}
+
+
+std::string suffix_for_compression_format(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1: return "avif";
+    case heif_compression_HEVC: return "heic";
+    case heif_compression_JPEG2000: return "hej2";
+    default: return "data";
   }
 }
 
@@ -1509,7 +1523,8 @@ int main(int argc, char** argv)
         filename_without_suffix = input_filename;
       }
 
-      output_filename = filename_without_suffix + (compressionFormat == heif_compression_AV1 ? ".avif" : ".heic");
+      std::string suffix = suffix_for_compression_format(compressionFormat);
+      output_filename = filename_without_suffix + '.' + suffix;
     }
 
 

@@ -414,6 +414,8 @@ enum heif_brand
   heif_vvis, // VVC sequence
   heif_evbi, // EVC image
   heif_evbs, // EVC sequence
+  heif_j2ki, // JPEG2000 image
+  heif_j2is, // JPEG2000 image sequence
 };
 
 // input data should be at least 12 bytes

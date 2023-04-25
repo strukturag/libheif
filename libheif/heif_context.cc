@@ -550,6 +550,7 @@ static bool item_type_is_image(const std::string& item_type)
           item_type == "iovl" ||
           item_type == "av01" ||
           item_type == "unci" ||
+          item_type == "j2k1" ||
           item_type == "vvc1");
 }
 
@@ -1225,7 +1226,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   // --- decode image, depending on its type
 
   if (image_type == "hvc1" ||
-      image_type == "av01") {
+      image_type == "av01" ||
+      image_type == "j2k1") {
 
     heif_compression_format compression = heif_compression_undefined;
     if (image_type == "hvc1") {
@@ -1233,6 +1235,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
     else if (image_type == "av01") {
       compression = heif_compression_AV1;
+    }
+    else if (image_type == "j2k1") {
+      compression = heif_compression_JPEG2000;
     }
 
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
