@@ -176,48 +176,6 @@ libheif_la_CFLAGS += -DHAVE_VISIBILITY
 libheif_la_CXXFLAGS += -DHAVE_VISIBILITY
 endif
 
-if ENABLE_LIBFUZZER
-bin_PROGRAMS += box-fuzzer \
-  color-conversion-fuzzer
-if HAVE_LIBDE265
-bin_PROGRAMS += file-fuzzer
-endif
-if HAVE_X265
-bin_PROGRAMS += encoder-fuzzer
-endif
-else
-noinst_LIBRARIES = libfuzzers.a
-libfuzzers_a_SOURCES = \
-  box_fuzzer.cc \
-  color_conversion_fuzzer.cc \
-  encoder_fuzzer.cc \
-  file_fuzzer.cc
-endif
-
-box_fuzzer_DEPENDENCIES =
-box_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-box_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
-box_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-box_fuzzer_SOURCES = $(libheif_la_SOURCES) box_fuzzer.cc
-
-color_conversion_fuzzer_DEPENDENCIES =
-color_conversion_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-color_conversion_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
-color_conversion_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-color_conversion_fuzzer_SOURCES = $(libheif_la_SOURCES) color_conversion_fuzzer.cc
-
-encoder_fuzzer_DEPENDENCIES =
-encoder_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-encoder_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
-encoder_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-encoder_fuzzer_SOURCES = $(libheif_la_SOURCES) encoder_fuzzer.cc
-
-file_fuzzer_DEPENDENCIES =
-file_fuzzer_CXXFLAGS = $(libde265_CFLAGS)
-file_fuzzer_LDFLAGS = $(FUZZING_ENGINE)
-file_fuzzer_LDADD = $(ADDITIONAL_LIBS)
-file_fuzzer_SOURCES = $(libheif_la_SOURCES) file_fuzzer.cc
-
 # hack, plugin_*.h files are not used by autotools, because our autotools build scripts don't support plugins, but we need it anyways
 EXTRA_DIST = \
   CMakeLists.txt \
