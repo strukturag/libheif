@@ -71,7 +71,7 @@ set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
 
 
-if (ENABLE_UNCOMPRESSED)
+if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             heif_encoder_uncompressed.h
             heif_encoder_uncompressed.cc)

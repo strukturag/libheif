@@ -122,8 +122,8 @@ if (ENABLE_MULTITHREADING_SUPPORT)
     endif()
 endif()
 
-if (ENABLE_UNCOMPRESSED)
-    target_compile_definitions(heif PRIVATE ENABLE_UNCOMPRESSED=1)
+if (WITH_UNCOMPRESSED_CODEC)
+    target_compile_definitions(heif PRIVATE WITH_UNCOMPRESSED_CODEC=1)
     target_sources(heif PRIVATE
             uncompressed_image.h
             uncompressed_image.cc)

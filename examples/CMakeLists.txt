@@ -117,6 +117,6 @@ if (PNG_FOUND)
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif ()
 
-if (ENABLE_UNCOMPRESSED)
+if (WITH_UNCOMPRESSED_CODEC)
     target_compile_definitions(heif-enc PRIVATE ENABLE_UNCOMPRESSED_ENCODER=1)
 endif()

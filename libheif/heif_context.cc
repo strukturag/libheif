@@ -49,7 +49,7 @@
 #include "libheif/color-conversion/colorconversion.h"
 #include "metadata_compression.h"
 
-#if ENABLE_UNCOMPRESSED
+#if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"
 #endif
 
@@ -1357,7 +1357,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (error) {
       return error;
     }
-#if ENABLE_UNCOMPRESSED
+#if WITH_UNCOMPRESSED_CODEC
   } else if (image_type == "unci") {
     std::vector<uint8_t> data;
     error = m_heif_file->get_compressed_image_data(ID, &data);
@@ -2671,7 +2671,7 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                 enum heif_image_input_class input_class,
                                                 std::shared_ptr<Image> out_image)
 {
-#if ENABLE_UNCOMPRESSED
+#if WITH_UNCOMPRESSED_CODEC
   heif_item_id image_id = m_heif_file->add_new_image("unci");
   out_image = std::make_shared<Image>(this, image_id);
 

@@ -41,7 +41,7 @@
 
 #include "metadata_compression.h"
 
-#if ENABLE_UNCOMPRESSED
+#if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"
 #endif
 
@@ -530,7 +530,7 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     }
   }
 
-#if ENABLE_UNCOMPRESSED
+#if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
   if (image_type == "unci") {
