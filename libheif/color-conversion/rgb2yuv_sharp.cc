@@ -34,6 +34,18 @@ static inline bool PlatformIsBigEndian() {
   return !*((char*)&i);
 }
 
+static uint16_t Shift(uint16_t v, int input_bits, int output_bits) {
+  if (input_bits == output_bits) return v;
+  if (output_bits > input_bits) {
+    int shift1 = output_bits - input_bits;
+    int shift2 = 8 - shift1;
+    return (uint16_t) ((v << shift1) | (v >> shift2));
+  } else {
+    int shift = input_bits - output_bits;
+    return (uint16_t) (v >> shift);
+  }
+}
+
 #endif
 
 std::vector<ColorStateWithCost>
@@ -207,7 +219,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   }
 
   SharpYuvColorSpace color_space = {
-      kr_kb.Kr, kr_kb.Kb, input_bits,
+      kr_kb.Kr, kr_kb.Kb, output_bits,
       full_range_flag ? kSharpYuvRangeFull : kSharpYuvRangeLimited};
   SharpYuvConversionMatrix yuv_matrix;
   SharpYuvComputeConversionMatrix(&color_space, &yuv_matrix);
@@ -236,15 +248,16 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
-        (void)in;
+        uint16_t a = has_alpha
+                         ? (input_bits == 8)
+                               ? in[0]
+                               : (uint16_t)((in[0 + le] << 8) | in[1 - le])
+                         : alpha_max;
         if (output_bits == 8) {
-          uint8_t a = has_alpha ? in[0] : 0xff;
-          out_a[y * out_a_stride + x] = a; // XXX maybe change precision
+          out_a[y * out_a_stride + x] = (uint8_t)Shift(a, input_bits, output_bits);
         } else {
-          // 16 bit alpha.
-          uint16_t a = has_alpha ? (uint16_t)((in[0 + le] << 8) | in[1 - le]) : alpha_max;
           uint16_t* out_a16 = reinterpret_cast<uint16_t*>(out_a);
-          out_a16[y * out_a_stride / 2 + x] = a;  // XXX maybe change precision
+          out_a16[y * out_a_stride / 2 + x] = Shift(a, input_bits, output_bits);
         }
       }
     }
