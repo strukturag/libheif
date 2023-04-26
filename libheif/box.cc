@@ -3569,8 +3569,8 @@ Error Box_grpl::parse(BitstreamRange& range)
     }
 
     group.group_id = range.read32();
-    int nEntities = range.read32();
-    for (int i = 0; i < nEntities; i++) {
+    uint32_t nEntities = range.read32();
+    for (uint32_t i = 0; i < nEntities; i++) {
       if (range.eof()) {
         break;
       }
