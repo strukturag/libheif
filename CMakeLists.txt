@@ -189,6 +189,22 @@ if (BUILD_TESTING AND WITH_REDUCED_VISIBILITY)
 endif()
 
 
+# --- Fuzzing
+
+option(WITH_FUZZERS "Build the fuzzers (and no other executables)" OFF)
+
+if (WITH_FUZZERS)
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_COMPILER "clang++")
+    set(FUZZER_FLAGS -fsanitize=fuzzer,address,shift,integer -fno-sanitize-recover=shift,integer)
+    add_compile_options(${FUZZER_FLAGS})
+    add_link_options(${FUZZER_FLAGS})
+
+    add_subdirectory(fuzzing)
+endif()
+
+add_compile_options(-Wno-tautological-constant-out-of-range-compare)
+
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
 add_subdirectory (gnome)

@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include "heif.h"
+#include "libheif/heif.h"
 
 static void generate_plane(int width, int height, uint8_t* output, int stride)
 {

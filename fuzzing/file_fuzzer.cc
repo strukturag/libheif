@@ -22,7 +22,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "heif.h"
+#include "libheif/heif.h"
 
 static const enum heif_colorspace kFuzzColorSpace = heif_colorspace_YCbCr;
 static const enum heif_chroma kFuzzChroma = heif_chroma_420;
