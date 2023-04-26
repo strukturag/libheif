@@ -2374,8 +2374,8 @@ Error Box_ipma::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  int entry_cnt = range.read32();
-  for (int i = 0; i < entry_cnt && !range.error() && !range.eof(); i++) {
+  uint32_t entry_cnt = range.read32();
+  for (uint32_t i = 0; i < entry_cnt && !range.error() && !range.eof(); i++) {
     Entry entry;
     if (get_version() < 1) {
       entry.item_ID = range.read16();
