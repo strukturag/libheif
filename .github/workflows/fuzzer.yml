@@ -2,7 +2,7 @@ name: fuzzer
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, new-fuzzers ]
   pull_request:
     branches: [ master ]
 
