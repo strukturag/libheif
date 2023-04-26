@@ -50,16 +50,7 @@ fi
 if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     ./autogen.sh
     CONFIGURE_ARGS=
-    if [ -z "$CONFIGURE_HOST" ]; then
-        if [ ! -z "$FUZZER" ]; then
-            export CC="$BUILD_ROOT/clang/bin/clang"
-            export CXX="$BUILD_ROOT/clang/bin/clang++"
-            FUZZER_FLAGS="-fsanitize=fuzzer-no-link,address,shift,integer -fno-sanitize-recover=shift,integer"
-            export CFLAGS="$CFLAGS -g -O0 $FUZZER_FLAGS"
-            export CXXFLAGS="$CXXFLAGS -g -O0 $FUZZER_FLAGS"
-            CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-libfuzzer=-fsanitize=fuzzer"
-        fi
-    else
+    if [ ! -z "$CONFIGURE_HOST" ]; then
         # Make sure the correct compiler will be used.
         unset CC
         unset CXX

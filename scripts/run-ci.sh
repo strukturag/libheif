@@ -136,7 +136,9 @@ if [ ! -z "$CMAKE" ]; then
     if [ "$CLANG_TIDY" = "1" ]; then
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
     fi
-
+    if [ ! -z "$FUZZER" ]; then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS --preset=fuzzing"
+    fi
     cmake . $CMAKE_OPTIONS
 fi
 
@@ -261,13 +263,13 @@ if [ ! -z "$TARBALL" ]; then
 fi
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
-    ./libheif/color-conversion-fuzzer ./fuzzing/corpus/*color-conversion-fuzzer*
-    ./libheif/file-fuzzer ./fuzzing/corpus/*.heic
+    ./fuzzing/color-conversion-fuzzer ./fuzzing/data/corpus/*color-conversion-fuzzer*
+    ./fuzzing/file-fuzzer ./fuzzing/data/corpus/*.heic
 
     echo "Running color conversion fuzzer ..."
-    ./libheif/color-conversion-fuzzer -max_total_time=120
+    ./fuzzing/color-conversion-fuzzer -max_total_time=120
     echo "Running encoder fuzzer ..."
-    ./libheif/encoder-fuzzer -max_total_time=120
+    ./fuzzing/encoder-fuzzer -max_total_time=120
     echo "Running file fuzzer ..."
-    ./libheif/file-fuzzer -dict=./fuzzing/dictionary.txt -max_total_time=120
+    ./fuzzing/file-fuzzer -dict=./fuzzing/data/dictionary.txt -max_total_time=120
 fi
