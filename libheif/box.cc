@@ -1646,7 +1646,7 @@ Error Box_iinf::parse(BitstreamRange& range)
 
   int nEntries_size = (get_version() > 0) ? 4 : 2;
 
-  int item_count;
+  uint32_t item_count;
   if (nEntries_size == 2) {
     item_count = range.read16();
   }
@@ -3628,7 +3628,7 @@ Error Box_dref::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  int nEntities = range.read32();
+  uint32_t nEntities = range.read32();
 
   /*
   for (int i=0;i<nEntities;i++) {
@@ -3643,7 +3643,7 @@ Error Box_dref::parse(BitstreamRange& range)
     return err;
   }
 
-  if ((int) m_children.size() != nEntities) {
+  if (m_children.size() != nEntities) {
     // TODO return Error(
   }
 
