@@ -3638,7 +3638,7 @@ Error Box_dref::parse(BitstreamRange& range)
   }
   */
 
-  Error err = read_children(range, nEntities);
+  Error err = read_children(range, (int)nEntities);
   if (err) {
     return err;
   }
