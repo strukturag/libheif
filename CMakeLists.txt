@@ -158,19 +158,11 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 
 option(WITH_EXAMPLES "Build examples" ON)
 
-# Tests are off by default. If you switch them on, also switch off WITH_REDUCED_VISIBILITY.
-# TODO: fix tests on windows.
-option(WITH_TESTS "Build tests" OFF)
-
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
 option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
-
-if (WITH_TESTS AND WITH_REDUCED_VISIBILITY)
-    message(FATAL_ERROR "Tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
-endif()
 
 if (WITH_REDUCED_VISIBILITY)
     set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -181,10 +173,22 @@ endif ()
 if(WITH_EXAMPLES)
     add_subdirectory (examples)
 endif()
-if(WITH_TESTS)
-    include(CTest)
+
+# --- Testing
+
+# Disable testing by default because this requires building with full symbol visibility (switched off WITH_REDUCED_VISIBILITY).
+option(BUILD_TESTING "" OFF)
+include(CTest)
+if(BUILD_TESTING)
+    # TODO: fix tests on windows.
     add_subdirectory (tests)
 endif()
+
+if (BUILD_TESTING AND WITH_REDUCED_VISIBILITY)
+    message(FATAL_ERROR "Tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+endif()
+
+
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
 add_subdirectory (gnome)
