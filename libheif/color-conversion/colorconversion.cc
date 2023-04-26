@@ -248,9 +248,9 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
   border_states.push_back({-1, nullptr, {input_state, 0}});
 
   while (!border_states.empty()) {
-    size_t minIdx = -1;
+    int minIdx = -1;
     int minCost = std::numeric_limits<int>::max();
-    for (size_t i = 0; i < border_states.size(); i++) {
+    for (int i = 0; i < (int)border_states.size(); i++) {
       int cost = border_states[i].color_state.speed_costs;
       if (cost < minCost) {
         minIdx = i;

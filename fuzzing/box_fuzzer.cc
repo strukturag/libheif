@@ -26,6 +26,8 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
+  heif_init(nullptr);
+
   auto reader = std::make_shared<heif::StreamReader_memory>(data, size, false);
 
   heif::BitstreamRange range(reader, size);
@@ -41,6 +43,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     heif::Indent indent;
     box->dump(indent);
   }
+
+  heif_deinit();
 
   return 0;
 }

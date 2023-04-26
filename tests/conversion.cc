@@ -31,6 +31,9 @@
 
 using namespace heif;
 
+// Enable for more verbose test output.
+#define DEBUG_ME 0
+
 struct Plane {
   heif_channel channel;
   int width;
@@ -76,9 +79,12 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
   int stride;
   const T* p = (T*)image.get_plane(channel, &stride);
   stride /= sizeof(T);
-  int digits = (int)std::ceil(std::log10(1 << image.get_bits_per_pixel(channel))) + 1;
+  int bpp = image.get_bits_per_pixel(channel);
+  int digits = (int)std::ceil(std::log10(1 << bpp)) + 1;
 
   std::ostringstream os;
+  os << "channel=" << channel << " width=" << width << " height=" << height
+     << " bpp=" << bpp << "\n";
   os << std::string(digits, ' ');
   int header_width = digits * num_interleaved - 1 + (is_interleaved ? 3 : 0);
   for (int x = 0; x < width; ++x) {
@@ -124,9 +130,10 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   double mse = 0.0;
 
   int num_interleaved = num_interleaved_pixels_per_plane(chroma);
+  bool is_interleaved = num_interleaved > 1;
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w * num_interleaved; x++) {
-      if (skip_alpha && num_interleaved > 1 && x % 4 == 3) continue;
+      if (skip_alpha && is_interleaved && x % 4 == 3) continue;
       int orig_v = SwapBytesIfNeeded(orig_p[y * orig_stride + x], chroma);
       int compressed_v = SwapBytesIfNeeded(compressed_p[y * compressed_stride + x], chroma);
       int d = orig_v - compressed_v;
@@ -224,14 +231,28 @@ bool MakeTestImage(const ColorState& state, int width, int height,
   return true;
 }
 
+// Converts from 'input_state' to 'target_state' and checks that the resulting
+// image has the expected shape. If the reverse conversion is also supported,
+// does a round-trip back to the original state and checks the PSNR.
+// If 'require_supported' is true, checks that the conversion from 'input_state'
+// to 'target_state' is supported, otherwise, exists silently for unsupported
+// conversions.
 void TestConversion(const std::string& test_name, const ColorState& input_state,
                     const ColorState& target_state,
-                    const heif_color_conversion_options& options) {
+                    const heif_color_conversion_options& options,
+                    bool require_supported = true) {
   INFO(test_name);
+  INFO("downsampling=" << options.preferred_chroma_downsampling_algorithm
+                       << " upsampling="
+                       << options.preferred_chroma_upsampling_algorithm
+                       << " only_used_preferred="
+                       << (bool)options.only_use_preferred_chroma_algorithm);
 
   ColorConversionPipeline pipeline;
-  REQUIRE(pipeline.construct_pipeline(input_state, target_state, options));
-  INFO(pipeline.debug_dump_pipeline());
+  bool supported = pipeline.construct_pipeline(input_state, target_state, options);
+  if (require_supported) REQUIRE(supported);
+  if (!supported) return;
+  INFO("conversion pipeline: " << pipeline.debug_dump_pipeline());
 
   auto in_image = std::make_shared<heif::HeifPixelImage>();
   // Width and height are multiples of 4.
@@ -258,6 +279,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   ColorConversionPipeline reverse_pipeline;
   if (reverse_pipeline.construct_pipeline(target_state, input_state,
                                           options)) {
+    INFO("reverse pipeline: " << reverse_pipeline.debug_dump_pipeline());
     std::shared_ptr<HeifPixelImage> recovered_image =
         reverse_pipeline.convert_image(out_image);
     REQUIRE(recovered_image != nullptr);
@@ -274,7 +296,8 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
 
     for (const Plane& plane : GetPlanes(input_state, width, height)) {
       if (skip_alpha && plane.channel == heif_channel_Alpha) continue;
-      INFO("Channel: " << plane.channel);
+      INFO("Channel: " << plane.channel << " (set DEBUG_ME to 1 in the code for more info)");
+#if DEBUG_ME
       INFO("Original:\n" << PrintChannel(*in_image, plane.channel));
       INFO("Recovered:\n" << PrintChannel(*recovered_image, plane.channel));
       for (const Plane& converted_plane :
@@ -283,6 +306,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
                       << converted_plane.channel << ":\n"
                       << PrintChannel(*out_image, converted_plane.channel));
       }
+#endif
       double psnr = GetPsnr(*in_image, *recovered_image, plane.channel, skip_alpha);
       CHECK(psnr >= expected_psnr);
     }
@@ -361,11 +385,22 @@ std::vector<ColorState> GetAllColorStates() {
 }
 
 TEST_CASE("All conversions", "[heif_image]") {
-  heif_color_conversion_options basic_options = {
-      .preferred_chroma_downsampling_algorithm =
-          heif_chroma_downsampling_average,
-      .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
-      .only_use_preferred_chroma_algorithm = false};
+  bool only_use_preferred_chroma_algorithm = GENERATE(false, true);
+  heif_chroma_downsampling_algorithm downsampling =
+      heif_chroma_downsampling_nearest_neighbor;
+  heif_chroma_upsampling_algorithm upsampling =
+      heif_chroma_upsampling_nearest_neighbor;
+  if (only_use_preferred_chroma_algorithm) {
+    downsampling = GENERATE(heif_chroma_downsampling_nearest_neighbor,
+                            heif_chroma_downsampling_average,
+                            heif_chroma_downsampling_sharp_yuv);
+    upsampling = GENERATE(heif_chroma_upsampling_nearest_neighbor,
+                          heif_chroma_upsampling_bilinear);
+  }
+  heif_color_conversion_options options = {
+      .preferred_chroma_downsampling_algorithm = downsampling,
+      .preferred_chroma_upsampling_algorithm = upsampling,
+      .only_use_preferred_chroma_algorithm = only_use_preferred_chroma_algorithm};
 
   // Test all source and destination state combinations.
   ColorState src_state = GENERATE(from_range(GetAllColorStates()));
@@ -375,14 +410,21 @@ TEST_CASE("All conversions", "[heif_image]") {
   // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
   // ColorState dst_state(...);
 
+  bool require_supported = true;
   // Converting to monochrome is not supported at the moment.
   if (dst_state.colorspace == heif_colorspace_monochrome ||
-      dst_state.chroma == heif_chroma_monochrome)
-    return;
+      dst_state.chroma == heif_chroma_monochrome) {
+    require_supported = false;
+  }
+  // Some conversions might not be supported when the exact upsampling
+  // or downsampling algorithm is specified.
+  if (only_use_preferred_chroma_algorithm) {
+    require_supported = false;
+  }
 
   std::ostringstream os;
   os << "from: " << src_state << "\nto:   " << dst_state;
-  TestConversion(os.str(), src_state, dst_state, basic_options);
+  TestConversion(os.str(), src_state, dst_state, options, require_supported);
 }
 
 TEST_CASE("Sharp yuv conversion", "[heif_image]") {
@@ -393,10 +435,6 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
       .only_use_preferred_chroma_algorithm = true};
 
 #ifdef HAVE_LIBSHARPYUV
-  TestConversion("### interleaved RGB -> YCbCr 420 with sharp yuv",
-                 {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, false, 8},
-                 {heif_colorspace_YCbCr, heif_chroma_420, false, 8},
-                 sharp_yuv_options);
   TestConversion("### interleaved RGBA -> YCbCr 420 with sharp yuv",
                  {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
                  {heif_colorspace_YCbCr, heif_chroma_420, true, 8},
@@ -436,6 +474,7 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
       "### interleaved RGBA -> YCbCr 420 with sharp yuv NOT COMPILED IN",
       {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
       {heif_colorspace_YCbCr, heif_chroma_420, false, 8}, sharp_yuv_options);
+  WARN("Tests built without sharp yuv");
 #endif
 
   TestFailingConversion(

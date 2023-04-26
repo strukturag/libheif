@@ -298,7 +298,7 @@ heif::Error heif::FullBox::write_header(StreamWriter& writer, size_t total_size,
     return err;
   }
 
-  assert((get_flags() & ~0x00FFFFFF) == 0);
+  assert((get_flags() & ~0x00FFFFFFU) == 0);
 
   writer.write32((get_version() << 24) | get_flags());
 
@@ -1569,10 +1569,10 @@ void Box_infe::set_hidden_item(bool hidden)
   m_hidden_item = hidden;
 
   if (m_hidden_item) {
-    set_flags(get_flags() | 1);
+    set_flags(get_flags() | 1U);
   }
   else {
-    set_flags(get_flags() & ~1);
+    set_flags(get_flags() & ~1U);
   }
 }
 
@@ -2677,9 +2677,9 @@ Error Box_clap::parse(BitstreamRange& range)
   // Note: in the standard document 14496-12(2015), it says that the offset values should also be unsigned integers,
   // but this is obviously an error. Even the accompanying standard text says that offsets may be negative.
   int32_t horizontal_offset_num = (int32_t) range.read32();
-  uint32_t horizontal_offset_den = (int32_t) range.read32();
+  uint32_t horizontal_offset_den = (uint32_t) range.read32();
   int32_t vertical_offset_num = (int32_t) range.read32();
-  uint32_t vertical_offset_den = (int32_t) range.read32();
+  uint32_t vertical_offset_den = (uint32_t) range.read32();
 
   if (clean_aperture_width_num > (uint32_t) std::numeric_limits<int32_t>::max() ||
       clean_aperture_width_den > (uint32_t) std::numeric_limits<int32_t>::max() ||
