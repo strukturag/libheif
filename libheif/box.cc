@@ -1006,7 +1006,7 @@ Error Box_iloc::parse(BitstreamRange& range)
     index_size = (values4 & 0xF);
   }
 
-  int item_count;
+  uint32_t item_count;
   if (get_version() < 2) {
     item_count = range.read16();
   }
@@ -1025,7 +1025,7 @@ Error Box_iloc::parse(BitstreamRange& range)
                  sstr.str());
   }
 
-  for (int i = 0; i < item_count; i++) {
+  for (uint32_t i = 0; i < item_count; i++) {
     Item item;
 
     if (get_version() < 2) {
