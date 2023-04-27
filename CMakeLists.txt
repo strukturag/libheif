@@ -192,13 +192,14 @@ endif()
 # --- Fuzzing
 
 option(WITH_FUZZERS "Build the fuzzers (and no other executables)" OFF)
+set(FUZZING_COMPILE_OPTIONS "-fsanitize=fuzzer,address,shift,integer -fno-sanitize-recover=shift,integer" CACHE STRING "Compiler options for fuzzing")
 
 if (WITH_FUZZERS)
     set(CMAKE_C_COMPILER "clang")
     set(CMAKE_CXX_COMPILER "clang++")
-    set(FUZZER_FLAGS -fsanitize=fuzzer,address,shift,integer -fno-sanitize-recover=shift,integer)
-    add_compile_options(${FUZZER_FLAGS})
-    add_link_options(${FUZZER_FLAGS})
+    separate_arguments(FUZZING_COMPILE_OPTIONS UNIX_COMMAND "${FUZZING_COMPILE_OPTIONS}")
+    add_compile_options(${FUZZING_COMPILE_OPTIONS})
+    add_link_options(${FUZZING_COMPILE_OPTIONS})
 
     add_subdirectory(fuzzing)
 endif()
