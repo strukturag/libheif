@@ -244,14 +244,14 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     int out_a_stride;
 
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
-    uint16_t alpha_max = static_cast<uint16_t>((1 << output_bits) - 1);
+    uint16_t alpha_max = static_cast<uint16_t>((1 << input_bits) - 1);
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
         uint16_t a = has_alpha
-                         ? (input_bits == 8)
-                               ? in[0]
-                               : (uint16_t)((in[0 + le] << 8) | in[1 - le])
+                         ? ((input_bits == 8)
+                                ? in[0]
+                                : (uint16_t)((in[0 + le] << 8) | in[1 - le]))
                          : alpha_max;
         if (output_bits == 8) {
           out_a[y * out_a_stride + x] = (uint8_t)Shift(a, input_bits, output_bits);

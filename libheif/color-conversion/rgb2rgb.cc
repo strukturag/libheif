@@ -196,8 +196,6 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
     return nullptr;
   }
 
-  //int bpp = input->get_bits_per_pixel(heif_channel_R);
-
   bool input_has_alpha = input->has_channel(heif_channel_Alpha);
   bool output_has_alpha = input_has_alpha || target_state.has_alpha;
 
@@ -211,6 +209,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
       return nullptr;
     }
   }
+  int bpp = input->get_bits_per_pixel(heif_channel_R);
+  if (bpp <= 0) return nullptr;
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -219,8 +219,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   outimg->create(width, height, heif_colorspace_RGB,
                  output_has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
-
-  if (!outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R))) {
+  if (!outimg->add_plane(heif_channel_interleaved, width, height, bpp)) {
     return nullptr;
   }
 
@@ -247,40 +246,22 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   const int pixelsize = (output_has_alpha ? 8 : 6);
 
   int x, y;
+  uint16_t alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
   for (y = 0; y < height; y++) {
-
-    if (input_has_alpha) {
-      for (x = 0; x < width; x++) {
-        uint16_t r = in_r[x + y * in_r_stride];
-        uint16_t g = in_g[x + y * in_g_stride];
-        uint16_t b = in_b[x + y * in_b_stride];
-        uint16_t a = in_a[x + y * in_a_stride];
-        out_p[y * out_p_stride + 8 * x + 0] = (uint8_t) (r >> 8);
-        out_p[y * out_p_stride + 8 * x + 1] = (uint8_t) (r & 0xFF);
-        out_p[y * out_p_stride + 8 * x + 2] = (uint8_t) (g >> 8);
-        out_p[y * out_p_stride + 8 * x + 3] = (uint8_t) (g & 0xFF);
-        out_p[y * out_p_stride + 8 * x + 4] = (uint8_t) (b >> 8);
-        out_p[y * out_p_stride + 8 * x + 5] = (uint8_t) (b & 0xFF);
-        out_p[y * out_p_stride + 8 * x + 6] = (uint8_t) (a >> 8);
-        out_p[y * out_p_stride + 8 * x + 7] = (uint8_t) (a & 0xFF);
-      }
-    }
-    else {
-      for (x = 0; x < width; x++) {
-        uint16_t r = in_r[x + y * in_r_stride];
-        uint16_t g = in_g[x + y * in_g_stride];
-        uint16_t b = in_b[x + y * in_b_stride];
-        out_p[y * out_p_stride + pixelsize * x + 0] = (uint8_t) (r >> 8);
-        out_p[y * out_p_stride + pixelsize * x + 1] = (uint8_t) (r & 0xFF);
-        out_p[y * out_p_stride + pixelsize * x + 2] = (uint8_t) (g >> 8);
-        out_p[y * out_p_stride + pixelsize * x + 3] = (uint8_t) (g & 0xFF);
-        out_p[y * out_p_stride + pixelsize * x + 4] = (uint8_t) (b >> 8);
-        out_p[y * out_p_stride + pixelsize * x + 5] = (uint8_t) (b & 0xFF);
-
-        if (output_has_alpha) {
-          out_p[y * out_p_stride + pixelsize * x + 6] = 0xFF;
-          out_p[y * out_p_stride + pixelsize * x + 7] = 0xFF;
-        }
+    for (x = 0; x < width; x++) {
+      uint16_t r = in_r[x + y * in_r_stride];
+      uint16_t g = in_g[x + y * in_g_stride];
+      uint16_t b = in_b[x + y * in_b_stride];
+      out_p[y * out_p_stride + pixelsize * x + 0] = (uint8_t)(r >> 8);
+      out_p[y * out_p_stride + pixelsize * x + 1] = (uint8_t)(r & 0xFF);
+      out_p[y * out_p_stride + pixelsize * x + 2] = (uint8_t)(g >> 8);
+      out_p[y * out_p_stride + pixelsize * x + 3] = (uint8_t)(g & 0xFF);
+      out_p[y * out_p_stride + pixelsize * x + 4] = (uint8_t)(b >> 8);
+      out_p[y * out_p_stride + pixelsize * x + 5] = (uint8_t)(b & 0xFF);
+      if (output_has_alpha) {
+        uint16_t a = input_has_alpha ? in_a[x + y * in_a_stride] : alpha_max;
+        out_p[y * out_p_stride + pixelsize * x + 6] = (uint8_t)(a >> 8);
+        out_p[y * out_p_stride + pixelsize * x + 7] = (uint8_t)(a & 0xFF);
       }
     }
   }
