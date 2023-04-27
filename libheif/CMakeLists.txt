@@ -116,6 +116,9 @@ if (WITH_DEFLATE_HEADER_COMPRESSION)
 endif ()
 
 if (ENABLE_MULTITHREADING_SUPPORT)
+    find_package(Threads)
+    target_link_libraries(heif PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+
     target_compile_definitions(heif PRIVATE ENABLE_MULTITHREADING_SUPPORT=1)
     if (ENABLE_PARALLEL_TILE_DECODING)
         target_compile_definitions(heif PRIVATE ENABLE_PARALLEL_TILE_DECODING=1)

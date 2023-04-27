@@ -6,13 +6,13 @@ include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
 set(TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data")
 configure_file(test-config.cc.in ${CMAKE_BINARY_DIR}/generated/test-config.cc)
 
-find_package(Threads)
+# find_package(Threads)
 
 macro(add_libheif_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
     add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc ${TEST_FILE}.cc)
     message("threading lib: ${CMAKE_THREAD_LIBS_INIT}")
-    target_link_libraries(${TEST_NAME} PRIVATE heif ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(${TEST_NAME} PRIVATE heif)
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
 endmacro()
 
