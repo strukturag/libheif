@@ -29,12 +29,13 @@
 #include "libheif/heif_api_structs.h"
 #include <cstdint>
 #include <stdio.h>
+#include "test-config.h"
 
 struct heif_context * get_rgb_context() {
   struct heif_context* context;
   struct heif_error err;
   context = heif_context_alloc();
-  err = heif_context_read_from_file(context, "uncompressed_rgb3.heif", NULL);
+  err = heif_context_read_from_file(context, (tests_data_directory + "/uncompressed_rgb3.heif").c_str(), NULL);
   REQUIRE(err.code == heif_error_Ok);
   return context;
 }
@@ -43,7 +44,7 @@ struct heif_context * get_rgb_planar_tiled_context() {
   struct heif_context* context;
   struct heif_error err;
   context = heif_context_alloc();
-  err = heif_context_read_from_file(context, "uncompressed_planar_tiled.heif", NULL);
+  err = heif_context_read_from_file(context, (tests_data_directory + "/uncompressed_planar_tiled.heif").c_str(), NULL);
   REQUIRE(err.code == heif_error_Ok);
   return context;
 }
