@@ -3638,7 +3638,7 @@ Error Box_dref::parse(BitstreamRange& range)
   }
   */
 
-  if (nEntities > std::numeric_limits<int>::max()) {
+  if (nEntities > (uint32_t)std::numeric_limits<int>::max()) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
                  "Too many entities in dref box.");
