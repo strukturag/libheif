@@ -203,7 +203,9 @@ if (WITH_FUZZERS)
     add_subdirectory(fuzzing)
 endif()
 
-add_compile_options(-Wno-tautological-constant-out-of-range-compare)
+if (CMAKE_CXX_COMPILER MATCHES "clang\\+\\+$")
+    add_compile_options(-Wno-tautological-constant-out-of-range-compare)
+endif()
 
 add_subdirectory (libheif)
 add_subdirectory (gdk-pixbuf)
