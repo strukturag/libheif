@@ -1,6 +1,5 @@
 if(UNIX OR MINGW)
   find_package(PkgConfig)
-  find_package(Threads)
   pkg_check_modules(GDKPIXBUF2 gdk-pixbuf-2.0)
 
   if(GDKPIXBUF2_FOUND)
