@@ -136,6 +136,9 @@ if [ ! -z "$CMAKE" ]; then
     if [ ! -z "$FUZZER" ]; then
         CMAKE_OPTIONS="--preset=fuzzing"
     fi
+    if [ ! -z "$TESTS" ]; then
+        CMAKE_OPTIONS="--preset=testing"
+    fi
     cmake . $CMAKE_OPTIONS
 fi
 
@@ -146,7 +149,7 @@ fi
 if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ] && [ -z "$CLANG_TIDY" ] ; then
     echo "Building libheif ..."
     make -j $(nproc)
-    if [ "$CURRENT_OS" = "linux" ] && [ -z "$CMAKE" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ]; then
+    if [ "$CURRENT_OS" = "linux" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ] && [ ! -z "$TESTS" ] ; then
         echo "Running tests ..."
         make test
     fi
@@ -239,9 +242,6 @@ if [ ! -z "$TARBALL" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist --disable-gdk-pixbuf"
     else
         CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
-    fi
-    if [ ! -z "$TESTS" ]; then
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests"
     fi
     if [ "$WITH_RAV1E" = "1" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-local-rav1e"

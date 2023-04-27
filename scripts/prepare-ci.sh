@@ -61,9 +61,6 @@ if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
     else
         CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
     fi
-    if [ ! -z "$TESTS" ]; then
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests --enable-uncompressed"
-    fi
     if [ "$WITH_RAV1E" = "1" ]; then
         CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-local-rav1e"
     fi
