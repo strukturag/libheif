@@ -218,6 +218,7 @@ add_subdirectory (gnome)
 # --- packaging (source code)
 
 set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_SOURCE_GENERATOR TGZ)
 set(CPACK_SOURCE_IGNORE_FILES
 /.git/
 /.github/
