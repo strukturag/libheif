@@ -2203,7 +2203,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   return error;
 }
 
-
+/*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
 {
   return ((int)orientation) > 4 ? h : w;
@@ -2214,7 +2214,7 @@ static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uin
 {
   return ((int)orientation) > 4 ? w : h;
 }
-
+*/
 
 void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id)
 {
@@ -2368,8 +2368,8 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   // if image size was rounded up to even size, add a 'clap' box to crop the
   // padding border away
 
-  uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
-  uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
+  //uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
+  //uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
 
   if (out_image->get_width() != encoded_width ||
       out_image->get_height() != encoded_height) {
@@ -2382,7 +2382,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
       m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
-      m_heif_file->add_ispe_property(image_id, rotated_width, rotated_height);
+      m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
 
       // MIAF 7.3.6.7
 
@@ -2423,7 +2423,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
       m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
       m_heif_file->add_orientation_properties(grid_image_id, options.image_orientation);
-      m_heif_file->add_ispe_property(grid_image_id, rotated_width, rotated_height);
+      m_heif_file->add_ispe_property(grid_image_id, grid.get_width(), grid.get_height());
 
       // --- now use the grid image instead of the original image
 
@@ -2438,7 +2438,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   }
   else {
     m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-    m_heif_file->add_ispe_property(image_id, rotated_width, rotated_height);
+    m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
   }
 
   // --- choose which color profile to put into 'colr' box
@@ -2653,10 +2653,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   uint32_t input_width, input_height;
   input_width = src_image->get_width();
   input_height = src_image->get_height();
-  m_heif_file->add_ispe_property(image_id,
-                                 get_rotated_width(options.image_orientation, input_width, input_height),
-                                 get_rotated_height(options.image_orientation, input_width, input_height));
-
+  m_heif_file->add_ispe_property(image_id, input_width, input_height);
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {

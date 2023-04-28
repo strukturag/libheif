@@ -26,6 +26,8 @@
 
 #include "catch.hpp"
 #include "libheif/heif.h"
+#include "libheif/heif_image.h"
+#include "libheif/heif_api_structs.h"
 
 
 struct heif_image* createImage_RRGGBB_BE() {
@@ -101,3 +103,58 @@ TEST_CASE( "Encode HDR", "[heif_encoder]" ) {
   heif_image_release(img);
 }
 #endif
+
+
+static void test_ispe_size(heif_compression_format compression,
+                           heif_orientation orientation,
+                           int input_width, int input_height,
+                           int expected_ispe_width, int expected_ispe_height)
+{
+  struct heif_error err;
+
+  heif_image* img;
+  heif_image_create(input_width,input_height, heif_colorspace_YCbCr, heif_chroma_420, &img);
+  img->image->fill_new_plane(heif_channel_Y, 128, input_width,input_height, 8);
+  img->image->fill_new_plane(heif_channel_Cb, 128, (input_width+1)/2,(input_height+1)/2, 8);
+  img->image->fill_new_plane(heif_channel_Cr, 128, (input_width+1)/2,(input_height+1)/2, 8);
+
+  heif_context* ctx = heif_context_alloc();
+  heif_encoder* enc;
+  err = heif_context_get_encoder_for_format(ctx, compression, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  struct heif_encoding_options* options;
+  options = heif_encoding_options_alloc();
+  options->macOS_compatibility_workaround = false;
+  options->macOS_compatibility_workaround_no_nclx_profile = false;
+  options->image_orientation = orientation;
+
+  heif_image_handle* handle;
+  heif_context_encode_image(ctx, img, enc, options, &handle);
+
+  int ispe_width = heif_image_handle_get_ispe_width(handle);
+  int ispe_height = heif_image_handle_get_ispe_height(handle);
+
+  REQUIRE(ispe_width == expected_ispe_width);
+  REQUIRE(ispe_height == expected_ispe_height);
+
+  heif_encoding_options_free(options);
+  heif_context_free(ctx);
+  heif_image_release(img);
+}
+
+
+TEST_CASE( "ispe odd size", "[heif_context]" ) {
+
+  // HEVC encoders typically encode with even dimensions only
+  test_ispe_size(heif_compression_HEVC, heif_orientation_normal, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_180, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 121,99, 122,100);
+  test_ispe_size(heif_compression_HEVC, heif_orientation_rotate_90_cw, 120,100, 120,100);
+
+  // AVIF encoders typically encode with odd dimensions
+  test_ispe_size(heif_compression_AV1, heif_orientation_normal, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_180, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 121,99, 121,99);
+  test_ispe_size(heif_compression_AV1, heif_orientation_rotate_90_cw, 120,100, 120,100);
+}
