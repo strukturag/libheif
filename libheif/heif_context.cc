@@ -2365,6 +2365,8 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
                  heif_suberror_Invalid_image_size);
   }
 
+  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
   // if image size was rounded up to even size, add a 'clap' box to crop the
   // padding border away
 
@@ -2381,8 +2383,6 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
                                      encoded_height);
 
       m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
-      m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
 
       // MIAF 7.3.6.7
 
@@ -2419,11 +2419,9 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
       }
 
 
-      m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
-
       m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
-      m_heif_file->add_orientation_properties(grid_image_id, options.image_orientation);
       m_heif_file->add_ispe_property(grid_image_id, grid.get_width(), grid.get_height());
+      m_heif_file->add_orientation_properties(grid_image_id, options.image_orientation);
 
       // --- now use the grid image instead of the original image
 
@@ -2438,7 +2436,6 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   }
   else {
     m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-    m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
   }
 
   // --- choose which color profile to put into 'colr' box
@@ -2648,12 +2645,12 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   m_heif_file->set_av1C_configuration(image_id, config);
 
 
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
   uint32_t input_width, input_height;
   input_width = src_image->get_width();
   input_height = src_image->get_height();
   m_heif_file->add_ispe_property(image_id, input_width, input_height);
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
