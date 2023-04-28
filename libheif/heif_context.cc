@@ -644,7 +644,6 @@ Error HeifContext::interpret_heif_file()
         }
 
         image->set_resolution(width, height);
-        image->set_ispe_resolution(width, height);
         ispe_read = true;
       }
 
@@ -1138,6 +1137,30 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
   else {
     out = id;
     return Error::Ok;
+  }
+}
+
+
+int HeifContext::Image::get_ispe_width() const
+{
+  auto ispe = m_heif_context->m_heif_file->get_property<Box_ispe>(m_id);
+  if (!ispe) {
+    return 0;
+  }
+  else {
+    return ispe->get_width();
+  }
+}
+
+
+int HeifContext::Image::get_ispe_height() const
+{
+  auto ispe = m_heif_context->m_heif_file->get_property<Box_ispe>(m_id);
+  if (!ispe) {
+    return 0;
+  }
+  else {
+    return ispe->get_height();
   }
 }
 

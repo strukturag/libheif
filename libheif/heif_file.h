@@ -110,6 +110,23 @@ namespace heif {
     Error get_properties(heif_item_id imageID,
                          std::vector<Box_ipco::Property>& properties) const;
 
+    template <class BoxType>
+    std::shared_ptr<BoxType> get_property(heif_item_id imageID) const {
+      std::vector<Box_ipco::Property> properties;
+      Error err = get_properties(imageID, properties);
+      if (err) {
+        return nullptr;
+      }
+
+      for (auto& property : properties) {
+        if (auto box = std::dynamic_pointer_cast<BoxType>(property.property)) {
+          return box;
+        }
+      }
+
+      return nullptr;
+    }
+
     heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const;
 
     int get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const;
