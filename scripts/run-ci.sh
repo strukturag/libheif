@@ -155,6 +155,12 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         make test
     fi
     if [ -z "$FUZZER" ] ; then
+	echo "List available encoders"
+        ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} --list-encoders
+
+	echo "List available decoders"
+        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} --list-decoders
+
         echo "Dumping information of sample file ..."
         ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_DECODER" ]; then
