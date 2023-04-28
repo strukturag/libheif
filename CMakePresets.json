@@ -67,6 +67,7 @@
       "description": "For running the tests",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_PLUGIN_LOADING" : "OFF",
         "BUILD_TESTING" : "ON",
         "WITH_REDUCED_VISIBILITY" : "OFF"
       }
