@@ -121,23 +121,24 @@ fi
 
 if [ ! -z "$CMAKE" ]; then
     echo "Preparing cmake build files ..."
-    CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Release"
-    if [ "$CURRENT_OS" = "osx" ] ; then
-        # Make sure the homebrew installed libraries are used when building instead
-        # of the libraries provided by Apple.
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
-    fi
-    if [ "$WITH_RAV1E" = "1" ]; then
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_LOCAL_RAV1E=1"
-    fi
-    if [ "$CLANG_TIDY" = "1" ]; then
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-    fi
+
     if [ ! -z "$FUZZER" ]; then
         CMAKE_OPTIONS="--preset=fuzzing"
     fi
     if [ ! -z "$TESTS" ]; then
         CMAKE_OPTIONS="--preset=testing"
+    fi
+    if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
+        CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
+    fi
+	
+    if [ "$CURRENT_OS" = "osx" ] ; then
+        # Make sure the homebrew installed libraries are used when building instead
+        # of the libraries provided by Apple.
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+    fi
+    if [ "$CLANG_TIDY" = "1" ]; then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
     fi
     cmake . $CMAKE_OPTIONS
 fi
