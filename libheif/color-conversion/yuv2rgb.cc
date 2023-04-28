@@ -803,31 +803,66 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
    *    +---+---+---+---+
    */
 
-  // --- fill borders  (TODO: no bilinear filtering yet)
+  // --- fill borders
 
-  for (int x = 0; x < width; x++) {
-    out_cb[0 * out_cb_stride + x] = in_cb[x / 2];
-    out_cr[0 * out_cr_stride + x] = in_cr[x / 2];
+  // top left corner
+  out_cb[0] = in_cb[0];
+  out_cr[0] = in_cr[0];
+
+  // top border
+  for (int cx = 0; cx < (width - 1) / 2; cx++) {
+    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel)((3 * in_cb[cx / 2] + 1 * in_cb[cx / 2 + 1] + 2) / 4);
+    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel)((1 * in_cb[cx / 2] + 3 * in_cb[cx / 2 + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel)((3 * in_cr[cx / 2] + 1 * in_cr[cx / 2 + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel)((1 * in_cr[cx / 2] + 3 * in_cr[cx / 2 + 1] + 2) / 4);
   }
 
-  if (height % 2 == 0) {
-    for (int x = 0; x < width; x++) {
-      out_cb[(height - 1) * out_cb_stride + x] = in_cb[(height / 2 - 1) * in_cb_stride + x / 2];
-      out_cr[(height - 1) * out_cr_stride + x] = in_cr[(height / 2 - 1) * in_cr_stride + x / 2];
-    }
-  }
-
-  for (int y = 0; y < height; y++) {
-    out_cb[y * out_cb_stride + 0] = in_cb[(y / 2) * in_cb_stride + 0];
-    out_cr[y * out_cr_stride + 0] = in_cr[(y / 2) * in_cr_stride + 0];
-  }
-
+  // top right corner
   if (width % 2 == 0) {
-    for (int y = 0; y < height; y++) {
-      out_cb[y * out_cb_stride + width - 1] = in_cb[(y / 2) * in_cb_stride + width / 2 - 1];
-      out_cr[y * out_cr_stride + width - 1] = in_cr[(y / 2) * in_cr_stride + width / 2 - 1];
+    out_cb[width - 1] = in_cb[width / 2 - 1];
+    out_cr[width - 1] = in_cr[width / 2 - 1];
+  }
+
+  // left border
+  for (int cy = 0; cy < (height - 1) / 2; cy++) {
+    out_cb[(2 * cy + 1) * out_cb_stride + 0] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
+    out_cb[(2 * cy + 2) * out_cb_stride + 0] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
+    out_cr[(2 * cy + 1) * out_cr_stride + 0] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride] + 2) / 4);
+    out_cr[(2 * cy + 2) * out_cr_stride + 0] = (Pixel) ((1 * in_cr[cy / 2 * in_cr_stride] + 3 * in_cr[(cy / 2 + 1) * in_cr_stride] + 2) / 4);
+  }
+
+  // bottom left corner
+  if (height % 2 == 0) {
+    out_cb[(height - 1) * out_cb_stride] = in_cb[(height / 2 - 1) * in_cb_stride];
+    out_cr[(height - 1) * out_cr_stride] = in_cr[(height / 2 - 1) * in_cr_stride];
+  }
+
+  // right border
+  if (width % 2 == 0) {
+    for (int cy = 0; cy < (height - 1) / 2; cy++) {
+      out_cb[(2 * cy + 1) * out_cb_stride + width - 1] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
+      out_cb[(2 * cy + 2) * out_cb_stride + width - 1] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
+      out_cr[(2 * cy + 1) * out_cr_stride + width - 1] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride + width / 2 - 1] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
+      out_cr[(2 * cy + 2) * out_cr_stride + width - 1] = (Pixel) ((1 * in_cr[cy / 2 * in_cr_stride + width / 2 - 1] + 3 * in_cr[(cy / 2 + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
     }
   }
+
+  // bottom border
+  if (height % 2 == 0) {
+    for (int cx = 0; cx < (width - 1) / 2; cx++) {
+      out_cb[(height - 1) * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
+      out_cb[(height - 1) * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
+      out_cr[(height - 1) * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2] + 1 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2 + 1] + 2) / 4);
+      out_cr[(height - 1) * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2] + 3 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2 + 1] + 2) / 4);
+    }
+  }
+
+  // bottom right corner
+  if (width % 2 == 0 && height % 2 == 0) {
+    out_cb[(height - 1) * out_cb_stride + width - 1] = in_cb[(height / 2 - 1) * in_cb_stride + width / 2 - 1];
+    out_cr[(height - 1) * out_cr_stride + width - 1] = in_cr[(height / 2 - 1) * in_cr_stride + width / 2 - 1];
+  }
+
 
   // --- bilinear filtering of inner part
 

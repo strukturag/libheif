@@ -264,7 +264,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   auto in_image = std::make_shared<heif::HeifPixelImage>();
   // Width and height are multiples of 4.
   int width = 12;
-  int height = 8; 
+  int height = 8;
   REQUIRE(MakeTestImage(input_state, width, height, in_image.get()));
 
   std::shared_ptr<HeifPixelImage> out_image =
@@ -497,4 +497,73 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
       "### interleaved RGBA -> YCbCr 422 with sharp yuv (not supported!)",
       {heif_colorspace_RGB, heif_chroma_interleaved_RGBA, true, 8},
       {heif_colorspace_YCbCr, heif_chroma_422, false, 8}, sharp_yuv_options);
+}
+
+
+static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint8_t>& pixels)
+{
+  img->add_plane(channel, w, h, 8);
+
+  int stride;
+  uint8_t* p = img->get_plane(channel, &stride);
+
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      p[y * stride + x] = pixels[y * w + x];
+    }
+  }
+}
+
+
+static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, const std::vector<uint8_t>& pixels)
+{
+  int w = img->get_width(channel);
+  int h = img->get_height(channel);
+
+  int stride;
+  uint8_t* p = img->get_plane(channel, &stride);
+
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      REQUIRE((int)p[y * stride + x] == (int)pixels[y * w + x]);
+    }
+  }
+}
+
+
+TEST_CASE("Bilinear upsampling", "[heif_image]")
+{
+  heif_color_conversion_options options = {
+      .preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear,
+      .only_use_preferred_chroma_algorithm = true};
+
+  std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
+  img->create(4, 4, heif_colorspace_YCbCr, heif_chroma_420);
+
+  img->fill_new_plane(heif_channel_Y, 128, 4,4, 8);
+  fill_plane(img, heif_channel_Cb, 2,2,
+             {10, 40,
+              100, 240});
+  fill_plane(img, heif_channel_Cr, 2, 2,
+             {255, 200,
+              50, 0});
+
+  std::shared_ptr<HeifPixelImage> out = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444, nullptr, 8, options);
+
+  assert_plane(out, heif_channel_Cb,
+               {
+                   10, 18, 33, 40,
+                   33, 47, 76, 90,
+                   78, 106, 162, 190,
+                   100, 135, 205, 240
+               });
+
+
+  assert_plane(out, heif_channel_Cr,
+               {
+                   255, 241, 214, 200,
+                   204, 190, 163, 150,
+                   101, 88, 63, 50,
+                   50, 38, 13, 0
+               });
 }
