@@ -841,9 +841,8 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
       param->bLossless = p.value_int;
     }
     else if (p.name == kParam_TU_intra_depth) {
-      char buf[100];
-      sprintf(buf, "%d", p.value_int);
-      api->param_parse(param, "tu-intra-depth", buf);
+      auto valString = std::to_string(p.value_int);
+      api->param_parse(param, "tu-intra-depth", valString.c_str());
     }
     else if (p.name == kParam_complexity) {
       const int complexity = p.value_int;
