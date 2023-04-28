@@ -2838,7 +2838,7 @@ static void set_default_options(heif_encoding_options& options)
   options.version = 6;
 
   options.save_alpha_channel = true;
-  options.macOS_compatibility_workaround = true;
+  options.macOS_compatibility_workaround = false;
   options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
   options.output_nclx_profile = nullptr;
   options.macOS_compatibility_workaround_no_nclx_profile = true;

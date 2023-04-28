@@ -2376,63 +2376,20 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
   if (out_image->get_width() != encoded_width ||
       out_image->get_height() != encoded_height) {
-    if (options.macOS_compatibility_workaround == false) {
-      m_heif_file->add_clap_property(image_id,
-                                     out_image->get_width(),
-                                     out_image->get_height(),
-                                     encoded_width,
-                                     encoded_height);
+    m_heif_file->add_clap_property(image_id,
+                                   out_image->get_width(),
+                                   out_image->get_height(),
+                                   encoded_width,
+                                   encoded_height);
 
-      m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
-      // MIAF 7.3.6.7
+    // MIAF 7.3.6.7
 
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
-    }
-    else {
-      // --- wrap the encoded image in a grid image just to apply the cropping
-
-      heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
-      auto grid_image = std::make_shared<Image>(this, grid_image_id);
-
-      m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), {image_id});
-
-      ImageGrid grid;
-      grid.set_num_tiles(1, 1);
-      grid.set_output_size(src_image->get_width(heif_channel_Y), src_image->get_height(heif_channel_Y)); // TODO: using out_image->get_width/height() would be shorter.
-      auto grid_data = grid.write();
-
-      // MIAF 7.3.11.4.2
-
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        grid_image->mark_not_miaf_compatible();
-      }
-
-      if ((encoded_width % 64) != 0 ||
-          (encoded_height % 64) != 0) {
-        grid_image->mark_not_miaf_compatible();
-      }
-
-
-      m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
-      m_heif_file->add_ispe_property(grid_image_id, grid.get_width(), grid.get_height());
-      m_heif_file->add_orientation_properties(grid_image_id, options.image_orientation);
-
-      // --- now use the grid image instead of the original image
-
-      // hide the original image
-      m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
-
-      out_image = grid_image;
-
-      // now use the grid image for all further property output
-      image_id = grid_image_id;
+    if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                            out_image->get_height(),
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
     }
   }
   else {

@@ -1705,9 +1705,7 @@ struct heif_encoding_options
 
   // version 2 options
 
-  // Crops heif images with a grid wrapper instead of a 'clap' transform.
-  // Results in slightly larger file size.
-  // Default: on.
+  // DEPRECATED. This option is not required anymore. Its value will be ignored.
   uint8_t macOS_compatibility_workaround;
 
   // version 3 options
