@@ -1091,12 +1091,14 @@ enum heif_chroma
 enum heif_colorspace
 {
   heif_colorspace_undefined = 99,
-  // Should be used with a heif_chroma value in:
+
+  // heif_colorspace_YCbCr should be used with one of these heif_chroma values:
   // * heif_chroma_444
   // * heif_chroma_422
   // * heif_chroma_420
   heif_colorspace_YCbCr = 0,
-  // Should be used with a heif_chroma value in:
+
+  // heif_colorspace_RGB should be used with one of these heif_chroma values:
   // * heif_chroma_444 (for planar RGB)
   // * heif_chroma_interleaved_RGB
   // * heif_chroma_interleaved_RGBA
@@ -1105,7 +1107,8 @@ enum heif_colorspace
   // * heif_chroma_interleaved_RRGGBB_LE
   // * heif_chroma_interleaved_RRGGBBAA_LE
   heif_colorspace_RGB = 1,
-  // Should be used with heif_chroma value: heif_chroma_monochrome
+
+  // heif_colorspace_monochrome should only be used with heif_chroma = heif_chroma_monochrome
   heif_colorspace_monochrome = 2
 };
 
