@@ -10,6 +10,7 @@ jobs:
   test:
     env:
       TESTS: 1
+      CMAKE: 1
       WITH_AOM: 1
       WITH_LIBDE265: 1
       WITH_X265: 1

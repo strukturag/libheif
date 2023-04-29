@@ -2,7 +2,7 @@ name: clang
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, remove-autoconf ]
   pull_request:
     branches: [ master ]
 
@@ -11,9 +11,9 @@ jobs:
     strategy:
       matrix:
         env:
-          - { NAME: "nothing" }
-          - { NAME: "libde265 (1) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1 }
-          - { NAME: "libde265 (2) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 2 }
+          - { NAME: "nothing", CMAKE: 1 }
+          - { NAME: "libde265 (1) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 1, CMAKE: 1 }
+          - { NAME: "libde265 (2) / x265 / aom / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_AOM: 1, WITH_LIBDE265: 2, CMAKE: 1 }
     env: ${{ matrix.env }}
     runs-on: ubuntu-20.04
     steps:
@@ -46,6 +46,7 @@ jobs:
       WITH_DAV1D: 1
       WITH_RAV1E: 1
       WITH_LIBDE265: 1
+      CMAKE: 1
       CLANG_TIDY: 1
     runs-on: ubuntu-20.04
     steps:
