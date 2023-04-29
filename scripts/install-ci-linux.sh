@@ -55,6 +55,8 @@ if [ "$WITH_LIBDE265" = "2" ]; then
         --disable-acceleration_speed
     make -j $(nproc) && make -j $(nproc) install
     popd
+
+    ls -lR $BUILD_ROOT/libde265/dist
 fi
 
 if [ "$WITH_AOM" = "1" ]; then

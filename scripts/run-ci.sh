@@ -119,36 +119,40 @@ if [ ! -z "$WITH_HEIF_DECODER" ]; then
     fi
 fi
 
-if [ ! -z "$CMAKE" ]; then
-    echo "Preparing cmake build files ..."
 
-    if [ ! -z "$FUZZER" ]; then
-        CMAKE_OPTIONS="--preset=fuzzing"
-    fi
-    if [ ! -z "$TESTS" ]; then
-        CMAKE_OPTIONS="--preset=testing"
-    fi
-    if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
-        CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
-    fi
-	
-    if [ "$CURRENT_OS" = "osx" ] ; then
-        # Make sure the homebrew installed libraries are used when building instead
-        # of the libraries provided by Apple.
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
-    fi
-    if [ "$CLANG_TIDY" = "1" ]; then
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-    fi
-    cmake . $CMAKE_OPTIONS
+echo "Preparing cmake build files ..."
+
+if [ ! -z "$FUZZER" ]; then
+    CMAKE_OPTIONS="--preset=fuzzing"
 fi
+if [ ! -z "$TESTS" ]; then
+    CMAKE_OPTIONS="--preset=testing"
+fi
+if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
+    CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
+fi
+	
+if [ "$CURRENT_OS" = "osx" ] ; then
+    # Make sure the homebrew installed libraries are used when building instead
+    # of the libraries provided by Apple.
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+fi
+if [ "$CLANG_TIDY" = "1" ]; then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+fi
+
+echo "install prefix: ${BUILD_ROOT}/dist"
+mkdir ${BUILD_ROOT}/dist
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_INSTALL_PREFIX=${BUILD_ROOT}/dist"
+
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
 fi
 
-if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ] && [ -z "$CLANG_TIDY" ] ; then
+if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ] ; then
     echo "Building libheif ..."
+    cmake . $CMAKE_OPTIONS
     make -j $(nproc)
     if [ "$CURRENT_OS" = "linux" ] && [ -z "$MINGW" ] && [ -z "$FUZZER" ] && [ ! -z "$TESTS" ] ; then
         echo "Running tests ..."
@@ -223,7 +227,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
             echo "Running golang example ..."
             export GOPATH="$BUILD_ROOT/gopath"
             export PKG_CONFIG_PATH="$BUILD_ROOT/dist/lib/pkgconfig:$BUILD_ROOT/libde265/dist/lib/pkgconfig/"
-            export LD_LIBRARY_PATH="$BUILD_ROOT/dist/lib"
+            export LD_LIBRARY_PATH="$BUILD_ROOT/dist/lib:$BUILD_ROOT/libde265/dist/lib"
             mkdir -p "$GOPATH/src/github.com/strukturag"
             ln -s "$BUILD_ROOT" "$GOPATH/src/github.com/strukturag/libheif"
             go run examples/heif-test.go examples/example.heic

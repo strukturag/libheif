@@ -40,29 +40,11 @@ if [ ! -z "$PKG_CONFIG_PATH" ]; then
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 fi
 
-CONFIGURE_HOST=
-if [ "$MINGW" == "32" ]; then
-    CONFIGURE_HOST=i686-w64-mingw32
-elif [ "$MINGW" == "64" ]; then
-    CONFIGURE_HOST=x86_64-w64-mingw32
-fi
-
-if [ -z "$CHECK_LICENSES" ] && [ -z "$CPPLINT" ] && [ -z "$CMAKE" ]; then
-    ./autogen.sh
-    CONFIGURE_ARGS=
-    if [ ! -z "$CONFIGURE_HOST" ]; then
-        # Make sure the correct compiler will be used.
-        unset CC
-        unset CXX
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --host=$CONFIGURE_HOST"
-    fi
-    if [ ! -z "$GO" ]; then
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --prefix=$BUILD_ROOT/dist --disable-gdk-pixbuf"
-    else
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-go"
-    fi
-    if [ "$WITH_RAV1E" = "1" ]; then
-        CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-local-rav1e"
-    fi
-    ./configure $CONFIGURE_ARGS
-fi
+# This was used with autotools, but not work cmake
+#
+#CONFIGURE_HOST=
+#if [ "$MINGW" == "32" ]; then
+#    CONFIGURE_HOST=i686-w64-mingw32
+#elif [ "$MINGW" == "64" ]; then
+#    CONFIGURE_HOST=x86_64-w64-mingw32
+#fi
