@@ -25,7 +25,6 @@
 #include <map>
 
 #include "uncompressed_image.h"
-#include "plugins/heif_encoder_uncompressed.h"
 
 
 enum heif_component_type

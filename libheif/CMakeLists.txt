@@ -6,7 +6,7 @@ set(libheif_headers
     heif.h
     heif_cxx.h
     heif_plugin.h
-    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h plugins/heif_encoder_uncompressed.cc plugins/heif_encoder_uncompressed.h)
+    ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
     bitstream.cc
