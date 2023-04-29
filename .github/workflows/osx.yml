@@ -2,7 +2,7 @@ name: osx
 
 on:
   push:
-    branches: [ master, remove-autoconf ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
