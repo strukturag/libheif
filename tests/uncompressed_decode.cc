@@ -49,6 +49,24 @@ struct heif_context * get_rgb_planar_tiled_context() {
   return context;
 }
 
+struct heif_context * get_rgb_row_context() {
+  struct heif_context* context;
+  struct heif_error err;
+  context = heif_context_alloc();
+  err = heif_context_read_from_file(context, (tests_data_directory + "/uncompressed_row.heif").c_str(), NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return context;
+}
+
+struct heif_context * get_rgb_row_tiled_context() {
+  struct heif_context* context;
+  struct heif_error err;
+  context = heif_context_alloc();
+  err = heif_context_read_from_file(context, (tests_data_directory + "/uncompressed_row_tiled.heif").c_str(), NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return context;
+}
+
 struct heif_image_handle * get_primary_image_handle(heif_context *context) {
   struct heif_error err;
   struct heif_image_handle * image_handle;
@@ -93,6 +111,18 @@ TEST_CASE("image_handle_size_rgb_planar_tiled") {
   heif_context_free(context);
 }
 
+TEST_CASE("image_handle_size_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_size(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("image_handle_size_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
+  check_image_handle_size(context);
+  heif_context_free(context);
+}
+
 void check_image_handle_alpha(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
@@ -110,6 +140,18 @@ TEST_CASE("alpha_rgb3") {
 
 TEST_CASE("alpha_rgb_planar") {
   auto context = get_rgb_planar_tiled_context();
+  check_image_handle_alpha(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("alpha_rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_alpha(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("alpha_rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
   check_image_handle_alpha(context);
   heif_context_free(context);
 }
@@ -138,6 +180,18 @@ TEST_CASE("depth_rgb_planar") {
   heif_context_free(context);
 }
 
+TEST_CASE("depth_rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_depth_images(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("depth_rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
+  check_image_handle_depth_images(context);
+  heif_context_free(context);
+}
+
 void check_image_handle_thumbnails(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
@@ -155,6 +209,18 @@ TEST_CASE("thumbnails_rgb3") {
 
 TEST_CASE("thumbnails_rgb_planar") {
   auto context = get_rgb_planar_tiled_context();
+  check_image_handle_thumbnails(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("thumbnails_rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_thumbnails(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("thumbnails_rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
   check_image_handle_thumbnails(context);
   heif_context_free(context);
 }
@@ -180,6 +246,18 @@ TEST_CASE("auxiliary images rgb planar") {
   heif_context_free(context);
 }
 
+TEST_CASE("auxiliary images rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_aux_images(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("auxiliary images rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
+  check_image_handle_aux_images(context);
+  heif_context_free(context);
+}
+
 void check_image_handle_metadata(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
 
@@ -198,6 +276,18 @@ TEST_CASE("metadata rgb3") {
 
 TEST_CASE("metadata rgb planar") {
   auto context = get_rgb_planar_tiled_context();
+  check_image_handle_metadata(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("metadata rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_handle_metadata(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("metadata rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
   check_image_handle_metadata(context);
   heif_context_free(context);
 }
@@ -261,6 +351,18 @@ TEST_CASE("image_size rgb planar") {
   heif_context_free(context);
 }
 
+TEST_CASE("image_size rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_size(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("image_size rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
+  check_image_size(context);
+  heif_context_free(context);
+}
+
 void check_image_content(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
   heif_image *img = get_primary_image(handle);
@@ -269,72 +371,48 @@ void check_image_content(struct heif_context *&context) {
   const uint8_t *img_plane =
       heif_image_get_plane_readonly(img, heif_channel_R, &stride);
   REQUIRE(stride == 64);
-  REQUIRE(((int)(img_plane[0])) == 255);
-  REQUIRE(((int)(img_plane[3])) == 255);
-  REQUIRE(((int)(img_plane[4])) == 0);
-  REQUIRE(((int)(img_plane[7])) == 0);
-  REQUIRE(((int)(img_plane[8])) == 0);
-  REQUIRE(((int)(img_plane[11])) == 0);
-  REQUIRE(((int)(img_plane[12])) == 255);
-  REQUIRE(((int)(img_plane[15])) == 255);
-  REQUIRE(((int)(img_plane[16])) == 0);
-  REQUIRE(((int)(img_plane[19])) == 0);
-  REQUIRE(((int)(img_plane[stride + 0])) == 255);
-  REQUIRE(((int)(img_plane[stride + 3])) == 255);
-  REQUIRE(((int)(img_plane[stride + 4])) == 0);
-  REQUIRE(((int)(img_plane[stride + 7])) == 0);
-  REQUIRE(((int)(img_plane[stride + 8])) == 0);
-  REQUIRE(((int)(img_plane[stride + 11])) == 0);
-  REQUIRE(((int)(img_plane[stride + 12])) == 255);
-  REQUIRE(((int)(img_plane[stride + 15])) == 255);
-  REQUIRE(((int)(img_plane[stride + 16])) == 0);
-  REQUIRE(((int)(img_plane[stride + 19])) == 0);
+  for (int row = 0; row < 10; row++) {
+    REQUIRE(((int)(img_plane[stride * row + 0])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 3])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 4])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 7])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 8])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 11])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 12])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 15])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 16])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 19])) == 0);
+  }
 
   img_plane = heif_image_get_plane_readonly(img, heif_channel_G, &stride);
-  REQUIRE(stride >= 20);
-  REQUIRE(((int)(img_plane[0])) == 0);
-  REQUIRE(((int)(img_plane[3])) == 0);
-  REQUIRE(((int)(img_plane[4])) == 128);
-  REQUIRE(((int)(img_plane[7])) == 128);
-  REQUIRE(((int)(img_plane[8])) == 0);
-  REQUIRE(((int)(img_plane[11])) == 0);
-  REQUIRE(((int)(img_plane[12])) == 255);
-  REQUIRE(((int)(img_plane[15])) == 255);
-  REQUIRE(((int)(img_plane[16])) == 0);
-  REQUIRE(((int)(img_plane[19])) == 0);
-  REQUIRE(((int)(img_plane[stride + 0])) == 0);
-  REQUIRE(((int)(img_plane[stride + 3])) == 0);
-  REQUIRE(((int)(img_plane[stride + 4])) == 128);
-  REQUIRE(((int)(img_plane[stride + 7])) == 128);
-  REQUIRE(((int)(img_plane[stride + 8])) == 0);
-  REQUIRE(((int)(img_plane[stride + 11])) == 0);
-  REQUIRE(((int)(img_plane[stride + 12])) == 255);
-  REQUIRE(((int)(img_plane[stride + 15])) == 255);
-  REQUIRE(((int)(img_plane[stride + 16])) == 0);
-  REQUIRE(((int)(img_plane[stride + 19])) == 0);
+  REQUIRE(stride == 64);
+  for (int row = 0; row < 10; row++) {
+    REQUIRE(((int)(img_plane[stride * row + 0])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 3])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 4])) == 128);
+    REQUIRE(((int)(img_plane[stride * row + 7])) == 128);
+    REQUIRE(((int)(img_plane[stride * row + 8])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 11])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 12])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 15])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 16])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 19])) == 0);
+  }
 
   img_plane = heif_image_get_plane_readonly(img, heif_channel_B, &stride);
-  REQUIRE(stride >= 20);
-  REQUIRE(((int)(img_plane[0])) == 0);
-  REQUIRE(((int)(img_plane[3])) == 0);
-  REQUIRE(((int)(img_plane[4])) == 0);
-  REQUIRE(((int)(img_plane[7])) == 0);
-  REQUIRE(((int)(img_plane[8])) == 255);
-  REQUIRE(((int)(img_plane[11])) == 255);
-  REQUIRE(((int)(img_plane[12])) == 255);
-  REQUIRE(((int)(img_plane[15])) == 255);
-  REQUIRE(((int)(img_plane[16])) == 0);
-  REQUIRE(((int)(img_plane[19])) == 0);
-  REQUIRE(((int)(img_plane[stride + 0])) == 0);
-  REQUIRE(((int)(img_plane[stride + 3])) == 0);
-  REQUIRE(((int)(img_plane[stride + 4])) == 0);
-  REQUIRE(((int)(img_plane[stride + 7])) == 0);
-  REQUIRE(((int)(img_plane[stride + 8])) == 255);
-  REQUIRE(((int)(img_plane[stride + 11])) == 255);
-  REQUIRE(((int)(img_plane[stride + 12])) == 255);
-  REQUIRE(((int)(img_plane[stride + 15])) == 255);
-  REQUIRE(((int)(img_plane[stride + 16])) == 0);
-  REQUIRE(((int)(img_plane[stride + 19])) == 0);
+  REQUIRE(stride == 64);
+  for (int row = 0; row < 10; row++) {
+    REQUIRE(((int)(img_plane[stride * row + 0])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 3])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 4])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 7])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 8])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 11])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 12])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 15])) == 255);
+    REQUIRE(((int)(img_plane[stride * row + 16])) == 0);
+    REQUIRE(((int)(img_plane[stride * row + 19])) == 0);
+  }
 
   heif_image_release(img);
   heif_image_handle_release(handle);
@@ -348,6 +426,18 @@ TEST_CASE("image_content rgb3") {
 
 TEST_CASE("image_content rgb planar") {
   auto context = get_rgb_planar_tiled_context();
+  check_image_content(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("image_content rgb_row") {
+  auto context = get_rgb_row_context();
+  check_image_content(context);
+  heif_context_free(context);
+}
+
+TEST_CASE("image_content rgb_row_tiled") {
+  auto context = get_rgb_row_tiled_context();
   check_image_content(context);
   heif_context_free(context);
 }
