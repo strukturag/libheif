@@ -45,6 +45,16 @@ enum heif_component_type
 };
 
 
+enum heif_uncompressed_interleave_type
+{
+  heif_uncompressed_interleave_type_component = 0,
+  heif_uncompressed_interleave_type_pixel = 1,
+  heif_uncompressed_interleave_type_mixed = 2,
+  heif_uncompressed_interleave_type_row = 3,
+  heif_uncompressed_interleave_type_tile_component = 4,
+  heif_uncompressed_interleave_type_multi_y = 5
+};
+
 namespace heif {
 
   Error Box_cmpd::parse(BitstreamRange& range)
@@ -243,7 +253,10 @@ namespace heif {
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if ((uncC->get_interleave_type() != 0) && (uncC->get_interleave_type() != 1)) {
+    if ((uncC->get_interleave_type() != heif_uncompressed_interleave_type_component)
+        && (uncC->get_interleave_type() != heif_uncompressed_interleave_type_pixel)
+        && (uncC->get_interleave_type() != heif_uncompressed_interleave_type_row)
+      ) {
       std::stringstream sstr;
       sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -392,6 +405,22 @@ namespace heif {
   }
 
 
+static long unsigned int get_tile_base_offset(uint32_t col, uint32_t row, const std::shared_ptr<Box_uncC>& uncC, const std::vector<heif_channel>& channels, uint32_t width, uint32_t height)
+  {
+    uint32_t numTileColumns = uncC->get_number_of_tile_columns();
+    uint32_t numTileRows = uncC->get_number_of_tile_rows();
+    uint32_t tile_width = width / numTileColumns;
+    uint32_t tile_height = height / numTileRows;
+    // TODO: assumes 8 bits per channel
+    long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
+    uint32_t tile_idx_y = row / tile_height;
+    uint32_t tile_idx_x = col / tile_width;
+    uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
+    long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
+    return tile_base_offset;
+  }
+
+
   Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
                                                           heif_item_id ID,
                                                           std::shared_ptr<HeifPixelImage>& img,
@@ -401,7 +430,6 @@ namespace heif {
   {
     // Get the properties for this item
     // We need: ispe, cmpd, uncC
-
     std::vector<heif::Box_ipco::Property> item_properties;
     Error error = heif_file->get_properties(ID, item_properties);
     if (error) {
@@ -523,7 +551,7 @@ namespace heif {
     uint32_t tile_width = width / numTileColumns;
     uint32_t tile_height = height / numTileRows;
     long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
-    if (uncC->get_interleave_type() == 0) {
+    if (uncC->get_interleave_type() == heif_uncompressed_interleave_type_component) {
       // Source is planar
       for (uint32_t c = 0; c < channels.size(); c++) {
         int stride;
@@ -550,9 +578,7 @@ namespace heif {
         }
       }
     }
-    else if (uncC->get_interleave_type() == 1) {
-      // Source is pixel interleaved
-
+    else if (uncC->get_interleave_type() == heif_uncompressed_interleave_type_pixel) {
       // TODO: we need to be smarter about block size, etc
 
       // TODO: we can only do this if we are 8 bits
@@ -564,16 +590,15 @@ namespace heif {
         uint8_t* dst = img->get_plane(channels[c], &stride);
         for (uint32_t row = 0; row < height; row++)
         {
-          uint32_t tile_idx_y = row / tile_height;
+          long unsigned int tile_row_idx = row % tile_height;
+          long unsigned int tile_row_offset = tile_width * tile_row_idx * channels.size();
           uint32_t col = 0;
           for (col = 0; col < width; col ++)
           {
-            uint32_t srcPixelIndex = row * width + col;
-            uint32_t srcPixelTileIndex = srcPixelIndex % (tile_width * tile_height);
-            uint32_t tile_idx_x = col / tile_width;
-            uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
-            long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
-            long unsigned int src_offset = tile_base_offset + pixel_stride * srcPixelTileIndex + pixel_offset;
+            long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
+            long unsigned int tile_col = col % tile_width;
+            long unsigned int tile_offset = tile_row_offset + tile_col * pixel_stride + pixel_offset;
+            long unsigned int src_offset = tile_base_offset + tile_offset;
             uint32_t dstPixelIndex = row * stride + col;
             dst[dstPixelIndex] = src[src_offset];
           }
@@ -585,10 +610,38 @@ namespace heif {
         }
       }
     }
+    else if (uncC->get_interleave_type() == heif_uncompressed_interleave_type_row) {
+      // TODO: we need to be smarter about block size, etc
 
+      // TODO: we can only do this if we are 8 bits
+      for (uint32_t c = 0; c < channels.size(); c++) {
+        int pixel_offset = channel_to_pixelOffset[channels[c]];
+        int stride;
+        uint8_t* dst = img->get_plane(channels[c], &stride);
+        for (uint32_t row = 0; row < height; row++)
+        {
+          long unsigned int tile_row_idx = row % tile_height;
+          long unsigned int tile_row_offset = tile_width * (tile_row_idx * channels.size() + pixel_offset);
+          uint32_t col = 0;
+          for (col = 0; col < width; col += tile_width)
+          {
+            long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
+            long unsigned int tile_col = col % tile_width;
+            long unsigned int tile_offset = tile_row_offset + tile_col;
+            long unsigned int src_offset = tile_base_offset + tile_offset;
+            uint32_t dst_offset = row * stride + col;
+            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+          }
+          for (; col < (uint32_t)stride; col++)
+          {
+            uint32_t dstPixelIndex = row * stride + col;
+            dst[dstPixelIndex] = 0;
+          }
+        }
+      }
+    }
     return Error::Ok;
   }
-
 
   Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                                           const std::shared_ptr<HeifPixelImage>& src_image,
