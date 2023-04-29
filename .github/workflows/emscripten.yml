@@ -2,7 +2,7 @@ name: emscripten
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, remove-autoconf ]
   pull_request:
     branches: [ master ]
 

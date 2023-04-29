@@ -19,27 +19,20 @@ if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
     cd ..
 fi
 
-CONFIGURE_ARGS="--disable-multithreading --disable-go"
+CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDKPIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON"
+#export PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}"
 
-emconfigure ./configure $CONFIGURE_ARGS \
-    PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
-    libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
-    libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
-if [ ! -e "Makefile" ]; then
-    # Most likely the first run of "emscripten" which will generate the
-    # config file and terminate. Run "emconfigure" again.
-    emconfigure ./configure $CONFIGURE_ARGS \
-        PKG_CONFIG_PATH="${DIR}/libde265-${LIBDE265_VERSION}" \
-        libde265_CFLAGS="-I${DIR}/libde265-${LIBDE265_VERSION}" \
-        libde265_LIBS="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
-fi
+emcmake cmake $CONFIGURE_ARGS \
+    -DLIBDE265_INCLUDE_DIR="${DIR}/libde265-${LIBDE265_VERSION}" \
+    -DLIBDE265_LIBRARY="-L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
 emmake make -j${CORES}
 
 export TOTAL_MEMORY=16777216
 
 echo "Running Emscripten..."
-emcc libheif/.libs/libheif.so \
-    --bind \
+emcc libheif/libheif.so \
+     --bind \
+     --closure 0 \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
     -s ALLOW_MEMORY_GROWTH=1 \
@@ -47,7 +40,6 @@ emcc libheif/.libs/libheif.so \
     -s INVOKE_RUN=0 \
     -s DOUBLE_MODE=0 \
     -s PRECISE_F32=0 \
-    -s PRECISE_I64_MATH=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s USE_CLOSURE_COMPILER=0 \
     -s LEGACY_VM_SUPPORT=1 \
