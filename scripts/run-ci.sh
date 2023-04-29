@@ -119,29 +119,28 @@ if [ ! -z "$WITH_HEIF_DECODER" ]; then
     fi
 fi
 
-if [ ! -z "$CMAKE" ]; then
-    echo "Preparing cmake build files ..."
+echo "Preparing cmake build files ..."
 
-    if [ ! -z "$FUZZER" ]; then
-        CMAKE_OPTIONS="--preset=fuzzing"
-    fi
-    if [ ! -z "$TESTS" ]; then
-        CMAKE_OPTIONS="--preset=testing"
-    fi
-    if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
-        CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
-    fi
-	
-    if [ "$CURRENT_OS" = "osx" ] ; then
-        # Make sure the homebrew installed libraries are used when building instead
-        # of the libraries provided by Apple.
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
-    fi
-    if [ "$CLANG_TIDY" = "1" ]; then
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-    fi
-    cmake . $CMAKE_OPTIONS
+if [ ! -z "$FUZZER" ]; then
+    CMAKE_OPTIONS="--preset=fuzzing"
 fi
+if [ ! -z "$TESTS" ]; then
+    CMAKE_OPTIONS="--preset=testing"
+fi
+if [ -z "$FUZZER" ] && [ -z "$TESTS" ]; then
+    CMAKE_OPTIONS="--preset=release -DENABLE_PLUGIN_LOADING=OFF"
+fi
+	
+if [ "$CURRENT_OS" = "osx" ] ; then
+    # Make sure the homebrew installed libraries are used when building instead
+    # of the libraries provided by Apple.
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_FIND_FRAMEWORK=LAST"
+fi
+if [ "$CLANG_TIDY" = "1" ]; then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+fi
+cmake . $CMAKE_OPTIONS
+
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"
