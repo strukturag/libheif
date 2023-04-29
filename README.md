@@ -110,20 +110,30 @@ There is also an experimental Go API, but this is not stable yet.
 
 ## Compiling
 
-This library uses either a standard autoconf/automake build system or CMake.
-
-Using autoconf/automake for compilation is deprecated.
-Starting with v1.14.0, CMake is the preferred build tool.
-While autoconf/automake might still work for some time to come, not all options are available for it.
-
-When using autoconf, run `./autogen.sh` to build the configuration scripts,
-then call `./configure` and `make`.
-
-**Note: compiling with autotools is now deprecated. Please use cmake instead. This section has to be updated...**
+This library uses the CMake build system (the earlier autotools build files have been removed in v1.16.0).
 
 Make sure that you compile and install [libde265](https://github.com/strukturag/libde265)
 first, so that the configuration script will find this.
 Also install x265 and its development files if you want to use HEIF encoding.
+
+The basic build steps are as follows:
+````
+mkdir build
+cd build
+cmake .. --preset=release
+make
+````
+
+There are CMake presets to cover the most frequent use cases.
+- `release`: the preferred preset which compiles all codecs as separate plugins.
+  If you do not want to distribute some of these plugins (e.g. HEIC), you can omit to package these.
+- `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
+  A single library is built with support for HEIC and AVIF.
+- `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
+- `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
+
+You can optionally adapt these standard configurations to your needs.
+This can be done, for example, by calling `ccmake .` from within the `build` directory.
 
 ### macOS
 
@@ -137,7 +147,9 @@ Also install x265 and its development files if you want to use HEIF encoding.
 2. Configure and build project
 
     ```
-    ./autogen.sh
+    mkdir build
+    cd build
+    cmake .. --preset=release
     ./configure
     make
     ```
