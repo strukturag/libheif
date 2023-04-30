@@ -23,6 +23,7 @@
 #include <cstring>
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 #include "uncompressed_image.h"
 
@@ -304,13 +305,6 @@ namespace heif {
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if (uncC->get_tile_align_size() != 0) {
-      std::stringstream sstr;
-      sstr << "Uncompressed tile_align_size of " << ((int) uncC->get_tile_align_size()) << " is not implemented yet";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_data_version,
-                   sstr.str());
-    }
     return Error::Ok;
   }
 
@@ -412,7 +406,13 @@ static long unsigned int get_tile_base_offset(uint32_t col, uint32_t row, const 
     uint32_t tile_width = width / numTileColumns;
     uint32_t tile_height = height / numTileRows;
     // TODO: assumes 8 bits per channel
-    long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
+    long unsigned int content_bytes_per_tile = tile_width * tile_height * channels.size();
+    uint32_t tile_align_size = uncC->get_tile_align_size();
+    long unsigned int tile_padding = 0;
+    if (tile_align_size > 0) {
+      tile_padding = tile_align_size - (content_bytes_per_tile % tile_align_size);
+    }
+    long unsigned int bytes_per_tile = content_bytes_per_tile + tile_padding;
     uint32_t tile_idx_y = row / tile_height;
     uint32_t tile_idx_x = col / tile_width;
     uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
@@ -550,9 +550,16 @@ static long unsigned int get_tile_base_offset(uint32_t col, uint32_t row, const 
     uint32_t numTileRows = uncC->get_number_of_tile_rows();
     uint32_t tile_width = width / numTileColumns;
     uint32_t tile_height = height / numTileRows;
-    long unsigned int bytes_per_tile = tile_width * tile_height * channels.size();
     if (uncC->get_interleave_type() == heif_uncompressed_interleave_type_component) {
       // Source is planar
+      // TODO: assumes 8 bits
+      long unsigned int content_bytes_per_tile = tile_width * tile_height * channels.size();
+      uint32_t tile_align_size = uncC->get_tile_align_size();
+      long unsigned int tile_padding = 0;
+      if (tile_align_size > 0) {
+        tile_padding = tile_align_size - (content_bytes_per_tile % tile_align_size);
+      };
+      long unsigned int bytes_per_tile = content_bytes_per_tile + tile_padding;        
       for (uint32_t c = 0; c < channels.size(); c++) {
         int stride;
         uint8_t* dst = img->get_plane(channels[c], &stride);
@@ -570,7 +577,8 @@ static long unsigned int get_tile_base_offset(uint32_t col, uint32_t row, const 
               uint32_t tile_idx_y = row / tile_height;
               uint32_t tile_idx_x = col / tile_width;
               uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
-              long unsigned int src_offset = tile_idx * bytes_per_tile + pixel_offset * tile_width * tile_height;
+              long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
+              long unsigned int src_offset = tile_base_offset + pixel_offset * tile_width * tile_height;
               long unsigned int dst_offset = row * stride + col;
               memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
             }
