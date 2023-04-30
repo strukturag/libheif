@@ -24,12 +24,10 @@
 #include "common_utils.h"
 #include <limits>
 
-using namespace heif;
-
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
 
-Error heif::fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image)
+Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image)
 {
   int bpp = image->get_bits_per_pixel(heif_channel_Y);
   heif_chroma chroma = image->get_chroma_format();
@@ -128,7 +126,7 @@ const static int HEIF_CSP_UNKNOWN = 0;
 // 2 - CSP_COLOCATED
 // 3 - CSP_RESERVED
 
-bool heif::fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize)
+bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize)
 {
   BitReader reader(data, dataSize);
 

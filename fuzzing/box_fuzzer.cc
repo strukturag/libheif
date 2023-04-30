@@ -28,19 +28,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
   heif_init(nullptr);
 
-  auto reader = std::make_shared<heif::StreamReader_memory>(data, size, false);
+  auto reader = std::make_shared<StreamReader_memory>(data, size, false);
 
-  heif::BitstreamRange range(reader, size);
+  BitstreamRange range(reader, size);
   for (;;) {
-    std::shared_ptr<heif::Box> box;
-    heif::Error error = heif::Box::read(range, &box);
-    if (error != heif::Error::Ok || range.error()) {
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    if (error != Error::Ok || range.error()) {
       break;
     }
 
     box->get_type();
     box->get_type_string();
-    heif::Indent indent;
+    Indent indent;
     box->dump(indent);
   }
 

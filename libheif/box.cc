@@ -39,8 +39,6 @@
 #include "uncompressed_image.h"
 #endif
 
-using namespace heif;
-
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -135,7 +133,7 @@ uint32_t from_fourcc(const char* string)
           (string[3]));
 }
 
-std::string heif::to_fourcc(uint32_t code)
+std::string to_fourcc(uint32_t code)
 {
   std::string str("    ");
   str[0] = static_cast<char>((code >> 24) & 0xFF);
@@ -147,10 +145,10 @@ std::string heif::to_fourcc(uint32_t code)
 }
 
 
-heif::BoxHeader::BoxHeader() = default;
+BoxHeader::BoxHeader() = default;
 
 
-std::vector<uint8_t> heif::BoxHeader::get_type() const
+std::vector<uint8_t> BoxHeader::get_type() const
 {
   if (m_type == fourcc("uuid")) {
     return m_uuid_type;
@@ -166,7 +164,7 @@ std::vector<uint8_t> heif::BoxHeader::get_type() const
 }
 
 
-std::string heif::BoxHeader::get_type_string() const
+std::string BoxHeader::get_type_string() const
 {
   if (m_type == fourcc("uuid")) {
     // 8-4-4-4-12
@@ -192,7 +190,7 @@ std::string heif::BoxHeader::get_type_string() const
 }
 
 
-heif::Error heif::BoxHeader::parse_header(BitstreamRange& range)
+Error BoxHeader::parse_header(BitstreamRange& range)
 {
   StreamReader::grow_status status;
   status = range.wait_for_available_bytes(8);
@@ -253,7 +251,7 @@ heif::Error heif::BoxHeader::parse_header(BitstreamRange& range)
 }
 
 
-int heif::Box::calculate_header_size(bool data64bit) const
+int Box::calculate_header_size(bool data64bit) const
 {
   int header_size = 8;  // does not include "FullBox" fields.
 
@@ -269,7 +267,7 @@ int heif::Box::calculate_header_size(bool data64bit) const
 }
 
 
-size_t heif::Box::reserve_box_header_space(StreamWriter& writer, bool data64bit) const
+size_t Box::reserve_box_header_space(StreamWriter& writer, bool data64bit) const
 {
   size_t start_pos = writer.get_position();
 
@@ -281,7 +279,7 @@ size_t heif::Box::reserve_box_header_space(StreamWriter& writer, bool data64bit)
 }
 
 
-size_t heif::FullBox::reserve_box_header_space(StreamWriter& writer, bool data64bit) const
+size_t FullBox::reserve_box_header_space(StreamWriter& writer, bool data64bit) const
 {
   size_t start_pos = Box::reserve_box_header_space(writer, data64bit);
 
@@ -291,7 +289,7 @@ size_t heif::FullBox::reserve_box_header_space(StreamWriter& writer, bool data64
 }
 
 
-heif::Error heif::FullBox::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
+Error FullBox::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
 {
   auto err = Box::write_header(writer, total_size, data64bit);
   if (err) {
@@ -306,7 +304,7 @@ heif::Error heif::FullBox::write_header(StreamWriter& writer, size_t total_size,
 }
 
 
-heif::Error heif::Box::prepend_header(StreamWriter& writer, size_t box_start, bool data64bit) const
+Error Box::prepend_header(StreamWriter& writer, size_t box_start, bool data64bit) const
 {
   size_t total_size = writer.data_size() - box_start;
 
@@ -320,7 +318,7 @@ heif::Error heif::Box::prepend_header(StreamWriter& writer, size_t box_start, bo
 }
 
 
-heif::Error heif::Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
+Error Box::write_header(StreamWriter& writer, size_t total_size, bool data64bit) const
 {
   bool large_size = (total_size > 0xFFFFFFFF);
 
@@ -403,7 +401,7 @@ Error FullBox::parse_full_box_header(BitstreamRange& range)
 }
 
 
-Error Box::read(BitstreamRange& range, std::shared_ptr<heif::Box>* result)
+Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 {
   BoxHeader hdr;
   Error err = hdr.parse_header(range);

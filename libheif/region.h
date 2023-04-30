@@ -30,8 +30,6 @@
 
 class RegionGeometry;
 
-using heif::Error;
-
 class RegionItem
 {
 public:
@@ -44,11 +42,12 @@ public:
 
   Error encode(std::vector<uint8_t>& result) const;
 
-  int get_number_of_regions() { return (int)mRegions.size(); }
+  int get_number_of_regions() { return (int) mRegions.size(); }
 
   std::vector<std::shared_ptr<RegionGeometry>> get_regions() { return mRegions; }
 
-  void add_region(const std::shared_ptr<RegionGeometry>& region) {
+  void add_region(const std::shared_ptr<RegionGeometry>& region)
+  {
     mRegions.push_back(region);
   }
 
@@ -72,7 +71,7 @@ public:
 
   virtual bool encode_needs_32bit() const { return false; }
 
-  virtual void encode(heif::StreamWriter&, int field_size_bytes) const {}
+  virtual void encode(StreamWriter&, int field_size_bytes) const {}
 
 protected:
   uint32_t parse_unsigned(const std::vector<uint8_t>& data, int field_size, unsigned int* dataOffset);
@@ -87,7 +86,7 @@ public:
 
   bool encode_needs_32bit() const override;
 
-  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+  void encode(StreamWriter&, int field_size_bytes) const override;
 
   heif_region_type getRegionType() override { return heif_region_type_point; }
 
@@ -101,7 +100,7 @@ public:
 
   bool encode_needs_32bit() const override;
 
-  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+  void encode(StreamWriter&, int field_size_bytes) const override;
 
   heif_region_type getRegionType() override { return heif_region_type_rectangle; }
 
@@ -116,7 +115,7 @@ public:
 
   bool encode_needs_32bit() const override;
 
-  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+  void encode(StreamWriter&, int field_size_bytes) const override;
 
   heif_region_type getRegionType() override { return heif_region_type_ellipse; }
 
@@ -131,7 +130,7 @@ public:
 
   bool encode_needs_32bit() const override;
 
-  void encode(heif::StreamWriter&, int field_size_bytes) const override;
+  void encode(StreamWriter&, int field_size_bytes) const override;
 
   heif_region_type getRegionType() override
   {
@@ -159,27 +158,23 @@ public:
   uint32_t width, height;
 
   // The mask may be decoded lazily on-the-fly.
-  std::shared_ptr<heif::HeifPixelImage> get_mask() const { return {}; } // TODO
+  std::shared_ptr<HeifPixelImage> get_mask() const { return {}; } // TODO
 
 private:
   enum class EncodingMethod {
     Inline, Referenced
   } mEncodingMethod;
 
-  std::shared_ptr<heif::HeifPixelImage> mCachedMask;
+  std::shared_ptr<HeifPixelImage> mCachedMask;
 };
 #endif
 
-
-namespace heif {
-  class HeifFile;
-}
-
+class HeifFile;
 
 class RegionCoordinateTransform
 {
 public:
-  static RegionCoordinateTransform create(std::shared_ptr<heif::HeifFile> file,
+  static RegionCoordinateTransform create(std::shared_ptr<HeifFile> file,
                                           heif_item_id item_id,
                                           int reference_width, int reference_height);
 

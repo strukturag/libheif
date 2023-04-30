@@ -26,8 +26,6 @@
 #include <string>
 #include <vector>
 
-using namespace heif;
-
 struct ColorState
 {
   heif_colorspace colorspace = heif_colorspace_undefined;

@@ -183,8 +183,8 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   if (colorProfile) {
     matrix_coeffs = colorProfile->get_matrix_coefficients();
     full_range_flag = colorProfile->get_full_range_flag();
-    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                                 colorProfile->get_colour_primaries());
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                           colorProfile->get_colour_primaries());
   }
 
 
@@ -244,7 +244,6 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
   return outimg;
 }
-
 
 
 std::vector<ColorStateWithCost>
@@ -320,8 +319,8 @@ Op_YCbCr420_to_RGB24::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (colorProfile) {
-    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                                 colorProfile->get_colour_primaries());
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                           colorProfile->get_colour_primaries());
   }
 
   int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
@@ -434,8 +433,8 @@ Op_YCbCr420_to_RGB32::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   auto colorProfile = input->get_color_profile_nclx();
   YCbCr_to_RGB_coefficients coeffs = YCbCr_to_RGB_coefficients::defaults();
   if (colorProfile) {
-    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                                 colorProfile->get_colour_primaries());
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                           colorProfile->get_colour_primaries());
   }
 
   int r_cr = static_cast<int>(std::lround(256 * coeffs.r_cr));
@@ -593,8 +592,8 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
   auto colorProfile = input->get_color_profile_nclx();
   if (colorProfile) {
     full_range_flag = colorProfile->get_full_range_flag();
-    coeffs = heif::get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
-                                                 colorProfile->get_colour_primaries());
+    coeffs = get_YCbCr_to_RGB_coefficients(colorProfile->get_matrix_coefficients(),
+                                           colorProfile->get_colour_primaries());
   }
 
   float limited_range_offset = static_cast<float>(16 << (bpp - 8));
@@ -636,12 +635,11 @@ Op_YCbCr420_to_RRGGBBaa::convert_colorspace(const std::shared_ptr<const HeifPixe
 }
 
 
-
 template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState& input_state,
-                                               const ColorState& target_state,
-                                               const heif_color_conversion_options& options) const
+                                                                const ColorState& target_state,
+                                                                const heif_color_conversion_options& options) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -689,8 +687,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                           const ColorState& target_state,
-                                           const heif_color_conversion_options& options) const
+                                                            const ColorState& target_state,
+                                                            const heif_color_conversion_options& options) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -811,10 +809,10 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // top border
   for (int cx = 0; cx < (width - 1) / 2; cx++) {
-    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel)((3 * in_cb[cx / 2] + 1 * in_cb[cx / 2 + 1] + 2) / 4);
-    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel)((1 * in_cb[cx / 2] + 3 * in_cb[cx / 2 + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel)((3 * in_cr[cx / 2] + 1 * in_cr[cx / 2 + 1] + 2) / 4);
-    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel)((1 * in_cr[cx / 2] + 3 * in_cr[cx / 2 + 1] + 2) / 4);
+    out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[cx / 2] + 1 * in_cb[cx / 2 + 1] + 2) / 4);
+    out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[cx / 2] + 3 * in_cb[cx / 2 + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[cx / 2] + 1 * in_cr[cx / 2 + 1] + 2) / 4);
+    out_cr[0 * out_cr_stride + 2 * cx + 2] = (Pixel) ((1 * in_cr[cx / 2] + 3 * in_cr[cx / 2 + 1] + 2) / 4);
   }
 
   // top right corner
@@ -867,8 +865,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // --- bilinear filtering of inner part
 
   int x, y;
-  for (y = 1; y < height-1; y += 2) {
-    for (x = 1; x < width-1; x += 2) {
+  for (y = 1; y < height - 1; y += 2) {
+    for (x = 1; x < width - 1; x += 2) {
       int cx = x / 2;
       int cy = y / 2;
 
@@ -881,15 +879,15 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
       Pixel cb11 = in_cb[(cy + 1) * in_cb_stride + cx + 1];
       Pixel cr11 = in_cr[(cy + 1) * in_cr_stride + cx + 1];
 
-      out_cb[(y + 0) * out_cb_stride + x + 0] = (Pixel)((cb00 * 3 * 3 + cb01 * 1 * 3 + cb10 * 3 * 1 + cb11 * 1 * 1 + 8) / 16);
-      out_cb[(y + 0) * out_cb_stride + x + 1] = (Pixel)((cb00 * 1 * 3 + cb01 * 3 * 3 + cb10 * 1 * 1 + cb11 * 3 * 1 + 8) / 16);
-      out_cb[(y + 1) * out_cb_stride + x + 0] = (Pixel)((cb00 * 3 * 1 + cb01 * 1 * 1 + cb10 * 3 * 3 + cb11 * 1 * 3 + 8) / 16);
-      out_cb[(y + 1) * out_cb_stride + x + 1] = (Pixel)((cb00 * 1 * 1 + cb01 * 3 * 1 + cb10 * 1 * 3 + cb11 * 3 * 3 + 8) / 16);
+      out_cb[(y + 0) * out_cb_stride + x + 0] = (Pixel) ((cb00 * 3 * 3 + cb01 * 1 * 3 + cb10 * 3 * 1 + cb11 * 1 * 1 + 8) / 16);
+      out_cb[(y + 0) * out_cb_stride + x + 1] = (Pixel) ((cb00 * 1 * 3 + cb01 * 3 * 3 + cb10 * 1 * 1 + cb11 * 3 * 1 + 8) / 16);
+      out_cb[(y + 1) * out_cb_stride + x + 0] = (Pixel) ((cb00 * 3 * 1 + cb01 * 1 * 1 + cb10 * 3 * 3 + cb11 * 1 * 3 + 8) / 16);
+      out_cb[(y + 1) * out_cb_stride + x + 1] = (Pixel) ((cb00 * 1 * 1 + cb01 * 3 * 1 + cb10 * 1 * 3 + cb11 * 3 * 3 + 8) / 16);
 
-      out_cr[(y + 0) * out_cr_stride + x + 0] = (Pixel)((cr00 * 3 * 3 + cr01 * 1 * 3 + cr10 * 3 * 1 + cr11 * 1 * 1 + 8) / 16);
-      out_cr[(y + 0) * out_cr_stride + x + 1] = (Pixel)((cr00 * 1 * 3 + cr01 * 3 * 3 + cr10 * 1 * 1 + cr11 * 3 * 1 + 8) / 16);
-      out_cr[(y + 1) * out_cr_stride + x + 0] = (Pixel)((cr00 * 3 * 1 + cr01 * 1 * 1 + cr10 * 3 * 3 + cr11 * 1 * 3 + 8) / 16);
-      out_cr[(y + 1) * out_cr_stride + x + 1] = (Pixel)((cr00 * 1 * 1 + cr01 * 3 * 1 + cr10 * 1 * 3 + cr11 * 3 * 3 + 8) / 16);
+      out_cr[(y + 0) * out_cr_stride + x + 0] = (Pixel) ((cr00 * 3 * 3 + cr01 * 1 * 3 + cr10 * 3 * 1 + cr11 * 1 * 1 + 8) / 16);
+      out_cr[(y + 0) * out_cr_stride + x + 1] = (Pixel) ((cr00 * 1 * 3 + cr01 * 3 * 3 + cr10 * 1 * 1 + cr11 * 3 * 1 + 8) / 16);
+      out_cr[(y + 1) * out_cr_stride + x + 0] = (Pixel) ((cr00 * 3 * 1 + cr01 * 1 * 1 + cr10 * 3 * 3 + cr11 * 1 * 3 + 8) / 16);
+      out_cr[(y + 1) * out_cr_stride + x + 1] = (Pixel) ((cr00 * 1 * 1 + cr01 * 3 * 1 + cr10 * 1 * 3 + cr11 * 3 * 3 + 8) / 16);
     }
   }
 

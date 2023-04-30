@@ -29,24 +29,23 @@ std::vector<std::string> get_plugin_directories_from_environment_variable_unix()
 
 std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char*);
 
-namespace heif {
-  class PluginLibrary_Unix : public PluginLibrary
+class PluginLibrary_Unix : public PluginLibrary
+{
+public:
+  heif_error load_from_file(const char* filename) override;
+
+  void release() override;
+
+  heif_plugin_info* get_plugin_info() override { return m_plugin_info; }
+
+  bool operator==(const PluginLibrary_Unix& b) const
   {
-  public:
-    heif_error load_from_file(const char* filename) override;
+    return m_library_handle == b.m_library_handle;
+  }
 
-    void release() override;
+private:
+  void* m_library_handle = nullptr;
+  heif_plugin_info* m_plugin_info = nullptr;
+};
 
-    heif_plugin_info* get_plugin_info() override
-    { return m_plugin_info; }
-
-    bool operator==(const PluginLibrary_Unix& b) const {
-      return m_library_handle == b.m_library_handle;
-    }
-
-  private:
-    void* m_library_handle = nullptr;
-    heif_plugin_info* m_plugin_info = nullptr;
-  };
-}
 #endif //LIBHEIF_PLUGINS_UNIX_H

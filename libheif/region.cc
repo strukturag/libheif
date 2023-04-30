@@ -109,7 +109,7 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
 
 Error RegionItem::encode(std::vector<uint8_t>& result) const
 {
-  heif::StreamWriter writer;
+  StreamWriter writer;
 
   writer.write8(0);
 
@@ -232,7 +232,7 @@ bool RegionGeometry_Point::encode_needs_32bit() const
 }
 
 
-void RegionGeometry_Point::encode(heif::StreamWriter& writer, int field_size_bytes) const
+void RegionGeometry_Point::encode(StreamWriter& writer, int field_size_bytes) const
 {
   writer.write8(heif_region_type_point);
   writer.write(field_size_bytes, x);
@@ -263,7 +263,7 @@ bool RegionGeometry_Rectangle::encode_needs_32bit() const
 }
 
 
-void RegionGeometry_Rectangle::encode(heif::StreamWriter& writer, int field_size_bytes) const
+void RegionGeometry_Rectangle::encode(StreamWriter& writer, int field_size_bytes) const
 {
   writer.write8(heif_region_type_rectangle);
   writer.write(field_size_bytes, x);
@@ -294,7 +294,7 @@ bool RegionGeometry_Ellipse::encode_needs_32bit() const
 }
 
 
-void RegionGeometry_Ellipse::encode(heif::StreamWriter& writer, int field_size_bytes) const
+void RegionGeometry_Ellipse::encode(StreamWriter& writer, int field_size_bytes) const
 {
   writer.write8(heif_region_type_ellipse);
   writer.write(field_size_bytes, x);
@@ -352,7 +352,7 @@ bool RegionGeometry_Polygon::encode_needs_32bit() const
 }
 
 
-void RegionGeometry_Polygon::encode(heif::StreamWriter& writer, int field_size_bytes) const
+void RegionGeometry_Polygon::encode(StreamWriter& writer, int field_size_bytes) const
 {
   writer.write8(closed ? heif_region_type_polygon : heif_region_type_polyline);
 
@@ -365,11 +365,11 @@ void RegionGeometry_Polygon::encode(heif::StreamWriter& writer, int field_size_b
 }
 
 
-RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif::HeifFile> file,
+RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<HeifFile> file,
                                                             heif_item_id item_id,
                                                             int reference_width, int reference_height)
 {
-  std::vector<heif::Box_ipco::Property> properties;
+  std::vector<Box_ipco::Property> properties;
 
   Error err = file->get_properties(item_id, properties);
   if (err) {
@@ -380,7 +380,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif
 
   for (auto& property : properties) {
     if (property.property->get_short_type() == fourcc("ispe")) {
-      auto ispe = std::dynamic_pointer_cast<heif::Box_ispe>(property.property);
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(property.property);
       image_width = ispe->get_width();
       image_height = ispe->get_height();
       break;
@@ -398,7 +398,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif
   for (auto& property : properties) {
     switch (property.property->get_short_type()) {
       case fourcc("imir"): {
-        auto imir = std::dynamic_pointer_cast<heif::Box_imir>(property.property);
+        auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
         if (imir->get_mirror_direction() == heif_transform_mirror_direction_horizontal) {
           transform.a = -transform.a;
           transform.b = -transform.b;
@@ -412,7 +412,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif
         break;
       }
       case fourcc("irot"): {
-        auto irot = std::dynamic_pointer_cast<heif::Box_irot>(property.property);
+        auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
         RegionCoordinateTransform tmp;
         switch (irot->get_rotation()) {
           case 90:
@@ -449,7 +449,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<heif
         break;
       }
       case fourcc("clap"): {
-        auto clap = std::dynamic_pointer_cast<heif::Box_clap>(property.property);
+        auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
         int left = clap->left_rounded(image_width);
         int top = clap->top_rounded(image_height);
         transform.tx -= left;

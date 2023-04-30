@@ -166,8 +166,8 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   if (target_state.nclx_profile) {
     full_range_flag = target_state.nclx_profile->get_full_range_flag();
     matrix_coeffs = target_state.nclx_profile->get_matrix_coefficients();
-    coeffs = heif::get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
-                                                 target_state.nclx_profile->get_colour_primaries());
+    coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
+                                           target_state.nclx_profile->get_colour_primaries());
   }
 
   int x, y;
@@ -392,8 +392,8 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   bool full_range_flag = true;
   if (colorProfile) {
     full_range_flag = target_state.nclx_profile->get_full_range_flag();
-    coeffs = heif::get_RGB_to_YCbCr_coefficients(colorProfile->get_matrix_coefficients(),
-                                                 colorProfile->get_colour_primaries());
+    coeffs = get_RGB_to_YCbCr_coefficients(colorProfile->get_matrix_coefficients(),
+                                           colorProfile->get_colour_primaries());
   }
 
   for (int y = 0; y < height; y++) {
@@ -590,8 +590,8 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   bool full_range_flag = true;
   if (target_state.nclx_profile) {
     full_range_flag = target_state.nclx_profile->get_full_range_flag();
-    coeffs = heif::get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
-                                                 target_state.nclx_profile->get_colour_primaries());
+    coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
+                                           target_state.nclx_profile->get_colour_primaries());
   }
 
 
@@ -878,14 +878,11 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
 }
 
 
-
-
-
 template<class Pixel>
 std::vector<ColorStateWithCost>
 Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState& input_state,
-                                                                const ColorState& target_state,
-                                                                const heif_color_conversion_options& options) const
+                                                               const ColorState& target_state,
+                                                               const heif_color_conversion_options& options) const
 {
   if (input_state.colorspace != heif_colorspace_YCbCr) {
     return {};
@@ -937,8 +934,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                                                            const ColorState& target_state,
-                                                            const heif_color_conversion_options& options) const
+                                                           const ColorState& target_state,
+                                                           const heif_color_conversion_options& options) const
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
@@ -985,8 +982,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
 
-  int cwidth = (width+1)/2;
-  int cheight = (height+1)/2;
+  int cwidth = (width + 1) / 2;
+  int cheight = (height + 1) / 2;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
       !outimg->add_plane(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
@@ -1055,16 +1052,16 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   if ((width & 1) && (height & 1)) {
-    out_cb[(cheight-1) * out_cb_stride + cwidth - 1] = in_cb[(height-1) * in_cb_stride + width - 1];
-    out_cr[(cheight-1) * out_cr_stride + cwidth - 1] = in_cr[(height-1) * in_cr_stride + width - 1];
+    out_cb[(cheight - 1) * out_cb_stride + cwidth - 1] = in_cb[(height - 1) * in_cb_stride + width - 1];
+    out_cr[(cheight - 1) * out_cr_stride + cwidth - 1] = in_cr[(height - 1) * in_cr_stride + width - 1];
   }
 
 
   // --- averaging filter
 
   int x, y;
-  for (y = 0; y < height-1; y += 2) {
-    for (x = 0; x < width-1; x += 2) {
+  for (y = 0; y < height - 1; y += 2) {
+    for (x = 0; x < width - 1; x += 2) {
       Pixel cb00 = in_cb[y * in_cb_stride + x];
       Pixel cr00 = in_cr[y * in_cr_stride + x];
       Pixel cb01 = in_cb[y * in_cb_stride + x + 1];
@@ -1074,8 +1071,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
       Pixel cb11 = in_cb[(y + 1) * in_cb_stride + x + 1];
       Pixel cr11 = in_cr[(y + 1) * in_cr_stride + x + 1];
 
-      out_cb[(y/2) * out_cb_stride + x/2] = (Pixel)((cb00 + cb01 + cb10 + cb11 + 2) / 4);
-      out_cr[(y/2) * out_cr_stride + x/2] = (Pixel)((cr00 + cr01 + cr10 + cr11 + 2) / 4);
+      out_cb[(y / 2) * out_cb_stride + x / 2] = (Pixel) ((cb00 + cb01 + cb10 + cb11 + 2) / 4);
+      out_cr[(y / 2) * out_cr_stride + x / 2] = (Pixel) ((cr00 + cr01 + cr10 + cr11 + 2) / 4);
     }
   }
 

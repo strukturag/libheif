@@ -22,7 +22,7 @@
 #include "nclx.h"
 
 
-heif::primaries::primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy)
+primaries::primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy)
 {
   defined = true;
   redX = rx;
@@ -36,7 +36,7 @@ heif::primaries::primaries(float gx, float gy, float bx, float by, float rx, flo
 }
 
 
-heif::primaries heif::get_colour_primaries(uint16_t primaries_idx)
+primaries get_colour_primaries(uint16_t primaries_idx)
 {
   switch (primaries_idx) {
     case 1:
@@ -65,7 +65,7 @@ heif::primaries heif::get_colour_primaries(uint16_t primaries_idx)
   }
 }
 
-heif::Kr_Kb heif::Kr_Kb::defaults()
+Kr_Kb Kr_Kb::defaults()
 {
   Kr_Kb kr_kb;
   // Rec 601.
@@ -75,7 +75,7 @@ heif::Kr_Kb heif::Kr_Kb::defaults()
 }
 
 
-heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+Kr_Kb get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
 {
   Kr_Kb result;
 
@@ -131,7 +131,7 @@ heif::Kr_Kb heif::get_Kr_Kb(uint16_t matrix_coefficients_idx, uint16_t primaries
 }
 
 
-heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
+YCbCr_to_RGB_coefficients YCbCr_to_RGB_coefficients::defaults()
 {
   YCbCr_to_RGB_coefficients coeffs;
   coeffs.defined = true;
@@ -142,8 +142,8 @@ heif::YCbCr_to_RGB_coefficients heif::YCbCr_to_RGB_coefficients::defaults()
   return coeffs;
 }
 
-heif::YCbCr_to_RGB_coefficients
-heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+YCbCr_to_RGB_coefficients
+get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
 {
   YCbCr_to_RGB_coefficients coeffs;
 
@@ -164,8 +164,8 @@ heif::get_YCbCr_to_RGB_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
 }
 
 
-heif::RGB_to_YCbCr_coefficients
-heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
+RGB_to_YCbCr_coefficients
+get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t primaries_idx)
 {
   RGB_to_YCbCr_coefficients coeffs;
 
@@ -191,7 +191,7 @@ heif::get_RGB_to_YCbCr_coefficients(uint16_t matrix_coefficients_idx, uint16_t p
 }
 
 
-heif::RGB_to_YCbCr_coefficients heif::RGB_to_YCbCr_coefficients::defaults()
+RGB_to_YCbCr_coefficients RGB_to_YCbCr_coefficients::defaults()
 {
   RGB_to_YCbCr_coefficients coeffs;
   coeffs.defined = true;

@@ -24,23 +24,27 @@
 #include "rgb2yuv_sharp.h"
 
 #ifdef HAVE_LIBSHARPYUV
+
 #include <sharpyuv/sharpyuv.h>
 #include <sharpyuv/sharpyuv_csp.h>
 #include "libheif/nclx.h"
 #include "libheif/common_utils.h"
 
-static inline bool PlatformIsBigEndian() {
+static inline bool PlatformIsBigEndian()
+{
   int i = 1;
-  return !*((char*)&i);
+  return !*((char*) &i);
 }
 
-static uint16_t Shift(uint16_t v, int input_bits, int output_bits) {
+static uint16_t Shift(uint16_t v, int input_bits, int output_bits)
+{
   if (input_bits == output_bits) return v;
   if (output_bits > input_bits) {
     int shift1 = output_bits - input_bits;
     int shift2 = 8 - shift1;
     return (uint16_t) ((v << shift1) | (v >> shift2));
-  } else {
+  }
+  else {
     int shift = input_bits - output_bits;
     return (uint16_t) (v >> shift);
   }
@@ -73,11 +77,11 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
 
   if (input_state.colorspace != heif_colorspace_RGB ||
       (
-       input_state.chroma != heif_chroma_444 &&  // Planar input.
-       input_state.chroma != heif_chroma_interleaved_RGB &&
-       input_state.chroma != heif_chroma_interleaved_RGBA &&
-       input_state.chroma != hdr_chroma &&
-       input_state.chroma != hdr_with_alpha_chroma)) {
+          input_state.chroma != heif_chroma_444 &&  // Planar input.
+          input_state.chroma != heif_chroma_interleaved_RGB &&
+          input_state.chroma != heif_chroma_interleaved_RGBA &&
+          input_state.chroma != hdr_chroma &&
+          input_state.chroma != hdr_with_alpha_chroma)) {
     return {};
   }
 
@@ -121,7 +125,8 @@ std::shared_ptr<HeifPixelImage>
 Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const std::shared_ptr<const HeifPixelImage>& input,
     const ColorState& target_state,
-    const heif_color_conversion_options& options) const {
+    const heif_color_conversion_options& options) const
+{
 #ifdef HAVE_LIBSHARPYUV
   int width = input->get_width();
   int height = input->get_height();
@@ -165,8 +170,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
        input_chroma == heif_chroma_interleaved_RGBA ||
        (input_chroma == heif_chroma_444 &&
         input->get_bits_per_pixel(heif_channel_R) <= 8))
-          ? 1
-          : 2;
+      ? 1
+      : 2;
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
   int in_stride = 0;
@@ -192,7 +197,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     if (has_alpha) {
       in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
     }
-  } else {
+  }
+  else {
     const uint8_t* in_p = input->get_plane(heif_channel_interleaved, &in_stride);
     input_bits = input->get_bits_per_pixel(heif_channel_interleaved);
     in_r = &in_p[input_bytes_per_sample * 0];
@@ -210,12 +216,12 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   uint8_t* out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
 
   bool full_range_flag = true;
-  Kr_Kb kr_kb = heif::Kr_Kb::defaults();
+  Kr_Kb kr_kb = Kr_Kb::defaults();
   if (target_state.nclx_profile) {
     full_range_flag = target_state.nclx_profile->get_full_range_flag();
     kr_kb =
-        heif::get_Kr_Kb(target_state.nclx_profile->get_matrix_coefficients(),
-                        target_state.nclx_profile->get_colour_primaries());
+        get_Kr_Kb(target_state.nclx_profile->get_matrix_coefficients(),
+                  target_state.nclx_profile->get_colour_primaries());
   }
 
   SharpYuvColorSpace color_space = {
@@ -239,8 +245,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     int le = (input_chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
               input_chroma == heif_chroma_interleaved_RRGGBB_LE ||
               (planar_input && !PlatformIsBigEndian()))
-                 ? 1
-                 : 0;
+             ? 1
+             : 0;
     int out_a_stride;
 
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
@@ -249,13 +255,14 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
       for (int x = 0; x < width; x++) {
         const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
         uint16_t a = has_alpha
-                         ? ((input_bits == 8)
-                                ? in[0]
-                                : (uint16_t)((in[0 + le] << 8) | in[1 - le]))
-                         : alpha_max;
+                     ? ((input_bits == 8)
+                        ? in[0]
+                        : (uint16_t) ((in[0 + le] << 8) | in[1 - le]))
+                     : alpha_max;
         if (output_bits == 8) {
-          out_a[y * out_a_stride + x] = (uint8_t)Shift(a, input_bits, output_bits);
-        } else {
+          out_a[y * out_a_stride + x] = (uint8_t) Shift(a, input_bits, output_bits);
+        }
+        else {
           uint16_t* out_a16 = reinterpret_cast<uint16_t*>(out_a);
           out_a16[y * out_a_stride / 2 + x] = Shift(a, input_bits, output_bits);
         }

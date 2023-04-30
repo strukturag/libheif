@@ -23,17 +23,17 @@
 #include <cassert>
 
 // static
-const char heif::Error::kSuccess[] = "Success";
+const char Error::kSuccess[] = "Success";
 const char* cUnknownError = "Unknown error";
 
 
-heif::Error heif::Error::Ok(heif_error_Ok);
+Error Error::Ok(heif_error_Ok);
 
 
-heif::Error::Error() = default;
+Error::Error() = default;
 
 
-heif::Error::Error(heif_error_code c,
+Error::Error(heif_error_code c,
                    heif_suberror_code sc,
                    const std::string& msg)
     : error_code(c),
@@ -43,7 +43,7 @@ heif::Error::Error(heif_error_code c,
 }
 
 
-const char* heif::Error::get_error_string(heif_error_code err)
+const char* Error::get_error_string(heif_error_code err)
 {
   switch (err) {
     case heif_error_Ok:
@@ -76,7 +76,7 @@ const char* heif::Error::get_error_string(heif_error_code err)
   return "Unknown error";
 }
 
-const char* heif::Error::get_error_string(heif_suberror_code err)
+const char* Error::get_error_string(heif_suberror_code err)
 {
   switch (err) {
     case heif_suberror_Unspecified:
@@ -234,7 +234,7 @@ const char* heif::Error::get_error_string(heif_suberror_code err)
 }
 
 
-heif_error heif::Error::error_struct(ErrorBuffer* error_buffer) const
+heif_error Error::error_struct(ErrorBuffer* error_buffer) const
 {
   if (error_buffer) {
     if (error_code == heif_error_Ok) {

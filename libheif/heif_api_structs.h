@@ -28,22 +28,22 @@
 
 struct heif_image_handle
 {
-  std::shared_ptr<heif::HeifContext::Image> image;
+  std::shared_ptr<HeifContext::Image> image;
 
   // store reference to keep the context alive while we are using the handle (issue #147)
-  std::shared_ptr<heif::HeifContext> context;
+  std::shared_ptr<HeifContext> context;
 };
 
 
 struct heif_image
 {
-  std::shared_ptr<heif::HeifPixelImage> image;
+  std::shared_ptr<HeifPixelImage> image;
 };
 
 
 struct heif_context
 {
-  std::shared_ptr<heif::HeifContext> context;
+  std::shared_ptr<HeifContext> context;
 };
 
 
@@ -65,14 +65,14 @@ struct heif_encoder
 
 struct heif_region_item
 {
-  std::shared_ptr<heif::HeifContext> context;
+  std::shared_ptr<HeifContext> context;
   std::shared_ptr<RegionItem> region_item;
 };
 
 
 struct heif_region
 {
-  std::shared_ptr<heif::HeifContext> context; // we need this to perform coordinate transformation
+  std::shared_ptr<HeifContext> context; // we need this to perform coordinate transformation
   //heif_item_id parent_region_item_id; // we need this to perform coordinate transformation
   std::shared_ptr<RegionItem> region_item;
   std::shared_ptr<RegionGeometry> region;

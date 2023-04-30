@@ -28,10 +28,8 @@
 
 #include <utility>
 
-using namespace heif;
 
-
-heif_chroma heif::chroma_from_subsampling(int h, int v)
+heif_chroma chroma_from_subsampling(int h, int v)
 {
   if (h == 2 && v == 2) {
     return heif_chroma_420;
@@ -57,7 +55,7 @@ HeifPixelImage::~HeifPixelImage()
 }
 
 
-int heif::num_interleaved_pixels_per_plane(heif_chroma chroma)
+int num_interleaved_pixels_per_plane(heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_undefined:
@@ -83,9 +81,9 @@ int heif::num_interleaved_pixels_per_plane(heif_chroma chroma)
 }
 
 
-bool heif::is_integer_multiple_of_chroma_size(int width,
-                                              int height,
-                                              heif_chroma chroma)
+bool is_integer_multiple_of_chroma_size(int width,
+                                        int height,
+                                        heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_444:
@@ -102,7 +100,7 @@ bool heif::is_integer_multiple_of_chroma_size(int width,
 }
 
 
-std::vector<heif_chroma> heif::get_valid_chroma_values_for_colorspace(heif_colorspace colorspace)
+std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace)
 {
   switch (colorspace) {
     case heif_colorspace_YCbCr:
@@ -460,7 +458,7 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
 }
 
 
-bool heif::is_chroma_with_alpha(heif_chroma chroma)
+bool is_chroma_with_alpha(heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_undefined:
@@ -904,7 +902,7 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
     }
 
     if (has_channel(heif_channel_Alpha)) {
-      out_img->add_plane(heif_channel_Alpha, width,height, get_bits_per_pixel(heif_channel_Alpha));
+      out_img->add_plane(heif_channel_Alpha, width, height, get_bits_per_pixel(heif_channel_Alpha));
     }
   }
 

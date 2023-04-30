@@ -29,8 +29,6 @@
 #include <vector>
 
 
-namespace heif {
-
   class SEIMessage
   {
   public:
@@ -52,7 +50,5 @@ namespace heif {
   Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
                                          Box_hvcC::configuration* inout_config,
                                          int* width, int* height);
-
-}
 
 #endif

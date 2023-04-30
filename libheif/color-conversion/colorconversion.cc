@@ -40,8 +40,6 @@
 #include "hdr_sdr.h"
 
 
-using namespace heif;
-
 #define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
 

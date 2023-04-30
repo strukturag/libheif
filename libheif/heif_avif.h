@@ -30,14 +30,11 @@
 #include "error.h"
 
 
-namespace heif {
+class HeifPixelImage;
 
-  class HeifPixelImage;
+Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image);
 
-  Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image);
+bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
 
-  bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
-
-}
 
 #endif

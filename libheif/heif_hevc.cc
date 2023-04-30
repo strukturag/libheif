@@ -23,8 +23,6 @@
 
 #include <cmath>
 
-using namespace heif;
-
 
 static double read_depth_rep_info_element(BitReader& reader)
 {
@@ -122,8 +120,8 @@ static std::shared_ptr<SEIMessage> read_depth_representation_info(BitReader& rea
 
 // aux subtypes: 00 00 00 11 / 00 00 00 0d / 4e 01 / b1 09 / 35 1e 78 c8 01 03 c5 d0 20
 
-Error heif::decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
-                                         std::vector<std::shared_ptr<SEIMessage>>& msgs)
+Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
+                                   std::vector<std::shared_ptr<SEIMessage>>& msgs)
 {
   // TODO: we probably do not need a full BitReader just for the array size.
   // Read this and the NAL size directly on the array data.
@@ -193,9 +191,9 @@ static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size
 }
 
 
-Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
-                                             Box_hvcC::configuration* config,
-                                             int* width, int* height)
+Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_hvcC::configuration* config,
+                                       int* width, int* height)
 {
   // remove start-code emulation bytes from SPS header stream
 
@@ -240,7 +238,7 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   if (nMaxSubLayersMinus1 > 0) {
     for (int i = nMaxSubLayersMinus1; i < 8; i++) {
-      reader.skip_bits(2);   
+      reader.skip_bits(2);
     }
   }
 
@@ -282,9 +280,12 @@ Error heif::parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
     //printf("conformance borders: %d %d %d %d\n",left,right,top,bottom);
 
-    int subH=1, subV=1;
-    if (config->chroma_format == 1) { subV=2; subH=2; }
-    if (config->chroma_format == 2) { subH=2; }
+    int subH = 1, subV = 1;
+    if (config->chroma_format == 1) {
+      subV = 2;
+      subH = 2;
+    }
+    if (config->chroma_format == 2) { subH = 2; }
 
     *width -= subH * (left + right);
     *height -= subV * (top + bottom);

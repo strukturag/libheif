@@ -37,43 +37,39 @@ struct heif_encoder_descriptor
 {
   const struct heif_encoder_plugin* plugin;
 
-  const char* get_name() const
-  { return plugin->get_plugin_name(); }
+  const char* get_name() const { return plugin->get_plugin_name(); }
 
-  enum heif_compression_format get_compression_format() const
-  { return plugin->compression_format; }
+  enum heif_compression_format get_compression_format() const { return plugin->compression_format; }
 };
 
 
-namespace heif {
-  struct encoder_descriptor_priority_order
+struct encoder_descriptor_priority_order
+{
+  bool operator()(const std::unique_ptr<struct heif_encoder_descriptor>& a,
+                  const std::unique_ptr<struct heif_encoder_descriptor>& b) const
   {
-    bool operator()(const std::unique_ptr<struct heif_encoder_descriptor>& a,
-                    const std::unique_ptr<struct heif_encoder_descriptor>& b) const
-    {
-      return a->plugin->priority > b->plugin->priority;  // highest priority first
-    }
-  };
+    return a->plugin->priority > b->plugin->priority;  // highest priority first
+  }
+};
 
 
-  extern std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
+extern std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
-  extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
-    encoder_descriptor_priority_order> s_encoder_descriptors;
+extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
+                     encoder_descriptor_priority_order> s_encoder_descriptors;
 
-  void register_default_plugins();
+void register_default_plugins();
 
-  void register_decoder(const heif_decoder_plugin* decoder_plugin);
+void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
-  void register_encoder(const heif_encoder_plugin* encoder_plugin);
+void register_encoder(const heif_encoder_plugin* encoder_plugin);
 
-  const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id);
+const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id);
 
-  const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type);
+const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type);
 
-  std::vector<const struct heif_encoder_descriptor*>
-  get_filtered_encoder_descriptors(enum heif_compression_format,
-                                   const char* name);
-}
+std::vector<const struct heif_encoder_descriptor*>
+get_filtered_encoder_descriptors(enum heif_compression_format,
+                                 const char* name);
 
 #endif

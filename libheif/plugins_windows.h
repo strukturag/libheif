@@ -31,26 +31,24 @@ std::vector<std::string> get_plugin_directories_from_environment_variable_window
 
 std::vector<std::string> list_all_potential_plugins_in_directory_windows(const char*);
 
-namespace heif {
-  class PluginLibrary_Windows : public PluginLibrary
+class PluginLibrary_Windows : public PluginLibrary
+{
+public:
+  heif_error load_from_file(const char* filename) override;
+
+  void release() override;
+
+  heif_plugin_info* get_plugin_info() override { return m_plugin_info; }
+
+  bool operator==(const PluginLibrary_Windows& b) const
   {
-  public:
-    heif_error load_from_file(const char* filename) override;
+    return m_filename == b.m_filename;
+  }
 
-    void release() override;
-
-    heif_plugin_info* get_plugin_info() override
-    { return m_plugin_info; }
-
-    bool operator==(const PluginLibrary_Windows& b) const {
-      return m_filename == b.m_filename;
-    }
-
-  private:
-    std::string m_filename;
-    HMODULE m_library_handle = nullptr;
-    heif_plugin_info* m_plugin_info = nullptr;
-  };
-}
+private:
+  std::string m_filename;
+  HMODULE m_library_handle = nullptr;
+  heif_plugin_info* m_plugin_info = nullptr;
+};
 
 #endif //LIBHEIF_PLUGINS_WINDOWS_H

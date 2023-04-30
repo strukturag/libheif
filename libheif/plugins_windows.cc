@@ -79,7 +79,7 @@ std::vector<std::string> list_all_potential_plugins_in_directory_windows(const c
 
 
 
-heif_error heif::PluginLibrary_Windows::load_from_file(const char* filename)
+heif_error PluginLibrary_Windows::load_from_file(const char* filename)
 {
   m_library_handle = LoadLibraryA(filename);
   if (!m_library_handle) {
@@ -100,7 +100,7 @@ heif_error heif::PluginLibrary_Windows::load_from_file(const char* filename)
   return heif_error_ok;
 }
 
-void heif::PluginLibrary_Windows::release()
+void PluginLibrary_Windows::release()
 {
   if (m_library_handle) {
     FreeLibrary(m_library_handle);

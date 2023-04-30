@@ -92,7 +92,7 @@ std::vector<std::string> list_all_potential_plugins_in_directory_unix(const char
 }
 
 
-heif_error heif::PluginLibrary_Unix::load_from_file(const char* filename)
+heif_error PluginLibrary_Unix::load_from_file(const char* filename)
 {
   m_library_handle = dlopen(filename, RTLD_LAZY);
   if (!m_library_handle) {
@@ -109,7 +109,7 @@ heif_error heif::PluginLibrary_Unix::load_from_file(const char* filename)
   return heif_error_ok;
 }
 
-void heif::PluginLibrary_Unix::release()
+void PluginLibrary_Unix::release()
 {
   if (m_library_handle) {
     dlclose(m_library_handle);

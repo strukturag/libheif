@@ -26,8 +26,6 @@
 
 #define MAX_UVLC_LEADING_ZEROS 20
 
-using namespace heif;
-
 
 StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
     : m_istr(std::move(istr))

@@ -62,8 +62,6 @@
 #include <cassert>
 
 
-using namespace heif;
-
 static struct heif_error error_Ok = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
                                                         heif_suberror_Unsupported_parameter,
@@ -274,7 +272,7 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
   BitstreamRange range(stream, len);
 
-  std::shared_ptr<heif::Box> box;
+  std::shared_ptr<Box> box;
   Error err = Box::read(range, &box);
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
@@ -306,7 +304,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
   auto stream = std::make_shared<StreamReader_memory>(data, len, false);
   BitstreamRange range(stream, len);
 
-  std::shared_ptr<heif::Box> box;
+  std::shared_ptr<Box> box;
   Error err = Box::read(range, &box);
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
@@ -1043,7 +1041,7 @@ struct heif_error heif_image_create(int width, int height,
   }
 
   // return error if invalid colorspace + chroma combination is used
-  auto validChroma = heif::get_valid_chroma_values_for_colorspace(colorspace);
+  auto validChroma = get_valid_chroma_values_for_colorspace(colorspace);
   if (std::find(validChroma.begin(), validChroma.end(), chroma) == validChroma.end()) {
     *image = nullptr;
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Invalid colorspace/chroma combination."};
@@ -2371,14 +2369,14 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 
 int heif_have_decoder_for_format(enum heif_compression_format format)
 {
-  auto plugin = heif::get_decoder(format, nullptr);
+  auto plugin = get_decoder(format, nullptr);
   return plugin != nullptr;
 }
 
 
 int heif_have_encoder_for_format(enum heif_compression_format format)
 {
-  auto plugin = heif::get_encoder(format);
+  auto plugin = get_encoder(format);
   return plugin != nullptr;
 }
 

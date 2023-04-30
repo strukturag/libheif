@@ -57,8 +57,8 @@ static bool is_valid_colorspace(uint8_t colorspace)
   }
 }
 
-static bool read_plane(heif::BitstreamRange* range,
-                       std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
+static bool read_plane(BitstreamRange* range,
+                       std::shared_ptr<HeifPixelImage> image, heif_channel channel,
                        int width, int height, int bit_depth)
 {
   if (width <= 0 || height <= 0) {
@@ -80,8 +80,8 @@ static bool read_plane(heif::BitstreamRange* range,
   return true;
 }
 
-static bool read_plane_interleaved(heif::BitstreamRange* range,
-                                   std::shared_ptr<heif::HeifPixelImage> image, heif_channel channel,
+static bool read_plane_interleaved(BitstreamRange* range,
+                                   std::shared_ptr<HeifPixelImage> image, heif_channel channel,
                                    int width, int height, int bit_depth, int comps)
 {
   if (width <= 0 || height <= 0) {
@@ -105,8 +105,8 @@ static bool read_plane_interleaved(heif::BitstreamRange* range,
 
 static int test(const uint8_t* data, size_t size)
 {
-  auto reader = std::make_shared<heif::StreamReader_memory>(data, size, false);
-  heif::BitstreamRange range(reader, size);
+  auto reader = std::make_shared<StreamReader_memory>(data, size, false);
+  BitstreamRange range(reader, size);
 
   int width;
   int height;
@@ -147,7 +147,7 @@ static int test(const uint8_t* data, size_t size)
     return 0;
   }
 
-  auto in_image = std::make_shared<heif::HeifPixelImage>();
+  auto in_image = std::make_shared<HeifPixelImage>();
   in_image->create(width, height, static_cast<heif_colorspace>(in_colorspace),
                    static_cast<heif_chroma>(in_chroma));
 

@@ -28,23 +28,20 @@ extern heif_error error_dlopen;
 extern heif_error error_plugin_not_loaded;
 extern heif_error error_cannot_read_plugin_directory;
 
-namespace heif {
-  // TODO: later, we might defer the default plugin initialization to when they are actually used for the first time.
-  // That would prevent them from being initialized every time at program start, even when the application software uses heif_init() later on.
+// TODO: later, we might defer the default plugin initialization to when they are actually used for the first time.
+// That would prevent them from being initialized every time at program start, even when the application software uses heif_init() later on.
 
-  // Note: the loaded plugin is not released automatically then the class is released, because this would require that
-  // we reference-count the handle. We do not really need this since releasing the library explicitly with release() is simple enough.
-  class PluginLibrary
-  {
-  public:
-    virtual struct heif_error load_from_file(const char*) = 0;
+// Note: the loaded plugin is not released automatically then the class is released, because this would require that
+// we reference-count the handle. We do not really need this since releasing the library explicitly with release() is simple enough.
+class PluginLibrary
+{
+public:
+  virtual struct heif_error load_from_file(const char*) = 0;
 
-    virtual void release() = 0;
+  virtual void release() = 0;
 
-    virtual struct heif_plugin_info* get_plugin_info() = 0;
-  };
+  virtual struct heif_plugin_info* get_plugin_info() = 0;
+};
 
-  // void implicit_plugin_registration();
-}
 
 #endif //LIBHEIF_HEIF_INIT_H

@@ -35,8 +35,6 @@
 #include "plugins_unix.h"
 #endif
 
-using namespace heif;
-
 void heif_unload_all_plugins();
 
 #if ENABLE_PLUGIN_LOADING
@@ -123,22 +121,22 @@ struct heif_error heif_init(struct heif_init_params*)
 
 static void heif_unregister_decoder_plugins()
 {
-  for (const auto* plugin : heif::s_decoder_plugins) {
+  for (const auto* plugin : s_decoder_plugins) {
     if (plugin->deinit_plugin) {
       (*plugin->deinit_plugin)();
     }
   }
-  heif::s_decoder_plugins.clear();
+  s_decoder_plugins.clear();
 }
 
 static void heif_unregister_encoder_plugins()
 {
-  for (const auto& plugin : heif::s_encoder_descriptors) {
+  for (const auto& plugin : s_encoder_descriptors) {
     if (plugin->plugin->cleanup_plugin) {
       (*plugin->plugin->cleanup_plugin)();
     }
   }
-  heif::s_encoder_descriptors.clear();
+  s_encoder_descriptors.clear();
 }
 
 #if ENABLE_PLUGIN_LOADING
@@ -148,9 +146,9 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
     (*plugin->cleanup_plugin)();
   }
 
-  for (auto iter = heif::s_encoder_descriptors.begin() ; iter != heif::s_encoder_descriptors.end(); ++iter) {
+  for (auto iter = s_encoder_descriptors.begin() ; iter != s_encoder_descriptors.end(); ++iter) {
     if ((*iter)->plugin == plugin) {
-      heif::s_encoder_descriptors.erase(iter);
+      s_encoder_descriptors.erase(iter);
       return;
     }
   }

@@ -53,8 +53,6 @@
 #include "uncompressed_image.h"
 #endif
 
-using namespace heif;
-
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
     : plugin(_plugin)
 {
@@ -515,7 +513,7 @@ const struct heif_decoder_plugin* HeifContext::get_decoder(enum heif_compression
 
   // search global plugins
 
-  best_plugin = heif::get_decoder(type, name_id);
+  best_plugin = ::get_decoder(type, name_id);
   if (best_plugin != nullptr) {
     highest_priority = best_plugin->does_support_format(type);
   }
