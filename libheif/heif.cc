@@ -2098,15 +2098,7 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
-  if (!decoder_plugin) {
-    return error_null_parameter;
-  }
-  else if (decoder_plugin->plugin_api_version > 3) {
-    return error_unsupported_plugin_version;
-  }
-
-  heif->context->register_decoder(decoder_plugin);
-  return Error::Ok.error_struct(heif->context.get());
+  return heif_register_decoder_plugin(decoder_plugin);
 }
 
 

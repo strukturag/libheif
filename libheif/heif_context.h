@@ -341,8 +341,6 @@ public:
 
   std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
-  void register_decoder(const heif_decoder_plugin* decoder_plugin);
-
   bool is_image(heif_item_id ID) const;
 
   bool has_alpha(heif_item_id ID) const;
@@ -441,10 +439,6 @@ public:
   void write(StreamWriter& writer);
 
 private:
-  const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id) const;
-
-  std::set<const struct heif_decoder_plugin*> m_decoder_plugins;
-
   std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
 
   // We store this in a vector because we need stable indices for the C API.
