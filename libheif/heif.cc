@@ -56,9 +56,11 @@
 #else
 
 #include <unistd.h>
-#include <cassert>
 
 #endif
+
+#include <cassert>
+
 
 using namespace heif;
 
