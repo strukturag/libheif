@@ -33,19 +33,20 @@ extern "C" {
 
 // API versions table
 //
-// release    depth.rep   dec.options   enc.options   heif_reader   heif_writer  col.profile
-// -----------------------------------------------------------------------------------------
-//  1.0          1             1           N/A           N/A           N/A          N/A
-//  1.1          1             1           N/A           N/A            1           N/A
-//  1.3          1             1            1             1             1           N/A
-//  1.4          1             1            1             1             1            1
-//  1.7          1             2            1             1             1            1
-//  1.9.2        1             2            2             1             1            1
-//  1.10         1             2            3             1             1            1
-//  1.11         1             2            4             1             1            1
-//  1.13         1             3            4             1             1            1
-//  1.14         1             3            5             1             1            1
-//  1.15         1             4            5             1             1            1
+// release    dec.options   enc.options   heif_reader   heif_writer   depth.rep   col.profile
+// ------------------------------------------------------------------------------------------
+//  1.0            1           N/A           N/A           N/A           1           N/A
+//  1.1            1           N/A           N/A            1            1           N/A
+//  1.3            1            1             1             1            1           N/A
+//  1.4            1            1             1             1            1            1
+//  1.7            2            1             1             1            1            1
+//  1.9.2          2            2             1             1            1            1
+//  1.10           2            3             1             1            1            1
+//  1.11           2            4             1             1            1            1
+//  1.13           3            4             1             1            1            1
+//  1.14           3            5             1             1            1            1
+//  1.15           4            5             1             1            1            1
+//  1.16           5            6             1             1            1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -1726,13 +1727,6 @@ struct heif_encoding_options
   enum heif_orientation image_orientation;
 
   // version 6 options
-
-  // TODO: clearly define the semantics. Even when this is turned on, it currently does not execute in all cases
-  //       because the implementation is only for the RGB24 interleaved case, but not for the planar case.
-  //       Moreover, chroma 4:2:2 is not handled (neither is 4:4:4).
-  //       Ideally, sharp YUV should be used in all conversion paths.
-  //       We should also have bilinear YUV->RGB to match this.
-  // Enable 'sharp' RGB to YUV420 conversion (if compiled in).
 
   struct heif_color_conversion_options color_conversion_options;
 };
