@@ -536,7 +536,7 @@ int main(int argc, char** argv)
 
             std::string auxType = std::string(auxTypeC);
 
-            heif_image_handle_free_auxiliary_types(aux_handle, &auxTypeC);
+            heif_image_handle_release_auxiliary_type(aux_handle, &auxTypeC);
 
             std::ostringstream s;
             s << numbered_output_filename_stem;

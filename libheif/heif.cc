@@ -716,13 +716,20 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
 }
 
 
-void heif_image_handle_free_auxiliary_types(const struct heif_image_handle* handle,
-                                            const char** out_type)
+void heif_image_handle_release_auxiliary_type(const struct heif_image_handle* handle,
+                                              const char** out_type)
 {
   if (out_type && *out_type) {
     free((void*) *out_type);
     *out_type = nullptr;
   }
+}
+
+// DEPRECATED (typo)
+void heif_image_handle_free_auxiliary_types(const struct heif_image_handle* handle,
+                                            const char** out_type)
+{
+  heif_image_handle_release_auxiliary_type(handle, out_type);
 }
 
 
