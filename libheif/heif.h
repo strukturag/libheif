@@ -1048,10 +1048,15 @@ struct heif_error heif_item_add_property_user_description(const struct heif_cont
                                                           const struct heif_property_user_description* description,
                                                           heif_property_id* out_propertyId);
 
+// Release all strings and the object itself.
+// Only call for objects that you received from heif_item_get_property_user_description().
+LIBHEIF_API
+void heif_property_user_description_release(struct heif_property_user_description*);
+
 enum heif_transform_mirror_direction
 {
-  heif_transform_mirror_direction_vertical = 0,
-  heif_transform_mirror_direction_horizontal = 1
+  heif_transform_mirror_direction_vertical = 0,    // flip image vertically
+  heif_transform_mirror_direction_horizontal = 1   // flip image horizontally
 };
 
 LIBHEIF_API
@@ -1059,6 +1064,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
                                                                              heif_item_id itemId,
                                                                              heif_property_id propertyId);
 
+// Returns only 0, 90, 180, or 270 angle values.
 // Returns -1 in case of error (but it will only return an error in case of wrong usage).
 LIBHEIF_API
 int heif_item_get_property_transform_rotation_ccw(const struct heif_context* context,
@@ -1074,9 +1080,6 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
-
-LIBHEIF_API
-void heif_property_user_description_release(struct heif_property_user_description*);
 
 
 // ========================= heif_image =========================
