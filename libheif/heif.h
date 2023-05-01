@@ -64,7 +64,7 @@ extern "C" {
 #define LIBHEIF_API
 #endif
 
-#define heif_fourcc(a, b, c, d) ((a<<24) | (b<<16) | (c<<8) | d)
+#define heif_fourcc(a, b, c, d) ((uint32_t)((a<<24) | (b<<16) | (c<<8) | d))
 
 
 /* === version numbers === */
@@ -396,7 +396,7 @@ LIBHEIF_API
 int heif_check_jpeg_filetype(const uint8_t* data, int len);
 
 
-// DEPRECATED, use heif_brand2 instead
+// DEPRECATED, use heif_brand2 and the heif_brand2_* constants below instead
 enum heif_brand
 {
   heif_unknown_brand,
@@ -424,6 +424,24 @@ enum heif_brand heif_main_brand(const uint8_t* data, int len);
 
 
 typedef uint32_t heif_brand2;
+
+#define heif_brand2_heic   heif_fourcc('h','e','i','c') // HEIF image with h265
+#define heif_brand2_heix   heif_fourcc('h','e','i','x') // 10bit images, or anything that uses h265 with range extension
+#define heif_brand2_hevc   heif_fourcc('h','e','v','c') // image sequences
+#define heif_brand2_hevx   heif_fourcc('h','e','v','x') // HDR image sequence
+#define heif_brand2_heim   heif_fourcc('h','e','i','m') // multiview
+#define heif_brand2_heis   heif_fourcc('h','e','i','s') // scalable
+#define heif_brand2_hevm   heif_fourcc('h','e','v','m') // multiview sequence
+#define heif_brand2_hevs   heif_fourcc('h','e','v','s') // scalable sequence
+#define heif_brand2_avif   heif_fourcc('a','v','i','f') // AVIF image (AV1)
+#define heif_brand2_avis   heif_fourcc('a','v','i','s') // AVIF sequence
+#define heif_brand2_mif1   heif_fourcc('m','i','f','1') // image, any coding algorithm
+#define heif_brand2_msf1   heif_fourcc('m','s','f','1') // sequence, any coding algorithm
+#define heif_brand2_vvic   heif_fourcc('v','v','i','c') // VVC image
+#define heif_brand2_vvis   heif_fourcc('v','v','i','s') // VVC sequence
+#define heif_brand2_evbi   heif_fourcc('e','v','b','i') // EVC image
+#define heif_brand2_evbs   heif_fourcc('e','v','b','s') // EVC sequence
+
 
 // input data should be at least 12 bytes
 LIBHEIF_API
