@@ -25,7 +25,7 @@
 #endif
 
 #include "box.h"
-#include "heif_limits.h"
+#include "security_limits.h"
 #include "nclx.h"
 
 #include <iomanip>

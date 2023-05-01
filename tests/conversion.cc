@@ -27,7 +27,7 @@
 #include <iomanip>
 #include "catch.hpp"
 #include "libheif/color-conversion/colorconversion.h"
-#include "libheif/heif_image.h"
+#include "libheif/pixelimage.h"
 
 // Enable for more verbose test output.
 #define DEBUG_ME 0

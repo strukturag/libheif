@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_FILE_H
-#define LIBHEIF_HEIF_FILE_H
+#ifndef LIBHEIF_FILE_H
+#define LIBHEIF_FILE_H
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"

@@ -21,8 +21,8 @@
 #ifndef HEIF_API_STRUCTS_H
 #define HEIF_API_STRUCTS_H
 
-#include "heif_image.h"
-#include "heif_context.h"
+#include "pixelimage.h"
+#include "context.h"
 
 #include <memory>
 

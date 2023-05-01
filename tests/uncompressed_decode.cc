@@ -26,7 +26,7 @@
 
 #include "catch.hpp"
 #include "libheif/heif.h"
-#include "libheif/heif_api_structs.h"
+#include "libheif/api_structs.h"
 #include <cstdint>
 #include <stdio.h>
 #include "test-config.h"

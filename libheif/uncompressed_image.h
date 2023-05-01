@@ -24,9 +24,9 @@
 
 #include "box.h"
 #include "bitstream.h"
-#include "heif_image.h"
-#include "heif_file.h"
-#include "heif_context.h"
+#include "pixelimage.h"
+#include "file.h"
+#include "context.h"
 
 #include <string>
 #include <vector>

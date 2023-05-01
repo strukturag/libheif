@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif_image.h"
-#include "heif_avif.h"
+#include "pixelimage.h"
+#include "avif.h"
 #include "bitstream.h"
 #include "common_utils.h"
 #include <limits>

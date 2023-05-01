@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif_hevc.h"
+#include "hevc.h"
 #include "bitstream.h"
 
 #include <cmath>

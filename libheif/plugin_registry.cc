@@ -26,7 +26,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include "heif_plugin_registry.h"
+#include "plugin_registry.h"
 
 #if HAVE_LIBDE265
 

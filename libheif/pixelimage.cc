@@ -19,13 +19,11 @@
 */
 
 
-#include "heif_image.h"
-#include "libheif/color-conversion/colorconversion.h"
+#include "pixelimage.h"
 #include "common_utils.h"
 
 #include <cassert>
 #include <cstring>
-
 #include <utility>
 
 

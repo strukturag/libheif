@@ -23,7 +23,7 @@
 
 #include <vector>
 #include <string>
-#include "heif_init.h"
+#include "init.h"
 
 std::vector<std::string> get_plugin_directories_from_environment_variable_unix();
 

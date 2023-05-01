@@ -19,8 +19,8 @@
  */
 
 
-#ifndef LIBHEIF_HEIF_INIT_H
-#define LIBHEIF_HEIF_INIT_H
+#ifndef LIBHEIF_INIT_H
+#define LIBHEIF_INIT_H
 
 #include "libheif/heif.h"
 
@@ -44,4 +44,4 @@ public:
 };
 
 
-#endif //LIBHEIF_HEIF_INIT_H
+#endif //LIBHEIF_INIT_H

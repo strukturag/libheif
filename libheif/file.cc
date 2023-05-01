@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif_file.h"
+#include "file.h"
 #include "libheif/box.h"
 
 #include <cstdint>

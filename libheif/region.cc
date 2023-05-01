@@ -20,7 +20,7 @@
 
 #include "region.h"
 #include "error.h"
-#include "heif_file.h"
+#include "file.h"
 #include "box.h"
 #include <utility>
 

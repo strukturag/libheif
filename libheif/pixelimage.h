@@ -19,8 +19,8 @@
 */
 
 
-#ifndef LIBHEIF_HEIF_IMAGE_H
-#define LIBHEIF_HEIF_IMAGE_H
+#ifndef LIBHEIF_IMAGE_H
+#define LIBHEIF_IMAGE_H
 
 #include "heif.h"
 #include "error.h"

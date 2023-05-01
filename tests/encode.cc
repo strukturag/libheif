@@ -26,8 +26,8 @@
 
 #include "catch.hpp"
 #include "libheif/heif.h"
-#include "libheif/heif_image.h"
-#include "libheif/heif_api_structs.h"
+#include "libheif/pixelimage.h"
+#include "libheif/api_structs.h"
 
 
 struct heif_image* createImage_RRGGBB_BE() {

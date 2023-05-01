@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_PLUGIN_REGISTRY_H
-#define LIBHEIF_HEIF_PLUGIN_REGISTRY_H
+#ifndef LIBHEIF_PLUGIN_REGISTRY_H
+#define LIBHEIF_PLUGIN_REGISTRY_H
 
 #include <map>
 #include <memory>

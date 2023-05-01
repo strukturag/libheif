@@ -18,10 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif_init.h"
+#include "init.h"
 #include "heif.h"
 #include "error.h"
-#include "heif_plugin_registry.h"
+#include "plugin_registry.h"
 #include "common_utils.h"
 #include "libheif/color-conversion/colorconversion.h"
 

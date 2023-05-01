@@ -27,11 +27,11 @@
 #endif
 
 #include "heif.h"
-#include "heif_file.h"
-#include "heif_image.h"
-#include "heif_api_structs.h"
-#include "heif_context.h"
-#include "heif_plugin_registry.h"
+#include "file.h"
+#include "pixelimage.h"
+#include "api_structs.h"
+#include "context.h"
+#include "plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
 #include <set>

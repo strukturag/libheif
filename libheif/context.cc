@@ -38,14 +38,14 @@
 #include <future>
 #endif
 
-#include "heif_context.h"
-#include "heif_file.h"
-#include "heif_image.h"
-#include "heif_api_structs.h"
-#include "heif_limits.h"
-#include "heif_hevc.h"
-#include "heif_avif.h"
-#include "heif_plugin_registry.h"
+#include "context.h"
+#include "file.h"
+#include "pixelimage.h"
+#include "api_structs.h"
+#include "security_limits.h"
+#include "hevc.h"
+#include "avif.h"
+#include "plugin_registry.h"
 #include "libheif/color-conversion/colorconversion.h"
 #include "metadata_compression.h"
 

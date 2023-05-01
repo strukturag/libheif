@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_CONTEXT_H
-#define LIBHEIF_HEIF_CONTEXT_H
+#ifndef LIBHEIF_CONTEXT_H
+#define LIBHEIF_CONTEXT_H
 
 #include <map>
 #include <memory>

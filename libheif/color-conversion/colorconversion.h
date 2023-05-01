@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_COLORCONVERSION_H
 #define LIBHEIF_COLORCONVERSION_H
 
-#include "libheif/heif_image.h"
+#include "libheif/pixelimage.h"
 #include <memory>
 #include <string>
 #include <vector>
