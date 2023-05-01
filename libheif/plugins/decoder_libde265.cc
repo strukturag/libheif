@@ -22,7 +22,7 @@
 #include "libheif/heif_plugin.h"
 //#include "libheif/heif_colorconversion.h"
 //#include "libheif/heif_api_structs.h"
-#include "heif_decoder_libde265.h"
+#include "decoder_libde265.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"

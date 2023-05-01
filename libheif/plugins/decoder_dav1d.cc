@@ -22,7 +22,7 @@
 #include "libheif/heif_plugin.h"
 #include "libheif/security_limits.h"
 #include "libheif/common_utils.h"
-#include "heif_decoder_dav1d.h"
+#include "decoder_dav1d.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"

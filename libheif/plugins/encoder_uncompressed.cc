@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "heif_encoder_uncompressed.h"
+#include "encoder_uncompressed.h"
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 

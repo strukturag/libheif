@@ -42,36 +42,36 @@ macro(plugin_compilation name varName optionName defineName)
 endmacro()
 
 
-set(X265_sources heif_encoder_x265.h heif_encoder_x265.cc)
+set(X265_sources encoder_x265.h encoder_x265.cc)
 set(X265_extra_plugin_sources)
 plugin_compilation(x265 X265 X265 X265)
 
-set(LIBDE265_sources heif_decoder_libde265.cc heif_decoder_libde265.h)
+set(LIBDE265_sources decoder_libde265.cc decoder_libde265.h)
 set(LIBDE265_extra_plugin_sources ../error.cc)
 plugin_compilation(libde265 LIBDE265 LIBDE265 LIBDE265)
 
-set(DAV1D_sources heif_decoder_dav1d.cc heif_decoder_dav1d.h)
+set(DAV1D_sources decoder_dav1d.cc decoder_dav1d.h)
 set(DAV1D_extra_plugin_sources ../common_utils.cc ../common_utils.h)
 plugin_compilation(dav1d DAV1D DAV1D DAV1D)
 
-set(AOM_DECODER_sources heif_decoder_aom.cc heif_decoder_aom.h)
+set(AOM_DECODER_sources decoder_aom.cc decoder_aom.h)
 set(AOM_DECODER_extra_plugin_sources)
 plugin_compilation(aomdec AOM AOM_DECODER AOM_DECODER)
 
-set(AOM_ENCODER_sources heif_encoder_aom.cc heif_encoder_aom.h)
+set(AOM_ENCODER_sources encoder_aom.cc encoder_aom.h)
 set(AOM_ENCODER_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
 plugin_compilation(aomenc AOM AOM_ENCODER AOM_ENCODER)
 
-set(SvtEnc_sources heif_encoder_svt.cc heif_encoder_svt.h)
+set(SvtEnc_sources encoder_svt.cc encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)
 plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 
-set(RAV1E_sources heif_encoder_rav1e.cc heif_encoder_rav1e.h)
+set(RAV1E_sources encoder_rav1e.cc encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
 
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
-            heif_encoder_uncompressed.h
-            heif_encoder_uncompressed.cc)
+            encoder_uncompressed.h
+            encoder_uncompressed.cc)
 endif ()

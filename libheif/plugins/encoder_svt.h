@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_ENCODER_SVT_H
-#define LIBHEIF_HEIF_ENCODER_SVT_H
+#ifndef LIBHEIF_ENCODER_SVT_H
+#define LIBHEIF_ENCODER_SVT_H
 
 #include "libheif/common_utils.h"
 

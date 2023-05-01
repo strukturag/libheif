@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_ENCODER_UNCOMPRESSED_H
-#define LIBHEIF_HEIF_ENCODER_UNCOMPRESSED_H
+#ifndef LIBHEIF_ENCODER_UNCOMPRESSED_H
+#define LIBHEIF_ENCODER_UNCOMPRESSED_H
 
 #include "libheif/common_utils.h"
 
@@ -52,4 +52,4 @@ MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }
 #endif
 
-#endif //LIBHEIF_HEIF_ENCODER_UNCOMPRESSED_H
+#endif //LIBHEIF_ENCODER_UNCOMPRESSED_H

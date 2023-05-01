@@ -18,14 +18,14 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_HEIF_ENCODER_AOM_H
-#define LIBHEIF_HEIF_ENCODER_AOM_H
+#ifndef LIBHEIF_ENCODER_RAV1E_H
+#define LIBHEIF_ENCODER_RAV1E_H
 
 #include "libheif/common_utils.h"
 
-const struct heif_encoder_plugin* get_encoder_plugin_aom();
+const struct heif_encoder_plugin* get_encoder_plugin_rav1e();
 
-#if PLUGIN_AOM_ENCODER
+#if PLUGIN_RAV1E
 extern "C" {
 MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }

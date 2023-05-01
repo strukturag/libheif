@@ -20,7 +20,7 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "heif_decoder_aom.h"
+#include "decoder_aom.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"

@@ -20,7 +20,7 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "heif_encoder_x265.h"
+#include "encoder_x265.h"
 #include <memory>
 #include <sstream>
 

@@ -32,7 +32,7 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include "heif_encoder_aom.h"
+#include "encoder_aom.h"
 
 #include <aom/aom_encoder.h>
 #include <aom/aomcx.h>
