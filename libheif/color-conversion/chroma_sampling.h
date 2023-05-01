@@ -18,16 +18,18 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_COLORCONVERSION_RGB2YUV_H
-#define LIBHEIF_COLORCONVERSION_RGB2YUV_H
+#ifndef LIBHEIF_CHROMA_SAMPLING_H
+#define LIBHEIF_CHROMA_SAMPLING_H
 
 #include "libheif/color-conversion/colorconversion.h"
-#include <vector>
 #include <memory>
+#include <vector>
 
 
-template<class Pixel>
-class Op_RGB_to_YCbCr : public ColorConversionOperation
+// --- downsampling ---
+
+template <class Pixel>
+class Op_YCbCr444_to_YCbCr420_average : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
@@ -41,12 +43,14 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-template class Op_RGB_to_YCbCr<uint8_t>;
-template class Op_RGB_to_YCbCr<uint16_t>;
+template class Op_YCbCr444_to_YCbCr420_average<uint8_t>;
+template class Op_YCbCr444_to_YCbCr420_average<uint16_t>;
 
 
+// --- upsampling ---
 
-class Op_RRGGBBxx_HDR_to_YCbCr420 : public ColorConversionOperation
+template <class Pixel>
+class Op_YCbCr420_bilinear_to_YCbCr444 : public ColorConversionOperation
 {
 public:
   std::vector<ColorStateWithCost>
@@ -60,34 +64,8 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-
-class Op_RGB24_32_to_YCbCr : public ColorConversionOperation
-{
-public:
-  std::vector<ColorStateWithCost>
-  state_after_conversion(const ColorState& input_state,
-                         const ColorState& target_state,
-                         const heif_color_conversion_options& options) const override;
-
-  std::shared_ptr<HeifPixelImage>
-  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
-};
+template class Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>;
+template class Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>;
 
 
-class Op_RGB24_32_to_YCbCr444_GBR : public ColorConversionOperation
-{
-public:
-  std::vector<ColorStateWithCost>
-  state_after_conversion(const ColorState& input_state,
-                         const ColorState& target_state,
-                         const heif_color_conversion_options& options) const override;
-
-  std::shared_ptr<HeifPixelImage>
-  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
-                     const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
-};
-
-#endif //LIBHEIF_COLORCONVERSION_RGB2YUV_H
+#endif //LIBHEIF_CHROMA_SAMPLING_H

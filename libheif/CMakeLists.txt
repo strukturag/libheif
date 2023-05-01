@@ -57,8 +57,9 @@ set(libheif_sources
     color-conversion/hdr_sdr.h
     color-conversion/alpha.cc
     color-conversion/alpha.h
-    ${libheif_headers}
-    )
+    color-conversion/chroma_sampling.cc
+    color-conversion/chroma_sampling.h
+    ${libheif_headers})
 
 add_library(heif ${libheif_sources})
 

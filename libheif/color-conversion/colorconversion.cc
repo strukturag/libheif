@@ -38,6 +38,7 @@
 #include "monochrome.h"
 #include "alpha.h"
 #include "hdr_sdr.h"
+#include "chroma_sampling.h"
 
 
 #define DEBUG_ME 0
