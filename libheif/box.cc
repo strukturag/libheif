@@ -2269,7 +2269,7 @@ Error Box_mdcv::write(StreamWriter& writer) const
 
 Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                                            const std::shared_ptr<class Box_ipma>& ipma,
-                                           std::vector<Property>& out_properties) const
+                                           std::vector<std::shared_ptr<Box>>& out_properties) const
 {
   const std::vector<Box_ipma::PropertyAssociation>* property_assoc = ipma->get_properties_for_item_ID(itemID);
   if (property_assoc == nullptr) {
@@ -2293,12 +2293,8 @@ Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                    sstr.str());
     }
 
-    Property prop;
-    prop.essential = assoc.essential;
-
     if (assoc.property_index > 0) {
-      prop.property = allProperties[assoc.property_index - 1];
-      out_properties.push_back(prop);
+      out_properties.push_back(allProperties[assoc.property_index - 1]);
     }
   }
 
@@ -2329,6 +2325,23 @@ std::shared_ptr<Box> Box_ipco::get_property_for_item_ID(heif_item_id itemID,
   }
 
   return nullptr;
+}
+
+
+bool Box_ipco::is_property_essential_for_item(heif_item_id itemId,
+                                              const std::shared_ptr<const class Box>& property,
+                                              const std::shared_ptr<class Box_ipma>& ipma) const
+{
+  // find property index
+
+  for (int i=0;i<(int)m_children.size();i++) {
+    if (m_children[i] == property) {
+      return ipma->is_property_essential_for_item(itemId, i);
+    }
+  }
+
+  assert(false); // non-existing property
+  return false;
 }
 
 
@@ -2417,6 +2430,23 @@ const std::vector<Box_ipma::PropertyAssociation>* Box_ipma::get_properties_for_i
   }
 
   return nullptr;
+}
+
+
+bool Box_ipma::is_property_essential_for_item(heif_item_id itemId, int propertyIndex) const
+{
+  for (const auto& entry : m_entries) {
+    if (entry.item_ID == itemId) {
+      for (const auto& assoc : entry.associations) {
+        if (assoc.property_index == propertyIndex) {
+          return assoc.essential;
+        }
+      }
+    }
+  }
+
+  assert(false);
+  return false;
 }
 
 

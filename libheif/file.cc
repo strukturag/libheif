@@ -423,7 +423,7 @@ std::string HeifFile::get_content_type(heif_item_id ID) const
 
 
 Error HeifFile::get_properties(heif_item_id imageID,
-                               std::vector<Box_ipco::Property>& properties) const
+                               std::vector<std::shared_ptr<Box>>& properties) const
 {
   if (!m_ipco_box) {
     return Error(heif_error_Invalid_input,
@@ -625,7 +625,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     // --- get properties for this image
 
-    std::vector<Box_ipco::Property> properties;
+    std::vector<std::shared_ptr<Box>> properties;
     Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
     if (err) {
       return err;
@@ -635,8 +635,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     std::shared_ptr<Box_hvcC> hvcC_box;
     for (auto& prop : properties) {
-      if (prop.property->get_short_type() == fourcc("hvcC")) {
-        hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop.property);
+      if (prop->get_short_type() == fourcc("hvcC")) {
+        hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop);
         if (hvcC_box) {
           break;
         }
@@ -662,7 +662,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     // --- get properties for this image
 
-    std::vector<Box_ipco::Property> properties;
+    std::vector<std::shared_ptr<Box>> properties;
     Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
     if (err) {
       return err;
@@ -672,8 +672,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     std::shared_ptr<Box_av1C> av1C_box;
     for (auto& prop : properties) {
-      if (prop.property->get_short_type() == fourcc("av1C")) {
-        av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop.property);
+      if (prop->get_short_type() == fourcc("av1C")) {
+        av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop);
         if (av1C_box) {
           break;
         }
@@ -930,7 +930,7 @@ Error HeifFile::set_hvcC_configuration(heif_item_id id, const Box_hvcC::configur
 
 Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
 {
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
 
   auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
                                                                                        m_ipma_box,

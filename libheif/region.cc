@@ -369,7 +369,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
                                                             heif_item_id item_id,
                                                             int reference_width, int reference_height)
 {
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
 
   Error err = file->get_properties(item_id, properties);
   if (err) {
@@ -379,8 +379,8 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
   int image_width = 0, image_height = 0;
 
   for (auto& property : properties) {
-    if (property.property->get_short_type() == fourcc("ispe")) {
-      auto ispe = std::dynamic_pointer_cast<Box_ispe>(property.property);
+    if (property->get_short_type() == fourcc("ispe")) {
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(property);
       image_width = ispe->get_width();
       image_height = ispe->get_height();
       break;
@@ -396,9 +396,9 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
   transform.d = image_height / (double) reference_height;
 
   for (auto& property : properties) {
-    switch (property.property->get_short_type()) {
+    switch (property->get_short_type()) {
       case fourcc("imir"): {
-        auto imir = std::dynamic_pointer_cast<Box_imir>(property.property);
+        auto imir = std::dynamic_pointer_cast<Box_imir>(property);
         if (imir->get_mirror_direction() == heif_transform_mirror_direction_horizontal) {
           transform.a = -transform.a;
           transform.b = -transform.b;
@@ -412,7 +412,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
         break;
       }
       case fourcc("irot"): {
-        auto irot = std::dynamic_pointer_cast<Box_irot>(property.property);
+        auto irot = std::dynamic_pointer_cast<Box_irot>(property);
         RegionCoordinateTransform tmp;
         switch (irot->get_rotation()) {
           case 90:
@@ -449,7 +449,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
         break;
       }
       case fourcc("clap"): {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+        auto clap = std::dynamic_pointer_cast<Box_clap>(property);
         int left = clap->left_rounded(image_width);
         int top = clap->top_rounded(image_height);
         transform.tx -= left;

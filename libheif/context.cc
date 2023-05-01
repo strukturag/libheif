@@ -569,7 +569,7 @@ Error HeifContext::interpret_heif_file()
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
 
-    std::vector<Box_ipco::Property> properties;
+    std::vector<std::shared_ptr<Box>> properties;
 
     Error err = m_heif_file->get_properties(pair.first, properties);
     if (err) {
@@ -578,7 +578,7 @@ Error HeifContext::interpret_heif_file()
 
     bool ispe_read = false;
     for (const auto& prop : properties) {
-      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
       if (ispe) {
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
@@ -602,13 +602,13 @@ Error HeifContext::interpret_heif_file()
       }
 
       if (ispe_read) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(prop.property);
+        auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
         if (clap) {
           image->set_resolution(clap->get_width_rounded(),
                                 clap->get_height_rounded());
         }
 
-        auto irot = std::dynamic_pointer_cast<Box_irot>(prop.property);
+        auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
         if (irot) {
           if (irot->get_rotation() == 90 ||
               irot->get_rotation() == 270) {
@@ -619,7 +619,7 @@ Error HeifContext::interpret_heif_file()
         }
       }
 
-      auto colr = std::dynamic_pointer_cast<Box_colr>(prop.property);
+      auto colr = std::dynamic_pointer_cast<Box_colr>(prop);
       if (colr) {
         auto profile = colr->get_color_profile();
         image->set_color_profile(profile);
@@ -681,7 +681,7 @@ Error HeifContext::interpret_heif_file()
           // --- this is an auxiliary image
           //     check whether it is an alpha channel and attach to the main image if yes
 
-          std::vector<Box_ipco::Property> properties;
+          std::vector<std::shared_ptr<Box>> properties;
           Error err = m_heif_file->get_properties(image->get_id(), properties);
           if (err) {
             return err;
@@ -689,7 +689,7 @@ Error HeifContext::interpret_heif_file()
 
           std::shared_ptr<Box_auxC> auxC_property;
           for (const auto& property : properties) {
-            auto auxC = std::dynamic_pointer_cast<Box_auxC>(property.property);
+            auto auxC = std::dynamic_pointer_cast<Box_auxC>(property);
             if (auxC) {
               auxC_property = auxC;
             }
@@ -1363,14 +1363,14 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   // --- apply image transformations
 
   if (options.ignore_transformations == false) {
-    std::vector<Box_ipco::Property> properties;
+    std::vector<std::shared_ptr<Box>> properties;
     auto ipco_box = m_heif_file->get_ipco_box();
     auto ipma_box = m_heif_file->get_ipma_box();
     error = ipco_box->get_properties_for_item_ID(ID, ipma_box, properties);
 
     for (const auto& property : properties) {
-      if (property.property->get_short_type() == fourcc("irot")) {
-        auto rot = std::dynamic_pointer_cast<Box_irot>(property.property);
+      if (property->get_short_type() == fourcc("irot")) {
+        auto rot = std::dynamic_pointer_cast<Box_irot>(property);
         std::shared_ptr<HeifPixelImage> rotated_img;
         error = img->rotate_ccw(rot->get_rotation(), rotated_img);
         if (error) {
@@ -1381,8 +1381,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      if (property.property->get_short_type() == fourcc("imir")) {
-        auto mirror = std::dynamic_pointer_cast<Box_imir>(property.property);
+      if (property->get_short_type() == fourcc("imir")) {
+        auto mirror = std::dynamic_pointer_cast<Box_imir>(property);
         error = img->mirror_inplace(mirror->get_mirror_direction());
         if (error) {
           return error;
@@ -1390,8 +1390,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       }
 
 
-      if (property.property->get_short_type() == fourcc("clap")) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(property.property);
+      if (property->get_short_type() == fourcc("clap")) {
+        auto clap = std::dynamic_pointer_cast<Box_clap>(property);
         std::shared_ptr<HeifPixelImage> clap_img;
 
         int img_width = img->get_width();

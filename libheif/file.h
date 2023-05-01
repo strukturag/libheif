@@ -101,19 +101,19 @@ public:
   std::shared_ptr<Box_ipma> get_ipma_box() const { return m_ipma_box; }
 
   Error get_properties(heif_item_id imageID,
-                       std::vector<Box_ipco::Property>& properties) const;
+                       std::vector<std::shared_ptr<Box>>& properties) const;
 
   template<class BoxType>
   std::shared_ptr<BoxType> get_property(heif_item_id imageID) const
   {
-    std::vector<Box_ipco::Property> properties;
+    std::vector<std::shared_ptr<Box>> properties;
     Error err = get_properties(imageID, properties);
     if (err) {
       return nullptr;
     }
 
     for (auto& property : properties) {
-      if (auto box = std::dynamic_pointer_cast<BoxType>(property.property)) {
+      if (auto box = std::dynamic_pointer_cast<BoxType>(property)) {
         return box;
       }
     }

@@ -429,7 +429,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
 {
   // Get the properties for this item
   // We need: ispe, cmpd, uncC
-  std::vector<Box_ipco::Property> item_properties;
+  std::vector<std::shared_ptr<Box>> item_properties;
   Error error = heif_file->get_properties(ID, item_properties);
   if (error) {
     return error;
@@ -440,7 +440,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   std::shared_ptr<Box_cmpd> cmpd;
   std::shared_ptr<Box_uncC> uncC;
   for (const auto& prop : item_properties) {
-    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop.property);
+    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
     if (ispe) {
       width = ispe->get_width();
       height = ispe->get_height();
@@ -457,12 +457,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       found_ispe = true;
     }
 
-    auto maybe_cmpd = std::dynamic_pointer_cast<Box_cmpd>(prop.property);
+    auto maybe_cmpd = std::dynamic_pointer_cast<Box_cmpd>(prop);
     if (maybe_cmpd) {
       cmpd = maybe_cmpd;
     }
 
-    auto maybe_uncC = std::dynamic_pointer_cast<Box_uncC>(prop.property);
+    auto maybe_uncC = std::dynamic_pointer_cast<Box_uncC>(prop);
     if (maybe_uncC) {
       uncC = maybe_uncC;
     }

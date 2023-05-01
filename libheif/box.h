@@ -531,19 +531,17 @@ public:
     set_short_type(fourcc("ipco"));
   }
 
-  struct Property
-  {
-    bool essential; // TODO: move this into PropertyBox and remove Property completely
-    std::shared_ptr<Box> property;
-  };
-
   Error get_properties_for_item_ID(heif_item_id itemID,
                                    const std::shared_ptr<class Box_ipma>&,
-                                   std::vector<Property>& out_properties) const;
+                                   std::vector<std::shared_ptr<Box>>& out_properties) const;
 
   std::shared_ptr<Box> get_property_for_item_ID(heif_item_id itemID,
                                                 const std::shared_ptr<class Box_ipma>&,
                                                 uint32_t property_box_type) const;
+
+  bool is_property_essential_for_item(heif_item_id itemId,
+                                      const std::shared_ptr<const class Box>& property,
+                                      const std::shared_ptr<class Box_ipma>&) const;
 
   std::string dump(Indent&) const override;
 
@@ -600,6 +598,8 @@ public:
   };
 
   const std::vector<PropertyAssociation>* get_properties_for_item_ID(heif_item_id itemID) const;
+
+  bool is_property_essential_for_item(heif_item_id itemId, int propertyIndex) const;
 
   void add_property_for_item_ID(heif_item_id itemID,
                                 PropertyAssociation assoc);

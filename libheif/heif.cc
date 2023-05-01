@@ -1830,7 +1830,7 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
     // We do not pass the error, because a missing ipco should have been detected already when reading the file.
@@ -1850,7 +1850,7 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
       match = true;
     }
     else {
-      match = (property.property->get_short_type() == type);
+      match = (property->get_short_type() == type);
     }
 
     if (match) {
@@ -1877,7 +1877,7 @@ int heif_item_get_transformation_properties(const struct heif_context* context,
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
     // We do not pass the error, because a missing ipco should have been detected already when reading the file.
@@ -1892,9 +1892,9 @@ int heif_item_get_transformation_properties(const struct heif_context* context,
   int property_id = 1;
 
   for (const auto& property : properties) {
-    bool match = (property.property->get_short_type() == fourcc("imir") ||
-                  property.property->get_short_type() == fourcc("irot") ||
-                  property.property->get_short_type() == fourcc("clap"));
+    bool match = (property->get_short_type() == fourcc("imir") ||
+                  property->get_short_type() == fourcc("irot") ||
+                  property->get_short_type() == fourcc("clap"));
 
     if (match) {
       if (out_list && out_idx < count) {
@@ -1918,7 +1918,7 @@ enum heif_item_property_type heif_item_get_property_type(const struct heif_conte
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(id, properties);
   if (err) {
     // We do not pass the error, because a missing ipco should have been detected already when reading the file.
@@ -1929,7 +1929,7 @@ enum heif_item_property_type heif_item_get_property_type(const struct heif_conte
     return heif_item_property_type_invalid;
   }
 
-  auto property = properties[propertyId - 1].property;
+  auto property = properties[propertyId - 1];
   return (enum heif_item_property_type) property->get_short_type();
 }
 
@@ -1953,7 +1953,7 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
 
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(itemId, properties);
   if (err) {
     return err.error_struct(context->context.get());
@@ -1963,7 +1963,7 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
   }
 
-  auto udes = std::dynamic_pointer_cast<Box_udes>(properties[propertyId - 1].property);
+  auto udes = std::dynamic_pointer_cast<Box_udes>(properties[propertyId - 1]);
   if (!udes) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
   }
@@ -2013,7 +2013,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(itemId, properties);
   if (err) {
     return heif_transform_mirror_direction_horizontal;
@@ -2023,7 +2023,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
     return heif_transform_mirror_direction_horizontal;
   }
 
-  auto imir = std::dynamic_pointer_cast<Box_imir>(properties[propertyId - 1].property);
+  auto imir = std::dynamic_pointer_cast<Box_imir>(properties[propertyId - 1]);
   if (!imir) {
     return heif_transform_mirror_direction_horizontal;
   }
@@ -2038,7 +2038,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(itemId, properties);
   if (err) {
     return -1;
@@ -2048,7 +2048,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
     return -1;
   }
 
-  auto irot = std::dynamic_pointer_cast<Box_irot>(properties[propertyId - 1].property);
+  auto irot = std::dynamic_pointer_cast<Box_irot>(properties[propertyId - 1]);
   if (!irot) {
     return -1;
   }
@@ -2065,7 +2065,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 {
   auto file = context->context->get_heif_file();
 
-  std::vector<Box_ipco::Property> properties;
+  std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(itemId, properties);
   if (err) {
     return;
@@ -2075,7 +2075,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
     return;
   }
 
-  auto clap = std::dynamic_pointer_cast<Box_clap>(properties[propertyId - 1].property);
+  auto clap = std::dynamic_pointer_cast<Box_clap>(properties[propertyId - 1]);
   if (!clap) {
     return;
   }
