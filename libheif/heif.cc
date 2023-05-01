@@ -1982,7 +1982,7 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
 
 
 LIBHEIF_API
-struct heif_error heif_item_set_property_user_description(const struct heif_context* context,
+struct heif_error heif_item_add_property_user_description(const struct heif_context* context,
                                                           heif_item_id itemId,
                                                           const struct heif_property_user_description* description,
                                                           heif_property_id* out_propertyId)
@@ -1992,10 +1992,10 @@ struct heif_error heif_item_set_property_user_description(const struct heif_cont
   }
 
   auto udes = std::make_shared<Box_udes>();
-  udes->set_lang(description->lang);
-  udes->set_name(description->name);
-  udes->set_description(description->description);
-  udes->set_tags(description->tags);
+  udes->set_lang(description->lang ? description->lang : "");
+  udes->set_name(description->name ? description->name : "");
+  udes->set_description(description->description ? description->description : "");
+  udes->set_tags(description->tags ? description->tags : "");
 
   heif_property_id id = context->context->add_property(itemId, udes);
 

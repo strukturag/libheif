@@ -871,11 +871,11 @@ int main(int argc, char** argv)
     heif_item_id pitm_id = heif_image_handle_get_item_id(primary_image_handle);
 
     heif_property_user_description udes;
-    udes.lang = "";
-    udes.name = "";
-    udes.tags = "";
+    udes.lang = nullptr;
+    udes.name = nullptr;
+    udes.tags = nullptr;
     udes.description = property_pitm_description.c_str();
-    err = heif_item_set_property_user_description(context.get(), pitm_id, &udes, nullptr);
+    err = heif_item_add_property_user_description(context.get(), pitm_id, &udes, nullptr);
     if (err.code) {
       std::cerr << "Cannot set user description\n";
       return 5;

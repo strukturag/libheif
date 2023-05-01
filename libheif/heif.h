@@ -996,6 +996,29 @@ enum heif_item_property_type
   heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
 };
 
+// Get the heif_property_id for a heif_item_id.
+// You may specify which property 'type' you want to receive.
+// If you specify 'heif_item_property_type_invalid', all properties associated to that item are returned.
+LIBHEIF_API
+int heif_item_get_properties_of_type(const struct heif_context* context,
+                                     heif_item_id id,
+                                     enum heif_item_property_type type,
+                                     heif_property_id* out_list,
+                                     int count);
+
+// Returns all transformative properties in the correct order.
+// This includes "irot", "imir", "clap".
+LIBHEIF_API
+int heif_item_get_transformation_properties(const struct heif_context* context,
+                                            heif_item_id id,
+                                            heif_property_id* out_list,
+                                            int count);
+
+LIBHEIF_API
+enum heif_item_property_type heif_item_get_property_type(const struct heif_context* context,
+                                                         heif_item_id id,
+                                                         heif_property_id property_id);
+
 // The strings are managed by libheif. They will be deleted in heif_property_user_description_release().
 struct heif_property_user_description
 {
@@ -1009,32 +1032,18 @@ struct heif_property_user_description
   const char* tags;
 };
 
-LIBHEIF_API
-int heif_item_get_properties_of_type(const struct heif_context* context,
-                                     heif_item_id id,
-                                     enum heif_item_property_type type,
-                                     heif_property_id* out_list,
-                                     int count);
-
-LIBHEIF_API
-int heif_item_get_transformation_properties(const struct heif_context* context,
-                                            heif_item_id id,
-                                            heif_property_id* out_list,
-                                            int count);
-
-LIBHEIF_API
-enum heif_item_property_type heif_item_get_property_type(const struct heif_context* context,
-                                                         heif_item_id id,
-                                                         heif_property_id property_id);
-
+// Get the "udes" user description property content.
+// Undefined strings are returned as empty strings.
 LIBHEIF_API
 struct heif_error heif_item_get_property_user_description(const struct heif_context* context,
                                                           heif_item_id itemId,
                                                           heif_property_id propertyId,
                                                           struct heif_property_user_description** out);
 
+// Add a "udes" user description property to the item.
+// If any string pointers are NULL, an empty string will be used instead.
 LIBHEIF_API
-struct heif_error heif_item_set_property_user_description(const struct heif_context* context,
+struct heif_error heif_item_add_property_user_description(const struct heif_context* context,
                                                           heif_item_id itemId,
                                                           const struct heif_property_user_description* description,
                                                           heif_property_id* out_propertyId);
