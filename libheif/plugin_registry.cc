@@ -68,6 +68,10 @@
 
 #endif
 
+#if WITH_UNCOMPRESSED_CODEC
+#include "libheif/plugins/heif_encoder_uncompressed.h"
+#endif
+
 
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
@@ -114,6 +118,10 @@ void register_default_plugins()
 
 #if HAVE_SvtEnc
   register_encoder(get_encoder_plugin_svt());
+#endif
+
+#if WITH_UNCOMPRESSED_CODEC
+  register_encoder(get_encoder_plugin_uncompressed());
 #endif
 }
 

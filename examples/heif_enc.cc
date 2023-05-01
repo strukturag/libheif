@@ -342,6 +342,9 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 static void show_list_of_all_encoders()
 {
   for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1
+#if false && WITH_UNCOMPRESSED_CODEC
+, heif_compression_uncompressed
+#endif
   }) {
 
     switch (compression_format) {
@@ -366,14 +369,6 @@ static void show_list_of_all_encoders()
 
     show_list_of_encoders(encoder_descriptors, count);
   }
-
-#if 0
-#if WITH_UNCOMPRESSED_CODEC
-  std::cout << "uncompressed: yes\n";
-#else
-  std::cout << "uncompressed: no\n";
-#endif
-#endif
 }
 
 
