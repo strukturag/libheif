@@ -477,6 +477,8 @@ void heif_free_list_of_compatible_brands(heif_brand2* brands_list);
 // - image/heif           HEIF file using any other compression
 // - image/heic-sequence  HEIF image sequence using h265 compression
 // - image/heif-sequence  HEIF image sequence using any other compression
+// - image/avif           AVIF image
+// - image/avif-sequence  AVIF sequence
 // - image/jpeg    JPEG image
 // - image/png     PNG image
 // If the format could not be detected, an empty string is returned.
