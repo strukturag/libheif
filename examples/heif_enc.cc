@@ -108,7 +108,7 @@ static struct option long_options[] = {
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if false && WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
     {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
@@ -153,7 +153,7 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if false && WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
@@ -372,7 +372,7 @@ static void show_list_of_all_encoders()
   }
 
 #if 0
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if WITH_UNCOMPRESSED_CODEC
   std::cout << "uncompressed: yes\n";
 #else
   std::cout << "uncompressed: no\n";
@@ -440,7 +440,7 @@ int main(int argc, char** argv)
   while (true) {
     int option_index = 0;
     int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if false && WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
         , long_options, &option_index);
@@ -478,7 +478,7 @@ int main(int argc, char** argv)
       case 'A':
         force_enc_av1f = true;
         break;
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if false && WITH_UNCOMPRESSED_CODEC
         case 'U':
         force_enc_uncompressed = true;
         break;

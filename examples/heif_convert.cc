@@ -159,7 +159,7 @@ void list_all_decoders()
   std::cout << "AVIF decoders:\n";
   list_decoders(heif_compression_AV1);
 
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if WITH_UNCOMPRESSED_CODEC
   std::cout << "uncompressed: yes\n";
 #else
   std::cout << "uncompressed: no\n";
