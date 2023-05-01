@@ -121,9 +121,7 @@ static struct option long_options[] = {
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
-#if HAVE_LIBSHARPYUV
     {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
-#endif
     {0, 0,                                                       0,               0},
 };
 
@@ -167,10 +165,8 @@ void show_help(const char* argv0)
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
-#ifdef HAVE_LIBSHARPYUV
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
-#endif
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
 
@@ -530,6 +526,12 @@ int main(int argc, char** argv)
         if (chroma_downsampling == "nn") { // abbreviation
           chroma_downsampling = "nearest-neighbor";
         }
+#if !HAVE_LIBSHARPYUV
+        if (chroma_downsampling == "sharp-yuv") {
+          std::cerr << "Error: sharp-yuv chroma downsampling method has not been compiled into libheif.\n";
+          return 5;
+        }
+#endif
         break;
     }
   }
