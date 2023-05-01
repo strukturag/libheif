@@ -29,33 +29,23 @@
 #include "plugin_registry.h"
 
 #if HAVE_LIBDE265
-
 #include "libheif/plugins/heif_decoder_libde265.h"
-
 #endif
 
 #if HAVE_X265
-
 #include "libheif/plugins/heif_encoder_x265.h"
-
 #endif
 
 #if HAVE_AOM_ENCODER
-
 #include "libheif/plugins/heif_encoder_aom.h"
-
 #endif
 
 #if HAVE_AOM_DECODER
-
 #include "libheif/plugins/heif_decoder_aom.h"
-
 #endif
 
 #if HAVE_RAV1E
-
 #include "libheif/plugins/heif_encoder_rav1e.h"
-
 #endif
 
 #if HAVE_DAV1D
@@ -63,9 +53,7 @@
 #endif
 
 #if HAVE_SvtEnc
-
 #include "libheif/plugins/heif_encoder_svt.h"
-
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
