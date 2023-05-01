@@ -1916,8 +1916,6 @@ int heif_encoder_descriptor_supportes_lossless_compression(const struct heif_enc
 
 // See ISO/IEC 23008-12:2022 Section 6.10 "Region items and region annotations"
 
-// EXPERIMENTAL: API is not stable and open for discussion.
-
 struct heif_region_item;
 
 enum heif_region_type
@@ -1926,8 +1924,8 @@ enum heif_region_type
   heif_region_type_rectangle = 1,
   heif_region_type_ellipse = 2,
   heif_region_type_polygon = 3,
-  heif_region_type_referenced_mask = 4,  // TODO: or should we keep 'referenced/inline' an implementation detail that is not exposed?
-  heif_region_type_inline_mask = 5,
+  heif_region_type_referenced_mask = 4, // TODO
+  heif_region_type_inline_mask = 5,     // TODO
   heif_region_type_polyline = 6
 };
 
@@ -1955,6 +1953,8 @@ heif_item_id heif_region_item_get_id(struct heif_region_item*);
 LIBHEIF_API
 void heif_region_item_release(struct heif_region_item*);
 
+// The reference size specifies the coordinate space using for the region items.
+// It is the size of the area of the encoded image prior to any transformations.
 LIBHEIF_API
 void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* width, uint32_t* height);
 
@@ -1968,40 +1968,10 @@ int heif_region_item_get_list_of_regions(const struct heif_region_item* region_i
                                          int max_count);
 
 LIBHEIF_API
-struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* image_handle,
-                                                    uint32_t reference_width, uint32_t reference_height,
-                                                    struct heif_region_item** out_region_item);
-
-LIBHEIF_API
-struct heif_error heif_region_item_add_region_point(struct heif_region_item*,
-                                                    int32_t x, int32_t y);
-
-LIBHEIF_API
-struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item*,
-                                                    int32_t x, int32_t y,
-                                                    uint32_t width, uint32_t height);
-
-LIBHEIF_API
-struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item*,
-                                                      int32_t x, int32_t y,
-                                                      uint32_t radius_x, uint32_t radius_y);
-
-// pts[] is an array of 2*nPoints, each pair representing x and y.
-LIBHEIF_API
-struct heif_error heif_region_item_add_region_polygon(struct heif_region_item*,
-                                                      const int32_t* pts, int nPoints);
-
-LIBHEIF_API
-struct heif_error heif_region_item_add_region_polyline(struct heif_region_item*,
-                                                       const int32_t* pts, int nPoints);
-
-
-LIBHEIF_API
 void heif_region_release(const struct heif_region* region);
 
 LIBHEIF_API
 void heif_region_release_many(const struct heif_region* const* regions, int num);
-
 
 LIBHEIF_API
 enum heif_region_type heif_region_get_type(const struct heif_region* region);
@@ -2061,40 +2031,35 @@ struct heif_error heif_region_get_polyline_points_scaled(const struct heif_regio
                                                          double* pts,
                                                          heif_item_id image_id);
 
-#if 0
-struct heif_region_annotation;
-
-enum heif_region_annotation_type
-{
-  heif_region_annotation_type_user_description,
-  heif_region_annotation_type_image
-};
+// --- adding region items
 
 LIBHEIF_API
-int heif_region_item_get_number_of_annotations(const struct heif_region_item* region_item);
+struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* image_handle,
+                                                    uint32_t reference_width, uint32_t reference_height,
+                                                    struct heif_region_item** out_region_item);
 
 LIBHEIF_API
-int heif_region_item_get_list_of_annotations(const struct heif_region_item* region_item,
-                                             struct heif_region_annotation* annotations, int max_count);
+struct heif_error heif_region_item_add_region_point(struct heif_region_item*,
+                                                    int32_t x, int32_t y);
 
 LIBHEIF_API
-enum heif_region_annotation_type heif_region_annotation_get_type(const struct heif_region_annotation* annotation);
-
-
-// When receiving this from the library, we have to free all the strings. The library makes a copy.
-// When passing this to the library, the library will also make a copy and we have to free our strings.
-struct heif_region_annotation_user_description
-{
-  const char* lang;
-  const char* name;
-  const char* description;
-  const char* tags;
-};
+struct heif_error heif_region_item_add_region_rectangle(struct heif_region_item*,
+                                                        int32_t x, int32_t y,
+                                                        uint32_t width, uint32_t height);
 
 LIBHEIF_API
-struct heif_error heif_region_annotation_get_user_description(const struct heif_region_annotation* annotation,
-                                                              struct heif_region_annotation_user_description* out);
-#endif
+struct heif_error heif_region_item_add_region_ellipse(struct heif_region_item*,
+                                                      int32_t x, int32_t y,
+                                                      uint32_t radius_x, uint32_t radius_y);
+
+// pts[] is an array of 2*nPoints, each pair representing x and y.
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_polygon(struct heif_region_item*,
+                                                      const int32_t* pts, int nPoints);
+
+LIBHEIF_API
+struct heif_error heif_region_item_add_region_polyline(struct heif_region_item*,
+                                                       const int32_t* pts, int nPoints);
 
 #ifdef __cplusplus
 }

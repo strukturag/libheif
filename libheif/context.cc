@@ -455,14 +455,14 @@ void HeifContext::reset_to_empty_heif()
   m_primary_image.reset();
 }
 
-heif_item_id HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
+std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
   std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
 
   auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
   add_region_item(regionItem);
 
-  return box->get_item_ID();
+  return regionItem;
 }
 
 void HeifContext::write(StreamWriter& writer)

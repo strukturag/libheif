@@ -3179,18 +3179,13 @@ struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* im
                                                     uint32_t reference_width, uint32_t reference_height,
                                                     struct heif_region_item** out_region_item)
 {
-  heif_item_id regionItemId = image_handle->context->add_region_item(reference_width, reference_height);
-  image_handle->image->add_region_item_id(regionItemId);
-
-  std::shared_ptr<RegionItem> regionItem = image_handle->context->get_region_item(regionItemId);
+  std::shared_ptr<RegionItem> regionItem = image_handle->context->add_region_item(reference_width, reference_height);
+  image_handle->image->add_region_item_id(regionItem->item_id);
 
   if (out_region_item) {
-    auto r = image_handle->context->get_region_item(regionItemId);
-    assert(r);
-
     heif_region_item* item = new heif_region_item();
     item->context = image_handle->context;
-    item->region_item = r;
+    item->region_item = regionItem;
 
     *out_region_item = item;
   }

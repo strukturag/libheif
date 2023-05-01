@@ -424,7 +424,7 @@ public:
     m_region_items.push_back(std::move(region_item));
   }
 
-  heif_item_id add_region_item(uint32_t reference_width, uint32_t reference_height);
+  std::shared_ptr<RegionItem>  add_region_item(uint32_t reference_width, uint32_t reference_height);
 
   std::shared_ptr<RegionItem> get_region_item(heif_item_id id) const
   {
