@@ -24,7 +24,7 @@
 
 #include "libheif/bitstream.h"
 #include "libheif/color-conversion/colorconversion.h"
-#include "libheif/image.h"
+#include "libheif/pixelimage.h"
 
 static bool is_valid_chroma(uint8_t chroma)
 {

@@ -83,6 +83,7 @@ int main() {
     target_include_directories(heif-enc PRIVATE ${JPEG_INCLUDE_DIRS})
 
     target_sources(heif-convert PRIVATE encoder_jpeg.cc encoder_jpeg.h)
+    target_sources(heif-enc PRIVATE decoder.h decoder_jpeg.cc decoder_jpeg.h)
 endif ()
 
 
