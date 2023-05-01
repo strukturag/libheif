@@ -371,10 +371,12 @@ static void show_list_of_all_encoders()
     show_list_of_encoders(encoder_descriptors, count);
   }
 
+#if 0
 #if ENABLE_UNCOMPRESSED_ENCODER
   std::cout << "uncompressed: yes\n";
 #else
   std::cout << "uncompressed: no\n";
+#endif
 #endif
 }
 
