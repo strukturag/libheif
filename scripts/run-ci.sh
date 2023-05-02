@@ -254,12 +254,12 @@ if [ ! -z "$TARBALL" ]; then
     pushd build
     cmake .. --preset=release
     make package_source
-    mv libheif-$VERSION-Source.tar.gz ..
+    mv libheif-$VERSION.tar.gz ..
     popd
 
     echo "Building from tarball ..."
     tar xf libheif-$VERSION-Source.tar*
-    pushd libheif-$VERSION-Source
+    pushd libheif-$VERSION
     mkdir build
     pushd build
     cmake .. --preset=release
