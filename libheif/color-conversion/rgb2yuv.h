@@ -41,9 +41,6 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-template class Op_RGB_to_YCbCr<uint8_t>;
-template class Op_RGB_to_YCbCr<uint16_t>;
-
 
 
 class Op_RRGGBBxx_HDR_to_YCbCr420 : public ColorConversionOperation

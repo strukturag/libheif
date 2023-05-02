@@ -55,8 +55,4 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-
-
-
-
 #endif //LIBHEIF_COLORCONVERSION_MONOCHROME_H

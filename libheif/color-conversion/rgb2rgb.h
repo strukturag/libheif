@@ -116,6 +116,4 @@ public:
 };
 
 
-
-
 #endif //LIBHEIF_RGB2RGB_H

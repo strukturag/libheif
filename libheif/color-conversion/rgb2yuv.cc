@@ -267,6 +267,9 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   return outimg;
 }
 
+template class Op_RGB_to_YCbCr<uint8_t>;
+template class Op_RGB_to_YCbCr<uint16_t>;
+
 
 std::vector<ColorStateWithCost>
 Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_state,

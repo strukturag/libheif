@@ -42,9 +42,6 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-template class Op_YCbCr_to_RGB<uint8_t>;
-template class Op_YCbCr_to_RGB<uint16_t>;
-
 
 class Op_YCbCr420_to_RGB24 : public ColorConversionOperation
 {
@@ -89,6 +86,5 @@ public:
                      const ColorState& target_state,
                      const heif_color_conversion_options& options) const override;
 };
-
 
 #endif //LIBHEIF_COLORCONVERSION_YUV2RGB_H

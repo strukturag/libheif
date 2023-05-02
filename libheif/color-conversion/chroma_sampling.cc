@@ -235,6 +235,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   return outimg;
 }
 
+template class Op_YCbCr444_to_YCbCr420_average<uint8_t>;
+template class Op_YCbCr444_to_YCbCr420_average<uint16_t>;
 
 
 
@@ -508,3 +510,6 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   return outimg;
 }
+
+template class Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>;
+template class Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>;

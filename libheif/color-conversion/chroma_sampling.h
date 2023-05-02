@@ -43,9 +43,6 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
-template class Op_YCbCr444_to_YCbCr420_average<uint8_t>;
-template class Op_YCbCr444_to_YCbCr420_average<uint16_t>;
-
 
 // --- upsampling ---
 
@@ -63,9 +60,5 @@ public:
                      const ColorState& target_state,
                      const heif_color_conversion_options& options) const override;
 };
-
-template class Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>;
-template class Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>;
-
 
 #endif //LIBHEIF_CHROMA_SAMPLING_H
