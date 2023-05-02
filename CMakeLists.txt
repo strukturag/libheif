@@ -157,7 +157,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
-option(WITH_GDKPIXBUF "Build gdk-pixbuf plugin" ON)
+option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
