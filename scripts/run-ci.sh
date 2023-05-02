@@ -258,7 +258,7 @@ if [ ! -z "$TARBALL" ]; then
     popd
 
     echo "Building from tarball ..."
-    tar xf libheif-$VERSION-Source.tar*
+    tar xf libheif-$VERSION.tar*
     pushd libheif-$VERSION
     mkdir build
     pushd build
