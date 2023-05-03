@@ -999,6 +999,8 @@ enum heif_item_property_type
 // Get the heif_property_id for a heif_item_id.
 // You may specify which property 'type' you want to receive.
 // If you specify 'heif_item_property_type_invalid', all properties associated to that item are returned.
+// The number of properties is returned, which are not more than 'count' if (out_list != nullptr).
+// By setting out_list==nullptr, you can query the number of properties, 'count' is ignored.
 LIBHEIF_API
 int heif_item_get_properties_of_type(const struct heif_context* context,
                                      heif_item_id id,
@@ -1008,6 +1010,8 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
 
 // Returns all transformative properties in the correct order.
 // This includes "irot", "imir", "clap".
+// The number of properties is returned, which are not more than 'count' if (out_list != nullptr).
+// By setting out_list==nullptr, you can query the number of properties, 'count' is ignored.
 LIBHEIF_API
 int heif_item_get_transformation_properties(const struct heif_context* context,
                                             heif_item_id id,

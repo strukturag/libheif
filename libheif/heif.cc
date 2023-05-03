@@ -1838,10 +1838,6 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
     return 0;
   }
 
-  if (out_list == nullptr) {
-    return 0;
-  }
-
   int out_idx = 0;
   int property_id = 1;
 
@@ -1882,10 +1878,6 @@ int heif_item_get_transformation_properties(const struct heif_context* context,
   Error err = file->get_properties(id, properties);
   if (err) {
     // We do not pass the error, because a missing ipco should have been detected already when reading the file.
-    return 0;
-  }
-
-  if (out_list == nullptr) {
     return 0;
   }
 
