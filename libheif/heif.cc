@@ -949,6 +949,7 @@ void fill_default_decoding_options(heif_decoding_options& options)
 
   // version 5
 
+  options.color_conversion_options.version = 1;
   options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
@@ -2843,6 +2844,7 @@ static void set_default_options(heif_encoding_options& options)
   options.macOS_compatibility_workaround_no_nclx_profile = true;
   options.image_orientation = heif_orientation_normal;
 
+  options.color_conversion_options.version = 1;
   options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
