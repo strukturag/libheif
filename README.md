@@ -120,7 +120,7 @@ The basic build steps are as follows:
 ````
 mkdir build
 cd build
-cmake .. --preset=release
+cmake --preset=release ..
 make
 ````
 
@@ -149,7 +149,7 @@ This can be done, for example, by calling `ccmake .` from within the `build` dir
     ```
     mkdir build
     cd build
-    cmake .. --preset=release
+    cmake --preset=release ..
     ./configure
     make
     ```
