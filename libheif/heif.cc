@@ -50,7 +50,7 @@
 #include <vector>
 #include <cstring>
 
-#if (defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
+#ifdef _WIN32
 // for _write
 #include <io.h>
 #else
@@ -477,8 +477,8 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd)
 
   std::string dump = ctx->context->debug_dump_boxes();
   // TODO(fancycode): Should we return an error if writing fails?
-#if (defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)) && !defined(HAVE_UNISTD_H)
-  auto written = _write(fd, dump.c_str(), dump.size());
+#ifdef _WIN32
+  auto written = _write(fd, dump.c_str(), static_cast<unsigned int>(dump.size()));
 #else
   auto written = write(fd, dump.c_str(), dump.size());
 #endif
