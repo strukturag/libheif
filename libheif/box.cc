@@ -604,7 +604,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   // Box size may not be larger than remaining bytes in parent box.
 
-  if (range.get_remaining_bytes() < box_size_without_header) {
+  if ((int64_t)range.get_remaining_bytes() < box_size_without_header) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size);
   }
@@ -1868,7 +1868,13 @@ Error Box_colr::parse(BitstreamRange& range)
   }
   else if (colour_type == fourcc("prof") ||
            colour_type == fourcc("rICC")) {
-    auto profile_size = get_box_size() - get_header_size() - 4;
+    uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
+    if (profile_size_64 > std::numeric_limits<size_t>::max()) {
+      return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
+    }
+
+    size_t profile_size = static_cast<size_t>(profile_size_64);
+
     status = range.wait_for_available_bytes(profile_size);
     if (status != StreamReader::size_reached) {
       // TODO: return recoverable error at timeout
@@ -3309,7 +3315,7 @@ Error Box_av1C::parse(BitstreamRange& range)
     c.initial_presentation_delay_minus_one = byte & 0x0F;
   }
 
-  const int64_t configOBUs_bytes = range.get_remaining_bytes();
+  const size_t configOBUs_bytes = range.get_remaining_bytes();
   m_config_OBUs.resize(configOBUs_bytes);
 
   if (!range.read(m_config_OBUs.data(), configOBUs_bytes)) {

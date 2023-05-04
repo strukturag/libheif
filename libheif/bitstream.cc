@@ -66,7 +66,7 @@ bool StreamReader_istream::seek(int64_t position)
 }
 
 
-StreamReader_memory::StreamReader_memory(const uint8_t* data, int64_t size, bool copy)
+StreamReader_memory::StreamReader_memory(const uint8_t* data, size_t size, bool copy)
     : m_length(size),
       m_position(0)
 {
@@ -144,7 +144,7 @@ StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_s
 
 
 BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
-                               uint64_t length,
+                               size_t length,
                                BitstreamRange* parent)
     : m_istr(std::move(istr)), m_parent_range(parent), m_remaining(length)
 {
@@ -259,7 +259,7 @@ std::string BitstreamRange::read_string()
 }
 
 
-bool BitstreamRange::read(uint8_t* data, int64_t n)
+bool BitstreamRange::read(uint8_t* data, size_t n)
 {
   if (!prepare_read(n)) {
     return false;
@@ -276,15 +276,11 @@ bool BitstreamRange::read(uint8_t* data, int64_t n)
 }
 
 
-bool BitstreamRange::prepare_read(int64_t nBytes)
+bool BitstreamRange::prepare_read(size_t nBytes)
 {
-  if (nBytes < 0) {
-    // --- we cannot read negative amounts of bytes
+  // Note: we do not test for negative nBytes anymore because we now use the unsigned size_t
 
-    assert(false);
-    return false;
-  }
-  else if (m_remaining < nBytes) {
+  if (m_remaining < nBytes) {
     // --- not enough data left in box -> move to end of box and set error flag
 
     skip_to_end_of_box();
@@ -308,7 +304,7 @@ bool BitstreamRange::prepare_read(int64_t nBytes)
 }
 
 
-StreamReader::grow_status BitstreamRange::wait_for_available_bytes(int64_t nBytes)
+StreamReader::grow_status BitstreamRange::wait_for_available_bytes(size_t nBytes)
 {
   int64_t target_size = m_istr->get_position() + nBytes;
 
@@ -316,7 +312,7 @@ StreamReader::grow_status BitstreamRange::wait_for_available_bytes(int64_t nByte
 }
 
 
-void BitstreamRange::skip_without_advancing_file_pos(int64_t n)
+void BitstreamRange::skip_without_advancing_file_pos(size_t n)
 {
   assert(n <= m_remaining);
 

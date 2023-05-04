@@ -89,7 +89,7 @@ private:
 class StreamReader_memory : public StreamReader
 {
 public:
-  StreamReader_memory(const uint8_t* data, int64_t size, bool copy);
+  StreamReader_memory(const uint8_t* data, size_t size, bool copy);
 
   ~StreamReader_memory() override;
 
@@ -136,7 +136,7 @@ class BitstreamRange
 {
 public:
   BitstreamRange(std::shared_ptr<StreamReader> istr,
-                 uint64_t length,
+                 size_t length,
                  BitstreamRange* parent = nullptr);
 
   // This function tries to make sure that the full data of this range is
@@ -152,11 +152,11 @@ public:
 
   std::string read_string();
 
-  bool read(uint8_t* data, int64_t n);
+  bool read(uint8_t* data, size_t n);
 
-  bool prepare_read(int64_t nBytes);
+  bool prepare_read(size_t nBytes);
 
-  StreamReader::grow_status wait_for_available_bytes(int64_t nBytes);
+  StreamReader::grow_status wait_for_available_bytes(size_t nBytes);
 
   void skip_to_end_of_file()
   {
@@ -218,18 +218,18 @@ public:
 
   int get_nesting_level() const { return m_nesting_level; }
 
-  int64_t get_remaining_bytes() const { return m_remaining; }
+  size_t get_remaining_bytes() const { return m_remaining; }
 
 private:
   std::shared_ptr<StreamReader> m_istr;
   BitstreamRange* m_parent_range = nullptr;
   int m_nesting_level = 0;
 
-  int64_t m_remaining;
+  size_t m_remaining;
   bool m_error = false;
 
   // Note: 'nBytes' may not be larger than the number of remaining bytes
-  void skip_without_advancing_file_pos(int64_t nBytes);
+  void skip_without_advancing_file_pos(size_t nBytes);
 };
 
 
