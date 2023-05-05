@@ -193,7 +193,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         fi
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_ENCODER" ]; then
             echo "Converting single JPEG file to heif ..."
-            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-single.heic -v -v -v --thumb 320x240 example-1.jpg
+            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-single.heic --verbose --verbose --verbose --thumb 320x240 example-1.jpg
             echo "Checking generated file ..."
             [ -s "output-single.heic" ] || exit 1
             echo "Converting back generated heif to JPEG ..."
@@ -201,7 +201,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
             echo "Checking generated file ..."
             [ -s "output-single.jpg" ] || exit 1
             echo "Converting multiple JPEG files to heif ..."
-            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic -v -v -v --thumb 320x240 example-1.jpg example-2.jpg
+            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic --verbose --verbose --verbose --thumb 320x240 example-1.jpg example-2.jpg
             echo "Checking generated file ..."
             [ -s "output-multi.heic" ] || exit 1
             ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-multi.heic output-multi.jpg
@@ -212,7 +212,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         fi
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_AVIF_ENCODER" ]; then
             echo "Converting JPEG file to AVIF ..."
-            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-jpeg.avif -v -v -v -A --thumb 320x240 example.jpg
+            ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-jpeg.avif --verbose --verbose --verbose -A --thumb 320x240 example.jpg
             echo "Checking generated file ..."
             [ -s "output-jpeg.avif" ] || exit 1
             echo "Converting back generated AVIF to JPEG ..."
