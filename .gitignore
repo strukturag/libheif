@@ -1,1 +1,7 @@
 build
+cmake-build-*
+.idea
+third-party/SVT-AV1/
+third-party/dav1d/
+third-party/libwebp/
+third-party/rav1e/
