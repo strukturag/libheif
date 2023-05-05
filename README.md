@@ -2,19 +2,19 @@
 
 [![Build Status](https://github.com/strukturag/libheif/workflows/build/badge.svg)](https://github.com/strukturag/libheif/actions) [![Build Status](https://ci.appveyor.com/api/projects/status/github/strukturag/libheif?svg=true)](https://ci.appveyor.com/project/strukturag/libheif) [![Coverity Scan Build Status](https://scan.coverity.com/projects/16641/badge.svg)](https://scan.coverity.com/projects/strukturag-libheif)
 
-
 libheif is an ISO/IEC 23008-12:2017 HEIF and AVIF (AV1 Image File Format) file format decoder and encoder.
+There is partial support for ISO/IEC 23008-12:2022 (2nd Edition) capabilities.
 
-HEIF and AVIF are new image file formats employing HEVC (h.265) or AV1 image coding, respectively, for the
+HEIF and AVIF are new image file formats employing HEVC (H.265) or AV1 image coding, respectively, for the
 best compression ratios currently possible.
 
 libheif makes use of [libde265](https://github.com/strukturag/libde265) for HEIF image decoding and x265 for encoding.
 For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
-
 ## Supported features
 
-libheif has support for decoding
+libheif has support for decoding:
+
 * tiled images
 * alpha channels
 * thumbnails
@@ -29,6 +29,7 @@ libheif has support for decoding
 * heix images (10 and 12 bit, chroma 4:2:2)
 
 The encoder supports:
+
 * lossy compression with adjustable quality
 * lossless compression
 * alpha channels
@@ -64,6 +65,13 @@ heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGB
 
 int stride;
 const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+
+// ... process data as needed ...
+
+// clean up resources
+heif_image_release(img);
+heif_image_handle_release(handle);
+heif_context_free(ctx);
 ```
 
 Writing an HEIF file can be done like this:
@@ -84,10 +92,13 @@ heif_context_encode_image(ctx, image, encoder, nullptr, nullptr);
 
 heif_encoder_release(encoder);
 
-heif_context_write_to_file(context, "output.heic");
+heif_context_write_to_file(ctx, "output.heic");
+
+heif_context_free(ctx);
 ```
 
 Get the EXIF data from an HEIF file:
+
 ```C
 heif_item_id exif_id;
 
@@ -107,7 +118,6 @@ Code using the C++ API is much less verbose than using the C API directly.
 
 There is also an experimental Go API, but this is not stable yet.
 
-
 ## Compiling
 
 This library uses the CMake build system (the earlier autotools build files have been removed in v1.16.0).
@@ -117,7 +127,8 @@ first, so that the configuration script will find this.
 Also install x265 and its development files if you want to use HEIF encoding.
 
 The basic build steps are as follows:
-````
+
+````sh
 mkdir build
 cd build
 cmake --preset=release ..
@@ -125,28 +136,28 @@ make
 ````
 
 There are CMake presets to cover the most frequent use cases.
-- `release`: the preferred preset which compiles all codecs as separate plugins.
-  If you do not want to distribute some of these plugins (e.g. HEIC), you can omit to package these.
-- `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
+
+* `release`: the preferred preset which compiles all codecs as separate plugins.
+  If you do not want to distribute some of these plugins (e.g. HEIC), you can omit packaging these.
+* `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
   A single library is built with support for HEIC and AVIF.
-- `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
-- `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
+* `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
+* `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
 
 You can optionally adapt these standard configurations to your needs.
-This can be done, for example, by calling `ccmake .` from within the `build` directory.
+This can be done, for example, by calling `ccmake ..` from within the `build` directory.
 
 ### macOS
 
 1. Install dependencies with Homebrew
 
+    ```sh
+    brew install cmake make pkg-config x265 libde265 libjpeg libtool
     ```
-    brew install automake make pkg-config x265 libde265 libjpeg libtool
-    ```
-
 
 2. Configure and build project
 
-    ```
+    ```sh
     mkdir build
     cd build
     cmake --preset=release ..
@@ -158,7 +169,7 @@ This can be done, for example, by calling `ccmake .` from within the `build` dir
 
 You can build and install libheif using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
 
-```
+```sh
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 ./bootstrap-vcpkg.bat
@@ -168,7 +179,6 @@ cd vcpkg
 
 The libheif port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
-
 ### Adding libaom encoder/decoder for AVIF
 
 * Run the `aom.cmd` script in the `third-party` directory to download libaom and
@@ -177,20 +187,20 @@ The libheif port in vcpkg is kept up to date by Microsoft team members and commu
 When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/aom/dist/lib/pkgconfig`.
 
-
 ### Adding rav1e encoder for AVIF
 
 * Install `cargo`.
 * Install `cargo-c` by executing
-```
+
+```sh
 cargo install --force cargo-c
 ```
+
 * Run the `rav1e.cmd` script in the `third-party` directory to download rav1e
   and compile it.
 
-When running `cmake` or `configure`, make sure that the environment variable
+When running `cmake`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/rav1e/dist/lib/pkgconfig`.
-
 
 ### Adding dav1d decoder for AVIF
 
@@ -198,9 +208,8 @@ When running `cmake` or `configure`, make sure that the environment variable
 * Run the `dav1d.cmd` script in the `third-party` directory to download dav1d
   and compile it.
 
-When running `cmake` or `configure`, make sure that the environment variable
+When running `cmake`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig`.
-
 
 ### Adding SVT-AV1 encoder for AVIF
 
@@ -214,7 +223,7 @@ When running `cmake` or `configure`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
 You may have to replace `linux` in this path with your system's identifier.
 
-You have to enable SVT-AV1 with CMake. It is not built with autotools.
+You have to enable SVT-AV1 with CMake.
 
 ## Codec plugins
 
@@ -232,7 +241,6 @@ You can also add plugin directories programmatically.
 A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the Wiki page
 [AVIF encoding benchmark](https://github.com/strukturag/libheif/wiki/AVIF-Encoder-Benchmark).
 
-
 ## Language bindings
 
 * .NET Platform (C#, F#, and other languages): [libheif-sharp](https://github.com/0xC0000054/libheif-sharp)
@@ -246,19 +254,16 @@ A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the
 
 Languages that can directly interface with C libraries (e.g., Swift, C#) should work out of the box.
 
-
 ## Compiling to JavaScript
 
 libheif can also be compiled to JavaScript using
 [emscripten](http://kripken.github.io/emscripten-site/).
 See the `build-emscripten.sh` for further information.
 
-
 ## Online demo
 
 Check out this [online demo](https://strukturag.github.io/libheif/).
 This is `libheif` running in JavaScript in your browser.
-
 
 ## Example programs
 
@@ -269,19 +274,19 @@ The program `heif-info` is a simple, minimal decoder that dumps the file structu
 
 For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
 
-```
+```sh
 cd examples/
 ./heif-convert example.heic example.jpeg
 ./heif-enc example-1.jpeg -o example.heif
 ```
 
 In order to convert `example-1.jpeg` to AVIF use:
-```
+
+```sh
 ./heif-enc example-1.jpeg -A -o example.avif
 ```
 
 There is also a GIMP plugin using libheif [here](https://github.com/strukturag/heif-gimp-plugin).
-
 
 ## HEIF/AVIF thumbnails for the Gnome desktop
 
@@ -290,13 +295,11 @@ The matching Gnome configuration files are in the `gnome` directory.
 Place the files `heif.xml` and `avif.xml` into `/usr/share/mime/packages` and `heif.thumbnailer` into `/usr/share/thumbnailers`.
 You may have to run `update-mime-database /usr/share/mime` to update the list of known MIME types.
 
-
 ## gdk-pixbuf loader
 
 libheif also includes a gdk-pixbuf loader for HEIF/AVIF images. 'make install' will copy the plugin
 into the system directories. However, you will still have to run `gdk-pixbuf-query-loaders --update-cache`
 to update the gdk-pixbuf loader database.
-
 
 ## Software using libheif
 
