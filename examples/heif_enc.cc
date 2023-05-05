@@ -92,14 +92,18 @@ const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 const int OPTION_PLUGIN_DIRECTORY = 1004;
 const int OPTION_PITM_DESCRIPTION = 1005;
+const int OPTION_VERBOSE = 1006;
+const int OPTION_SHOW_CONFIGURATION = 1007;
+
 
 static struct option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
+    {(char* const) "version",                 no_argument,       0,              'v'},
     {(char* const) "quality",                 required_argument, 0,              'q'},
     {(char* const) "output",                  required_argument, 0,              'o'},
     {(char* const) "lossless",                no_argument,       0,              'L'},
     {(char* const) "thumb",                   required_argument, 0,              't'},
-    {(char* const) "verbose",                 no_argument,       0,              'v'},
+    {(char* const) "verbose",                 no_argument,       0,              OPTION_VERBOSE},
     {(char* const) "params",                  no_argument,       0,              'P'},
     {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
@@ -121,7 +125,8 @@ static struct option long_options[] = {
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
-    {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
+    {(char* const) "chroma-downsampling",         required_argument, 0,           'C'},
+    {(char* const) "show-config",                 no_argument,       0,           OPTION_SHOW_CONFIGURATION},
     {0, 0,                                                       0,               0},
 };
 
@@ -140,13 +145,14 @@ void show_help(const char* argv0)
             << "\n"
             << "Options:\n"
             << "  -h, --help        show help\n"
+            << "  -v, --version     show version\n"
             << "  -q, --quality     set output quality (0-100) for lossy compression\n"
             << "  -L, --lossless    generate lossless output (-q has no effect)\n"
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
             << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
             << "  -o, --output          output filename (optional)\n"
-            << "  -v, --verbose         enable logging output (more -v will increase logging level)\n"
+            << "  --verbose             enable logging output (more will increase logging level)\n"
             << "  -P, --params          show all encoder parameters\n"
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
@@ -169,6 +175,7 @@ void show_help(const char* argv0)
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
+            << "  --show-config             show configuration information\n"
 
             << "\n"
             << "Note: to get lossless encoding, you need this set of options:\n"
@@ -442,6 +449,9 @@ int main(int argc, char** argv)
       case 'h':
         show_help(argv[0]);
         return 0;
+      case 'v':
+        std::cout << LIBHEIF_VERSION <<  std::endl;
+        return 0;
       case 'q':
         quality = atoi(optarg);
         break;
@@ -451,7 +461,7 @@ int main(int argc, char** argv)
       case 'o':
         output_filename = optarg;
         break;
-      case 'v':
+      case OPTION_VERBOSE:
         logging_level++;
         break;
       case 'P':
@@ -528,6 +538,9 @@ int main(int argc, char** argv)
         }
 #endif
         break;
+      case OPTION_SHOW_CONFIGURATION:
+        heif_dump_configuration();
+        return 0;
     }
   }
 

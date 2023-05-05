@@ -34,6 +34,7 @@
 #include "plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
+#include "init.h"
 #include <set>
 #include <limits>
 
@@ -106,6 +107,26 @@ int heif_get_version_number_maintenance(void)
   return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF);
 }
 
+const void heif_dump_configuration(void)
+{
+  printf("libheif:%s\n", heif_get_version());
+  auto plugin_paths = get_plugin_paths();
+  printf("plugin paths:");
+  for (int i = 0; i < (int) plugin_paths.size(); i++) {
+    printf("%s", plugin_paths[i].data());
+    if (i < (int)plugin_paths.size() -1) {
+      printf(",");
+    }
+  }
+  printf("\n");
+  printf("libsharpyuv:");
+#ifdef HAVE_LIBSHARPYUV
+  printf("yes\n");
+#else
+  printf("no\n");
+#endif  
+
+}
 
 heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 {

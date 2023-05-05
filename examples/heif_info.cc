@@ -23,6 +23,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
+
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -46,6 +47,7 @@
 #include <memory>
 #include <getopt.h>
 #include <assert.h>
+#include <stdio.h>
 
 
 /*
@@ -63,11 +65,15 @@ info -w 20012 -o out.265 *file
 info -d // dump
  */
 
+const int OPTION_SHOW_CONFIGURATION = 1000;
+
 static struct option long_options[] = {
     //{"write-raw", required_argument, 0, 'w' },
     //{"output",    required_argument, 0, 'o' },
-    {(char* const) "dump-boxes", no_argument, 0, 'd'},
-    {(char* const) "help",       no_argument, 0, 'h'},
+    {(char* const) "dump-boxes",  no_argument, 0, 'd'},
+    {(char* const) "help",        no_argument, 0, 'h'},
+    {(char* const) "version",     no_argument, 0, 'v'},
+    {(char* const) "show-config", no_argument, 0, OPTION_SHOW_CONFIGURATION},
     {0, 0,                                    0, 0}
 };
 
@@ -93,6 +99,8 @@ void show_help(const char* argv0)
   //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
   fprintf(stderr, "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
   fprintf(stderr, "  -h, --help           show help\n");
+  fprintf(stderr, "  -v, --version        show version\n");
+  fprintf(stderr, "  --show-config        show configuration information\n");
 }
 
 
@@ -118,7 +126,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "dh", long_options, &option_index);
+    int c = getopt_long(argc, argv, "dhv", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -136,6 +144,12 @@ int main(int argc, char** argv)
       case 'o':
         output_filename = optarg;
         break;
+      case 'v':
+        printf("%s\n", LIBHEIF_VERSION);
+        return 0;
+      case OPTION_SHOW_CONFIGURATION:
+        heif_dump_configuration();
+        return 0;
     }
   }
 

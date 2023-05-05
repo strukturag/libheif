@@ -31,6 +31,7 @@
 #if defined(HAVE_UNISTD_H)
 #  include <unistd.h>
 #endif
+#include <stdio.h>
 
 #include <string>
 #include <iostream>
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
   int size = 512; // default thumbnail size
   bool thumbnail_from_primary_image_only = false;
 
-  while ((opt = getopt(argc, argv, "s:hp")) != -1) {
+  while ((opt = getopt(argc, argv, "s:hpv")) != -1) {
     switch (opt) {
       case 's':
         size = atoi(optarg);
@@ -79,6 +80,9 @@ int main(int argc, char** argv)
       case 'p':
         thumbnail_from_primary_image_only = true;
         break;
+      case 'v':
+        printf("%s\n", LIBHEIF_VERSION);
+        return 0;
       case 'h':
       default:
         return usage(argv[0]);

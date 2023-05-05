@@ -74,10 +74,11 @@ static void show_help(const char* argv0)
                "Usage: heif-convert [options]  <input-image> <output-image>\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffices are recognized: jpg, jpeg, png, y4m."
+               "These suffixes are recognized: jpg, jpeg, png, y4m."
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
+               "  -v, --version                  show version\n"
                "  -q, --quality                  quality (for JPEG output)\n"
                "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n"
                "      --with-aux                 also write auxiliary images (e.g. depth images)\n"
@@ -87,6 +88,7 @@ static void show_help(const char* argv0)
                "      --no-colons                replace ':' characters in auxiliary image filenames with '_'\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "      --quiet                    do not output status messages to console\n"
+               "      --show-config              show configuration information\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n";
 }
 
@@ -115,6 +117,8 @@ int option_with_exif = 0;
 int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
 
+const int OPTION_SHOW_CONFIGURATION = 1000;
+
 std::string chroma_upsampling;
 
 static struct option long_options[] = {
@@ -129,7 +133,9 @@ static struct option long_options[] = {
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'},
-    {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
+    {(char* const) "version",          no_argument,       0,                        'v'},
+    {(char* const) "chroma-upsampling", required_argument, 0,                       'C'},
+    {(char* const) "show-config",       no_argument,       0,                       OPTION_SHOW_CONFIGURATION},
 };
 
 
@@ -187,7 +193,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:C:v", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -220,6 +226,12 @@ int main(int argc, char** argv)
           chroma_upsampling = "nearest-neighbor";
         }
         break;
+      case 'v':
+        std::cout << LIBHEIF_VERSION << std::endl;
+        return 0;
+      case OPTION_SHOW_CONFIGURATION:
+        heif_dump_configuration();
+        return 0;
     }
   }
 

@@ -88,6 +88,10 @@ LIBHEIF_API int heif_get_version_number_maintenance(void);
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
+// Dump configuration output to stdout.
+// This format is potentially subject to change
+LIBHEIF_API const void heif_dump_configuration(void);
+
 struct heif_context;
 struct heif_image_handle;
 struct heif_image;

@@ -23,10 +23,14 @@
 #define LIBHEIF_INIT_H
 
 #include "libheif/heif.h"
+#include <string>
+#include <vector>
 
 extern heif_error error_dlopen;
 extern heif_error error_plugin_not_loaded;
 extern heif_error error_cannot_read_plugin_directory;
+
+std::vector<std::string> get_plugin_paths();
 
 // TODO: later, we might defer the default plugin initialization to when they are actually used for the first time.
 // That would prevent them from being initialized every time at program start, even when the application software uses heif_init() later on.
