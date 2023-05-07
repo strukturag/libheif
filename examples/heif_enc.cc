@@ -111,7 +111,7 @@ static struct option long_options[] = {
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
-#if false && WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
     {(char* const) "matrix_coefficients",     required_argument, 0,              OPTION_NCLX_MATRIX_COEFFICIENTS},
@@ -156,7 +156,7 @@ void show_help(const char* argv0)
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
-#if false && WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
@@ -347,8 +347,8 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 static void show_list_of_all_encoders()
 {
   for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG
-#if false && WITH_UNCOMPRESSED_CODEC
-      , heif_compression_uncompressed
+#if WITH_UNCOMPRESSED_CODEC
+, heif_compression_uncompressed
 #endif
   }) {
 
@@ -361,6 +361,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_JPEG:
         std::cout << "JPEG";
+        break;
+      case heif_compression_uncompressed:
+        std::cout << "Uncompressed";
         break;
       default:
         assert(false);
@@ -440,7 +443,7 @@ int main(int argc, char** argv)
   while (true) {
     int option_index = 0;
     int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
-#if false && WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
         , long_options, &option_index);
@@ -481,7 +484,7 @@ int main(int argc, char** argv)
       case 'A':
         force_enc_av1f = true;
         break;
-#if false && WITH_UNCOMPRESSED_CODEC
+#if WITH_UNCOMPRESSED_CODEC
         case 'U':
         force_enc_uncompressed = true;
         break;

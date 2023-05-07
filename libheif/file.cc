@@ -172,6 +172,13 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
       break;
 
+    case heif_compression_uncompressed:
+      // Not clear what the correct major brand should be
+      m_ftyp_box->set_major_brand(heif_brand2_mif2);
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
+      break;
+
     default:
       break;
   }
@@ -1126,7 +1133,6 @@ void HeifFile::set_hdlr_library_info(const std::string& encoder_plugin_version)
   sstr << "libheif (" << LIBHEIF_VERSION << ") / " << encoder_plugin_version;
   m_hdlr_box->set_name(sstr.str());
 }
-
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 std::wstring HeifFile::convert_utf8_path_to_utf16(std::string str)
