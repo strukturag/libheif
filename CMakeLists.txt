@@ -212,7 +212,7 @@ endif (DOXYGEN_FOUND)
 
 # --- Testing
 
-option(BUILD_TESTING "" OFF)
+option(BUILD_TESTING "" ON)
 include(CTest)
 if(BUILD_TESTING)
     # TODO: fix tests on windows.
