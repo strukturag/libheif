@@ -104,7 +104,7 @@ static struct option long_options[] = {
     {(char* const) "no-alpha",                no_argument,       &master_alpha,  0},
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
-    {(char* const) "encoder",                 no_argument,       0,              'e'},
+    {(char* const) "encoder",                 required_argument, 0,              'e'},
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
