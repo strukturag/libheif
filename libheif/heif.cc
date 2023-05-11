@@ -2209,7 +2209,7 @@ int heif_get_encoder_descriptors(enum heif_compression_format format,
                                  const struct heif_encoder_descriptor** out_encoder_descriptors,
                                  int count)
 {
-  if (out_encoder_descriptors == nullptr || count <= 0) {
+  if (out_encoder_descriptors != nullptr && count <= 0) {
     return 0;
   }
 
@@ -2217,8 +2217,13 @@ int heif_get_encoder_descriptors(enum heif_compression_format format,
   descriptors = get_filtered_encoder_descriptors(format, name);
 
   int i;
-  for (i = 0; i < count && static_cast<size_t>(i) < descriptors.size(); i++) {
-    out_encoder_descriptors[i] = descriptors[i];
+  if (out_encoder_descriptors != nullptr) {
+    for (i = 0; i < count && static_cast<size_t>(i) < descriptors.size(); i++) {
+        out_encoder_descriptors[i] = descriptors[i];
+    }
+  }
+  else {
+    i = static_cast<int>(descriptors.size());
   }
 
   return i;

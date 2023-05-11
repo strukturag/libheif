@@ -1488,8 +1488,8 @@ struct heif_decoder_descriptor;
 // Get a list of available decoders. You can filter the encoders by compression format.
 // Use format_filter==heif_compression_undefined to get all available decoders.
 // The returned list of decoders is sorted by their priority (which is a plugin property).
-// The number of decoders is returned, which are not more than 'count' if (out_encoders != nullptr).
-// By setting out_encoders==nullptr, you can query the number of decoders, 'count' is ignored.
+// The number of decoders is returned, which are not more than 'count' if (out_decoders != nullptr).
+// By setting out_decoders==nullptr, you can query the number of decoders, 'count' is ignored.
 LIBHEIF_API
 int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
                                  const struct heif_decoder_descriptor** out_decoders,
@@ -1509,6 +1509,8 @@ const char* heif_decoder_descriptor_get_id_name(const struct heif_decoder_descri
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 // The returned list of encoders is sorted by their priority (which is a plugin property).
+// The number of encoders is returned, which are not more than 'count' if (out_encoders != nullptr).
+// By setting out_encoders==nullptr, you can query the number of encoders, 'count' is ignored.
 // Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
 LIBHEIF_API
 int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do we need this parameter?
@@ -1520,6 +1522,8 @@ int heif_context_get_encoder_descriptors(struct heif_context*, // TODO: why do w
 // Get a list of available encoders. You can filter the encoders by compression format and name.
 // Use format_filter==heif_compression_undefined and name_filter==NULL as wildcards.
 // The returned list of encoders is sorted by their priority (which is a plugin property).
+// The number of encoders is returned, which are not more than 'count' if (out_encoders != nullptr).
+// By setting out_encoders==nullptr, you can query the number of encoders, 'count' is ignored.
 // Note: to get the actual encoder from the descriptors returned here, use heif_context_get_encoder().
 LIBHEIF_API
 int heif_get_encoder_descriptors(enum heif_compression_format format_filter,
