@@ -22,6 +22,7 @@
 #define LIBHEIF_BOX_H
 
 #include <cstdint>
+#include "libheif/common_utils.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -48,7 +49,8 @@
 #define HAS_BOOL_ARRAY 1
 #endif
 
-#define fourcc(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
+// abbreviation
+constexpr inline uint32_t fourcc(const char* id) { return fourcc_to_uint32(id); }
 
 std::string to_fourcc(uint32_t code);
 

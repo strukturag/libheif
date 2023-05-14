@@ -20,6 +20,7 @@
 
 #include "libheif/heif_plugin.h"
 #include "libheif/region.h"
+#include "libheif/common_utils.h"
 #include <cstdint>
 
 #if defined(HAVE_CONFIG_H)
@@ -239,8 +240,6 @@ heif_brand2 heif_read_main_brand(const uint8_t* data, int len)
   return heif_fourcc_to_brand((char*) (data + 8));
 }
 
-
-#define fourcc_to_uint32(id) (((uint32_t)(id[0])<<24) | (id[1]<<16) | (id[2]<<8) | (id[3]))
 
 heif_brand2 heif_fourcc_to_brand(const char* fourcc)
 {

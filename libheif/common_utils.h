@@ -31,6 +31,15 @@
 #endif
 
 
+constexpr inline uint32_t fourcc_to_uint32(const char* id)
+{
+  return ((((uint32_t) id[0]) << 24) |
+          (((uint32_t) id[1]) << 16) |
+          (((uint32_t) id[2]) << 8) |
+          (((uint32_t) id[3]) << 0));
+}
+
+
 // Functions for common use in libheif and the plugins.
 
 uint8_t chroma_h_subsampling(heif_chroma c);
