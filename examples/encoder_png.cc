@@ -28,6 +28,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <vector>
+#include <zlib.h>
 
 #include "encoder_png.h"
 #include "libheif/exif.h"
@@ -49,6 +50,10 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
     png_destroy_write_struct(&png_ptr, nullptr);
     fprintf(stderr, "libpng initialization failed (2)\n");
     return false;
+  }
+
+  if (m_compression_level != -1) {
+    png_set_compression_level(png_ptr, m_compression_level);
   }
 
   FILE* fp = fopen(filename.c_str(), "wb");
@@ -86,7 +91,6 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   png_set_IHDR(png_ptr, info_ptr, width, height, bitDepth, colorType,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
 
   // --- write ICC profile
 

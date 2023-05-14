@@ -87,7 +87,8 @@ static void show_help(const char* argv0)
                "      --no-colons                replace ':' characters in auxiliary image filenames with '_'\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "      --quiet                    do not output status messages to console\n"
-               "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n";
+               "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
+               "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n";
 }
 
 
@@ -114,8 +115,12 @@ int option_with_xmp = 0;
 int option_with_exif = 0;
 int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
+int option_png_compression_level = -1; // use zlib default
 
 std::string chroma_upsampling;
+
+#define OPTION_PNG_COMPRESSION_LEVEL 1000
+
 
 static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
@@ -130,6 +135,7 @@ static struct option long_options[] = {
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
+    {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
 };
 
 
@@ -164,6 +170,33 @@ void list_all_decoders()
 #else
   std::cout << "uncompressed: no\n";
 #endif
+}
+
+
+bool is_integer_string(const char* s)
+{
+  if (strlen(s)==0) {
+    return false;
+  }
+
+  if (!(isdigit(s[0]) || s[0]=='-')) {
+    return false;
+  }
+
+  for (size_t i=strlen(s)-1; i>=1 ; i--) {
+    if (!isdigit(s[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+void show_png_compression_level_usage_warning()
+{
+  fprintf(stderr, "Invalid PNG compression level. Has to be between 0 (fastest) and 9 (best).\n"
+                  "You can also use -1 to use the default compression level.\n");
 }
 
 
@@ -220,6 +253,17 @@ int main(int argc, char** argv)
           chroma_upsampling = "nearest-neighbor";
         }
         break;
+      case OPTION_PNG_COMPRESSION_LEVEL:
+        if (!is_integer_string(optarg)) {
+          show_png_compression_level_usage_warning();
+          exit(5);
+        }
+        option_png_compression_level = std::stoi(optarg);
+        if (option_png_compression_level < -1 || option_png_compression_level > 9) {
+          show_png_compression_level_usage_warning();
+          exit(5);
+        }
+        break;
     }
   }
 
@@ -266,7 +310,9 @@ int main(int argc, char** argv)
 
     if (suffix_lowercase == "png") {
 #if HAVE_LIBPNG
-      encoder.reset(new PngEncoder());
+      auto pngEncoder = new PngEncoder();
+      pngEncoder->set_compression_level(option_png_compression_level);
+      encoder.reset(pngEncoder);
 #else
       fprintf(stderr, "PNG support has not been compiled in.\n");
       return 1;

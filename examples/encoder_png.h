@@ -35,6 +35,13 @@ class PngEncoder : public Encoder
 public:
   PngEncoder();
 
+  // 0 = fastest compression
+  // 9 = best compression
+  // -1 = zlib default
+  void set_compression_level(int level) {
+    m_compression_level = level;
+  }
+
   heif_colorspace colorspace(bool has_alpha) const override
   {
     return heif_colorspace_RGB;
@@ -60,6 +67,7 @@ public:
               const struct heif_image* image, const std::string& filename) override;
 
 private:
+  int m_compression_level = -1;
 };
 
 #endif  // EXAMPLE_ENCODER_PNG_H
