@@ -2216,14 +2216,13 @@ int heif_get_encoder_descriptors(enum heif_compression_format format,
   std::vector<const struct heif_encoder_descriptor*> descriptors;
   descriptors = get_filtered_encoder_descriptors(format, name);
 
-  int i;
-  if (out_encoder_descriptors != nullptr) {
-    for (i = 0; i < count && static_cast<size_t>(i) < descriptors.size(); i++) {
-        out_encoder_descriptors[i] = descriptors[i];
-    }
+  if (out_encoder_descriptors == nullptr) {
+    return static_cast<int>(descriptors.size());
   }
-  else {
-    i = static_cast<int>(descriptors.size());
+
+  int i;
+  for (i = 0; i < count && static_cast<size_t>(i) < descriptors.size(); i++) {
+    out_encoder_descriptors[i] = descriptors[i];
   }
 
   return i;
