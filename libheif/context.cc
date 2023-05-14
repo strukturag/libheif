@@ -2814,9 +2814,9 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
 }
 
 
-heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property)
+heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential)
 {
-  heif_property_id id = m_heif_file->add_property(targetItem, property);
+  heif_property_id id = m_heif_file->add_property(targetItem, property, essential);
 
   return id;
 }

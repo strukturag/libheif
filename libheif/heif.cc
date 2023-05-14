@@ -1989,7 +1989,7 @@ struct heif_error heif_item_add_property_user_description(const struct heif_cont
   udes->set_description(description->description ? description->description : "");
   udes->set_tags(description->tags ? description->tags : "");
 
-  heif_property_id id = context->context->add_property(itemId, udes);
+  heif_property_id id = context->context->add_property(itemId, udes, false);
 
   if (out_propertyId) {
     *out_propertyId = id;
