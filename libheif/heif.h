@@ -436,6 +436,7 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_avif   heif_fourcc('a','v','i','f') // AVIF image (AV1)
 #define heif_brand2_avis   heif_fourcc('a','v','i','s') // AVIF sequence
 #define heif_brand2_mif1   heif_fourcc('m','i','f','1') // image, any coding algorithm
+#define heif_brand2_mif2   heif_fourcc('m','i','f','2') // image, any coding algorithm
 #define heif_brand2_msf1   heif_fourcc('m','s','f','1') // sequence, any coding algorithm
 #define heif_brand2_vvic   heif_fourcc('v','v','i','c') // VVC image
 #define heif_brand2_vvis   heif_fourcc('v','v','i','s') // VVC sequence

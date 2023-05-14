@@ -121,21 +121,21 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
   }
 
   if (len >= 12) {
-    heif_brand brand = heif_main_brand(data, len);
+    heif_brand2 brand = heif_read_main_brand(data, len);
 
-    if (brand == heif_heic) {
+    if (brand == heif_brand2_heic) {
       return heif_filetype_yes_supported;
     }
-    else if (brand == heif_heix) {
+    else if (brand == heif_brand2_heix) {
       return heif_filetype_yes_supported;
     }
-    else if (brand == heif_avif) {
+    else if (brand == heif_brand2_avif) {
       return heif_filetype_yes_supported;
     }
-    else if (brand == heif_unknown_brand) {
-      return heif_filetype_no;
+    else if (brand == heif_brand2_mif1) {
+      return heif_filetype_maybe;
     }
-    else if (brand == heif_mif1) {
+    else if (brand == heif_brand2_mif2) {
       return heif_filetype_maybe;
     }
     else {
