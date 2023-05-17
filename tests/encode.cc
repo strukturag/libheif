@@ -138,6 +138,8 @@ static void test_ispe_size(heif_compression_format compression,
   REQUIRE(ispe_width == expected_ispe_width);
   REQUIRE(ispe_height == expected_ispe_height);
 
+  heif_image_handle_release(handle);
+  heif_encoder_release(enc);
   heif_encoding_options_free(options);
   heif_context_free(ctx);
   heif_image_release(img);
