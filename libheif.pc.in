@@ -15,7 +15,7 @@ builtin_avif_encoder=yes
 Name: libheif
 Description: HEIF image codec.
 URL: https://github.com/strukturag/libheif
-Version: @VERSION@
+Version: @PROJECT_VERSION@
 Requires:
 Requires.private: @REQUIRES_PRIVATE@
 Libs: -L${libdir} -lheif
