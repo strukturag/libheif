@@ -25,7 +25,7 @@
 */
 
 #include <iomanip>
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "libheif/color-conversion/colorconversion.h"
 #include "libheif/pixelimage.h"
 
