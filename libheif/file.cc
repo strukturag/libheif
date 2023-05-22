@@ -528,6 +528,12 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     }
   }
 
+  // JPEG
+
+  if (image_type == "jpeg" || (image_type=="mime" && get_content_type(imageID)=="image/jpeg")) {
+    return jpeg_get_bits_per_pixel(imageID);
+  }
+
 #if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
@@ -570,6 +576,36 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
       }
       else {
         return 10;
+      }
+    }
+  }
+
+  // JPEG
+
+  if (image_type == "jpeg" || (image_type=="mime" && get_content_type(imageID)=="image/jpeg")) {
+    return jpeg_get_bits_per_pixel(imageID);
+  }
+
+  return -1;
+}
+
+
+int HeifFile::jpeg_get_bits_per_pixel(heif_item_id imageID) const
+{
+  std::vector<uint8_t> data;
+  Error err = get_compressed_image_data(imageID, &data);
+  if (err) {
+    return -1;
+  }
+
+  for (size_t i = 0; i + 1 < data.size(); i++) {
+    if (data[i] == 0xFF && data[i+1] == 0xC0) {
+      i += 4;
+      if (i < data.size()) {
+        return data[i];
+      }
+      else {
+        return -1;
       }
     }
   }
@@ -690,6 +726,13 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+  }
+  else if (item_type == "jpeg" ||
+           (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
+
+    // TODO: read jpgC if present
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }

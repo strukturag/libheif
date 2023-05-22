@@ -221,6 +221,8 @@ private:
                                       std::unordered_set<heif_item_id>& parent_items) const;
 
   std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
+
+  int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
 };
 
 #endif
