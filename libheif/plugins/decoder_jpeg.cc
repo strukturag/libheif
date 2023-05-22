@@ -43,7 +43,6 @@ struct jpeg_decoder
 };
 
 static const char kSuccess[] = "Success";
-static const char kEmptyString[] = "";
 
 static const int JPEG_PLUGIN_PRIORITY = 100;
 
