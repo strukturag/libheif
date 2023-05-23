@@ -1196,7 +1196,10 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     imginfo = m_all_images.find(ID)->second;
   }
 
-  assert(imginfo);
+  // Note: this may happen, for example when an 'iden' image references a non-existing image item.
+  if (imginfo == nullptr) {
+    return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
+  }
 
   Error error;
 
