@@ -2619,6 +2619,21 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
 }
 
 
+static uint8_t JPEG_SOS = 0xDA;
+
+// returns 0 if the marker_type was not found
+size_t find_jpeg_marker_start(const std::vector<uint8_t>& data, uint8_t marker_type)
+{
+  for (size_t i = 0; i < data.size() - 1; i++) {
+    if (data[i]==0xFF && data[i+1]==marker_type) {
+      return i;
+    }
+  }
+
+  return 0;
+}
+
+
 Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
@@ -2736,6 +2751,24 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
     size_t oldsize = vec.size();
     vec.resize(oldsize + size);
     memcpy(vec.data() + oldsize, data, size);
+  }
+
+  // Optional: split the JPEG data into a jpgC box and the actual image data.
+  // Currently disabled because not supported yet in other decoders.
+  if (false) {
+    size_t pos = find_jpeg_marker_start(vec, JPEG_SOS);
+    if (pos > 0) {
+      std::vector<uint8_t> jpgC_data(vec.begin(), vec.begin() + pos);
+      auto jpgC = std::make_shared<Box_jpgC>();
+      jpgC->set_data(jpgC_data);
+
+      auto ipma_box = m_heif_file->get_ipma_box();
+      int index = m_heif_file->get_ipco_box()->append_child_box(jpgC);
+      ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+      std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());
+      vec = std::move(image_data);
+    }
   }
 
   m_heif_file->append_iloc_data(image_id, vec);
