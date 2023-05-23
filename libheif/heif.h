@@ -442,7 +442,8 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_vvis   heif_fourcc('v','v','i','s') // VVC sequence
 #define heif_brand2_evbi   heif_fourcc('e','v','b','i') // EVC image
 #define heif_brand2_evbs   heif_fourcc('e','v','b','s') // EVC sequence
-
+#define heif_brand2_jpeg   heif_fourcc('j','p','e','g') // JPEG, per ISO/IEC 23008-12 Annex H.4
+#define heif_brand2_jpgs   heif_fourcc('j','p','g','s') // JPEG sequence, per ISO/IEC 23008-12 Annex H.5
 
 // input data should be at least 12 bytes
 LIBHEIF_API
