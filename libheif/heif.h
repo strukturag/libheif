@@ -601,7 +601,7 @@ LIBHEIF_API
 struct heif_error heif_context_get_primary_image_handle(struct heif_context* ctx,
                                                         struct heif_image_handle**);
 
-// Get the image handle for a known an image ID.
+// Get the image handle for a known image ID.
 LIBHEIF_API
 struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
