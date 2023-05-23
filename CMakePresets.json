@@ -51,7 +51,7 @@
         "WITH_RAV1E_PLUGIN" : "OFF",
         "WITH_SvtEnc_PLUGIN" : "OFF",
         "WITH_X265_PLUGIN" : "OFF",
-        "WITH_JPEG_DECODER_PLUGIN" : "OFF
+        "WITH_JPEG_DECODER_PLUGIN" : "OFF"
       }
     },
     {
