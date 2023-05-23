@@ -74,6 +74,10 @@ set(JPEG_DECODER_sources decoder_jpeg.cc decoder_jpeg.h)
 set(JPEG_DECODER_extra_plugin_sources)
 plugin_compilation(jpegdec JPEG JPEG_DECODER JPEG_DECODER)
 
+set(JPEG_ENCODER_sources encoder_jpeg.cc encoder_jpeg.h)
+set(JPEG_ENCODER_extra_plugin_sources)
+plugin_compilation(jpegenc JPEG JPEG_ENCODER JPEG_ENCODER)
+
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             encoder_uncompressed.h

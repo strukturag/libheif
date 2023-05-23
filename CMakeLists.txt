@@ -96,6 +96,7 @@ plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)
 plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" ON)
 plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" ON)
 plugin_option(JPEG_DECODER JPEG "Jpeg" "JPEG decoder" OFF)
+plugin_option(JPEG_ENCODER JPEG "Jpeg" "JPEG encoder" OFF)
 
 option(WITH_UNCOMPRESSED_CODEC "Support internal ISO/IEC 23001-17 uncompressed codec (experimental)" OFF)
 
@@ -144,6 +145,10 @@ endif()
 if (SvtEnc_FOUND AND NOT WITH_SvtEnc_PLUGIN)
     list(APPEND REQUIRES_PRIVATE "SvtAv1Enc")
 endif()
+if ((JPEG_DECODER_FOUND AND NOT WITH_JPEG_DECODER_PLUGIN) OR (JPEG_ENCODER_FOUND AND NOT WITH_JPEG_ENCODER_PLUGIN))
+    list(APPEND REQUIRES_PRIVATE "libjpeg")
+endif()
+# TODO: JPEG
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()

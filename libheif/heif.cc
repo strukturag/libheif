@@ -2248,7 +2248,7 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
   std::vector<decoder_with_priority> plugins;
   std::vector<heif_compression_format> formats;
   if (format_filter == heif_compression_undefined) {
-    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_VVC};
+    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_VVC};
   }
   else {
     formats.emplace_back(format_filter);

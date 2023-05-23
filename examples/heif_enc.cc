@@ -92,6 +92,7 @@ const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
 const int OPTION_NCLX_FULL_RANGE_FLAG = 1003;
 const int OPTION_PLUGIN_DIRECTORY = 1004;
 const int OPTION_PITM_DESCRIPTION = 1005;
+const int OPTION_USE_JPEG_COMPRESSION = 1006;
 
 static struct option long_options[] = {
     {(char* const) "help",                    no_argument,       0,              'h'},
@@ -108,6 +109,7 @@ static struct option long_options[] = {
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
+    {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
 #if false && WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
@@ -121,8 +123,8 @@ static struct option long_options[] = {
     {(char* const) "benchmark",               no_argument,       &run_benchmark,  1},
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression,  1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
-    {(char* const) "chroma-downsampling", required_argument, 0, 'C'},
-    {0, 0,                                                       0,               0},
+    {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
+    {0, 0,                                                           0,  0},
 };
 
 void show_help(const char* argv0)
@@ -151,6 +153,7 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --jpeg            encode as JPEG\n"
 #if false && WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
@@ -341,9 +344,9 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1
+  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG
 #if false && WITH_UNCOMPRESSED_CODEC
-, heif_compression_uncompressed
+      , heif_compression_uncompressed
 #endif
   }) {
 
@@ -353,6 +356,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
+        break;
+      case heif_compression_JPEG:
+        std::cout << "JPEG";
         break;
       default:
         assert(false);
@@ -423,6 +429,7 @@ int main(int argc, char** argv)
   int output_bit_depth = 10;
   bool force_enc_av1f = false;
   bool force_enc_uncompressed = false;
+  bool force_enc_jpeg = false;
   bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
@@ -495,6 +502,9 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_USE_JPEG_COMPRESSION:
+        force_enc_jpeg = true;
+        break;
       case OPTION_PLUGIN_DIRECTORY: {
         int nPlugins;
         heif_error error = heif_load_plugins(optarg, nullptr, &nPlugins, 0);
@@ -536,7 +546,7 @@ int main(int argc, char** argv)
     return 5;
   }
 
-  if (force_enc_av1f && force_enc_uncompressed) {
+  if ((force_enc_av1f ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
   }
 
@@ -573,6 +583,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_uncompressed) {
     compressionFormat = heif_compression_uncompressed;
+  }
+  else if (force_enc_jpeg) {
+    compressionFormat = heif_compression_JPEG;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);

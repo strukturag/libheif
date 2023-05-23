@@ -399,6 +399,12 @@ public:
                             enum heif_image_input_class input_class,
                             std::shared_ptr<Image>& out_image);
 
+  Error encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
+                             struct heif_encoder* encoder,
+                             const struct heif_encoding_options& options,
+                             enum heif_image_input_class input_class,
+                             std::shared_ptr<Image>& out_image);
+
   Error encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                      struct heif_encoder* encoder,
                                      const struct heif_encoding_options& options,
@@ -440,7 +446,7 @@ public:
     m_region_items.push_back(std::move(region_item));
   }
 
-  std::shared_ptr<RegionItem>  add_region_item(uint32_t reference_width, uint32_t reference_height);
+  std::shared_ptr<RegionItem> add_region_item(uint32_t reference_width, uint32_t reference_height);
 
   std::shared_ptr<RegionItem> get_region_item(heif_item_id id) const
   {
