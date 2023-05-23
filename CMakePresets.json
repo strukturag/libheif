@@ -25,6 +25,8 @@
         "WITH_SvtEnc_PLUGIN" : "ON",
         "WITH_X265" : "ON",
         "WITH_X265_PLUGIN" : "ON",
+        "WITH_JPEG_DECODER" : "ON",
+        "WITH_JPEG_DECODER_PLUGIN" : "ON",
         "WITH_UNCOMPRESSED_CODEC" : "ON"
       }
     },
@@ -48,7 +50,8 @@
         "WITH_LIBDE265_PLUGIN" : "OFF",
         "WITH_RAV1E_PLUGIN" : "OFF",
         "WITH_SvtEnc_PLUGIN" : "OFF",
-        "WITH_X265_PLUGIN" : "OFF"
+        "WITH_X265_PLUGIN" : "OFF",
+        "WITH_JPEG_DECODER_PLUGIN" : "OFF
       }
     },
     {
