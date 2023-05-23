@@ -164,6 +164,13 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->add_compatible_brand(fourcc("vvic"));
       break;
 
+    case heif_compression_JPEG:
+      m_ftyp_box->set_major_brand(fourcc("jpeg"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("jpeg"));
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      break;
+
     default:
       break;
   }
@@ -249,7 +256,8 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
   if (!m_ftyp_box->has_compatible_brand(fourcc("heic")) &&
       !m_ftyp_box->has_compatible_brand(fourcc("heix")) &&
       !m_ftyp_box->has_compatible_brand(fourcc("mif1")) &&
-      !m_ftyp_box->has_compatible_brand(fourcc("avif"))) {
+      !m_ftyp_box->has_compatible_brand(fourcc("avif")) &&
+      !m_ftyp_box->has_compatible_brand(fourcc("jpeg"))) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
 
