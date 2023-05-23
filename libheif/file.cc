@@ -948,7 +948,7 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
 
   int index = m_ipco_box->append_child_box(pixi);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
 
@@ -1096,7 +1096,7 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
   colr->set_color_profile(profile);
 
   int index = m_ipco_box->append_child_box(colr);
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
 
