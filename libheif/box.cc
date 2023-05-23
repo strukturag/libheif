@@ -548,6 +548,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_udes>();
       break;
 
+    case fourcc("jpgC"):
+      box = std::make_shared<Box_jpgC>();
+      break;
+
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>();
@@ -1137,7 +1141,9 @@ Error Box_iloc::read_data(const Item& item,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
-  //istr.clear();
+  // TODO: this function should always append the data to the output vector as this is used when
+  //       the image data is concatenated with data in a configuration box. However, it seems that
+  //       this function clears the array in some cases. This should be corrected.
 
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
@@ -3721,6 +3727,39 @@ std::string Box_url::dump(Indent& indent) const
 
   return sstr.str();
 }
+
+
+std::string Box_jpgC::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "num bytes: " << m_data.size() << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_jpgC::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_data);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_jpgC::parse(BitstreamRange& range)
+{
+  size_t nBytes = range.get_remaining_bytes();
+  m_data.resize(nBytes);
+  range.read(m_data.data(), nBytes);
+  return range.get_error();
+}
+
 
 Error Box_udes::parse(BitstreamRange& range)
 {

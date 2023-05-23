@@ -732,7 +732,26 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   else if (item_type == "jpeg" ||
            (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
 
-    // TODO: read jpgC if present
+    // --- check if 'jpgC' is present
+
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_jpgC> jpgC_box;
+    for (auto& prop : properties) {
+      if (prop->get_short_type() == fourcc("jpgC")) {
+        jpgC_box = std::dynamic_pointer_cast<Box_jpgC>(prop);
+        if (jpgC_box) {
+          *data = jpgC_box->get_data();
+          break;
+        }
+      }
+    }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }

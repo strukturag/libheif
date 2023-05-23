@@ -1301,6 +1301,31 @@ private:
   std::shared_ptr<const color_profile> m_color_profile;
 };
 
+
+class Box_jpgC : public Box
+{
+public:
+  Box_jpgC()
+  {
+    set_short_type(fourcc("jpgC"));
+  }
+
+  const std::vector<uint8_t>& get_data() { return m_data; }
+
+  void set_data(const std::vector<uint8_t>& data) { m_data = data; }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  std::vector<uint8_t> m_data;
+};
+
+
 /**
  * User Description property.
  *
