@@ -583,15 +583,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
     return err.error_struct(ctx->context.get());
   }
 
-  const std::vector<std::shared_ptr<HeifContext::Image>> images = ctx->context->get_top_level_images();
-
-  std::shared_ptr<HeifContext::Image> image;
-  for (auto& img : images) {
-    if (img->get_id() == id) {
-      image = img;
-      break;
-    }
-  }
+  auto image = ctx->context->get_image(id);
 
   if (!image) {
     Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);

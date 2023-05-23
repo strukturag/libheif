@@ -339,6 +339,22 @@ public:
     return const_cast<HeifContext*>(this)->get_top_level_image(id);
   }
 
+  std::shared_ptr<Image> get_image(heif_item_id id)
+  {
+    auto iter = m_all_images.find(id);
+    if (iter == m_all_images.end()) {
+      return nullptr;
+    }
+    else {
+      return iter->second;
+    }
+  }
+
+  std::shared_ptr<const Image> get_image(heif_item_id id) const
+  {
+    return const_cast<HeifContext*>(this)->get_image(id);
+  }
+
   std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
 
   bool is_image(heif_item_id ID) const;
