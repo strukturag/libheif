@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <cstddef>
 #include <cstdint>
 
@@ -27,6 +28,7 @@
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
+#include "jpeg2000.h"
 
 #include <iomanip>
 #include <utility>
@@ -561,6 +563,26 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_uncC>();
       break;
 #endif
+
+    case fourcc("j2kH"):
+      box = std::make_shared<Box_j2kH>();
+      break;
+
+    case fourcc("cdef"):
+      box = std::make_shared<Box_cdef>();
+      break;
+
+    case fourcc("cmap"):
+      box = std::make_shared<Box_cmap>();
+      break;
+
+    case fourcc("pclr"):
+      box = std::make_shared<Box_pclr>();
+      break;
+
+    case fourcc("j2kL"):
+      box = std::make_shared<Box_j2kL>();
+      break;
 
     default:
       box = std::make_shared<Box>();
