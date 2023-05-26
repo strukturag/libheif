@@ -370,27 +370,6 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   kvz_config* config = api->config_alloc();
   api->config_init(config); // param, encoder->preset.c_str(), encoder->tune.c_str());
 
-  /*
-  if (bit_depth == 8) api->param_apply_profile(param, "mainstillpicture");
-  else if (bit_depth == 10) api->param_apply_profile(param, "main10-intra");
-  else if (bit_depth == 12) api->param_apply_profile(param, "main12-intra");
-  else {
-    api->param_free(param);
-    return heif_error_unsupported_parameter;
-  }
-*/
-
-  /*
-  param->fpsNum = 1;
-  param->fpsDenom = 1;
-*/
-
-  // kvazaar cannot encode images smaller than one CTU size
-  // https://bitbucket.org/multicoreware/kvazaar/issues/475/kvazaar-does-not-allow-image-sizes-smaller
-  // -> use smaller CTU sizes for very small images
-  //const char* ctu = NULL;
-  //int ctuSize = 64;
-
 #if 1
 #if 0
   while (ctuSize > 16 &&
@@ -450,11 +429,6 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   (void) ctu;
 #endif
 
-  // BPG uses CQP. It does not seem to be better though.
-  //  param->rc.rateControlMode = kvazaar_RC_CQP;
-  //  param->rc.qp = (100 - encoder->quality)/2;
-  //param->totalFrames = 1;
-
   kvz_chroma_format kvzChroma;
   int chroma_stride_shift = 0;
   int chroma_height_shift = 0;
@@ -496,19 +470,6 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
     (void) h;
   }
 
-  /*
-  api->param_parse(param, "info", "0");
-  api->param_parse(param, "limit-modes", "0");
-  api->param_parse(param, "limit-refs", "0");
-  api->param_parse(param, "ctu", ctu);
-  api->param_parse(param, "rskip", "0");
-
-  api->param_parse(param, "rect", "1");
-  api->param_parse(param, "amp", "1");
-  api->param_parse(param, "aq-mode", "1");
-  api->param_parse(param, "psy-rd", "1.0");
-  api->param_parse(param, "psy-rdoq", "1.0");
-*/
 
   struct heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
@@ -519,37 +480,20 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   // make sure NCLX profile is deleted at end of function
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
-  /*
   if (nclx) {
-    api->param_parse(param, "range", nclx->full_range_flag ? "full" : "limited");
+    config->vui.fullrange = nclx->full_range_flag;
   }
   else {
-    api->param_parse(param, "range", "full");
+    config->vui.fullrange = 1;
   }
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->color_primaries;
-      api->param_parse(param, "colorprim", sstr.str().c_str());
-    }
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->transfer_characteristics;
-      api->param_parse(param, "transfer", sstr.str().c_str());
-    }
-
-    {
-      std::stringstream sstr;
-      sstr << nclx->matrix_coefficients;
-      api->param_parse(param, "colormatrix", sstr.str().c_str());
-    }
+    config->vui.colorprim = nclx->color_primaries;
+    config->vui.transfer = nclx->transfer_characteristics;
+    config->vui.colormatrix = nclx->matrix_coefficients;
   }
-*/
 
   config->qp = ((100 - encoder->quality) * 51 + 50) / 100;
   config->lossless = encoder->lossless ? 1 : 0;
