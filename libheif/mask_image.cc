@@ -100,6 +100,12 @@ Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& h
                   "Missing required box for mask codec");
   }
 
+  if ((mskC->get_bits_per_pixel() != 8) && (mskC->get_bits_per_pixel() != 16))
+  {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Unsupported bit depth for mask item");
+  }
 
   img = std::make_shared<HeifPixelImage>();
   img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
