@@ -36,6 +36,10 @@
 #include "libheif/plugins/encoder_x265.h"
 #endif
 
+#if HAVE_KVAZAAR
+#include "libheif/plugins/encoder_kvazaar.h"
+#endif
+
 #if HAVE_AOM_ENCODER
 #include "libheif/plugins/encoder_aom.h"
 #endif
@@ -93,6 +97,10 @@ void register_default_plugins()
 
 #if HAVE_X265
   register_encoder(get_encoder_plugin_x265());
+#endif
+
+#if HAVE_KVAZAAR
+  register_encoder(get_encoder_plugin_kvazaar());
 #endif
 
 #if HAVE_AOM_ENCODER

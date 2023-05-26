@@ -90,6 +90,7 @@ endmacro()
 
 plugin_option(LIBDE265 LIBDE265 "libde265" "HEIC decoder" OFF)
 plugin_option(X265 X265 "x265" "HEIC encoder" OFF)
+plugin_option(KVAZAAR kvazaar "kvazaar" "kvazaar HEVC encoder" OFF)
 plugin_option(DAV1D DAV1D "Dav1d" "AVIF decoder" OFF)
 plugin_option(AOM_ENCODER AOM "aom" "AVIF encoder" OFF)
 plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" OFF)

@@ -41,7 +41,6 @@ macro(plugin_compilation name varName optionName defineName)
     endif ()
 endmacro()
 
-
 set(X265_sources encoder_x265.h encoder_x265.cc)
 set(X265_extra_plugin_sources)
 plugin_compilation(x265 X265 X265 X265)
@@ -77,6 +76,10 @@ plugin_compilation(jpegdec JPEG JPEG_DECODER JPEG_DECODER)
 set(JPEG_ENCODER_sources encoder_jpeg.cc encoder_jpeg.h)
 set(JPEG_ENCODER_extra_plugin_sources)
 plugin_compilation(jpegenc JPEG JPEG_ENCODER JPEG_ENCODER)
+
+set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
+set(KVAZAAR_extra_plugin_sources)
+plugin_compilation(kvazaar KVAZAAR KVAZAAR KVAZAAR)
 
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
