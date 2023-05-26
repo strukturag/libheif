@@ -316,7 +316,7 @@ TEST_CASE("create mask region") {
   int32_t x, y;
   uint32_t width, height;
   heif_item_id referenced_item_id;
-  err = heif_region_get_referenced_mask(regions[0], &x, &y, &width, &height, &referenced_item_id);
+  err = heif_region_get_referenced_mask_ID(regions[0], &x, &y, &width, &height, &referenced_item_id);
   REQUIRE (err.code == heif_error_Ok);
   REQUIRE(x == 200);
   REQUIRE(y == 140);

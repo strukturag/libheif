@@ -484,7 +484,7 @@ int main(int argc, char** argv)
             uint32_t w;
             uint32_t h;
             heif_item_id referenced_item;
-            heif_region_get_referenced_mask(regions[j], &x, &y, &w, &h, &referenced_item);
+            heif_region_get_referenced_mask_ID(regions[j], &x, &y, &w, &h, &referenced_item);
             printf("      referenced mask [x=%i, y=%i, w=%u, h=%u, item=%u]\n", x, y, w, h, referenced_item);
           }
           else if (type == heif_region_type_polyline) {

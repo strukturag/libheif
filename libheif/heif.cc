@@ -3590,10 +3590,10 @@ struct heif_error heif_region_get_polyline_points_transformed(const struct heif_
   return heif_region_get_poly_points_scaled(region, pts, image_id);
 }
 
-struct heif_error heif_region_get_referenced_mask(const struct heif_region* region,
-                                                  int32_t* x, int32_t* y,
-                                                  uint32_t* width, uint32_t* height,
-                                                  heif_item_id *mask_item_id)
+struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* region,
+                                                     int32_t* x, int32_t* y,
+                                                     uint32_t* width, uint32_t* height,
+                                                     heif_item_id *mask_item_id)
 {
   if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr) || (mask_item_id == nullptr))
   {

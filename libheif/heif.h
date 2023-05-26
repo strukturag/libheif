@@ -2455,10 +2455,10 @@ struct heif_error heif_region_get_polyline_points_transformed(const struct heif_
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
-struct heif_error heif_region_get_referenced_mask(const struct heif_region* region,
-                                                  int32_t* x, int32_t* y,
-                                                  uint32_t* width, uint32_t* height,
-                                                  heif_item_id *mask_item_id);
+struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* region,
+                                                     int32_t* x, int32_t* y,
+                                                     uint32_t* width, uint32_t* height,
+                                                     heif_item_id *mask_item_id);
 
 /**
  * Get the length of the data in an inline mask region.
