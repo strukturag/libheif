@@ -31,6 +31,7 @@
 #include "test_utils.h"
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 
 TEST_CASE("no regions") {
@@ -341,14 +342,15 @@ TEST_CASE("create mask region") {
   REQUIRE(plane_in[mski_in_width*mski_in_height - 1] == 0xfe);
 
   heif_region_release(regions[0]);
-
+  heif_image_release(mski_in);
+  heif_image_handle_release(mski_handle_in);
   heif_region_item_release(in_region_item);
   heif_image_handle_release(readbackHandle);
   heif_context_free(readbackCtx);
 }
 
 
-TEST_CASE("create inline mask region") {
+TEST_CASE("create inline mask region from data") {
   struct heif_error err;
 
   heif_image* img;
@@ -388,10 +390,10 @@ TEST_CASE("create inline mask region") {
   mask_data[10] = 0x3e;
   mask_data[18] = 0x1d;
   mask_data[23] = 0x01; 
-  err = heif_region_item_add_region_inline_mask(region_item1, 20, 50, 64, 3, mask_data.data(), mask_data.size(), NULL);
+  err = heif_region_item_add_region_inline_mask_data(region_item1, 20, 50, 64, 3, mask_data.data(), mask_data.size(), NULL);
   REQUIRE(err.code == heif_error_Ok);
 
-  err = heif_context_write_to_file(ctx, "regions_mask_inline.heif");
+  err = heif_context_write_to_file(ctx, "regions_mask_inline_data.heif");
   REQUIRE(err.code == heif_error_Ok);
 
   heif_region_item_release(region_item1);
@@ -402,7 +404,7 @@ TEST_CASE("create inline mask region") {
   heif_context_free(ctx);
   heif_image_release(img);;
 
-  heif_context *readbackCtx = get_context_for_local_file("regions_mask_inline.heif");
+  heif_context *readbackCtx = get_context_for_local_file("regions_mask_inline_data.heif");
   heif_image_handle *readbackHandle = get_primary_image_handle(readbackCtx);
   int num_region_items = heif_image_handle_get_number_of_region_items(readbackHandle);
   REQUIRE(num_region_items == 1);
@@ -423,18 +425,156 @@ TEST_CASE("create inline mask region") {
   int32_t x, y;
   uint32_t width, height;
   std::vector<uint8_t> mask_data_in(data_len);
-  err = heif_region_get_inline_mask(regions[0], &x, &y, &width, &height, mask_data_in.data());
+  err = heif_region_get_inline_mask_data(regions[0], &x, &y, &width, &height, mask_data_in.data());
   REQUIRE (err.code == heif_error_Ok);
   REQUIRE(x == 20);
   REQUIRE(y == 50);
   REQUIRE(width == 64);
   REQUIRE(height == 3);
-  REQUIRE(mask_data[0] == 0x80);
-  REQUIRE(mask_data[1] == 0x00);
-  REQUIRE(mask_data[2] == 0x7f);
-  REQUIRE(mask_data[10] == 0x3e);
-  REQUIRE(mask_data[18] == 0x1d);
-  REQUIRE(mask_data[23] == 0x01);
+  REQUIRE(mask_data_in[0] == 0x80);
+  REQUIRE(mask_data_in[1] == 0x00);
+  REQUIRE(mask_data_in[2] == 0x7f);
+  REQUIRE(mask_data_in[10] == 0x3e);
+  REQUIRE(mask_data_in[18] == 0x1d);
+  REQUIRE(mask_data_in[23] == 0x01);
+  heif_region_release(regions[0]);
+
+  heif_region_item_release(in_region_item);
+  heif_image_handle_release(readbackHandle);
+  heif_context_free(readbackCtx);
+}
+
+
+TEST_CASE("create inline mask region from image") {
+  struct heif_error err;
+
+  heif_image* img;
+  uint32_t input_width = 1280;
+  uint32_t input_height = 1024;
+  heif_image_create(input_width, input_height, heif_colorspace_YCbCr,
+                    heif_chroma_420, &img);
+  fill_new_plane(img, heif_channel_Y, input_width, input_height);
+  fill_new_plane(img, heif_channel_Cb, (input_width + 1) / 2,
+                 (input_height + 1) / 2);
+  fill_new_plane(img, heif_channel_Cr, (input_width + 1) / 2,
+                 (input_height + 1) / 2);
+
+  heif_context *ctx = heif_context_alloc();
+  heif_encoder *enc;
+  err = heif_context_get_encoder_for_format(ctx, heif_compression_AV1, &enc);
+  REQUIRE(err.code == heif_error_Ok);
+
+  struct heif_encoding_options *options;
+  options = heif_encoding_options_alloc();
+  options->macOS_compatibility_workaround = false;
+  options->macOS_compatibility_workaround_no_nclx_profile = false;
+  options->image_orientation = heif_orientation_normal;
+
+  heif_image_handle *handle;
+  err = heif_context_encode_image(ctx, img, enc, options, &handle);
+  REQUIRE(err.code == heif_error_Ok);
+
+  struct heif_region_item *region_item1;
+  err = heif_image_handle_add_region_item(handle, input_width, input_height,
+                                          &region_item1);
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image* mask_image;
+  heif_image_create(64, 3, heif_colorspace_monochrome,
+                    heif_chroma_monochrome, &mask_image);
+  err = heif_image_add_plane(mask_image, heif_channel_Y, 64, 3, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  int stride;
+  uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
+  memset(p, 0, 3 * stride);
+  p[0] = 0x02;
+  p[17] = 0x01;
+  p[18] = 0x01;
+  p[19] = 0x01;
+  p[20] = 0x01;
+  p[21] = 0xff;
+  p[22] = 0xff;
+  p[23] = 0xff;
+  p[82] = 0x06;
+  p[83] = 0x06;
+  p[84] = 0x07;
+  p[85] = 0x07;
+  p[86] = 0x07;
+  p[147] = 0x01;
+  p[148] = 0x01;
+  p[149] = 0x01;
+  p[151] = 0x01;
+  p[191] = 0x01;        
+  err = heif_region_item_add_region_inline_mask(region_item1, 20, 50, 64, 3, mask_image, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+
+  err = heif_context_write_to_file(ctx, "regions_mask_inline_image.heif");
+  REQUIRE(err.code == heif_error_Ok);
+
+  heif_image_release(mask_image);
+  heif_region_item_release(region_item1);
+
+  heif_image_handle_release(handle);
+  heif_encoder_release(enc);
+  heif_encoding_options_free(options);
+  heif_context_free(ctx);
+  heif_image_release(img);;
+
+  heif_context *readbackCtx = get_context_for_local_file("regions_mask_inline_image.heif");
+  heif_image_handle *readbackHandle = get_primary_image_handle(readbackCtx);
+  int num_region_items = heif_image_handle_get_number_of_region_items(readbackHandle);
+  REQUIRE(num_region_items == 1);
+  std::vector<heif_item_id> region_item_ids(num_region_items);
+  int num_returned = heif_image_handle_get_list_of_region_item_ids(readbackHandle, region_item_ids.data(), num_region_items);
+  REQUIRE(num_returned == 1);
+  heif_region_item* in_region_item;
+  err = heif_context_get_region_item(readbackCtx, region_item_ids[0], &in_region_item);
+  heif_item_id id1 = heif_region_item_get_id(in_region_item);
+  REQUIRE(id1 == region_item_ids[0]);
+  int num_regions = heif_region_item_get_number_of_regions(in_region_item);
+  REQUIRE(num_regions == 1);
+  std::vector<heif_region*> regions(num_regions);
+  int num_regions_returned = heif_region_item_get_list_of_regions(in_region_item, regions.data(), (int)(regions.size()));
+  REQUIRE(num_regions_returned == num_regions);
+  REQUIRE(heif_region_get_type(regions[0]) == heif_region_type_inline_mask);
+  heif_image * mask_image_in;
+  int32_t x, y;
+  uint32_t width, height;
+  err = heif_region_get_inline_mask_image(regions[0], &x, &y, &width, &height, &mask_image_in);
+  REQUIRE (err.code == heif_error_Ok);
+  REQUIRE(x == 20);
+  REQUIRE(y == 50);
+  REQUIRE(width == 64);
+  REQUIRE(height == 3);
+  uint8_t* p_in = heif_image_get_plane(mask_image_in, heif_channel_Y, &stride);
+  REQUIRE(p_in[0] == 0xff);
+  REQUIRE(p_in[1] == 0x00);
+  REQUIRE(p_in[8] == 0x00);
+  REQUIRE(p_in[16] == 0x00);
+  REQUIRE(p_in[17] == 0xff);
+  REQUIRE(p_in[18] == 0xff);
+  REQUIRE(p_in[19] == 0xff);
+  REQUIRE(p_in[20] == 0xff);
+  REQUIRE(p_in[21] == 0xff);
+  REQUIRE(p_in[22] == 0xff);
+  REQUIRE(p_in[23] == 0xff);
+  REQUIRE(p_in[24] == 0x00);
+  REQUIRE(p_in[81] == 0x00);
+  REQUIRE(p_in[82] == 0xff);
+  REQUIRE(p_in[83] == 0xff);
+  REQUIRE(p_in[84] == 0xff);
+  REQUIRE(p_in[85] == 0xff);
+  REQUIRE(p_in[86] == 0xff);
+  REQUIRE(p_in[87] == 0x00);
+  REQUIRE(p_in[146] == 0x00);
+  REQUIRE(p_in[147] == 0xff);
+  REQUIRE(p_in[148] == 0xff);
+  REQUIRE(p_in[149] == 0xff);
+  REQUIRE(p_in[150] == 0x00);
+  REQUIRE(p_in[151] == 0xff);
+  REQUIRE(p_in[190] == 0x00);
+  REQUIRE(p_in[191] == 0xff);
+  heif_image_release(mask_image_in);
   heif_region_release(regions[0]);
 
   heif_region_item_release(in_region_item);

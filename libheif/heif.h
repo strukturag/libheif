@@ -2471,7 +2471,7 @@ unsigned long heif_region_get_inline_mask_data_len(const struct heif_region* reg
 
 
 /**
- * Get a inline mask region.
+ * Get data for an inline mask region.
  *
  * This returns the values in the reference coordinate space (from the parent region item).
  * The mask location is represented by a top left corner position, and a size defined
@@ -2500,10 +2500,39 @@ unsigned long heif_region_get_inline_mask_data_len(const struct heif_region* reg
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
-struct heif_error heif_region_get_inline_mask(const struct heif_region* region,
-                                              int32_t* x, int32_t* y,
-                                              uint32_t* width, uint32_t* height,
-                                              uint8_t* mask_data);
+struct heif_error heif_region_get_inline_mask_data(const struct heif_region* region,
+                                                   int32_t* x, int32_t* y,
+                                                   uint32_t* width, uint32_t* height,
+                                                   uint8_t* mask_data);
+
+/**
+ * Get an inline mask region image.
+ *
+ * This returns the values in the reference coordinate space (from the parent region item).
+ * The mask location is represented by a top left corner position, and a size defined
+ * by a width and height.
+ *
+ * The mask is held as inline data on the region, one bit per pixel. If the bit value is `1`,
+ * the corresponding pixel is part of the region. If the bit value is `0`, the corresponding
+ * pixel is not part of the region. This function converts that to an 8-bit monochrome image,
+ * with the pixel value set to `255` where the pixel is part of the region, and `0` where the
+ * pixel value is not part of the region.
+ *
+ * @param region the region to query, which must be of type #heif_region_type_inline_mask.
+ * @param x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param width the width of the mask region
+ * @param height the height of the mask region
+ * @param mask_image the returned mask image
+ * @return heif_error_ok on success, or an error value indicating the problem on failure
+ *
+ * \note the caller is responsible for releasing the mask image
+ */
+LIBHEIF_API
+struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
+                                                    int32_t* x, int32_t* y,
+                                                    uint32_t* width, uint32_t* height,
+                                                    struct heif_image** mask_image);
 
 // --- adding region items
 
@@ -2701,12 +2730,42 @@ struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
  LIBHEIF_API
+struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_region_item* region_item,
+                                                               int32_t x, int32_t y,
+                                                               uint32_t width, uint32_t height,
+                                                               uint8_t* mask_data,
+                                                               unsigned long mask_data_len,
+                                                               struct heif_region** out_region);
+
+/**
+ * Add an inline mask region image to the region item.
+ *
+ * The region geometry is described by a top left corner position, and a size defined
+ * by a width and height.
+ *
+ * The mask data is held as inline data on the region, one bit per pixel. The provided
+ * image is converted to inline data, where any non-zero pixel becomes part of the
+ * mask region. If the image width is less that the specified width, it is expanded
+ * to match the width of the region (zero fill on the right). If the image height is
+ * less than the specified height, it is expanded to match the height of the region
+ * (zero fill on the bottom). If the image width or height is greater than the 
+ * width or height (correspondingly) of the region, the image is cropped.
+ *
+ * @param region_item the region item that holds this mask region
+ * @param x the x value for the top-left corner of this mask region
+ * @param y the y value for the top-left corner of this mask region
+ * @param width the width of this mask region
+ * @param height the height of this mask region
+ * @param image the image to convert to an inline mask
+ * @param out_region pointer to pointer to the returned region (optional, see below)
+ * @return heif_error_ok on success, or an error value indicating the problem on failure
+ */
+ LIBHEIF_API
 struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_item* region_item,
-                                                              int32_t x, int32_t y,
-                                                              uint32_t width, uint32_t height,
-                                                              uint8_t* mask_data,
-                                                              unsigned long mask_data_len,
-                                                              struct heif_region** out_region);
+                                                          int32_t x, int32_t y,
+                                                          uint32_t width, uint32_t height,
+                                                          struct heif_image* image,
+                                                          struct heif_region** out_region);
 #ifdef __cplusplus
 }
 #endif
