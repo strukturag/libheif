@@ -74,7 +74,7 @@ static void show_help(const char* argv0)
                "Usage: heif-convert [options]  <input-image> <output-image>\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffices are recognized: jpg, jpeg, png, y4m."
+               "These suffixes are recognized: jpg, jpeg, png, y4m."
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
