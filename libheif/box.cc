@@ -799,13 +799,10 @@ Error Box_ftyp::parse(BitstreamRange& range)
 
 bool Box_ftyp::has_compatible_brand(uint32_t brand) const
 {
-  for (uint32_t b : m_compatible_brands) {
-    if (b == brand) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::find(m_compatible_brands.begin(),
+                   m_compatible_brands.end(),
+                   brand) !=
+         m_compatible_brands.end();
 }
 
 
@@ -834,9 +831,9 @@ std::string Box_ftyp::dump(Indent& indent) const
 
 void Box_ftyp::add_compatible_brand(uint32_t brand)
 {
-  // TODO: check whether brand already exists in the list
-
-  m_compatible_brands.push_back(brand);
+  if (!has_compatible_brand(brand)) {
+    m_compatible_brands.push_back(brand);
+  }
 }
 
 
