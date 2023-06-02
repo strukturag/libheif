@@ -273,7 +273,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_compression_VVC", heif_compression_VVC)
     .value("heif_compression_EVC", heif_compression_EVC)
     .value("heif_compression_JPEG2000", heif_compression_JPEG2000)
-    .value("heif_compression_uncompressed", heif_compression_uncompressed);
+    .value("heif_compression_uncompressed", heif_compression_uncompressed)
+    .value("heif_compression_mask", heif_compression_mask);
     emscripten::enum_<heif_chroma>("heif_chroma")
     .value("heif_chroma_undefined", heif_chroma_undefined)
     .value("heif_chroma_monochrome", heif_chroma_monochrome)

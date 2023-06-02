@@ -23,6 +23,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
+#include <cstdint>
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -465,14 +466,6 @@ int main(int argc, char** argv)
             uint32_t h;
             heif_region_get_rectangle(regions[j], &x, &y, &w, &h);
             printf("      rectangle [x=%i, y=%i, w=%u, h=%u]\n", x, y, w, h);
-#if 0
-            double dx;
-            double dy;
-            double dw;
-            double dh;
-            heif_region_get_rectangle_scaled(regions[j], &dx, &dy, &dw, &dh, IDs[i]);
-            printf("      rectangle [x=%lf, y=%lf, w=%lf, h=%lf]\n", dx, dy, dw, dh);
-#endif
           }
           else if (type == heif_region_type_ellipse) {
             int32_t x;
@@ -492,6 +485,15 @@ int main(int argc, char** argv)
             }
             printf("]\n");
           }
+          else if (type == heif_region_type_referenced_mask) {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            heif_item_id referenced_item;
+            heif_region_get_referenced_mask_ID(regions[j], &x, &y, &w, &h, &referenced_item);
+            printf("      referenced mask [x=%i, y=%i, w=%u, h=%u, item=%u]\n", x, y, w, h, referenced_item);
+          }
           else if (type == heif_region_type_polyline) {
             int32_t numPoints = heif_region_get_polyline_num_points(regions[j]);
             std::vector<int32_t> pts(numPoints*2);
@@ -501,6 +503,16 @@ int main(int argc, char** argv)
               printf("(%d;%d)", pts[2*p+0], pts[2*p+1]);
             }
             printf("]\n");
+          }
+          else if (type == heif_region_type_inline_mask) {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            long unsigned int data_len = heif_region_get_inline_mask_data_len(regions[j]);
+            std::vector<uint8_t> mask_data(data_len);
+            heif_region_get_inline_mask_data(regions[j], &x, &y, &w, &h, mask_data.data());
+            printf("      inline mask [x=%i, y=%i, w=%u, h=%u, data len=%lu]\n", x, y, w, h, mask_data.size());
           }
       }
 
