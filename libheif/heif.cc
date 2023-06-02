@@ -3764,9 +3764,6 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
     }
 
     err = heif_decode_image(mski_handle_in, mask_image, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
-    if (err.code != heif_error_Ok) {
-      heif_image_handle_release(mski_handle_in);
-    }
 
     heif_image_handle_release(mski_handle_in);
 
