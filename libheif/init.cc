@@ -108,20 +108,10 @@ struct heif_error heif_init(struct heif_init_params*)
     struct heif_error err{};
     std::vector<std::string> plugin_paths = get_plugin_paths();
 
-    if (plugin_paths.empty()) {
-      // --- load plugins from default directory
-
-      err = heif_load_plugins(LIBHEIF_PLUGIN_DIRECTORY, nullptr, nullptr, 0);
+    for (const auto& dir : plugin_paths) {
+      err = heif_load_plugins(dir.c_str(), nullptr, nullptr, 0);
       if (err.code != 0) {
         return err;
-      }
-    }
-    else {
-      for (const auto& dir : plugin_paths) {
-        err = heif_load_plugins(dir.c_str(), nullptr, nullptr, 0);
-        if (err.code != 0) {
-          return err;
-        }
       }
     }
 #endif
@@ -338,33 +328,6 @@ void heif_unload_all_plugins()
 }
 
 
-const char* const* heif_get_plugin_directories()
-{
-  auto plugin_paths = get_plugin_paths();
-  size_t n = plugin_paths.size();
-
-  auto out_paths = new char* [n + 1];
-  for (size_t i = 0; i < n; i++) {
-    out_paths[i] = new char[plugin_paths[i].size() + 1];
-    strcpy(out_paths[i], plugin_paths[i].c_str());
-  }
-
-  out_paths[n] = nullptr;
-
-  return out_paths;
-}
-
-
-void heif_free_plugin_directories(const char* const* paths)
-{
-  for (int i = 0; paths[i]; i++) {
-    delete[] paths[i];
-  }
-
-  delete[] paths;
-}
-
-
 struct heif_error heif_load_plugins(const char* directory,
                                     const struct heif_plugin_info** out_plugins,
                                     int* out_nPluginsLoaded,
@@ -427,3 +390,30 @@ struct heif_error heif_load_plugins(const char* directory,
 }
 
 #endif
+
+
+const char* const* heif_get_plugin_directories()
+{
+  auto plugin_paths = get_plugin_paths();
+  size_t n = plugin_paths.size();
+
+  auto out_paths = new char* [n + 1];
+  for (size_t i = 0; i < n; i++) {
+    out_paths[i] = new char[plugin_paths[i].size() + 1];
+    strcpy(out_paths[i], plugin_paths[i].c_str());
+  }
+
+  out_paths[n] = nullptr;
+
+  return out_paths;
+}
+
+
+void heif_free_plugin_directories(const char* const* paths)
+{
+  for (int i = 0; paths[i]; i++) {
+    delete[] paths[i];
+  }
+
+  delete[] paths;
+}
