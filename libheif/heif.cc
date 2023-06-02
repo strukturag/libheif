@@ -3704,11 +3704,11 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
 }
 
 struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
-                                                    int32_t* x, int32_t* y,
-                                                    uint32_t* width, uint32_t* height,
-                                                    heif_image** mask_image)
+                                                    int32_t* out_x0, int32_t* out_y0,
+                                                    uint32_t* out_width, uint32_t* out_height,
+                                                    heif_image** out_mask_image)
 {
-  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr))
+  if ((out_x0 == nullptr) || (out_y0 == nullptr) || (out_width == nullptr) || (out_height == nullptr))
   {
     return heif_error_invalid_parameter_value;
   }
@@ -3716,36 +3716,37 @@ struct heif_error heif_region_get_inline_mask_image(const struct heif_region* re
   const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
   if (mask)
   {
-    *x = mask->x;
-    *y = mask->y;
-    *width = mask->width;
-    *height = mask->height;
-    uint8_t* packed_mask_values = mask->mask_data.data();
+    *out_x0 = mask->x;
+    *out_y0 = mask->y;
+    uint32_t width = *out_width = mask->width;
+    uint32_t height= *out_height = mask->height;
+    uint8_t* mask_data = mask->mask_data.data();
 
-    heif_error err = heif_image_create(*width, *height, heif_colorspace_monochrome, heif_chroma_monochrome, mask_image);
+    heif_error err = heif_image_create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome, out_mask_image);
     if (err.code)
     {
       return err;
     }
-    err = heif_image_add_plane(*mask_image, heif_channel_Y, *width, *height, 8);
+    err = heif_image_add_plane(*out_mask_image, heif_channel_Y, width, height, 8);
     if (err.code)
     {
-      heif_image_release(*mask_image);
+      heif_image_release(*out_mask_image);
       return err;
     }
     int stride;
-    uint8_t* p = heif_image_get_plane(*mask_image, heif_channel_Y, &stride);
-    for (uint32_t y = 0; y < *height; y++)
+    uint8_t* p = heif_image_get_plane(*out_mask_image, heif_channel_Y, &stride);
+    uint64_t pixel_index = 0;
+
+    for (uint32_t y = 0; y < height; y++)
     {
-      for (uint32_t x = 0; x < *width; x++)
+      for (uint32_t x = 0; x < width; x++)
       {
-        uint64_t pixel = (y * stride + x);
-        uint64_t bit_index = y * (*width) + x;
-        uint64_t mask_byte = bit_index / 8;
-        int bit_offset = 7 - (bit_index % 8);
-        uint8_t packed_mask_value = packed_mask_values[mask_byte];
-        uint8_t unpacked_mask_value = ((packed_mask_value & (1 << bit_offset)) != 0) ? 255 : 0;
-        p[pixel] = unpacked_mask_value;        
+        uint64_t mask_byte = pixel_index / 8;
+        uint8_t pixel_bit = 0x80U >> (pixel_index % 8);
+
+        p[y * stride + x] = (mask_data[mask_byte] & pixel_bit) ? 255 : 0;
+
+        pixel_index++;
       }
     }
     return heif_error_ok;
