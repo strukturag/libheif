@@ -39,6 +39,10 @@ void show_version()
       std::cout << "plugin path: " << paths[i] << '\n';
     }
 
+    if (paths[0] == nullptr) {
+      std::cout << "plugin path: plugins are disabled\n";
+    }
+
     heif_free_plugin_directories(paths);
   }
 }
