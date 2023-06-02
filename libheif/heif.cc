@@ -3768,6 +3768,8 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
       heif_image_handle_release(mski_handle_in);
     }
 
+    heif_image_handle_release(mski_handle_in);
+
     return err;
   }
 
