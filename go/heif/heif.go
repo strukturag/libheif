@@ -54,6 +54,7 @@ const (
 	CompressionVVC          = C.heif_compression_VVC
 	CompressionEVC          = C.heif_compression_EVC
 	CompressionUncompressed = C.heif_compression_uncompressed
+	CompressionMask         = C.heif_compression_mask
 )
 
 type Chroma C.enum_heif_chroma

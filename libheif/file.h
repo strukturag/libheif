@@ -136,6 +136,9 @@ public:
 
   heif_item_id add_new_image(const char* item_type);
 
+  heif_item_id add_new_hidden_image(const char* item_type);
+
+
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
   void add_hvcC_property(heif_item_id id);

@@ -27,6 +27,7 @@
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
+#include "mask_image.h"
 
 #include <iomanip>
 #include <utility>
@@ -561,6 +562,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_uncC>();
       break;
 #endif
+
+    case fourcc("mskC"):
+      box = std::make_shared<Box_mskC>();
+      break;
 
     default:
       box = std::make_shared<Box>();

@@ -81,6 +81,10 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR KVAZAAR)
 
+target_sources(heif PRIVATE
+               encoder_mask.h
+               encoder_mask.cc)
+
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             encoder_uncompressed.h

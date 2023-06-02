@@ -3305,6 +3305,119 @@ struct heif_error heif_region_item_add_region_polyline(struct heif_region_item* 
 }
 
 
+struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region_item* item,
+                                                              int32_t x, int32_t y,
+                                                              uint32_t width, uint32_t height,
+                                                              heif_item_id mask_item_id,
+                                                              struct heif_region** out_region)
+{
+  auto region = std::make_shared<RegionGeometry_ReferencedMask>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+  region->referenced_item = mask_item_id;
+
+  item->region_item->add_region(region);
+
+  if (out_region) {
+    *out_region = create_region(region, item);
+  }
+
+  /* When the geometry 'mask' of a region is represented by a mask stored in
+   * another image item the image item containing the mask shall be identified
+   * by an item reference of type 'mask' from the region item to the image item
+   * containing the mask. */
+  std::shared_ptr<HeifContext> ctx = item->context;
+  ctx->add_region_referenced_mask_ref(item->region_item->item_id, mask_item_id);
+
+  return error_Ok;
+}
+
+
+struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_region_item* item,
+                                                               int32_t x, int32_t y,
+                                                               uint32_t width, uint32_t height,
+                                                               uint8_t* mask_data,
+                                                               unsigned long mask_data_len,
+                                                               struct heif_region** out_region)
+{
+  auto region = std::make_shared<RegionGeometry_InlineMask>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+  region->mask_data.resize(mask_data_len);
+  std::memcpy(region->mask_data.data(), mask_data, region->mask_data.size());
+
+  item->region_item->add_region(region);
+
+  if (out_region) {
+    *out_region = create_region(region, item);
+  }
+
+  return error_Ok;
+}
+
+struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_item* item,
+                                                          int32_t x, int32_t y,
+                                                          uint32_t width, uint32_t height,
+                                                          heif_image* mask_image,
+                                                          struct heif_region** out_region)
+{
+  if (! heif_image_has_channel(mask_image, heif_channel_Y))
+  {
+    return {heif_error_Usage_error, heif_suberror_Nonexisting_image_channel_referenced, "Inline mask image must have a Y channel"};
+  }
+  auto region = std::make_shared<RegionGeometry_InlineMask>();
+  region->x = x;
+  region->y = y;
+  region->width = width;
+  region->height = height;
+  region->mask_data.resize((width * height + 7) / 8);
+  uint32_t mask_height = std::min(height, (uint32_t)heif_image_get_height(mask_image, heif_channel_Y));
+  uint32_t mask_width = std::min(width, (uint32_t)heif_image_get_width(mask_image, heif_channel_Y));
+  int stride;
+  uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
+  int bit_offset = 7;
+  uint64_t mask_offset = 0;
+  uint8_t mask_value = 0;
+  for (uint32_t y = 0; y < height; y++)
+  {
+    if (y < mask_height)
+    {
+      for (uint32_t x = 0; x < width; x++)
+      {
+        if (x < mask_width)
+        {
+          uint8_t pixel_value = p[y * stride + x];
+          if (pixel_value)
+          {
+            mask_value |= (1 << bit_offset);
+          }
+        }
+        bit_offset -= 1;
+        if (bit_offset < 0)
+        {
+          bit_offset = 7;
+          region->mask_data.data()[mask_offset] = mask_value;
+          mask_offset += 1;
+          mask_value = 0;
+        }
+      }
+    }
+  }
+
+  item->region_item->add_region(region);
+
+  if (out_region) {
+    *out_region = create_region(region, item);
+  }
+
+  return error_Ok;
+}
+
+
 void heif_region_release(const struct heif_region* region)
 {
   delete region;
@@ -3533,5 +3646,110 @@ struct heif_error heif_region_get_polygon_points_transformed(const struct heif_r
 struct heif_error heif_region_get_polyline_points_transformed(const struct heif_region* region, double* pts, heif_item_id image_id)
 {
   return heif_region_get_poly_points_scaled(region, pts, image_id);
+}
+
+struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* region,
+                                                     int32_t* x, int32_t* y,
+                                                     uint32_t* width, uint32_t* height,
+                                                     heif_item_id *mask_item_id)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr) || (mask_item_id == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_ReferencedMask> mask = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    *mask_item_id = mask->referenced_item;
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
+}
+
+unsigned long int heif_region_get_inline_mask_data_len(const struct heif_region* region)
+{
+  const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
+  if (mask) {
+    return mask->mask_data.size();
+  }
+  return 0;
+}
+
+struct heif_error heif_region_get_inline_mask_data(const struct heif_region* region,
+                                                   int32_t* x, int32_t* y,
+                                                   uint32_t* width, uint32_t* height,
+                                                   uint8_t* data)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    memcpy(data, mask->mask_data.data(), mask->mask_data.size());
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
+}
+
+struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
+                                                    int32_t* x, int32_t* y,
+                                                    uint32_t* width, uint32_t* height,
+                                                    heif_image** mask_image)
+{
+  if ((x == nullptr) || (y == nullptr) || (width == nullptr) || (height == nullptr))
+  {
+    return heif_error_invalid_parameter_value;
+  }
+
+  const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
+  if (mask)
+  {
+    *x = mask->x;
+    *y = mask->y;
+    *width = mask->width;
+    *height = mask->height;
+    uint8_t* packed_mask_values = mask->mask_data.data();
+
+    heif_error err = heif_image_create(*width, *height, heif_colorspace_monochrome, heif_chroma_monochrome, mask_image);
+    if (err.code)
+    {
+      return err;
+    }
+    err = heif_image_add_plane(*mask_image, heif_channel_Y, *width, *height, 8);
+    if (err.code)
+    {
+      heif_image_release(*mask_image);
+      return err;
+    }
+    int stride;
+    uint8_t* p = heif_image_get_plane(*mask_image, heif_channel_Y, &stride);
+    for (uint32_t y = 0; y < *height; y++)
+    {
+      for (uint32_t x = 0; x < *width; x++)
+      {
+        uint64_t pixel = (y * stride + x);
+        uint64_t bit_index = y * (*width) + x;
+        uint64_t mask_byte = bit_index / 8;
+        int bit_offset = 7 - (bit_index % 8);
+        uint8_t packed_mask_value = packed_mask_values[mask_byte];
+        uint8_t unpacked_mask_value = ((packed_mask_value & (1 << bit_offset)) != 0) ? 255 : 0;
+        p[pixel] = unpacked_mask_value;        
+      }
+    }
+    return heif_error_ok;
+  }
+  return heif_error_invalid_parameter_value;
 }
 
