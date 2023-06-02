@@ -45,6 +45,7 @@
 #include <memory>
 #include <getopt.h>
 #include <assert.h>
+#include "common.h"
 
 
 static struct option long_options[] = {
@@ -107,7 +108,7 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'v':
-      printf("%s\n", LIBHEIF_VERSION);
+        show_version();
         return 0;
     }
   }

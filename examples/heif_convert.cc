@@ -60,6 +60,7 @@
 #endif
 
 #include "encoder_y4m.h"
+#include "common.h"
 
 #if defined(_MSC_VER)
 #include "getopt.h"
@@ -270,7 +271,7 @@ int main(int argc, char** argv)
         }
         break;
       case 'v':
-        std::cout << LIBHEIF_VERSION << std::endl;
+        show_version();
         return 0;
     }
   }

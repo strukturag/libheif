@@ -11,7 +11,9 @@ if (MSVC)
 endif ()
 
 add_executable(heif-info ${getopt_sources}
-        heif_info.cc)
+        heif_info.cc
+        common.cc
+        common.h)
 target_link_libraries(heif-info heif)
 install(TARGETS heif-info RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
@@ -24,7 +26,9 @@ add_executable(heif-convert ${getopt_sources}
         encoder_y4m.h
         heif_convert.cc
         ../libheif/exif.cc
-        ../libheif/exif.cc)
+        ../libheif/exif.cc
+        common.cc
+        common.h)
 target_link_libraries(heif-convert PRIVATE heif)
 install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-convert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
@@ -38,7 +42,9 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.cc
         encoder.cc
         decoder_y4m.cc
-        decoder_y4m.h)
+        decoder_y4m.h
+        common.cc
+        common.h)
 target_link_libraries(heif-enc PRIVATE heif)
 
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -46,7 +52,9 @@ install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 
 add_executable(heif-test ${getopt_sources}
-        heif_test.cc)
+        heif_test.cc
+        common.cc
+        common.h)
 target_link_libraries(heif-test heif)
 
 
@@ -108,7 +116,9 @@ if (PNG_FOUND)
             encoder_png.cc
             encoder_png.h
             ../libheif/exif.h
-            ../libheif/exif.cc)
+            ../libheif/exif.cc
+            common.cc
+            common.h)
     target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES})
     target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
 

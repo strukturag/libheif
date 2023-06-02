@@ -54,6 +54,7 @@
 #include <assert.h>
 #include "benchmark.h"
 #include "libheif/exif.h"
+#include "common.h"
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -152,7 +153,7 @@ void show_help(const char* argv0)
             << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
             << "  -o, --output          output filename (optional)\n"
-            << "  --verbose             enable logging output (more will increase logging level)\n"
+            << "      --verbose         enable logging output (more will increase logging level)\n"
             << "  -P, --params          show all encoder parameters\n"
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
@@ -454,7 +455,7 @@ int main(int argc, char** argv)
         show_help(argv[0]);
         return 0;
       case 'v':
-        std::cout << LIBHEIF_VERSION <<  std::endl;
+        show_version();
         return 0;
       case 'q':
         quality = atoi(optarg);

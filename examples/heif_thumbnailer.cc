@@ -40,6 +40,8 @@
 
 #if HAVE_LIBPNG
 #  include "encoder_png.h"
+#include "common.h"
+
 #endif
 
 #if defined(_MSC_VER)
@@ -80,7 +82,7 @@ int main(int argc, char** argv)
         thumbnail_from_primary_image_only = true;
         break;
       case 'v':
-        std::cout << LIBHEIF_VERSION << std::endl;
+        show_version();
         return 0;
       case 'h':
       default:

@@ -47,6 +47,7 @@
 #include <getopt.h>
 #include <assert.h>
 #include <stdio.h>
+#include "common.h"
 
 
 /*
@@ -140,7 +141,7 @@ int main(int argc, char** argv)
         output_filename = optarg;
         break;
       case 'v':
-        printf("%s\n", LIBHEIF_VERSION);
+        show_version();
         return 0;
     }
   }

@@ -377,6 +377,15 @@ struct heif_error heif_load_plugins(const char* directory,
 LIBHEIF_API
 struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin);
 
+// Get a NULL terminated array of the plugin directories that are searched by libheif.
+// This includes the paths specified in the environment variable LIBHEIF_PLUGIN_PATHS and the built-in path
+// (if not overridden by the environment variable).
+LIBHEIF_API
+const char*const* heif_get_plugin_directories();
+
+LIBHEIF_API
+void heif_free_plugin_directories(const char*const*);
+
 
 // ========================= file type check ======================
 

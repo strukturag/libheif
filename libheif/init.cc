@@ -43,11 +43,19 @@ void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
 
 std::vector<std::string> get_plugin_paths()
 {
+  std::vector<std::string> plugin_paths;
+
 #if defined(_WIN32)
-  return get_plugin_directories_from_environment_variable_windows();
+  plugin_paths = get_plugin_directories_from_environment_variable_windows();
 #else
-  return get_plugin_directories_from_environment_variable_unix();
+  plugin_paths = get_plugin_directories_from_environment_variable_unix();
 #endif
+
+  if (plugin_paths.empty()) {
+    plugin_paths.push_back(LIBHEIF_PLUGIN_DIRECTORY);
+  }
+
+  return plugin_paths;
 }
 
 std::vector<std::string> list_all_potential_plugins_in_directory(const char* directory)
@@ -58,7 +66,11 @@ std::vector<std::string> list_all_potential_plugins_in_directory(const char* dir
   return list_all_potential_plugins_in_directory_unix(directory);
 #endif
 }
-
+#else
+std::vector<std::string> get_plugin_paths()
+{
+  return {};
+}
 #endif
 
 
@@ -183,6 +195,7 @@ void heif_deinit()
 // This could be inside ENABLE_PLUGIN_LOADING, but the "include-what-you-use" checker cannot process this.
 #include <vector>
 #include <string>
+#include <cstring>
 
 #if ENABLE_PLUGIN_LOADING
 
@@ -323,6 +336,34 @@ void heif_unload_all_plugins()
 
   sLoadedPlugins.clear();
 }
+
+
+const char* const* heif_get_plugin_directories()
+{
+  auto plugin_paths = get_plugin_paths();
+  size_t n = plugin_paths.size();
+
+  auto out_paths = new char* [n + 1];
+  for (size_t i = 0; i < n; i++) {
+    out_paths[i] = new char[plugin_paths[i].size() + 1];
+    strcpy(out_paths[i], plugin_paths[i].c_str());
+  }
+
+  out_paths[n] = nullptr;
+
+  return out_paths;
+}
+
+
+void heif_free_plugin_directories(const char* const* paths)
+{
+  for (int i = 0; paths[i]; i++) {
+    delete[] paths[i];
+  }
+
+  delete[] paths;
+}
+
 
 struct heif_error heif_load_plugins(const char* directory,
                                     const struct heif_plugin_info** out_plugins,
