@@ -578,7 +578,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 struct heif_image_handle** imgHdl)
 {
   if (!imgHdl) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, ""}
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, ""};
   }
 
   auto image = ctx->context->get_image(id);
