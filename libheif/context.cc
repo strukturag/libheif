@@ -54,6 +54,8 @@
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"
+#include "libheif/plugins/encoder_mask.h"
+
 #endif
 
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
@@ -1407,12 +1409,16 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       std::cout << "mski error 1" << std::endl;
       return error;
     }
+
+    auto infe = m_heif_file->get_infe_box(ID);
+
     error = MaskImageCodec::decode_mask_image(m_heif_file,
                                               ID,
                                               img,
                                               m_maximum_image_width_limit,
                                               m_maximum_image_height_limit,
-                                              data);
+                                              data,
+                                              infe->get_content_encoding());
     if (error) {
       return error;
     }
@@ -2906,13 +2912,24 @@ Error HeifContext::encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& s
                                         enum heif_image_input_class input_class,
                                         std::shared_ptr<Image>& out_image)
 {
-  heif_item_id image_id = m_heif_file->add_new_hidden_image("mski");
+  auto* mask_encoder = (encoder_struct_mask*)encoder->encoder;
+  std::cout << mask_encoder->encoding << "\n";
+
+  auto infe = m_heif_file->add_new_infe_box("mski");
+  infe->set_hidden_item(true);
+
+  infe->set_content_encoding(mask_encoder->encoding=="none" ? "" : mask_encoder->encoding);
+
+  std::cout << "set enc: " << infe->get_content_encoding() << "\n";
+
+  heif_item_id image_id = infe->get_item_ID();
   out_image = std::make_shared<Image>(this, image_id);
   Error err = MaskImageCodec::encode_mask_image(m_heif_file,
                                                 src_image,
                                                 encoder->encoder,
                                                 options,
-                                                out_image);
+                                                out_image,
+                                                mask_encoder->encoding);
   m_top_level_images.push_back(out_image);
   m_all_images[image_id] = out_image;
   write_image_metadata(src_image, image_id);

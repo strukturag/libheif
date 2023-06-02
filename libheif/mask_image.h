@@ -54,11 +54,9 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  uint8_t get_bits_per_pixel() const
-  { return m_bits_per_pixel; }
+  uint8_t get_bits_per_pixel() const { return m_bits_per_pixel; }
 
-  void set_bits_per_pixel(uint8_t bits_per_pixel)
-  { m_bits_per_pixel = bits_per_pixel; }
+  void set_bits_per_pixel(uint8_t bits_per_pixel) { m_bits_per_pixel = bits_per_pixel; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -71,16 +69,19 @@ class MaskImageCodec
 {
 public:
   static Error decode_mask_image(const std::shared_ptr<const HeifFile>& heif_file,
-                                  heif_item_id ID,
-                                  std::shared_ptr<HeifPixelImage>& img,
-                                  uint32_t maximum_image_width_limit,
-                                  uint32_t maximum_image_height_limit,
-                                  const std::vector<uint8_t>& data);
+                                 heif_item_id ID,
+                                 std::shared_ptr<HeifPixelImage>& img,
+                                 uint32_t maximum_image_width_limit,
+                                 uint32_t maximum_image_height_limit,
+                                 std::vector<uint8_t> data,
+                                 const std::string& content_encoding);
+
   static Error encode_mask_image(const std::shared_ptr<HeifFile>& heif_file,
                                  const std::shared_ptr<HeifPixelImage>& src_image,
                                  void* encoder_struct,
                                  const struct heif_encoding_options& options,
-                                 std::shared_ptr<HeifContext::Image>& out_image);
+                                 std::shared_ptr<HeifContext::Image>& out_image,
+                                 const std::string& content_encoding);
 };
 
 #endif //LIBHEIF_MASK_IMAGE_H

@@ -36,7 +36,14 @@
 #include <mutex>
 
 
-static const char* kParam_interleave = "interleave";
+static const char* kParam_encoding = "encoding";
+static const char* const kParam_encoding_valid_values[] = {
+    "none",
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    "deflate",
+#endif
+    nullptr
+};
 
 static const int PLUGIN_PRIORITY = 60;
 
@@ -65,9 +72,10 @@ static void mask_init_parameters()
 
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
-  p->name = kParam_interleave;
+  p->name = kParam_encoding;
   p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "planar";
+  p->string.default_value = "none";
+  p->string.valid_values = kParam_encoding_valid_values;
   p->has_default = true;
   d[i++] = p++;
 
@@ -185,18 +193,51 @@ struct heif_error mask_get_parameter_boolean(void* encoder_raw, const char* name
 }
 
 
+static bool string_list_contains(const char* const* values_list, const char* value)
+{
+  for (int i = 0; values_list[i]; i++) {
+    if (strcmp(values_list[i], value) == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 struct heif_error mask_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  //struct encoder_struct_mask* encoder = (struct encoder_struct_mask*) encoder_raw;
+  struct encoder_struct_mask* encoder = (struct encoder_struct_mask*) encoder_raw;
+
+  if (strcmp(name, kParam_encoding) == 0) {
+    if (!string_list_contains(kParam_encoding_valid_values, value)) {
+      return heif_error_invalid_parameter_value;
+    }
+
+    encoder->encoding = value;
+    return heif_error_ok;
+  }
 
   return heif_error_unsupported_parameter;
+}
+
+
+static void save_strcpy(char* dst, int dst_size, const char* src)
+{
+  strncpy(dst, src, dst_size - 1);
+  dst[dst_size - 1] = 0;
 }
 
 
 struct heif_error mask_get_parameter_string(void* encoder_raw, const char* name,
                                                     char* value, int value_size)
 {
-  //struct encoder_struct_mask* encoder = (struct encoder_struct_mask*) encoder_raw;
+  struct encoder_struct_mask* encoder = (struct encoder_struct_mask*) encoder_raw;
+
+  if (strcmp(name, kParam_encoding) == 0) {
+    save_strcpy(value, value_size, encoder->encoding.c_str());
+    return heif_error_ok;
+  }
 
   return heif_error_unsupported_parameter;
 }

@@ -830,14 +830,6 @@ heif_item_id HeifFile::add_new_image(const char* item_type)
 }
 
 
-heif_item_id HeifFile::add_new_hidden_image(const char* item_type)
-{
-  auto box = add_new_infe_box(item_type);
-  box->set_hidden_item(true);
-  return box->get_item_ID();
-}
-
-
 std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
 {
   heif_item_id id = get_unused_item_id();

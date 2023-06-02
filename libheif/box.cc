@@ -1553,14 +1553,9 @@ void Box_infe::derive_box_version()
 {
   int min_version = 0;
 
-  if (m_hidden_item) {
-    min_version = std::max(min_version, 2);
-  }
-
   if (m_item_ID > 0xFFFF) {
     min_version = std::max(min_version, 3);
   }
-
 
   if (m_item_type != "") {
     min_version = std::max(min_version, 2);
@@ -1585,6 +1580,8 @@ void Box_infe::set_hidden_item(bool hidden)
 Error Box_infe::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
+
+  std::cout << "infe| enc:" << m_content_encoding << "  ver:" << ((int)get_version()) << "\n";
 
   if (get_version() <= 1) {
     writer.write16((uint16_t) m_item_ID);

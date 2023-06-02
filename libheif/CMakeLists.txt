@@ -114,7 +114,7 @@ if (WITH_DEFLATE_HEADER_COMPRESSION)
     if (ZLIB_FOUND)
         target_link_libraries(heif PRIVATE ${ZLIB_LIBRARY})
         target_include_directories(heif PRIVATE ${ZLIB_INCLUDE_DIRS})
-        target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
+        target_compile_definitions(heif PUBLIC WITH_DEFLATE_HEADER_COMPRESSION=1)
     endif ()
 endif ()
 

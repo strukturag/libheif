@@ -26,10 +26,14 @@
 #include <algorithm>
 #include <map>
 #include <string.h>
+#include <iostream>
+#include <utility>
 
 #include "libheif/heif.h"
 #include "libheif/logging.h"
 #include "mask_image.h"
+#include "libheif/plugins/encoder_mask.h"
+#include "metadata_compression.h"
 
 Error Box_mskC::parse(BitstreamRange& range)
 {
@@ -60,7 +64,8 @@ Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& h
                                         std::shared_ptr<HeifPixelImage>& img,
                                         uint32_t maximum_image_width_limit,
                                         uint32_t maximum_image_height_limit,
-                                        const std::vector<uint8_t>& data)
+                                        std::vector<uint8_t> data,
+                                        const std::string& content_encoding)
 {
   std::vector<std::shared_ptr<Box>> item_properties;
   Error error = heif_file->get_properties(ID, item_properties);
@@ -107,6 +112,18 @@ Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& h
                  "Unsupported bit depth for mask item");
   }
 
+  std::cout << "enc: " << content_encoding << "\n";
+  if (content_encoding == "deflate") {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    data = inflate(data);
+    std::cout << "inflate\n";
+#else
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method,
+                 "libheif has been compiled without 'deflate' support.");
+#endif
+  }
+
   img = std::make_shared<HeifPixelImage>();
   img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
   img->add_plane(heif_channel_Y, width, height, mskC->get_bits_per_pixel());
@@ -129,7 +146,8 @@ Error MaskImageCodec::encode_mask_image(const std::shared_ptr<HeifFile>& heif_fi
                                         const std::shared_ptr<HeifPixelImage>& src_image,
                                         void* encoder_struct,
                                         const struct heif_encoding_options& options,
-                                        std::shared_ptr<HeifContext::Image>& out_image)
+                                        std::shared_ptr<HeifContext::Image>& out_image,
+                                        const std::string& content_encoding)
 {
   if (src_image->get_colorspace() != heif_colorspace_monochrome)
   {
@@ -143,13 +161,23 @@ Error MaskImageCodec::encode_mask_image(const std::shared_ptr<HeifFile>& heif_fi
                  heif_suberror_Unsupported_data_version,
                  "Unsupported bit depth for mask region");
   }
+
   // TODO: we could add an option to lossless-compress this data
   std::vector<uint8_t> data;
   int src_stride;
   uint8_t* src_data = src_image->get_plane(heif_channel_Y, &src_stride);
   uint64_t out_size = src_image->get_height() * src_stride;
   data.resize(data.size() + out_size);
-  memcpy(data.data(), src_data, out_size);
+  memcpy(data.data(), src_data, out_size); // TODO: I think the output should be without stride
+
+#if WITH_DEFLATE_HEADER_COMPRESSION
+  if (content_encoding == "deflate") {
+    std::vector<uint8_t> encodedData;
+    encodedData = deflate(data.data(), (int)data.size());
+    data = std::move(encodedData);
+  }
+#endif
+
   heif_file->append_iloc_data(out_image->get_id(), data, 0);
 
   std::shared_ptr<Box_mskC> mskC = std::make_shared<Box_mskC>();

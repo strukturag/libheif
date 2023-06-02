@@ -22,12 +22,14 @@
 #define LIBHEIF_ENCODER_MASK_H
 
 #include "libheif/common_utils.h"
+#include <string>
 
 // This is a dummy module. It does not actually do anything except parameter parsing.
 // The actual codec is included in the library.
 
 struct encoder_struct_mask
 {
+  std::string encoding = "none";
 };
 
 

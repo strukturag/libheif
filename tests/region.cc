@@ -268,6 +268,13 @@ TEST_CASE("create mask region") {
   err = heif_context_get_encoder_for_format(ctx, heif_compression_mask,
                                             &mask_enc);
   REQUIRE(err.code == heif_error_Ok);
+
+#if WITH_DEFLATE_HEADER_COMPRESSION
+  err = heif_encoder_set_parameter_string(mask_enc, "encoding", "deflate");
+  REQUIRE(err.code == heif_error_Ok);
+  printf("with deflate\n");
+#endif
+
   heif_image_handle *mask_handle;
   err = heif_context_encode_image(ctx, mask, mask_enc, options, &mask_handle);
   REQUIRE(err.code == heif_error_Ok);
