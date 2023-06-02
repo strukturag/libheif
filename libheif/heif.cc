@@ -578,23 +578,22 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 struct heif_image_handle** imgHdl)
 {
   if (!imgHdl) {
-    Error err(heif_error_Usage_error,
-              heif_suberror_Null_pointer_argument);
-    return err.error_struct(ctx->context.get());
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, ""}
   }
 
   auto image = ctx->context->get_image(id);
 
   if (!image) {
-    Error err(heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced);
-    return err.error_struct(ctx->context.get());
+    *imgHdl = nullptr;
+
+    return {heif_error_Usage_error, heif_suberror_Nonexisting_item_referenced, ""};
   }
 
   *imgHdl = new heif_image_handle();
   (*imgHdl)->image = image;
   (*imgHdl)->context = ctx->context;
 
-  return Error::Ok.error_struct(ctx->context.get());
+  return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
 
@@ -3757,7 +3756,7 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
     heif_context ctx;
     ctx.context = region->context;
 
-    heif_image_handle* mski_handle_in = nullptr;
+    heif_image_handle* mski_handle_in;
     err = heif_context_get_image_handle(&ctx, referenced_item_id, &mski_handle_in);
     if (err.code != heif_error_Ok) {
       assert(mski_handle_in == nullptr);
