@@ -3360,7 +3360,7 @@ struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_regio
 }
 
 struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_item* item,
-                                                          int32_t x, int32_t y,
+                                                          int32_t x0, int32_t y0,
                                                           uint32_t width, uint32_t height,
                                                           heif_image* mask_image,
                                                           struct heif_region** out_region)
@@ -3370,41 +3370,25 @@ struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_ite
     return {heif_error_Usage_error, heif_suberror_Nonexisting_image_channel_referenced, "Inline mask image must have a Y channel"};
   }
   auto region = std::make_shared<RegionGeometry_InlineMask>();
-  region->x = x;
-  region->y = y;
+  region->x = x0;
+  region->y = y0;
   region->width = width;
   region->height = height;
   region->mask_data.resize((width * height + 7) / 8);
-  uint32_t mask_height = std::min(height, (uint32_t)heif_image_get_height(mask_image, heif_channel_Y));
-  uint32_t mask_width = std::min(width, (uint32_t)heif_image_get_width(mask_image, heif_channel_Y));
+  memset(region->mask_data.data(), 0, region->mask_data.size());
+
+  uint32_t mask_height = (uint32_t)heif_image_get_height(mask_image, heif_channel_Y);
+  uint32_t mask_width = (uint32_t)heif_image_get_width(mask_image, heif_channel_Y);
   int stride;
   uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
-  int bit_offset = 7;
-  uint64_t mask_offset = 0;
-  uint8_t mask_value = 0;
-  for (uint32_t y = 0; y < height; y++)
-  {
-    if (y < mask_height)
-    {
-      for (uint32_t x = 0; x < width; x++)
-      {
-        if (x < mask_width)
-        {
-          uint8_t pixel_value = p[y * stride + x];
-          if (pixel_value)
-          {
-            mask_value |= (1 << bit_offset);
-          }
-        }
-        bit_offset -= 1;
-        if (bit_offset < 0)
-        {
-          bit_offset = 7;
-          region->mask_data.data()[mask_offset] = mask_value;
-          mask_offset += 1;
-          mask_value = 0;
-        }
-      }
+  uint64_t pixel_index = 0;
+
+  for (uint32_t y = 0; y < mask_height; y++) {
+    for (uint32_t x = 0; x < mask_width; x++) {
+      uint8_t mask_bit = p[y * stride + x] & 0x80; // use high-order bit of the 8-bit mask value as binary mask value
+      region->mask_data.data()[pixel_index/8] |= (mask_bit >> (pixel_index % 8));
+
+      pixel_index++;
     }
   }
 
