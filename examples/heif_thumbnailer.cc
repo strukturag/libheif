@@ -71,7 +71,7 @@ int main(int argc, char** argv)
   int size = 512; // default thumbnail size
   bool thumbnail_from_primary_image_only = false;
 
-  while ((opt = getopt(argc, argv, "s:hp")) != -1) {
+  while ((opt = getopt(argc, argv, "s:hpv")) != -1) {
     switch (opt) {
       case 's':
         size = atoi(optarg);
@@ -79,6 +79,9 @@ int main(int argc, char** argv)
       case 'p':
         thumbnail_from_primary_image_only = true;
         break;
+      case 'v':
+        std::cout << LIBHEIF_VERSION << std::endl;
+        return 0;
       case 'h':
       default:
         return usage(argv[0]);

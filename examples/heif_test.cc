@@ -52,6 +52,7 @@ static struct option long_options[] = {
     //{"output",    required_argument, 0, 'o' },
     {(char* const) "decode-img", required_argument, 0, 'd'},
     {(char* const) "metadata",   required_argument, 0, 'm'},
+    {(char* const) "version",    required_argument, 0, 'v'},
     {0, 0,                                          0, 0}
 };
 
@@ -65,6 +66,7 @@ void show_help(const char* argv0)
   fprintf(stderr, "  -d, --decode-img ID  decode image and output raw pixel data of all planes\n");
   fprintf(stderr, "  -m, --metadata ID    output metadata\n");
   fprintf(stderr, "  -h, --help           show help\n");
+  fprintf(stderr, "  -v, --version        show version\n");
 }
 
 
@@ -90,7 +92,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "d:m:h", long_options, &option_index);
+    int c = getopt_long(argc, argv, "d:m:hv", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -103,6 +105,9 @@ int main(int argc, char** argv)
         break;
       case 'h':
         show_help(argv[0]);
+        return 0;
+      case 'v':
+      printf("%s\n", LIBHEIF_VERSION);
         return 0;
     }
   }

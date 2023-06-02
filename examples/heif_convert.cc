@@ -78,6 +78,7 @@ static void show_help(const char* argv0)
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
+               "  -v, --version                  show version\n"
                "  -q, --quality                  quality (for JPEG output)\n"
                "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n"
                "      --with-aux                 also write auxiliary images (e.g. depth images)\n"
@@ -135,7 +136,8 @@ static struct option long_options[] = {
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
-    {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL}
+    {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
+    {(char* const) "version",          no_argument,       0,                        'v'}
 };
 
 
@@ -223,7 +225,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:C:v", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -267,6 +269,9 @@ int main(int argc, char** argv)
           exit(5);
         }
         break;
+      case 'v':
+        std::cout << LIBHEIF_VERSION << std::endl;
+        return 0;
     }
   }
 
