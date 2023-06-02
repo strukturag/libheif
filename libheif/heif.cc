@@ -3748,7 +3748,7 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
     return heif_region_get_inline_mask_image(region,x,y,width,height,mask_image);
   }
   else if (region->region->getRegionType() == heif_region_type_referenced_mask) {
-    heif_item_id referenced_item_id;
+    heif_item_id referenced_item_id = 0;
     heif_error err = heif_region_get_referenced_mask_ID(region, x, y, width, height, &referenced_item_id);
     if (err.code != heif_error_Ok) {
       return err;
@@ -3757,13 +3757,18 @@ struct heif_error heif_region_get_mask_image(const struct heif_region* region,
     heif_context ctx;
     ctx.context = region->context;
 
-    heif_image_handle* mski_handle_in;
+    heif_image_handle* mski_handle_in = nullptr;
     err = heif_context_get_image_handle(&ctx, referenced_item_id, &mski_handle_in);
     if (err.code != heif_error_Ok) {
+      assert(mski_handle_in == nullptr);
       return err;
     }
 
     err = heif_decode_image(mski_handle_in, mask_image, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
+    if (err.code != heif_error_Ok) {
+      heif_image_handle_release(mski_handle_in);
+    }
+
     return err;
   }
 
