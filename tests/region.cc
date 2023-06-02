@@ -540,7 +540,7 @@ TEST_CASE("create inline mask region from image") {
   heif_image * mask_image_in;
   int32_t x, y;
   uint32_t width, height;
-  err = heif_region_get_inline_mask_image(regions[0], &x, &y, &width, &height, &mask_image_in);
+  err = heif_region_get_mask_image(regions[0], &x, &y, &width, &height, &mask_image_in);
   REQUIRE (err.code == heif_error_Ok);
   REQUIRE(x == 20);
   REQUIRE(y == 50);

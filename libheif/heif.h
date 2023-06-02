@@ -2515,17 +2515,21 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
                                                    uint8_t* mask_data);
 
 /**
- * Get an inline mask region image.
+ * Get a mask region image.
  *
  * This returns the values in the reference coordinate space (from the parent region item).
  * The mask location is represented by a top left corner position, and a size defined
  * by a width and height.
  *
- * The mask is held as inline data on the region, one bit per pixel. If the bit value is `1`,
- * the corresponding pixel is part of the region. If the bit value is `0`, the corresponding
- * pixel is not part of the region. This function converts that to an 8-bit monochrome image,
- * with the pixel value set to `255` where the pixel is part of the region, and `0` where the
- * pixel value is not part of the region.
+ * This function works when the passed region is either a heif_region_type_referenced_mask or
+ * a heif_region_type_inline_mask.
+ * The returned image is a monochrome image where each pixel represents the (scaled) probability
+ * of the pixel being part of the mask.
+ *
+ * If the region type is an inline mask, which always holds a binary mask, this function
+ * converts the binary inline mask to an 8-bit monochrome image with the values '0' and '255'.
+ * The pixel value is set to `255` where the pixel is part of the region, and `0` where the
+ * pixel is not part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_inline_mask.
  * @param x the X coordinate for the top left corner, where 0 is the left-most column.
@@ -2538,22 +2542,12 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
  * \note the caller is responsible for releasing the mask image
  */
 LIBHEIF_API
-struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
-                                                    int32_t* x, int32_t* y,
-                                                    uint32_t* width, uint32_t* height,
-                                                    struct heif_image** mask_image);
+struct heif_error heif_region_get_mask_image(const struct heif_region* region,
+                                             int32_t* x, int32_t* y,
+                                             uint32_t* width, uint32_t* height,
+                                             struct heif_image** mask_image);
 
 // --- adding region items
-
-#if 0
-struct heif_region_annotation;
-
-enum heif_region_annotation_type
-{
-  heif_region_annotation_type_user_description,
-  heif_region_annotation_type_image
-};
-#endif
 
 /**
  * Add a region item to an image.

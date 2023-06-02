@@ -3703,10 +3703,10 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
   return heif_error_invalid_parameter_value;
 }
 
-struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
-                                                    int32_t* out_x0, int32_t* out_y0,
-                                                    uint32_t* out_width, uint32_t* out_height,
-                                                    heif_image** out_mask_image)
+static struct heif_error heif_region_get_inline_mask_image(const struct heif_region* region,
+                                                           int32_t* out_x0, int32_t* out_y0,
+                                                           uint32_t* out_width, uint32_t* out_height,
+                                                           heif_image** out_mask_image)
 {
   if ((out_x0 == nullptr) || (out_y0 == nullptr) || (out_width == nullptr) || (out_height == nullptr))
   {
@@ -3754,3 +3754,34 @@ struct heif_error heif_region_get_inline_mask_image(const struct heif_region* re
   return heif_error_invalid_parameter_value;
 }
 
+
+struct heif_error heif_region_get_mask_image(const struct heif_region* region,
+                                             int32_t* x, int32_t* y,
+                                             uint32_t* width, uint32_t* height,
+                                             struct heif_image** mask_image)
+{
+  if (region->region->getRegionType() == heif_region_type_inline_mask) {
+    return heif_region_get_inline_mask_image(region,x,y,width,height,mask_image);
+  }
+  else if (region->region->getRegionType() == heif_region_type_referenced_mask) {
+    heif_item_id referenced_item_id;
+    heif_error err = heif_region_get_referenced_mask_ID(region, x, y, width, height, &referenced_item_id);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+
+    heif_context ctx;
+    ctx.context = region->context;
+
+    heif_image_handle* mski_handle_in;
+    err = heif_context_get_image_handle(&ctx, referenced_item_id, &mski_handle_in);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+
+    err = heif_decode_image(mski_handle_in, mask_image, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
+    return err;
+  }
+
+  return heif_error_invalid_parameter_value;
+}
