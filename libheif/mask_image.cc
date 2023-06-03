@@ -147,9 +147,21 @@ Error MaskImageCodec::encode_mask_image(const std::shared_ptr<HeifFile>& heif_fi
   std::vector<uint8_t> data;
   int src_stride;
   uint8_t* src_data = src_image->get_plane(heif_channel_Y, &src_stride);
-  uint64_t out_size = src_image->get_height() * src_stride;
-  data.resize(data.size() + out_size);
-  memcpy(data.data(), src_data, out_size);
+
+  int w = src_image->get_width();
+  int h = src_image->get_height();
+
+  data.resize(w * h);
+
+  if (w == src_stride) {
+    memcpy(data.data(), src_data, w * h);
+  }
+  else {
+    for (int y = 0; y < h; y++) {
+      memcpy(data.data() + y * w, src_data + y * src_stride, w);
+    }
+  }
+
   heif_file->append_iloc_data(out_image->get_id(), data, 0);
 
   std::shared_ptr<Box_mskC> mskC = std::make_shared<Box_mskC>();
