@@ -126,6 +126,12 @@ bool Fraction::is_valid() const
   return denominator != 0;
 }
 
+Fraction16::Fraction16(uint16_t num, uint16_t den)
+{
+  numerator = num;
+  denominator = den;
+}
+
 uint32_t from_fourcc(const char* string)
 {
   return ((string[0] << 24) |
@@ -565,6 +571,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
+      break;
+
+    case fourcc("iscl"):
+      box = std::make_shared<Box_iscl>();
       break;
 
     default:
@@ -3795,3 +3805,36 @@ Error Box_udes::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
+Error Box_iscl::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+  uint16_t target_width_numerator = range.read16();
+  uint16_t target_width_denominator = range.read16();
+  uint16_t target_height_numerator = range.read16();
+  uint16_t target_height_denominator = range.read16();
+  m_target_width = Fraction16(target_width_numerator, target_width_denominator);
+  m_target_height = Fraction16(target_height_numerator, target_height_denominator);
+  return range.get_error();
+}
+
+std::string Box_iscl::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "scale: " << m_target_width.numerator
+       << "/" << m_target_width.denominator << " x "
+       << m_target_height.numerator << "/"
+       << m_target_height.denominator << "\n";
+  return sstr.str();
+}
+
+Error Box_iscl::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write16(m_target_width.numerator);
+  writer.write32(m_target_width.denominator);
+  writer.write32(m_target_height.numerator);
+  writer.write32(m_target_height.denominator);
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}

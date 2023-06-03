@@ -1009,7 +1009,8 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_transform_scale = heif_fourcc('i', 's', 'c', 'l'),
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -1025,7 +1026,7 @@ int heif_item_get_properties_of_type(const struct heif_context* context,
                                      int count);
 
 // Returns all transformative properties in the correct order.
-// This includes "irot", "imir", "clap".
+// This includes "irot", "imir", "clap", "iscl".
 // The number of properties is returned, which are not more than 'count' if (out_list != nullptr).
 // By setting out_list==nullptr, you can query the number of properties, 'count' is ignored.
 LIBHEIF_API

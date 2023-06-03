@@ -97,6 +97,16 @@ public:
   int32_t denominator = 1;
 };
 
+class Fraction16
+{
+public:
+  Fraction16() = default;
+
+  Fraction16(uint16_t num, uint16_t den);
+
+  uint16_t numerator = 0;
+  uint16_t denominator = 1;
+};
 
 inline std::ostream& operator<<(std::ostream& str, const Fraction& f)
 {
@@ -733,6 +743,27 @@ private:
   Fraction m_clean_aperture_height;
   Fraction m_horizontal_offset;
   Fraction m_vertical_offset;
+};
+
+
+class Box_iscl : public FullBox
+{
+public:
+  Box_iscl()
+  {
+    set_short_type(fourcc("iscl"));
+  }
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  Fraction16 m_target_width;
+  Fraction16 m_target_height;
 };
 
 

@@ -21,7 +21,7 @@ libheif has support for decoding:
 * reading EXIF and XMP metadata
 * reading the depth channel
 * multiple images in a file
-* image transformations (crop, mirror, rotate)
+* image transformations (crop, mirror, rotate, scale)
 * overlay images
 * plugin interface to add alternative codecs for additional formats (AVC, JPEG)
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)

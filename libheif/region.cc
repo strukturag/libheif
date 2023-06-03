@@ -529,6 +529,10 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
         image_height = clap->get_height_rounded();
         break;
       }
+      case fourcc("iscl"): {
+        // TODO: implement image scaling
+        break;
+      }
       default:
         break;
     }

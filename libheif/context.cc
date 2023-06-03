@@ -1489,6 +1489,12 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
         img = cropped_img;
       }
+
+      if (property->get_short_type() == fourcc("iscl")) {
+        return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   "Can image scaling is not supported yet");
+      }
     }
   }
 

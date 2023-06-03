@@ -1880,6 +1880,7 @@ int heif_item_get_transformation_properties(const struct heif_context* context,
   for (const auto& property : properties) {
     bool match = (property->get_short_type() == fourcc("imir") ||
                   property->get_short_type() == fourcc("irot") ||
+                  property->get_short_type() == fourcc("iscl") ||
                   property->get_short_type() == fourcc("clap"));
 
     if (match) {

@@ -419,6 +419,10 @@ int main(int argc, char** argv)
             printf("  crop: left=%d top=%d right=%d bottom=%d\n", left,top,right,bottom);
             break;
           }
+          case heif_item_property_type_transform_scale: {
+            printf("TODO");
+            break;
+          }
           default:
             assert(false);
         }
