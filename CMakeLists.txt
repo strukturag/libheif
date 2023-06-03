@@ -279,7 +279,6 @@ set(CPACK_SOURCE_IGNORE_FILES
 /Makefile$
 /libtool$
 /libheif.pc$
-/config.h$
 stamp-h1$
 )
 include(CPack)

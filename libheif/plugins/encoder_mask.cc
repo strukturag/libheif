@@ -21,11 +21,6 @@
 #include "encoder_mask.h"
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <algorithm>
 #include <cstring>
 #include <cassert>

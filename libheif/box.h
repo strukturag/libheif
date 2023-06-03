@@ -23,11 +23,6 @@
 
 #include <cstdint>
 #include "libheif/common_utils.h"
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <cinttypes>
 #include <cstddef>
 

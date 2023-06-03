@@ -23,11 +23,6 @@
 #include "libheif/heif.h"
 #include "libheif/region.h"
 #include <cstdint>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <cassert>
 #include <cstring>
 #include <algorithm>

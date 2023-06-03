@@ -23,11 +23,6 @@
 //#include "libheif/heif_colorconversion.h"
 //#include "libheif/heif_api_structs.h"
 #include "decoder_libde265.h"
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <assert.h>
 #include <memory>
 #include <cstring>

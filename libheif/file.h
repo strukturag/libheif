@@ -21,10 +21,6 @@
 #ifndef LIBHEIF_FILE_H
 #define LIBHEIF_FILE_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include "box.h"
 
 #include <map>

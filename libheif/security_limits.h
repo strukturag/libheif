@@ -20,10 +20,6 @@
 #ifndef LIBHEIF_SECURITY_LIMITS_H
 #define LIBHEIF_SECURITY_LIMITS_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <cinttypes>
 #include <cstddef>
 

@@ -20,11 +20,6 @@
 #include "libheif/heif.h"
 #include <cstddef>
 #include <cstdint>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
