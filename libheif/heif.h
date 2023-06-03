@@ -459,6 +459,24 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_jpeg   heif_fourcc('j','p','e','g') // JPEG, per ISO/IEC 23008-12 Annex H.4
 #define heif_brand2_jpgs   heif_fourcc('j','p','g','s') // JPEG sequence, per ISO/IEC 23008-12 Annex H.5
 
+/**
+ * Multi-image application format (MIAF) brand.
+ *
+ * This is HEIF with additional constraints for interoperability.
+ *
+ * See ISO/IEC 23000-22.
+ */
+#define heif_brand2_miaf   heif_fourcc('m','i','a','f')
+
+/**
+ * Single picture file brand.
+ *
+ * This is a compatible brand indicating the file contains a single intra-coded picture.
+ *
+ * See ISO/IEC 23008-12:2022 Section 10.2.5.
+*/
+#define heif_brand2_1pic   heif_fourcc('1','p','i','c')
+
 // input data should be at least 12 bytes
 LIBHEIF_API
 heif_brand2 heif_read_main_brand(const uint8_t* data, int len);

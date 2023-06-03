@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "libheif/heif.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -802,7 +803,7 @@ Error Box_ftyp::parse(BitstreamRange& range)
 }
 
 
-bool Box_ftyp::has_compatible_brand(uint32_t brand) const
+bool Box_ftyp::has_compatible_brand(heif_brand2 brand) const
 {
   return std::find(m_compatible_brands.begin(),
                    m_compatible_brands.end(),
@@ -834,7 +835,7 @@ std::string Box_ftyp::dump(Indent& indent) const
 }
 
 
-void Box_ftyp::add_compatible_brand(uint32_t brand)
+void Box_ftyp::add_compatible_brand(heif_brand2 brand)
 {
   if (!has_compatible_brand(brand)) {
     m_compatible_brands.push_back(brand);
