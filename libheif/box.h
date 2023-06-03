@@ -266,13 +266,13 @@ public:
 
   std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
 
-  void set_major_brand(uint32_t major_brand) { m_major_brand = major_brand; }
+  void set_major_brand(heif_brand2 major_brand) { m_major_brand = major_brand; }
 
   void set_minor_version(uint32_t minor_version) { m_minor_version = minor_version; }
 
   void clear_compatible_brands() { m_compatible_brands.clear(); }
 
-  void add_compatible_brand(uint32_t brand);
+  void add_compatible_brand(heif_brand2 brand);
 
   Error write(StreamWriter& writer) const override;
 
@@ -282,7 +282,7 @@ protected:
 private:
   uint32_t m_major_brand = 0;
   uint32_t m_minor_version = 0;
-  std::vector<uint32_t> m_compatible_brands;
+  std::vector<heif_brand2> m_compatible_brands;
 };
 
 
