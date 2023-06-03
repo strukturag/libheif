@@ -1131,18 +1131,82 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 // Planar RGB images are specified as heif_colorspace_RGB / heif_chroma_444.
 
+/**
+ * libheif known compression formats.
+ */
 enum heif_compression_format
 {
+  /**
+   * Unspecified / undefined compression format.
+   *
+   * This is used to mean "no match" or "any decoder" for some parts of the
+   * API. It does not indicate a specific compression format.
+   */
   heif_compression_undefined = 0,
+  /**
+   * HEVC compression.
+   *
+   * This is equivalent to H.265.
+  */
   heif_compression_HEVC = 1,
+  /**
+   * AVC compression.
+   *
+   * The compression is defined in ISO/IEC 14496-10. This is equivalent to H.264.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex E.
+   */
   heif_compression_AVC = 2,
+  /**
+   * JPEG compression.
+   *
+   * The compression format is defined in ISO/IEC 10918-1. The encapsulation
+   * of JPEG is specified in ISO/IEC 23008-12:2022 Annex H.
+  */
   heif_compression_JPEG = 3,
+  /**
+   * AV1 compression.
+   *
+   * The compression format is provided at https://aomediacodec.github.io/av1-spec/
+   *
+   * The encapsulation is defined in https://aomediacodec.github.io/av1-avif/
+   */
   heif_compression_AV1 = 4,
+  /**
+   * VVC compression.
+   *
+   * The compression format is defined in ISO/IEC 23090-3. This is equivalent to H.266.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex L.
+   */
   heif_compression_VVC = 5,
+  /**
+   * EVC compression.
+   *
+   * The compression format is defined in ISO/IEC 23094-1. This is equivalent to H.266.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex M.
+   */
   heif_compression_EVC = 6,
-  heif_compression_JPEG2000 = 7,  // ISO/IEC 15444-16:2021
-  heif_compression_uncompressed = 8, // ISO/IEC 23001-17:2023
-  heif_compression_mask = 9          // ISO/IEC 23008-12:2022 Section 6.10.2
+  /**
+   * JPEG 2000 compression.
+   *
+   * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
+   * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
+  */
+  heif_compression_JPEG2000 = 7,
+  /**
+   * Uncompressed encoding.
+   *
+   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
+  */
+  heif_compression_uncompressed = 8,
+  /**
+   * Mask image encoding.
+   *
+   * See ISO/IEC 23008-12:2022 Section 6.10.2
+   */
+  heif_compression_mask = 9
 };
 
 enum heif_chroma
