@@ -22,11 +22,6 @@
 #include "libheif/region.h"
 #include "libheif/common_utils.h"
 #include <cstdint>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include "heif.h"
 #include "file.h"
 #include "pixelimage.h"

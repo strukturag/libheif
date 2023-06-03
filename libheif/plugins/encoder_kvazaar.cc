@@ -22,11 +22,6 @@
 #include "libheif/heif_plugin.h"
 #include "encoder_kvazaar.h"
 #include <memory>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <string>
 #include <cstring>
 #include <cassert>

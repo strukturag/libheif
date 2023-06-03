@@ -23,11 +23,6 @@
 #include "encoder_x265.h"
 #include <memory>
 #include <sstream>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <string>
 #include <cstring>
 #include <cstdio>

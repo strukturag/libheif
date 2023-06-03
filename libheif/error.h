@@ -21,10 +21,6 @@
 #ifndef LIBHEIF_ERROR_H
 #define LIBHEIF_ERROR_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <cinttypes>
 #include <cstddef>
 
