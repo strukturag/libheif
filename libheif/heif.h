@@ -1144,13 +1144,13 @@ enum heif_compression_format
    */
   heif_compression_undefined = 0,
   /**
-   * HEVC compression.
+   * HEVC compression, used for HEIC images.
    *
    * This is equivalent to H.265.
   */
   heif_compression_HEVC = 1,
   /**
-   * AVC compression.
+   * AVC compression. (Currently unused in libheif.)
    *
    * The compression is defined in ISO/IEC 14496-10. This is equivalent to H.264.
    *
@@ -1165,7 +1165,7 @@ enum heif_compression_format
   */
   heif_compression_JPEG = 3,
   /**
-   * AV1 compression.
+   * AV1 compression, used for AVIF images.
    *
    * The compression format is provided at https://aomediacodec.github.io/av1-spec/
    *
@@ -1173,7 +1173,7 @@ enum heif_compression_format
    */
   heif_compression_AV1 = 4,
   /**
-   * VVC compression.
+   * VVC compression. (Currently unused in libheif.)
    *
    * The compression format is defined in ISO/IEC 23090-3. This is equivalent to H.266.
    *
@@ -1181,7 +1181,7 @@ enum heif_compression_format
    */
   heif_compression_VVC = 5,
   /**
-   * EVC compression.
+   * EVC compression. (Currently unused in libheif.)
    *
    * The compression format is defined in ISO/IEC 23094-1. This is equivalent to H.266.
    *
@@ -1189,7 +1189,7 @@ enum heif_compression_format
    */
   heif_compression_EVC = 6,
   /**
-   * JPEG 2000 compression.
+   * JPEG 2000 compression. (Currently unused in libheif.)
    *
    * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
    * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
