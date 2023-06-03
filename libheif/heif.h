@@ -2829,7 +2829,7 @@ struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_regio
  * by a width and height.
  *
  * The mask data is held as inline data on the region, one bit per pixel. The provided
- * image is converted to inline data, where any non-zero pixel becomes part of the
+ * image is converted to inline data, where any pixel with a value >= 0x80 becomes part of the
  * mask region. If the image width is less that the specified width, it is expanded
  * to match the width of the region (zero fill on the right). If the image height is
  * less than the specified height, it is expanded to match the height of the region
