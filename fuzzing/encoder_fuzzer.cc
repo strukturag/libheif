@@ -132,7 +132,7 @@ static struct heif_error writer_write(struct heif_context* ctx, const void* data
   return err;
 }
 
-static int test(const uint8_t* data, size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
   struct heif_error err;
   std::shared_ptr<heif_context> context(heif_context_alloc(),
@@ -196,14 +196,4 @@ static int test(const uint8_t* data, size_t size)
   heif_context_write(context.get(), &w, &writer);
   assert(writer.size() > 0);
   return 0;
-}
-
-
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
-{
-  heif_init(nullptr);
-  int retVal = test(data, size);
-  heif_deinit();
-
-  return retVal;
 }
