@@ -180,10 +180,14 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
     m_ftyp_box->add_compatible_brand(heif_brand2_miaf);
   }
 
+#if 0
+  // Temporarily disabled, pending resolution of
+  // https://github.com/strukturag/libheif/issues/888
   if (get_num_images() == 1) {
     // This could be overly conservative, but is safe
     m_ftyp_box->add_compatible_brand(heif_brand2_1pic);
   }
+#endif
 }
 
 
