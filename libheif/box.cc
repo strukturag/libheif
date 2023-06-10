@@ -23,6 +23,7 @@
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
+#include "jpeg2000.h"
 #include "mask_image.h"
 
 #include <iomanip>
@@ -559,6 +560,29 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       break;
 #endif
 
+    // --- JPEG 2000
+      
+    case fourcc("j2kH"):
+      box = std::make_shared<Box_j2kH>();
+      break;
+
+    case fourcc("cdef"):
+      box = std::make_shared<Box_cdef>();
+      break;
+
+    case fourcc("cmap"):
+      box = std::make_shared<Box_cmap>();
+      break;
+
+    case fourcc("pclr"):
+      box = std::make_shared<Box_pclr>();
+      break;
+
+    case fourcc("j2kL"):
+      box = std::make_shared<Box_j2kL>();
+
+    // --- mski
+      
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
       break;
