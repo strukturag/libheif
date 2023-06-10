@@ -85,8 +85,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   struct heif_image_handle* primary_handle = nullptr;
   int images_count;
   heif_item_id* image_IDs = NULL;
+  bool explicit_init = size == 0 || data[size - 1] & 1;
 
-  heif_init(nullptr);
+  if (explicit_init) {
+    heif_init(nullptr);
+  }
 
   heif_check_filetype(data, clip_int(size));
   heif_main_brand(data, clip_int(size));
@@ -151,7 +154,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   heif_context_free(ctx);
   free(image_IDs);
 
-  heif_deinit();
+  if (explicit_init) {
+    heif_deinit();
+  }
 
   return 0;
 }

@@ -101,10 +101,10 @@ public:
   std::string debug_dump_pipeline() const;
 
 private:
-  static std::vector<ColorConversionOperation*> m_operation_pool;
+  static std::vector<std::shared_ptr<ColorConversionOperation>> m_operation_pool;
 
   struct ConversionStep {
-    const ColorConversionOperation* operation;
+    std::shared_ptr<ColorConversionOperation> operation;
     ColorState output_state;
   };
 

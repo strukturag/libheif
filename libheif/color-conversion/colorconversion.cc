@@ -151,7 +151,7 @@ struct Node
 {
   Node() = default;
 
-  Node(int prev, const ColorConversionOperation* _op, const ColorStateWithCost& state)
+  Node(int prev, const std::shared_ptr<ColorConversionOperation>& _op, const ColorStateWithCost& state)
   {
     prev_processed_idx = prev;
     op = _op;
@@ -159,7 +159,7 @@ struct Node
   }
 
   int prev_processed_idx = -1;
-  const ColorConversionOperation* op;
+  std::shared_ptr<ColorConversionOperation> op;
   ColorStateWithCost color_state;
 };
 
@@ -170,7 +170,7 @@ std::ostream& operator<<(std::ostream& ostr, const ColorState& state) {
               << " nclx=" << (state.nclx_profile ? "yes" : "no");
 }
 
-std::vector<ColorConversionOperation*> ColorConversionPipeline::m_operation_pool;
+std::vector<std::shared_ptr<ColorConversionOperation>> ColorConversionPipeline::m_operation_pool;
 
 
 void ColorConversionPipeline::init_ops()
@@ -179,42 +179,38 @@ void ColorConversionPipeline::init_ops()
     return;
   }
 
-  std::vector<ColorConversionOperation*>& ops = m_operation_pool;
-  ops.push_back(new Op_RGB_to_RGB24_32());
-  ops.push_back(new Op_RGB24_32_to_RGB());
-  ops.push_back(new Op_YCbCr_to_RGB<uint16_t>());
-  ops.push_back(new Op_YCbCr_to_RGB<uint8_t>());
-  ops.push_back(new Op_YCbCr420_to_RGB24());
-  ops.push_back(new Op_YCbCr420_to_RGB32());
-  ops.push_back(new Op_YCbCr420_to_RRGGBBaa());
-  ops.push_back(new Op_RGB_HDR_to_RRGGBBaa_BE());
-  ops.push_back(new Op_RGB_to_RRGGBBaa_BE());
-  ops.push_back(new Op_mono_to_YCbCr420());
-  ops.push_back(new Op_mono_to_RGB24_32());
-  ops.push_back(new Op_RRGGBBaa_swap_endianness());
-  ops.push_back(new Op_RRGGBBaa_BE_to_RGB_HDR());
-  ops.push_back(new Op_RGB24_32_to_YCbCr());
-  ops.push_back(new Op_RGB_to_YCbCr<uint8_t>());
-  ops.push_back(new Op_RGB_to_YCbCr<uint16_t>());
-  ops.push_back(new Op_RRGGBBxx_HDR_to_YCbCr420());
-  ops.push_back(new Op_RGB24_32_to_YCbCr444_GBR());
-  ops.push_back(new Op_drop_alpha_plane());
-  ops.push_back(new Op_to_hdr_planes());
-  ops.push_back(new Op_to_sdr_planes());
-  ops.push_back(new Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>());
-  ops.push_back(new Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>());
-  ops.push_back(new Op_YCbCr444_to_YCbCr420_average<uint8_t>());
-  ops.push_back(new Op_YCbCr444_to_YCbCr420_average<uint16_t>());
-  ops.push_back(new Op_Any_RGB_to_YCbCr_420_Sharp());
+  std::vector<std::shared_ptr<ColorConversionOperation>>& ops = m_operation_pool;
+  ops.push_back(std::make_shared<Op_RGB_to_RGB24_32>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_RGB>());
+  ops.push_back(std::make_shared<Op_YCbCr_to_RGB<uint16_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr_to_RGB<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr420_to_RGB24>());
+  ops.push_back(std::make_shared<Op_YCbCr420_to_RGB32>());
+  ops.push_back(std::make_shared<Op_YCbCr420_to_RRGGBBaa>());
+  ops.push_back(std::make_shared<Op_RGB_HDR_to_RRGGBBaa_BE>());
+  ops.push_back(std::make_shared<Op_RGB_to_RRGGBBaa_BE>());
+  ops.push_back(std::make_shared<Op_mono_to_YCbCr420>());
+  ops.push_back(std::make_shared<Op_mono_to_RGB24_32>());
+  ops.push_back(std::make_shared<Op_RRGGBBaa_swap_endianness>());
+  ops.push_back(std::make_shared<Op_RRGGBBaa_BE_to_RGB_HDR>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint8_t>>());
+  ops.push_back(std::make_shared<Op_RGB_to_YCbCr<uint16_t>>());
+  ops.push_back(std::make_shared<Op_RRGGBBxx_HDR_to_YCbCr420>());
+  ops.push_back(std::make_shared<Op_RGB24_32_to_YCbCr444_GBR>());
+  ops.push_back(std::make_shared<Op_drop_alpha_plane>());
+  ops.push_back(std::make_shared<Op_to_hdr_planes>());
+  ops.push_back(std::make_shared<Op_to_sdr_planes>());
+  ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint16_t>>());
+  ops.push_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
 }
 
 
 void ColorConversionPipeline::release_ops()
 {
-  for (auto& op : m_operation_pool) {
-    delete op;
-  }
-
   m_operation_pool.clear();
 }
 
@@ -238,7 +234,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   init_ops(); // to be sure these are initialized even without heif_init()
 
-  std::vector<ColorConversionOperation*>& ops = m_operation_pool;
+  std::vector<std::shared_ptr<ColorConversionOperation>>& ops = m_operation_pool;
 
   // --- Dijkstra search for the minimum-cost conversion pipeline
 
