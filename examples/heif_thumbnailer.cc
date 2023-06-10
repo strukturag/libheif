@@ -23,10 +23,6 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#if defined(HAVE_CONFIG_H)
-#  include "config.h"
-#endif
-
 
 #if defined(HAVE_UNISTD_H)
 #  include <unistd.h>
@@ -40,6 +36,8 @@
 
 #if HAVE_LIBPNG
 #  include "encoder_png.h"
+#include "common.h"
+
 #endif
 
 #if defined(_MSC_VER)
@@ -71,7 +69,7 @@ int main(int argc, char** argv)
   int size = 512; // default thumbnail size
   bool thumbnail_from_primary_image_only = false;
 
-  while ((opt = getopt(argc, argv, "s:hp")) != -1) {
+  while ((opt = getopt(argc, argv, "s:hpv")) != -1) {
     switch (opt) {
       case 's':
         size = atoi(optarg);
@@ -79,6 +77,9 @@ int main(int argc, char** argv)
       case 'p':
         thumbnail_from_primary_image_only = true;
         break;
+      case 'v':
+        show_version();
+        return 0;
       case 'h':
       default:
         return usage(argv[0]);

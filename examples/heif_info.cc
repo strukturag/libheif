@@ -23,9 +23,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 */
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
+#include <cstdint>
 
 #include <errno.h>
 #include <string.h>
@@ -46,6 +44,8 @@
 #include <memory>
 #include <getopt.h>
 #include <assert.h>
+#include <stdio.h>
+#include "common.h"
 
 
 /*
@@ -68,6 +68,7 @@ static struct option long_options[] = {
     //{"output",    required_argument, 0, 'o' },
     {(char* const) "dump-boxes", no_argument, 0, 'd'},
     {(char* const) "help",       no_argument, 0, 'h'},
+    {(char* const) "version",    no_argument, 0, 'v'},
     {0, 0,                                    0, 0}
 };
 
@@ -93,6 +94,7 @@ void show_help(const char* argv0)
   //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
   fprintf(stderr, "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
   fprintf(stderr, "  -h, --help           show help\n");
+  fprintf(stderr, "  -v, --version        show version\n");
 }
 
 
@@ -118,7 +120,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "dh", long_options, &option_index);
+    int c = getopt_long(argc, argv, "dhv", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -136,6 +138,9 @@ int main(int argc, char** argv)
       case 'o':
         output_filename = optarg;
         break;
+      case 'v':
+        show_version();
+        return 0;
     }
   }
 
@@ -458,14 +463,6 @@ int main(int argc, char** argv)
             uint32_t h;
             heif_region_get_rectangle(regions[j], &x, &y, &w, &h);
             printf("      rectangle [x=%i, y=%i, w=%u, h=%u]\n", x, y, w, h);
-#if 0
-            double dx;
-            double dy;
-            double dw;
-            double dh;
-            heif_region_get_rectangle_scaled(regions[j], &dx, &dy, &dw, &dh, IDs[i]);
-            printf("      rectangle [x=%lf, y=%lf, w=%lf, h=%lf]\n", dx, dy, dw, dh);
-#endif
           }
           else if (type == heif_region_type_ellipse) {
             int32_t x;
@@ -485,6 +482,15 @@ int main(int argc, char** argv)
             }
             printf("]\n");
           }
+          else if (type == heif_region_type_referenced_mask) {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            heif_item_id referenced_item;
+            heif_region_get_referenced_mask_ID(regions[j], &x, &y, &w, &h, &referenced_item);
+            printf("      referenced mask [x=%i, y=%i, w=%u, h=%u, item=%u]\n", x, y, w, h, referenced_item);
+          }
           else if (type == heif_region_type_polyline) {
             int32_t numPoints = heif_region_get_polyline_num_points(regions[j]);
             std::vector<int32_t> pts(numPoints*2);
@@ -494,6 +500,16 @@ int main(int argc, char** argv)
               printf("(%d;%d)", pts[2*p+0], pts[2*p+1]);
             }
             printf("]\n");
+          }
+          else if (type == heif_region_type_inline_mask) {
+            int32_t x;
+            int32_t y;
+            uint32_t w;
+            uint32_t h;
+            long unsigned int data_len = heif_region_get_inline_mask_data_len(regions[j]);
+            std::vector<uint8_t> mask_data(data_len);
+            heif_region_get_inline_mask_data(regions[j], &x, &y, &w, &h, mask_data.data());
+            printf("      inline mask [x=%i, y=%i, w=%u, h=%u, data len=%lu]\n", x, y, w, h, mask_data.size());
           }
       }
 

@@ -17,18 +17,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include "libheif/heif.h"
 #include <cstddef>
 #include <cstdint>
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
 #include "jpeg2000.h"
+#include "mask_image.h"
 
 #include <iomanip>
 #include <utility>
@@ -564,6 +560,8 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       break;
 #endif
 
+    // --- JPEG 2000
+      
     case fourcc("j2kH"):
       box = std::make_shared<Box_j2kH>();
       break;
@@ -582,6 +580,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("j2kL"):
       box = std::make_shared<Box_j2kL>();
+
+    // --- mski
+      
+    case fourcc("mskC"):
+      box = std::make_shared<Box_mskC>();
       break;
 
     default:
@@ -819,15 +822,12 @@ Error Box_ftyp::parse(BitstreamRange& range)
 }
 
 
-bool Box_ftyp::has_compatible_brand(uint32_t brand) const
+bool Box_ftyp::has_compatible_brand(heif_brand2 brand) const
 {
-  for (uint32_t b : m_compatible_brands) {
-    if (b == brand) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::find(m_compatible_brands.begin(),
+                   m_compatible_brands.end(),
+                   brand) !=
+         m_compatible_brands.end();
 }
 
 
@@ -854,11 +854,11 @@ std::string Box_ftyp::dump(Indent& indent) const
 }
 
 
-void Box_ftyp::add_compatible_brand(uint32_t brand)
+void Box_ftyp::add_compatible_brand(heif_brand2 brand)
 {
-  // TODO: check whether brand already exists in the list
-
-  m_compatible_brands.push_back(brand);
+  if (!has_compatible_brand(brand)) {
+    m_compatible_brands.push_back(brand);
+  }
 }
 
 

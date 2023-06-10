@@ -20,6 +20,7 @@
 
 #include "file.h"
 #include "libheif/box.h"
+#include "libheif/heif.h"
 
 #include <cstdint>
 #include <fstream>
@@ -144,31 +145,31 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
 
   switch (format) {
     case heif_compression_HEVC:
-      m_ftyp_box->set_major_brand(fourcc("heic"));
+      m_ftyp_box->set_major_brand(heif_brand2_heic);
       m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
-      m_ftyp_box->add_compatible_brand(fourcc("heic"));
+      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
+      m_ftyp_box->add_compatible_brand(heif_brand2_heic);
       break;
 
     case heif_compression_AV1:
-      m_ftyp_box->set_major_brand(fourcc("avif"));
+      m_ftyp_box->set_major_brand(heif_brand2_avif);
       m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(fourcc("avif"));
-      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(heif_brand2_avif);
+      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
       break;
 
     case heif_compression_VVC:
-      m_ftyp_box->set_major_brand(fourcc("vvic"));
+      m_ftyp_box->set_major_brand(heif_brand2_vvic);
       m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
-      m_ftyp_box->add_compatible_brand(fourcc("vvic"));
+      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
+      m_ftyp_box->add_compatible_brand(heif_brand2_vvic);
       break;
 
     case heif_compression_JPEG:
-      m_ftyp_box->set_major_brand(fourcc("jpeg"));
+      m_ftyp_box->set_major_brand(heif_brand2_jpeg);
       m_ftyp_box->set_minor_version(0);
-      m_ftyp_box->add_compatible_brand(fourcc("jpeg"));
-      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(heif_brand2_jpeg);
+      m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
       break;
 
     default:
@@ -176,8 +177,17 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
   }
 
   if (miaf_compatible) {
-    m_ftyp_box->add_compatible_brand(fourcc("miaf"));
+    m_ftyp_box->add_compatible_brand(heif_brand2_miaf);
   }
+
+#if 0
+  // Temporarily disabled, pending resolution of
+  // https://github.com/strukturag/libheif/issues/888
+  if (get_num_images() == 1) {
+    // This could be overly conservative, but is safe
+    m_ftyp_box->add_compatible_brand(heif_brand2_1pic);
+  }
+#endif
 }
 
 
@@ -253,11 +263,12 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                  heif_suberror_No_ftyp_box);
   }
 
-  if (!m_ftyp_box->has_compatible_brand(fourcc("heic")) &&
-      !m_ftyp_box->has_compatible_brand(fourcc("heix")) &&
-      !m_ftyp_box->has_compatible_brand(fourcc("mif1")) &&
-      !m_ftyp_box->has_compatible_brand(fourcc("avif")) &&
-      !m_ftyp_box->has_compatible_brand(fourcc("jpeg"))) {
+  if (!m_ftyp_box->has_compatible_brand(heif_brand2_heic) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_heix) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_mif1) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_avif) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_1pic) &&
+      !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg)) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
 
@@ -826,6 +837,14 @@ heif_item_id HeifFile::get_unused_item_id() const
 heif_item_id HeifFile::add_new_image(const char* item_type)
 {
   auto box = add_new_infe_box(item_type);
+  return box->get_item_ID();
+}
+
+
+heif_item_id HeifFile::add_new_hidden_image(const char* item_type)
+{
+  auto box = add_new_infe_box(item_type);
+  box->set_hidden_item(true);
   return box->get_item_ID();
 }
 

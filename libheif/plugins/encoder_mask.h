@@ -18,46 +18,19 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_LOGGING_H
-#define LIBHEIF_LOGGING_H
+#ifndef LIBHEIF_ENCODER_MASK_H
+#define LIBHEIF_ENCODER_MASK_H
 
-#include <cinttypes>
-#include <cstddef>
+#include "libheif/common_utils.h"
 
-#include <vector>
-#include <string>
-#include <memory>
-#include <limits>
-#include <istream>
+// This is a dummy module. It does not actually do anything except parameter parsing.
+// The actual codec is included in the library.
 
-
-class Indent
+struct encoder_struct_mask
 {
-public:
-  Indent() = default;
-
-  int get_indent() const { return m_indent; }
-
-  void operator++(int) { m_indent++; }
-
-  void operator--(int)
-  {
-    m_indent--;
-    if (m_indent < 0) m_indent = 0;
-  }
-
-private:
-  int m_indent = 0;
 };
 
 
-inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent)
-{
-  for (int i = 0; i < indent.get_indent(); i++) {
-    ostr << "| ";
-  }
+const struct heif_encoder_plugin* get_encoder_plugin_mask();
 
-  return ostr;
-}
-
-#endif
+#endif //LIBHEIF_ENCODER_MASK_H

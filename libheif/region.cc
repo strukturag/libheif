@@ -22,6 +22,9 @@
 #include "error.h"
 #include "file.h"
 #include "box.h"
+#include "libheif/heif.h"
+#include <algorithm>
+#include <cstdint>
 #include <utility>
 
 
@@ -83,6 +86,12 @@ Error RegionItem::parse(const std::vector<uint8_t>& data)
       auto polygon = std::make_shared<RegionGeometry_Polygon>();
       polygon->closed = true;
       region = polygon;
+    }
+    else if (geometry_type == heif_region_type_referenced_mask) {
+      region = std::make_shared<RegionGeometry_ReferencedMask>();
+    }
+    else if (geometry_type == heif_region_type_inline_mask) {
+      region = std::make_shared<RegionGeometry_InlineMask>();
     }
     else if (geometry_type == heif_region_type_polyline) {
       auto polygon = std::make_shared<RegionGeometry_Polygon>();
@@ -185,18 +194,11 @@ int32_t RegionGeometry::parse_signed(const std::vector<uint8_t>& data,
                                      int field_size,
                                      unsigned int* dataOffset)
 {
-  // TODO: fix this for negative values
-  int32_t x;
   if (field_size == 32) {
-    x = ((data[*dataOffset] << 24) | (data[*dataOffset + 1] << 16) |
-         (data[*dataOffset + 2] << 8) | (data[*dataOffset + 3]));
-    *dataOffset = *dataOffset + 4;
+    return (int32_t)parse_unsigned(data, field_size, dataOffset);
+  } else {
+    return (int16_t)parse_unsigned(data, field_size, dataOffset);
   }
-  else {
-    x = ((data[*dataOffset] << 8) | (data[*dataOffset + 1]));
-    *dataOffset = *dataOffset + 2;
-  }
-  return x;
 }
 
 Error RegionGeometry_Point::parse(const std::vector<uint8_t>& data,
@@ -336,6 +338,32 @@ Error RegionGeometry_Polygon::parse(const std::vector<uint8_t>& data,
 }
 
 
+Error RegionGeometry_ReferencedMask::parse(const std::vector<uint8_t>& data,
+                                          int field_size,
+                                          unsigned int* dataOffset)
+{
+  unsigned int bytesRequired = (field_size / 8) * 4;
+  if (data.size() - *dataOffset < bytesRequired) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for referenced mask region");
+  }
+  x = parse_signed(data, field_size, dataOffset);
+  y = parse_signed(data, field_size, dataOffset);
+  width = parse_unsigned(data, field_size, dataOffset);
+  height = parse_unsigned(data, field_size, dataOffset);
+  return Error::Ok;
+}
+
+
+void RegionGeometry_ReferencedMask::encode(StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(heif_region_type_referenced_mask);
+  writer.write(field_size_bytes, x);
+  writer.write(field_size_bytes, y);
+  writer.write(field_size_bytes, width);
+  writer.write(field_size_bytes, height);
+}
+
 bool RegionGeometry_Polygon::encode_needs_32bit() const
 {
   if (exceeds_u16((uint32_t)points.size())) {
@@ -362,6 +390,49 @@ void RegionGeometry_Polygon::encode(StreamWriter& writer, int field_size_bytes) 
     writer.write(field_size_bytes, p.x);
     writer.write(field_size_bytes, p.y);
   }
+}
+
+
+Error RegionGeometry_InlineMask::parse(const std::vector<uint8_t>& data,
+                                       int field_size,
+                                       unsigned int* dataOffset)
+{
+  unsigned int bytesRequired = (field_size / 8) * 4 + 1;
+  if (data.size() - *dataOffset < bytesRequired) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for inline mask region");
+  }
+  x = parse_signed(data, field_size, dataOffset);
+  y = parse_signed(data, field_size, dataOffset);
+  width = parse_unsigned(data, field_size, dataOffset);
+  height = parse_unsigned(data, field_size, dataOffset);
+  uint8_t mask_coding_method = data[*dataOffset];
+  *dataOffset = *dataOffset + 1;
+  if (mask_coding_method != 0) {
+    return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Deflate compressed inline mask is not yet supported");
+  }
+  unsigned int additionalBytesRequired = width * height / 8;
+  if (data.size() - *dataOffset < additionalBytesRequired) {
+        return Error(heif_error_Invalid_input, heif_suberror_Invalid_region_data,
+                 "Insufficient data remaining for inline mask region data[]");
+  }
+  mask_data.resize(additionalBytesRequired);
+  std::copy(data.begin() + *dataOffset, data.begin() + *dataOffset + additionalBytesRequired, mask_data.begin());
+  return Error::Ok;
+}
+
+
+void RegionGeometry_InlineMask::encode(StreamWriter& writer, int field_size_bytes) const
+{
+  writer.write8(heif_region_type_inline_mask);
+  writer.write(field_size_bytes, x);
+  writer.write(field_size_bytes, y);
+  writer.write(field_size_bytes, width);
+  writer.write(field_size_bytes, height);
+  writer.write8(0); // coding method
+  // if using some other coding method, there are parameters to write out here.
+  writer.write(mask_data);
 }
 
 
@@ -483,3 +554,6 @@ RegionCoordinateTransform::Extent RegionCoordinateTransform::transform_extent(Ex
   newe.y = e.x * c + e.y * d;
   return newe;
 }
+
+
+

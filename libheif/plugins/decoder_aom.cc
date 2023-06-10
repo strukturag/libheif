@@ -21,11 +21,6 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "decoder_aom.h"
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <memory>
 #include <cstring>
 #include <cassert>

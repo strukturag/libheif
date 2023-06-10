@@ -146,28 +146,33 @@ public:
   std::vector<Point> points;
 };
 
-#if 0
-// TODO
-
-class RegionGeometry_Mask : public RegionGeometry
+class RegionGeometry_ReferencedMask : public RegionGeometry
 {
 public:
-  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override {return {};} // TODO
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override;
+
+  void encode(StreamWriter&, int field_size_bytes) const override;
+
+  heif_region_type getRegionType() override { return heif_region_type_referenced_mask; }
 
   int32_t x,y;
   uint32_t width, height;
-
-  // The mask may be decoded lazily on-the-fly.
-  std::shared_ptr<HeifPixelImage> get_mask() const { return {}; } // TODO
-
-private:
-  enum class EncodingMethod {
-    Inline, Referenced
-  } mEncodingMethod;
-
-  std::shared_ptr<HeifPixelImage> mCachedMask;
+  heif_item_id referenced_item;
 };
-#endif
+
+class RegionGeometry_InlineMask : public RegionGeometry
+{
+public:
+  Error parse(const std::vector<uint8_t>& data, int field_size, unsigned int *dataOffset) override;
+
+  void encode(StreamWriter&, int field_size_bytes) const override;
+
+  int32_t x,y;
+  uint32_t width, height;
+  std::vector<uint8_t> mask_data;
+
+  heif_region_type getRegionType() override { return heif_region_type_inline_mask; }
+};
 
 class HeifFile;
 

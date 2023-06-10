@@ -18,10 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <utility>
 #include <cstring>
 #include <algorithm>
@@ -34,6 +30,10 @@
 
 #if HAVE_X265
 #include "libheif/plugins/encoder_x265.h"
+#endif
+
+#if HAVE_KVAZAAR
+#include "libheif/plugins/encoder_kvazaar.h"
 #endif
 
 #if HAVE_AOM_ENCODER
@@ -68,6 +68,8 @@
 #include "libheif/plugins/encoder_jpeg.h"
 #endif
 
+#include "libheif/plugins/encoder_mask.h"
+
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
 std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
@@ -93,6 +95,10 @@ void register_default_plugins()
 
 #if HAVE_X265
   register_encoder(get_encoder_plugin_x265());
+#endif
+
+#if HAVE_KVAZAAR
+  register_encoder(get_encoder_plugin_kvazaar());
 #endif
 
 #if HAVE_AOM_ENCODER
@@ -126,6 +132,8 @@ void register_default_plugins()
 #if WITH_UNCOMPRESSED_CODEC
   register_encoder(get_encoder_plugin_uncompressed());
 #endif
+
+register_encoder(get_encoder_plugin_mask());
 }
 
 

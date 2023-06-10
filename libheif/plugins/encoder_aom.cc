@@ -21,11 +21,6 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/common_utils.h"
-
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
-
 #include <algorithm>
 #include <cstring>
 #include <cassert>
