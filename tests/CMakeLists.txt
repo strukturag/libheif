@@ -14,13 +14,13 @@ macro(add_libheif_test TEST_FILE)
 endmacro()
 
 if (WITH_REDUCED_VISIBILITY)
-    message("Conversion tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+    message("Conversion and JPEG 2000 box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
 else()
     add_libheif_test(conversion)
+    add_libheif_test(jpeg2000)
 endif()
 
 add_libheif_test(encode)
-add_libheif_test(jpeg2000)
 add_libheif_test(region)
 add_libheif_test(uncompressed_decode)
 
