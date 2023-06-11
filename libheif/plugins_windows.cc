@@ -19,6 +19,8 @@
  */
 
 
+#if ENABLE_PLUGIN_LOADING
+
 #include "plugins_windows.h"
 #include "heif_plugin.h"
 #include <sstream>
@@ -107,3 +109,5 @@ void PluginLibrary_Windows::release()
     m_library_handle = nullptr;
   }
 }
+
+#endif

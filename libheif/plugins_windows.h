@@ -22,6 +22,8 @@
 #ifndef LIBHEIF_PLUGINS_WINDOWS_H
 #define LIBHEIF_PLUGINS_WINDOWS_H
 
+#if ENABLE_PLUGIN_LOADING
+
 #include <vector>
 #include <string>
 #include "init.h"
@@ -50,5 +52,7 @@ private:
   HMODULE m_library_handle = nullptr;
   heif_plugin_info* m_plugin_info = nullptr;
 };
+
+#endif //ENABLE_PLUGIN_LOADING
 
 #endif //LIBHEIF_PLUGINS_WINDOWS_H

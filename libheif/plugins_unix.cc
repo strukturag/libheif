@@ -18,6 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if ENABLE_PLUGIN_LOADING
 
 #include "plugins_unix.h"
 #include "heif_plugin.h"
@@ -116,4 +117,6 @@ void PluginLibrary_Unix::release()
     m_library_handle = nullptr;
   }
 }
+
+#endif
 
