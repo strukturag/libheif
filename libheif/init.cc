@@ -386,6 +386,10 @@ struct heif_error heif_load_plugins(const char* directory,
                                     int* out_nPluginsLoaded,
                                     int output_array_size)
 {
+  if (out_nPluginsLoaded) {
+    *out_nPluginsLoaded = 0;
+  }
+
   return heif_error_plugins_unsupported;
 }
 
