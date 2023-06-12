@@ -319,7 +319,7 @@ to update the gdk-pixbuf loader database.
 
 ## Packaging status
 
-[![libheif packaging status](https://repology.org/badge/vertical-allrepos/libheif.svg?exclude_unsupported=1&columns=3&exclude_sources=modules,site&header=libjxl%20packaging%20status)](https://repology.org/project/libheif/versions)
+[![libheif packaging status](https://repology.org/badge/vertical-allrepos/libheif.svg?exclude_unsupported=1&columns=3&exclude_sources=modules,site&header=libheif%20packaging%20status)](https://repology.org/project/libheif/versions)
 
 ## Sponsors
 
