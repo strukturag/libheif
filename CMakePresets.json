@@ -109,6 +109,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_SHARED_LIBS": "OFF",
+        "BUILD_TESTING" : "OFF",
         "WITH_FUZZERS" : "ON",
         "WITH_EXAMPLES" : "OFF",
         "ENABLE_PLUGIN_LOADING" : "OFF",

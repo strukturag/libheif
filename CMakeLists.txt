@@ -212,16 +212,11 @@ endif (DOXYGEN_FOUND)
 
 # --- Testing
 
-# Disable testing by default because this requires building with full symbol visibility (switched off WITH_REDUCED_VISIBILITY).
-option(BUILD_TESTING "" OFF)
+option(BUILD_TESTING "" ON)
 include(CTest)
 if(BUILD_TESTING)
     # TODO: fix tests on windows.
     add_subdirectory (tests)
-endif()
-
-if (BUILD_TESTING AND WITH_REDUCED_VISIBILITY)
-    message(FATAL_ERROR "Tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
 endif()
 
 
