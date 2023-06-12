@@ -1157,6 +1157,9 @@ public:
   Box_clli()
   {
     set_short_type(fourcc("clli"));
+
+    clli.max_content_light_level = 0;
+    clli.max_pic_average_light_level = 0;
   }
 
   heif_content_light_level clli;
@@ -1173,10 +1176,7 @@ protected:
 class Box_mdcv : public Box
 {
 public:
-  Box_mdcv()
-  {
-    set_short_type(fourcc("mdcv"));
-  }
+  Box_mdcv();
 
   heif_mastering_display_colour_volume mdcv;
 

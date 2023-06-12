@@ -2249,6 +2249,14 @@ Error Box_clli::write(StreamWriter& writer) const
 }
 
 
+Box_mdcv::Box_mdcv()
+{
+  set_short_type(fourcc("mdcv"));
+  
+  memset(&mdcv, 0, sizeof(heif_mastering_display_colour_volume));
+}
+
+
 Error Box_mdcv::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
