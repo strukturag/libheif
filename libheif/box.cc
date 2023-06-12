@@ -1785,14 +1785,14 @@ Error color_profile_nclx::parse(BitstreamRange& range)
 
 Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
 {
-  *out_data = alloc_nclx_color_profile();
+  *out_data = nullptr;
 
-  if (*out_data == nullptr) {
+  struct heif_color_profile_nclx* nclx = alloc_nclx_color_profile();
+
+  if (nclx == nullptr) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Unspecified);
   }
-
-  struct heif_color_profile_nclx* nclx = *out_data;
 
   struct heif_error err;
 
@@ -1800,16 +1800,19 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
 
   err = heif_nclx_color_profile_set_color_primaries(nclx, get_colour_primaries());
   if (err.code) {
+    free_nclx_color_profile(nclx);
     return {err.code, err.subcode};
   }
 
   err = heif_nclx_color_profile_set_transfer_characteristics(nclx, get_transfer_characteristics());
   if (err.code) {
+    free_nclx_color_profile(nclx);
     return {err.code, err.subcode};
   }
 
   err = heif_nclx_color_profile_set_matrix_coefficients(nclx, get_matrix_coefficients());
   if (err.code) {
+    free_nclx_color_profile(nclx);
     return {err.code, err.subcode};
   }
 
@@ -1827,6 +1830,8 @@ Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx*
   nclx->color_primary_blue_y = primaries.blueY;
   nclx->color_primary_white_x = primaries.whiteX;
   nclx->color_primary_white_y = primaries.whiteY;
+
+  *out_data = nclx;
 
   return Error::Ok;
 }
