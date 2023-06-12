@@ -3079,7 +3079,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
 
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (compression != heif_metadata_compression_off &&
-      (item_type == nullptr || strcmp(item_type, "mime") != 0)) {
+      strcmp(item_type, "mime") != 0) {
     // TODO: error, compression not supported
   }
 
