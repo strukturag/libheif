@@ -317,6 +317,10 @@ to update the gdk-pixbuf loader database.
 * [OpenImageIO](https://sites.google.com/site/openimageio/)
 * [XnView](https://www.xnview.com)
 
+## Packaging status
+
+[![libheif packaging status](https://repology.org/badge/vertical-allrepos/libheif.svg?exclude_unsupported=1&columns=3&exclude_sources=modules,site&header=libjxl%20packaging%20status)](https://repology.org/project/libheif/versions)
+
 ## Sponsors
 
 Since I work as an independent developer, I need your support to be able to allocate time for libheif.
