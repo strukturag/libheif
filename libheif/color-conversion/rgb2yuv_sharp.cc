@@ -99,10 +99,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     return {};
   }
 
-  if (target_state.nclx_profile) {
-    if (target_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (target_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
@@ -217,12 +215,10 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
 
   bool full_range_flag = true;
   Kr_Kb kr_kb = Kr_Kb::defaults();
-  if (target_state.nclx_profile) {
-    full_range_flag = target_state.nclx_profile->get_full_range_flag();
-    kr_kb =
-        get_Kr_Kb(target_state.nclx_profile->get_matrix_coefficients(),
-                  target_state.nclx_profile->get_colour_primaries());
-  }
+  full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  kr_kb =
+      get_Kr_Kb(target_state.nclx_profile.get_matrix_coefficients(),
+                target_state.nclx_profile.get_colour_primaries());
 
   SharpYuvColorSpace color_space = {
       kr_kb.Kr, kr_kb.Kb, output_bits,

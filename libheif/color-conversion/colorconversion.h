@@ -26,13 +26,16 @@
 #include <string>
 #include <vector>
 
+
 struct ColorState
 {
   heif_colorspace colorspace = heif_colorspace_undefined;
   heif_chroma chroma = heif_chroma_undefined;
   bool has_alpha = false;
   int bits_per_pixel = 8;
-  std::shared_ptr<const color_profile_nclx> nclx_profile;
+
+  // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values.
+  color_profile_nclx nclx_profile;
 
   ColorState() = default;
 

@@ -48,10 +48,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  if (input_state.nclx_profile) {
-    if (input_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   if (target_state.chroma != heif_chroma_420) {
@@ -266,10 +264,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  if (input_state.nclx_profile) {
-    if (input_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;

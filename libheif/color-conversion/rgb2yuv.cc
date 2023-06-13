@@ -163,12 +163,10 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int matrix_coeffs = 2;
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
   bool full_range_flag = true;
-  if (target_state.nclx_profile) {
-    full_range_flag = target_state.nclx_profile->get_full_range_flag();
-    matrix_coeffs = target_state.nclx_profile->get_matrix_coefficients();
-    coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
-                                           target_state.nclx_profile->get_colour_primaries());
-  }
+  full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  matrix_coeffs = target_state.nclx_profile.get_matrix_coefficients();
+  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile.get_matrix_coefficients(),
+                                         target_state.nclx_profile.get_colour_primaries());
 
   int x, y;
 
@@ -294,14 +292,12 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  if (input_state.nclx_profile) {
-    int matrix = input_state.nclx_profile->get_matrix_coefficients();
-    if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
-      return {};
-    }
-    if (!input_state.nclx_profile->get_full_range_flag()) {
-      return {};
-    }
+  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
+    return {};
+  }
+  if (!input_state.nclx_profile.get_full_range_flag()) {
+    return {};
   }
 
   if (target_state.chroma != heif_chroma_420) {
@@ -394,7 +390,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
   bool full_range_flag = true;
   if (colorProfile) {
-    full_range_flag = target_state.nclx_profile->get_full_range_flag();
+    full_range_flag = target_state.nclx_profile.get_full_range_flag();
     coeffs = get_RGB_to_YCbCr_coefficients(colorProfile->get_matrix_coefficients(),
                                            colorProfile->get_colour_primaries());
   }
@@ -495,10 +491,8 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (target_state.nclx_profile) {
-    if (target_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (target_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
@@ -591,11 +585,9 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
 
   RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
   bool full_range_flag = true;
-  if (target_state.nclx_profile) {
-    full_range_flag = target_state.nclx_profile->get_full_range_flag();
-    coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile->get_matrix_coefficients(),
-                                           target_state.nclx_profile->get_colour_primaries());
-  }
+  full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  coeffs = get_RGB_to_YCbCr_coefficients(target_state.nclx_profile.get_matrix_coefficients(),
+                                         target_state.nclx_profile.get_colour_primaries());
 
 
   int bytes_per_pixel = (has_alpha ? 4 : 3);
@@ -784,15 +776,11 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  if (!target_state.nclx_profile) {
+  if (target_state.nclx_profile.get_matrix_coefficients() != 0) {
     return {};
   }
 
-  if (target_state.nclx_profile->get_matrix_coefficients() != 0) {
-    return {};
-  }
-
-  if (input_state.nclx_profile && !input_state.nclx_profile->get_full_range_flag()) {
+  if (!input_state.nclx_profile.get_full_range_flag()) {
     return {};
   }
 
@@ -855,8 +843,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
   }
 
 
-  assert(target_state.nclx_profile);
-  assert(target_state.nclx_profile->get_matrix_coefficients() == 0);
+  assert(target_state.nclx_profile.get_matrix_coefficients() == 0);
   int bytes_per_pixel = (has_alpha ? 4 : 3);
 
   for (int y = 0; y < height; y++) {
