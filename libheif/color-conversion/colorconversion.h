@@ -34,7 +34,8 @@ struct ColorState
   bool has_alpha = false;
   int bits_per_pixel = 8;
 
-  // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values.
+  // ColorConversionOperations can assume that the input and target nclx has no 'unspecified' values
+  // if the colorspace is heif_colorspace_YCbCr. Otherwise, the values should preferably be 'unspecified'.
   color_profile_nclx nclx_profile;
 
   ColorState() = default;
@@ -83,6 +84,7 @@ public:
 
   virtual std::shared_ptr<HeifPixelImage>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     const ColorState& input_state,
                      const ColorState& target_state,
                      const heif_color_conversion_options& options) const = 0;
 };
@@ -108,6 +110,7 @@ private:
 
   struct ConversionStep {
     std::shared_ptr<ColorConversionOperation> operation;
+    ColorState input_state;
     ColorState output_state;
   };
 

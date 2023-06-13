@@ -140,13 +140,24 @@ static void __attribute__ ((unused)) print_spec(std::ostream& ostr, const std::s
 
 bool ColorState::operator==(const ColorState& b) const
 {
-  return (colorspace == b.colorspace &&
-          chroma == b.chroma &&
-          has_alpha == b.has_alpha &&
-          bits_per_pixel == b.bits_per_pixel &&
-          nclx_profile.get_full_range_flag() == b.nclx_profile.get_full_range_flag() &&
-          nclx_profile.get_matrix_coefficients() == b.nclx_profile.get_matrix_coefficients() &&
-          nclx_profile.get_colour_primaries() == b.nclx_profile.get_colour_primaries());
+  bool mainParamsMatch = (colorspace == b.colorspace &&
+                          chroma == b.chroma &&
+                          has_alpha == b.has_alpha &&
+                          bits_per_pixel == b.bits_per_pixel);
+
+  if (!mainParamsMatch) {
+    return false;
+  }
+
+  if (colorspace == heif_colorspace_YCbCr) {
+    bool ycbcr_parameters_match = (nclx_profile.get_full_range_flag() == b.nclx_profile.get_full_range_flag() &&
+                                   nclx_profile.get_matrix_coefficients() == b.nclx_profile.get_matrix_coefficients() &&
+                                   nclx_profile.get_colour_primaries() == b.nclx_profile.get_colour_primaries());
+    return ycbcr_parameters_match;
+  }
+  else {
+    return true;
+  }
 }
 
 
@@ -154,26 +165,40 @@ struct Node
 {
   Node() = default;
 
-  Node(int prev, const std::shared_ptr<ColorConversionOperation>& _op, const ColorStateWithCost& state)
+  Node(int prev,
+       const std::shared_ptr<ColorConversionOperation>& _op,
+      //const ColorState& _input_state,
+       const ColorState& _output_state,
+       int _speed_cost)
   {
     prev_processed_idx = prev;
     op = _op;
-    color_state = state;
+    //input_state = _input_state;
+    output_state = _output_state;
+    speed_costs = _speed_cost;
   }
 
   int prev_processed_idx = -1;
   std::shared_ptr<ColorConversionOperation> op;
-  ColorStateWithCost color_state;
+  //ColorState input_state;
+  ColorState output_state;
+  int speed_costs;
 };
 
-std::ostream& operator<<(std::ostream& ostr, const ColorState& state) {
-  return ostr << "colorspace=" << state.colorspace << " chroma=" << state.chroma
-              << " bpp(R)=" << state.bits_per_pixel
-              << " alpha=" << (state.has_alpha ? "yes" : "no")
-              << " nclx matrix coefficients=" << state.nclx_profile.get_matrix_coefficients()
-              << " nclx colour primaries=" << state.nclx_profile.get_colour_primaries()
-              << " nclx transfer characteristics=" << state.nclx_profile.get_transfer_characteristics()
-              << " full-range=" << (state.nclx_profile.get_full_range_flag() ? "yes":"no");
+std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
+{
+  ostr << "colorspace=" << state.colorspace << " chroma=" << state.chroma
+           << " bpp(R)=" << state.bits_per_pixel
+              << " alpha=" << (state.has_alpha ? "yes" : "no");
+
+  if (state.colorspace == heif_colorspace_YCbCr) {
+    ostr << " matrix-coefficients=" << state.nclx_profile.get_matrix_coefficients()
+         << " colour-primaries=" << state.nclx_profile.get_colour_primaries()
+         << " transfer-characteristics=" << state.nclx_profile.get_transfer_characteristics()
+         << " full-range=" << (state.nclx_profile.get_full_range_flag() ? "yes" : "no");
+  }
+
+  return ostr;
 }
 
 std::vector<std::shared_ptr<ColorConversionOperation>> ColorConversionPipeline::m_operation_pool;
@@ -246,13 +271,13 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   std::vector<Node> processed_states;
   std::vector<Node> border_states;
-  border_states.push_back({-1, nullptr, {input_state, 0}});
+  border_states.push_back({-1, nullptr, input_state, 0});
 
   while (!border_states.empty()) {
     int minIdx = -1;
     int minCost = std::numeric_limits<int>::max();
-    for (int i = 0; i < (int)border_states.size(); i++) {
-      int cost = border_states[i].color_state.speed_costs;
+    for (int i = 0; i < (int) border_states.size(); i++) {
+      int cost = border_states[i].speed_costs;
       if (cost < minCost) {
         minIdx = i;
         minCost = cost;
@@ -270,11 +295,11 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
     border_states.pop_back();
 
 #if DEBUG_PIPELINE_CREATION
-    std::cerr << "- expand node: " << processed_states.back().color_state.color_state
-        << " with cost " << processed_states.back().color_state.speed_costs << " \n";
+    std::cerr << "- expand node: " << processed_states.back().output_state
+        << " with cost " << processed_states.back().speed_costs << " \n";
 #endif
 
-    if (processed_states.back().color_state.color_state == target_state) {
+    if (processed_states.back().output_state == target_state) {
       // end-state found, backtrack path to find conversion pipeline
 
       size_t idx = processed_states.size() - 1;
@@ -290,7 +315,14 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
       int step = 0;
       while (idx > 0) {
         m_conversion_steps[len - 1 - step].operation = processed_states[idx].op;
-        m_conversion_steps[len - 1 - step].output_state = processed_states[idx].color_state.color_state;
+        m_conversion_steps[len - 1 - step].output_state = processed_states[idx].output_state;
+        if (step > 0) {
+          m_conversion_steps[len - step].input_state = m_conversion_steps[len - 1 - step].output_state;
+        }
+        else {
+          assert(len - 1 - step == 0);
+          m_conversion_steps[0].input_state = input_state;
+        }
 
         //printf("cost: %f\n",processed_states[idx].color_state.costs.total(options.criterion));
         idx = processed_states[idx].prev_processed_idx;
@@ -316,18 +348,18 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
       std::cerr << "-- apply op: " << typeid(op).name() << "\n";
 #endif
 
-      auto out_states = op_ptr->state_after_conversion(processed_states.back().color_state.color_state,
+      auto out_states = op_ptr->state_after_conversion(processed_states.back().output_state,
                                                        target_state,
                                                        options);
       for (const auto& out_state : out_states) {
-        int new_op_costs = out_state.speed_costs + processed_states.back().color_state.speed_costs;
+        int new_op_costs = out_state.speed_costs + processed_states.back().speed_costs;
 #if DEBUG_PIPELINE_CREATION
         std::cerr << "--- " << out_state.color_state << " with cost " << new_op_costs << "\n";
 #endif
 
         bool state_exists = false;
         for (const auto& s : processed_states) {
-          if (s.color_state.color_state == out_state.color_state) {
+          if (s.output_state == out_state.color_state) {
             state_exists = true;
             break;
           }
@@ -335,17 +367,18 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
         if (!state_exists) {
           for (auto& s : border_states) {
-            if (s.color_state.color_state == out_state.color_state) {
+            if (s.output_state == out_state.color_state) {
               state_exists = true;
 
               // if we reached the same border node with a lower cost, replace the border node
 
-              if (s.color_state.speed_costs > new_op_costs) {
+              if (s.speed_costs > new_op_costs) {
                 s = {(int) (processed_states.size() - 1),
                      op_ptr,
-                     out_state};
+                     out_state.color_state,
+                     out_state.speed_costs};
 
-                s.color_state.speed_costs = new_op_costs;
+                s.speed_costs = new_op_costs;
               }
               break;
             }
@@ -357,9 +390,12 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
         if (!state_exists) {
           ColorStateWithCost s = out_state;
-          s.speed_costs = s.speed_costs + processed_states.back().color_state.speed_costs;
+          s.speed_costs = s.speed_costs + processed_states.back().speed_costs;
 
-          border_states.push_back({(int) (processed_states.size() - 1), op_ptr, s});
+          border_states.push_back({(int) (processed_states.size() - 1),
+                                   op_ptr,
+                                   s.color_state,
+                                   s.speed_costs});
         }
       }
     }
@@ -393,7 +429,7 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
     print_spec(std::cerr, in);
 #endif
 
-    out = step.operation->convert_colorspace(in, step.output_state, m_options);
+    out = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options);
     if (!out) {
       return nullptr; // TODO: we should return a proper error
     }

@@ -65,6 +65,7 @@ Op_RGB_to_RGB24_32::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                       const ColorState& input_state,
                                        const ColorState& target_state,
                                        const heif_color_conversion_options& options) const
 {
@@ -187,6 +188,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                              const ColorState& input_state,
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options) const
 {
@@ -315,6 +317,7 @@ Op_RGB_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                          const ColorState& input_state,
                                           const ColorState& target_state,
                                           const heif_color_conversion_options& options) const
 {
@@ -432,6 +435,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                              const ColorState& input_state,
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options) const
 {
@@ -544,6 +548,7 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                       const ColorState& input_state,
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options) const
 {
@@ -670,6 +675,7 @@ Op_RRGGBBaa_swap_endianness::state_after_conversion(const ColorState& input_stat
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                const ColorState& input_state,
                                                 const ColorState& target_state,
                                                 const heif_color_conversion_options& options) const
 {

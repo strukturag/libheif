@@ -60,6 +60,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.chroma = target_state.chroma;
     output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx_profile = target_state.nclx_profile;
 
     states.push_back({output_state, SpeedCosts_Unoptimized});
   }
@@ -70,6 +71,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.chroma = heif_chroma_444;
     output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
     output_state.bits_per_pixel = input_state.bits_per_pixel;
+    output_state.nclx_profile = target_state.nclx_profile;
 
     states.push_back({output_state, SpeedCosts_Unoptimized});
   }
@@ -81,6 +83,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                           const ColorState& input_state,
                                            const ColorState& target_state,
                                            const heif_color_conversion_options& options) const
 {
@@ -315,6 +318,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
   output_state.chroma = heif_chroma_420;
   output_state.has_alpha = input_state.has_alpha;  // we generate an alpha plane if the source contains data
   output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx_profile = target_state.nclx_profile;
 
   states.push_back({output_state, SpeedCosts_Unoptimized});
 
@@ -324,6 +328,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
 
 std::shared_ptr<HeifPixelImage>
 Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                const ColorState& input_state,
                                                 const ColorState& target_state,
                                                 const heif_color_conversion_options& options) const
 {
@@ -503,6 +508,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
   output_state.chroma = target_state.chroma;
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = 8;
+  output_state.nclx_profile = target_state.nclx_profile;
 
   states.push_back({output_state, SpeedCosts_Unoptimized});
 
@@ -531,6 +537,7 @@ inline void set_chroma_pixels(uint8_t* out_cb, uint8_t* out_cr,
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                         const ColorState& input_state,
                                          const ColorState& target_state,
                                          const heif_color_conversion_options& options) const
 {
@@ -792,6 +799,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
   output_state.chroma = heif_chroma_444;
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = 8;
+  output_state.nclx_profile = target_state.nclx_profile;
 
   states.push_back({output_state, SpeedCosts_Unoptimized});
 
@@ -801,6 +809,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
 
 std::shared_ptr<HeifPixelImage>
 Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                const ColorState& input_state,
                                                 const ColorState& target_state,
                                                 const heif_color_conversion_options& options) const
 {
