@@ -319,15 +319,13 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
         if (step > 0) {
           m_conversion_steps[len - step].input_state = m_conversion_steps[len - 1 - step].output_state;
         }
-        else {
-          assert(len - 1 - step == 0);
-          m_conversion_steps[0].input_state = input_state;
-        }
 
         //printf("cost: %f\n",processed_states[idx].color_state.costs.total(options.criterion));
         idx = processed_states[idx].prev_processed_idx;
         step++;
       }
+
+      m_conversion_steps[0].input_state = input_state;
 
       assert(m_conversion_steps.back().output_state == target_state);
 
