@@ -2319,6 +2319,8 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
     return false;
   }
 
+  // TODO: are the colour primaries relevant for matrix-coefficients != 12,13 ?
+  //       If not, we should skip this test for anything else than matrix-coefficients != 12,13.
   if (image_nclx->get_colour_primaries() != spec_nclx->color_primaries) {
     return false;
   }
