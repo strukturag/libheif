@@ -184,7 +184,7 @@ Error Box_uncC::parse(BitstreamRange& range)
   for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
     component.component_index = range.read16();
-    component.component_bit_depth_minus_one = range.read8();
+    component.component_bit_depth = range.read8() + 1;
     component.component_format = range.read8();
     component.component_align_size = range.read8();
     m_components.push_back(component);
@@ -209,9 +209,9 @@ Error Box_uncC::parse(BitstreamRange& range)
 
   m_tile_align_size = range.read32();
 
-  m_num_tile_cols_minus_one = range.read32();
+  m_num_tile_cols = range.read32() + 1;
 
-  m_num_tile_rows_minus_one = range.read32();
+  m_num_tile_rows = range.read32() + 1;
 
   return range.get_error();
 }
@@ -230,7 +230,7 @@ std::string Box_uncC::dump(Indent& indent) const
 
   for (const auto& component : m_components) {
     sstr << indent << "component_index: " << component.component_index << "\n";
-    sstr << indent << "component_bit_depth_minus_one: " << (int) component.component_bit_depth_minus_one << "\n";
+    sstr << indent << "component_bit_depth: " << (int) component.component_bit_depth << "\n";
     sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
     sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
   }
@@ -253,9 +253,9 @@ std::string Box_uncC::dump(Indent& indent) const
 
   sstr << indent << "tile_align_size: " << m_tile_align_size << "\n";
 
-  sstr << indent << "num_tile_cols_minus_one: " << m_num_tile_cols_minus_one << "\n";
+  sstr << indent << "num_tile_cols: " << m_num_tile_cols << "\n";
 
-  sstr << indent << "num_tile_rows_minus_one: " << m_num_tile_rows_minus_one << "\n";
+  sstr << indent << "num_tile_rows: " << m_num_tile_rows << "\n";
 
   return sstr.str();
 }
@@ -274,7 +274,7 @@ Error Box_uncC::write(StreamWriter& writer) const
   writer.write16((uint16_t) m_components.size());
   for (const auto& component : m_components) {
     writer.write16(component.component_index);
-    writer.write8(component.component_bit_depth_minus_one);
+    writer.write8(component.component_bit_depth - 1);
     writer.write8(component.component_format);
     writer.write8(component.component_align_size);
   }
@@ -291,8 +291,8 @@ Error Box_uncC::write(StreamWriter& writer) const
   writer.write8(m_pixel_size);
   writer.write32(m_row_align_size);
   writer.write32(m_tile_align_size);
-  writer.write32(m_num_tile_cols_minus_one);
-  writer.write32(m_num_tile_rows_minus_one);
+  writer.write32(m_num_tile_cols - 1);
+  writer.write32(m_num_tile_rows - 1);
   prepend_header(writer, box_start);
 
   return Error::Ok;
@@ -311,9 +311,9 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if (component.component_bit_depth_minus_one + 1 > 16) {
+    if (component.component_bit_depth > 16) {
       std::stringstream sstr;
-      sstr << "Uncompressed image with component_bit_depth_minus_one " << ((int) component.component_bit_depth_minus_one) << " is not implemented yet";
+      sstr << "Uncompressed image with component_bit_depth " << ((int) component.component_bit_depth) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
@@ -473,10 +473,10 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
       case component_type_red:
       case component_type_green:
       case component_type_blue:
-        alternate_channel_bits = std::max(alternate_channel_bits, component.component_bit_depth_minus_one + 1);
+        alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
         break;
       case component_type_Y:
-        luma_bits = std::max(luma_bits, component.component_bit_depth_minus_one + 1);
+        luma_bits = std::max(luma_bits, (int)component.component_bit_depth);
         break;
         // TODO: there are other things we'll need to handle eventually, like palette.
     }
@@ -500,7 +500,7 @@ static unsigned int get_bytes_per_pixel(const std::shared_ptr<Box_uncC>& uncC)
     if (component.component_align_size == 0)
     {
       // TODO: needs more work when we have components with padding
-      unsigned int component_bytes = (component.component_bit_depth_minus_one + 1) / 8;
+      unsigned int component_bytes = (component.component_bit_depth + 7) / 8;
       bytes += component_bytes;
     }
     else
@@ -616,37 +616,37 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
     if (component_type == component_type_Y) {
-      img->add_plane(heif_channel_Y, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_Y, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Y);
       channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
     }
     else if (component_type == component_type_Cb) {
-      img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Cb);
       channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
     }
     else if (component_type == component_type_Cr) {
-      img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Cr);
       channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
     }
     else if (component_type == component_type_red) {
-      img->add_plane(heif_channel_R, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_R, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_R);
       channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
     }
     else if (component_type == component_type_green) {
-      img->add_plane(heif_channel_G, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_G, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_G);
       channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
     }
     else if (component_type == component_type_blue) {
-      img->add_plane(heif_channel_B, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_B, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_B);
       channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
     }
     else if (component_type == component_type_alpha) {
-      img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth_minus_one + 1);
+      img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Alpha);
       channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
     }

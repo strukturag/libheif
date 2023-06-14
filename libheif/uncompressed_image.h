@@ -83,7 +83,7 @@ public:
   struct Component
   {
     uint16_t component_index;
-    uint8_t component_bit_depth_minus_one;
+    uint8_t component_bit_depth;
     uint8_t component_format;
     uint8_t component_align_size;
   };
@@ -179,18 +179,18 @@ public:
     m_tile_align_size = tile_align_size;
   }
 
-  uint32_t get_number_of_tile_columns() const { return m_num_tile_cols_minus_one + 1; }
+  uint32_t get_number_of_tile_columns() const { return m_num_tile_cols; }
 
   void set_number_of_tile_columns(const uint32_t num_tile_cols)
   {
-    m_num_tile_cols_minus_one = num_tile_cols - 1;
+    m_num_tile_cols = num_tile_cols;
   }
 
-  uint32_t get_number_of_tile_rows() const { return m_num_tile_rows_minus_one + 1; }
+  uint32_t get_number_of_tile_rows() const { return m_num_tile_rows; }
 
   void set_number_of_tile_rows(const uint32_t num_tile_rows)
   {
-    m_num_tile_rows_minus_one = num_tile_rows - 1;
+    m_num_tile_rows = num_tile_rows;
   }
 
 protected:
@@ -210,8 +210,8 @@ protected:
   uint8_t m_pixel_size;
   uint32_t m_row_align_size;
   uint32_t m_tile_align_size;
-  uint32_t m_num_tile_cols_minus_one;
-  uint32_t m_num_tile_rows_minus_one;
+  uint32_t m_num_tile_cols;
+  uint32_t m_num_tile_rows;
 };
 
 
