@@ -47,12 +47,33 @@ enum heif_uncompressed_component_type
   component_type_padded = 12
 };
 
+static std::map<heif_uncompressed_component_type, const char*> sNames_uncompressed_component_type{
+    {component_type_monochrome,   "monochrome"},
+    {component_type_Y,            "Y"},
+    {component_type_Cb,           "Cb"},
+    {component_type_Cr,           "Cr"},
+    {component_type_red,          "red"},
+    {component_type_green,        "green"},
+    {component_type_blue,         "blue"},
+    {component_type_alpha,        "alpha"},
+    {component_type_depth,        "depth"},
+    {component_type_disparity,    "disparity"},
+    {component_type_palette,      "palette"},
+    {component_type_filter_array, "filter-array"},
+    {component_type_padded,       "padded"}
+};
 
 enum heif_uncompressed_component_format
 {
   component_format_unsigned = 0,
   component_format_float = 1,
   component_format_complex = 2,
+};
+
+static std::map<heif_uncompressed_component_format, const char*> sNames_uncompressed_component_format{
+    {component_format_unsigned, "unsigned"},
+    {component_format_float,    "float"},
+    {component_format_complex,  "complex"}
 };
 
 
@@ -64,6 +85,12 @@ enum heif_uncompressed_sampling_type
   sampling_type_411 = 3
 };
 
+static std::map<heif_uncompressed_sampling_type, const char*> sNames_uncompressed_sampling_type{
+    {sampling_type_no_subsampling, "no subsampling"},
+    {sampling_type_422,            "4:2:2"},
+    {sampling_type_420,            "4:2:0"},
+    {sampling_type_411,            "4:1:1"}
+};
 
 enum heif_uncompressed_interleave_type
 {
@@ -74,6 +101,27 @@ enum heif_uncompressed_interleave_type
   interleave_type_tile_component = 4,
   interleave_type_multi_y = 5
 };
+
+static std::map<heif_uncompressed_interleave_type, const char*> sNames_uncompressed_interleave_type{
+    {interleave_type_component,      "component"},
+    {interleave_type_pixel,          "pixel"},
+    {interleave_type_mixed,          "mixed"},
+    {interleave_type_row,            "row"},
+    {interleave_type_tile_component, "tile-component"},
+    {interleave_type_multi_y,        "multi-y"}
+};
+
+template <typename T> const char* get_name(T val, const std::map<T, const char*>& table)
+{
+  auto iter = table.find(val);
+  if (iter == table.end()) {
+    return "unknown";
+  }
+  else {
+    return iter->second;
+  }
+}
+
 
 Error Box_cmpd::parse(BitstreamRange& range)
 {
@@ -100,7 +148,7 @@ std::string Box_cmpd::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   for (const auto& component : m_components) {
-    sstr << indent << "component_type: " << component.component_type << "\n";
+    sstr << indent << "component_type: " << get_name(heif_uncompressed_component_type(component.component_type), sNames_uncompressed_component_type) << "\n";
     if (component.component_type >= 0x8000) {
       sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
     }
@@ -183,13 +231,13 @@ std::string Box_uncC::dump(Indent& indent) const
   for (const auto& component : m_components) {
     sstr << indent << "component_index: " << component.component_index << "\n";
     sstr << indent << "component_bit_depth_minus_one: " << (int) component.component_bit_depth_minus_one << "\n";
-    sstr << indent << "component_format: " << (int) component.component_format << "\n";
+    sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
     sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
   }
 
-  sstr << indent << "sampling_type: " << (int) m_sampling_type << "\n";
+  sstr << indent << "sampling_type: " << get_name(heif_uncompressed_sampling_type(m_sampling_type), sNames_uncompressed_sampling_type) << "\n";
 
-  sstr << indent << "interleave_type: " << (int) m_interleave_type << "\n";
+  sstr << indent << "interleave_type: " << get_name(heif_uncompressed_interleave_type(m_interleave_type), sNames_uncompressed_interleave_type) << "\n";
 
   sstr << indent << "block_size: " << (int) m_block_size << "\n";
 
