@@ -30,7 +30,7 @@
 #include "libheif/pixelimage.h"
 
 // Enable for more verbose test output.
-#define DEBUG_ME 0
+constexpr bool kEnableDebugOutput = 0;
 
 struct Plane {
   heif_channel channel;
@@ -223,6 +223,8 @@ std::vector<Plane> GetPlanes(const ColorState& state, int width, int height) {
 bool MakeTestImage(const ColorState& state, int width, int height,
                    HeifPixelImage* image) {
   image->create(width, height, state.colorspace, state.chroma);
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>(state.nclx_profile);
+  image->set_color_profile_nclx(target_nclx_profile);
   std::vector<Plane> planes = GetPlanes(state, width, height);
   if (planes.empty()) return false;
   for (size_t i = 0; i < planes.size(); ++i) {
@@ -233,6 +235,22 @@ bool MakeTestImage(const ColorState& state, int width, int height,
     image->fill_new_plane(plane.channel, value, plane.width, plane.height,
                           plane.bit_depth);
   }
+  return true;
+}
+
+static bool NclxMatches(heif_colorspace colorspace,
+                        const color_profile_nclx& src_nclx,
+                        const color_profile_nclx& dst_nclx) {
+  if (colorspace != heif_colorspace_YCbCr) {
+    return true;
+  }
+
+  if (src_nclx.get_full_range_flag() != dst_nclx.get_full_range_flag() ||
+      src_nclx.get_matrix_coefficients() !=
+          dst_nclx.get_matrix_coefficients()) {
+    return false;
+  }
+
   return true;
 }
 
@@ -290,8 +308,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
 
   // Convert back in the other direction (if supported).
   ColorConversionPipeline reverse_pipeline;
-  if (reverse_pipeline.construct_pipeline(target_state, input_state,
-                                          options)) {
+  if (reverse_pipeline.construct_pipeline(target_state, input_state, options)) {
     INFO("reverse pipeline: " << reverse_pipeline.debug_dump_pipeline());
     std::shared_ptr<HeifPixelImage> recovered_image =
         reverse_pipeline.convert_image(out_image);
@@ -306,22 +323,28 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
          (input_state.chroma != heif_chroma_420 &&
           input_state.chroma != heif_chroma_422 &&
           target_state.chroma != heif_chroma_420 &&
-          target_state.chroma != heif_chroma_422));
+          target_state.chroma != heif_chroma_422)) &&
+        NclxMatches(input_state.colorspace, input_state.nclx_profile,
+                    target_state.nclx_profile);
     double expected_psnr = expect_lossless ? 100. : 40.;
 
     for (const Plane& plane : GetPlanes(input_state, width, height)) {
-      INFO("Channel: " << plane.channel << " (set DEBUG_ME to 1 in the code for more info)");
-#if DEBUG_ME
-      INFO("Original:\n" << PrintChannel(*in_image, plane.channel));
-      INFO("Recovered:\n" << PrintChannel(*recovered_image, plane.channel));
-      for (const Plane& converted_plane :
-           GetPlanes(target_state, width, height)) {
-        UNSCOPED_INFO("Converted channel "
-                      << converted_plane.channel << ":\n"
-                      << PrintChannel(*out_image, converted_plane.channel));
+      INFO("Channel: "
+           << plane.channel
+           << " (set kEnableDebugOutput to 1 in the code for more info)");
+      if (kEnableDebugOutput) {
+        UNSCOPED_INFO("Original:\n" << PrintChannel(*in_image, plane.channel));
+        UNSCOPED_INFO("Recovered:\n"
+                      << PrintChannel(*recovered_image, plane.channel));
+        for (const Plane& converted_plane :
+             GetPlanes(target_state, width, height)) {
+          UNSCOPED_INFO("Converted channel "
+                        << converted_plane.channel << ":\n"
+                        << PrintChannel(*out_image, converted_plane.channel));
+        }
       }
-#endif
-      double psnr = GetPsnr(*in_image, *recovered_image, plane.channel, expect_alpha_max);
+      double psnr =
+          GetPsnr(*in_image, *recovered_image, plane.channel, expect_alpha_max);
       CHECK(psnr >= expected_psnr);
     }
   }
@@ -389,7 +412,19 @@ std::vector<ColorState> GetAllColorStates() {
     for (heif_chroma chroma : get_valid_chroma_values_for_colorspace(colorspace)) {
       for (bool has_alpha : GetValidHasAlpha(chroma)) {
         for (int bits_per_pixel : GetValidBitsPerPixel(chroma)) {
+          // Without nclx.
           ColorState color_state(colorspace, chroma, has_alpha, bits_per_pixel);
+          color_states.push_back(color_state);
+
+          // With nclx.
+          // TODO: test more matrix values and non full range.
+          color_state.nclx_profile.set_full_range_flag(true);
+          color_state.nclx_profile.set_matrix_coefficients(
+              heif_matrix_coefficients_SMPTE_240M);
+          color_state.nclx_profile.set_colour_primaries(
+              heif_color_primaries_ITU_R_BT_709_5);
+          color_state.nclx_profile.set_transfer_characteristics(
+              heif_color_primaries_SMPTE_240M);
           color_states.push_back(color_state);
         }
       }
@@ -422,6 +457,7 @@ TEST_CASE("All conversions", "[heif_image]") {
   // To debug a particular combination, hardcoe the ColorState values
   // instead:
   // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
+  // src_state.nclx_profile.set_matrix_coefficients(...);
   // ColorState dst_state(...);
 
   bool require_supported = true;
