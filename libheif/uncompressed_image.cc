@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include <cassert>
 
 #include "libheif/heif.h"
 #include "uncompressed_image.h"
@@ -956,11 +957,33 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
              (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
              (src_image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
     {
+      int bytes_per_pixel = 0;
+      switch (src_image->get_chroma_format()) {
+        case heif_chroma_interleaved_RGB:
+          bytes_per_pixel=3;
+          break;
+        case heif_chroma_interleaved_RGBA:
+          bytes_per_pixel=4;
+          break;
+        case heif_chroma_interleaved_RRGGBB_BE:
+        case heif_chroma_interleaved_RRGGBB_LE:
+          bytes_per_pixel=6;
+          break;
+        case heif_chroma_interleaved_RRGGBBAA_BE:
+        case heif_chroma_interleaved_RRGGBBAA_LE:
+          bytes_per_pixel=8;
+          break;
+        default:
+          assert(false);
+      }
+
       int src_stride;
       uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
-      uint64_t out_size = src_image->get_height() * src_stride;
+      uint64_t out_size = src_image->get_height() * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
-      memcpy(data.data(), src_data, out_size);
+      for (int y = 0; y < src_image->get_height(); y++) {
+        memcpy(data.data() + y * src_image->get_width() * bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * bytes_per_pixel);
+      }
       heif_file->append_iloc_data(out_image->get_id(), data, 0);
     }
     else
