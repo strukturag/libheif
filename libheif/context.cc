@@ -2874,7 +2874,7 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                 struct heif_encoder* encoder,
                                                 const struct heif_encoding_options& options,
                                                 enum heif_image_input_class input_class,
-                                                std::shared_ptr<Image> out_image)
+                                                std::shared_ptr<Image>& out_image)
 {
 #if WITH_UNCOMPRESSED_CODEC
   heif_item_id image_id = m_heif_file->add_new_image("unci");

@@ -28,6 +28,7 @@
 #include "file.h"
 #include "context.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <memory>
@@ -53,6 +54,11 @@ public:
 
   const std::vector<Component>& get_components() const { return m_components; }
 
+  void add_component(Component component)
+  {
+    m_components.push_back(component);
+  }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
@@ -64,6 +70,7 @@ class Box_uncC : public FullBox
 public:
   Box_uncC()
   {
+    m_profile = 0;
     set_short_type(fourcc("uncC"));
   }
 
@@ -83,31 +90,108 @@ public:
 
   const std::vector<Component>& get_components() const { return m_components; }
 
-  uint8_t get_sampling_type() { return m_sampling_type; }
+  void add_component(Component component)
+  {
+    m_components.push_back(component);
+  }
 
-  uint8_t get_interleave_type() { return m_interleave_type; }
+  uint32_t get_profile() const { return m_profile; }
 
-  uint8_t get_block_size() { return m_block_size; }
+  void set_profile(const uint32_t profile)
+  {
+    m_profile = profile;
+  }
 
-  bool is_components_little_endian() { return m_components_little_endian; }
+  uint8_t get_sampling_type() const { return m_sampling_type; }
 
-  bool is_block_pad_lsb() { return m_block_pad_lsb; }
+  void set_sampling_type(const uint8_t sampling_type)
+  {
+    m_sampling_type = sampling_type;
+  }
 
-  bool is_block_little_endian() { return m_block_little_endian; }
+  uint8_t get_interleave_type() const { return m_interleave_type; }
 
-  bool is_block_reversed() { return m_block_reversed; }
+  void set_interleave_type(const uint8_t interleave_type)
+  {
+    m_interleave_type = interleave_type;
+  }
 
-  bool is_pad_unknown() { return m_pad_unknown; }
+  uint8_t get_block_size() const { return m_block_size; }
 
-  uint8_t get_pixel_size() { return m_pixel_size; }
+  void set_block_size(const uint8_t block_size)
+  {
+    m_block_size = block_size;
+  }
 
-  uint32_t get_row_align_size() { return m_row_align_size; }
+  bool is_components_little_endian() const { return m_components_little_endian; }
 
-  uint32_t get_tile_align_size() { return m_tile_align_size; }
+  void set_components_little_endian (const bool components_little_endian)
+  {
+    m_components_little_endian = components_little_endian;
+  }
 
-  uint32_t get_number_of_tile_columns() { return m_num_tile_cols_minus_one + 1; }
+  bool is_block_pad_lsb() const { return m_block_pad_lsb; }
 
-  uint32_t get_number_of_tile_rows() { return m_num_tile_rows_minus_one + 1; }
+  void set_block_pad_lsb(const bool block_pad_lsb)
+  {
+    m_block_pad_lsb = block_pad_lsb;
+  }
+
+  bool is_block_little_endian() const { return m_block_little_endian; }
+
+  void set_block_little_endian(const bool block_little_endian)
+  {
+    m_block_little_endian = block_little_endian;
+  }
+
+  bool is_block_reversed() const { return m_block_reversed; }
+
+  void set_block_reversed(const bool block_reversed)
+  {
+    m_block_reversed = block_reversed;
+  }
+
+  bool is_pad_unknown() const { return m_pad_unknown; }
+
+  void set_pad_unknown(const bool pad_unknown)
+  {
+    m_pad_unknown = pad_unknown;
+  }
+
+  uint8_t get_pixel_size() const { return m_pixel_size; }
+
+  void set_pixel_size(const uint8_t pixel_size)
+  {
+    m_pixel_size = pixel_size;
+  }
+
+  uint32_t get_row_align_size() const { return m_row_align_size; }
+
+  void set_row_align_size(const uint32_t row_align_size)
+  {
+    m_row_align_size = row_align_size;
+  }
+
+  uint32_t get_tile_align_size() const { return m_tile_align_size; }
+
+  void set_tile_align_size(const uint32_t tile_align_size)
+  {
+    m_tile_align_size = tile_align_size;
+  }
+
+  uint32_t get_number_of_tile_columns() const { return m_num_tile_cols_minus_one + 1; }
+
+  void set_number_of_tile_columns(const uint32_t num_tile_cols)
+  {
+    m_num_tile_cols_minus_one = num_tile_cols - 1;
+  }
+
+  uint32_t get_number_of_tile_rows() const { return m_num_tile_rows_minus_one + 1; }
+
+  void set_number_of_tile_rows(const uint32_t num_tile_rows)
+  {
+    m_num_tile_rows_minus_one = num_tile_rows - 1;
+  }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -147,7 +231,7 @@ public:
                                          const std::shared_ptr<HeifPixelImage>& src_image,
                                          void* encoder_struct,
                                          const struct heif_encoding_options& options,
-                                         std::shared_ptr<HeifContext::Image> out_image);
+                                         std::shared_ptr<HeifContext::Image>& out_image);
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_IMAGE_H
