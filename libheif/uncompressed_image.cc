@@ -922,9 +922,11 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
     {
       int src_stride;
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-      uint64_t out_size = src_image->get_height() * src_stride;
+      uint64_t out_size = src_image->get_height() * src_image->get_width();
       data.resize(data.size() + out_size);
-      memcpy(data.data() + offset, src_data, out_size);
+      for (int y = 0; y < src_image->get_height(); y++) {
+        memcpy(data.data() + offset + y * src_image->get_width(), src_data + src_stride * y, src_image->get_width());
+      }
       offset += out_size;
     }
     heif_file->append_iloc_data(out_image->get_id(), data, 0);
