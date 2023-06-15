@@ -295,11 +295,11 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
-  if (!input_state.nclx_profile.get_full_range_flag()) {
+  if (!target_state.nclx_profile.get_full_range_flag()) {
     return {};
   }
 

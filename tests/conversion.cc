@@ -418,14 +418,18 @@ std::vector<ColorState> GetAllColorStates() {
 
           // With nclx.
           // TODO: test more matrix values and non full range.
-          color_state.nclx_profile.set_full_range_flag(true);
-          color_state.nclx_profile.set_matrix_coefficients(
-              heif_matrix_coefficients_SMPTE_240M);
-          color_state.nclx_profile.set_colour_primaries(
-              heif_color_primaries_ITU_R_BT_709_5);
-          color_state.nclx_profile.set_transfer_characteristics(
-              heif_color_primaries_SMPTE_240M);
-          color_states.push_back(color_state);
+          for (heif_matrix_coefficients matrix :
+               {heif_matrix_coefficients_RGB_GBR,
+                heif_matrix_coefficients_SMPTE_240M}) {
+            color_state.nclx_profile.set_full_range_flag(true);
+            color_state.nclx_profile.set_matrix_coefficients(
+                matrix);
+            color_state.nclx_profile.set_colour_primaries(
+                heif_color_primaries_ITU_R_BT_709_5);
+            color_state.nclx_profile.set_transfer_characteristics(
+                heif_color_primaries_SMPTE_240M);
+            color_states.push_back(color_state);
+          }
         }
       }
     }
