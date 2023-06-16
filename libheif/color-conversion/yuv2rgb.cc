@@ -47,6 +47,12 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  if ( matrix == 11 || matrix == 14) {
+    return {};
+  }
+
+
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
   if ((input_state.bits_per_pixel != 8) != hdr) {
@@ -219,7 +225,7 @@ Op_YCbCr_to_RGB<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         out_g[y * out_g_stride + x] = (Pixel) (clip_int_u8(yv + cb));
         out_b[y * out_b_stride + x] = (Pixel) (clip_int_u8(yv - cb - cr));
       }
-      else { // TODO: matrix_coefficients = 10,11,13,14
+      else { // TODO: matrix_coefficients = 11,14
         float yv, cb, cr;
         yv = static_cast<float>(in_y[y * in_y_stride + x] );
         cb = static_cast<float>(in_cb[cy * in_cb_stride + cx] - halfRange);

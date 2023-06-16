@@ -354,9 +354,17 @@ void TestFailingConversion(const std::string& test_name,
                            const ColorState& input_state,
                            const ColorState& target_state,
                            const heif_color_conversion_options& options = {}) {
+  INFO(test_name);
+  INFO("downsampling=" << options.preferred_chroma_downsampling_algorithm
+                       << " upsampling="
+                       << options.preferred_chroma_upsampling_algorithm
+                       << " only_used_preferred="
+                       << (bool)options.only_use_preferred_chroma_algorithm);
   ColorConversionPipeline pipeline;
-  REQUIRE_FALSE(
-      pipeline.construct_pipeline(input_state, target_state, options));
+  bool construct_pipeline_res =
+      pipeline.construct_pipeline(input_state, target_state, options);
+  INFO("conversion pipeline: " << pipeline.debug_dump_pipeline());
+  REQUIRE_FALSE(construct_pipeline_res);
 }
 
 // Returns the list of valid has_alpha values for a given heif_chroma.
@@ -404,9 +412,22 @@ std::vector<int> GetValidBitsPerPixel(heif_chroma chroma) {
   }
 }
 
+// Returns a subset (to reduce the number of tests) of fully supported matrix
+// coefficients.
+const std::vector<heif_matrix_coefficients> GetSupportedMatrices() {
+  return {heif_matrix_coefficients_RGB_GBR,
+          heif_matrix_coefficients_SMPTE_240M};
+}
+
+// Returns matrix coefficients that are not currently supported by any operator.
+const std::vector<heif_matrix_coefficients> GetUnsupportedMatrices() {
+  return {heif_matrix_coefficients_SMPTE_ST_2085,
+          heif_matrix_coefficients_ICtCp};
+}
+
 // Returns of list of all valid ColorState (valid combinations
 // of a heif_colorspace/heif_chroma/has_alpha/bpp).
-std::vector<ColorState> GetAllColorStates() {
+std::vector<ColorState> GetAllColorStates(const std::vector<heif_matrix_coefficients>& matrices) {
   std::vector<ColorState> color_states;
   for (heif_colorspace colorspace : {heif_colorspace_YCbCr, heif_colorspace_RGB, heif_colorspace_monochrome}) {
     for (heif_chroma chroma : get_valid_chroma_values_for_colorspace(colorspace)) {
@@ -417,10 +438,8 @@ std::vector<ColorState> GetAllColorStates() {
           color_states.push_back(color_state);
 
           // With nclx.
-          // TODO: test more matrix values and non full range.
-          for (heif_matrix_coefficients matrix :
-               {heif_matrix_coefficients_RGB_GBR,
-                heif_matrix_coefficients_SMPTE_240M}) {
+          for (heif_matrix_coefficients matrix : matrices) {
+            // TODO: test non full range.
             color_state.nclx_profile.set_full_range_flag(true);
             color_state.nclx_profile.set_matrix_coefficients(
                 matrix);
@@ -456,8 +475,10 @@ TEST_CASE("All conversions", "[heif_image]") {
       .only_use_preferred_chroma_algorithm = only_use_preferred_chroma_algorithm};
 
   // Test all source and destination state combinations.
-  ColorState src_state = GENERATE(from_range(GetAllColorStates()));
-  ColorState dst_state = GENERATE(from_range(GetAllColorStates()));
+  ColorState src_state = GENERATE(
+      from_range(GetAllColorStates(GetSupportedMatrices())));
+  ColorState dst_state = GENERATE(
+      from_range(GetAllColorStates(GetSupportedMatrices())));
   // To debug a particular combination, hardcoe the ColorState values
   // instead:
   // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
@@ -479,6 +500,43 @@ TEST_CASE("All conversions", "[heif_image]") {
   std::ostringstream os;
   os << "from: " << src_state << "\nto:   " << dst_state;
   TestConversion(os.str(), src_state, dst_state, options, require_supported);
+}
+
+TEST_CASE("Unsupported matrices", "[heif_image]") {
+  bool only_use_preferred_chroma_algorithm = GENERATE(false, true);
+  heif_chroma_downsampling_algorithm downsampling =
+      heif_chroma_downsampling_nearest_neighbor;
+  heif_chroma_upsampling_algorithm upsampling =
+      heif_chroma_upsampling_nearest_neighbor;
+  if (only_use_preferred_chroma_algorithm) {
+    downsampling = GENERATE(heif_chroma_downsampling_nearest_neighbor,
+                            heif_chroma_downsampling_average,
+                            heif_chroma_downsampling_sharp_yuv);
+    upsampling = GENERATE(heif_chroma_upsampling_nearest_neighbor,
+                          heif_chroma_upsampling_bilinear);
+  }
+  heif_color_conversion_options options = {
+      .preferred_chroma_downsampling_algorithm = downsampling,
+      .preferred_chroma_upsampling_algorithm = upsampling,
+      .only_use_preferred_chroma_algorithm = only_use_preferred_chroma_algorithm};
+
+  ColorState src_state =
+      GENERATE(from_range(GetAllColorStates(GetUnsupportedMatrices())));
+  ColorState dst_state =
+      GENERATE(from_range(GetAllColorStates(GetUnsupportedMatrices())));
+  color_profile_nclx default_nclx;
+
+  if (src_state == dst_state ||
+      NclxMatches(src_state.colorspace, src_state.nclx_profile,
+                  dst_state.nclx_profile) ||
+      (src_state.nclx_profile.get_matrix_coefficients() == default_nclx.get_matrix_coefficients() ||
+       dst_state.nclx_profile.get_matrix_coefficients() == default_nclx.get_matrix_coefficients())) {
+    return;
+  }
+
+  std::ostringstream os;
+  os << "from: " << src_state << "\nto:   " << dst_state;
+  TestFailingConversion(os.str(), src_state, dst_state, options);
 }
 
 TEST_CASE("Sharp yuv conversion", "[heif_image]") {

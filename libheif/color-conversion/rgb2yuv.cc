@@ -44,6 +44,11 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 8 || matrix == 11 || matrix == 14) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
@@ -492,7 +497,8 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (target_state.nclx_profile.get_matrix_coefficients() == 0) {
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
 

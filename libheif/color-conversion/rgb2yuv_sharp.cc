@@ -99,7 +99,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
     return {};
   }
 
-  if (target_state.nclx_profile.get_matrix_coefficients() == 0) {
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
 
