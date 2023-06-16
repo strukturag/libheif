@@ -295,11 +295,11 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  int matrix = input_state.nclx_profile.get_matrix_coefficients();
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
   if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
-  if (!input_state.nclx_profile.get_full_range_flag()) {
+  if (!target_state.nclx_profile.get_full_range_flag()) {
     return {};
   }
 
@@ -391,14 +391,10 @@ Op_RRGGBBxx_HDR_to_YCbCr420::convert_colorspace(const std::shared_ptr<const Heif
   int le = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
             input->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ? 1 : 0;
 
-  auto colorProfile = input->get_color_profile_nclx();
-  RGB_to_YCbCr_coefficients coeffs = RGB_to_YCbCr_coefficients::defaults();
-  bool full_range_flag = true;
-  if (colorProfile) {
-    full_range_flag = target_state.nclx_profile.get_full_range_flag();
-    coeffs = get_RGB_to_YCbCr_coefficients(colorProfile->get_matrix_coefficients(),
-                                           colorProfile->get_colour_primaries());
-  }
+  bool full_range_flag = target_state.nclx_profile.get_full_range_flag();
+  RGB_to_YCbCr_coefficients coeffs = get_RGB_to_YCbCr_coefficients(
+      target_state.nclx_profile.get_matrix_coefficients(),
+      target_state.nclx_profile.get_colour_primaries());
 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
