@@ -904,7 +904,21 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
       max_q = encoder->alpha_max_q;
   }
 
-  cfg.rc_min_quantizer = min_q;
+  int quality = encoder->quality;
+
+  if (input_class == heif_image_input_class_alpha && encoder->alpha_quality_set) {
+      quality = encoder->alpha_quality;
+  }
+
+  int cq_level = ((100 - quality) * 63 + 50) / 100;
+
+  // Work around the bug in libaom v2.0.2 or older fixed by
+  // https://aomedia-review.googlesource.com/c/aom/+/113064. If using a libaom
+  // release with the bug, set cfg.rc_min_quantizer to cq_level to prevent
+  // libaom from incorrectly using a quantizer index lower than cq_level.
+  bool aom_2_0_2_or_older = aom_codec_version() <= 0x020002;
+
+  cfg.rc_min_quantizer = aom_2_0_2_or_older ? cq_level : min_q;
   cfg.rc_max_quantizer = max_q;
   cfg.g_error_resilient = 0;
   cfg.g_threads = encoder->threads;
@@ -931,13 +945,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used);
 
-  int quality = encoder->quality;
-
-  if (input_class == heif_image_input_class_alpha && encoder->alpha_quality_set) {
-      quality = encoder->alpha_quality;
-  }
-
-  int cq_level = ((100 - quality) * 63 + 50) / 100;
   aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level);
 
   if (encoder->threads > 1) {
