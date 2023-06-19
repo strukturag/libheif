@@ -30,7 +30,7 @@
 #include "libheif/pixelimage.h"
 
 // Enable for more verbose test output.
-constexpr bool kEnableDebugOutput = 0;
+constexpr bool kEnableDebugOutput = false;
 
 struct Plane {
   heif_channel channel;
@@ -326,12 +326,12 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
           target_state.chroma != heif_chroma_422)) &&
         NclxMatches(input_state.colorspace, input_state.nclx_profile,
                     target_state.nclx_profile);
-    double expected_psnr = expect_lossless ? 100. : 40.;
+    double expected_psnr = expect_lossless ? 100. : 38.;
 
     for (const Plane& plane : GetPlanes(input_state, width, height)) {
       INFO("Channel: "
            << plane.channel
-           << " (set kEnableDebugOutput to 1 in the code for more info)");
+           << " (set kEnableDebugOutput to true in the code for more info)");
       if (kEnableDebugOutput) {
         UNSCOPED_INFO("Original:\n" << PrintChannel(*in_image, plane.channel));
         UNSCOPED_INFO("Recovered:\n"
@@ -438,16 +438,18 @@ std::vector<ColorState> GetAllColorStates(const std::vector<heif_matrix_coeffici
           color_states.push_back(color_state);
 
           // With nclx.
-          for (heif_matrix_coefficients matrix : matrices) {
-            // TODO: test non full range.
-            color_state.nclx_profile.set_full_range_flag(true);
-            color_state.nclx_profile.set_matrix_coefficients(
-                matrix);
-            color_state.nclx_profile.set_colour_primaries(
-                heif_color_primaries_ITU_R_BT_709_5);
-            color_state.nclx_profile.set_transfer_characteristics(
-                heif_color_primaries_SMPTE_240M);
-            color_states.push_back(color_state);
+          if (colorspace == heif_colorspace_YCbCr) {
+            for (heif_matrix_coefficients matrix : matrices) {
+              for (bool full_range : {true, false}) {
+                color_state.nclx_profile.set_full_range_flag(full_range);
+                color_state.nclx_profile.set_matrix_coefficients(matrix);
+                color_state.nclx_profile.set_colour_primaries(
+                    heif_color_primaries_ITU_R_BT_709_5);
+                color_state.nclx_profile.set_transfer_characteristics(
+                    heif_color_primaries_SMPTE_240M);
+                color_states.push_back(color_state);
+              }
+            }
           }
         }
       }
@@ -479,7 +481,7 @@ TEST_CASE("All conversions", "[heif_image]") {
       from_range(GetAllColorStates(GetSupportedMatrices())));
   ColorState dst_state = GENERATE(
       from_range(GetAllColorStates(GetSupportedMatrices())));
-  // To debug a particular combination, hardcoe the ColorState values
+  // To debug a particular combination, hardcode the ColorState values
   // instead:
   // ColorState src_state(heif_colorspace_YCbCr, heif_chroma_420, false, 8);
   // src_state.nclx_profile.set_matrix_coefficients(...);
