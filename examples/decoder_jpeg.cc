@@ -331,7 +331,7 @@ InputImage loadJPEG(const char* filename)
       }
     }
 
-    int cw,ch;
+    int cw=0,ch=0;
     switch (output_chroma) {
       case heif_chroma_420:
         cw = (cinfo.image_width + 1) / 2;
