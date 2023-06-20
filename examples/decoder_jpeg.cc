@@ -30,6 +30,8 @@
 #include <cstring>
 #include <cstdio>
 #include <iostream>
+#include <cassert>
+#include <algorithm>
 #include "decoder_jpeg.h"
 #include "libheif/exif.h"
 
@@ -301,74 +303,168 @@ InputImage loadJPEG(const char* filename)
       memcpy(py + (cinfo.output_scanline - 1) * y_stride, *buffer, cinfo.output_width);
     }
   }
-  else {
+  else if (cinfo.jpeg_color_space == JCS_YCbCr) {
     cinfo.out_color_space = JCS_YCbCr;
 
-    jpeg_start_decompress(&cinfo);
+    bool read_raw = false;
+    heif_chroma output_chroma = heif_chroma_420;
 
-    JSAMPARRAY buffer;
-    buffer = (*cinfo.mem->alloc_sarray)
-        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
+    if (cinfo.comp_info[1].h_samp_factor == 1 &&
+        cinfo.comp_info[1].v_samp_factor == 1 &&
+        cinfo.comp_info[2].h_samp_factor == 1 &&
+        cinfo.comp_info[2].v_samp_factor == 1) {
+
+      if (cinfo.comp_info[0].h_samp_factor == 1 &&
+          cinfo.comp_info[0].v_samp_factor == 1) {
+        output_chroma = heif_chroma_444;
+        read_raw = true;
+      }
+      else if (cinfo.comp_info[0].h_samp_factor == 1 &&
+               cinfo.comp_info[0].v_samp_factor == 2) {
+        output_chroma = heif_chroma_422;
+        read_raw = true;
+      }
+      else if (cinfo.comp_info[0].h_samp_factor == 2 &&
+               cinfo.comp_info[0].v_samp_factor == 2) {
+        output_chroma = heif_chroma_420;
+        read_raw = true;
+      }
+    }
+
+    int cw,ch;
+    switch (output_chroma) {
+      case heif_chroma_420:
+        cw = (cinfo.image_width + 1) / 2;
+        ch = (cinfo.image_height + 1) / 2;
+        break;
+      case heif_chroma_422:
+        cw = cinfo.image_width;
+        ch = (cinfo.image_height + 1) / 2;
+        break;
+      case heif_chroma_444:
+        cw = cinfo.image_width;
+        ch = cinfo.image_height;
+        break;
+      default:
+        assert(false);
+    }
+
+    //read_raw = false;
+
+    cinfo.raw_data_out = read_raw;
+
+    jpeg_start_decompress(&cinfo);
 
 
     // create destination image
 
     struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
                                               heif_colorspace_YCbCr,
-                                              heif_chroma_420,
+                                              output_chroma,
                                               &image);
     (void) err;
 
     heif_image_add_plane(image, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-    heif_image_add_plane(image, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
-    heif_image_add_plane(image, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
+    heif_image_add_plane(image, heif_channel_Cb, cw, ch, 8);
+    heif_image_add_plane(image, heif_channel_Cr, cw, ch, 8);
 
-    int y_stride;
-    int cb_stride;
-    int cr_stride;
-    uint8_t* py = heif_image_get_plane(image, heif_channel_Y, &y_stride);
-    uint8_t* pcb = heif_image_get_plane(image, heif_channel_Cb, &cb_stride);
-    uint8_t* pcr = heif_image_get_plane(image, heif_channel_Cr, &cr_stride);
+    int stride[3];
+    uint8_t* p[3];
+    p[0] = heif_image_get_plane(image, heif_channel_Y, &stride[0]);
+    p[1] = heif_image_get_plane(image, heif_channel_Cb, &stride[1]);
+    p[2] = heif_image_get_plane(image, heif_channel_Cr, &stride[2]);
 
     // read the image
 
-    //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
+    if (read_raw) {
+      // adapted from https://github.com/AOMediaCodec/libavif/blob/430ea2df584dcb95ff1632c17643ebbbb2f3bc81/apps/shared/avifjpeg.c
 
-    while (cinfo.output_scanline < cinfo.output_height) {
-      JOCTET* bufp;
+      JSAMPIMAGE buffer;
+      buffer = (JSAMPIMAGE)(cinfo.mem->alloc_small)((j_common_ptr)&cinfo, JPOOL_IMAGE, sizeof(JSAMPARRAY) * cinfo.num_components);
 
-      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+      // lines of output image to be read per jpeg_read_raw_data call
+      int readLines = 0;
+      // lines of samples to be read per call (for each channel)
+      int linesPerCall[3] = { 0, 0, 0 };
+      // expected count of sample lines (for each channel)
+      int targetRead[3] = { 0, 0, 0 };
+      for (int i = 0; i < cinfo.num_components; ++i) {
+        jpeg_component_info * comp = &cinfo.comp_info[i];
 
-      bufp = buffer[0];
-
-      int y = cinfo.output_scanline - 1;
-
-      for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
-        py[y * y_stride + x] = *bufp++;
-        pcb[y / 2 * cb_stride + x / 2] = *bufp++;
-        pcr[y / 2 * cr_stride + x / 2] = *bufp++;
-
-        if (x + 1 < cinfo.output_width) {
-          py[y * y_stride + x + 1] = *bufp++;
-        }
-
-        bufp += 2;
+        linesPerCall[i] = comp->v_samp_factor * comp->DCT_v_scaled_size;
+        targetRead[i] = comp->downsampled_height;
+        buffer[i] = (cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo,
+                                                JPOOL_IMAGE,
+                                                comp->width_in_blocks * comp->DCT_h_scaled_size,
+                                                linesPerCall[i]);
+        readLines = std::max(readLines, linesPerCall[i]);
       }
 
+      // count of already-read lines (for each channel)
+      int alreadyRead[3] = { 0, 0, 0 };
+      int width[3] = { (int)cinfo.output_width, cw, cw};
 
-      if (cinfo.output_scanline < cinfo.output_height) {
+      while (cinfo.output_scanline < cinfo.output_height) {
+        jpeg_read_raw_data(&cinfo, buffer, readLines);
+
+        int workComponents = 3;
+
+        for (int i = 0; i < workComponents; ++i) {
+          int linesRead = std::min(targetRead[i] - alreadyRead[i], linesPerCall[i]);
+          int targetChannel = i; // Note: might have to be remapped when we want support other colorspaces
+          for (int j = 0; j < linesRead; ++j) {
+            memcpy(p[targetChannel] + stride[targetChannel] * (alreadyRead[i] + j),
+                   buffer[i][j],
+                   width[targetChannel]);
+          }
+          alreadyRead[i] += linesPerCall[i];
+        }
+      }
+    }
+    else {
+      JSAMPARRAY buffer;
+      buffer = (*cinfo.mem->alloc_sarray)
+          ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
+
+      while (cinfo.output_scanline < cinfo.output_height) {
+        JOCTET* bufp;
+
         (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
         bufp = buffer[0];
 
-        y = cinfo.output_scanline - 1;
+        int y = cinfo.output_scanline - 1;
 
-        for (unsigned int x = 0; x < cinfo.output_width; x++) {
-          py[y * y_stride + x] = *bufp++;
+        for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
+          p[0][y * stride[0] + x] = *bufp++;
+          p[1][y / 2 * stride[1] + x / 2] = *bufp++;
+          p[2][y / 2 * stride[2] + x / 2] = *bufp++;
+
+          if (x + 1 < cinfo.output_width) {
+            p[0][y * stride[0] + x + 1] = *bufp++;
+          }
+
           bufp += 2;
+        }
+
+
+        if (cinfo.output_scanline < cinfo.output_height) {
+          (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+
+          bufp = buffer[0];
+
+          y = cinfo.output_scanline - 1;
+
+          for (unsigned int x = 0; x < cinfo.output_width; x++) {
+            p[0][y * stride[0] + x] = *bufp++;
+            bufp += 2;
+          }
         }
       }
     }
+  }
+  else {
+    // TODO: error, unsupported JPEG colorspace
   }
 
   if (embeddedIccFlag && iccLen > 0) {
