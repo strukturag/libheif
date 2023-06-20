@@ -44,6 +44,11 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 8 || matrix == 11 || matrix == 14) {
+    return {};
+  }
+
   std::vector<ColorStateWithCost> states;
 
   ColorState output_state;
@@ -210,9 +215,9 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
         }
         else {
           out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
-              ((in_b[y * in_b_stride + x] * 219.0f) / 256) + limited_range_offset, fullRange);
+              ((in_b[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
           out_cr[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(
-              ((in_r[y * in_b_stride + x] * 219.0f) / 256) + limited_range_offset, fullRange);
+              ((in_r[y * in_b_stride + x] * 224.0f) / 256) + limited_range_offset, fullRange);
         }
       }
       else {
@@ -492,7 +497,8 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
     return {};
   }
 
-  if (target_state.nclx_profile.get_matrix_coefficients() == 0) {
+  int matrix = target_state.nclx_profile.get_matrix_coefficients();
+  if (matrix == 0 || matrix == 8 || matrix == 11 || matrix == 14) {
     return {};
   }
 
@@ -783,7 +789,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
     return {};
   }
 
-  if (!input_state.nclx_profile.get_full_range_flag()) {
+  if (!target_state.nclx_profile.get_full_range_flag()) {
     return {};
   }
 
