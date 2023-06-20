@@ -217,6 +217,12 @@ bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
 }
 
 
+#if JPEG_LIB_VERSION < 70
+#define DCT_h_scaled_size DCT_scaled_size
+#define DCT_v_scaled_size DCT_scaled_size
+#endif
+
+
 InputImage loadJPEG(const char* filename)
 {
   InputImage img;
