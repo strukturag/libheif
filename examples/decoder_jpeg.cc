@@ -325,8 +325,8 @@ InputImage loadJPEG(const char* filename)
         output_chroma = heif_chroma_444;
         read_raw = true;
       }
-      else if (cinfo.comp_info[0].h_samp_factor == 1 &&
-               cinfo.comp_info[0].v_samp_factor == 2) {
+      else if (cinfo.comp_info[0].h_samp_factor == 2 &&
+               cinfo.comp_info[0].v_samp_factor == 1) {
         output_chroma = heif_chroma_422;
         read_raw = true;
       }
@@ -344,8 +344,8 @@ InputImage loadJPEG(const char* filename)
         ch = (cinfo.image_height + 1) / 2;
         break;
       case heif_chroma_422:
-        cw = cinfo.image_width;
-        ch = (cinfo.image_height + 1) / 2;
+        cw = (cinfo.image_width + 1) / 2;
+        ch = cinfo.image_height;
         break;
       case heif_chroma_444:
         cw = cinfo.image_width;
