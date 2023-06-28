@@ -48,10 +48,8 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
     return {};
   }
 
-  if (input_state.nclx_profile) {
-    if (input_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   if (target_state.chroma != heif_chroma_420) {
@@ -68,6 +66,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
   output_state.chroma = heif_chroma_420;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx_profile = input_state.nclx_profile;
 
   states.push_back({output_state, SpeedCosts_Unoptimized});
 
@@ -78,6 +77,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                           const ColorState& input_state,
                                                            const ColorState& target_state,
                                                            const heif_color_conversion_options& options) const
 {
@@ -266,10 +266,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
     return {};
   }
 
-  if (input_state.nclx_profile) {
-    if (input_state.nclx_profile->get_matrix_coefficients() == 0) {
-      return {};
-    }
+  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
   }
 
   std::vector<ColorStateWithCost> states;
@@ -282,6 +280,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
   output_state.chroma = heif_chroma_444;
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx_profile = input_state.nclx_profile;
 
   states.push_back({output_state, SpeedCosts_Unoptimized});
 
@@ -292,6 +291,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 template<class Pixel>
 std::shared_ptr<HeifPixelImage>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                            const ColorState& input_state,
                                                             const ColorState& target_state,
                                                             const heif_color_conversion_options& options) const
 {

@@ -1879,10 +1879,12 @@ void color_profile_nclx::set_undefined()
 
 void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
 {
-  m_colour_primaries = nclx->color_primaries;
-  m_transfer_characteristics = nclx->transfer_characteristics;
-  m_matrix_coefficients = nclx->matrix_coefficients;
-  m_full_range_flag = nclx->full_range_flag;
+  if (nclx) {
+    m_colour_primaries = nclx->color_primaries;
+    m_transfer_characteristics = nclx->transfer_characteristics;
+    m_matrix_coefficients = nclx->matrix_coefficients;
+    m_full_range_flag = nclx->full_range_flag;
+  }
 }
 
 

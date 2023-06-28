@@ -51,6 +51,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                     const ColorState& input_state,
                                      const ColorState& target_state,
                                      const heif_color_conversion_options& options) const
 {
@@ -136,6 +137,7 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
 
 std::shared_ptr<HeifPixelImage>
 Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                     const ColorState& input_state,
                                      const ColorState& target_state,
                                      const heif_color_conversion_options& options) const
 {
