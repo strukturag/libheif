@@ -21,7 +21,6 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "encoder_openjpeg.h"
-#include "error.h"
 
 #include <openjpeg.h>
 #include <string.h>
