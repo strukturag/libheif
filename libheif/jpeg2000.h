@@ -27,6 +27,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <memory>
 
 /**
  * JPEG 2000 Channel Definition box.
