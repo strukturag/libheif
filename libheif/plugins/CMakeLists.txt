@@ -30,7 +30,7 @@ macro(plugin_compilation name varName optionName defineName)
             message("Compiling '" ${name} "' as built-in backend")
             target_sources(heif PRIVATE ${${optionName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
-            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
+            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR} ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         endif ()
 
