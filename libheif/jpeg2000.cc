@@ -295,6 +295,6 @@ Error Jpeg2000ImageCodec::encode_jpeg2000_image(const std::shared_ptr<HeifFile>&
 {
     return Error(heif_error_Unsupported_feature,
                 heif_suberror_Unsupported_codec,
-                "JPEG2000 Encoding has not be implemented yet");
+                "JPEG2000 Encoding has not been implemented yet");
 
 }
