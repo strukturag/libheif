@@ -100,8 +100,8 @@ if (PNG_FOUND)
 
     target_link_libraries(heif-convert PRIVATE ${PNG_LIBRARIES})
     target_link_libraries(heif-enc PRIVATE ${PNG_LIBRARIES})
-    target_include_directories(heif-convert PRIVATE ${PNG_INCLUDE_DIR})
-    target_include_directories(heif-enc PRIVATE ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-convert PRIVATE ${PNG_INCLUDE_DIRS})
+    target_include_directories(heif-enc PRIVATE ${PNG_INCLUDE_DIRS})
 
     target_sources(heif-convert PRIVATE encoder_png.cc encoder_png.h)
     target_sources(heif-enc PRIVATE decoder_png.cc decoder_png.h)
@@ -120,7 +120,7 @@ if (PNG_FOUND)
             common.cc
             common.h)
     target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES})
-    target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIRS})
 
     install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
