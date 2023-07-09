@@ -22,6 +22,7 @@
 #define LIBHEIF_FILE_H
 
 #include "box.h"
+#include "hevc.h"
 
 #include <map>
 #include <memory>
