@@ -22,9 +22,118 @@
 #include "avif.h"
 #include "bitstream.h"
 #include "common_utils.h"
+#include <iomanip>
 #include <limits>
+#include <string>
 
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
+
+
+Error Box_av1C::parse(BitstreamRange& range)
+{
+  //parse_full_box_header(range);
+
+  uint8_t byte;
+
+  auto& c = m_configuration; // abbreviation
+
+  byte = range.read8();
+  if ((byte & 0x80) == 0) {
+    // error: marker bit not set
+  }
+
+  c.version = byte & 0x7F;
+
+  byte = range.read8();
+  c.seq_profile = (byte >> 5) & 0x7;
+  c.seq_level_idx_0 = byte & 0x1f;
+
+  byte = range.read8();
+  c.seq_tier_0 = (byte >> 7) & 1;
+  c.high_bitdepth = (byte >> 6) & 1;
+  c.twelve_bit = (byte >> 5) & 1;
+  c.monochrome = (byte >> 4) & 1;
+  c.chroma_subsampling_x = (byte >> 3) & 1;
+  c.chroma_subsampling_y = (byte >> 2) & 1;
+  c.chroma_sample_position = byte & 3;
+
+  byte = range.read8();
+  c.initial_presentation_delay_present = (byte >> 4) & 1;
+  if (c.initial_presentation_delay_present) {
+    c.initial_presentation_delay_minus_one = byte & 0x0F;
+  }
+
+  const size_t configOBUs_bytes = range.get_remaining_bytes();
+  m_config_OBUs.resize(configOBUs_bytes);
+
+  if (!range.read(m_config_OBUs.data(), configOBUs_bytes)) {
+    // error
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_av1C::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  const auto& c = m_configuration; // abbreviation
+
+  writer.write8(c.version | 0x80);
+
+  writer.write8((uint8_t) (((c.seq_profile & 0x7) << 5) |
+                           (c.seq_level_idx_0 & 0x1f)));
+
+  writer.write8((uint8_t) ((c.seq_tier_0 ? 0x80 : 0) |
+                           (c.high_bitdepth ? 0x40 : 0) |
+                           (c.twelve_bit ? 0x20 : 0) |
+                           (c.monochrome ? 0x10 : 0) |
+                           (c.chroma_subsampling_x ? 0x08 : 0) |
+                           (c.chroma_subsampling_y ? 0x04 : 0) |
+                           (c.chroma_sample_position & 0x03)));
+
+  writer.write8(0); // TODO initial_presentation_delay
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_av1C::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  const auto& c = m_configuration; // abbreviation
+
+  sstr << indent << "version: " << ((int) c.version) << "\n"
+       << indent << "seq_profile: " << ((int) c.seq_profile) << "\n"
+       << indent << "seq_level_idx_0: " << ((int) c.seq_level_idx_0) << "\n"
+       << indent << "high_bitdepth: " << ((int) c.high_bitdepth) << "\n"
+       << indent << "twelve_bit: " << ((int) c.twelve_bit) << "\n"
+       << indent << "chroma_subsampling_x: " << ((int) c.chroma_subsampling_x) << "\n"
+       << indent << "chroma_subsampling_y: " << ((int) c.chroma_subsampling_y) << "\n"
+       << indent << "chroma_sample_position: " << ((int) c.chroma_sample_position) << "\n"
+       << indent << "initial_presentation_delay: ";
+
+  if (c.initial_presentation_delay_present) {
+    sstr << c.initial_presentation_delay_minus_one + 1 << "\n";
+  }
+  else {
+    sstr << "not present\n";
+  }
+
+  sstr << indent << "config OBUs:";
+  for (size_t i = 0; i < m_config_OBUs.size(); i++) {
+    sstr << " " << std::hex << std::setfill('0') << std::setw(2)
+         << ((int) m_config_OBUs[i]);
+  }
+  sstr << std::dec << "\n";
+
+  return sstr.str();
+}
 
 
 Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::shared_ptr<HeifPixelImage>& image)
@@ -64,6 +173,87 @@ Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::
 
   inout_config->chroma_sample_position = (chroma == heif_chroma_420 ? 0 : 2);
 
+
+  return Error::Ok;
+}
+
+
+Error Box_a1op::parse(BitstreamRange& range)
+{
+  op_index = range.read8();
+
+  return range.get_error();
+}
+
+
+std::string Box_a1op::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "op-index: " << ((int) op_index) << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_a1op::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write8(op_index);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_a1lx::parse(BitstreamRange& range)
+{
+  uint8_t flags = range.read8();
+
+  for (int i = 0; i < 3; i++) {
+    if (flags & 1) {
+      layer_size[i] = range.read32();
+    }
+    else {
+      layer_size[i] = range.read16();
+    }
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_a1lx::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "layer-sizes: [" << layer_size[0] << "," << layer_size[1] << "," << layer_size[2] << "]\n";
+
+  return sstr.str();
+}
+
+
+Error Box_a1lx::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  bool large = (layer_size[0] > 0xFFFF || layer_size[1] > 0xFFFF || layer_size[2] > 0xFFFF);
+  writer.write8(large ? 1 : 0);
+
+  for (int i = 0; i < 3; i++) {
+    if (large) {
+      writer.write32(layer_size[i]);
+    }
+    else {
+      writer.write16((uint16_t) layer_size[i]);
+    }
+  }
+
+  prepend_header(writer, box_start);
 
   return Error::Ok;
 }
