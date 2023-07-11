@@ -61,6 +61,8 @@ set(libheif_sources
         color-conversion/alpha.h
         color-conversion/chroma_sampling.cc
         color-conversion/chroma_sampling.h
+        jpeg.h
+        jpeg.cc
         jpeg2000.h
         jpeg2000.cc
         ${libheif_headers})

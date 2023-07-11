@@ -42,6 +42,7 @@
 #include "security_limits.h"
 #include "hevc.h"
 #include "avif.h"
+#include "jpeg.h"
 #include "plugin_registry.h"
 #include "libheif/color-conversion/colorconversion.h"
 #include "mask_image.h"
