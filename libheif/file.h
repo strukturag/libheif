@@ -24,6 +24,7 @@
 #include "avif.h"
 #include "box.h"
 #include "hevc.h"
+#include "nclx.h"
 
 #include <map>
 #include <memory>
