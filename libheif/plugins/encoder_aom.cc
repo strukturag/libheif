@@ -736,6 +736,23 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   int bpp_y = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
 
+
+  // --- check for AOM 3.6.0 bug
+
+  bool is_aom_3_6_0 = (aom_codec_version() == 0x030600);
+
+  if (is_aom_3_6_0) {
+    // This bound might be too tight, as I still could encode images with 8193 x 4353 correctly. Even 8200x4400, but 8200x4800 fails.
+    // Let's still keep it as most images will be smaller anyway.
+    if (!(source_width <= 8192 * 2 && source_height <= 4352 * 2 && source_width * source_height <= 8192 * 4352)) {
+      err = {heif_error_Encoding_error,
+             heif_suberror_Encoder_encoding,
+             "AOM v3.6.0 has a bug when encoding large images. Please upgrade to at least AOM v3.6.1."};
+      return err;
+    }
+  }
+
+
   // --- copy libheif image to aom image
 
   aom_image_t input_image;
