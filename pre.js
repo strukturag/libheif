@@ -71,7 +71,5 @@ var Module = {
             }
             libheif[key] = Module[key];
         }
-
-        console.log(libheif);
     }
 };

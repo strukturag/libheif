@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-TARGET=$1
+VERSION=$1
 TARGET=$2
 
 if [ -z "$VERSION" ] || [ -z "$TARGET" ]; then
