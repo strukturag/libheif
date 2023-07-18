@@ -38,7 +38,7 @@ git pull --verbose
 git checkout ${VERSION}
 
 echo "Installing SDK version latest ..."
-./emsdk install latest
+./emsdk install ${VERSION}
 
 echo "Activating SDK version latest ..."
-./emsdk activate latest
+./emsdk activate ${VERSION}
