@@ -7,14 +7,15 @@ function StringToArrayBuffer(str) {
     return buf;
 }
 
-var HeifImage = function(handle) {
+var HeifImage = function(handle, Module) {
     this.handle = handle;
+    this.Module = Module;
     this.img = null;
 };
 
 HeifImage.prototype.free = function() {
     if (this.handle) {
-        libheif.heif_image_handle_release(this.handle);
+        this.Module.heif_image_handle_release(this.handle);
         this.handle = null;
     }
 };
@@ -24,15 +25,17 @@ HeifImage.prototype._ensureImage = function() {
         return;
     }
 
-    var img = libheif.heif_js_decode_image(this.handle,
-        libheif.heif_colorspace_YCbCr, libheif.heif_chroma_420);
+    var img = this.Module.heif_js_decode_image(this.handle,
+        this.Module.heif_colorspace.heif_colorspace_YCbCr, this.Module.heif_chroma.heif_chroma_420);
     if (!img || img.code) {
         console.log("Decoding image failed", this.handle, img);
         return;
     }
 
-    this.data = new Uint8Array(StringToArrayBuffer(img.data));
-    delete img.data;
+    //this.data = new Uint8Array(StringToArrayBuffer(img.data));
+    //delete img.data;
+    console.log(typeof(img.data));
+    this.data = img.data;
     this.img = img;
 };
 
@@ -118,26 +121,28 @@ HeifImage.prototype.display = function(image_data, callback) {
     }.bind(this), 0);
 };
 
-var HeifDecoder = function() {
+var HeifDecoder = function(Module) {
     this.decoder = null;
+    this.Module = Module;
 };
 
 HeifDecoder.prototype.decode = function(buffer) {
     if (this.decoder) {
-        libheif.heif_context_free(this.decoder);
+        this.Module.heif_context_free(this.decoder);
     }
-    this.decoder = libheif.heif_context_alloc();
+    this.decoder = this.Module.heif_context_alloc();
     if (!this.decoder) {
         console.log("Could not create HEIF context");
         return [];
     }
-    var error = libheif.heif_context_read_from_memory(this.decoder, buffer);
-    if (error.code !== libheif.heif_error_Ok) {
+
+    var error = this.Module.heif_js_context_read_from_memory(this.decoder, buffer);
+    if (error.code !== this.Module.heif_error_code.heif_error_Ok) {
         console.log("Could not parse HEIF file", error);
         return [];
     }
 
-    var ids = libheif.heif_js_context_get_list_of_top_level_image_IDs(this.decoder);
+    var ids = this.Module.heif_js_context_get_list_of_top_level_image_IDs(this.decoder);
     if (!ids || ids.code) {
         console.log("Error loading image ids", ids);
         return [];
@@ -149,13 +154,13 @@ HeifDecoder.prototype.decode = function(buffer) {
 
     var result = [];
     for (var i = 0; i < ids.length; i++) {
-        var handle = libheif.heif_js_context_get_image_handle(this.decoder, ids[i]);
+        var handle = this.Module.heif_js_context_get_image_handle(this.decoder, ids[i]);
         if (!handle || handle.code) {
             console.log("Could not get image data for id", ids[i], handle);
             continue;
         }
 
-        result.push(new HeifImage(handle));
+        result.push(new HeifImage(handle, Module));
     }
     return result;
 };
@@ -174,60 +179,6 @@ var libheif = {
             s.charCodeAt(3);
     }
 };
-
-var key;
-
-// Expose enum values.
-var enums = {
-    "heif_error_code": true,
-    "heif_suberror_code": true,
-    "heif_compression_format": true,
-    "heif_chroma": true,
-    "heif_colorspace": true,
-    "heif_channel": true
-};
-var e;
-for (e in enums) {
-    if (!enums.hasOwnProperty(e)) {
-        continue;
-    }
-    for (key in Module[e]) {
-        if (!Module[e].hasOwnProperty(key) ||
-            key === "values") {
-            continue;
-        }
-
-        libheif[key] = Module[e][key];
-    }
-}
-
-// Expose internal C API.
-for (key in Module) {
-    if (enums.hasOwnProperty(key) || key.indexOf("heif_") !== 0) {
-        continue;
-    }
-    libheif[key] = Module[key];
-}
-
-// don't pollute the global namespace
-delete this['Module'];
-
-// On IE this function is called with "undefined" as first parameter. Override
-// with a version that supports this behaviour.
-function createNamedFunction(name, body) {
-    if (!name) {
-      name = "function_" + (new Date());
-    }
-    name = makeLegalFunctionName(name);
-    /*jshint evil:true*/
-    return new Function(
-        "body",
-        "return function " + name + "() {\n" +
-        "    \"use strict\";" +
-        "    return body.apply(this, arguments);\n" +
-        "};\n"
-    )(body);
-}
 
 var root = this;
 
