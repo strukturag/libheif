@@ -32,11 +32,6 @@
 #include "bitstream.h"
 #include <set>
 #include <limits>
-
-#if defined(__EMSCRIPTEN__)
-#include "heif_emscripten.h"
-#endif
-
 #include <algorithm>
 #include <iostream>
 #include <fstream>
