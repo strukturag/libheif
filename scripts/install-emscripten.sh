@@ -2,15 +2,15 @@
 set -e
 
 TARGET=$1
+TARGET=$2
 
-if [ -z "$TARGET" ]; then
-    echo "USAGE: $0 <target-folder>"
+if [ -z "$VERSION" ] || [ -z "$TARGET" ]; then
+    echo "USAGE: $0 <sdk-version> <target-folder>"
     exit 1
 fi
 
 LIBSTDC_BASE=http://de.archive.ubuntu.com/ubuntu/pool/main/g/gcc-5
 EMSDK_DOWNLOAD=https://github.com/emscripten-core/emsdk.git
-EMSDK_VERSION=3.1.43
 
 CODENAME=$(/usr/bin/lsb_release --codename --short)
 if [ "$CODENAME" = "trusty" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21" ]; then
@@ -32,13 +32,13 @@ if [ ! -d emsdk ]; then
 fi
 
 cd emsdk
-echo "Updating SDK base to ${EMSDK_VERSION} ..."
+echo "Updating SDK base to ${VERSION} ..."
 git checkout main
 git pull --verbose
-git checkout ${EMSDK_VERSION}
+git checkout ${VERSION}
 
-echo "Installing SDK version ${VERSION} ..."
+echo "Installing SDK version latest ..."
 ./emsdk install latest
 
-echo "Activating SDK version ${VERSION} ..."
+echo "Activating SDK version latest ..."
 ./emsdk activate latest
