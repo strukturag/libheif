@@ -37,18 +37,15 @@ HeifImage.prototype._ensureImage = function() {
 };
 
 HeifImage.prototype.get_width = function() {
-    this._ensureImage();
-    return this.img.width;
+    return libheif.heif_image_handle_get_width(this.handle);
 };
 
 HeifImage.prototype.get_height = function() {
-    this._ensureImage();
-    return this.img.height;
+    return libheif.heif_image_handle_get_height(this.handle);
 };
 
 HeifImage.prototype.is_primary = function() {
-    this._ensureImage();
-    return !!this.img.is_primary;
+    return !!heif_image_handle_is_primary_image(this.handle);
 }
 
 HeifImage.prototype.display = function(image_data, callback) {

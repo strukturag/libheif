@@ -186,6 +186,9 @@ EMSCRIPTEN_BINDINGS(libheif) {
     emscripten::function("heif_js_decode_image",
     &heif_js_decode_image, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_image_handle_release);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_get_width);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
