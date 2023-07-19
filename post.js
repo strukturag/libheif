@@ -175,40 +175,6 @@ var libheif = {
     }
 };
 
-var key;
-
-// Expose enum values.
-var enums = {
-    "heif_error_code": true,
-    "heif_suberror_code": true,
-    "heif_compression_format": true,
-    "heif_chroma": true,
-    "heif_colorspace": true,
-    "heif_channel": true
-};
-var e;
-for (e in enums) {
-    if (!enums.hasOwnProperty(e)) {
-        continue;
-    }
-    for (key in Module[e]) {
-        if (!Module[e].hasOwnProperty(key) ||
-            key === "values") {
-            continue;
-        }
-
-        libheif[key] = Module[e][key];
-    }
-}
-
-// Expose internal C API.
-for (key in Module) {
-    if (enums.hasOwnProperty(key) || key.indexOf("heif_") !== 0) {
-        continue;
-    }
-    libheif[key] = Module[key];
-}
-
 // don't pollute the global namespace
 delete this['Module'];
 

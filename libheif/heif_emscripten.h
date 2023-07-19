@@ -112,7 +112,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
   result.set("width", width);
   int height = heif_image_get_height(image, heif_channel_Y);
   result.set("height", height);
-  std::string data;
+  std::basic_string<unsigned char> data;
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
   switch (heif_image_get_colorspace(image)) {
@@ -127,7 +127,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_v = heif_image_get_plane_readonly(image,
                                                              heif_channel_Cr, &stride_v);
       data.resize((width * height) + (2 * round_odd(width) * round_odd(height)));
-      char* dest = const_cast<char*>(data.data());
+      unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_y, width, height, stride_y);
       strided_copy(dest + (width * height), plane_u,
                    round_odd(width), round_odd(height), stride_u);
@@ -142,7 +142,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
                                                                heif_channel_interleaved, &stride_rgb);
       data.resize(width * height * 3);
-      char* dest = const_cast<char*>(data.data());
+      unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
     }
       break;
@@ -153,7 +153,7 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       const uint8_t* plane_grey = heif_image_get_plane_readonly(image,
                                                                 heif_channel_Y, &stride_grey);
       data.resize(width * height);
-      char* dest = const_cast<char*>(data.data());
+      unsigned char* dest = const_cast<unsigned char*>(data.data());
       strided_copy(dest, plane_grey, width, height, stride_grey);
     }
       break;
