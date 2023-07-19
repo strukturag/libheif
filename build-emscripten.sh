@@ -95,8 +95,9 @@ BUILD_FLAGS="-lembind -o libheif.js --pre-js pre.js --post-js post.js -sWASM=$US
 RELEASE_BUILD_FLAGS="-O3"
 
 if [ "$STANDALONE" = "1" ]; then
+    # Note: this intentionally overwrites the BUILD_FLAGS set above
     echo "Building in standalone (non-web) build mode"
-    BUILD_FLAGS="$BUILD_FLAGS -s STANDALONE_WASM=1 -s WASM=1 -o libheif.wasm --no-entry"
+    BUILD_FLAGS="-s STANDALONE_WASM=1 -s WASM=1 -o libheif.wasm --no-entry"
 fi
 
 if [ "$DEBUG" = "1" ]; then
