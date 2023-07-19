@@ -9,6 +9,7 @@ ENABLE_AOM="${ENABLE_AOM:-0}"
 AOM_VERSION="${AOM_VERSION:-3.6.1}"
 STANDALONE="${STANDALONE:0}"
 DEBUG="${DEBUG:0}"
+USE_WASM="${USE_WASM:-1}"
 
 echo "Build using ${CORES} CPU cores"
 
@@ -90,12 +91,12 @@ EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols
 
 echo "Running Emscripten..."
 
-BUILD_FLAGS="-lembind -o libheif.js --pre-js pre.js --post-js post.js"
+BUILD_FLAGS="-lembind -o libheif.js --pre-js pre.js --post-js post.js -sWASM=$USE_WASM"
 RELEASE_BUILD_FLAGS="-O3"
 
 if [ "$STANDALONE" = "1" ]; then
     echo "Building in standalone (non-web) build mode"
-    BUILD_FLAGS="-s STANDALONE_WASM=1 -s WASM=1 -o libheif.wasm --no-entry"
+    BUILD_FLAGS="$BUILD_FLAGS -s STANDALONE_WASM=1 -s WASM=1 -o libheif.wasm --no-entry"
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -108,6 +109,7 @@ emcc "$LIBHEIFA" \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
     -s LLD_REPORT_UNDEFINED \
+    --memory-init-file 0 \
     -std=c++11 \
     $LIBRARY_INCLUDE_FLAGS \
     $LIBRARY_LINKER_FLAGS \
