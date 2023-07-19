@@ -162,6 +162,18 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
       break;
   }
   result.set("data", std::move(data));
+
+  if (heif_image_has_channel(image, heif_channel_Alpha)) {
+    std::basic_string<unsigned char> alpha;
+    int stride_alpha;
+    const uint8_t* plane_alpha = heif_image_get_plane_readonly(image,
+							       heif_channel_Alpha, &stride_alpha);
+    alpha.resize(width * height);
+    unsigned char* dest = const_cast<unsigned char*>(alpha.data());
+    strided_copy(dest, plane_alpha, width, height, stride_alpha);
+    result.set("alpha", std::move(alpha));
+  }
+
   heif_image_release(image);
   return result;
 }

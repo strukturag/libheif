@@ -34,6 +34,11 @@ HeifImage.prototype._ensureImage = function() {
     this.data = new Uint8Array(StringToArrayBuffer(img.data));
     delete img.data;
     this.img = img;
+
+    if (img.alpha !== undefined) {
+	this.alpha = new Uint8Array(StringToArrayBuffer(img.alpha));
+	delete img.alpha;
+    }
 };
 
 HeifImage.prototype.get_width = function() {
@@ -54,12 +59,30 @@ HeifImage.prototype.display = function(image_data, callback) {
     var h = this.get_height();
 
     setTimeout(function() {
-        this._ensureImage();
-        if (!this.img) {
-            // Decoding failed.
-            callback(null);
-            return;
-        }
+
+	// If image hasn't been loaded yet, decode the image
+
+	if (!this.img) {
+	    var img = libheif.heif_js_decode_image(this.handle,
+						   libheif.heif_colorspace_YCbCr, libheif.heif_chroma_420);
+	    if (!img || img.code) {
+		console.log("Decoding image failed", this.handle, img);
+
+		callback(null);
+		return;
+	    }
+
+	    this.data = new Uint8Array(StringToArrayBuffer(img.data));
+	    delete img.data;
+	    this.img = img;
+	}
+
+	if (img.alpha !== undefined) {
+	    this.alpha = new Uint8Array(StringToArrayBuffer(img.alpha));
+	    delete img.alpha;
+	}
+
+	const has_alpha = (this.alpha !== undefined);
 
         var yval;
         var uval;
@@ -80,6 +103,7 @@ HeifImage.prototype.display = function(image_data, callback) {
         var u = this.data.subarray(stridey * h, stridey * h + (strideu * h2));
         var v = this.data.subarray(stridey * h + (strideu * h2), stridey * h + (strideu * h2) + (stridev * h2));
         var dest = image_data.data;
+
         while (i < maxi) {
             x2 = (xpos >> 1);
             yval = 1.164 * (y[yoffset + xpos] - 16);
@@ -89,7 +113,7 @@ HeifImage.prototype.display = function(image_data, callback) {
             dest[(i<<2)+0] = yval + 1.596 * vval;
             dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
             dest[(i<<2)+2] = yval + 2.018 * uval;
-            dest[(i<<2)+3] = 0xff;
+            dest[(i<<2)+3] = has_alpha ? this.alpha[yoffset + xpos] : 0xff;
             i++;
             xpos++;
 
@@ -98,7 +122,7 @@ HeifImage.prototype.display = function(image_data, callback) {
                 dest[(i<<2)+0] = yval + 1.596 * vval;
                 dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
                 dest[(i<<2)+2] = yval + 2.018 * uval;
-                dest[(i<<2)+3] = 0xff;
+                dest[(i<<2)+3] = has_alpha ? this.alpha[yoffset + xpos] : 0xff;
                 i++;
                 xpos++;
             }
