@@ -243,7 +243,7 @@ fi
 
 if [ ! -z "$EMSCRIPTEN_VERSION" ]; then
     echo "Building with emscripten $EMSCRIPTEN_VERSION ..."
-    source ./emscripten/emsdk/emsdk_env.sh && ./build-emscripten.sh
+    source ./emscripten/emsdk/emsdk_env.sh && USE_WASM=0 ./build-emscripten.sh
     source ./emscripten/emsdk/emsdk_env.sh && node scripts/test-javascript.js
 fi
 
