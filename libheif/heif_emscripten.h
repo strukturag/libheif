@@ -8,6 +8,8 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <string.h>
+#include <cassert>
 
 #include "heif.h"
 
