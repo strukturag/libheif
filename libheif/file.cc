@@ -616,6 +616,10 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
 }
 
 
+// This checks whether a start code FFCx with nibble 'x' is a SOF marker.
+// E.g. FFC0-FFC3 are, while FFC4 is not.
+static bool isSOF[16] = { 1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1 };
+
 int HeifFile::jpeg_get_bits_per_pixel(heif_item_id imageID) const
 {
   std::vector<uint8_t> data;
@@ -625,7 +629,7 @@ int HeifFile::jpeg_get_bits_per_pixel(heif_item_id imageID) const
   }
 
   for (size_t i = 0; i + 1 < data.size(); i++) {
-    if (data[i] == 0xFF && (data[i+1] & 0xF0) == 0xC0) {
+    if (data[i] == 0xFF && (data[i+1] & 0xF0) == 0xC0 && isSOF[data[i+1] & 0x0F]) {
       i += 4;
       if (i < data.size()) {
         return data[i];
