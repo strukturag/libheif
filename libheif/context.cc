@@ -2261,15 +2261,6 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
     }
       break;
 
-    case heif_compression_JPEG2000: {
-      error = encode_image_as_jpeg2000(pixel_image,
-                                   encoder,
-                                   options,
-                                   heif_image_input_class_normal,
-                                   out_image);
-    }
-      break;
-
     case heif_compression_uncompressed: {
       error = encode_image_as_uncompressed(pixel_image,
                                            encoder,
@@ -3058,28 +3049,6 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   return Error::Ok;
 }
-
-Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& src_image,
-                                            struct heif_encoder* encoder,
-                                            const struct heif_encoding_options& options,
-                                            enum heif_image_input_class input_class,
-                                            std::shared_ptr<Image>& out_image)
-{
-  heif_item_id image_id = m_heif_file->add_new_image("j2k1");
-  out_image = std::make_shared<Image>(this, image_id);
-  
-  Error err = Jpeg2000ImageCodec::encode_jpeg2000_image(m_heif_file,
-                                                        src_image,
-                                                        encoder->encoder,
-                                                        options,
-                                                        out_image);
-
-  m_top_level_images.push_back(out_image);
-  m_all_images[image_id] = out_image;
-
-  return err;
-}
-
 
 Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                                 struct heif_encoder* encoder,

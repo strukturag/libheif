@@ -41,6 +41,7 @@
 #endif
 
 #include "metadata_compression.h"
+#include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"

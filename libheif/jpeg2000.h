@@ -105,6 +105,8 @@ public:
     */
     void add_channel(Channel channel) { m_channels.push_back(channel); }
 
+    void set_channels(heif_chroma chroma);
+
 protected:
     Error parse(BitstreamRange &range) override;
 
@@ -318,7 +320,7 @@ protected:
     Error parse(BitstreamRange &range) override;
 };
 
-class Jpeg2000ImageCodec 
+class Jpeg2000ImageCodec
 {
 public:
 
@@ -333,7 +335,7 @@ public:
                                      const std::shared_ptr<HeifPixelImage>& src_image,
                                      void* encoder_struct,
                                      const struct heif_encoding_options& options,
-                                     std::shared_ptr<HeifContext::Image>& out_image); 
+                                     std::shared_ptr<HeifContext::Image>& out_image);
 };
 
 #endif // LIBHEIF_JPEG2000_H

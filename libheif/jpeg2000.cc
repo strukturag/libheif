@@ -70,6 +70,33 @@ Error Box_cdef::write(StreamWriter& writer) const
 }
 
 
+void Box_cdef::set_channels(heif_chroma chroma) {
+
+  //TODO - Check for the presence of a cmap box which specifies channel indices.
+
+  const uint16_t TYPE_COLOR = 0;
+  const uint16_t ASOC_GREY = 1;
+  const uint16_t ASOC_RED = 1;
+  const uint16_t ASOC_GREEN = 2;
+  const uint16_t ASOC_BLUE = 3;
+
+  switch (chroma) {
+    case heif_chroma_interleaved_RGB:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_RED});
+      m_channels.push_back({1, TYPE_COLOR, ASOC_GREEN});
+      m_channels.push_back({2, TYPE_COLOR, ASOC_BLUE});
+      break;
+
+    case heif_chroma_monochrome:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_GREY});
+      break;
+
+    default:
+      //TODO - Handle remaining cases.
+      break;
+  }
+}
+
 Error Box_cmap::parse(BitstreamRange& range)
 {
     while (!range.eof() && !range.error()) {
@@ -284,17 +311,4 @@ std::string Box_j2kH::dump(Indent& indent) const
     sstr << dump_children(indent);
 
     return sstr.str();
-}
-
-
-Error Jpeg2000ImageCodec::encode_jpeg2000_image(const std::shared_ptr<HeifFile>& heif_file,
-                                                const std::shared_ptr<HeifPixelImage>& src_image,
-                                                void* encoder_struct,
-                                                const struct heif_encoding_options& options,
-                                                std::shared_ptr<HeifContext::Image>& out_image) 
-{
-    return Error(heif_error_Unsupported_feature,
-                heif_suberror_Unsupported_codec,
-                "JPEG2000 Encoding has not been implemented yet");
-
 }
