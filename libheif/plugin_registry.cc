@@ -150,8 +150,7 @@ void register_default_plugins()
 #endif
 
 #if HAVE_OPENJPEG_DECODER
-  //TODO - Implement decoder
-  // register_decoder(get_decoder_plugin_openjpeg());
+  register_decoder(get_decoder_plugin_openjpeg());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

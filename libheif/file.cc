@@ -568,6 +568,12 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     return jpeg_get_bits_per_pixel(imageID);
   }
 
+  // JPEG 2000
+
+  if (image_type == "j2k1") {
+    return 8; // TODO: how can we get the actual value?
+  }
+
 #if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
@@ -618,6 +624,12 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
 
   if (image_type == "jpeg" || (image_type=="mime" && get_content_type(imageID)=="image/jpeg")) {
     return jpeg_get_bits_per_pixel(imageID);
+  }
+
+  // JPEG 2000
+
+  if (image_type == "j2k1") {
+    return 8; // TODO: how can we get the actual value?
   }
 
   return -1;
