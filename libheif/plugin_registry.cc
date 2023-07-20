@@ -60,6 +60,10 @@
 #include "libheif/plugins/encoder_uncompressed.h"
 #endif
 
+#if HAVE_OPENJPEG
+#include "libheif/plugins/heif_encoder_openjpeg.h"
+#endif
+
 #if HAVE_JPEG_DECODER
 #include "libheif/plugins/decoder_jpeg.h"
 #endif
@@ -135,6 +139,10 @@ void register_default_plugins()
 
 #if HAVE_JPEG_ENCODER
   register_encoder(get_encoder_plugin_jpeg());
+#endif
+
+#if HAVE_OPENJPEG
+  heif::register_encoder(get_encoder_plugin_openjpeg());
 #endif
 
 #if HAVE_OPENJPEG_ENCODER

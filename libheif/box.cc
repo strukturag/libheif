@@ -3833,3 +3833,100 @@ Error Box_udes::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
+
+std::string Box_j2kH::dump(Indent& indent) const {
+  std::string s = "TODO - box.cc - j2kH::dump()\n"; 
+  return s;
+}
+
+
+Error Box_j2kH::parse(BitstreamRange& range) {
+
+  printf("TODO - box.cc - j2kH::parse()\n");
+
+  return Error::Ok;
+
+}
+
+
+std::string Box_cdef::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  uint16_t channel_count = (uint16_t)m_channels.size();
+
+  sstr << indent << "N: " << channel_count << "\n";
+  for (int i = 0; i < channel_count; i++) {
+    Channel c = m_channels[i];
+    sstr << indent << "Cn[" << i << "]: " << c.index << "\n";
+    sstr << indent << "Type[" << i << "]: " << c.type << "\n";
+    sstr << indent << "Asoc[" << i << "]: " << c.association << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_cdef::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+
+  uint16_t channel_count = (uint16_t)m_channels.size();
+  writer.write16(channel_count);
+
+  for (int i = 0; i < channel_count; i++) {
+    Channel c = m_channels[i];
+    writer.write16(c.index);
+    writer.write16(c.type);
+    writer.write16(c.association);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_cdef::parse(BitstreamRange& range) {
+  // parse_full_box_header(range);
+
+  uint16_t channel_count = range.read16();
+
+  for (int i = 0; i < channel_count; i++) {
+    Channel channel;
+    channel.index = range.read16();
+    channel.type = range.read16();
+    channel.association = range.read16();
+    m_channels.push_back(channel);
+  }
+
+  return range.get_error();
+}
+
+
+void Box_cdef::set_channels(heif_chroma chroma) {
+
+  //TODO - Check for the presence of a cmap box which specifies channel indices.
+
+  const uint16_t TYPE_COLOR = 0;
+  const uint16_t ASOC_GREY = 1;
+  const uint16_t ASOC_RED = 1;
+  const uint16_t ASOC_GREEN = 2;
+  const uint16_t ASOC_BLUE = 3;
+
+  switch (chroma) {
+    case heif_chroma_interleaved_RGB:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_RED});
+      m_channels.push_back({1, TYPE_COLOR, ASOC_GREEN});
+      m_channels.push_back({2, TYPE_COLOR, ASOC_BLUE});
+    break;
+
+    case heif_chroma_monochrome:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_GREY});
+    break;
+
+    default:
+      //TODO - Handle remaining cases.
+    break;
+  }
+}
+

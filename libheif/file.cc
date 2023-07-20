@@ -179,6 +179,13 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
       break;
 
+    case heif_compression_JPEG2000:
+      m_ftyp_box->set_major_brand(fourcc("j2ki"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(fourcc("j2ki"));
+      break;
+
     default:
       break;
   }
@@ -785,6 +792,9 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
+  else if (item_type == "j2k1") {
+    // TODO
+  }
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
            item_type == "grid" ||
            item_type == "iovl" ||
@@ -1070,6 +1080,16 @@ Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configur
     return Error(heif_error_Usage_error,
                  heif_suberror_No_av1C_box);
   }
+}
+
+std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id) 
+{
+  auto j2kH = std::make_shared<Box_j2kH>();
+  int index = m_ipco_box->append_child_box(j2kH);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+  return j2kH;
 }
 
 

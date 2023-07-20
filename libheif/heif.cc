@@ -213,6 +213,12 @@ heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
   else if (strcmp(brand, "vvic") == 0) {
     return heif_vvic;
   }
+  else if (strcmp(brand, "j2ki") == 0) {
+    return heif_j2ki;
+  }
+  else if (strcmp(brand, "j2is") == 0) {
+    return heif_j2is;
+  }
   else {
     return heif_unknown_brand;
   }
@@ -406,6 +412,12 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
   }
   else if (mainBrand == heif_avis) {
     return "image/avif-sequence";
+  }
+  else if (mainBrand == heif_j2ki) {
+    return "image/hej2k";
+  }
+  else if (mainBrand == heif_j2is) {
+    return "image/j2is";
   }
   else if (is_jpeg(data, len) == TriBool::Yes) {
     return "image/jpeg";
