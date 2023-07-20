@@ -63,7 +63,7 @@ HeifImage.prototype.display = function(image_data, callback) {
         // If image hasn't been loaded yet, decode the image
 
         if (!this.img) {
-            var img = libheif.heif_js_decode_image(this.handle,
+            var img = libheif.heif_js_decode_image2(this.handle,
                 libheif.heif_colorspace_RGB, libheif.heif_chroma_interleaved_RGBA);
             if (!img || img.code) {
                 console.log("Decoding image failed", this.handle, img);
@@ -72,7 +72,25 @@ HeifImage.prototype.display = function(image_data, callback) {
                 return;
             }
 
-            image_data.data = new Uint8Array(StringToArrayBuffer(img.data));
+            for (let c of img.channels) {
+                if (c.id == libheif.heif_channel_interleaved) {
+
+                    // copy image into output array
+
+                    if (c.stride == c.width*4) {
+                        image_data.data.set(c.data);
+                    }
+                    else {
+                        for (let y = 0; y < c.height; y++) {
+                            let slice = c.data.slice(y * c.stride, y * c.stride + c.width * 4);
+                            let offset = y * c.width * 4;
+                            image_data.data.set(slice, offset);
+                        }
+                    }
+                }
+            }
+
+            libheif.heif_image_release(img.image);
         }
 
         callback(image_data);
