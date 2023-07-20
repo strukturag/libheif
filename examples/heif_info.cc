@@ -367,9 +367,13 @@ int main(int argc, char** argv)
         return 1;
       }
 
-      printf(" (%dx%d)\n",
+      printf("    size: %dx%d\n",
              heif_image_handle_get_width(depth_handle),
              heif_image_handle_get_height(depth_handle));
+
+      int depth_luma_bpp = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
+      printf("    bits per pixel: %d\n", depth_luma_bpp);
+
 
       const struct heif_depth_representation_info* depth_info;
       if (heif_image_handle_get_depth_image_representation_info(handle, depth_id, &depth_info)) {
