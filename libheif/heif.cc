@@ -790,6 +790,14 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
 }
 
 
+struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle)
+{
+  auto ctx = new heif_context();
+  ctx->context = handle->context;
+  return ctx;
+}
+
+
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
                                                                       enum heif_chroma* out_chroma)

@@ -864,6 +864,17 @@ int heif_image_handle_get_ispe_width(const struct heif_image_handle* handle);
 LIBHEIF_API
 int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
 
+// This gets the context associated with the image handle.
+// Note that you have to release the returned context with heif_context_free() in any case.
+//
+// This means: when you have several image-handles that originate from the same file and you get the
+// context of each of them, the returned pointer may be different even though it refers to the same
+// logical context. You have to call heif_context_free() on all those context pointers.
+// After you freed a context pointer, you can still use the context through a different pointer that you
+// might have acquired from elsewhere.
+LIBHEIF_API
+struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle);
+
 
 // ------------------------- depth images -------------------------
 
