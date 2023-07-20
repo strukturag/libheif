@@ -1,6 +1,7 @@
 /*
- * AVIF codec.
- * Copyright (c) 2019 struktur AG, Dirk Farin <farin@struktur.de>
+ * OpenJPEG codec.
+ * Copyright (c) 2023 Devon Sookhoo
+ * Copyright (c) 2023 Dirk Farin <farin@struktur.de>
  *
  * This file is part of libheif.
  *
@@ -36,7 +37,7 @@ struct openjpeg_decoder
 
 static const char* openjpeg_plugin_name()
 {
-  return "OpenJPEG JPEG2000 Decoder";
+  return "OpenJPEG";
 }
 
 
@@ -106,174 +107,166 @@ struct heif_error openjpeg_push_data(void* decoder_raw, const void* frame_data, 
 
 
 //**************************************************************************
-typedef struct
+
+struct opj_memory_stream
 {
+  OPJ_UINT8* pData; //Our data.
+  OPJ_SIZE_T dataSize; //How big is our data.
+  OPJ_SIZE_T offset; //Where are we currently in our data.
+};
 
-	OPJ_UINT8* pData; //Our data.
 
-	OPJ_SIZE_T dataSize; //How big is our data.
 
-	OPJ_SIZE_T offset; //Where are we currently in our data.
+//  This will read from our memory to the buffer.
 
-}opj_memory_stream;
-
-//This will read from our memory to the buffer.
-
-static OPJ_SIZE_T opj_memory_stream_read(void * p_buffer, OPJ_SIZE_T p_nb_bytes, void * p_user_data)
-
+static OPJ_SIZE_T opj_memory_stream_read(void* p_buffer, OPJ_SIZE_T p_nb_bytes, void* p_user_data)
 {
+  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data;//Our data.
 
-	opj_memory_stream* l_memory_stream = (opj_memory_stream*)p_user_data;//Our data.
+  OPJ_SIZE_T l_nb_bytes_read = p_nb_bytes; //Amount to move to buffer.
 
-	OPJ_SIZE_T l_nb_bytes_read = p_nb_bytes;//Amount to move to buffer.
+  // Check if the current offset is outside our data buffer.
 
-	//Check if the current offset is outside our data buffer.
+  if (l_memory_stream->offset >= l_memory_stream->dataSize) {
+    return (OPJ_SIZE_T) -1;
+  }
 
-	if (l_memory_stream->offset >= l_memory_stream->dataSize) return (OPJ_SIZE_T)-1;
+  // Check if we are reading more than we have.
 
-	//Check if we are reading more than we have.
+  if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset)) {
+    //Read all we have.
+    l_nb_bytes_read = l_memory_stream->dataSize - l_memory_stream->offset;
+  }
 
-	if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset))
+  // Copy the data to the internal buffer.
 
-		l_nb_bytes_read = l_memory_stream->dataSize - l_memory_stream->offset;//Read all we have.
+  memcpy(p_buffer, &(l_memory_stream->pData[l_memory_stream->offset]), l_nb_bytes_read);
 
-	//Copy the data to the internal buffer.
+  l_memory_stream->offset += l_nb_bytes_read;//Update the pointer to the new location.
 
-	memcpy(p_buffer, &(l_memory_stream->pData[l_memory_stream->offset]), l_nb_bytes_read);
-
-	l_memory_stream->offset += l_nb_bytes_read;//Update the pointer to the new location.
-
-	return l_nb_bytes_read;
-
+  return l_nb_bytes_read;
 }
 
-//This will write from the buffer to our memory.
 
-static OPJ_SIZE_T opj_memory_stream_write(void * p_buffer, OPJ_SIZE_T p_nb_bytes, void * p_user_data)
+// This will write from the buffer to our memory.
 
+static OPJ_SIZE_T opj_memory_stream_write(void* p_buffer, OPJ_SIZE_T p_nb_bytes, void* p_user_data)
 {
+  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data; // Our data.
 
-	opj_memory_stream* l_memory_stream = (opj_memory_stream*)p_user_data;//Our data.
+  OPJ_SIZE_T l_nb_bytes_write = p_nb_bytes; // Amount to move to buffer.
 
-	OPJ_SIZE_T l_nb_bytes_write = p_nb_bytes;//Amount to move to buffer.
+  // Check if the current offset is outside our data buffer.
 
-	//Check if the current offset is outside our data buffer.
+  if (l_memory_stream->offset >= l_memory_stream->dataSize) {
+    return (OPJ_SIZE_T) -1;
+  }
 
-	if (l_memory_stream->offset >= l_memory_stream->dataSize) return (OPJ_SIZE_T)-1;
+  // Check if we are write more than we have space for.
 
-	//Check if we are write more than we have space for.
+  if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset)) {
+    l_nb_bytes_write = l_memory_stream->dataSize - l_memory_stream->offset;//Write the remaining space.
+  }
 
-	if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset))
 
-		l_nb_bytes_write = l_memory_stream->dataSize - l_memory_stream->offset;//Write the remaining space.
+  // Copy the data from the internal buffer.
 
-	//Copy the data from the internal buffer.
+  memcpy(&(l_memory_stream->pData[l_memory_stream->offset]), p_buffer, l_nb_bytes_write);
 
-	memcpy(&(l_memory_stream->pData[l_memory_stream->offset]), p_buffer, l_nb_bytes_write);
+  l_memory_stream->offset += l_nb_bytes_write;//Update the pointer to the new location.
 
-	l_memory_stream->offset += l_nb_bytes_write;//Update the pointer to the new location.
-
-	return l_nb_bytes_write;
-
+  return l_nb_bytes_write;
 }
 
-//Moves the pointer forward, but never more than we have.
+// Moves the pointer forward, but never more than we have.
 
-static OPJ_OFF_T opj_memory_stream_skip(OPJ_OFF_T p_nb_bytes, void * p_user_data)
-
+static OPJ_OFF_T opj_memory_stream_skip(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 {
+  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data;
 
-	opj_memory_stream* l_memory_stream = (opj_memory_stream*)p_user_data;
-
-	OPJ_SIZE_T l_nb_bytes;
-
+  OPJ_SIZE_T l_nb_bytes;
 
 
-	if (p_nb_bytes < 0) return -1;//No skipping backwards.
+  if (p_nb_bytes < 0) {
+    //No skipping backwards.
+    return -1;
+  }
 
-	l_nb_bytes = (OPJ_SIZE_T)p_nb_bytes;//Allowed because it is positive.
+  l_nb_bytes = (OPJ_SIZE_T) p_nb_bytes; // Allowed because it is positive.
 
-	// Do not allow jumping past the end.
+  // Do not allow jumping past the end.
 
-	if (l_nb_bytes >l_memory_stream->dataSize - l_memory_stream->offset)
+  if (l_nb_bytes > l_memory_stream->dataSize - l_memory_stream->offset) {
+    l_nb_bytes = l_memory_stream->dataSize - l_memory_stream->offset;//Jump the max.
+  }
 
-		l_nb_bytes = l_memory_stream->dataSize - l_memory_stream->offset;//Jump the max.
+  // Make the jump.
 
-	//Make the jump.
+  l_memory_stream->offset += l_nb_bytes;
 
-	l_memory_stream->offset += l_nb_bytes;
+  // Returm how far we jumped.
 
-	//Returm how far we jumped.
-
-	return l_nb_bytes;
-
+  return l_nb_bytes;
 }
 
-//Sets the pointer to anywhere in the memory.
 
-static OPJ_BOOL opj_memory_stream_seek(OPJ_OFF_T p_nb_bytes, void * p_user_data)
+// Sets the pointer to anywhere in the memory.
 
+static OPJ_BOOL opj_memory_stream_seek(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 {
-
-	opj_memory_stream* l_memory_stream = (opj_memory_stream*)p_user_data;
-
+  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data;
 
 
-	if (p_nb_bytes < 0) return OPJ_FALSE;//No before the buffer.
+  if (p_nb_bytes < 0) return OPJ_FALSE;//No before the buffer.
 
-	if (p_nb_bytes >(OPJ_OFF_T)l_memory_stream->dataSize) return OPJ_FALSE;//No after the buffer.
+  if (p_nb_bytes > (OPJ_OFF_T) l_memory_stream->dataSize) return OPJ_FALSE;//No after the buffer.
 
-	l_memory_stream->offset = (OPJ_SIZE_T)p_nb_bytes;//Move to new position.
+  l_memory_stream->offset = (OPJ_SIZE_T) p_nb_bytes;//Move to new position.
 
-	return OPJ_TRUE;
+  return OPJ_TRUE;
 
 }
 
 //The system needs a routine to do when finished, the name tells you what I want it to do.
 
-static void opj_memory_stream_do_nothing(void * p_user_data)
-
+static void opj_memory_stream_do_nothing(void* p_user_data)
 {
-
-	OPJ_ARG_NOT_USED(p_user_data);
-
+  OPJ_ARG_NOT_USED(p_user_data);
 }
 
-//Create a stream to use memory as the input or output.
+
+// Create a stream to use memory as the input or output.
 
 opj_stream_t* opj_stream_create_default_memory_stream(opj_memory_stream* p_memoryStream, OPJ_BOOL p_is_read_stream)
-
 {
+  opj_stream_t* stream;
 
-	opj_stream_t* stream;
+  if (!(stream = opj_stream_default_create(p_is_read_stream))) {
+    return nullptr;
+  }
 
+  // Set how to work with the frame buffer.
 
+  if (p_is_read_stream) {
+    opj_stream_set_read_function(stream, opj_memory_stream_read);
+  }
+  else {
+    opj_stream_set_write_function(stream, opj_memory_stream_write);
+  }
 
-	if (!(stream = opj_stream_default_create(p_is_read_stream))) return (NULL);
+  opj_stream_set_seek_function(stream, opj_memory_stream_seek);
 
-	//Set how to work with the frame buffer.
+  opj_stream_set_skip_function(stream, opj_memory_stream_skip);
 
-	if(p_is_read_stream)
+  opj_stream_set_user_data(stream, p_memoryStream, opj_memory_stream_do_nothing);
 
-		opj_stream_set_read_function(stream, opj_memory_stream_read);
+  opj_stream_set_user_data_length(stream, p_memoryStream->dataSize);
 
-	else
-
-		opj_stream_set_write_function(stream, opj_memory_stream_write);
-
-	opj_stream_set_seek_function(stream, opj_memory_stream_seek);
-
-	opj_stream_set_skip_function(stream, opj_memory_stream_skip);
-
-	opj_stream_set_user_data(stream, p_memoryStream, opj_memory_stream_do_nothing);
-
-	opj_stream_set_user_data_length(stream, p_memoryStream->dataSize);
-
-	return stream;
-
+  return stream;
 }
-//**************************************************************************
 
+
+//**************************************************************************
 
 
 struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
@@ -282,13 +275,12 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   std::vector<uint8_t>* encoded_data = &decoder->encoded_data;
 
 
-
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
   opj_codec_t* l_codec;
-  
-  //Initialize Decoder
-  opj_set_default_decoder_parameters(&decompression_parameters); 
+
+  // Initialize Decoder
+  opj_set_default_decoder_parameters(&decompression_parameters);
   l_codec = opj_create_decompress(OPJ_CODEC_J2K);
   success = opj_setup_decoder(l_codec, &decompression_parameters);
   if (!success) {
@@ -297,18 +289,14 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   }
 
 
-
-
-  //Create Input Stream
-
-
+  // Create Input Stream
 
   opj_memory_stream memoryStream;
-    memoryStream.pData = encoded_data->data();
-    memoryStream.dataSize = encoded_data->size();
-    memoryStream.offset = 0;
+  memoryStream.pData = encoded_data->data();
+  memoryStream.dataSize = encoded_data->size();
+  memoryStream.offset = 0;
   OPJ_BOOL is_read_stream = true;
-  opj_stream_t *stream = opj_stream_create_default_memory_stream(&memoryStream, is_read_stream);
+  opj_stream_t* stream = opj_stream_create_default_memory_stream(&memoryStream, is_read_stream);
 
 
   // Read Codestream Header
@@ -323,8 +311,8 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3"};
     return err;
   }
-  else if ((image->color_space != OPJ_CLRSPC_UNSPECIFIED) && (image->color_space != OPJ_CLRSPC_SRGB) ) {
-    //TODO - Handle other colorpsaces
+  else if ((image->color_space != OPJ_CLRSPC_UNSPECIFIED) && (image->color_space != OPJ_CLRSPC_SRGB)) {
+    //TODO - Handle other colorspaces
     struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace must be SRGB"};
     return err;
   }
@@ -333,7 +321,7 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   int pixel_count = width * height;
 
 
-    /* Get the decoded image */
+  /* Get the decoded image */
   success = opj_decode(l_codec, stream, image);
   if (!success) {
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_decode()"};
@@ -347,17 +335,14 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     return err;
   }
 
-  
+
   /* Close the byte stream */
   opj_stream_destroy(stream);
 
 
-  
   opj_image_comp_t opj_r = image->comps[0];
   opj_image_comp_t opj_g = image->comps[1];
   opj_image_comp_t opj_b = image->comps[2];
-  
-
 
 
   heif_colorspace colorspace = heif_colorspace_RGB;
@@ -381,13 +366,14 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   if (stride == width) {
     for (int i = 0; i < pixel_count; i++) {
 
-        r[i] = (uint8_t) opj_r.data[i];
-        g[i] = (uint8_t) opj_g.data[i];
-        b[i] = (uint8_t) opj_b.data[i];
+      r[i] = (uint8_t) opj_r.data[i];
+      g[i] = (uint8_t) opj_g.data[i];
+      b[i] = (uint8_t) opj_b.data[i];
     }
   }
   else {
-    printf("width %d != stride %d\n", width , stride);
+    // printf("width %d != stride %d\n", width, stride);
+
     int i = 0, i_opj = 0;
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
@@ -396,7 +382,6 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
         r[i] = (uint8_t) opj_r.data[i_opj];
         g[i] = (uint8_t) opj_g.data[i_opj];
         b[i] = (uint8_t) opj_b.data[i_opj];
-
       }
     }
   }
@@ -405,9 +390,7 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 }
 
 
-
-static const struct heif_decoder_plugin decoder_openjpeg
-{
+static const struct heif_decoder_plugin decoder_openjpeg{
     3,
     openjpeg_plugin_name,
     openjpeg_init_plugin,

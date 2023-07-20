@@ -1,6 +1,7 @@
 /*
- * HEIF codec.
- * Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
+ * OpenJPEG codec.
+ * Copyright (c) 2023 Devon Sookhoo
+ * Copyright (c) 2023 Dirk Farin <farin@struktur.de>
  *
  * This file is part of libheif.
  *
