@@ -72,14 +72,7 @@ HeifImage.prototype.display = function(image_data, callback) {
                 return;
             }
 
-            this.data = new Uint8Array(StringToArrayBuffer(img.data));
-            delete img.data;
-            this.img = img;
-        }
-
-        var dest = image_data.data;
-        for (let i = 0; i < w * h * 4; i++) {
-            dest[i] = this.data[i];
+            image_data.data = new Uint8Array(StringToArrayBuffer(img.data));
         }
 
         callback(image_data);
