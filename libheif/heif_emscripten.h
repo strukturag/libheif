@@ -110,9 +110,9 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
 
   result.set("is_primary", heif_image_handle_is_primary_image(handle));
   result.set("thumbnails", heif_image_handle_get_number_of_thumbnails(handle));
-  int width = heif_image_get_width(image, heif_channel_Y);
+  int width = heif_image_handle_get_width(handle);
   result.set("width", width);
-  int height = heif_image_get_height(image, heif_channel_Y);
+  int height = heif_image_handle_get_height(handle);
   result.set("height", height);
   std::basic_string<unsigned char> data;
   result.set("chroma", heif_image_get_chroma_format(image));
@@ -138,14 +138,25 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
     }
       break;
     case heif_colorspace_RGB: {
-      assert(heif_image_get_chroma_format(image) ==
-             heif_chroma_interleaved_24bit);
-      int stride_rgb;
-      const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
-                                                               heif_channel_interleaved, &stride_rgb);
-      data.resize(width * height * 3);
-      unsigned char* dest = const_cast<unsigned char*>(data.data());
-      strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
+      if(heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGB) {
+        int stride_rgb;
+        const uint8_t* plane_rgb = heif_image_get_plane_readonly(image,
+                                                                 heif_channel_interleaved, &stride_rgb);
+        data.resize(width * height * 3);
+        unsigned char* dest = const_cast<unsigned char*>(data.data());
+        strided_copy(dest, plane_rgb, width * 3, height, stride_rgb);
+      }
+      else if (heif_image_get_chroma_format(image) == heif_chroma_interleaved_RGBA) {
+        int stride_rgba;
+        const uint8_t* plane_rgba = heif_image_get_plane_readonly(image,
+                                                                 heif_channel_interleaved, &stride_rgba);
+        data.resize(width * height * 4);
+        unsigned char* dest = const_cast<unsigned char*>(data.data());
+        strided_copy(dest, plane_rgba, width * 4, height, stride_rgba);
+      }
+      else {
+        assert(false);
+      }
     }
       break;
     case heif_colorspace_monochrome: {

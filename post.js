@@ -60,81 +60,28 @@ HeifImage.prototype.display = function(image_data, callback) {
 
     setTimeout(function() {
 
-	// If image hasn't been loaded yet, decode the image
+        // If image hasn't been loaded yet, decode the image
 
-	if (!this.img) {
-	    var img = libheif.heif_js_decode_image(this.handle,
-						   libheif.heif_colorspace_YCbCr, libheif.heif_chroma_420);
-	    if (!img || img.code) {
-		console.log("Decoding image failed", this.handle, img);
+        if (!this.img) {
+            var img = libheif.heif_js_decode_image(this.handle,
+                libheif.heif_colorspace_RGB, libheif.heif_chroma_interleaved_RGBA);
+            if (!img || img.code) {
+                console.log("Decoding image failed", this.handle, img);
 
-		callback(null);
-		return;
-	    }
-
-	    this.data = new Uint8Array(StringToArrayBuffer(img.data));
-	    delete img.data;
-	    this.img = img;
-	}
-
-	if (img.alpha !== undefined) {
-	    this.alpha = new Uint8Array(StringToArrayBuffer(img.alpha));
-	    delete img.alpha;
-	}
-
-	const has_alpha = (this.alpha !== undefined);
-
-        var yval;
-        var uval;
-        var vval;
-        var xpos = 0;
-        var ypos = 0;
-        var yoffset = 0;
-        var uoffset = 0;
-        var voffset = 0;
-        var x2;
-        var i = 0;
-        var maxi = w*h;
-        var stridey = w;
-        var strideu = Math.ceil(w / 2);
-        var stridev = Math.ceil(w / 2);
-        var h2 = Math.ceil(h / 2);
-        var y = this.data;
-        var u = this.data.subarray(stridey * h, stridey * h + (strideu * h2));
-        var v = this.data.subarray(stridey * h + (strideu * h2), stridey * h + (strideu * h2) + (stridev * h2));
-        var dest = image_data.data;
-
-        while (i < maxi) {
-            x2 = (xpos >> 1);
-            yval = 1.164 * (y[yoffset + xpos] - 16);
-
-            uval = u[uoffset + x2] - 128;
-            vval = v[voffset + x2] - 128;
-            dest[(i<<2)+0] = yval + 1.596 * vval;
-            dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-            dest[(i<<2)+2] = yval + 2.018 * uval;
-            dest[(i<<2)+3] = has_alpha ? this.alpha[yoffset + xpos] : 0xff;
-            i++;
-            xpos++;
-
-            if (xpos < w) {
-                yval = 1.164 * (y[yoffset + xpos] - 16);
-                dest[(i<<2)+0] = yval + 1.596 * vval;
-                dest[(i<<2)+1] = yval - 0.813 * vval - 0.391 * uval;
-                dest[(i<<2)+2] = yval + 2.018 * uval;
-                dest[(i<<2)+3] = has_alpha ? this.alpha[yoffset + xpos] : 0xff;
-                i++;
-                xpos++;
+                callback(null);
+                return;
             }
 
-            if (xpos === w) {
-                xpos = 0;
-                ypos++;
-                yoffset += stridey;
-                uoffset = ((ypos >> 1) * strideu);
-                voffset = ((ypos >> 1) * stridev);
-            }
+            this.data = new Uint8Array(StringToArrayBuffer(img.data));
+            delete img.data;
+            this.img = img;
         }
+
+        var dest = image_data.data;
+        for (let i = 0; i < w * h * 4; i++) {
+            dest[i] = this.data[i];
+        }
+
         callback(image_data);
     }.bind(this), 0);
 };
