@@ -1248,10 +1248,12 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 
 enum heif_transform_mirror_direction
 {
+  heif_transform_mirror_direction_invalid = -1,
   heif_transform_mirror_direction_vertical = 0,    // flip image vertically
   heif_transform_mirror_direction_horizontal = 1   // flip image horizontally
 };
 
+// Will return 'heif_transform_mirror_direction_invalid' in case of error.
 LIBHEIF_API
 enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(const struct heif_context* context,
                                                                              heif_item_id itemId,

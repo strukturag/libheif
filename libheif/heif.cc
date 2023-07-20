@@ -2010,16 +2010,16 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
   std::vector<std::shared_ptr<Box>> properties;
   Error err = file->get_properties(itemId, properties);
   if (err) {
-    return heif_transform_mirror_direction_horizontal;
+    return heif_transform_mirror_direction_invalid;
   }
 
   if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
-    return heif_transform_mirror_direction_horizontal;
+    return heif_transform_mirror_direction_invalid;
   }
 
   auto imir = std::dynamic_pointer_cast<Box_imir>(properties[propertyId - 1]);
   if (!imir) {
-    return heif_transform_mirror_direction_horizontal;
+    return heif_transform_mirror_direction_invalid;
   }
 
   return imir->get_mirror_direction();
