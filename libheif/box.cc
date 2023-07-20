@@ -2736,6 +2736,9 @@ std::string Box_imir::dump(Indent& indent) const
     case heif_transform_mirror_direction_horizontal:
       sstr << "horizontal\n";
       break;
+    case heif_transform_mirror_direction_invalid:
+      sstr << "invalid\n";
+      break;
   }
 
   return sstr.str();
