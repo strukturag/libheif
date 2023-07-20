@@ -625,7 +625,7 @@ int HeifFile::jpeg_get_bits_per_pixel(heif_item_id imageID) const
   }
 
   for (size_t i = 0; i + 1 < data.size(); i++) {
-    if (data[i] == 0xFF && data[i+1] == 0xC0) {
+    if (data[i] == 0xFF && (data[i+1] & 0xF0) == 0xC0) {
       i += 4;
       if (i < data.size()) {
         return data[i];
