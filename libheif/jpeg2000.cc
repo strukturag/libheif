@@ -286,3 +286,15 @@ std::string Box_j2kH::dump(Indent& indent) const
     return sstr.str();
 }
 
+
+Error Jpeg2000ImageCodec::encode_jpeg2000_image(const std::shared_ptr<HeifFile>& heif_file,
+                                                const std::shared_ptr<HeifPixelImage>& src_image,
+                                                void* encoder_struct,
+                                                const struct heif_encoding_options& options,
+                                                std::shared_ptr<HeifContext::Image>& out_image) 
+{
+    return Error(heif_error_Unsupported_feature,
+                heif_suberror_Unsupported_codec,
+                "JPEG2000 Encoding has not been implemented yet");
+
+}

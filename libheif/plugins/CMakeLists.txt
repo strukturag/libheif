@@ -30,7 +30,7 @@ macro(plugin_compilation name varName optionName defineName)
             message("Compiling '" ${name} "' as built-in backend")
             target_sources(heif PRIVATE ${${optionName}_sources})
             target_compile_definitions(heif PRIVATE HAVE_${defineName}=1)
-            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR})
+            target_include_directories(heif PRIVATE ${${varName}_INCLUDE_DIR} ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif PRIVATE ${${varName}_LIBRARIES} ${${varName}_LINKDIR})
         endif ()
 
@@ -76,6 +76,14 @@ plugin_compilation(jpegdec JPEG JPEG_DECODER JPEG_DECODER)
 set(JPEG_ENCODER_sources encoder_jpeg.cc encoder_jpeg.h)
 set(JPEG_ENCODER_extra_plugin_sources)
 plugin_compilation(jpegenc JPEG JPEG_ENCODER JPEG_ENCODER)
+
+set(OpenJPEG_DECODER_sources decoder_openjpeg.cc decoder_openjpeg.h)
+set(OpenJPEG_DECODER_extra_plugin_sources ) 
+plugin_compilation(OpenJPEG_Decoder OPENJPEG OpenJPEG_DECODER OPENJPEG_DECODER) 
+
+set(OpenJPEG_ENCODER_sources encoder_openjpeg.cc encoder_openjpeg.h)
+set(OpenJPEG_ENCODER_extra_plugin_sources)
+plugin_compilation(OpenJPEG_Encoder OPENJPEG OpenJPEG_ENCODER OPENJPEG_ENCODER)
 
 set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)

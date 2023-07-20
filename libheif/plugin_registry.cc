@@ -68,6 +68,14 @@
 #include "libheif/plugins/encoder_jpeg.h"
 #endif
 
+#if HAVE_OPENJPEG_ENCODER
+#include "libheif/plugins/encoder_openjpeg.h"
+#endif
+
+#if HAVE_OPENJPEG_DECODER
+#include "libheif/plugins/decoder_openjpeg.h"
+#endif
+
 #include "libheif/plugins/encoder_mask.h"
 
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
@@ -127,6 +135,15 @@ void register_default_plugins()
 
 #if HAVE_JPEG_ENCODER
   register_encoder(get_encoder_plugin_jpeg());
+#endif
+
+#if HAVE_OPENJPEG_ENCODER
+  register_encoder(get_encoder_plugin_openjpeg());
+#endif
+
+#if HAVE_OPENJPEG_DECODER
+  //TODO - Implement decoder
+  // register_decoder(get_decoder_plugin_openjpeg());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
