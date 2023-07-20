@@ -329,6 +329,143 @@ typedef uint32_t heif_property_id;
 
 
 
+// ========================= enum types ======================
+
+/**
+ * libheif known compression formats.
+ */
+enum heif_compression_format
+{
+  /**
+   * Unspecified / undefined compression format.
+   *
+   * This is used to mean "no match" or "any decoder" for some parts of the
+   * API. It does not indicate a specific compression format.
+   */
+  heif_compression_undefined = 0,
+  /**
+   * HEVC compression, used for HEIC images.
+   *
+   * This is equivalent to H.265.
+  */
+  heif_compression_HEVC = 1,
+  /**
+   * AVC compression. (Currently unused in libheif.)
+   *
+   * The compression is defined in ISO/IEC 14496-10. This is equivalent to H.264.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex E.
+   */
+  heif_compression_AVC = 2,
+  /**
+   * JPEG compression.
+   *
+   * The compression format is defined in ISO/IEC 10918-1. The encapsulation
+   * of JPEG is specified in ISO/IEC 23008-12:2022 Annex H.
+  */
+  heif_compression_JPEG = 3,
+  /**
+   * AV1 compression, used for AVIF images.
+   *
+   * The compression format is provided at https://aomediacodec.github.io/av1-spec/
+   *
+   * The encapsulation is defined in https://aomediacodec.github.io/av1-avif/
+   */
+  heif_compression_AV1 = 4,
+  /**
+   * VVC compression. (Currently unused in libheif.)
+   *
+   * The compression format is defined in ISO/IEC 23090-3. This is equivalent to H.266.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex L.
+   */
+  heif_compression_VVC = 5,
+  /**
+   * EVC compression. (Currently unused in libheif.)
+   *
+   * The compression format is defined in ISO/IEC 23094-1. This is equivalent to H.266.
+   *
+   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex M.
+   */
+  heif_compression_EVC = 6,
+  /**
+   * JPEG 2000 compression. (Currently unused in libheif.)
+   *
+   * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
+   * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
+  */
+  heif_compression_JPEG2000 = 7,
+  /**
+   * Uncompressed encoding.
+   *
+   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
+  */
+  heif_compression_uncompressed = 8,
+  /**
+   * Mask image encoding.
+   *
+   * See ISO/IEC 23008-12:2022 Section 6.10.2
+   */
+  heif_compression_mask = 9
+};
+
+enum heif_chroma
+{
+  heif_chroma_undefined = 99,
+  heif_chroma_monochrome = 0,
+  heif_chroma_420 = 1,
+  heif_chroma_422 = 2,
+  heif_chroma_444 = 3,
+  heif_chroma_interleaved_RGB = 10,
+  heif_chroma_interleaved_RGBA = 11,
+  heif_chroma_interleaved_RRGGBB_BE = 12,   // HDR, big endian.
+  heif_chroma_interleaved_RRGGBBAA_BE = 13, // HDR, big endian.
+  heif_chroma_interleaved_RRGGBB_LE = 14,   // HDR, little endian.
+  heif_chroma_interleaved_RRGGBBAA_LE = 15  // HDR, little endian.
+};
+
+// DEPRECATED ENUM NAMES
+#define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
+#define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
+
+
+enum heif_colorspace
+{
+  heif_colorspace_undefined = 99,
+
+  // heif_colorspace_YCbCr should be used with one of these heif_chroma values:
+  // * heif_chroma_444
+  // * heif_chroma_422
+  // * heif_chroma_420
+  heif_colorspace_YCbCr = 0,
+
+  // heif_colorspace_RGB should be used with one of these heif_chroma values:
+  // * heif_chroma_444 (for planar RGB)
+  // * heif_chroma_interleaved_RGB
+  // * heif_chroma_interleaved_RGBA
+  // * heif_chroma_interleaved_RRGGBB_BE
+  // * heif_chroma_interleaved_RRGGBBAA_BE
+  // * heif_chroma_interleaved_RRGGBB_LE
+  // * heif_chroma_interleaved_RRGGBBAA_LE
+  heif_colorspace_RGB = 1,
+
+  // heif_colorspace_monochrome should only be used with heif_chroma = heif_chroma_monochrome
+  heif_colorspace_monochrome = 2
+};
+
+enum heif_channel
+{
+  heif_channel_Y = 0,
+  heif_channel_Cb = 1,
+  heif_channel_Cr = 2,
+  heif_channel_R = 3,
+  heif_channel_G = 4,
+  heif_channel_B = 5,
+  heif_channel_Alpha = 6,
+  heif_channel_interleaved = 10
+};
+
+
 // ========================= library initialization ======================
 
 struct heif_init_params
@@ -708,6 +845,15 @@ int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 // Returns -1 on error, e.g. if this information is not present in the image.
 LIBHEIF_API
 int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
+
+// Return the colorspace that libheif proposes to use for decoding.
+// Usually, these will be either YCbCr or Monochrome, but it may also propose RGB for images
+// encoded with matrix_coefficients=0.
+// It may also return *_undefined if the file misses relevant information to determine this without decoding.
+LIBHEIF_API
+struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
+                                                                      enum heif_colorspace* out_colorspace,
+                                                                      enum heif_chroma* out_chroma);
 
 // Get the image width from the 'ispe' box. This is the original image size without
 // any transformations applied to it. Do not use this unless you know exactly what
@@ -1139,141 +1285,6 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 // containing the interleaved R,G,B values.
 
 // Planar RGB images are specified as heif_colorspace_RGB / heif_chroma_444.
-
-/**
- * libheif known compression formats.
- */
-enum heif_compression_format
-{
-  /**
-   * Unspecified / undefined compression format.
-   *
-   * This is used to mean "no match" or "any decoder" for some parts of the
-   * API. It does not indicate a specific compression format.
-   */
-  heif_compression_undefined = 0,
-  /**
-   * HEVC compression, used for HEIC images.
-   *
-   * This is equivalent to H.265.
-  */
-  heif_compression_HEVC = 1,
-  /**
-   * AVC compression. (Currently unused in libheif.)
-   *
-   * The compression is defined in ISO/IEC 14496-10. This is equivalent to H.264.
-   *
-   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex E.
-   */
-  heif_compression_AVC = 2,
-  /**
-   * JPEG compression.
-   *
-   * The compression format is defined in ISO/IEC 10918-1. The encapsulation
-   * of JPEG is specified in ISO/IEC 23008-12:2022 Annex H.
-  */
-  heif_compression_JPEG = 3,
-  /**
-   * AV1 compression, used for AVIF images.
-   *
-   * The compression format is provided at https://aomediacodec.github.io/av1-spec/
-   *
-   * The encapsulation is defined in https://aomediacodec.github.io/av1-avif/
-   */
-  heif_compression_AV1 = 4,
-  /**
-   * VVC compression. (Currently unused in libheif.)
-   *
-   * The compression format is defined in ISO/IEC 23090-3. This is equivalent to H.266.
-   *
-   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex L.
-   */
-  heif_compression_VVC = 5,
-  /**
-   * EVC compression. (Currently unused in libheif.)
-   *
-   * The compression format is defined in ISO/IEC 23094-1. This is equivalent to H.266.
-   *
-   * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex M.
-   */
-  heif_compression_EVC = 6,
-  /**
-   * JPEG 2000 compression. (Currently unused in libheif.)
-   *
-   * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
-   * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
-  */
-  heif_compression_JPEG2000 = 7,
-  /**
-   * Uncompressed encoding.
-   *
-   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
-  */
-  heif_compression_uncompressed = 8,
-  /**
-   * Mask image encoding.
-   *
-   * See ISO/IEC 23008-12:2022 Section 6.10.2
-   */
-  heif_compression_mask = 9
-};
-
-enum heif_chroma
-{
-  heif_chroma_undefined = 99,
-  heif_chroma_monochrome = 0,
-  heif_chroma_420 = 1,
-  heif_chroma_422 = 2,
-  heif_chroma_444 = 3,
-  heif_chroma_interleaved_RGB = 10,
-  heif_chroma_interleaved_RGBA = 11,
-  heif_chroma_interleaved_RRGGBB_BE = 12,   // HDR, big endian.
-  heif_chroma_interleaved_RRGGBBAA_BE = 13, // HDR, big endian.
-  heif_chroma_interleaved_RRGGBB_LE = 14,   // HDR, little endian.
-  heif_chroma_interleaved_RRGGBBAA_LE = 15  // HDR, little endian.
-};
-
-// DEPRECATED ENUM NAMES
-#define heif_chroma_interleaved_24bit  heif_chroma_interleaved_RGB
-#define heif_chroma_interleaved_32bit  heif_chroma_interleaved_RGBA
-
-
-enum heif_colorspace
-{
-  heif_colorspace_undefined = 99,
-
-  // heif_colorspace_YCbCr should be used with one of these heif_chroma values:
-  // * heif_chroma_444
-  // * heif_chroma_422
-  // * heif_chroma_420
-  heif_colorspace_YCbCr = 0,
-
-  // heif_colorspace_RGB should be used with one of these heif_chroma values:
-  // * heif_chroma_444 (for planar RGB)
-  // * heif_chroma_interleaved_RGB
-  // * heif_chroma_interleaved_RGBA
-  // * heif_chroma_interleaved_RRGGBB_BE
-  // * heif_chroma_interleaved_RRGGBBAA_BE
-  // * heif_chroma_interleaved_RRGGBB_LE
-  // * heif_chroma_interleaved_RRGGBBAA_LE
-  heif_colorspace_RGB = 1,
-
-  // heif_colorspace_monochrome should only be used with heif_chroma = heif_chroma_monochrome
-  heif_colorspace_monochrome = 2
-};
-
-enum heif_channel
-{
-  heif_channel_Y = 0,
-  heif_channel_Cb = 1,
-  heif_channel_Cr = 2,
-  heif_channel_R = 3,
-  heif_channel_G = 4,
-  heif_channel_B = 5,
-  heif_channel_Alpha = 6,
-  heif_channel_interleaved = 10
-};
-
 
 enum heif_progress_step
 {

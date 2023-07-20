@@ -790,6 +790,19 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle)
 }
 
 
+struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
+                                                                      enum heif_colorspace* out_colorspace,
+                                                                      enum heif_chroma* out_chroma)
+{
+  Error err = image_handle->image->get_preferred_decoding_colorspace(out_colorspace, out_chroma);
+  if (err) {
+    return err.error_struct(image_handle->image.get());
+  }
+
+  return error_Ok;
+}
+
+
 int heif_image_handle_has_alpha_channel(const struct heif_image_handle* handle)
 {
   // TODO: for now, also scan the grid tiles for alpha information (issue #708), but depending about

@@ -864,6 +864,21 @@ public:
     uint8_t initial_presentation_delay_minus_one = 0;
 
     //unsigned int (8)[] configOBUs;
+
+    heif_chroma get_heif_chroma() const {
+      if (chroma_subsampling_x==2 && chroma_subsampling_y==2) {
+        return heif_chroma_420;
+      }
+      else if (chroma_subsampling_x==2 && chroma_subsampling_y==1) {
+        return heif_chroma_422;
+      }
+      else if (chroma_subsampling_x==1 && chroma_subsampling_y==1) {
+        return heif_chroma_444;
+      }
+      else {
+        return heif_chroma_undefined;
+      }
+    }
   };
 
 

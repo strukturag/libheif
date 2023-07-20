@@ -120,6 +120,8 @@ public:
 
     int get_chroma_bits_per_pixel() const;
 
+    Error get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
+
     bool is_primary() const { return m_is_primary; }
 
     void set_size(int w, int h)

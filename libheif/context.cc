@@ -1152,6 +1152,45 @@ int HeifContext::Image::get_ispe_height() const
 }
 
 
+Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+{
+  heif_item_id id;
+  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  if (err) {
+    return err;
+  }
+
+  auto pixi = m_heif_context->m_heif_file->get_property<Box_pixi>(id);
+  if (pixi && pixi->get_num_channels() == 1) {
+    *out_colorspace = heif_colorspace_monochrome;
+    *out_chroma = heif_chroma_monochrome;
+    return err;
+  }
+
+  auto nclx = get_color_profile_nclx();
+  if (nclx && nclx->get_matrix_coefficients() == 0) {
+    *out_colorspace = heif_colorspace_RGB;
+    *out_chroma = heif_chroma_444;
+    return err;
+  }
+
+  *out_colorspace = heif_colorspace_YCbCr;
+  *out_chroma = heif_chroma_420;
+
+  if (auto hvcC = m_heif_context->m_heif_file->get_property<Box_hvcC>(id)) {
+    *out_chroma = (heif_chroma)(hvcC->get_configuration().chroma_format);
+  }
+  else if (auto av1C = m_heif_context->m_heif_file->get_property<Box_av1C>(id)) {
+    *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
+  }
+  else {
+    *out_chroma = heif_chroma_undefined;
+  }
+
+  return err;
+}
+
+
 int HeifContext::Image::get_luma_bits_per_pixel() const
 {
   heif_item_id id;
