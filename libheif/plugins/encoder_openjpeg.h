@@ -1,6 +1,6 @@
 /*
- * HEIF JPEG 2000 codec.
- * Copyright (c) 2023 Devon Sookhoo <devonsookhoo14gmail.com>
+ * HEIF codec.
+ * Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
  *
  * This file is part of libheif.
  *

@@ -1,6 +1,6 @@
 /*
- * HEIF JPEG 2000 codec.
- * Copyright (c) 2023 Devon Sookhoo <devonsookhoo14gmail.com>
+ * HEIF codec.
+ * Copyright (c) 2017 struktur AG, Dirk Farin <farin@struktur.de>
  *
  * This file is part of libheif.
  *
@@ -37,9 +37,29 @@ struct encoder_struct_opj {
 
   heif_chroma chroma;
 
+  // --- output
+
   std::vector<uint8_t> codestream; //contains encoded pixel data
   bool data_read = false;
 
+  // --- parameters
+
+  // std::vector<parameter> parameters;
+
+  // void add_param(const parameter&);
+
+  // void add_param(const std::string& name, int value);
+
+  // void add_param(const std::string& name, bool value);
+
+  // void add_param(const std::string& name, const std::string& value);
+
+  // parameter get_param(const std::string& name) const;
+
+  // std::string preset;
+  // std::string tune;
+
+  // int logLevel = X265_LOG_NONE;
 };
 
 
@@ -48,9 +68,12 @@ const char* opj_plugin_name() {
 }
 
 void opj_init_plugin() {
+  // Global plugin initialization (may be NULL)
 }
 
 void opj_cleanup_plugin() {
+  // Global plugin cleanup (may be NULL).
+  // Free data that was allocated in init_plugin()
 }
 
 struct heif_error opj_new_encoder(void** encoder_out) {
@@ -119,17 +142,253 @@ struct heif_error opj_get_parameter_string(void* encoder, const char* name, char
 }
 
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
+  // Replace the input colorspace/chroma with the one that is supported by the encoder and that
+  // comes as close to the input colorspace/chroma as possible.
+
+  *inout_colorspace = heif_colorspace_RGB;
+  *inout_chroma = heif_chroma_interleaved_RGB;
 }
 
 
+// OpenJPEG will encode a portion of the image and then call this function
+// @param src_data_raw - Newly encoded bytes provided by OpenJPEG
+// @param nb_bytes - The number of bytes or size of src_data_raw
+// @param encoder_raw - Out the new
+// @return - The number of bytes successfuly transfered
+static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes, void* encoder_raw) {
+  uint8_t* src_data = (uint8_t*) src_data_raw;
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  for (size_t i = 0; i < nb_bytes; i++) {
+    encoder->codestream.push_back(src_data[i]);
+  }
+
+  return nb_bytes;
+}
+
+static void opj_close_from_buffer(void* p_user_data) {
+    FILE* p_file = (FILE*)p_user_data;
+    fclose(p_file);
+}
+
+// Create an opj_image_t object from the input buffer
+// @param src_data - Uncompressed image pixel data
+// @param sub_dx - TODO: what is this?
+// @param sub_dy - TODO: what is this?
+// TODO: Return heif_error insteaf of opj_image_t
+// TODO: Clean up this function so that it looks pretty
+static opj_image_t *create_opj_image(const unsigned char *src_data, int width, int height, int band_count, int sub_dx, int sub_dy) {
+
+	opj_image_cmptparm_t component_params[4];
+	memset(&component_params, 0, 4 * sizeof(opj_image_cmptparm_t));
+	for (int comp = 0; comp < band_count; ++comp) {
+    component_params[comp].prec = 8;
+    component_params[comp].bpp = 8;
+    component_params[comp].sgnd = 0;
+    component_params[comp].dx = sub_dx;
+    component_params[comp].dy = sub_dy;
+    component_params[comp].w = width;
+    component_params[comp].h = height;
+   }
+
+  OPJ_COLOR_SPACE colorspace = (band_count > 2 ? OPJ_CLRSPC_SRGB: OPJ_CLRSPC_GRAY);
+	opj_image_t *image = opj_image_create(band_count, &component_params[0], colorspace);
+	if (image == NULL) {
+    // Failed to create image
+	  return NULL;
+  }
+
+  // ???????
+  image->x0 = 0;
+  image->y0 = 0;
+  image->x1 = (width - 1) * sub_dx + 1;
+  image->y1 = (height - 1) * sub_dy + 1;
+
+	int *r, *g, *b;
+	bool is_rgb;
+	if (band_count == 3) {
+    is_rgb = 1;
+    r = image->comps[0].data;
+    g = image->comps[1].data;
+    b = image->comps[2].data;
+  }
+	else { //Grayscale
+	  r = image->comps[0].data;
+  }
+
+	const unsigned char *cs = src_data;
+	int max = height * width;
+	for (int i = 0; i < max; i++) {
+	  if (is_rgb) {
+      *r++ = (int)*cs++; 
+      *g++ = (int)*cs++; 
+      *b++ = (int)*cs++;
+      continue;
+    }
+
+    /* G */
+  	*r++ = (int)*cs++;
+   }
+
+	return image;
+} 
+
+
+// The codestream is defined in ISO/IEC 15444-1. It contains the
+// compressed image pixel data and very basic metadata. 
+// @param data - Uncompressed image pixel data
+// @param encoder - The function will output codestream in encoder->codestream
+static heif_error generate_codestream(const uint8_t* data, struct encoder_struct_opj* encoder, int width, int height, int numcomps) {
+
+  heif_error error;
+  OPJ_BOOL success;
+	opj_cparameters_t parameters;
+	opj_set_default_encoder_parameters(&parameters);
+
+
+  #if 0
+  //Insert a human readable comment into the codestream
+	if (parameters.cp_comment == NULL) {
+    char buf[80];
+    #ifdef _WIN32
+    sprintf_s(buf, 80, "Created by OpenJPEG version %s", opj_version());
+    #else
+    snprintf(buf, 80, "Created by OpenJPEG version %s", opj_version());
+    #endif
+    parameters.cp_comment = strdup(buf);
+  }
+  #endif
+
+
+	opj_image_t *image = create_opj_image(data, width, height, numcomps, parameters.subsampling_dx, parameters.subsampling_dy);
+  if (image == nullptr) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create OpenJPEG image"};
+    return error;
+  }
+
+
+  //OPJ_CODEC_J2K - Only generate the codestream
+  //OPJ_CODEC_JP2 - Generate the entire jp2 file (which contains a codestream)
+	OPJ_CODEC_FORMAT codec_format = OPJ_CODEC_J2K; 
+	opj_codec_t* codec = opj_create_compress(codec_format);
+	success = opj_setup_encoder(codec, &parameters, image);
+  if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to setup OpenJPEG encoder"};
+    return error;
+  }
+
+
+  //Create Stream
+  size_t size = width * height * numcomps;
+  const bool READ_DATA = false; //We want to write to a buffer, not read from one
+  opj_stream_t* stream = opj_stream_create(size, READ_DATA);
+	if (stream == NULL) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
+    return error;
+  }
+
+
+  // When OpenJPEG encodes the image, it will pass the 'encoder' into the write function
+  opj_stream_set_user_data(stream, encoder, opj_close_from_buffer);
+
+  // Tell OpenJPEG how and where to write the output data
+  opj_stream_set_write_function(stream, (opj_stream_write_fn) opj_write_from_buffer);
+
+  // TODO: should we use this function?
+  // opj_stream_set_user_data_length(stream, 0);
+
+
+
+  success = opj_start_compress(codec, image, stream);
+	if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_start_compress()"};
+    return error;
+  }
+
+  success = opj_encode(codec, stream);
+	if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_encode()"};
+    return error;
+  }
+
+	success = opj_end_compress(codec, stream);
+	if (!success) {
+    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_end_compress()"};
+    return error;
+  }
+
+  return error_Ok;
+}
 
 struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* image, enum heif_image_input_class image_class) {
-  return heif_error {heif_error_Unsupported_feature, heif_suberror_Unsupported_codec, "JPEG2000 Encoding has not been implemented yet"};
+  
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+  struct heif_error err;
+  heif_chroma chroma = heif_image_get_chroma_format(image);
+  heif_colorspace colorspace = heif_image_get_colorspace(image);
+  uint32_t numcomps;
+  heif_channel channel;
 
+  if (chroma == heif_chroma_interleaved_RGB) {
+    channel = heif_channel_interleaved;
+    numcomps = 3;
+  } 
+  else {
+    err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Chroma not yet supported"};
+    return err;
+  }
+
+  if (colorspace == heif_colorspace_RGB) {
+    // Okay
+  }
+  else {
+    err = { heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace not yet supported"};
+    return err;
+  }
+
+  int stride = 0; //Number of bytes per row
+  const uint8_t* src_data = heif_image_get_plane_readonly(image, channel, &stride);
+  unsigned int width = stride / numcomps;
+  width = heif_image_get_width(image, channel);
+  unsigned int height = heif_image_get_primary_height(image);
+
+  std::vector<uint8_t> fixed_data;
+  if (width*numcomps != (unsigned int)stride) {
+    //Convert the data such that the stride is exactly (width * numcomps)
+    int i;
+    for (unsigned int y = 0; y < height; y++) {
+      for (unsigned int x = 0; x < (width * numcomps); x++) {
+        i = (stride * y) + x;
+        fixed_data.push_back(src_data[i]);
+      }
+    }
+    src_data = fixed_data.data();
+  }
+
+  encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
+
+  //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
+  err = generate_codestream(src_data, encoder, width, height, numcomps);
+
+  return err;
 }
 
 struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int* size, enum heif_encoded_data_type* type) {
-  return heif_error {heif_error_Unsupported_feature, heif_suberror_Unsupported_codec, "JPEG2000 Encoding has not been implemented yet"};
+  // Get a packet of decoded data. The data format depends on the codec.
+  
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  if (encoder->data_read) {
+    *size = 0;
+    *data = nullptr;
+  } 
+  else {
+    *size = (int) encoder->codestream.size();
+    *data = encoder->codestream.data();
+    encoder->data_read = true;
+  }
+
+  return error_Ok;
 }
 
 void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma) {
@@ -138,6 +397,12 @@ void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colo
 }
 
 void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height, uint32_t* encoded_width, uint32_t* encoded_height) {
+  // --- version 3 ---
+
+  // The encoded image size may be different from the input frame size, e.g. because
+  // of required rounding, or a required minimum size. Use this function to return
+  // the encoded size for a given input image size.
+  // You may set this to NULL if no padding is required for any image size.
 }
 
 

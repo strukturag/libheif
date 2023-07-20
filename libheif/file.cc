@@ -794,7 +794,38 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
   else if (item_type == "j2k1") {
-    // TODO
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_j2kH> j2kH_box;
+    for (auto& prop : properties) {
+      if (prop->get_short_type() == fourcc("j2kH")) {
+        j2kH_box = std::dynamic_pointer_cast<Box_j2kH>(prop);
+        if (j2kH_box) {
+          break;
+        }
+      }
+    }
+
+    if (!j2kH_box) {
+      // Should always have an j2kH box, because we are checking this in
+      // heif_context::interpret_heif_file()
+
+      //TODO - Correctly Find the j2kH box
+      // return Error(heif_error_Invalid_input,
+      //              heif_suberror_Unspecified);
+    }
+    // else if (!j2kH_box->get_headers(data)) {
+    //   return Error(heif_error_Invalid_input,
+    //                heif_suberror_No_item_data);
+    // }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
            item_type == "grid" ||
