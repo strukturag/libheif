@@ -131,6 +131,9 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
     else if (brand == heif_brand2_jpeg) {
       return heif_filetype_yes_supported;
     }
+    else if (brand == heif_brand2_j2ki) {
+      return heif_filetype_yes_supported;
+    }
     else if (brand == heif_brand2_mif1) {
       return heif_filetype_maybe;
     }
