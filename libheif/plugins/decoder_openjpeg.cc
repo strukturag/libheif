@@ -310,9 +310,9 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace must be SRGB"};
     return err;
   }
-  int width = (image->x1 - image->x0);
-  int height = (image->y1 - image->y0);
-  int pixel_count = width * height;
+
+  const int width = (image->x1 - image->x0);
+  const int height = (image->y1 - image->y0);
 
 
   /* Get the decoded image */
@@ -357,20 +357,21 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   uint8_t* g = heif_image_get_plane(*out_img, heif_channel_G, &stride);
   uint8_t* b = heif_image_get_plane(*out_img, heif_channel_B, &stride);
 
-  if (stride == width) {
-    for (int i = 0; i < pixel_count; i++) {
 
+  // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
+  // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
+
+  if (stride == width) {
+    for (int i = 0; i < width * height; i++) {
       r[i] = (uint8_t) opj_r.data[i];
       g[i] = (uint8_t) opj_g.data[i];
       b[i] = (uint8_t) opj_b.data[i];
     }
   }
   else {
-    // printf("width %d != stride %d\n", width, stride);
-
     int i = 0, i_opj = 0;
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
         i = (stride * y) + x;
         i_opj = (width * y) + x;
         r[i] = (uint8_t) opj_r.data[i_opj];
