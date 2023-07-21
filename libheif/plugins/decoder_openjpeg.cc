@@ -34,6 +34,7 @@ static const int OPENJPEG_PLUGIN_PRIORITY = 100;
 struct openjpeg_decoder
 {
   std::vector<uint8_t> encoded_data;
+  size_t read_position = 0;
 };
 
 
@@ -105,41 +106,33 @@ struct heif_error openjpeg_push_data(void* decoder_raw, const void* frame_data, 
 
 //**************************************************************************
 
-struct opj_memory_stream
-{
-  OPJ_UINT8* pData; //Our data.
-  OPJ_SIZE_T dataSize; //How big is our data.
-  OPJ_SIZE_T offset; //Where are we currently in our data.
-};
-
-
-
 //  This will read from our memory to the buffer.
 
 static OPJ_SIZE_T opj_memory_stream_read(void* p_buffer, OPJ_SIZE_T p_nb_bytes, void* p_user_data)
 {
-  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data; // Our data.
+  openjpeg_decoder* decoder = (openjpeg_decoder*) p_user_data; // Our data.
+  size_t data_size = decoder->encoded_data.size();
 
   OPJ_SIZE_T l_nb_bytes_read = p_nb_bytes; // Amount to move to buffer.
 
   // Check if the current offset is outside our data buffer.
 
-  if (l_memory_stream->offset >= l_memory_stream->dataSize) {
+  if (decoder->read_position >= data_size) {
     return (OPJ_SIZE_T) -1;
   }
 
   // Check if we are reading more than we have.
 
-  if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset)) {
+  if (p_nb_bytes > (data_size - decoder->read_position)) {
     //Read all we have.
-    l_nb_bytes_read = l_memory_stream->dataSize - l_memory_stream->offset;
+    l_nb_bytes_read = data_size - decoder->read_position;
   }
 
   // Copy the data to the internal buffer.
 
-  memcpy(p_buffer, &(l_memory_stream->pData[l_memory_stream->offset]), l_nb_bytes_read);
+  memcpy(p_buffer, &(decoder->encoded_data[decoder->read_position]), l_nb_bytes_read);
 
-  l_memory_stream->offset += l_nb_bytes_read; // Update the pointer to the new location.
+  decoder->read_position += l_nb_bytes_read; // Update the pointer to the new location.
 
   return l_nb_bytes_read;
 }
@@ -151,7 +144,7 @@ static OPJ_SIZE_T opj_memory_stream_write(void* p_buffer, OPJ_SIZE_T p_nb_bytes,
 {
   assert(false); // We should never need to write to the buffer.
   return 0;
-
+#if 0
   opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data; // Our data.
 
   OPJ_SIZE_T l_nb_bytes_write = p_nb_bytes; // Amount to move to buffer.
@@ -176,6 +169,7 @@ static OPJ_SIZE_T opj_memory_stream_write(void* p_buffer, OPJ_SIZE_T p_nb_bytes,
   l_memory_stream->offset += l_nb_bytes_write;//Update the pointer to the new location.
 
   return l_nb_bytes_write;
+#endif
 }
 
 
@@ -183,7 +177,8 @@ static OPJ_SIZE_T opj_memory_stream_write(void* p_buffer, OPJ_SIZE_T p_nb_bytes,
 
 static OPJ_OFF_T opj_memory_stream_skip(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 {
-  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data;
+  openjpeg_decoder* decoder = (openjpeg_decoder*) p_user_data; // Our data.
+  size_t data_size = decoder->encoded_data.size();
 
   OPJ_SIZE_T l_nb_bytes;
 
@@ -197,15 +192,15 @@ static OPJ_OFF_T opj_memory_stream_skip(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 
   // Do not allow jumping past the end.
 
-  if (l_nb_bytes > l_memory_stream->dataSize - l_memory_stream->offset) {
-    l_nb_bytes = l_memory_stream->dataSize - l_memory_stream->offset;//Jump the max.
+  if (l_nb_bytes > data_size - decoder->read_position) {
+    l_nb_bytes = data_size - decoder->read_position;//Jump the max.
   }
 
   // Make the jump.
 
-  l_memory_stream->offset += l_nb_bytes;
+  decoder->read_position += l_nb_bytes;
 
-  // Returm how far we jumped.
+  // Return how far we jumped.
 
   return l_nb_bytes;
 }
@@ -215,18 +210,19 @@ static OPJ_OFF_T opj_memory_stream_skip(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 
 static OPJ_BOOL opj_memory_stream_seek(OPJ_OFF_T p_nb_bytes, void* p_user_data)
 {
-  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data;
+  openjpeg_decoder* decoder = (openjpeg_decoder*) p_user_data; // Our data.
+  size_t data_size = decoder->encoded_data.size();
 
   // No before the buffer.
   if (p_nb_bytes < 0)
     return OPJ_FALSE;
 
   // No after the buffer.
-  if (p_nb_bytes > (OPJ_OFF_T) l_memory_stream->dataSize)
+  if (p_nb_bytes > (OPJ_OFF_T) data_size)
     return OPJ_FALSE;
 
   // Move to new position.
-  l_memory_stream->offset = (OPJ_SIZE_T) p_nb_bytes;
+  decoder->read_position = (OPJ_SIZE_T) p_nb_bytes;
 
   return OPJ_TRUE;
 }
@@ -241,7 +237,7 @@ static void opj_memory_stream_do_nothing(void* p_user_data)
 
 // Create a stream to use memory as the input or output.
 
-opj_stream_t* opj_stream_create_default_memory_stream(opj_memory_stream* p_memoryStream, OPJ_BOOL p_is_read_stream)
+opj_stream_t* opj_stream_create_default_memory_stream(openjpeg_decoder* p_decoder, OPJ_BOOL p_is_read_stream)
 {
   opj_stream_t* stream;
 
@@ -262,9 +258,9 @@ opj_stream_t* opj_stream_create_default_memory_stream(opj_memory_stream* p_memor
 
   opj_stream_set_skip_function(stream, opj_memory_stream_skip);
 
-  opj_stream_set_user_data(stream, p_memoryStream, opj_memory_stream_do_nothing);
+  opj_stream_set_user_data(stream, p_decoder, opj_memory_stream_do_nothing);
 
-  opj_stream_set_user_data_length(stream, p_memoryStream->dataSize);
+  opj_stream_set_user_data_length(stream, p_decoder->encoded_data.size());
 
   return stream;
 }
@@ -276,8 +272,6 @@ opj_stream_t* opj_stream_create_default_memory_stream(opj_memory_stream* p_memor
 struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct openjpeg_decoder* decoder = (struct openjpeg_decoder*) decoder_raw;
-  std::vector<uint8_t>* encoded_data = &decoder->encoded_data;
-
 
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
@@ -295,12 +289,8 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 
   // Create Input Stream
 
-  opj_memory_stream memoryStream;
-  memoryStream.pData = encoded_data->data();
-  memoryStream.dataSize = encoded_data->size();
-  memoryStream.offset = 0;
   OPJ_BOOL is_read_stream = true;
-  opj_stream_t* stream = opj_stream_create_default_memory_stream(&memoryStream, is_read_stream);
+  opj_stream_t* stream = opj_stream_create_default_memory_stream(decoder, is_read_stream);
 
 
   // Read Codestream Header
