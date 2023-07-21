@@ -105,7 +105,7 @@ public:
     */
     void add_channel(Channel channel) { m_channels.push_back(channel); }
 
-    void set_channels(heif_chroma chroma);
+    void set_channels(heif_colorspace colorspace);
 
 protected:
     Error parse(BitstreamRange &range) override;

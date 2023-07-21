@@ -70,7 +70,7 @@ Error Box_cdef::write(StreamWriter& writer) const
 }
 
 
-void Box_cdef::set_channels(heif_chroma chroma) {
+void Box_cdef::set_channels(heif_colorspace colorspace) {
 
   //TODO - Check for the presence of a cmap box which specifies channel indices.
 
@@ -80,14 +80,14 @@ void Box_cdef::set_channels(heif_chroma chroma) {
   const uint16_t ASOC_GREEN = 2;
   const uint16_t ASOC_BLUE = 3;
 
-  switch (chroma) {
-    case heif_chroma_interleaved_RGB:
+  switch (colorspace) {
+    case heif_colorspace_RGB:
       m_channels.push_back({0, TYPE_COLOR, ASOC_RED});
       m_channels.push_back({1, TYPE_COLOR, ASOC_GREEN});
       m_channels.push_back({2, TYPE_COLOR, ASOC_BLUE});
       break;
 
-    case heif_chroma_monochrome:
+    case heif_colorspace_monochrome:
       m_channels.push_back({0, TYPE_COLOR, ASOC_GREY});
       break;
 

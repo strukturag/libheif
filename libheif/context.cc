@@ -2843,12 +2843,14 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
 
   //Add 'cdef' to 'j2kH'
   auto cdef = std::make_shared<Box_cdef>();
-  cdef->set_channels(image->get_chroma_format());
+  cdef->set_channels(src_image->get_colorspace());
   j2kH->append_child_box(cdef);
 
+  //write_image_metadata(src_image, image_id);   // TODO: currently writes invalid bpp=255
+
   return Error::Ok;
-  
 }
+
 
 static uint8_t JPEG_SOS = 0xDA;
 
