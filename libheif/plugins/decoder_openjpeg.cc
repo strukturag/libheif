@@ -144,32 +144,6 @@ static OPJ_SIZE_T opj_memory_stream_write(void* p_buffer, OPJ_SIZE_T p_nb_bytes,
 {
   assert(false); // We should never need to write to the buffer.
   return 0;
-#if 0
-  opj_memory_stream* l_memory_stream = (opj_memory_stream*) p_user_data; // Our data.
-
-  OPJ_SIZE_T l_nb_bytes_write = p_nb_bytes; // Amount to move to buffer.
-
-  // Check if the current offset is outside our data buffer.
-
-  if (l_memory_stream->offset >= l_memory_stream->dataSize) {
-    return (OPJ_SIZE_T) -1;
-  }
-
-  // Check if we are write more than we have space for.
-
-  if (p_nb_bytes > (l_memory_stream->dataSize - l_memory_stream->offset)) {
-    l_nb_bytes_write = l_memory_stream->dataSize - l_memory_stream->offset;//Write the remaining space.
-  }
-
-
-  // Copy the data from the internal buffer.
-
-  memcpy(&(l_memory_stream->pData[l_memory_stream->offset]), p_buffer, l_nb_bytes_write);
-
-  l_memory_stream->offset += l_nb_bytes_write;//Update the pointer to the new location.
-
-  return l_nb_bytes_write;
-#endif
 }
 
 
