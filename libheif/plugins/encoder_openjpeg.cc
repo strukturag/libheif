@@ -65,9 +65,15 @@ struct encoder_struct_opj
 };
 
 
+#define MAX_PLUGIN_NAME_LENGTH 80
+static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
+
 const char* opj_plugin_name()
 {
-  return "OpenJPEG JPEG2000 Encoder"; // Human-readable name of the plugin
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "OpenJPEG %s", opj_version());
+  plugin_name[MAX_PLUGIN_NAME_LENGTH-1] = 0;
+
+  return plugin_name;
 }
 
 void opj_init_plugin()
@@ -340,7 +346,7 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
     return error;
   }
 
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* image, enum heif_image_input_class image_class)
@@ -413,7 +419,7 @@ struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int
     encoder->data_read = true;
   }
 
-  return error_Ok;
+  return heif_error_ok;
 }
 
 void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)

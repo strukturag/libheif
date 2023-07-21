@@ -38,9 +38,15 @@ struct openjpeg_decoder
 };
 
 
+#define MAX_PLUGIN_NAME_LENGTH 80
+static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
+
 static const char* openjpeg_plugin_name()
 {
-  return "OpenJPEG";
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "OpenJPEG %s", opj_version());
+  plugin_name[MAX_PLUGIN_NAME_LENGTH-1] = 0;
+
+  return plugin_name;
 }
 
 
