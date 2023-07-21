@@ -33,11 +33,10 @@ using namespace std;
 
 
 static const int OPJ_PLUGIN_PRIORITY = 80;
-static struct heif_error error_Ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 
 struct encoder_struct_opj
 {
-
   heif_chroma chroma;
 
   // --- output
@@ -88,7 +87,7 @@ struct heif_error opj_new_encoder(void** encoder_out)
   encoder->chroma = heif_chroma_interleaved_RGB; //default chroma
 
   *encoder_out = encoder;
-  return error_Ok;
+  return heif_error_ok;
 }
 
 void opj_free_encoder(void* encoder_raw)
@@ -99,32 +98,32 @@ void opj_free_encoder(void* encoder_raw)
 
 struct heif_error opj_set_parameter_quality(void* encoder, int quality)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_quality(void* encoder, int* quality)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_set_parameter_lossless(void* encoder, int lossless)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_lossless(void* encoder, int* lossless)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_set_parameter_logging_level(void* encoder, int logging)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_logging_level(void* encoder, int* logging)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 const struct heif_encoder_parameter** opj_list_parameters(void* encoder)
@@ -134,32 +133,32 @@ const struct heif_encoder_parameter** opj_list_parameters(void* encoder)
 
 struct heif_error opj_set_parameter_integer(void* encoder, const char* name, int value)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_integer(void* encoder, const char* name, int* value)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_set_parameter_boolean(void* encoder, const char* name, int value)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_boolean(void* encoder, const char* name, int* value)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_set_parameter_string(void* encoder, const char* name, const char* value)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 struct heif_error opj_get_parameter_string(void* encoder, const char* name, char* value, int value_size)
 {
-  return error_Ok;
+  return heif_error_ok;
 }
 
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
