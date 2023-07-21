@@ -1176,6 +1176,8 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     return err;
   }
 
+  // TODO: this should be codec specific. JPEG-2000, for example, can use RGB internally.
+
   *out_colorspace = heif_colorspace_YCbCr;
   *out_chroma = heif_chroma_420;
 

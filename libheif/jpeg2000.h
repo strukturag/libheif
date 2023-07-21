@@ -338,4 +338,26 @@ public:
                                      std::shared_ptr<HeifContext::Image>& out_image);
 };
 
+struct JPEG2000_SIZ_segment
+{
+  int x0 = 0, y0 = 0;
+  int width = 0, height = 0;
+
+  int tile_x0 = 0, tile_y0 = 0;
+  int tile_width = 0, tile_height = 0;
+
+  int decoder_capabilities = 0;
+
+  struct component
+  {
+    uint8_t h_separation, v_separation;
+    uint8_t precision;
+    bool is_signed;
+  };
+
+  std::vector<component> components;
+};
+
+JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID);
+
 #endif // LIBHEIF_JPEG2000_H

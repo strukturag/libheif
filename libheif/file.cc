@@ -21,6 +21,7 @@
 #include "file.h"
 #include "libheif/box.h"
 #include "libheif/heif.h"
+#include "libheif/jpeg2000.h"
 
 #include <cstdint>
 #include <fstream>
@@ -571,7 +572,12 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    return 8; // TODO: how can we get the actual value?
+    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
+    if (siz.components.empty()) {
+      return -1;
+    }
+
+    return siz.components[0].precision;
   }
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -629,7 +635,13 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    return 8; // TODO: how can we get the actual value?
+    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
+    if (siz.components.size() <= 1) {
+      return -1;
+    }
+
+    // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
+    return siz.components[1].precision;
   }
 
   return -1;

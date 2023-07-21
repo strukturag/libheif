@@ -78,13 +78,10 @@ const char* opj_plugin_name()
 
 void opj_init_plugin()
 {
-  // Global plugin initialization (may be NULL)
 }
 
 void opj_cleanup_plugin()
 {
-  // Global plugin cleanup (may be NULL).
-  // Free data that was allocated in init_plugin()
 }
 
 struct heif_error opj_new_encoder(void** encoder_out)
@@ -206,9 +203,9 @@ static void opj_close_from_buffer(void* p_user_data)
 // TODO: Clean up this function so that it looks pretty
 static opj_image_t* create_opj_image(const unsigned char* src_data, int width, int height, int band_count, int sub_dx, int sub_dy)
 {
-
   opj_image_cmptparm_t component_params[4];
   memset(&component_params, 0, 4 * sizeof(opj_image_cmptparm_t));
+
   for (int comp = 0; comp < band_count; ++comp) {
     component_params[comp].prec = 8;
     component_params[comp].bpp = 8;
@@ -268,12 +265,10 @@ static opj_image_t* create_opj_image(const unsigned char* src_data, int width, i
 // @param encoder - The function will output codestream in encoder->codestream
 static heif_error generate_codestream(const uint8_t* data, struct encoder_struct_opj* encoder, int width, int height, int numcomps)
 {
-
   heif_error error;
   OPJ_BOOL success;
   opj_cparameters_t parameters;
   opj_set_default_encoder_parameters(&parameters);
-
 
 #if 0
   //Insert a human readable comment into the codestream
@@ -287,7 +282,6 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
     parameters.cp_comment = strdup(buf);
   }
 #endif
-
 
   opj_image_t* image = create_opj_image(data, width, height, numcomps, parameters.subsampling_dx, parameters.subsampling_dy);
   if (image == nullptr) {
@@ -309,8 +303,7 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
 
   //Create Stream
   size_t size = width * height * numcomps;
-  const bool READ_DATA = false; //We want to write to a buffer, not read from one
-  opj_stream_t* stream = opj_stream_create(size, READ_DATA);
+  opj_stream_t* stream = opj_stream_create(size, false /* read only mode */);
   if (stream == NULL) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
@@ -349,9 +342,9 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
   return heif_error_ok;
 }
 
+
 struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* image, enum heif_image_input_class image_class)
 {
-
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
   struct heif_error err;
   heif_chroma chroma = heif_image_get_chroma_format(image);

@@ -312,3 +312,69 @@ std::string Box_j2kH::dump(Indent& indent) const
 
     return sstr.str();
 }
+
+
+int read16(const std::vector<uint8_t>& data, int offset)
+{
+  return (data[offset]<<8) | data[offset+1];
+}
+
+
+int read32(const std::vector<uint8_t>& data, int offset)
+{
+  return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+}
+
+
+JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID)
+{
+  std::vector<uint8_t> data;
+  Error err = file.get_compressed_image_data(imageID, &data);
+  if (err) {
+    return {};
+  }
+
+  for (size_t i = 0; i + 1 < data.size(); i++) {
+    if (data[i] == 0xFF && data[i+1] & 0x51) {
+
+      JPEG2000_SIZ_segment siz;
+
+      // space for full header and one component
+      if (i+2+38+3 > data.size()) {
+        return {};
+      }
+
+      // read number of components
+
+      int nComponents = read16(data, 40);
+
+      if (i+2+38+nComponents*3 > data.size()) {
+        return {};
+      }
+
+      siz.decoder_capabilities = read16(data, 6);
+      siz.width = read32(data, 8);
+      siz.height = read32(data, 12);
+      siz.x0 = read32(data, 16);
+      siz.y0 = read32(data, 20);
+      siz.tile_width = read32(data, 24);
+      siz.tile_height = read32(data, 28);
+      siz.tile_x0 = read32(data, 32);
+      siz.tile_y0 = read32(data, 36);
+
+      for (int c = 0; c < nComponents; c++) {
+        JPEG2000_SIZ_segment::component comp;
+        comp.precision = data[42 + c * 3];
+        comp.is_signed = (comp.precision & 0x80);
+        comp.precision = (comp.precision & 0x7F) + 1;
+        comp.h_separation = data[43 + c *3];
+        comp.v_separation = data[44 + c *3];
+        siz.components.push_back(comp);
+      }
+
+      return siz;
+    }
+  }
+
+  return {};
+}
