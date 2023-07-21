@@ -191,8 +191,6 @@ static OPJ_SIZE_T opj_write_from_buffer(void* src_data_raw, OPJ_SIZE_T nb_bytes,
 
 static void opj_close_from_buffer(void* p_user_data)
 {
-  FILE* p_file = (FILE*) p_user_data;
-  fclose(p_file);
 }
 
 // Create an opj_image_t object from the input buffer
