@@ -40,6 +40,8 @@ jobs:
     - name: Build with Coverity build tool
       run: |
         export PATH=`pwd`/coverity_tool/bin:$PATH
+        mkdir build && cd build
+        cmake ..
         cov-build --dir cov-int make
 
     - name: Submit build result to Coverity Scan
