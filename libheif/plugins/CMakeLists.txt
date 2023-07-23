@@ -11,10 +11,12 @@ macro(plugin_compilation name varName optionName defineName)
                     MODULE ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
                     ../heif_plugin.cc
                     )
-            set_target_properties(heif-${name}
-                    PROPERTIES
-                    VERSION ${PROJECT_VERSION}
-                    SOVERSION ${PROJECT_VERSION_MAJOR})
+            if (NOT APPLE)
+                set_target_properties(heif-${name}
+                        PROPERTIES
+                        VERSION ${PROJECT_VERSION}
+                        SOVERSION ${PROJECT_VERSION_MAJOR})
+            endif ()
             target_compile_definitions(heif-${name}
                     PUBLIC
                     LIBHEIF_EXPORTS
