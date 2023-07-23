@@ -44,7 +44,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 static const char* openjpeg_plugin_name()
 {
   snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "OpenJPEG %s", opj_version());
-  plugin_name[MAX_PLUGIN_NAME_LENGTH-1] = 0;
+  plugin_name[MAX_PLUGIN_NAME_LENGTH - 1] = 0;
 
   return plugin_name;
 }
@@ -314,49 +314,74 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   opj_stream_destroy(stream);
 
 
-  opj_image_comp_t opj_y = image->comps[0];
-  opj_image_comp_t opj_cb = image->comps[1];
-  opj_image_comp_t opj_cr = image->comps[2];
-
-
   heif_colorspace colorspace = heif_colorspace_YCbCr;
   heif_chroma chroma = heif_chroma_444; //heif_chroma_interleaved_RGB;
+
+  std::vector<heif_channel> channels;
+
+  if (image->numcomps == 1) {
+    colorspace = heif_colorspace_monochrome;
+    chroma = heif_chroma_monochrome;
+    channels = {heif_channel_Y};
+  }
+  else if (image->numcomps == 3 &&
+           image->comps[1].dx == 1 &&
+           image->comps[1].dy == 1) {
+    colorspace = heif_colorspace_YCbCr;
+    chroma = heif_chroma_444;
+    channels = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+  }
+  else if (image->numcomps == 3 &&
+           image->comps[1].dx == 2 &&
+           image->comps[1].dy == 1) {
+    colorspace = heif_colorspace_YCbCr;
+    chroma = heif_chroma_422;
+    channels = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+  }
+  else if (image->numcomps == 3 &&
+           image->comps[1].dx == 2 &&
+           image->comps[1].dy == 2) {
+    colorspace = heif_colorspace_YCbCr;
+    chroma = heif_chroma_420;
+    channels = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+  }
+  else {
+    struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "unsupported image format"};
+    return err;
+  }
+
 
   struct heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
   if (error.code) {
     return error;
   }
 
-  int bit_depth = 8;
-  error = heif_image_add_plane(*out_img, heif_channel_Y, width, height, bit_depth);
-  error = heif_image_add_plane(*out_img, heif_channel_Cb, width, height, bit_depth);
-  error = heif_image_add_plane(*out_img, heif_channel_Cr, width, height, bit_depth);
+  for (size_t c = 0; c < image->numcomps; c++) {
+    const opj_image_comp_t& opj_comp = image->comps[c];
 
-  int stride = -1;
-  uint8_t* r = heif_image_get_plane(*out_img, heif_channel_Y, &stride);
-  uint8_t* g = heif_image_get_plane(*out_img, heif_channel_Cb, &stride);
-  uint8_t* b = heif_image_get_plane(*out_img, heif_channel_Cr, &stride);
+    int bit_depth = opj_comp.prec;
+    int cwidth = opj_comp.w;
+    int cheight = opj_comp.h;
+
+    error = heif_image_add_plane(*out_img, channels[c], cwidth, cheight, bit_depth);
+
+    int stride = -1;
+    uint8_t* p = heif_image_get_plane(*out_img, channels[c], &stride);
 
 
-  // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
-  // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
+    // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
+    // https://stackoverflow.com/questions/63774643/how-to-convert-uint32-to-uint8-using-simd-but-not-avx512
 
-  if (stride == width) {
-    for (int i = 0; i < width * height; i++) {
-      r[i] = (uint8_t) opj_y.data[i];
-      g[i] = (uint8_t) opj_cb.data[i];
-      b[i] = (uint8_t) opj_cr.data[i];
+    if (stride == cwidth) {
+      for (int i = 0; i < cwidth * cheight; i++) {
+        p[i] = (uint8_t) opj_comp.data[i];
+      }
     }
-  }
-  else {
-    int i = 0, i_opj = 0;
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        i = (stride * y) + x;
-        i_opj = (width * y) + x;
-        r[i] = (uint8_t) opj_y.data[i_opj];
-        g[i] = (uint8_t) opj_cb.data[i_opj];
-        b[i] = (uint8_t) opj_cr.data[i_opj];
+    else {
+      for (int y = 0; y < cheight; y++) {
+        for (int x = 0; x < cwidth; x++) {
+          p[y * stride + x] = (uint8_t) opj_comp.data[y * cwidth + x];
+        }
       }
     }
   }

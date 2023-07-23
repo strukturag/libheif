@@ -190,7 +190,7 @@ void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colo
   }
   else {
     *inout_colorspace = heif_colorspace_YCbCr;
-    *inout_chroma = heif_chroma_444;
+    //*inout_chroma = heif_chroma_420;
     //*inout_chroma = encoder->chroma;
   }
 }
@@ -351,10 +351,10 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     component_params[comp].prec = bpp;
     component_params[comp].bpp = bpp;
     component_params[comp].sgnd = 0;
-    component_params[comp].dx = sub_dx;
-    component_params[comp].dy = sub_dy;
-    component_params[comp].w = (width + sub_dx / 2) / sub_dx;
-    component_params[comp].h = (height + sub_dy / 2) / sub_dy;
+    component_params[comp].dx = comp==0 ? 1 : sub_dx;
+    component_params[comp].dy = comp==0 ? 1 : sub_dy;
+    component_params[comp].w = comp==0 ? width : (width + sub_dx / 2) / sub_dx;
+    component_params[comp].h = comp==0 ? height : (height + sub_dy / 2) / sub_dy;
   }
 
   opj_image_t* opj_image = opj_image_create(band_count, &component_params[0], opj_colorspace);
@@ -373,10 +373,13 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     int stride;
     const uint8_t* p = heif_image_get_plane_readonly(image, channels[comp], &stride);
 
+    int cwidth = component_params[comp].w;
+    int cheight = component_params[comp].h;
+
     // Note: obj_image data is 32bit integer
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        opj_image->comps[comp].data[y * width + x] = p[y * stride + x];
+    for (int y = 0; y < cheight; y++) {
+      for (int x = 0; x < cwidth; x++) {
+        opj_image->comps[comp].data[y * cwidth + x] = p[y * stride + x];
       }
     }
   }
