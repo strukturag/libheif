@@ -280,9 +280,9 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_read_header()"};
     return err;
   }
-  else if (image->numcomps != 3) {
+  else if (image->numcomps != 3 && image->numcomps != 1) {
     //TODO - Handle other numbers of components
-    struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3"};
+    struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3 or 1"};
     return err;
   }
   else if ((image->color_space != OPJ_CLRSPC_UNSPECIFIED) && (image->color_space != OPJ_CLRSPC_SRGB)) {
