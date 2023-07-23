@@ -38,7 +38,7 @@ static const int OPJ_PLUGIN_PRIORITY = 80;
 
 struct encoder_struct_opj
 {
-  heif_chroma chroma;
+  heif_chroma chroma = heif_chroma_undefined;
 
   // --- output
 
@@ -65,6 +65,11 @@ struct encoder_struct_opj
   // int logLevel = X265_LOG_NONE;
 };
 
+static const char* kParam_chroma = "chroma";
+static const char* const kParam_chroma_valid_values[] = {
+    "420", "422", "444", nullptr
+};
+
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
@@ -77,8 +82,33 @@ const char* opj_plugin_name()
   return plugin_name;
 }
 
+
+#define MAX_NPARAMETERS 10
+
+static struct heif_encoder_parameter opj_encoder_params[MAX_NPARAMETERS];
+static const struct heif_encoder_parameter* opj_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
+
+static void opj_init_parameters()
+{
+  struct heif_encoder_parameter* p = opj_encoder_params;
+  const struct heif_encoder_parameter** d = opj_encoder_parameter_ptrs;
+  int i = 0;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_chroma;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "420";
+  p->has_default = true;
+  p->string.valid_values = kParam_chroma_valid_values;
+  d[i++] = p++;
+
+  d[i++] = nullptr;
+}
+
 void opj_init_plugin()
 {
+  opj_init_parameters();
 }
 
 void opj_cleanup_plugin()
@@ -88,7 +118,6 @@ void opj_cleanup_plugin()
 struct heif_error opj_new_encoder(void** encoder_out)
 {
   struct encoder_struct_opj* encoder = new encoder_struct_opj();
-  encoder->chroma = heif_chroma_interleaved_RGB; //default chroma
 
   *encoder_out = encoder;
   return heif_error_ok;
@@ -132,7 +161,7 @@ struct heif_error opj_get_parameter_logging_level(void* encoder, int* logging)
 
 const struct heif_encoder_parameter** opj_list_parameters(void* encoder)
 {
-  return nullptr;
+  return opj_encoder_parameter_ptrs;
 }
 
 struct heif_error opj_set_parameter_integer(void* encoder, const char* name, int value)
@@ -155,14 +184,60 @@ struct heif_error opj_get_parameter_boolean(void* encoder, const char* name, int
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_string(void* encoder, const char* name, const char* value)
+struct heif_error opj_set_parameter_string(void* encoder_raw, const char* name, const char* value)
 {
-  return heif_error_ok;
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  if (strcmp(name, kParam_chroma) == 0) {
+    if (strcmp(value, "420") == 0) {
+      encoder->chroma = heif_chroma_420;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "422") == 0) {
+      encoder->chroma = heif_chroma_422;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "444") == 0) {
+      encoder->chroma = heif_chroma_444;
+      return heif_error_ok;
+    }
+    else {
+      return heif_error_invalid_parameter_value;
+    }
+  }
+
+  return heif_error_unsupported_parameter;
 }
 
-struct heif_error opj_get_parameter_string(void* encoder, const char* name, char* value, int value_size)
+static void save_strcpy(char* dst, int dst_size, const char* src)
 {
-  return heif_error_ok;
+  strncpy(dst, src, dst_size - 1);
+  dst[dst_size - 1] = 0;
+}
+
+struct heif_error opj_get_parameter_string(void* encoder_raw, const char* name, char* value, int value_size)
+{
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  switch (encoder->chroma) {
+    case heif_chroma_420:
+      save_strcpy(value, value_size, "420");
+      break;
+    case heif_chroma_422:
+      save_strcpy(value, value_size, "422");
+      break;
+    case heif_chroma_444:
+      save_strcpy(value, value_size, "444");
+      break;
+    case heif_chroma_undefined:
+      save_strcpy(value, value_size, "undefined");
+      break;
+    default:
+      assert(false);
+      return heif_error_invalid_parameter_value;
+  }
+
+  return heif_error_unsupported_parameter;
 }
 
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
@@ -180,9 +255,9 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
   }
 }
 
-void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
+void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
 {
-  //auto* encoder = (struct encoder_struct_x265*) encoder_raw;
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
 
   if (*inout_colorspace == heif_colorspace_monochrome) {
     *inout_colorspace = heif_colorspace_monochrome;
@@ -190,8 +265,10 @@ void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colo
   }
   else {
     *inout_colorspace = heif_colorspace_YCbCr;
-    //*inout_chroma = heif_chroma_420;
-    //*inout_chroma = encoder->chroma;
+
+    if (encoder->chroma != heif_chroma_undefined) {
+      *inout_chroma = encoder->chroma;
+    }
   }
 }
 
@@ -222,7 +299,7 @@ static void opj_close_from_buffer(void* p_user_data)
 // compressed image pixel data and very basic metadata. 
 // @param data - Uncompressed image pixel data
 // @param encoder - The function will output codestream in encoder->codestream
-static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder, int buffersize)
+static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder, size_t buffersize)
 {
   heif_error error;
   OPJ_BOOL success;
@@ -351,10 +428,10 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     component_params[comp].prec = bpp;
     component_params[comp].bpp = bpp;
     component_params[comp].sgnd = 0;
-    component_params[comp].dx = comp==0 ? 1 : sub_dx;
-    component_params[comp].dy = comp==0 ? 1 : sub_dy;
-    component_params[comp].w = comp==0 ? width : (width + sub_dx / 2) / sub_dx;
-    component_params[comp].h = comp==0 ? height : (height + sub_dy / 2) / sub_dy;
+    component_params[comp].dx = comp == 0 ? 1 : sub_dx;
+    component_params[comp].dy = comp == 0 ? 1 : sub_dy;
+    component_params[comp].w = comp == 0 ? width : (width + sub_dx / 2) / sub_dx;
+    component_params[comp].h = comp == 0 ? height : (height + sub_dy / 2) / sub_dy;
   }
 
   opj_image_t* opj_image = opj_image_create(band_count, &component_params[0], opj_colorspace);

@@ -2371,15 +2371,21 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
 
 
 static bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                                      const std::shared_ptr<const color_profile_nclx>& image_nclx,
+                                      std::shared_ptr<const color_profile_nclx> image_nclx,
                                       const struct heif_color_profile_nclx* spec_nclx)
 {
   if (colorspace != heif_colorspace_YCbCr) {
     return true;
   }
 
-  if (!image_nclx || !spec_nclx) {
+  // Do target specification -> always matches
+  if (!spec_nclx) {
     return true;
+  }
+
+  if (!image_nclx) {
+    // if no input nclx is specified, compare against default one
+    image_nclx = std::make_shared<color_profile_nclx>();
   }
 
   if (image_nclx->get_full_range_flag() != spec_nclx->full_range_flag) {
@@ -2811,8 +2817,8 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
 
   std::shared_ptr<HeifPixelImage> src_image;
   if (colorspace != image->get_colorspace() ||
-      chroma != image->get_chroma_format()) {
-    // @TODO: use color profile when converting
+      chroma != image->get_chroma_format() ||
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
     int output_bpp = 0; // same as input
     src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
                                    output_bpp, options.color_conversion_options);
@@ -2855,9 +2861,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   m_heif_file->add_ispe_property(image_id, image->get_width(), image->get_height());
 
   //Add 'colr' Property
-  //TODO: Use the correct color profile instead of default
-  auto profile = std::make_shared<const color_profile_nclx>();
-  m_heif_file->set_color_profile(image_id, profile);
+  m_heif_file->set_color_profile(image_id, target_nclx_profile);
 
   //Add 'j2kH' Property
   auto j2kH = m_heif_file->add_j2kH_property(image_id);
