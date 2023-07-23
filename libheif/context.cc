@@ -2790,12 +2790,17 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   // ---begin---
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
+
+  /*
   auto color_profile = image->get_color_profile_nclx();
   if (!color_profile) {
     color_profile = std::make_shared<color_profile_nclx>();
   }
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
+*/
 
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2809,7 +2814,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
       chroma != image->get_chroma_format()) {
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
-    src_image = convert_colorspace(image, colorspace, chroma, nclx_profile,
+    src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
                                    output_bpp, options.color_conversion_options);
     if (!src_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);

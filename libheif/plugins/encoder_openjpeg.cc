@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
 
 using namespace std;
 
@@ -71,7 +72,7 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 const char* opj_plugin_name()
 {
   snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "OpenJPEG %s", opj_version());
-  plugin_name[MAX_PLUGIN_NAME_LENGTH-1] = 0;
+  plugin_name[MAX_PLUGIN_NAME_LENGTH - 1] = 0;
 
   return plugin_name;
 }
@@ -169,8 +170,29 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
   // comes as close to the input colorspace/chroma as possible.
 
-  *inout_colorspace = heif_colorspace_RGB;
-  *inout_chroma = heif_chroma_interleaved_RGB;
+  if (*inout_colorspace == heif_colorspace_monochrome) {
+    *inout_colorspace = heif_colorspace_monochrome;
+    *inout_chroma = heif_chroma_monochrome;
+  }
+  else {
+    *inout_colorspace = heif_colorspace_RGB; // YCbCr;
+    *inout_chroma = heif_chroma_444;
+  }
+}
+
+void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
+{
+  //auto* encoder = (struct encoder_struct_x265*) encoder_raw;
+
+  if (*inout_colorspace == heif_colorspace_monochrome) {
+    *inout_colorspace = heif_colorspace_monochrome;
+    *inout_chroma = heif_chroma_monochrome;
+  }
+  else {
+    *inout_colorspace = heif_colorspace_RGB; // YCbCr;
+    *inout_chroma = heif_chroma_444;
+    //*inout_chroma = encoder->chroma;
+  }
 }
 
 
@@ -195,75 +217,12 @@ static void opj_close_from_buffer(void* p_user_data)
 {
 }
 
-// Create an opj_image_t object from the input buffer
-// @param src_data - Uncompressed image pixel data
-// @param sub_dx - TODO: what is this?
-// @param sub_dy - TODO: what is this?
-// TODO: Return heif_error insteaf of opj_image_t
-// TODO: Clean up this function so that it looks pretty
-static opj_image_t* create_opj_image(const unsigned char* src_data, int width, int height, int band_count, int sub_dx, int sub_dy)
-{
-  opj_image_cmptparm_t component_params[4];
-  memset(&component_params, 0, 4 * sizeof(opj_image_cmptparm_t));
-
-  for (int comp = 0; comp < band_count; ++comp) {
-    component_params[comp].prec = 8;
-    component_params[comp].bpp = 8;
-    component_params[comp].sgnd = 0;
-    component_params[comp].dx = sub_dx;
-    component_params[comp].dy = sub_dy;
-    component_params[comp].w = width;
-    component_params[comp].h = height;
-  }
-
-  OPJ_COLOR_SPACE colorspace = (band_count > 2 ? OPJ_CLRSPC_SRGB : OPJ_CLRSPC_GRAY);
-  opj_image_t* image = opj_image_create(band_count, &component_params[0], colorspace);
-  if (image == NULL) {
-    // Failed to create image
-    return NULL;
-  }
-
-  // ???????
-  image->x0 = 0;
-  image->y0 = 0;
-  image->x1 = (width - 1) * sub_dx + 1;
-  image->y1 = (height - 1) * sub_dy + 1;
-
-  int* r, * g, * b;
-  bool is_rgb;
-  if (band_count == 3) {
-    is_rgb = 1;
-    r = image->comps[0].data;
-    g = image->comps[1].data;
-    b = image->comps[2].data;
-  }
-  else { //Grayscale
-    r = image->comps[0].data;
-  }
-
-  const unsigned char* cs = src_data;
-  int max = height * width;
-  for (int i = 0; i < max; i++) {
-    if (is_rgb) {
-      *r++ = (int) *cs++;
-      *g++ = (int) *cs++;
-      *b++ = (int) *cs++;
-      continue;
-    }
-
-    /* G */
-    *r++ = (int) *cs++;
-  }
-
-  return image;
-}
-
 
 // The codestream is defined in ISO/IEC 15444-1. It contains the
 // compressed image pixel data and very basic metadata. 
 // @param data - Uncompressed image pixel data
 // @param encoder - The function will output codestream in encoder->codestream
-static heif_error generate_codestream(const uint8_t* data, struct encoder_struct_opj* encoder, int width, int height, int numcomps)
+static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder, int buffersize)
 {
   heif_error error;
   OPJ_BOOL success;
@@ -283,13 +242,6 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
   }
 #endif
 
-  opj_image_t* image = create_opj_image(data, width, height, numcomps, parameters.subsampling_dx, parameters.subsampling_dy);
-  if (image == nullptr) {
-    error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create OpenJPEG image"};
-    return error;
-  }
-
-
   //OPJ_CODEC_J2K - Only generate the codestream
   //OPJ_CODEC_JP2 - Generate the entire jp2 file (which contains a codestream)
   OPJ_CODEC_FORMAT codec_format = OPJ_CODEC_J2K;
@@ -302,8 +254,7 @@ static heif_error generate_codestream(const uint8_t* data, struct encoder_struct
 
 
   //Create Stream
-  size_t size = width * height * numcomps;
-  opj_stream_t* stream = opj_stream_create(size, false /* read only mode */);
+  opj_stream_t* stream = opj_stream_create(buffersize, false /* read only mode */);
   if (stream == NULL) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
@@ -347,51 +298,95 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
 {
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
   struct heif_error err;
+
   heif_chroma chroma = heif_image_get_chroma_format(image);
   heif_colorspace colorspace = heif_image_get_colorspace(image);
-  uint32_t numcomps;
-  heif_channel channel;
 
-  if (chroma == heif_chroma_interleaved_RGB) {
-    channel = heif_channel_interleaved;
-    numcomps = 3;
+  int width = heif_image_get_primary_width(image);
+  int height = heif_image_get_primary_height(image);
+
+  std::vector<heif_channel> channels;
+  OPJ_COLOR_SPACE opj_colorspace;
+
+  switch (colorspace) {
+    case heif_colorspace_YCbCr:
+      channels = {heif_channel_Y, heif_channel_Cb, heif_channel_Cr};
+      opj_colorspace = OPJ_CLRSPC_SYCC;
+      break;
+    case heif_colorspace_RGB:
+      channels = {heif_channel_R, heif_channel_G, heif_channel_B};
+      opj_colorspace = OPJ_CLRSPC_SRGB;
+      break;
+    case heif_colorspace_monochrome:
+      channels = {heif_channel_Y};
+      opj_colorspace = OPJ_CLRSPC_GRAY;
+      break;
+    default:
+      assert(false);
   }
-  else {
-    err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Chroma not yet supported"};
+
+  int band_count = (int) channels.size();
+
+  opj_image_cmptparm_t component_params[4];
+  memset(&component_params, 0, band_count * sizeof(opj_image_cmptparm_t));
+
+  for (int comp = 0; comp < band_count; comp++) {
+
+    int bpp = heif_image_get_bits_per_pixel_range(image, channels[comp]);
+
+    int sub_dx = 1, sub_dy = 1;
+    switch (chroma) {
+      case heif_chroma_420:
+        sub_dx = 2;
+        sub_dy = 2;
+        break;
+      case heif_chroma_422:
+        sub_dx = 2;
+        sub_dy = 1;
+        break;
+      default:
+        break;
+    }
+
+    component_params[comp].prec = bpp;
+    component_params[comp].bpp = bpp;
+    component_params[comp].sgnd = 0;
+    component_params[comp].dx = sub_dx;
+    component_params[comp].dy = sub_dy;
+    component_params[comp].w = (width + sub_dx / 2) / sub_dx;
+    component_params[comp].h = (height + sub_dy / 2) / sub_dy;
+  }
+
+  opj_image_t* opj_image = opj_image_create(band_count, &component_params[0], opj_colorspace);
+  if (image == nullptr) {
+    // Failed to create image
+    err = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed create OpenJPEG image"};
     return err;
   }
 
-  if (colorspace == heif_colorspace_RGB) {
-    // Okay
-  }
-  else {
-    err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Colorspace not yet supported"};
-    return err;
-  }
+  opj_image->x0 = 0;
+  opj_image->y0 = 0;
+  opj_image->x1 = width;
+  opj_image->y1 = height;
 
-  int stride = 0; //Number of bytes per row
-  const uint8_t* src_data = heif_image_get_plane_readonly(image, channel, &stride);
-  unsigned int width = stride / numcomps;
-  width = heif_image_get_width(image, channel);
-  unsigned int height = heif_image_get_primary_height(image);
+  for (int comp = 0; comp < band_count; comp++) {
+    int stride;
+    const uint8_t* p = heif_image_get_plane_readonly(image, channels[comp], &stride);
 
-  std::vector<uint8_t> fixed_data;
-  if (width * numcomps != (unsigned int) stride) {
-    //Convert the data such that the stride is exactly (width * numcomps)
-    int i;
-    for (unsigned int y = 0; y < height; y++) {
-      for (unsigned int x = 0; x < (width * numcomps); x++) {
-        i = (stride * y) + x;
-        fixed_data.push_back(src_data[i]);
+    // Note: obj_image data is 32bit integer
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        opj_image->comps[comp].data[y * width + x] = p[y * stride + x];
       }
     }
-    src_data = fixed_data.data();
   }
 
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
+  size_t buffersize = width * height * band_count;
+
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
-  err = generate_codestream(src_data, encoder, width, height, numcomps);
+  err = generate_codestream(opj_image, encoder, buffersize);
 
   return err;
 }
@@ -413,12 +408,6 @@ struct heif_error opj_get_compressed_data(void* encoder_raw, uint8_t** data, int
   }
 
   return heif_error_ok;
-}
-
-void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
-{
-  *inout_colorspace = heif_colorspace_RGB;
-  *inout_chroma = heif_chroma_interleaved_RGB;
 }
 
 void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_height, uint32_t* encoded_width, uint32_t* encoded_height)

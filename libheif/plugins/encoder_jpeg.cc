@@ -310,6 +310,8 @@ void jpeg_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace
 {
   //auto* encoder = (struct encoder_struct_jpeg*) encoder_raw;
 
+  // TODO: support encoding greyscale JPEGs
+
   *colorspace = heif_colorspace_YCbCr;
   *chroma = heif_chroma_420;
 }

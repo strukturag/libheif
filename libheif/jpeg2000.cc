@@ -70,21 +70,30 @@ Error Box_cdef::write(StreamWriter& writer) const
 }
 
 
-void Box_cdef::set_channels(heif_colorspace colorspace) {
-
-  //TODO - Check for the presence of a cmap box which specifies channel indices.
+void Box_cdef::set_channels(heif_colorspace colorspace)
+{
+  // TODO - Check for the presence of a cmap box which specifies channel indices.
 
   const uint16_t TYPE_COLOR = 0;
   const uint16_t ASOC_GREY = 1;
   const uint16_t ASOC_RED = 1;
   const uint16_t ASOC_GREEN = 2;
   const uint16_t ASOC_BLUE = 3;
+  const uint16_t ASOC_Y = 1;
+  const uint16_t ASOC_Cb = 2;
+  const uint16_t ASOC_Cr = 3;
 
   switch (colorspace) {
     case heif_colorspace_RGB:
       m_channels.push_back({0, TYPE_COLOR, ASOC_RED});
       m_channels.push_back({1, TYPE_COLOR, ASOC_GREEN});
       m_channels.push_back({2, TYPE_COLOR, ASOC_BLUE});
+      break;
+
+    case heif_colorspace_YCbCr:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_Y});
+      m_channels.push_back({1, TYPE_COLOR, ASOC_Cb});
+      m_channels.push_back({2, TYPE_COLOR, ASOC_Cr});
       break;
 
     case heif_colorspace_monochrome:
