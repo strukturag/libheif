@@ -2306,17 +2306,33 @@ static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uin
 
 void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id)
 {
+  auto colorspace = src_image->get_colorspace();
+  auto chroma = src_image->get_chroma_format();
+
+
   // --- write PIXI property
 
-  if (src_image->get_chroma_format() == heif_chroma_monochrome) {
+  if (colorspace == heif_colorspace_monochrome) {
     m_heif_file->add_pixi_property(image_id,
                                    src_image->get_bits_per_pixel(heif_channel_Y), 0, 0);
   }
-  else {
+  else if (colorspace == heif_colorspace_YCbCr) {
     m_heif_file->add_pixi_property(image_id,
                                    src_image->get_bits_per_pixel(heif_channel_Y),
                                    src_image->get_bits_per_pixel(heif_channel_Cb),
                                    src_image->get_bits_per_pixel(heif_channel_Cr));
+  }
+  else if (colorspace == heif_colorspace_RGB) {
+    if (chroma == heif_chroma_444) {
+      m_heif_file->add_pixi_property(image_id,
+                                     src_image->get_bits_per_pixel(heif_channel_R),
+                                     src_image->get_bits_per_pixel(heif_channel_G),
+                                     src_image->get_bits_per_pixel(heif_channel_B));
+    }
+    else if (chroma == heif_chroma_interleaved_RGB ||
+             chroma == heif_chroma_interleaved_RGBA) {
+      m_heif_file->add_pixi_property(image_id, 8, 8, 8);
+    }
   }
 
 
