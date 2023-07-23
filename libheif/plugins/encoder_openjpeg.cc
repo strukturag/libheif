@@ -38,6 +38,7 @@ static const int OPJ_PLUGIN_PRIORITY = 80;
 
 struct encoder_struct_opj
 {
+  int quality = 70;
   heif_chroma chroma = heif_chroma_undefined;
 
   // --- output
@@ -98,8 +99,8 @@ static void opj_init_parameters()
   p->version = 2;
   p->name = kParam_chroma;
   p->type = heif_encoder_parameter_type_string;
-  p->string.default_value = "420";
-  p->has_default = true;
+  //p->string.default_value = "420";
+  p->has_default = false;
   p->string.valid_values = kParam_chroma_valid_values;
   d[i++] = p++;
 
@@ -115,11 +116,15 @@ void opj_cleanup_plugin()
 {
 }
 
+static void opj_set_default_parameters(void* encoder);
+
 struct heif_error opj_new_encoder(void** encoder_out)
 {
   struct encoder_struct_opj* encoder = new encoder_struct_opj();
-
   *encoder_out = encoder;
+
+  opj_set_default_parameters(encoder);
+
   return heif_error_ok;
 }
 
@@ -129,13 +134,25 @@ void opj_free_encoder(void* encoder_raw)
   delete encoder;
 }
 
-struct heif_error opj_set_parameter_quality(void* encoder, int quality)
+struct heif_error opj_set_parameter_quality(void* encoder_raw, int quality)
 {
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  if (quality < 0 || quality > 100) {
+    return heif_error_invalid_parameter_value;
+  }
+
+  encoder->quality = quality;
+
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_quality(void* encoder, int* quality)
+struct heif_error opj_get_parameter_quality(void* encoder_raw, int* quality)
 {
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  *quality = encoder->quality;
+
   return heif_error_ok;
 }
 
@@ -164,13 +181,25 @@ const struct heif_encoder_parameter** opj_list_parameters(void* encoder)
   return opj_encoder_parameter_ptrs;
 }
 
-struct heif_error opj_set_parameter_integer(void* encoder, const char* name, int value)
+struct heif_error opj_set_parameter_integer(void* encoder_raw, const char* name, int value)
 {
-  return heif_error_ok;
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
+    return opj_set_parameter_quality(encoder, value);
+  }
+
+  return heif_error_unsupported_parameter;
 }
 
-struct heif_error opj_get_parameter_integer(void* encoder, const char* name, int* value)
+struct heif_error opj_get_parameter_integer(void* encoder_raw, const char* name, int* value)
 {
+  struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
+
+  if (strcmp(name, heif_encoder_parameter_name_quality) == 0) {
+    return opj_get_parameter_quality(encoder, value);
+  }
+
   return heif_error_ok;
 }
 
@@ -240,6 +269,29 @@ struct heif_error opj_get_parameter_string(void* encoder_raw, const char* name, 
   return heif_error_unsupported_parameter;
 }
 
+
+static void opj_set_default_parameters(void* encoder)
+{
+  for (const struct heif_encoder_parameter** p = opj_encoder_parameter_ptrs; *p; p++) {
+    const struct heif_encoder_parameter* param = *p;
+
+    if (param->has_default) {
+      switch (param->type) {
+        case heif_encoder_parameter_type_integer:
+          opj_set_parameter_integer(encoder, param->name, param->integer.default_value);
+          break;
+        case heif_encoder_parameter_type_boolean:
+          opj_set_parameter_boolean(encoder, param->name, param->boolean.default_value);
+          break;
+        case heif_encoder_parameter_type_string:
+          opj_set_parameter_string(encoder, param->name, param->string.default_value);
+          break;
+      }
+    }
+  }
+}
+
+
 void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum heif_chroma* inout_chroma)
 {
   // Replace the input colorspace/chroma with the one that is supported by the encoder and that
@@ -306,6 +358,10 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
   opj_cparameters_t parameters;
   opj_set_default_encoder_parameters(&parameters);
 
+  parameters.cp_disto_alloc = 1;
+  parameters.tcp_numlayers = 1;
+  parameters.tcp_rates[0] = (float)(1 + (100 - encoder->quality)/2);
+
 #if 0
   //Insert a human readable comment into the codestream
   if (parameters.cp_comment == NULL) {
@@ -331,7 +387,7 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
 
 
   //Create Stream
-  size_t bufferSize = 64*1024; // 64k
+  size_t bufferSize = 64 * 1024; // 64k
   opj_stream_t* stream = opj_stream_create(bufferSize, false /* read only mode */);
   if (stream == NULL) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
