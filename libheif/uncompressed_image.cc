@@ -409,7 +409,6 @@ static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::
 
     componentSet |= (1 << component_type);
   }
-
   if (componentSet == ((1 << component_type_red) | (1 << component_type_green) | (1 << component_type_blue)) ||
       componentSet == ((1 << component_type_red) | (1 << component_type_green) | (1 << component_type_blue) | (1 << component_type_alpha))) {
     *out_chroma = heif_chroma_444;
@@ -492,45 +491,36 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   }
 }
 
-static unsigned int get_bytes_per_pixel(const std::shared_ptr<Box_uncC>& uncC)
-{
-  unsigned int bytes = 0;
-  for (Box_uncC::Component component: uncC->get_components())
-  {
-    if (component.component_align_size == 0)
-    {
-      // TODO: needs more work when we have components with padding
-      unsigned int component_bytes = (component.component_bit_depth + 7) / 8;
-      bytes += component_bytes;
-    }
-    else
-    {
-      bytes += component.component_align_size;
-    }
-  }
-  return bytes;
-}
 
-static long unsigned int get_tile_base_offset(uint32_t col, uint32_t row, const std::shared_ptr<Box_uncC>& uncC, const std::vector<heif_channel>& channels, uint32_t width, uint32_t height)
-{
-  uint32_t numTileColumns = uncC->get_number_of_tile_columns();
-  uint32_t numTileRows = uncC->get_number_of_tile_rows();
-  uint32_t tile_width = width / numTileColumns;
-  uint32_t tile_height = height / numTileRows;
-  long unsigned int content_bytes_per_tile = tile_width * tile_height * get_bytes_per_pixel(uncC);
-  uint32_t tile_align_size = uncC->get_tile_align_size();
-  long unsigned int tile_padding = 0;
-  if (tile_align_size > 0) {
-    tile_padding = tile_align_size - (content_bytes_per_tile % tile_align_size);
+static bool map_uncompressed_component_to_channel(std::shared_ptr<Box_cmpd> &cmpd, Box_uncC::Component component, heif_channel *channel) {
+  uint16_t component_index = component.component_index;
+  uint16_t component_type = cmpd->get_components()[component_index].component_type;
+  switch (component_type) {
+  case component_type_Y:
+    *channel = heif_channel_Y;
+    return true;
+  case component_type_Cb:
+    *channel = heif_channel_Cb;
+    return true;
+  case component_type_Cr:
+    *channel = heif_channel_Cr;
+    return true;
+  case component_type_red:
+    *channel = heif_channel_R;
+    return true;
+  case component_type_green:
+    *channel = heif_channel_G;
+    return true;
+  case component_type_blue:
+    *channel = heif_channel_B;
+    return true;
+  case component_type_alpha:
+    *channel = heif_channel_Alpha;
+    return true;
+  default:
+    return false;
   }
-  long unsigned int bytes_per_tile = content_bytes_per_tile + tile_padding;
-  uint32_t tile_idx_y = row / tile_height;
-  uint32_t tile_idx_x = col / tile_width;
-  uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
-  long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
-  return tile_base_offset;
 }
-
 
 Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<const HeifFile>& heif_file,
                                                         heif_item_id ID,
@@ -608,143 +598,85 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
               colourspace,
               chroma);
 
-  std::vector<heif_channel> channels;
-  std::map<heif_channel, uint32_t> channel_to_pixelOffset;
-
   uint32_t componentOffset = 0;
   for (Box_uncC::Component component : uncC->get_components()) {
-    uint16_t component_index = component.component_index;
-    uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if (component_type == component_type_Y) {
-      img->add_plane(heif_channel_Y, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_Y);
-      channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
+    heif_channel channel;
+    if (map_uncompressed_component_to_channel(cmpd, component, &channel)) {
+      img->add_plane(channel, width, height, component.component_bit_depth);
     }
-    else if (component_type == component_type_Cb) {
-      img->add_plane(heif_channel_Cb, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_Cb);
-      channel_to_pixelOffset.emplace(heif_channel_Cb, componentOffset);
-    }
-    else if (component_type == component_type_Cr) {
-      img->add_plane(heif_channel_Cr, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_Cr);
-      channel_to_pixelOffset.emplace(heif_channel_Cr, componentOffset);
-    }
-    else if (component_type == component_type_red) {
-      img->add_plane(heif_channel_R, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_R);
-      channel_to_pixelOffset.emplace(heif_channel_R, componentOffset);
-    }
-    else if (component_type == component_type_green) {
-      img->add_plane(heif_channel_G, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_G);
-      channel_to_pixelOffset.emplace(heif_channel_G, componentOffset);
-    }
-    else if (component_type == component_type_blue) {
-      img->add_plane(heif_channel_B, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_B);
-      channel_to_pixelOffset.emplace(heif_channel_B, componentOffset);
-    }
-    else if (component_type == component_type_alpha) {
-      img->add_plane(heif_channel_Alpha, width, height, component.component_bit_depth);
-      channels.push_back(heif_channel_Alpha);
-      channel_to_pixelOffset.emplace(heif_channel_Alpha, componentOffset);
-    }
-
-    // TODO: other component types
     componentOffset++;
   }
 
-  // TODO: properly interpret uncompressed_data per uncC config, subsampling etc.
-  uint32_t bytes_per_channel = width * height;
-  uint32_t numTileColumns = uncC->get_number_of_tile_columns();
-  uint32_t numTileRows = uncC->get_number_of_tile_rows();
-  uint32_t tile_width = width / numTileColumns;
-  uint32_t tile_height = height / numTileRows;
-  if (uncC->get_interleave_type() == interleave_type_component) {
-    // Source is planar
-    // TODO: assumes 8 bits
-    long unsigned int content_bytes_per_tile = tile_width * tile_height * get_bytes_per_pixel(uncC);
-    uint32_t tile_align_size = uncC->get_tile_align_size();
-    long unsigned int tile_padding = 0;
-    if (tile_align_size > 0) {
-      tile_padding = tile_align_size - (content_bytes_per_tile % tile_align_size);
-    };
-    long unsigned int bytes_per_tile = content_bytes_per_tile + tile_padding;
-    for (uint32_t c = 0; c < channels.size(); c++) {
-      int stride;
-      uint8_t* dst = img->get_plane(channels[c], &stride);
-      if ((numTileRows == 1) && (numTileColumns == 1) && (((uint32_t) stride) == width)) {
-        memcpy(dst, uncompressed_data.data() + c * bytes_per_channel, bytes_per_channel);
-      }
-      else {
-        int pixel_offset = channel_to_pixelOffset[channels[c]];
-        for (uint32_t row = 0; row < height; row++) {
-          for (uint32_t col = 0; col < width; col += tile_width) {
-            uint32_t tile_idx_y = row / tile_height;
-            uint32_t tile_idx_x = col / tile_width;
-            uint32_t tile_idx = tile_idx_y * numTileColumns + tile_idx_x;
-            long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
-            long unsigned int src_offset = tile_base_offset + pixel_offset * tile_width * tile_height;
-            long unsigned int dst_offset = row * stride + col;
-            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+  const uint32_t tile_height = height / uncC->get_number_of_tile_rows();
+  const uint32_t tile_width = width / uncC->get_number_of_tile_columns();
+  const uint8_t* src = uncompressed_data.data();
+  uint64_t src_offset = 0;
+  // TODO: needs to handle multiple bytes per sample, plus row padding
+  uint32_t bytes_per_tile_row = tile_width;
+  
+
+  for (uint32_t tile_row = 0; tile_row < uncC->get_number_of_tile_rows(); tile_row++) {
+    for (uint32_t tile_column = 0; tile_column < uncC->get_number_of_tile_columns(); tile_column++) {
+      if (uncC->get_interleave_type() == 0) {
+        for (Box_uncC::Component component : uncC->get_components()) {
+          heif_channel channel;
+          if (!map_uncompressed_component_to_channel(cmpd, component, &channel)) {
+            // TODO: we need to advance src_offset by the bytes in a tile for the channel
+            continue;
+          }
+          int stride;
+          uint8_t* dst_plane = img->get_plane(channel, &stride);
+          for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
+            uint64_t dst_row_number = tile_row * tile_height + tile_y;
+            uint64_t dst_row_offset = dst_row_number * stride;
+            uint64_t dst_column_offset = tile_column * tile_width;
+            memcpy(dst_plane + dst_row_offset + dst_column_offset, src + src_offset, bytes_per_tile_row);
+            src_offset += bytes_per_tile_row;
           }
         }
+      } else if (uncC->get_interleave_type() == 1) {
+        for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
+          for (uint32_t tile_x = 0; tile_x < tile_width; tile_x++) {
+            for (Box_uncC::Component component : uncC->get_components()) {
+              heif_channel channel;
+              if (!map_uncompressed_component_to_channel(cmpd, component, &channel)) {
+                // TODO: we need to advance src_offset by the bytes a single component sample
+                continue;
+              }
+              int stride;
+              uint8_t* dst_plane = img->get_plane(channel, &stride);
+              uint64_t dst_row_number = tile_row * tile_height + tile_y;
+              uint64_t dst_row_offset = dst_row_number * stride;
+              uint64_t dst_col_number = tile_column * tile_width + tile_x;
+              uint64_t dst_column_offset = dst_col_number; // TODO: bytes per sample
+              dst_plane[dst_row_offset + dst_column_offset] = src[src_offset];
+             src_offset += 1; // TODO: bytes per sample
+            }
+          }
+        }
+      } else if (uncC->get_interleave_type() == 3) {
+        for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
+          for (Box_uncC::Component component : uncC->get_components()) {
+            heif_channel channel;
+            if (!map_uncompressed_component_to_channel(cmpd, component, &channel)) {
+              // TODO: we need to advance src_offset by the bytes in a component row
+              continue;
+            }
+            int stride;
+            uint8_t* dst_plane = img->get_plane(channel, &stride);
+            uint64_t dst_row_number = tile_row * tile_height + tile_y;
+            uint64_t dst_row_offset = dst_row_number * stride;
+            uint64_t dst_column_offset = tile_column * tile_width;
+            memcpy(dst_plane + dst_row_offset + dst_column_offset, src + src_offset, bytes_per_tile_row);
+            src_offset += bytes_per_tile_row;
+          }
+        }
+      } else {
+        std::cout << "unsupported interleave type: " << (int)(uncC->get_interleave_type()) << std::endl;
       }
-    }
-  }
-  else if (uncC->get_interleave_type() == interleave_type_pixel) {
-    // TODO: we need to be smarter about block size, etc
-
-    // TODO: we can only do this if we are 8 bits
-    long unsigned int pixel_stride = get_bytes_per_pixel(uncC);
-    const uint8_t* src = uncompressed_data.data();
-    for (uint32_t c = 0; c < channels.size(); c++) {
-      int pixel_offset = channel_to_pixelOffset[channels[c]];
-      int stride;
-      uint8_t* dst = img->get_plane(channels[c], &stride);
-      for (uint32_t row = 0; row < height; row++) {
-        long unsigned int tile_row_idx = row % tile_height;
-        long unsigned int tile_row_offset = tile_width * tile_row_idx * channels.size();
-        uint32_t col = 0;
-        for (col = 0; col < width; col++) {
-          long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
-          long unsigned int tile_col = col % tile_width;
-          long unsigned int tile_offset = tile_row_offset + tile_col * pixel_stride + pixel_offset;
-          long unsigned int src_offset = tile_base_offset + tile_offset;
-          uint32_t dstPixelIndex = row * stride + col;
-          dst[dstPixelIndex] = src[src_offset];
-        }
-        for (; col < (uint32_t) stride; col++) {
-          uint32_t dstPixelIndex = row * stride + col;
-          dst[dstPixelIndex] = 0;
-        }
-      }
-    }
-  }
-  else if (uncC->get_interleave_type() == interleave_type_row) {
-    // TODO: we need to be smarter about block size, etc
-
-    // TODO: we can only do this if we are 8 bits
-    for (uint32_t c = 0; c < channels.size(); c++) {
-      int pixel_offset = channel_to_pixelOffset[channels[c]];
-      int stride;
-      uint8_t* dst = img->get_plane(channels[c], &stride);
-      for (uint32_t row = 0; row < height; row++) {
-        long unsigned int tile_row_idx = row % tile_height;
-        long unsigned int tile_row_offset = tile_width * (tile_row_idx * channels.size() + pixel_offset);
-        uint32_t col = 0;
-        for (col = 0; col < width; col += tile_width) {
-          long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
-          long unsigned int tile_col = col % tile_width;
-          long unsigned int tile_offset = tile_row_offset + tile_col;
-          long unsigned int src_offset = tile_base_offset + tile_offset;
-          uint32_t dst_offset = row * stride + col;
-          memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
-        }
-        for (; col < (uint32_t) stride; col++) {
-          uint32_t dstPixelIndex = row * stride + col;
-          dst[dstPixelIndex] = 0;
+      if (uncC->get_tile_align_size() != 0) {
+        while (src_offset % uncC->get_tile_align_size() != 0) {
+          src_offset += 1;
         }
       }
     }
