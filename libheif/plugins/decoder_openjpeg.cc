@@ -314,12 +314,12 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   opj_stream_destroy(stream);
 
 
-  opj_image_comp_t opj_r = image->comps[0];
-  opj_image_comp_t opj_g = image->comps[1];
-  opj_image_comp_t opj_b = image->comps[2];
+  opj_image_comp_t opj_y = image->comps[0];
+  opj_image_comp_t opj_cb = image->comps[1];
+  opj_image_comp_t opj_cr = image->comps[2];
 
 
-  heif_colorspace colorspace = heif_colorspace_RGB;
+  heif_colorspace colorspace = heif_colorspace_YCbCr;
   heif_chroma chroma = heif_chroma_444; //heif_chroma_interleaved_RGB;
 
   struct heif_error error = heif_image_create(width, height, colorspace, chroma, out_img);
@@ -328,14 +328,14 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   }
 
   int bit_depth = 8;
-  error = heif_image_add_plane(*out_img, heif_channel_R, width, height, bit_depth);
-  error = heif_image_add_plane(*out_img, heif_channel_G, width, height, bit_depth);
-  error = heif_image_add_plane(*out_img, heif_channel_B, width, height, bit_depth);
+  error = heif_image_add_plane(*out_img, heif_channel_Y, width, height, bit_depth);
+  error = heif_image_add_plane(*out_img, heif_channel_Cb, width, height, bit_depth);
+  error = heif_image_add_plane(*out_img, heif_channel_Cr, width, height, bit_depth);
 
   int stride = -1;
-  uint8_t* r = heif_image_get_plane(*out_img, heif_channel_R, &stride);
-  uint8_t* g = heif_image_get_plane(*out_img, heif_channel_G, &stride);
-  uint8_t* b = heif_image_get_plane(*out_img, heif_channel_B, &stride);
+  uint8_t* r = heif_image_get_plane(*out_img, heif_channel_Y, &stride);
+  uint8_t* g = heif_image_get_plane(*out_img, heif_channel_Cb, &stride);
+  uint8_t* b = heif_image_get_plane(*out_img, heif_channel_Cr, &stride);
 
 
   // TODO: a SIMD implementation to convert int32 to uint8 would speed this up
@@ -343,9 +343,9 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 
   if (stride == width) {
     for (int i = 0; i < width * height; i++) {
-      r[i] = (uint8_t) opj_r.data[i];
-      g[i] = (uint8_t) opj_g.data[i];
-      b[i] = (uint8_t) opj_b.data[i];
+      r[i] = (uint8_t) opj_y.data[i];
+      g[i] = (uint8_t) opj_cb.data[i];
+      b[i] = (uint8_t) opj_cr.data[i];
     }
   }
   else {
@@ -354,9 +354,9 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
       for (int x = 0; x < width; x++) {
         i = (stride * y) + x;
         i_opj = (width * y) + x;
-        r[i] = (uint8_t) opj_r.data[i_opj];
-        g[i] = (uint8_t) opj_g.data[i_opj];
-        b[i] = (uint8_t) opj_b.data[i_opj];
+        r[i] = (uint8_t) opj_y.data[i_opj];
+        g[i] = (uint8_t) opj_cb.data[i_opj];
+        b[i] = (uint8_t) opj_cr.data[i_opj];
       }
     }
   }

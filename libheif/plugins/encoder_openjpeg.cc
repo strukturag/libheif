@@ -175,7 +175,7 @@ void opj_query_input_colorspace(enum heif_colorspace* inout_colorspace, enum hei
     *inout_chroma = heif_chroma_monochrome;
   }
   else {
-    *inout_colorspace = heif_colorspace_RGB; // YCbCr;
+    *inout_colorspace = heif_colorspace_YCbCr;
     *inout_chroma = heif_chroma_444;
   }
 }
@@ -189,7 +189,7 @@ void opj_query_input_colorspace2(void* encoder, enum heif_colorspace* inout_colo
     *inout_chroma = heif_chroma_monochrome;
   }
   else {
-    *inout_colorspace = heif_colorspace_RGB; // YCbCr;
+    *inout_colorspace = heif_colorspace_YCbCr;
     *inout_chroma = heif_chroma_444;
     //*inout_chroma = encoder->chroma;
   }
