@@ -22,9 +22,12 @@
 #define LIBHEIF_JPEG2000_H
 
 #include "box.h"
+#include "file.h"
+#include "context.h"
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <memory>
 
 /**
  * JPEG 2000 Channel Definition box.
@@ -101,6 +104,8 @@ public:
     * @param channel the channel to add
     */
     void add_channel(Channel channel) { m_channels.push_back(channel); }
+
+    void set_channels(heif_colorspace colorspace);
 
 protected:
     Error parse(BitstreamRange &range) override;
@@ -314,5 +319,45 @@ public:
 protected:
     Error parse(BitstreamRange &range) override;
 };
+
+class Jpeg2000ImageCodec
+{
+public:
+
+//   static Error decode_jpeg2000_image(const std::shared_ptr<const HeifFile>& heif_file,
+//                                      heif_item_id ID,
+//                                      std::shared_ptr<HeifPixelImage>& img,
+//                                      uint32_t maximum_image_width_limit,
+//                                      uint32_t maximum_image_height_limit,
+//                                      const std::vector<uint8_t>& uncompressed_data);
+
+  static Error encode_jpeg2000_image(const std::shared_ptr<HeifFile>& heif_file,
+                                     const std::shared_ptr<HeifPixelImage>& src_image,
+                                     void* encoder_struct,
+                                     const struct heif_encoding_options& options,
+                                     std::shared_ptr<HeifContext::Image>& out_image);
+};
+
+struct JPEG2000_SIZ_segment
+{
+  int x0 = 0, y0 = 0;
+  int width = 0, height = 0;
+
+  int tile_x0 = 0, tile_y0 = 0;
+  int tile_width = 0, tile_height = 0;
+
+  int decoder_capabilities = 0;
+
+  struct component
+  {
+    uint8_t h_separation, v_separation;
+    uint8_t precision;
+    bool is_signed;
+  };
+
+  std::vector<component> components;
+};
+
+JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID);
 
 #endif // LIBHEIF_JPEG2000_H

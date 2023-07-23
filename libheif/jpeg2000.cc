@@ -70,6 +70,42 @@ Error Box_cdef::write(StreamWriter& writer) const
 }
 
 
+void Box_cdef::set_channels(heif_colorspace colorspace)
+{
+  // TODO - Check for the presence of a cmap box which specifies channel indices.
+
+  const uint16_t TYPE_COLOR = 0;
+  const uint16_t ASOC_GREY = 1;
+  const uint16_t ASOC_RED = 1;
+  const uint16_t ASOC_GREEN = 2;
+  const uint16_t ASOC_BLUE = 3;
+  const uint16_t ASOC_Y = 1;
+  const uint16_t ASOC_Cb = 2;
+  const uint16_t ASOC_Cr = 3;
+
+  switch (colorspace) {
+    case heif_colorspace_RGB:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_RED});
+      m_channels.push_back({1, TYPE_COLOR, ASOC_GREEN});
+      m_channels.push_back({2, TYPE_COLOR, ASOC_BLUE});
+      break;
+
+    case heif_colorspace_YCbCr:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_Y});
+      m_channels.push_back({1, TYPE_COLOR, ASOC_Cb});
+      m_channels.push_back({2, TYPE_COLOR, ASOC_Cr});
+      break;
+
+    case heif_colorspace_monochrome:
+      m_channels.push_back({0, TYPE_COLOR, ASOC_GREY});
+      break;
+
+    default:
+      //TODO - Handle remaining cases.
+      break;
+  }
+}
+
 Error Box_cmap::parse(BitstreamRange& range)
 {
     while (!range.eof() && !range.error()) {
@@ -286,3 +322,68 @@ std::string Box_j2kH::dump(Indent& indent) const
     return sstr.str();
 }
 
+
+int read16(const std::vector<uint8_t>& data, int offset)
+{
+  return (data[offset]<<8) | data[offset+1];
+}
+
+
+int read32(const std::vector<uint8_t>& data, int offset)
+{
+  return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+}
+
+
+JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID)
+{
+  std::vector<uint8_t> data;
+  Error err = file.get_compressed_image_data(imageID, &data);
+  if (err) {
+    return {};
+  }
+
+  for (size_t i = 0; i + 1 < data.size(); i++) {
+    if (data[i] == 0xFF && data[i+1] & 0x51) {
+
+      JPEG2000_SIZ_segment siz;
+
+      // space for full header and one component
+      if (i+2+38+3 > data.size()) {
+        return {};
+      }
+
+      // read number of components
+
+      int nComponents = read16(data, 40);
+
+      if (i+2+38+nComponents*3 > data.size()) {
+        return {};
+      }
+
+      siz.decoder_capabilities = read16(data, 6);
+      siz.width = read32(data, 8);
+      siz.height = read32(data, 12);
+      siz.x0 = read32(data, 16);
+      siz.y0 = read32(data, 20);
+      siz.tile_width = read32(data, 24);
+      siz.tile_height = read32(data, 28);
+      siz.tile_x0 = read32(data, 32);
+      siz.tile_y0 = read32(data, 36);
+
+      for (int c = 0; c < nComponents; c++) {
+        JPEG2000_SIZ_segment::component comp;
+        comp.precision = data[42 + c * 3];
+        comp.is_signed = (comp.precision & 0x80);
+        comp.precision = (comp.precision & 0x7F) + 1;
+        comp.h_separation = data[43 + c *3];
+        comp.v_separation = data[44 + c *3];
+        siz.components.push_back(comp);
+      }
+
+      return siz;
+    }
+  }
+
+  return {};
+}

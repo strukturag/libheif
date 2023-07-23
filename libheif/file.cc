@@ -21,6 +21,7 @@
 #include "file.h"
 #include "libheif/box.h"
 #include "libheif/heif.h"
+#include "libheif/jpeg2000.h"
 
 #include <cstdint>
 #include <fstream>
@@ -41,6 +42,7 @@
 #endif
 
 #include "metadata_compression.h"
+#include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"
@@ -177,6 +179,13 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       m_ftyp_box->set_major_brand(heif_brand2_mif2);
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(heif_brand2_mif1);
+      break;
+
+    case heif_compression_JPEG2000:
+      m_ftyp_box->set_major_brand(fourcc("j2ki"));
+      m_ftyp_box->set_minor_version(0);
+      m_ftyp_box->add_compatible_brand(fourcc("mif1"));
+      m_ftyp_box->add_compatible_brand(fourcc("j2ki"));
       break;
 
     default:
@@ -560,6 +569,17 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     return jpeg_get_bits_per_pixel(imageID);
   }
 
+  // JPEG 2000
+
+  if (image_type == "j2k1") {
+    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
+    if (siz.components.empty()) {
+      return -1;
+    }
+
+    return siz.components[0].precision;
+  }
+
 #if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
@@ -610,6 +630,18 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
 
   if (image_type == "jpeg" || (image_type=="mime" && get_content_type(imageID)=="image/jpeg")) {
     return jpeg_get_bits_per_pixel(imageID);
+  }
+
+  // JPEG 2000
+
+  if (image_type == "j2k1") {
+    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
+    if (siz.components.size() <= 1) {
+      return -1;
+    }
+
+    // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
+    return siz.components[1].precision;
   }
 
   return -1;
@@ -782,6 +814,40 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
         }
       }
     }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+  }
+  else if (item_type == "j2k1") {
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_j2kH> j2kH_box;
+    for (auto& prop : properties) {
+      if (prop->get_short_type() == fourcc("j2kH")) {
+        j2kH_box = std::dynamic_pointer_cast<Box_j2kH>(prop);
+        if (j2kH_box) {
+          break;
+        }
+      }
+    }
+
+    if (!j2kH_box) {
+      // Should always have an j2kH box, because we are checking this in
+      // heif_context::interpret_heif_file()
+
+      //TODO - Correctly Find the j2kH box
+      // return Error(heif_error_Invalid_input,
+      //              heif_suberror_Unspecified);
+    }
+    // else if (!j2kH_box->get_headers(data)) {
+    //   return Error(heif_error_Invalid_input,
+    //                heif_suberror_No_item_data);
+    // }
 
     error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
@@ -1070,6 +1136,16 @@ Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configur
     return Error(heif_error_Usage_error,
                  heif_suberror_No_av1C_box);
   }
+}
+
+std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id) 
+{
+  auto j2kH = std::make_shared<Box_j2kH>();
+  int index = m_ipco_box->append_child_box(j2kH);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+
+  return j2kH;
 }
 
 

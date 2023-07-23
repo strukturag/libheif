@@ -131,6 +131,9 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
     else if (brand == heif_brand2_jpeg) {
       return heif_filetype_yes_supported;
     }
+    else if (brand == heif_brand2_j2ki) {
+      return heif_filetype_yes_supported;
+    }
     else if (brand == heif_brand2_mif1) {
       return heif_filetype_maybe;
     }
@@ -212,6 +215,12 @@ heif_brand heif_fourcc_to_brand_enum(const char* fourcc)
   }
   else if (strcmp(brand, "vvic") == 0) {
     return heif_vvic;
+  }
+  else if (strcmp(brand, "j2ki") == 0) {
+    return heif_j2ki;
+  }
+  else if (strcmp(brand, "j2is") == 0) {
+    return heif_j2is;
   }
   else {
     return heif_unknown_brand;
@@ -406,6 +415,12 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
   }
   else if (mainBrand == heif_avis) {
     return "image/avif-sequence";
+  }
+  else if (mainBrand == heif_j2ki) {
+    return "image/hej2k";
+  }
+  else if (mainBrand == heif_j2is) {
+    return "image/j2is";
   }
   else if (is_jpeg(data, len) == TriBool::Yes) {
     return "image/jpeg";
@@ -2263,7 +2278,7 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
   std::vector<decoder_with_priority> plugins;
   std::vector<heif_compression_format> formats;
   if (format_filter == heif_compression_undefined) {
-    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_VVC};
+    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_VVC};
   }
   else {
     formats.emplace_back(format_filter);

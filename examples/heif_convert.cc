@@ -168,6 +168,9 @@ void list_all_decoders()
   std::cout << "JPEG decoders:\n";
   list_decoders(heif_compression_JPEG);
 
+  std::cout << "JPEG-2000 decoders:\n";
+  list_decoders(heif_compression_JPEG2000);
+
 #if WITH_UNCOMPRESSED_CODEC
   std::cout << "uncompressed: yes\n";
 #else

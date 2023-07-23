@@ -46,6 +46,7 @@
 #include "libheif/color-conversion/colorconversion.h"
 #include "mask_image.h"
 #include "metadata_compression.h"
+#include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_image.h"
@@ -511,6 +512,7 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "vvc1" ||
           item_type == "jpeg" ||
           (item_type == "mime" && content_type == "image/jpeg") ||
+          item_type == "j2k1" ||
           item_type == "mski");
 }
 
@@ -1174,6 +1176,8 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     return err;
   }
 
+  // TODO: this should be codec specific. JPEG-2000, for example, can use RGB internally.
+
   *out_colorspace = heif_colorspace_YCbCr;
   *out_chroma = heif_chroma_420;
 
@@ -1278,6 +1282,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
   if (image_type == "hvc1" ||
       image_type == "av01" ||
+      image_type == "j2k1" ||
       image_type == "jpeg" ||
       (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg")) {
 
@@ -1291,6 +1296,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     else if (image_type == "jpeg" ||
              (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg")) {
       compression = heif_compression_JPEG;
+    }
+    else if (image_type == "j2k1") {
+      compression = heif_compression_JPEG2000;
     }
 
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
@@ -2237,6 +2245,14 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
                                   out_image);
     }
       break;
+    case heif_compression_JPEG2000: {
+      error = encode_image_as_jpeg2000(pixel_image,
+                                       encoder,
+                                       options,
+                                       heif_image_input_class_normal,
+                                       out_image);
+      }
+      break;
 
     case heif_compression_JPEG: {
       error = encode_image_as_jpeg(pixel_image,
@@ -2290,17 +2306,33 @@ static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uin
 
 void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id)
 {
+  auto colorspace = src_image->get_colorspace();
+  auto chroma = src_image->get_chroma_format();
+
+
   // --- write PIXI property
 
-  if (src_image->get_chroma_format() == heif_chroma_monochrome) {
+  if (colorspace == heif_colorspace_monochrome) {
     m_heif_file->add_pixi_property(image_id,
                                    src_image->get_bits_per_pixel(heif_channel_Y), 0, 0);
   }
-  else {
+  else if (colorspace == heif_colorspace_YCbCr) {
     m_heif_file->add_pixi_property(image_id,
                                    src_image->get_bits_per_pixel(heif_channel_Y),
                                    src_image->get_bits_per_pixel(heif_channel_Cb),
                                    src_image->get_bits_per_pixel(heif_channel_Cr));
+  }
+  else if (colorspace == heif_colorspace_RGB) {
+    if (chroma == heif_chroma_444) {
+      m_heif_file->add_pixi_property(image_id,
+                                     src_image->get_bits_per_pixel(heif_channel_R),
+                                     src_image->get_bits_per_pixel(heif_channel_G),
+                                     src_image->get_bits_per_pixel(heif_channel_B));
+    }
+    else if (chroma == heif_chroma_interleaved_RGB ||
+             chroma == heif_chroma_interleaved_RGBA) {
+      m_heif_file->add_pixi_property(image_id, 8, 8, 8);
+    }
   }
 
 
@@ -2339,15 +2371,21 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
 
 
 static bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                                      const std::shared_ptr<const color_profile_nclx>& image_nclx,
+                                      std::shared_ptr<const color_profile_nclx> image_nclx,
                                       const struct heif_color_profile_nclx* spec_nclx)
 {
   if (colorspace != heif_colorspace_YCbCr) {
     return true;
   }
 
-  if (!image_nclx || !spec_nclx) {
+  // Do target specification -> always matches
+  if (!spec_nclx) {
     return true;
+  }
+
+  if (!image_nclx) {
+    // if no input nclx is specified, compare against default one
+    image_nclx = std::make_shared<color_profile_nclx>();
   }
 
   if (image_nclx->get_full_range_flag() != spec_nclx->full_range_flag) {
@@ -2396,7 +2434,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   std::shared_ptr<HeifPixelImage> src_image;
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format() ||
-      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
     src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
@@ -2604,7 +2642,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   std::shared_ptr<HeifPixelImage> src_image;
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format() ||
-      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
     src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
@@ -2742,6 +2780,102 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   return Error::Ok;
 }
 
+Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
+                                            struct heif_encoder* encoder,
+                                            const struct heif_encoding_options& options,
+                                            enum heif_image_input_class input_class,
+                                            std::shared_ptr<Image>& out_image) {
+
+  heif_item_id image_id = m_heif_file->add_new_image("j2k1");
+
+  out_image = std::make_shared<Image>(this, image_id);
+  m_top_level_images.push_back(out_image);
+
+
+  // TODO: simplify the color-conversion part. It's the same for each codec.
+  // ---begin---
+  heif_colorspace colorspace = image->get_colorspace();
+  heif_chroma chroma = image->get_chroma_format();
+
+  /*
+  auto color_profile = image->get_color_profile_nclx();
+  if (!color_profile) {
+    color_profile = std::make_shared<color_profile_nclx>();
+  }
+  auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
+*/
+
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+
+  if (encoder->plugin->plugin_api_version >= 2) {
+    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
+  }
+  else {
+    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
+  }
+
+  std::shared_ptr<HeifPixelImage> src_image;
+  if (colorspace != image->get_colorspace() ||
+      chroma != image->get_chroma_format() ||
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
+    int output_bpp = 0; // same as input
+    src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
+                                   output_bpp, options.color_conversion_options);
+    if (!src_image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
+  }
+  else {
+    src_image = image;
+  }
+  // ---end---
+
+
+  //Encode Image
+  heif_image c_api_image;
+  c_api_image.image = src_image;
+  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+
+  //Get Compressed Data
+  for (;;) {
+    uint8_t* data;
+    int size;
+    
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+    
+    if (data == NULL) {
+      break;
+    }
+
+    std::vector<uint8_t> vec;
+    vec.resize(size);
+    memcpy(vec.data(), data, size);
+
+    m_heif_file->append_iloc_data(image_id, vec);
+  }
+
+
+
+  //Add 'ispe' Property 
+  m_heif_file->add_ispe_property(image_id, image->get_width(), image->get_height());
+
+  //Add 'colr' Property
+  m_heif_file->set_color_profile(image_id, target_nclx_profile);
+
+  //Add 'j2kH' Property
+  auto j2kH = m_heif_file->add_j2kH_property(image_id);
+
+  //Add 'cdef' to 'j2kH'
+  auto cdef = std::make_shared<Box_cdef>();
+  cdef->set_channels(src_image->get_colorspace());
+  j2kH->append_child_box(cdef);
+
+  //write_image_metadata(src_image, image_id);   // TODO: currently writes invalid bpp=255
+
+  return Error::Ok;
+}
+
 
 static uint8_t JPEG_SOS = 0xDA;
 
@@ -2796,7 +2930,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
   std::shared_ptr<HeifPixelImage> src_image;
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format() ||
-      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), &target_heif_nclx)) {
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), &target_heif_nclx)) {
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
     src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
@@ -2944,7 +3078,6 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   return Error::Ok;
 }
-
 
 Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                                 struct heif_encoder* encoder,

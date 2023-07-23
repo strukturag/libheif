@@ -60,12 +60,24 @@
 #include "libheif/plugins/encoder_uncompressed.h"
 #endif
 
+#if HAVE_OPENJPEG
+#include "libheif/plugins/heif_encoder_openjpeg.h"
+#endif
+
 #if HAVE_JPEG_DECODER
 #include "libheif/plugins/decoder_jpeg.h"
 #endif
 
 #if HAVE_JPEG_ENCODER
 #include "libheif/plugins/encoder_jpeg.h"
+#endif
+
+#if HAVE_OPENJPEG_ENCODER
+#include "libheif/plugins/encoder_openjpeg.h"
+#endif
+
+#if HAVE_OPENJPEG_DECODER
+#include "libheif/plugins/decoder_openjpeg.h"
 #endif
 
 #include "libheif/plugins/encoder_mask.h"
@@ -127,6 +139,18 @@ void register_default_plugins()
 
 #if HAVE_JPEG_ENCODER
   register_encoder(get_encoder_plugin_jpeg());
+#endif
+
+#if HAVE_OPENJPEG
+  heif::register_encoder(get_encoder_plugin_openjpeg());
+#endif
+
+#if HAVE_OPENJPEG_ENCODER
+  register_encoder(get_encoder_plugin_openjpeg());
+#endif
+
+#if HAVE_OPENJPEG_DECODER
+  register_decoder(get_decoder_plugin_openjpeg());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

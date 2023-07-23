@@ -3832,4 +3832,3 @@ Error Box_udes::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
   return Error::Ok;
 }
-
