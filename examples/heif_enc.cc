@@ -159,7 +159,7 @@ void show_help(const char* argv0)
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
-            << "      --jpeg2000        encode as JPEG-2000\n"
+            << "      --jpeg2000        encode as JPEG-2000 (experimental)\n"
 #if ENABLE_UNCOMPRESSED_ENCODER
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif

@@ -299,7 +299,7 @@ static void opj_close_from_buffer(void* p_user_data)
 // compressed image pixel data and very basic metadata. 
 // @param data - Uncompressed image pixel data
 // @param encoder - The function will output codestream in encoder->codestream
-static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder, size_t buffersize)
+static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_opj* encoder)
 {
   heif_error error;
   OPJ_BOOL success;
@@ -331,7 +331,8 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
 
 
   //Create Stream
-  opj_stream_t* stream = opj_stream_create(buffersize, false /* read only mode */);
+  size_t bufferSize = 64*1024; // 64k
+  opj_stream_t* stream = opj_stream_create(bufferSize, false /* read only mode */);
   if (stream == NULL) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
@@ -463,10 +464,8 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
 
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
-  size_t buffersize = width * height * band_count;
-
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
-  err = generate_codestream(opj_image, encoder, buffersize);
+  err = generate_codestream(opj_image, encoder);
 
   return err;
 }
