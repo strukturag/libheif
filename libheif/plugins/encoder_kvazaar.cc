@@ -707,7 +707,7 @@ const struct heif_encoder_plugin* get_encoder_plugin_kvazaar()
 }
 
 
-#if PLUGIN_kvazaar
+#if PLUGIN_KVAZAAR
 heif_plugin_info plugin_info {
   1,
   heif_plugin_type_encoder,
