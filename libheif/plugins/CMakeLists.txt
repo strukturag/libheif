@@ -68,7 +68,7 @@ set(SvtEnc_extra_plugin_sources)
 plugin_compilation(svtenc SvtEnc SvtEnc SvtEnc)
 
 set(RAV1E_sources encoder_rav1e.cc encoder_rav1e.h)
-set(RAV1E_extra_plugin_sources ../box.cc ../error.cc)
+set(RAV1E_extra_plugin_sources ../error.cc)
 plugin_compilation(rav1e RAV1E RAV1E RAV1E)
 
 set(JPEG_DECODER_sources decoder_jpeg.cc decoder_jpeg.h)
