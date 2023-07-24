@@ -615,7 +615,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   // TODO: needs to handle multiple bytes per sample, plus row padding
   uint32_t bytes_per_tile_row = tile_width;
   
-  if (uncC->get_interleave_type() == 4) {
+  if (uncC->get_interleave_type() == interleave_type_tile_component) {
     for (Box_uncC::Component component : uncC->get_components()) {
       heif_channel channel;
       if (!map_uncompressed_component_to_channel(cmpd, component, &channel)) {
@@ -644,7 +644,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   } else {
     for (uint32_t tile_row = 0; tile_row < uncC->get_number_of_tile_rows(); tile_row++) {
       for (uint32_t tile_column = 0; tile_column < uncC->get_number_of_tile_columns(); tile_column++) {
-        if (uncC->get_interleave_type() == 0) {
+        if (uncC->get_interleave_type() == interleave_type_component) {
           for (Box_uncC::Component component : uncC->get_components()) {
             heif_channel channel;
             if (!map_uncompressed_component_to_channel(cmpd, component, &channel)) {
@@ -661,7 +661,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
               src_offset += bytes_per_tile_row;
             }
           }
-        } else if (uncC->get_interleave_type() == 1) {
+        } else if (uncC->get_interleave_type() == interleave_type_pixel) {
           for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
             for (uint32_t tile_x = 0; tile_x < tile_width; tile_x++) {
               for (Box_uncC::Component component : uncC->get_components()) {
@@ -681,7 +681,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
               }
             }
           }
-        } else if (uncC->get_interleave_type() == 3) {
+        } else if (uncC->get_interleave_type() == interleave_type_row) {
           for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
             for (Box_uncC::Component component : uncC->get_components()) {
               heif_channel channel;
