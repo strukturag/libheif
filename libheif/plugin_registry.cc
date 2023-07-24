@@ -23,6 +23,8 @@
 #include <algorithm>
 
 #include "plugin_registry.h"
+#include "init.h"
+
 
 #if HAVE_LIBDE265
 #include "libheif/plugins/decoder_libde265.h"
@@ -86,6 +88,22 @@ std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
 std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
               encoder_descriptor_priority_order> s_encoder_descriptors;
+
+std::set<const struct heif_decoder_plugin*>& get_decoder_plugins()
+{
+  load_plugins_if_not_initialized_yet();
+
+  return s_decoder_plugins;
+}
+
+extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
+                     encoder_descriptor_priority_order>& get_encoder_descriptors()
+{
+  load_plugins_if_not_initialized_yet();
+
+  return s_encoder_descriptors;
+}
+
 
 // Note: we cannot move this to 'heif_init' because we have to make sure that this is initialized
 // AFTER the two global std::set above.
@@ -242,3 +260,40 @@ get_filtered_encoder_descriptors(enum heif_compression_format format,
 
   return filtered_descriptors;
 }
+
+
+void heif_unregister_decoder_plugins()
+{
+  for (const auto* plugin : s_decoder_plugins) {
+    if (plugin->deinit_plugin) {
+      (*plugin->deinit_plugin)();
+    }
+  }
+  s_decoder_plugins.clear();
+}
+
+void heif_unregister_encoder_plugins()
+{
+  for (const auto& plugin : s_encoder_descriptors) {
+    if (plugin->plugin->cleanup_plugin) {
+      (*plugin->plugin->cleanup_plugin)();
+    }
+  }
+  s_encoder_descriptors.clear();
+}
+
+#if ENABLE_PLUGIN_LOADING
+void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
+{
+  if (plugin->cleanup_plugin) {
+    (*plugin->cleanup_plugin)();
+  }
+
+  for (auto iter = s_encoder_descriptors.begin() ; iter != s_encoder_descriptors.end(); ++iter) {
+    if ((*iter)->plugin == plugin) {
+      s_encoder_descriptors.erase(iter);
+      return;
+    }
+  }
+}
+#endif

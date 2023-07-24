@@ -53,16 +53,24 @@ struct encoder_descriptor_priority_order
 };
 
 
-extern std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
+extern std::set<const struct heif_decoder_plugin*>& get_decoder_plugins();
 
 extern std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
-                     encoder_descriptor_priority_order> s_encoder_descriptors;
+                     encoder_descriptor_priority_order>& get_encoder_descriptors();
 
 void register_default_plugins();
 
 void register_decoder(const heif_decoder_plugin* decoder_plugin);
 
 void register_encoder(const heif_encoder_plugin* encoder_plugin);
+
+void heif_unregister_decoder_plugins();
+
+void heif_unregister_encoder_plugins();
+
+#if ENABLE_PLUGIN_LOADING
+void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin);
+#endif
 
 const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id);
 

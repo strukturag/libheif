@@ -2284,7 +2284,7 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
     formats.emplace_back(format_filter);
   }
 
-  for (const auto* plugin : s_decoder_plugins) {
+  for (const auto* plugin : get_decoder_plugins()) {
     for (auto& format : formats) {
       int priority = plugin->does_support_format(format);
       if (priority) {

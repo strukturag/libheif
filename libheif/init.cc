@@ -26,13 +26,17 @@
 #include "libheif/color-conversion/colorconversion.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
+
 #include <mutex>
+
 #endif
 
 #if defined(_WIN32)
 #include "plugins_windows.h"
 #else
+
 #include "plugins_unix.h"
+
 #endif
 
 void heif_unload_all_plugins();
@@ -66,6 +70,7 @@ std::vector<std::string> list_all_potential_plugins_in_directory(const char* dir
   return list_all_potential_plugins_in_directory_unix(directory);
 #endif
 }
+
 #else
 std::vector<std::string> get_plugin_paths()
 {
@@ -79,12 +84,23 @@ static bool default_plugins_registered = true; // because they are implicitly re
 
 
 #if ENABLE_MULTITHREADING_SUPPORT
+
 static std::recursive_mutex& heif_init_mutex()
 {
   static std::recursive_mutex init_mutex;
   return init_mutex;
 }
+
 #endif
+
+
+void load_plugins_if_not_initialized_yet()
+{
+  if (heif_library_initialization_count == 0) {
+    heif_init(nullptr);
+  }
+}
+
 
 struct heif_error heif_init(struct heif_init_params*)
 {
@@ -120,42 +136,6 @@ struct heif_error heif_init(struct heif_init_params*)
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
-
-static void heif_unregister_decoder_plugins()
-{
-  for (const auto* plugin : s_decoder_plugins) {
-    if (plugin->deinit_plugin) {
-      (*plugin->deinit_plugin)();
-    }
-  }
-  s_decoder_plugins.clear();
-}
-
-static void heif_unregister_encoder_plugins()
-{
-  for (const auto& plugin : s_encoder_descriptors) {
-    if (plugin->plugin->cleanup_plugin) {
-      (*plugin->plugin->cleanup_plugin)();
-    }
-  }
-  s_encoder_descriptors.clear();
-}
-
-#if ENABLE_PLUGIN_LOADING
-void heif_unregister_encoder_plugin(const heif_encoder_plugin* plugin)
-{
-  if (plugin->cleanup_plugin) {
-    (*plugin->cleanup_plugin)();
-  }
-
-  for (auto iter = s_encoder_descriptors.begin() ; iter != s_encoder_descriptors.end(); ++iter) {
-    if ((*iter)->plugin == plugin) {
-      s_encoder_descriptors.erase(iter);
-      return;
-    }
-  }
-}
-#endif
 
 void heif_deinit()
 {
@@ -194,7 +174,6 @@ typedef PluginLibrary_Windows PluginLibrary_SysDep;
 #else
 typedef PluginLibrary_Unix PluginLibrary_SysDep;
 #endif
-
 
 
 struct loaded_plugin

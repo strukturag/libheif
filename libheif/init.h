@@ -48,4 +48,7 @@ public:
 
 std::vector<std::string> get_plugin_paths();
 
+// This is for implicit initialization when heif_init() is not called.
+void load_plugins_if_not_initialized_yet();
+
 #endif //LIBHEIF_INIT_H
