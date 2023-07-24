@@ -356,6 +356,8 @@ struct JPEG2000_SIZ_segment
   };
 
   std::vector<component> components;
+
+  heif_chroma get_chroma_format() const;
 };
 
 JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID);

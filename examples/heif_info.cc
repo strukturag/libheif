@@ -269,7 +269,7 @@ int main(int argc, char** argv)
         printf("RGB");
         break;
       case heif_colorspace_monochrome:
-        printf("monochroma");
+        printf("monochrome");
         break;
       default:
         printf("unknown");
@@ -301,7 +301,7 @@ int main(int argc, char** argv)
     int chroma_depth = heif_image_handle_get_chroma_bits_per_pixel(handle);
 
     printf("  bit depth: ");
-    if (luma_depth==chroma_depth) {
+    if (chroma == heif_chroma_monochrome || luma_depth==chroma_depth) {
       printf("%d\n", luma_depth);
     }
     else {

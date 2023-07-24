@@ -1179,7 +1179,7 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
   // TODO: this should be codec specific. JPEG-2000, for example, can use RGB internally.
 
   *out_colorspace = heif_colorspace_YCbCr;
-  *out_chroma = heif_chroma_420;
+  *out_chroma = heif_chroma_undefined;
 
   if (auto hvcC = m_heif_context->m_heif_file->get_property<Box_hvcC>(id)) {
     *out_chroma = (heif_chroma)(hvcC->get_configuration().chroma_format);
@@ -1187,8 +1187,9 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
   else if (auto av1C = m_heif_context->m_heif_file->get_property<Box_av1C>(id)) {
     *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
   }
-  else {
-    *out_chroma = heif_chroma_undefined;
+  else if (auto j2kH = m_heif_context->m_heif_file->get_property<Box_j2kH>(id)) {
+    JPEG2000_SIZ_segment siz = jpeg2000_get_SIZ_segment(*m_heif_context->m_heif_file, id);
+    *out_chroma = siz.get_chroma_format();
   }
 
   return err;
@@ -2871,7 +2872,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   cdef->set_channels(src_image->get_colorspace());
   j2kH->append_child_box(cdef);
 
-  //write_image_metadata(src_image, image_id);   // TODO: currently writes invalid bpp=255
+  write_image_metadata(src_image, image_id);
 
   return Error::Ok;
 }
