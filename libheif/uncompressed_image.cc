@@ -626,10 +626,10 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       uint8_t* dst_plane = img->get_plane(channel, &stride);
       for (uint32_t tile_row = 0; tile_row < uncC->get_number_of_tile_rows(); tile_row++) {
         for (uint32_t tile_column = 0; tile_column < uncC->get_number_of_tile_columns(); tile_column++) {
+          uint64_t dst_column_offset = tile_column * tile_width;
           for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
             uint64_t dst_row_number = tile_row * tile_height + tile_y;
             uint64_t dst_row_offset = dst_row_number * stride;
-            uint64_t dst_column_offset = tile_column * tile_width;
             memcpy(dst_plane + dst_row_offset + dst_column_offset, src + src_offset, bytes_per_tile_row);
             src_offset += bytes_per_tile_row;
           }
@@ -651,12 +651,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
               // TODO: we need to advance src_offset by the bytes in a tile for the channel
               continue;
             }
+            uint64_t dst_column_offset = tile_column * tile_width;
             int stride;
             uint8_t* dst_plane = img->get_plane(channel, &stride);
             for (uint32_t tile_y = 0; tile_y < tile_height; tile_y++) {
               uint64_t dst_row_number = tile_row * tile_height + tile_y;
               uint64_t dst_row_offset = dst_row_number * stride;
-              uint64_t dst_column_offset = tile_column * tile_width;
               memcpy(dst_plane + dst_row_offset + dst_column_offset, src + src_offset, bytes_per_tile_row);
               src_offset += bytes_per_tile_row;
             }
@@ -677,7 +677,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
                 uint64_t dst_col_number = tile_column * tile_width + tile_x;
                 uint64_t dst_column_offset = dst_col_number; // TODO: bytes per sample
                 dst_plane[dst_row_offset + dst_column_offset] = src[src_offset];
-              src_offset += 1; // TODO: bytes per sample
+                src_offset += 1; // TODO: bytes per sample
               }
             }
           }
@@ -699,7 +699,11 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
             }
           }
         } else {
-          std::cout << "unsupported interleave type: " << (int)(uncC->get_interleave_type()) << std::endl;
+          std::stringstream sstr;
+          sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+          return Error(heif_error_Unsupported_feature,
+                      heif_suberror_Unsupported_data_version,
+                      sstr.str());
         }
         if (uncC->get_tile_align_size() != 0) {
           while (src_offset % uncC->get_tile_align_size() != 0) {
