@@ -34,7 +34,8 @@
 
 #define FILES "uncompressed_rgb3.heif", "uncompressed_planar_tiled.heif", "uncompressed_row.heif", \
   "uncompressed_row_tiled.heif", "uncompressed_pix_tile_align.heif", \
-  "uncompressed_comp_tile_align.heif", "uncompressed_row_tile_align.heif"
+  "uncompressed_comp_tile_align.heif", "uncompressed_row_tile_align.heif", \
+  "uncompressed_tile_tiled.heif", "uncompressed_tile_tiled_align.heif"
 
 void check_image_handle_size(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
