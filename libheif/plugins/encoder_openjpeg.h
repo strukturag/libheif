@@ -22,7 +22,15 @@
 #ifndef LIBHEIF_ENCODER_OPENJPEG_H
 #define LIBHEIF_ENCODER_OPENJPEG_H
 
+#include "libheif/common_utils.h"
+
 
 const struct heif_encoder_plugin* get_encoder_plugin_openjpeg();
+
+#if PLUGIN_OPENJPEG_ENCODER
+extern "C" {
+MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
+}
+#endif
 
 #endif

@@ -27,4 +27,10 @@
 const struct heif_decoder_plugin* get_decoder_plugin_openjpeg();
 
 
+#if PLUGIN_OPENJPEG_DECODER
+extern "C" {
+MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
+}
+#endif
+
 #endif //LIBHEIF_DECODER_OPENJPEG_H

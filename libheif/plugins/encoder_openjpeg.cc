@@ -592,3 +592,12 @@ const struct heif_encoder_plugin* get_encoder_plugin_openjpeg()
 {
   return &encoder_plugin_openjpeg;
 }
+
+
+#if PLUGIN_OPENJPEG_ENCODER
+heif_plugin_info plugin_info {
+  1,
+  heif_plugin_type_encoder,
+  &encoder_plugin_openjpeg
+};
+#endif
