@@ -13,32 +13,23 @@ For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 ## Supported features
 
-libheif has support for decoding:
+libheif has support for:
 
-* tiled images
-* alpha channels
-* thumbnails
-* reading EXIF and XMP metadata
-* reading the depth channel
+* HEIC, AVIF, JPEG-in-HEIF, JPEG2000, uncompressed (ISO/IEC 23001-17:2023)
+* alpha channels, depth maps, thumbnails, auxiliary images
 * multiple images in a file
-* image transformations (crop, mirror, rotate)
-* overlay images
-* plugin interface to add alternative codecs for additional formats (AVC, JPEG)
+* HDR images, correct color transform according to embedded color profiles
+* image transformations (crop, mirror, rotate), overlay images
+* plugin interface to add alternative codecs
+* reading EXIF and XMP metadata
+* region annotations and mask images
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
-* reading color profiles
-* heix images (10 and 12 bit, chroma 4:2:2)
 
-The encoder supports:
-
-* lossy compression with adjustable quality
-* lossless compression
-* alpha channels
-* thumbnails
-* save multiple images to a file
-* save EXIF and XMP metadata
-* writing color profiles
-* 10 and 12 bit images
-* monochrome images
+Supported codecs:
+* HEIC: libde265, x265, kvazaar
+* AVIF: libaom, dav1d, rav1d, svt-av1
+* JPEG: libjpeg
+* JPEG-2000: OpenJPEG
 
 ## API
 
