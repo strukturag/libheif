@@ -245,11 +245,18 @@ A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the
 
 Languages that can directly interface with C libraries (e.g., Swift, C#) should work out of the box.
 
-## Compiling to JavaScript
+## Compiling to JavaScript / WASM
 
 libheif can also be compiled to JavaScript using
 [emscripten](http://kripken.github.io/emscripten-site/).
-See the `build-emscripten.sh` for further information.
+It can be built like this (in the libheif directory):
+````
+mkdir buildjs
+cd buildjs
+USE_WASM=0 ../build-emscripten.sh ..
+````
+Set `USE_WASM=1` to build with WASM output.
+See the `build-emscripten.sh` script for further options.
 
 ## Online demo
 
