@@ -2,6 +2,22 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+if [[ $# -ne 1 ]] ; then
+    echo "Usage: $0 SRCDIR"
+    echo
+    echo "It is recommended to build in a separate directory."
+    echo "Then specify this directory as an argument to this script."
+    echo "Example:"
+    echo "  mkdir buildjs"
+    echo "  cd buildjs"
+    echo "  USE_WASM=0 ../build-emscripten.sh .."
+    echo
+    echo "This should generate a libheif.js and (optionally, without the USE_WASM=0) a libheif.wasm"
+    exit 5
+fi
+
+SRCDIR=$1
+
 CORES="${CORES:-`nproc --all`}"
 ENABLE_LIBDE265="${ENABLE_LIBDE265:-1}"
 LIBDE265_VERSION="${LIBDE265_VERSION:-1.0.12}"
@@ -77,7 +93,8 @@ if [ "$STANDALONE" = "1" ]; then
 fi
 
 CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON -DENABLE_PLUGIN_LOADING=OFF"
-emcmake cmake $CONFIGURE_ARGS \
+emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="${EXTRA_COMPILER_FLAGS}" \
     -DCMAKE_CXX_FLAGS="${EXTRA_COMPILER_FLAGS}" \
     -DCMAKE_EXE_LINKER_FLAGS="${LIBRARY_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}" \
@@ -91,7 +108,7 @@ EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols
 
 echo "Running Emscripten..."
 
-BUILD_FLAGS="-lembind -o libheif.js --pre-js pre.js --post-js post.js -sWASM=$USE_WASM"
+BUILD_FLAGS="-lembind -o libheif.js --pre-js ${SRCDIR}/pre.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM"
 RELEASE_BUILD_FLAGS="-O3"
 
 if [ "$STANDALONE" = "1" ]; then
