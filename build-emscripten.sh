@@ -42,7 +42,7 @@ if [ "$ENABLE_LIBDE265" = "1" ]; then
         tar xf libde265-${LIBDE265_VERSION}.tar.gz
         cd libde265-${LIBDE265_VERSION}
         [ -x configure ] || ./autogen.sh
-        emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
+        CXXFLAGS=-O3 emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
         emmake make -j${CORES}
         cd ..
     fi
@@ -101,7 +101,7 @@ emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
     $CONFIGURE_ARGS_LIBDE265 \
     $CONFIGURE_ARGS_AOM
 
-emmake make -j${CORES}
+VERBOSE=1 emmake make -j${CORES}
 
 LIBHEIFA="libheif/libheif.a"
 EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols | grep "^heif_\|^de265_\|^aom_" | grep "[^:]$" | sed 's/^/_/' | paste -sd "," -)
