@@ -143,12 +143,16 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
 
   /* Expand paletted colors into true RGB triplets */
-  if (color_type == PNG_COLOR_TYPE_PALETTE)
-    png_set_expand(png_ptr);
+  if (color_type == PNG_COLOR_TYPE_PALETTE) {
+    png_set_palette_to_rgb(png_ptr);
+    bit_depth = 8;
+  }
 
   /* Expand grayscale images to the full 8 bits from 1, 2, or 4 bits/pixel */
-  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-    png_set_expand(png_ptr);
+  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+    png_set_expand_gray_1_2_4_to_8(png_ptr);
+    bit_depth = 8;
+  }
 
   /* Set the background color to draw transparent and alpha images over.
    * It is possible to set the red, green, and blue components directly
@@ -228,34 +232,15 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     }
   }
 
+  int band = png_get_channels(png_ptr, info_ptr);
+
   /* clean up after the read, and free any memory allocated - REQUIRED */
   png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
 
 
-  // OK, now we should have the png image in some way in
-  // row_pointers, have fun with it
-
-  int band = 0;
-  switch (color_type) {
-    case PNG_COLOR_TYPE_GRAY:
-    case PNG_COLOR_TYPE_GRAY_ALPHA:
-      band = 1;
-      break;
-    case PNG_COLOR_TYPE_PALETTE:
-    case PNG_COLOR_TYPE_RGB:
-    case PNG_COLOR_TYPE_RGB_ALPHA:
-      band = 3;
-      break;
-    default:
-      assert(false); // , "unknown color type in png image.");
-  } // switch
-
-
-
-
   struct heif_error err;
 
-  bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA);
+  bool has_alpha = (band == 2 || band == 4);
 
   if (band == 1 && bit_depth == 8) {
     err = heif_image_create((int) width, (int) height,
