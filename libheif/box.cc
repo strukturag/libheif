@@ -580,6 +580,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("j2kL"):
       box = std::make_shared<Box_j2kL>();
+      break;
 
     // --- mski
       
