@@ -705,13 +705,13 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       uint8_t* dst = img->get_plane(channels[c], &stride);
       for (uint32_t row = 0; row < height; row++) {
         long unsigned int tile_row_idx = row % tile_height;
-        long unsigned int tile_row_offset = tile_width * tile_row_idx * channels.size();
+        size_t tile_row_offset = tile_width * tile_row_idx * channels.size();
         uint32_t col = 0;
         for (col = 0; col < width; col++) {
           long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
           long unsigned int tile_col = col % tile_width;
-          long unsigned int tile_offset = tile_row_offset + tile_col * pixel_stride + pixel_offset;
-          long unsigned int src_offset = tile_base_offset + tile_offset;
+          size_t tile_offset = tile_row_offset + tile_col * pixel_stride + pixel_offset;
+          size_t src_offset = tile_base_offset + tile_offset;
           uint32_t dstPixelIndex = row * stride + col;
           dst[dstPixelIndex] = src[src_offset];
         }
@@ -732,13 +732,13 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       uint8_t* dst = img->get_plane(channels[c], &stride);
       for (uint32_t row = 0; row < height; row++) {
         long unsigned int tile_row_idx = row % tile_height;
-        long unsigned int tile_row_offset = tile_width * (tile_row_idx * channels.size() + pixel_offset);
+        size_t tile_row_offset = tile_width * (tile_row_idx * channels.size() + pixel_offset);
         uint32_t col = 0;
         for (col = 0; col < width; col += tile_width) {
           long unsigned int tile_base_offset = get_tile_base_offset(col, row, uncC, channels, width, height);
           long unsigned int tile_col = col % tile_width;
-          long unsigned int tile_offset = tile_row_offset + tile_col;
-          long unsigned int src_offset = tile_base_offset + tile_offset;
+          size_t tile_offset = tile_row_offset + tile_col;
+          size_t src_offset = tile_base_offset + tile_offset;
           uint32_t dst_offset = row * stride + col;
           memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
         }
@@ -965,7 +965,7 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
   std::vector<uint8_t> data;
   if (src_image->get_colorspace() == heif_colorspace_YCbCr)
   {
-    unsigned long offset = 0;
+    uint64_t offset = 0;
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
       int src_stride;
@@ -983,7 +983,7 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
   {
     if (src_image->get_chroma_format() == heif_chroma_444)
     {
-      unsigned long offset = 0;
+      uint64_t offset = 0;
       std::vector<heif_channel> channels = {heif_channel_R, heif_channel_G, heif_channel_B};
       if (src_image->has_channel(heif_channel_Alpha))
       {
@@ -1045,7 +1045,7 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
   }
   else if (src_image->get_colorspace() == heif_colorspace_monochrome)
   {
-    unsigned long offset = 0;
+    uint64_t offset = 0;
     std::vector<heif_channel> channels;
     if (src_image->has_channel(heif_channel_Alpha))
     {

@@ -421,7 +421,7 @@ TEST_CASE("create inline mask region from data") {
   int num_regions_returned = heif_region_item_get_list_of_regions(in_region_item, regions.data(), (int)(regions.size()));
   REQUIRE(num_regions_returned == num_regions);
   REQUIRE(heif_region_get_type(regions[0]) == heif_region_type_inline_mask);
-  long unsigned int data_len = heif_region_get_inline_mask_data_len(regions[0]);
+  size_t data_len = heif_region_get_inline_mask_data_len(regions[0]);
   int32_t x, y;
   uint32_t width, height;
   std::vector<uint8_t> mask_data_in(data_len);

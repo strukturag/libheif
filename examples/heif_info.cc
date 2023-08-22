@@ -567,7 +567,7 @@ int main(int argc, char** argv)
             int32_t y;
             uint32_t w;
             uint32_t h;
-            long unsigned int data_len = heif_region_get_inline_mask_data_len(regions[j]);
+            size_t data_len = heif_region_get_inline_mask_data_len(regions[j]);
             std::vector<uint8_t> mask_data(data_len);
             heif_region_get_inline_mask_data(regions[j], &x, &y, &w, &h, mask_data.data());
             printf("      inline mask [x=%i, y=%i, w=%u, h=%u, data len=%lu]\n", x, y, w, h, mask_data.size());
