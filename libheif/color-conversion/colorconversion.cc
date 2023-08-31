@@ -40,6 +40,11 @@
 #include "hdr_sdr.h"
 #include "chroma_sampling.h"
 
+#if ENABLE_MULTITHREADING_SUPPORT
+
+#include <mutex>
+
+#endif
 
 #define DEBUG_ME 0
 #define DEBUG_PIPELINE_CREATION 0
