@@ -202,10 +202,12 @@ std::ostream& operator<<(std::ostream& ostr, const ColorState& state)
 }
 
 std::vector<std::shared_ptr<ColorConversionOperation>> ColorConversionPipeline::m_operation_pool;
+std::mutex init_ops_mutex;
 
 
 void ColorConversionPipeline::init_ops()
 {
+  std::lock_guard<std::mutex> lock(init_ops_mutex);
   if (!m_operation_pool.empty()) {
     return;
   }
