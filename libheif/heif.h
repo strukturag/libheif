@@ -495,7 +495,7 @@ LIBHEIF_API
 struct heif_error heif_init(struct heif_init_params*);
 
 LIBHEIF_API
-void heif_deinit();
+void heif_deinit(void);
 
 
 // --- Plugins are currently only supported on Unix platforms.
@@ -530,7 +530,7 @@ struct heif_error heif_unload_plugin(const struct heif_plugin_info* plugin);
 // This includes the paths specified in the environment variable LIBHEIF_PLUGIN_PATHS and the built-in path
 // (if not overridden by the environment variable).
 LIBHEIF_API
-const char*const* heif_get_plugin_directories();
+const char*const* heif_get_plugin_directories(void);
 
 LIBHEIF_API
 void heif_free_plugin_directories(const char*const*);
@@ -1164,7 +1164,7 @@ struct heif_error heif_image_handle_get_nclx_color_profile(const struct heif_ima
 // Do not fill values for higher versions as these might be outside the allocated structure size.
 // May return NULL.
 LIBHEIF_API
-struct heif_color_profile_nclx* heif_nclx_color_profile_alloc();
+struct heif_color_profile_nclx* heif_nclx_color_profile_alloc(void);
 
 LIBHEIF_API
 void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile);
@@ -1384,7 +1384,7 @@ struct heif_decoding_options
 // Note: you should always get the decoding options through this function since the
 // option structure may grow in size in future versions.
 LIBHEIF_API
-struct heif_decoding_options* heif_decoding_options_alloc();
+struct heif_decoding_options* heif_decoding_options_alloc(void);
 
 LIBHEIF_API
 void heif_decoding_options_free(struct heif_decoding_options*);
@@ -1911,7 +1911,7 @@ struct heif_encoding_options
 };
 
 LIBHEIF_API
-struct heif_encoding_options* heif_encoding_options_alloc();
+struct heif_encoding_options* heif_encoding_options_alloc(void);
 
 LIBHEIF_API
 void heif_encoding_options_free(struct heif_encoding_options*);
