@@ -1,7 +1,7 @@
+# Please put your IDE or OS specific ignores into a global .gitignore file.
+# see here: https://stackoverflow.com/questions/7335420/global-git-ignore
+
 build
-cmake-build-*
-.cache
-.idea
 third-party/SVT-AV1/
 third-party/dav1d/
 third-party/libwebp/
