@@ -2,6 +2,7 @@ build
 cmake-build-*
 .cache
 .idea
+.vscode/
 third-party/SVT-AV1/
 third-party/dav1d/
 third-party/libwebp/
