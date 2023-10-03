@@ -31,6 +31,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <set>
 #include <cassert>
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -2919,6 +2920,43 @@ Error Box_iref::parse(BitstreamRange& range)
     }
 
     m_references.push_back(ref);
+  }
+
+
+  // --- check for cyclic references
+
+  for (const auto& ref : m_references) {
+    std::set<heif_item_id> reached_ids; // IDs that we have already reached in the DAG
+    std::set<heif_item_id> todo;    // IDs that still need to be followed
+
+    todo.insert(ref.from_item_ID);  // start at base item
+
+    while (!todo.empty()) {
+      // transfer ID into set of reached IDs
+      auto id = *todo.begin();
+      todo.erase(id);
+      reached_ids.insert(id);
+
+      // if this ID refers to another 'iref', follow it
+
+      for (const auto& succ_ref : m_references) {
+        if (succ_ref.from_item_ID == id) {
+
+          // Check whether any successor IDs has been visited yet, which would be an error.
+          // Otherwise, put that ID into the 'todo' set.
+
+          for (const auto& succ_ref_id : succ_ref.to_item_ID) {
+            if (reached_ids.find(succ_ref_id)  != reached_ids.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Unspecified,
+                           "'iref' has cyclic references");
+            }
+
+            todo.insert(succ_ref_id);
+          }
+        }
+      }
+    }
   }
 
   return range.get_error();
