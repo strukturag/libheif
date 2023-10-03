@@ -1995,13 +1995,18 @@ Error HeifContext::decode_derived_image(heif_item_id ID,
 
   if ((int) image_references.size() != 1) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_Missing_grid_images,
+                 heif_suberror_Unspecified,
                  "'iden' image with more than one reference image");
   }
 
 
   heif_item_id reference_image_id = image_references[0];
 
+  if (reference_image_id == ID) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iden' image referring to itself");
+  }
 
   Error error = decode_image_planar(reference_image_id, img,
                                     heif_colorspace_RGB, options, false); // TODO: always RGB ?
