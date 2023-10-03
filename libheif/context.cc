@@ -969,20 +969,33 @@ Error HeifContext::interpret_heif_file()
             img_iter->second->add_region_item_id(id);
             m_region_items.push_back(region_item);
           }
+
           /* When the geometry 'mask' of a region is represented by a mask stored in
           * another image item the image item containing the mask shall be identified
           * by an item reference of type 'mask' from the region item to the image item
           * containing the mask. */
           if (ref.header.get_short_type() == fourcc("mask")) {
             std::vector<uint32_t> refs = ref.to_item_ID;
-            int mask_index = 0;
+            size_t mask_index = 0;
             for (int j = 0; j < region_item->get_number_of_regions(); j++) {
               if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
                 std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
+
+                if (mask_index >= refs.size()) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Unspecified,
+                               "Region mask reference with non-existing mask image reference");
+                }
+
                 uint32_t mask_image_id = refs[mask_index];
-                assert(is_image(mask_image_id));
-                mask_geometry->referenced_item = mask_image_id;
+                if (!is_image(mask_image_id)) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Unspecified,
+                               "Region mask referenced item is not an image");
+                }
+
                 auto mask_image = m_all_images.find(mask_image_id)->second;
+                mask_geometry->referenced_item = mask_image_id;
                 if (mask_geometry->width == 0) {
                   mask_geometry->width = mask_image->get_ispe_width();
                 }
