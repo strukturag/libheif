@@ -331,7 +331,7 @@ JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id
       JPEG2000_SIZ_segment siz;
 
       // space for full header and one component
-      if (i + 2 + 38 + 3 > data.size()) {
+      if (i + 2 + 40 + 3 > data.size()) {
         return {};
       }
 
@@ -339,7 +339,7 @@ JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id
 
       int nComponents = read16(data, 40);
 
-      if (i + 2 + 38 + nComponents * 3 > data.size()) {
+      if (i + 2 + 40 + nComponents * 3 > data.size()) {
         return {};
       }
 
