@@ -158,9 +158,9 @@ public:
     m_pad_unknown = pad_unknown;
   }
 
-  uint8_t get_pixel_size() const { return m_pixel_size; }
+  uint32_t get_pixel_size() const { return m_pixel_size; }
 
-  void set_pixel_size(const uint8_t pixel_size)
+  void set_pixel_size(const uint32_t pixel_size)
   {
     m_pixel_size = pixel_size;
   }
@@ -207,7 +207,7 @@ protected:
   bool m_block_little_endian;
   bool m_block_reversed;
   bool m_pad_unknown;
-  uint8_t m_pixel_size;
+  uint32_t m_pixel_size;
   uint32_t m_row_align_size;
   uint32_t m_tile_align_size;
   uint32_t m_num_tile_cols;

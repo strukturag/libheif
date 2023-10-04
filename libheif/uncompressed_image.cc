@@ -44,7 +44,11 @@ enum heif_uncompressed_component_type
   component_type_disparity = 9,
   component_type_palette = 10,
   component_type_filter_array = 11,
-  component_type_padded = 12
+  component_type_padded = 12,
+  component_type_cyan = 13,
+  component_type_magenta = 14,
+  component_type_yellow = 15,
+  component_type_key_black = 16
 };
 
 static std::map<heif_uncompressed_component_type, const char*> sNames_uncompressed_component_type{
@@ -60,7 +64,11 @@ static std::map<heif_uncompressed_component_type, const char*> sNames_uncompress
     {component_type_disparity,    "disparity"},
     {component_type_palette,      "palette"},
     {component_type_filter_array, "filter-array"},
-    {component_type_padded,       "padded"}
+    {component_type_padded,       "padded"},
+    {component_type_cyan,         "cyan"},
+    {component_type_magenta,      "magenta"},
+    {component_type_yellow,       "yellow"},
+    {component_type_key_black,    "key (black)"}
 };
 
 enum heif_uncompressed_component_format
@@ -125,9 +133,9 @@ template <typename T> const char* get_name(T val, const std::map<T, const char*>
 
 Error Box_cmpd::parse(BitstreamRange& range)
 {
-  int component_count = range.read16();
+  unsigned int component_count = range.read32();
 
-  for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
+  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
     component.component_type = range.read16();
     if (component.component_type >= 0x8000) {
@@ -161,7 +169,7 @@ Error Box_cmpd::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write16((uint16_t) m_components.size());
+  writer.write32((uint32_t) m_components.size());
   for (const auto& component : m_components) {
     writer.write16(component.component_type);
     if (component.component_type >= 0x8000) {
@@ -179,9 +187,9 @@ Error Box_uncC::parse(BitstreamRange& range)
   parse_full_box_header(range);
   m_profile = range.read32();
 
-  int component_count = range.read16();
+  unsigned int component_count = range.read32();
 
-  for (int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
+  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
     component.component_index = range.read16();
     component.component_bit_depth = range.read8() + 1;
@@ -203,7 +211,7 @@ Error Box_uncC::parse(BitstreamRange& range)
   m_block_reversed = !!(flags & 0x10);
   m_pad_unknown = !!(flags & 0x08);
 
-  m_pixel_size = range.read8();
+  m_pixel_size = range.read32();
 
   m_row_align_size = range.read32();
 
@@ -247,7 +255,7 @@ std::string Box_uncC::dump(Indent& indent) const
   sstr << indent << "block_reversed: " << m_block_reversed << "\n";
   sstr << indent << "pad_unknown: " << m_pad_unknown << "\n";
 
-  sstr << indent << "pixel_size: " << (int) m_pixel_size << "\n";
+  sstr << indent << "pixel_size: " << m_pixel_size << "\n";
 
   sstr << indent << "row_align_size: " << m_row_align_size << "\n";
 
@@ -271,7 +279,7 @@ Error Box_uncC::write(StreamWriter& writer) const
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(m_profile);
-  writer.write16((uint16_t) m_components.size());
+  writer.write32((uint32_t) m_components.size());
   for (const auto& component : m_components) {
     writer.write16(component.component_index);
     writer.write8(component.component_bit_depth - 1);
@@ -288,7 +296,7 @@ Error Box_uncC::write(StreamWriter& writer) const
   flags |= (m_block_reversed ? 1 : 0) << 4;
   flags |= (m_pad_unknown ? 1 : 0) << 3;
   writer.write8(flags);
-  writer.write8(m_pixel_size);
+  writer.write32(m_pixel_size);
   writer.write32(m_row_align_size);
   writer.write32(m_tile_align_size);
   writer.write32(m_num_tile_cols - 1);
