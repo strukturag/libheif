@@ -46,7 +46,8 @@ namespace heif {
     {
       m_code = err.code;
       m_subcode = err.subcode;
-      m_message = err.message;
+      if (err.message)
+        m_message = err.message;
     }
 
     Error(heif_error_code code, heif_suberror_code subcode, const std::string& msg)
