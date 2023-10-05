@@ -2211,7 +2211,13 @@ struct heif_error heif_context_write(struct heif_context* ctx,
   ctx->context->write(swriter);
 
   const auto& data = swriter.get_data();
-  return writer->write(ctx, data.data(), data.size(), userdata);
+  heif_error writer_error = writer->write(ctx, data.data(), data.size(), userdata);
+  if (!writer_error.message) {
+    return heif_error{heif_error_Usage_error, heif_suberror_Null_pointer_argument, "heif_writer callback returned a null error text"};
+  }
+  else {
+    return writer_error;
+  }
 }
 
 
