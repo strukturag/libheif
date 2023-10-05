@@ -323,6 +323,9 @@ struct heif_error
   const char* message;
 };
 
+// Default success return value. Intended for use in user-supplied callback functions.
+LIBHEIF_API extern struct heif_error heif_error_success;
+
 
 typedef uint32_t heif_item_id;
 typedef uint32_t heif_property_id;
