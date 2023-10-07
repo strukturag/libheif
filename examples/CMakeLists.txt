@@ -33,7 +33,6 @@ target_link_libraries(heif-convert PRIVATE heif)
 install(TARGETS heif-convert RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-convert.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-
 add_executable(heif-enc ${getopt_sources}
         heif_enc.cc
         ../libheif/exif.cc
@@ -107,8 +106,8 @@ if (PNG_FOUND)
     target_sources(heif-enc PRIVATE decoder_png.cc decoder_png.h)
 endif ()
 
-
-if (PNG_FOUND)
+find_package(ZLIB)
+if (PNG_FOUND AND ZLIB_FOUND)
     add_executable(heif-thumbnailer ${getopt_sources}
             encoder.cc
             encoder.h
@@ -119,8 +118,9 @@ if (PNG_FOUND)
             ../libheif/exif.cc
             common.cc
             common.h)
-    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES})
+    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES} ${ZLIB_LIBRARY})
     target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
+    target_include_directories(heif-thumbnailer PRIVATE ${ZLIB_INCLUDE_DIRS})
 
     install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
