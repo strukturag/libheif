@@ -118,7 +118,7 @@ if (PNG_FOUND AND ZLIB_FOUND)
             ../libheif/exif.cc
             common.cc
             common.h)
-    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES} ${ZLIB_LIBRARY})
+    target_link_libraries(heif-thumbnailer heif ${PNG_LIBRARIES} ${ZLIB_LIBRARIES})
     target_include_directories(heif-thumbnailer PRIVATE ${PNG_INCLUDE_DIR})
     target_include_directories(heif-thumbnailer PRIVATE ${ZLIB_INCLUDE_DIRS})
 
