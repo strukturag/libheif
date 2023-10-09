@@ -2786,7 +2786,7 @@ struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* r
  * @return the number of bytes in the mask data, or 0 on error.
  */
 LIBHEIF_API
-unsigned long heif_region_get_inline_mask_data_len(const struct heif_region* region);
+size_t heif_region_get_inline_mask_data_len(const struct heif_region* region);
 
 
 /**

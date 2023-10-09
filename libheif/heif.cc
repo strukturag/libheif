@@ -3690,7 +3690,7 @@ struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* r
   return heif_error_invalid_parameter_value;
 }
 
-unsigned long int heif_region_get_inline_mask_data_len(const struct heif_region* region)
+size_t heif_region_get_inline_mask_data_len(const struct heif_region* region)
 {
   const std::shared_ptr<RegionGeometry_InlineMask> mask = std::dynamic_pointer_cast<RegionGeometry_InlineMask>(region->region);
   if (mask) {
