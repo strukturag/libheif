@@ -588,27 +588,192 @@ enum heif_brand heif_main_brand(const uint8_t* data, int len);
 
 typedef uint32_t heif_brand2;
 
-#define heif_brand2_heic   heif_fourcc('h','e','i','c') // HEIF image with h265
-#define heif_brand2_heix   heif_fourcc('h','e','i','x') // 10bit images, or anything that uses h265 with range extension
-#define heif_brand2_hevc   heif_fourcc('h','e','v','c') // image sequences
-#define heif_brand2_hevx   heif_fourcc('h','e','v','x') // HDR image sequence
-#define heif_brand2_heim   heif_fourcc('h','e','i','m') // multiview
-#define heif_brand2_heis   heif_fourcc('h','e','i','s') // scalable
-#define heif_brand2_hevm   heif_fourcc('h','e','v','m') // multiview sequence
-#define heif_brand2_hevs   heif_fourcc('h','e','v','s') // scalable sequence
-#define heif_brand2_avif   heif_fourcc('a','v','i','f') // AVIF image (AV1)
+/**
+ * HEVC image (`heic`) brand.
+ *
+ * Image conforms to HEVC (H.265) Main or Main Still profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.1.
+ */
+#define heif_brand2_heic   heif_fourcc('h','e','i','c')
+
+/**
+ * HEVC image (`heix`) brand.
+ *
+ * Image conforms to HEVC (H.265) Main 10 profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.1.
+ */
+#define heif_brand2_heix   heif_fourcc('h','e','i','x')
+
+/**
+ * HEVC image sequence (`hevc`) brand.
+ *
+ * Image sequence conforms to HEVC (H.265) Main profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.2.
+ */
+#define heif_brand2_hevc   heif_fourcc('h','e','v','c')
+
+/**
+ * HEVC image sequence (`hevx`) brand.
+ *
+ * Image sequence conforms to HEVC (H.265) Main 10 profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.2.
+ */
+#define heif_brand2_hevx   heif_fourcc('h','e','v','x')
+
+/**
+ * HEVC layered image (`heim`) brand.
+ *
+ * Image layers conform to HEVC (H.265) Main or Multiview Main profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.3.
+ */
+#define heif_brand2_heim   heif_fourcc('h','e','i','m')
+
+/**
+ * HEVC layered image (`heis`) brand.
+ *
+ * Image layers conform to HEVC (H.265) Main, Main 10, Scalable Main
+ * or Scalable Main 10 profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.3.
+ */
+#define heif_brand2_heis   heif_fourcc('h','e','i','s')
+
+/**
+ * HEVC layered image sequence (`hevm`) brand.
+ *
+ * Image sequence layers conform to HEVC (H.265) Main or Multiview Main profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.4.
+ */
+#define heif_brand2_hevm   heif_fourcc('h','e','v','m')
+
+/**
+ * HEVC layered image sequence (`hevs`) brand.
+ *
+ * Image sequence layers conform to HEVC (H.265) Main, Main 10, Scalable Main
+ * or Scalable Main 10 profile.
+ *
+ * See ISO/IEC 23008-12:2022 Section B.4.4.
+ */
+#define heif_brand2_hevs   heif_fourcc('h','e','v','s')
+
+/**
+ * AV1 image (`avif`) brand.
+ *
+ * See https://aomediacodec.github.io/av1-avif/#image-and-image-collection-brand
+ */
+#define heif_brand2_avif   heif_fourcc('a','v','i','f')
+
+/**
+ * AV1 image sequence (`avis`) brand.
+ *
+ * See https://aomediacodec.github.io/av1-avif/#image-sequence-brand
+ */
 #define heif_brand2_avis   heif_fourcc('a','v','i','s') // AVIF sequence
-#define heif_brand2_mif1   heif_fourcc('m','i','f','1') // image, any coding algorithm
-#define heif_brand2_mif2   heif_fourcc('m','i','f','2') // image, any coding algorithm
-#define heif_brand2_msf1   heif_fourcc('m','s','f','1') // sequence, any coding algorithm
-#define heif_brand2_vvic   heif_fourcc('v','v','i','c') // VVC image
-#define heif_brand2_vvis   heif_fourcc('v','v','i','s') // VVC sequence
-#define heif_brand2_evbi   heif_fourcc('e','v','b','i') // EVC image
-#define heif_brand2_evbs   heif_fourcc('e','v','b','s') // EVC sequence
-#define heif_brand2_jpeg   heif_fourcc('j','p','e','g') // JPEG, per ISO/IEC 23008-12 Annex H.4
-#define heif_brand2_jpgs   heif_fourcc('j','p','g','s') // JPEG sequence, per ISO/IEC 23008-12 Annex H.5
-#define heif_brand2_j2ki   heif_fourcc('j','2','k','i') // JPEG2000 image, per ISO/IEC 15444-16:2021 Section 6.5
-#define heif_brand2_j2is   heif_fourcc('j','2','i','s') // JPEG2000 sequence, per ISO/IEC 15444-16:2021 Section 7.6
+
+/**
+ * HEIF image structural brand (`mif1`).
+ *
+ * This does not imply a specific coding algorithm.
+ *
+ * See ISO/IEC 23008-12:2022 Section 10.2.2.
+ */
+#define heif_brand2_mif1   heif_fourcc('m','i','f','1')
+
+/**
+ * HEIF image structural brand (`mif2`).
+ *
+ * This does not imply a specific coding algorithm. `mif2` extends
+ * the requirements of `mif1` to include the `rref` and `iscl` item
+ * properties.
+ *
+ * See ISO/IEC 23008-12:2022 Section 10.2.3.
+ */
+#define heif_brand2_mif2   heif_fourcc('m','i','f','2')
+
+/**
+ * HEIF image sequence structural brand (`msf1`).
+ *
+ * This does not imply a specific coding algorithm.
+ *
+ * See ISO/IEC 23008-12:2022 Section 10.3.1.
+ */
+#define heif_brand2_msf1   heif_fourcc('m','s','f','1')
+
+/**
+ * VVC image (`vvic`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section L.4.1.
+ */
+#define heif_brand2_vvic   heif_fourcc('v','v','i','c')
+
+/**
+ * VVC image sequence (`vvis`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section L.4.2.
+ */
+#define heif_brand2_vvis   heif_fourcc('v','v','i','s')
+
+/**
+ * EVC baseline image (`evbi`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section M.4.1.
+ */
+#define heif_brand2_evbi   heif_fourcc('e','v','b','i')
+
+/**
+ * EVC main profile image (`evmi`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section M.4.2.
+ */
+#define heif_brand2_evmi   heif_fourcc('e','v','m','i')
+
+/**
+ * EVC baseline image sequence (`evbs`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section M.4.3.
+ */
+#define heif_brand2_evbs   heif_fourcc('e','v','b','s')
+
+/**
+ * EVC main profile image sequence (`evms`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Section M.4.4.
+ */
+#define heif_brand2_evms   heif_fourcc('e','v','m','s')
+
+/**
+ * JPEG image (`jpeg`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Annex H.4
+ */
+#define heif_brand2_jpeg   heif_fourcc('j','p','e','g')
+
+/**
+ * JPEG image sequence (`jpgs`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Annex H.5
+ */
+#define heif_brand2_jpgs   heif_fourcc('j','p','g','s')
+
+/**
+ * JPEG 2000 image (`j2ki`) brand.
+ *
+ * See ISO/IEC 15444-16:2021 Section 6.5 
+ */
+#define heif_brand2_j2ki   heif_fourcc('j','2','k','i')
+
+/**
+ * JPEG 2000 image sequence (`j2is`) brand.
+ *
+ * See ISO/IEC 15444-16:2021 Section 7.6
+ */
+#define heif_brand2_j2is   heif_fourcc('j','2','i','s')
 
 /**
  * Multi-image application format (MIAF) brand.
@@ -1414,22 +1579,47 @@ enum heif_colorspace heif_image_get_colorspace(const struct heif_image*);
 LIBHEIF_API
 enum heif_chroma heif_image_get_chroma_format(const struct heif_image*);
 
-// Get width of the given image channel in pixels. Returns -1 if a non-existing
-// channel was given.
+/**
+ * Get the width of a specified image channel.
+ *
+ * @param img the image to get the width for
+ * @param channel the channel to select
+ * @return the width of the channel in pixels, or -1 the channel does not exist in the image
+ */
 LIBHEIF_API
-int heif_image_get_width(const struct heif_image*, enum heif_channel channel);
+int heif_image_get_width(const struct heif_image* img, enum heif_channel channel);
 
-// Get height of the given image channel in pixels. Returns -1 if a non-existing
-// channel was given.
+/**
+ * Get the height of a specified image channel.
+ *
+ * @param img the image to get the height for
+ * @param channel the channel to select
+ * @return the height of the channel in pixels, or -1 the channel does not exist in the image
+ */
 LIBHEIF_API
-int heif_image_get_height(const struct heif_image*, enum heif_channel channel);
+int heif_image_get_height(const struct heif_image* img, enum heif_channel channel);
 
-// Get the width of the main channel (Y in YCbCr, or any in RGB).
+/**
+ * Get the width of the main channel.
+ *
+ * This is the Y channel in YCbCr or mono, or any in RGB.
+ *
+ * @param img the image to get the primary width for
+ * @return the width in pixels
+ */
 LIBHEIF_API
-int heif_image_get_primary_width(const struct heif_image*);
+int heif_image_get_primary_width(const struct heif_image* img);
 
+/**
+ * Get the height of the main channel.
+ *
+ * This is the Y channel in YCbCr or mono, or any in RGB.
+ *
+ * @param img the image to get the primary height for
+ * @return the height in pixels
+ */
 LIBHEIF_API
-int heif_image_get_primary_height(const struct heif_image*);
+int heif_image_get_primary_height(const struct heif_image* img);
 
 LIBHEIF_API
 struct heif_error heif_image_crop(struct heif_image* img,
