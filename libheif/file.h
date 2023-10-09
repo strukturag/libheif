@@ -21,7 +21,10 @@
 #ifndef LIBHEIF_FILE_H
 #define LIBHEIF_FILE_H
 
+#include "avif.h"
 #include "box.h"
+#include "hevc.h"
+#include "nclx.h"
 
 #include <map>
 #include <memory>

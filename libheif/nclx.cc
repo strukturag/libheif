@@ -21,6 +21,12 @@
 
 #include "nclx.h"
 
+#include <cassert>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+
 
 primaries::primaries(float gx, float gy, float bx, float by, float rx, float ry, float wx, float wy)
 {
@@ -208,4 +214,246 @@ RGB_to_YCbCr_coefficients RGB_to_YCbCr_coefficients::defaults()
 
   return coeffs;
 }
+
+
+Error color_profile_nclx::parse(BitstreamRange& range)
+{
+  StreamReader::grow_status status;
+  status = range.wait_for_available_bytes(7);
+  if (status != StreamReader::size_reached) {
+    // TODO: return recoverable error at timeout
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_End_of_data);
+  }
+
+  m_colour_primaries = range.read16();
+  m_transfer_characteristics = range.read16();
+  m_matrix_coefficients = range.read16();
+  m_full_range_flag = (range.read8() & 0x80 ? true : false);
+
+  return Error::Ok;
+}
+
+Error color_profile_nclx::get_nclx_color_profile(struct heif_color_profile_nclx** out_data) const
+{
+  *out_data = nullptr;
+
+  struct heif_color_profile_nclx* nclx = alloc_nclx_color_profile();
+
+  if (nclx == nullptr) {
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Unspecified);
+  }
+
+  struct heif_error err;
+
+  nclx->version = 1;
+
+  err = heif_nclx_color_profile_set_color_primaries(nclx, get_colour_primaries());
+  if (err.code) {
+    free_nclx_color_profile(nclx);
+    return {err.code, err.subcode};
+  }
+
+  err = heif_nclx_color_profile_set_transfer_characteristics(nclx, get_transfer_characteristics());
+  if (err.code) {
+    free_nclx_color_profile(nclx);
+    return {err.code, err.subcode};
+  }
+
+  err = heif_nclx_color_profile_set_matrix_coefficients(nclx, get_matrix_coefficients());
+  if (err.code) {
+    free_nclx_color_profile(nclx);
+    return {err.code, err.subcode};
+  }
+
+  nclx->full_range_flag = get_full_range_flag();
+
+  // fill color primaries
+
+  auto primaries = ::get_colour_primaries(nclx->color_primaries);
+
+  nclx->color_primary_red_x = primaries.redX;
+  nclx->color_primary_red_y = primaries.redY;
+  nclx->color_primary_green_x = primaries.greenX;
+  nclx->color_primary_green_y = primaries.greenY;
+  nclx->color_primary_blue_x = primaries.blueX;
+  nclx->color_primary_blue_y = primaries.blueY;
+  nclx->color_primary_white_x = primaries.whiteX;
+  nclx->color_primary_white_y = primaries.whiteY;
+
+  *out_data = nclx;
+
+  return Error::Ok;
+}
+
+
+struct heif_color_profile_nclx* color_profile_nclx::alloc_nclx_color_profile()
+{
+  auto profile = (heif_color_profile_nclx*) malloc(sizeof(struct heif_color_profile_nclx));
+
+  if (profile) {
+    profile->version = 1;
+    profile->color_primaries = heif_color_primaries_unspecified;
+    profile->transfer_characteristics = heif_transfer_characteristic_unspecified;
+    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+    profile->full_range_flag = true;
+  }
+
+  return profile;
+}
+
+
+void color_profile_nclx::free_nclx_color_profile(struct heif_color_profile_nclx* profile)
+{
+  free(profile);
+}
+
+
+void color_profile_nclx::set_default()
+{
+  m_colour_primaries = 2;
+  m_transfer_characteristics = 2;
+  m_matrix_coefficients = 6;
+  m_full_range_flag = true;
+}
+
+
+void color_profile_nclx::set_undefined()
+{
+  m_colour_primaries = 2;
+  m_transfer_characteristics = 2;
+  m_matrix_coefficients = 2;
+  m_full_range_flag = true;
+}
+
+
+void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx)
+{
+  if (nclx) {
+    m_colour_primaries = nclx->color_primaries;
+    m_transfer_characteristics = nclx->transfer_characteristics;
+    m_matrix_coefficients = nclx->matrix_coefficients;
+    m_full_range_flag = nclx->full_range_flag;
+  }
+}
+
+
+Error Box_colr::parse(BitstreamRange& range)
+{
+  StreamReader::grow_status status;
+  uint32_t colour_type = range.read32();
+
+  if (colour_type == fourcc("nclx")) {
+    auto color_profile = std::make_shared<color_profile_nclx>();
+    m_color_profile = color_profile;
+    Error err = color_profile->parse(range);
+    if (err) {
+      return err;
+    }
+  }
+  else if (colour_type == fourcc("prof") ||
+           colour_type == fourcc("rICC")) {
+    uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
+    if (profile_size_64 > std::numeric_limits<size_t>::max()) {
+      return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
+    }
+
+    size_t profile_size = static_cast<size_t>(profile_size_64);
+
+    status = range.wait_for_available_bytes(profile_size);
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
+
+    std::vector<uint8_t> rawData(profile_size);
+    for (size_t i = 0; i < profile_size; i++) {
+      rawData[i] = range.read8();
+    }
+
+    m_color_profile = std::make_shared<color_profile_raw>(colour_type, rawData);
+  }
+  else {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unknown_color_profile_type);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_colr::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  if (m_color_profile) {
+    sstr << indent << "colour_type: " << to_fourcc(get_color_profile_type()) << "\n";
+    sstr << m_color_profile->dump(indent);
+  }
+  else {
+    sstr << indent << "colour_type: ---\n";
+    sstr << "no color profile\n";
+  }
+
+  return sstr.str();
+}
+
+
+std::string color_profile_raw::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << indent << "profile size: " << m_data.size() << "\n";
+  return sstr.str();
+}
+
+
+std::string color_profile_nclx::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << indent << "colour_primaries: " << m_colour_primaries << "\n"
+       << indent << "transfer_characteristics: " << m_transfer_characteristics << "\n"
+       << indent << "matrix_coefficients: " << m_matrix_coefficients << "\n"
+       << indent << "full_range_flag: " << m_full_range_flag << "\n";
+  return sstr.str();
+}
+
+
+Error color_profile_nclx::write(StreamWriter& writer) const
+{
+  writer.write16(m_colour_primaries);
+  writer.write16(m_transfer_characteristics);
+  writer.write16(m_matrix_coefficients);
+  writer.write8(m_full_range_flag ? 0x80 : 0x00);
+
+  return Error::Ok;
+}
+
+Error color_profile_raw::write(StreamWriter& writer) const
+{
+  writer.write(m_data);
+
+  return Error::Ok;
+}
+
+Error Box_colr::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  assert(m_color_profile);
+
+  writer.write32(m_color_profile->get_type());
+
+  Error err = m_color_profile->write(writer);
+  if (err) {
+    return err;
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
 

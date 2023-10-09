@@ -22,6 +22,8 @@
 #include "libheif/box.h"
 #include "libheif/heif.h"
 #include "libheif/jpeg2000.h"
+#include "libheif/jpeg.h"
+#include "libheif/vvc.h"
 
 #include <cstdint>
 #include <fstream>
