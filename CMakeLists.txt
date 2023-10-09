@@ -112,7 +112,7 @@ plugin_option(OpenJPEG_DECODER OpenJPEG "OpenJPEG_Decoder" "JPEG2000 decoder" OF
 
 option(WITH_FFMPEG_DECODER "Build FFMPEG HEVC decoder (HW accelerated)" OFF)
 option(WITH_FFMPEG_DECODER_PLUGIN "Build FFMPEG HEVC decoder as a plugin" OFF)
-if (WITH_WITH_FFMPEG_DECODER)
+if (WITH_FFMPEG_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
