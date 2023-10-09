@@ -110,13 +110,13 @@ plugin_option(OpenJPEG_DECODER OpenJPEG "OpenJPEG_Decoder" "JPEG2000 decoder" OF
 
 # FFMPEG detection works slightly differently. We cannot use plugin_option().
 
-option(WITH_FFMPEG_DECODER "Build FFMPEG HEVC decoder (HW accelerated)" OFF)
-option(WITH_FFMPEG_DECODER_PLUGIN "Build FFMPEG HEVC decoder as a plugin" OFF)
-if (WITH_FFMPEG_DECODER)
+option(WITH_FFMPEG_HEVC_DECODER "Build FFMPEG HEVC decoder (HW accelerated)" OFF)
+option(WITH_FFMPEG_HEVC_DECODER_PLUGIN "Build FFMPEG HEVC decoder as a plugin" OFF)
+if (WITH_FFMPEG_HEVC_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
-if (FFMPEG_avcodec_FOUND AND WITH_FFMPEG_DECODER_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
+if (FFMPEG_avcodec_FOUND AND WITH_FFMPEG_HEVC_DECODER_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
     set(msg "found plugin")
 elseif (FFMPEG_avcodec_FOUND)
     set(msg " found built-in")

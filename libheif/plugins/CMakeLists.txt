@@ -87,9 +87,9 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR KVAZAAR)
 
-set(FFMPEG_DECODER_sources heif_decoder_ffmpeg.cc heif_decoder_ffmpeg.h)
-set(FFMPEG_DECODER_extra_plugin_sources ../heif_image.cc ../error.cc)
-plugin_compilation(ffmpegdec FFMPEG FFMPEG_DECODER FFMPEG_DECODER)
+set(FFMPEG_HEVC_DECODER_sources decoder_ffmpeg_hevc.cc decoder_ffmpeg_hevc.h)
+set(FFMPEG_HEVC_DECODER_extra_plugin_sources ../error.cc)
+plugin_compilation(ffmpeg_hevc_dec FFMPEG FFMPEG_HEVC_DECODER FFMPEG_HEVC_DECODER)
 
 target_sources(heif PRIVATE
                encoder_mask.h

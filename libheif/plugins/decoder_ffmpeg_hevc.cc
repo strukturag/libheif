@@ -20,7 +20,7 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "heif_decoder_ffmpeg.h"
+#include "decoder_ffmpeg_hevc.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -479,7 +479,7 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_v1_push_data,
         ffmpeg_v1_decode_image,
         ffmpeg_set_strict_decoding,
-        "ffmpeg"
+        "ffmpeg-hevc"
     };
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
@@ -487,7 +487,7 @@ const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
   return &decoder_ffmpeg;
 }
 
-#if PLUGIN_FFMPEG_DECODER
+#if PLUGIN_FFMPEG_HEVC_DECODER
 heif_plugin_info plugin_info{
   1,
   heif_plugin_type_decoder,
