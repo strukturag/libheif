@@ -193,7 +193,6 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
 static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec_frame, AVPacket* hvec_pkt, struct heif_image** image)
 {
     int ret;
-    struct heif_error err = { heif_error_Ok, heif_suberror_Unspecified, kSuccess };
 
     ret = avcodec_send_packet(hvec_dec_ctx, hvec_pkt);
     if (ret < 0) {
@@ -273,14 +272,12 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
                                  "Pixel format not implemented" };
         return err;
     }
-
 }
 
 static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
                                                   struct heif_image** out_img)
 {
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
 
   int heif_idrpic_size;
   int heif_vps_size;
@@ -430,7 +427,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 
       if (hvec_pkt->size)
       {
-          err = hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
+          struct heif_error err = hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
           if (err.code != heif_error_Ok)
               return err;
       }
@@ -453,7 +450,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   uint8_t matrix_coefficients = hvec_codecParam->color_space;
   avcodec_parameters_free(&hvec_codecParam);
 
-  delete hvec_data;
+  free(hvec_data);
   av_parser_close(hvec_parser);
   avcodec_free_context(&hvec_codecContext);
   av_frame_free(&hvec_frame);
@@ -467,7 +464,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   heif_image_set_nclx_color_profile(*out_img, nclx);
   heif_nclx_color_profile_free(nclx);
 
-  return err;
+  return heif_error_success;
 }
 
 static const struct heif_decoder_plugin decoder_ffmpeg
