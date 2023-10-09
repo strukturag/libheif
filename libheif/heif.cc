@@ -30,6 +30,7 @@
 #include "plugin_registry.h"
 #include "error.h"
 #include "bitstream.h"
+#include "init.h"
 #include <set>
 #include <limits>
 
@@ -436,6 +437,8 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
 
 heif_context* heif_context_alloc()
 {
+  load_plugins_if_not_initialized_yet();
+
   struct heif_context* ctx = new heif_context;
   ctx->context = std::make_shared<HeifContext>();
 
