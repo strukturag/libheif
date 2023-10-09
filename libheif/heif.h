@@ -3047,7 +3047,7 @@ struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_regio
                                                                int32_t x, int32_t y,
                                                                uint32_t width, uint32_t height,
                                                                uint8_t* mask_data,
-                                                               unsigned long mask_data_len,
+                                                               size_t mask_data_len,
                                                                struct heif_region** out_region);
 
 /**
