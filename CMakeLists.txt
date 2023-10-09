@@ -56,6 +56,9 @@ endif()
 
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
+
+# --- codec plugins
+
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
 set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_FULL_LIBDIR}/libheif" CACHE STRING "Plugin install directory")
 
@@ -67,73 +70,124 @@ if (ENABLE_PLUGIN_LOADING)
         WORLD_READ WORLD_EXECUTE)
 endif()
 
-macro(plugin_option variableName packageName displayName displayType defaultEnabled defaultPlugin)
-    option(WITH_${variableName} "Build ${displayName} ${displayType}" ${defaultEnabled})
-    option(WITH_${variableName}_PLUGIN "Build ${displayName} as a plugin" ${defaultPlugin})
-    if (WITH_${variableName})
-        find_package(${packageName})
-    endif ()
+macro(plugin_option optionVariableName displayName defaultEnabled defaultPlugin)
+    option(WITH_${optionVariableName} "Build ${displayName}" ${defaultEnabled})
+    option(WITH_${optionVariableName}_PLUGIN "Build ${displayName} as a plugin" ${defaultPlugin})
+endmacro()
 
-    if (${variableName}_FOUND AND WITH_${variableName}_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
+macro(plugin_compilation_info optionVariableName detectionVariable displayName)
+    if (${detectionVariable}_FOUND AND WITH_${optionVariableName}_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
         set(msg "found (plugin)")
-    elseif (${variableName}_FOUND)
+    elseif (${detectionVariable}_FOUND)
         set(msg "found (built-in)")
-    elseif (WITH_${variableName})
+    elseif (WITH_${optionVariableName})
         set(msg "not found")
     else()
         set(msg "disabled")
     endif ()
 
-    message("${displayName} (${displayType}): ${msg}")
+    message("${displayName}: ${msg}")
     unset(msg)
 endmacro()
 
-plugin_option(LIBDE265 LIBDE265 "libde265" "HEIC decoder" ON OFF)
-plugin_option(X265 X265 "x265" "HEIC encoder" ON OFF)
-plugin_option(KVAZAAR kvazaar "kvazaar" "kvazaar HEVC encoder" OFF OFF)
-if (HAVE_KVAZAAR_ENABLE_LOGGING)
-    add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=1)
-else()
-    add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
+# libde265
+
+plugin_option(LIBDE265 "libde265 HEVC decoder" ON OFF)
+if (WITH_LIBDE265)
+    find_package(LIBDE265)
 endif()
+plugin_compilation_info(LIBDE265 LIBDE265 "libde265")
 
-plugin_option(DAV1D DAV1D "Dav1d" "AVIF decoder" OFF ON)
-plugin_option(AOM_ENCODER AOM "aom" "AVIF encoder" ON OFF)
-plugin_option(AOM_DECODER AOM "aom" "AVIF decoder" ON OFF)
-plugin_option(SvtEnc SvtEnc "Svt-av1" "AVIF encoder" OFF ON)
-plugin_option(RAV1E RAV1E "Rav1e" "AVIF encoder" OFF ON)
-plugin_option(JPEG_DECODER JPEG "Jpeg" "JPEG decoder" OFF OFF)
-plugin_option(JPEG_ENCODER JPEG "Jpeg" "JPEG encoder" OFF OFF)
-plugin_option(OpenJPEG_ENCODER OpenJPEG "OpenJPEG_Encoder" "JPEG2000 encoder" OFF ON)
-plugin_option(OpenJPEG_DECODER OpenJPEG "OpenJPEG_Decoder" "JPEG2000 decoder" OFF ON)
+# x265
 
+plugin_option(X265 "x265 HEVC encoder" ON OFF)
+if (WITH_X265)
+    find_package(X265)
+endif()
+plugin_compilation_info(X265 X265 "x265")
 
-# FFMPEG detection works slightly differently. We cannot use plugin_option().
+# kvazaar
 
-option(WITH_FFMPEG_HEVC_DECODER "Build FFMPEG HEVC decoder (HW accelerated)" OFF)
-option(WITH_FFMPEG_HEVC_DECODER_PLUGIN "Build FFMPEG HEVC decoder as a plugin" OFF)
+plugin_option(KVAZAAR "kvazaar HEVC encoder" OFF OFF)
+if (WITH_KVAZAAR)
+    find_package(kvazaar)
+    if (HAVE_KVAZAAR_ENABLE_LOGGING)
+        add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=1)
+    else ()
+        add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
+    endif ()
+endif ()
+plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
+
+# dav1d
+
+plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
+if (WITH_DAV1D)
+    find_package(DAV1D)
+endif()
+plugin_compilation_info(DAV1D DAV1D "Dav1d AV1 decoder")
+
+# aom
+
+plugin_option(AOM_DECODER "AOM AV1 decoder" ON OFF)
+plugin_option(AOM_ENCODER "AOM AV1 encoder" ON OFF)
+if (WITH_AOM_ENCODER OR WITH_AOM_DECODER)
+    find_package(AOM)
+endif()
+plugin_compilation_info(AOM_DECODER AOM "AOM AV1 decoder")
+plugin_compilation_info(AOM_ENCODER AOM "AOM AV1 encoder")
+
+# svt
+
+plugin_option(SvtEnc "SVT AV1 encoder" OFF ON)
+if (WITH_SvtEnc)
+    find_package(SvtEnc)
+endif()
+plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
+
+# rav1e
+
+plugin_option(RAV1E "Rav1e AV1 encoder" OFF ON)
+if (WITH_RAV1E)
+    find_package(RAV1E)
+endif()
+plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
+
+# jpeg
+
+plugin_option(JPEG_DECODER "JPEG decoder" OFF OFF)
+plugin_option(JPEG_ENCODER "JPEG encoder" OFF OFF)
+if (WITH_JPEG_ENCODER OR WITH_JPEG_DECODER)
+    find_package(JPEG)
+endif()
+plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
+plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+
+# openjpeg
+
+plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
+plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
+if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
+    find_package(OpenJPEG)
+endif()
+plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
+plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
+
+# ffmpeg
+
+plugin_option(FFMPEG_HEVC_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
 if (WITH_FFMPEG_HEVC_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
+plugin_compilation_info(FFMPEG_HEVC_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW accelerated)")
 
-if (FFMPEG_avcodec_FOUND AND WITH_FFMPEG_HEVC_DECODER_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
-    set(msg "found plugin")
-elseif (FFMPEG_avcodec_FOUND)
-    set(msg " found built-in")
-elseif (WITH_FFMPEG_DECODER)
-    set(msg " not found")
-else ()
-    set(msg "disabled")
-endif ()
-
-message("FFMPEG HEVC decoder:" ${msg})
-unset(msg)
-
-
+# uncompressed
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
-# Libsharpyuv
+
+# --- Libsharpyuv color space transforms
+
 option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
 if (WITH_LIBSHARPYUV)
     find_package(libsharpyuv)
