@@ -861,35 +861,35 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
       {
         component_align = 2;
       }
-      Box_uncC::Component component0 = {0, (uint8_t)(bpp - 1), component_format_unsigned, component_align};
+      Box_uncC::Component component0 = {0, (uint8_t)(bpp), component_format_unsigned, component_align};
       uncC->add_component(component0);
-      Box_uncC::Component component1 = {1, (uint8_t)(bpp - 1), component_format_unsigned, component_align};
+      Box_uncC::Component component1 = {1, (uint8_t)(bpp), component_format_unsigned, component_align};
       uncC->add_component(component1);
-      Box_uncC::Component component2 = {2, (uint8_t)(bpp - 1), component_format_unsigned, component_align};
+      Box_uncC::Component component2 = {2, (uint8_t)(bpp), component_format_unsigned, component_align};
       uncC->add_component(component2);
       if ((image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
           (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
           (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
       {
         Box_uncC::Component component3 = {
-            3, (uint8_t)(bpp - 1), component_format_unsigned, component_align};
+            3, (uint8_t)(bpp), component_format_unsigned, component_align};
         uncC->add_component(component3);
       }
     } else {
       uncC->set_interleave_type(interleave_type_component);
       int bpp_red = image->get_bits_per_pixel(heif_channel_R);
-      Box_uncC::Component component0 = {0, (uint8_t)(bpp_red - 1), component_format_unsigned, 0};
+      Box_uncC::Component component0 = {0, (uint8_t)(bpp_red), component_format_unsigned, 0};
       uncC->add_component(component0);
       int bpp_green = image->get_bits_per_pixel(heif_channel_G);
-      Box_uncC::Component component1 = {1, (uint8_t)(bpp_green - 1), component_format_unsigned, 0};
+      Box_uncC::Component component1 = {1, (uint8_t)(bpp_green), component_format_unsigned, 0};
       uncC->add_component(component1);
       int bpp_blue = image->get_bits_per_pixel(heif_channel_B);
-      Box_uncC::Component component2 = {2, (uint8_t)(bpp_blue - 1), component_format_unsigned, 0};
+      Box_uncC::Component component2 = {2, (uint8_t)(bpp_blue), component_format_unsigned, 0};
       uncC->add_component(component2);
       if(image->has_channel(heif_channel_Alpha))
       {
         int bpp_alpha = image->get_bits_per_pixel(heif_channel_Alpha);
-        Box_uncC::Component component3 = {3, (uint8_t)(bpp_alpha - 1), component_format_unsigned, 0};
+        Box_uncC::Component component3 = {3, (uint8_t)(bpp_alpha), component_format_unsigned, 0};
         uncC->add_component(component3);   
       }
     }
@@ -922,12 +922,12 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
       cmpd->add_component(alphaComponent);
     }
     int bpp = image->get_bits_per_pixel(heif_channel_Y);
-    Box_uncC::Component component0 = {0, (uint8_t)(bpp - 1), component_format_unsigned, 0};
+    Box_uncC::Component component0 = {0, (uint8_t)(bpp), component_format_unsigned, 0};
     uncC->add_component(component0);
     if (image->has_channel(heif_channel_Alpha))
     {
       bpp = image->get_bits_per_pixel(heif_channel_Alpha);
-      Box_uncC::Component component1 = {1, (uint8_t)(bpp - 1), component_format_unsigned, 0};
+      Box_uncC::Component component1 = {1, (uint8_t)(bpp), component_format_unsigned, 0};
       uncC->add_component(component1);
     }
     uncC->set_sampling_type(sampling_type_no_subsampling);
