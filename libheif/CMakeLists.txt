@@ -117,11 +117,8 @@ endif ()
 
 if (WITH_DEFLATE_HEADER_COMPRESSION)
     find_package(ZLIB REQUIRED)
-    if (ZLIB_FOUND)
-        target_link_libraries(heif PRIVATE ${ZLIB_LIBRARIES})
-        target_include_directories(heif PRIVATE ${ZLIB_INCLUDE_DIRS})
-        target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
-    endif ()
+    target_link_libraries(heif PRIVATE ZLIB::ZLIB)
+    target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
 endif ()
 
 if (ENABLE_MULTITHREADING_SUPPORT)
