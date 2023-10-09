@@ -87,6 +87,10 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR KVAZAAR)
 
+set(FFMPEG_DECODER_sources heif_decoder_ffmpeg.cc heif_decoder_ffmpeg.h)
+set(FFMPEG_DECODER_extra_plugin_sources ../heif_image.cc ../error.cc)
+plugin_compilation(ffmpegdec FFMPEG FFMPEG_DECODER FFMPEG_DECODER)
+
 target_sources(heif PRIVATE
                encoder_mask.h
                encoder_mask.cc)
@@ -96,3 +100,4 @@ if (WITH_UNCOMPRESSED_CODEC)
             encoder_uncompressed.h
             encoder_uncompressed.cc)
 endif ()
+
