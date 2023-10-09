@@ -28,7 +28,6 @@
 #include <cstring>
 #include <cstdlib>
 #include <vector>
-#include <zlib.h>
 
 #include "encoder_png.h"
 #include "libheif/exif.h"
