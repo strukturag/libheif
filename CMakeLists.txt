@@ -106,9 +106,32 @@ plugin_option(JPEG_DECODER JPEG "Jpeg" "JPEG decoder" OFF OFF)
 plugin_option(JPEG_ENCODER JPEG "Jpeg" "JPEG encoder" OFF OFF)
 plugin_option(OpenJPEG_ENCODER OpenJPEG "OpenJPEG_Encoder" "JPEG2000 encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER OpenJPEG "OpenJPEG_Decoder" "JPEG2000 decoder" OFF ON)
-plugin_option(FFMPEG_DECODER FFMPEG "FFMPEG" "FFMPEG hevc decoder with hw accel" OFF OFF)
 
-option(WITH_UNCOMPRESSED_CODEC "Support internal ISO/IEC 23001-17 uncompressed codec (experimental)" OFF)
+
+# FFMPEG detection works slightly differently. We cannot use plugin_option().
+
+option(WITH_FFMPEG_DECODER "Build FFMPEG HEVC decoder (HW accelerated)" OFF)
+option(WITH_FFMPEG_DECODER_PLUGIN "Build FFMPEG HEVC decoder as a plugin" OFF)
+if (WITH_WITH_FFMPEG_DECODER)
+    find_package(FFMPEG COMPONENTS avcodec)
+endif ()
+
+if (FFMPEG_avcodec_FOUND AND WITH_FFMPEG_DECODER_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
+    set(msg "found plugin")
+elseif (FFMPEG_avcodec_FOUND)
+    set(msg " found built-in")
+elseif (WITH_FFMPEG_DECODER)
+    set(msg " not found")
+else ()
+    set(msg "disabled")
+endif ()
+
+message("FFMPEG HEVC decoder:" ${msg})
+unset(msg)
+
+
+
+option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
 # Libsharpyuv
 option(WITH_LIBSHARPYUV "Build libsharpyuv" ON)
