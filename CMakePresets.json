@@ -29,7 +29,15 @@
         "WITH_JPEG_DECODER_PLUGIN" : "ON",
         "WITH_JPEG_ENCODER" : "ON",
         "WITH_JPEG_ENCODER_PLUGIN" : "ON",
-        "WITH_UNCOMPRESSED_CODEC" : "ON"
+        "WITH_UNCOMPRESSED_CODEC" : "ON",
+	"WITH_KVAZAAR" : "ON",
+	"WITH_KVAZAAR_PLUGIN" : "ON",
+	"WITH_OpenJPEG_DECODER" : "ON",
+	"WITH_OpenJPEG_DECODER_PLUGIN" : "ON",
+	"WITH_OpenJPEG_ENCODER" : "ON",
+	"WITH_OpenJPEG_ENCODER_PLUGIN" : "ON",
+	"WITH_FFMPEG_HEVC_DECODER" : "ON",
+	"WITH_FFMPEG_HEVC_DECODER_PLUGIN" : "ON"
       }
     },
     {
@@ -86,7 +94,14 @@
         "WITH_AOM_ENCODER" : "ON",
         "WITH_DAV1D" : "OFF",
         "WITH_RAV1E" : "OFF",
-        "WITH_SvtEnc" : "OFF"
+        "WITH_SvtEnc" : "OFF",
+        "WITH_JPEG_DECODER" : "OFF",
+        "WITH_JPEG_ENCODER" : "OFF",
+        "WITH_UNCOMPRESSED_CODEC" : "OFF",
+	"WITH_KVAZAAR" : "OFF",
+	"WITH_OpenJPEG_DECODER" : "OFF",
+	"WITH_OpenJPEG_ENCODER" : "OFF",
+	"WITH_FFMPEG_HEVC_DECODER" : "OFF"
       }
     },
     {
