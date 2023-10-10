@@ -59,7 +59,7 @@
 #endif
 
 #if HAVE_FFMPEG_HEVC_DECODER
-#include "libheif/plugins/heif_decoder_ffmpeg.h"
+#include "libheif/plugins/decoder_ffmpeg_hevc.h"
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
