@@ -483,7 +483,6 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     }
 
     component_params[comp].prec = bpp;
-    component_params[comp].bpp = bpp;
     component_params[comp].sgnd = 0;
     component_params[comp].dx = comp == 0 ? 1 : sub_dx;
     component_params[comp].dy = comp == 0 ? 1 : sub_dy;
