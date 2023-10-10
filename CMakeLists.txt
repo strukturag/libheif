@@ -166,8 +166,8 @@ endif()
 
 # ffmpeg
 
-plugin_option(FFMPEG_HEVC_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
-if (WITH_FFMPEG_HEVC_DECODER)
+plugin_option(FFMPEG_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
+if (WITH_FFMPEG_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
@@ -180,7 +180,7 @@ option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed 
 
 message("=== Summary of compiled codecs ===")
 plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
-plugin_compilation_info(FFMPEG_HEVC_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
+plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
 plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
 plugin_compilation_info(AOM_DECODER AOM "AOM AV1 decoder")
