@@ -77,16 +77,19 @@ endmacro()
 
 macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     if (${detectionVariable}_FOUND AND WITH_${optionVariableName}_PLUGIN AND PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
-        set(msg "found (plugin)")
+        set(msg "+ separate plugin")
     elseif (${detectionVariable}_FOUND)
-        set(msg "found (built-in)")
+        set(msg "+ built-in")
     elseif (WITH_${optionVariableName})
-        set(msg "not found")
+        set(msg "- not found")
     else()
-        set(msg "disabled")
+        set(msg "- disabled")
     endif ()
 
-    message("${displayName}: ${msg}")
+    string(LENGTH "${displayName}" len)
+    math(EXPR fill "29 - ${len}")
+    string(SUBSTRING "                                                " 0 ${fill} filler)
+    message("${displayName}${filler}: ${msg}")
     unset(msg)
 endmacro()
 
@@ -96,7 +99,6 @@ plugin_option(LIBDE265 "libde265 HEVC decoder" ON OFF)
 if (WITH_LIBDE265)
     find_package(LIBDE265)
 endif()
-plugin_compilation_info(LIBDE265 LIBDE265 "libde265")
 
 # x265
 
@@ -104,7 +106,6 @@ plugin_option(X265 "x265 HEVC encoder" ON OFF)
 if (WITH_X265)
     find_package(X265)
 endif()
-plugin_compilation_info(X265 X265 "x265")
 
 # kvazaar
 
@@ -117,7 +118,6 @@ if (WITH_KVAZAAR)
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
     endif ()
 endif ()
-plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
 
 # dav1d
 
@@ -125,7 +125,6 @@ plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
 if (WITH_DAV1D)
     find_package(DAV1D)
 endif()
-plugin_compilation_info(DAV1D DAV1D "Dav1d AV1 decoder")
 
 # aom
 
@@ -134,8 +133,6 @@ plugin_option(AOM_ENCODER "AOM AV1 encoder" ON OFF)
 if (WITH_AOM_ENCODER OR WITH_AOM_DECODER)
     find_package(AOM)
 endif()
-plugin_compilation_info(AOM_DECODER AOM "AOM AV1 decoder")
-plugin_compilation_info(AOM_ENCODER AOM "AOM AV1 encoder")
 
 # svt
 
@@ -143,7 +140,6 @@ plugin_option(SvtEnc "SVT AV1 encoder" OFF ON)
 if (WITH_SvtEnc)
     find_package(SvtEnc)
 endif()
-plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
 
 # rav1e
 
@@ -151,7 +147,6 @@ plugin_option(RAV1E "Rav1e AV1 encoder" OFF ON)
 if (WITH_RAV1E)
     find_package(RAV1E)
 endif()
-plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
 
 # jpeg
 
@@ -160,8 +155,6 @@ plugin_option(JPEG_ENCODER "JPEG encoder" OFF OFF)
 if (WITH_JPEG_ENCODER OR WITH_JPEG_DECODER)
     find_package(JPEG)
 endif()
-plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
-plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
 
 # openjpeg
 
@@ -170,8 +163,6 @@ plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
     find_package(OpenJPEG)
 endif()
-plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
-plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 
 # ffmpeg
 
@@ -179,11 +170,28 @@ plugin_option(FFMPEG_HEVC_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF
 if (WITH_FFMPEG_HEVC_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
-plugin_compilation_info(FFMPEG_HEVC_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW accelerated)")
 
 # uncompressed
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
+
+
+# --- show codec compilation summary
+
+message("=== Summary of compiled codecs ===")
+plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
+plugin_compilation_info(FFMPEG_HEVC_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
+plugin_compilation_info(X265 X265 "x265 HEVC encoder")
+plugin_compilation_info(KVAZAAR KVAZAAR "Kvazaar HEVC encoder")
+plugin_compilation_info(AOM_DECODER AOM "AOM AV1 decoder")
+plugin_compilation_info(AOM_ENCODER AOM "AOM AV1 encoder")
+plugin_compilation_info(DAV1D DAV1D "Dav1d AV1 decoder")
+plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
+plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
+plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
+plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
+plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 
 
 # --- Libsharpyuv color space transforms
