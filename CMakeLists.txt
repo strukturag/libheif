@@ -72,7 +72,7 @@ endif()
 
 macro(plugin_option optionVariableName displayName defaultEnabled defaultPlugin)
     option(WITH_${optionVariableName} "Build ${displayName}" ${defaultEnabled})
-    option(WITH_${optionVariableName}_PLUGIN "Build ${displayName} as a plugin" ${defaultPlugin})
+    option(WITH_${optionVariableName}_PLUGIN "Build ${displayName} as a plugin" ${defaultPlugin} AND WITH_${optionVariableName})
 endmacro()
 
 macro(plugin_compilation_info optionVariableName detectionVariable displayName)
