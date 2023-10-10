@@ -190,17 +190,17 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
   return err;
 }
 
-static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec_frame, AVPacket* hvec_pkt, struct heif_image** image)
+static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
 {
     int ret;
 
-    ret = avcodec_send_packet(hvec_dec_ctx, hvec_pkt);
+    ret = avcodec_send_packet(hevc_dec_ctx, hevc_pkt);
     if (ret < 0) {
         struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
         return err;
     }
 
-    ret = avcodec_receive_frame(hvec_dec_ctx, hvec_frame);
+    ret = avcodec_receive_frame(hevc_dec_ctx, hevc_frame);
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
         struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
@@ -211,11 +211,11 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
         return err;
     }
 
-    if ((hvec_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hvec_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P)) //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
+    if ((hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P)) //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
     {
         heif_error err;
-        err = heif_image_create(hvec_frame->width,
-            hvec_frame->height,
+        err = heif_image_create(hevc_frame->width,
+            hevc_frame->height,
             heif_colorspace_YCbCr,
             heif_chroma_420,
             image);
@@ -234,11 +234,11 @@ static struct heif_error hvec_decode(AVCodecContext* hvec_dec_ctx, AVFrame* hvec
         for (int channel = 0; channel < nPlanes; channel++) {
 
             int bpp = 8;
-            int stride = hvec_frame->linesize[channel];
-            const uint8_t* data = hvec_frame->data[channel];
+            int stride = hevc_frame->linesize[channel];
+            const uint8_t* data = hevc_frame->data[channel];
 
-            int w = (channel == 0) ? hvec_frame->width : hvec_frame->width >> 1;
-            int h = (channel == 0) ? hvec_frame->height : hvec_frame->height >> 1;
+            int w = (channel == 0) ? hevc_frame->width : hevc_frame->width >> 1;
+            int h = (channel == 0) ? hevc_frame->height : hevc_frame->height >> 1;
             if (w <= 0 || h <= 0) {
                 heif_image_release(*image);
                 err = { heif_error_Decoder_plugin_error,
@@ -331,35 +331,35 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
       return err;
   }
 
-  const char hvec_AnnexB_StartCode[] = { 0x00, 0x00, 0x00, 0x01 };
-  int hvec_AnnexB_StartCode_size = 4;
+  const char hevc_AnnexB_StartCode[] = { 0x00, 0x00, 0x00, 0x01 };
+  int hevc_AnnexB_StartCode_size = 4;
 
-  size_t hvec_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hvec_AnnexB_StartCode_size;
-  uint8_t* hvec_data = (uint8_t*)malloc(hvec_data_size);
+  size_t hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
+  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size);
 
-  //Copy hvec pps data
-  uint8_t* hvec_data_ptr = hvec_data;
-  memcpy(hvec_data_ptr, hvec_AnnexB_StartCode, hvec_AnnexB_StartCode_size);
-  hvec_data_ptr += hvec_AnnexB_StartCode_size;
-  memcpy(hvec_data_ptr, heif_vps_data, heif_vps_size);
-  hvec_data_ptr += heif_vps_size;
+  //Copy hevc pps data
+  uint8_t* hevc_data_ptr = hevc_data;
+  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+  hevc_data_ptr += hevc_AnnexB_StartCode_size;
+  memcpy(hevc_data_ptr, heif_vps_data, heif_vps_size);
+  hevc_data_ptr += heif_vps_size;
 
-  //Copy hvec sps data
-  memcpy(hvec_data_ptr, hvec_AnnexB_StartCode, hvec_AnnexB_StartCode_size);
-  hvec_data_ptr += hvec_AnnexB_StartCode_size;
-  memcpy(hvec_data_ptr, heif_sps_data, heif_sps_size);
-  hvec_data_ptr += heif_sps_size;
+  //Copy hevc sps data
+  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+  hevc_data_ptr += hevc_AnnexB_StartCode_size;
+  memcpy(hevc_data_ptr, heif_sps_data, heif_sps_size);
+  hevc_data_ptr += heif_sps_size;
 
-  //Copy hvec pps data
-  memcpy(hvec_data_ptr, hvec_AnnexB_StartCode, hvec_AnnexB_StartCode_size);
-  hvec_data_ptr += hvec_AnnexB_StartCode_size;
-  memcpy(hvec_data_ptr, heif_pps_data, heif_pps_size);
-  hvec_data_ptr += heif_pps_size;
+  //Copy hevc pps data
+  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+  hevc_data_ptr += hevc_AnnexB_StartCode_size;
+  memcpy(hevc_data_ptr, heif_pps_data, heif_pps_size);
+  hevc_data_ptr += heif_pps_size;
 
-  //Copy hvec idrpic data
-  memcpy(hvec_data_ptr, hvec_AnnexB_StartCode, hvec_AnnexB_StartCode_size);
-  hvec_data_ptr += hvec_AnnexB_StartCode_size;
-  memcpy(hvec_data_ptr, heif_idrpic_data, heif_idrpic_size);
+  //Copy hevc idrpic data
+  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+  hevc_data_ptr += hevc_AnnexB_StartCode_size;
+  memcpy(hevc_data_ptr, heif_idrpic_data, heif_idrpic_size);
 
   //decoder->NalMap not needed anymore
   for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
@@ -367,94 +367,94 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   }
   decoder->NalMap.clear();
 
-  const AVCodec* hvec_codec;
-  AVCodecParserContext* hvec_parser;
-  AVCodecContext* hvec_codecContext = NULL;
-  AVPacket* hvec_pkt;
-  AVFrame* hvec_frame;
+  const AVCodec* hevc_codec;
+  AVCodecParserContext* hevc_parser;
+  AVCodecContext* hevc_codecContext = NULL;
+  AVPacket* hevc_pkt;
+  AVFrame* hevc_frame;
   int ret = 0;
 
-  hvec_pkt = av_packet_alloc();
-  if (!hvec_pkt) {
+  hevc_pkt = av_packet_alloc();
+  if (!hevc_pkt) {
       struct heif_error err = { heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
   // Find HEVC video decoder
-  hvec_codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
+  hevc_codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
 
-  if (!hvec_codec) {
+  if (!hevc_codec) {
       struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
-  hvec_parser = av_parser_init(hvec_codec->id);
-  if (!hvec_parser) {
+  hevc_parser = av_parser_init(hevc_codec->id);
+  if (!hevc_parser) {
       struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
-  hvec_codecContext = avcodec_alloc_context3(hvec_codec);
-  if (!hvec_codecContext) {
+  hevc_codecContext = avcodec_alloc_context3(hevc_codec);
+  if (!hevc_codecContext) {
       struct heif_error err = { heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
   /* open it */
-  if (avcodec_open2(hvec_codecContext, hvec_codec, NULL) < 0) {
+  if (avcodec_open2(hevc_codecContext, hevc_codec, NULL) < 0) {
       struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
-  hvec_frame = av_frame_alloc();
-  if (!hvec_frame) {
+  hevc_frame = av_frame_alloc();
+  if (!hevc_frame) {
       struct heif_error err = { heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
-  uint8_t* parse_hvec_data = hvec_data;
-  int parse_hvec_data_size = (int)hvec_data_size;
-  while (parse_hvec_data_size > 0) {
-      hvec_parser->flags = PARSER_FLAG_COMPLETE_FRAMES;
-      ret = av_parser_parse2(hvec_parser, hvec_codecContext, &hvec_pkt->data, &hvec_pkt->size, parse_hvec_data, parse_hvec_data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+  uint8_t* parse_hevc_data = hevc_data;
+  int parse_hevc_data_size = (int)hevc_data_size;
+  while (parse_hevc_data_size > 0) {
+      hevc_parser->flags = PARSER_FLAG_COMPLETE_FRAMES;
+      ret = av_parser_parse2(hevc_parser, hevc_codecContext, &hevc_pkt->data, &hevc_pkt->size, parse_hevc_data, parse_hevc_data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
  
       if (ret < 0) {
           struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
           return err;
       }
-      parse_hvec_data += ret;
-      parse_hvec_data_size -= ret;
+      parse_hevc_data += ret;
+      parse_hevc_data_size -= ret;
 
-      if (hvec_pkt->size)
+      if (hevc_pkt->size)
       {
-          struct heif_error err = hvec_decode(hvec_codecContext, hvec_frame, hvec_pkt, out_img);
+          struct heif_error err = hevc_decode(hevc_codecContext, hevc_frame, hevc_pkt, out_img);
           if (err.code != heif_error_Ok)
               return err;
       }
   }
 
-  AVCodecParameters* hvec_codecParam = avcodec_parameters_alloc();
-  if (!hvec_codecParam) {
+  AVCodecParameters* hevc_codecParam = avcodec_parameters_alloc();
+  if (!hevc_codecParam) {
       struct heif_error err = { heif_error_Memory_allocation_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
-  if (avcodec_parameters_from_context(hvec_codecParam, hvec_codecContext) < 0)
+  if (avcodec_parameters_from_context(hevc_codecParam, hevc_codecContext) < 0)
   {
       struct heif_error err = { heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess };
       return err;
   }
 
-  uint8_t video_full_range_flag = (hvec_codecParam->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
-  uint8_t color_primaries = hvec_codecParam->color_primaries;
-  uint8_t transfer_characteristics = hvec_codecParam->color_trc;
-  uint8_t matrix_coefficients = hvec_codecParam->color_space;
-  avcodec_parameters_free(&hvec_codecParam);
+  uint8_t video_full_range_flag = (hevc_codecParam->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+  uint8_t color_primaries = hevc_codecParam->color_primaries;
+  uint8_t transfer_characteristics = hevc_codecParam->color_trc;
+  uint8_t matrix_coefficients = hevc_codecParam->color_space;
+  avcodec_parameters_free(&hevc_codecParam);
 
-  free(hvec_data);
-  av_parser_close(hvec_parser);
-  avcodec_free_context(&hvec_codecContext);
-  av_frame_free(&hvec_frame);
-  av_packet_free(&hvec_pkt);
+  free(hevc_data);
+  av_parser_close(hevc_parser);
+  avcodec_free_context(&hevc_codecContext);
+  av_frame_free(&hevc_frame);
+  av_packet_free(&hevc_pkt);
 
   struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
   heif_nclx_color_profile_set_color_primaries(nclx, static_cast<uint16_t>(color_primaries));
