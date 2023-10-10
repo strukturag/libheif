@@ -209,7 +209,9 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
         return err;
     }
 
-    if ((hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P)) //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
+
+    if ((hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P) || //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
+        (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P10LE))
     {
         heif_error err;
         err = heif_image_create(hevc_frame->width,
@@ -231,7 +233,7 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
 
         for (int channel = 0; channel < nPlanes; channel++) {
 
-            int bpp = 8;
+            int bpp = (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P10LE) ? 10 : 8;
             int stride = hevc_frame->linesize[channel];
             const uint8_t* data = hevc_frame->data[channel];
 
