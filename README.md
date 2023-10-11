@@ -29,7 +29,7 @@ Supported codecs:
 | Format       |  Decoders        |  Encoders           |
 |:-------------|:----------------:|:-------------------:|
 | HEIC         | libde265, ffmpeg | x265, kvazaar       |
-| AVIF         | AOM, dav1d       | AOM, rav1d, svt-av1 |
+| AVIF         | AOM, dav1d       | AOM, rav1e, svt-av1 |
 | JPEG         | libjpeg          | libjpeg             |
 | JPEG2000     | OpenJPEG         | OpenJPEG            |
 | uncompressed | builtin          | builtin             |
