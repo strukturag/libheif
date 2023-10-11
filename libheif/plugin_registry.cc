@@ -191,6 +191,8 @@ void register_decoder(const heif_decoder_plugin* decoder_plugin)
 
 const struct heif_decoder_plugin* get_decoder(enum heif_compression_format type, const char* name_id)
 {
+  load_plugins_if_not_initialized_yet();
+
   int highest_priority = 0;
   const struct heif_decoder_plugin* best_plugin = nullptr;
 
@@ -229,6 +231,8 @@ void register_encoder(const heif_encoder_plugin* encoder_plugin)
 
 const struct heif_encoder_plugin* get_encoder(enum heif_compression_format type)
 {
+  load_plugins_if_not_initialized_yet();
+
   auto filtered_encoder_descriptors = get_filtered_encoder_descriptors(type, nullptr);
   if (filtered_encoder_descriptors.size() > 0) {
     return filtered_encoder_descriptors[0]->plugin;
