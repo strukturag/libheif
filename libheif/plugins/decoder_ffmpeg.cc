@@ -492,7 +492,7 @@ static const struct heif_decoder_plugin decoder_ffmpeg
         ffmpeg_v1_push_data,
         ffmpeg_v1_decode_image,
         ffmpeg_set_strict_decoding,
-        "ffmpeg-hevc"
+        "ffmpeg"
     };
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
