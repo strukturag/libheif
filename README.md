@@ -30,9 +30,9 @@ Supported codecs:
 |:-------------|:----------------:|:-------------------:|
 | HEIC         | libde265, ffmpeg | x265, kvazaar       |
 | AVIF         | AOM, dav1d       | AOM, rav1e, svt-av1 |
-| JPEG         | libjpeg          | libjpeg             |
+| JPEG         | libjpeg(-turbo)  | libjpeg(-turbo)     |
 | JPEG2000     | OpenJPEG         | OpenJPEG            |
-| uncompressed | builtin          | builtin             |
+| uncompressed | built-in         | built-in            |
 
 ## API
 
