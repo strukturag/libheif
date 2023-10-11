@@ -26,13 +26,13 @@ libheif has support for:
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 
 Supported codecs:
-| Format       |  Decoders        |  Encoders      |
-|:-------------|:----------------:|:--------------:|
-| HEIC         | libde265, ffmpeg | x265, kvazaar  |
-| AVIF         | AOM, dav1d       | rav1d, svt-av1 |
-| JPEG         | libjpeg          | libjpeg        |
-| JPEG2000     | OpenJPEG         | OpenJPEG       |
-| uncompressed | builtin          | builtin        |
+| Format       |  Decoders        |  Encoders           |
+|:-------------|:----------------:|:-------------------:|
+| HEIC         | libde265, ffmpeg | x265, kvazaar       |
+| AVIF         | AOM, dav1d       | AOM, rav1d, svt-av1 |
+| JPEG         | libjpeg          | libjpeg             |
+| JPEG2000     | OpenJPEG         | OpenJPEG            |
+| uncompressed | builtin          | builtin             |
 
 ## API
 
