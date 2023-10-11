@@ -25,7 +25,7 @@
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg();
 
-#if PLUGIN_FFMPEG_HEVC_DECODER
+#if PLUGIN_FFMPEG_DECODER
 extern "C" {
 	MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }

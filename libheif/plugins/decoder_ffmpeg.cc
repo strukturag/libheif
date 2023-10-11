@@ -500,7 +500,7 @@ const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg()
   return &decoder_ffmpeg;
 }
 
-#if PLUGIN_FFMPEG_HEVC_DECODER
+#if PLUGIN_FFMPEG_DECODER
 heif_plugin_info plugin_info{
   1,
   heif_plugin_type_decoder,
