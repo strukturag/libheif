@@ -457,6 +457,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
       break;
     default:
       assert(false);
+      return heif_error{heif_error_Encoding_error, heif_suberror_Unspecified, "OpenJPEG encoder plugin received image with invalid colorspace."};
   }
 
   int band_count = (int) channels.size();
