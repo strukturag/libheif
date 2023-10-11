@@ -244,6 +244,8 @@ void ColorConversionPipeline::init_ops()
   ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>>());
   ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint8_t>>());
   ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint16_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint16_t>>());
   ops.push_back(std::make_shared<Op_Any_RGB_to_YCbCr_420_Sharp>());
 }
 

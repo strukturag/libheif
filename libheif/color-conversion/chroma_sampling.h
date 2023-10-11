@@ -45,6 +45,23 @@ public:
 };
 
 
+template <class Pixel>
+class Op_YCbCr444_to_YCbCr422_average : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const heif_color_conversion_options& options) const override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     const ColorState& input_state,
+                     const ColorState& target_state,
+                     const heif_color_conversion_options& options) const override;
+};
+
+
 // --- upsampling ---
 
 template <class Pixel>
