@@ -108,9 +108,7 @@ struct heif_error heif_init(struct heif_init_params*)
   std::lock_guard<std::recursive_mutex> lock(heif_init_mutex());
 #endif
 
-  heif_library_initialization_count++;
-
-  if (heif_library_initialization_count == 1) {
+  if (heif_library_initialization_count == 0) {
 
     ColorConversionPipeline::init_ops();
 
@@ -133,6 +131,10 @@ struct heif_error heif_init(struct heif_init_params*)
 #endif
   }
 
+  // Note: it is important that we increase the counter AFTER initialization such that 'load_plugins_if_not_initialized_yet()' can check this
+  // without having to lock the mutex.
+  heif_library_initialization_count++;
+
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 }
 
@@ -148,9 +150,7 @@ void heif_deinit()
     return;
   }
 
-  heif_library_initialization_count--;
-
-  if (heif_library_initialization_count == 0) {
+  if (heif_library_initialization_count == 1) {
     heif_unregister_decoder_plugins();
     heif_unregister_encoder_plugins();
     default_plugins_registered = false;
@@ -159,6 +159,10 @@ void heif_deinit()
 
     ColorConversionPipeline::release_ops();
   }
+
+  // Note: contrary to heif_init() I think it does not matter whether we decrease the counter before or after deinitialization.
+  // If the client application calls heif_deinit() in parallel to some other libheif function, it is really broken.
+  heif_library_initialization_count--;
 }
 
 
