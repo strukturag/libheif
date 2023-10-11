@@ -711,3 +711,226 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
 template class Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>;
 template class Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>;
+
+
+
+
+template<class Pixel>
+std::vector<ColorStateWithCost>
+Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState& input_state,
+                                                                const ColorState& target_state,
+                                                                const heif_color_conversion_options& options) const
+{
+  if (input_state.colorspace != heif_colorspace_YCbCr) {
+    return {};
+  }
+
+  if (input_state.chroma != heif_chroma_422) {
+    return {};
+  }
+
+  // this Op only implements the bilinear algorithm
+
+  if (options.preferred_chroma_upsampling_algorithm != heif_chroma_upsampling_bilinear) {
+    return {};
+  }
+
+  bool hdr = !std::is_same<Pixel, uint8_t>::value;
+
+  if ((input_state.bits_per_pixel != 8) != hdr) {
+    return {};
+  }
+
+  if (input_state.nclx_profile.get_matrix_coefficients() == 0) {
+    return {};
+  }
+
+  std::vector<ColorStateWithCost> states;
+
+  ColorState output_state;
+
+  // --- convert to 4:4:4
+
+  output_state.colorspace = heif_colorspace_YCbCr;
+  output_state.chroma = heif_chroma_444;
+  output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
+  output_state.bits_per_pixel = input_state.bits_per_pixel;
+  output_state.nclx_profile = input_state.nclx_profile;
+
+  states.push_back({output_state, SpeedCosts_Unoptimized});
+
+  return states;
+}
+
+
+template<class Pixel>
+std::shared_ptr<HeifPixelImage>
+Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                            const ColorState& input_state,
+                                                            const ColorState& target_state,
+                                                            const heif_color_conversion_options& options) const
+{
+  bool hdr = !std::is_same<Pixel, uint8_t>::value;
+
+  int bpp_y = input->get_bits_per_pixel(heif_channel_Y);
+  int bpp_cb = input->get_bits_per_pixel(heif_channel_Cb);
+  int bpp_cr = input->get_bits_per_pixel(heif_channel_Cr);
+  int bpp_a = 0;
+
+  bool has_alpha = input->has_channel(heif_channel_Alpha);
+
+  if (has_alpha) {
+    bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
+  }
+
+  if (!hdr) {
+    if (bpp_y != 8 ||
+        bpp_cb != 8 ||
+        bpp_cr != 8) {
+      return nullptr;
+    }
+  }
+  else {
+    if (bpp_y == 8 ||
+        bpp_cb == 8 ||
+        bpp_cr == 8) {
+      return nullptr;
+    }
+  }
+
+
+  if (bpp_y != bpp_cb ||
+      bpp_y != bpp_cr) {
+    // TODO: test with varying bit depths when we have a test image
+    return nullptr;
+  }
+
+
+  auto colorProfile = input->get_color_profile_nclx();
+
+  int width = input->get_width();
+  int height = input->get_height();
+
+  auto outimg = std::make_shared<HeifPixelImage>();
+
+  outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
+
+  if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
+      !outimg->add_plane(heif_channel_Cb, width, height, bpp_cb) ||
+      !outimg->add_plane(heif_channel_Cr, width, height, bpp_cr)) {
+    return nullptr;
+  }
+
+  if (has_alpha) {
+    if (!outimg->add_plane(heif_channel_Alpha, width, height, bpp_a)) {
+      return nullptr;
+    }
+  }
+
+  const Pixel* in_y, * in_cb, * in_cr, * in_a;
+  int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+
+  Pixel* out_y, * out_cb, * out_cr, * out_a;
+  int out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
+
+  in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
+  in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
+  in_cr = (const Pixel*) input->get_plane(heif_channel_Cr, &in_cr_stride);
+  out_y = (Pixel*) outimg->get_plane(heif_channel_Y, &out_y_stride);
+  out_cb = (Pixel*) outimg->get_plane(heif_channel_Cb, &out_cb_stride);
+  out_cr = (Pixel*) outimg->get_plane(heif_channel_Cr, &out_cr_stride);
+
+  if (has_alpha) {
+    in_a = (const Pixel*) input->get_plane(heif_channel_Alpha, &in_a_stride);
+    out_a = (Pixel*) outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+  }
+  else {
+    in_a = nullptr;
+    out_a = nullptr;
+  }
+
+
+  if (hdr) {
+    in_y_stride /= 2;
+    in_cb_stride /= 2;
+    in_cr_stride /= 2;
+    in_a_stride /= 2;
+    out_y_stride /= 2;
+    out_cb_stride /= 2;
+    out_cr_stride /= 2;
+    out_a_stride /= 2;
+  }
+
+  /*
+   *  We assume that chroma pixels are located in the center of 2x1 luma pixels.
+   *  The image border 'b' is handled separately.
+   *  The right border is not processed when the size is odd.
+   *
+   *  Upsampling weights are 3/4, 1/4. For example:
+   *    A = 3/4 * X + 1/4 * Y
+   *
+   *  X,Y,Z are the chroma samples
+   *
+   *    +---+---+---+---+
+   *    | b X A | B Y b |    even image width
+   *    +---+---+---+---+
+   *
+   *    +---+---+---+---+---+
+   *    | b X A | B Y b | b Z    odd image width
+   *    +---+---+---+---+---+
+   */
+
+  // --- fill borders
+
+  // left border
+  for (int cy = 0; cy < height; cy++) {
+    out_cb[cy * out_cb_stride] = in_cb[cy * in_cb_stride];
+    out_cr[cy * out_cr_stride] = in_cr[cy * in_cr_stride];
+  }
+
+  // right border
+  if (width % 2 == 0) {
+    for (int cy = 0; cy < height; cy++) {
+      out_cb[cy * out_cb_stride + width - 1] = in_cb[cy * in_cb_stride + width / 2 - 1];
+      out_cr[cy * out_cr_stride + width - 1] = in_cr[cy * in_cr_stride + width / 2 - 1];
+    }
+  }
+
+
+  // --- bilinear filtering of inner part
+
+  int x, y;
+  for (y = 0; y < height; y++) {
+    for (x = 1; x < width - 1; x += 2) {
+      int cx = x / 2;
+
+      Pixel cb00 = in_cb[y * in_cb_stride + cx];
+      Pixel cr00 = in_cr[y * in_cr_stride + cx];
+      Pixel cb01 = in_cb[y * in_cb_stride + cx + 1];
+      Pixel cr01 = in_cr[y * in_cr_stride + cx + 1];
+
+      out_cb[y * out_cb_stride + x + 0] = (Pixel) ((cb00 * 3 + cb01 * 1 + 2) / 4);
+      out_cb[y * out_cb_stride + x + 1] = (Pixel) ((cb00 * 1 + cb01 * 3 + 2) / 4);
+
+      out_cr[y * out_cr_stride + x + 0] = (Pixel) ((cr00 * 3 + cr01 * 1 + 2) / 4);
+      out_cr[y * out_cr_stride + x + 1] = (Pixel) ((cr00 * 1 + cr01 * 3 + 2) / 4);
+    }
+  }
+
+  // TODO: check whether we can use HeifPixelImage::transfer_plane_from_image_as() instead of copying Y and Alpha
+
+  for (y = 0; y < height; y++) {
+    int copyWidth = (hdr ? width * 2 : width);
+
+    memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
+
+    if (has_alpha) {
+      memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], copyWidth);
+    }
+  }
+
+  return outimg;
+}
+
+template class Op_YCbCr422_bilinear_to_YCbCr444<uint8_t>;
+template class Op_YCbCr422_bilinear_to_YCbCr444<uint16_t>;

@@ -242,6 +242,8 @@ void ColorConversionPipeline::init_ops()
   ops.push_back(std::make_shared<Op_to_sdr_planes>());
   ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint8_t>>());
   ops.push_back(std::make_shared<Op_YCbCr420_bilinear_to_YCbCr444<uint16_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr422_bilinear_to_YCbCr444<uint8_t>>());
+  ops.push_back(std::make_shared<Op_YCbCr422_bilinear_to_YCbCr444<uint16_t>>());
   ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint8_t>>());
   ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr420_average<uint16_t>>());
   ops.push_back(std::make_shared<Op_YCbCr444_to_YCbCr422_average<uint8_t>>());

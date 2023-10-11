@@ -80,4 +80,20 @@ public:
                      const heif_color_conversion_options& options) const override;
 };
 
+template <class Pixel>
+class Op_YCbCr422_bilinear_to_YCbCr444 : public ColorConversionOperation
+{
+public:
+  std::vector<ColorStateWithCost>
+  state_after_conversion(const ColorState& input_state,
+                         const ColorState& target_state,
+                         const heif_color_conversion_options& options) const override;
+
+  std::shared_ptr<HeifPixelImage>
+  convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                     const ColorState& input_state,
+                     const ColorState& target_state,
+                     const heif_color_conversion_options& options) const override;
+};
+
 #endif //LIBHEIF_CHROMA_SAMPLING_H
