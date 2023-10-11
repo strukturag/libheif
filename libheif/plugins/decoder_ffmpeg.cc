@@ -69,7 +69,7 @@ struct ffmpeg_decoder
 static const char kEmptyString[] = "";
 static const char kSuccess[] = "Success";
 
-static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 200;
+static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 
