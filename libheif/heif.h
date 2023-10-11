@@ -1501,7 +1501,12 @@ struct heif_color_conversion_options
   enum heif_chroma_downsampling_algorithm preferred_chroma_downsampling_algorithm;
   enum heif_chroma_upsampling_algorithm preferred_chroma_upsampling_algorithm;
 
-  // When set to 'false', libheif may also use a different algorithm if the preferred one is not available.
+  // When set to 'false' libheif may also use a different algorithm if the preferred one is not available
+  // or using a different algorithm is computationally less complex. Note that currently (v1.17.0) this
+  // means that for RGB input it will usually choose nearest-neighbor sampling because this is computationally
+  // the simplest.
+  // Set this field to 'true' if you want to make sure that the specified algorithm is used even
+  // at the cost of slightly higher computation times.
   uint8_t only_use_preferred_chroma_algorithm;
 };
 
