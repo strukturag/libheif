@@ -1533,6 +1533,19 @@ const char* heif_image_handle_get_metadata_content_type(const struct heif_image_
 }
 
 
+const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
+                                                         heif_item_id metadata_id)
+{
+  for (auto& metadata : handle->image->get_metadata()) {
+    if (metadata->item_id == metadata_id) {
+      return metadata->item_uri_type.c_str();
+    }
+  }
+
+  return nullptr;
+}
+
+
 size_t heif_image_handle_get_metadata_size(const struct heif_image_handle* handle,
                                            heif_item_id metadata_id)
 {

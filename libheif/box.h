@@ -465,6 +465,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  const std::string& get_item_uri_type() const { return m_item_uri_type; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
