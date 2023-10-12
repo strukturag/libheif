@@ -147,7 +147,7 @@ static gboolean stop_load(gpointer context, GError** error)
       g_free(profile_base64);
     }
     else {
-      g_warning("%s", err.message);
+      // Having no ICC profile is perfectly fine. Do not show any warning because of that.
     }
 
     g_free(profile_data);
