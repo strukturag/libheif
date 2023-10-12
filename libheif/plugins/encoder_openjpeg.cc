@@ -1,7 +1,7 @@
 /*
  * OpenJPEG codec.
  * Copyright (c) 2023 Devon Sookhoo
- * Copyright (c) 2023 Dirk Farin <farin@struktur.de>
+ * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *

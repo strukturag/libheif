@@ -3,7 +3,7 @@
 
   MIT License
 
-  Copyright (c) 2019 struktur AG, Dirk Farin <farin@struktur.de>
+  Copyright (c) 2019 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal

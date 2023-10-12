@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2020 struktur AG, Dirk Farin <farin@struktur.de>
+ * Copyright (c) 2020 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *

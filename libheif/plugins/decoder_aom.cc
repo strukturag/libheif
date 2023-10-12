@@ -1,6 +1,6 @@
 /*
  * AVIF codec.
- * Copyright (c) 2019 struktur AG, Dirk Farin <farin@struktur.de>
+ * Copyright (c) 2019 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
