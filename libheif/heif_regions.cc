@@ -342,7 +342,7 @@ struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_ite
   for (uint32_t y = 0; y < mask_height; y++) {
     for (uint32_t x = 0; x < mask_width; x++) {
       uint8_t mask_bit = p[y * stride + x] & 0x80; // use high-order bit of the 8-bit mask value as binary mask value
-      region->mask_data.data()[pixel_index/8] |= (mask_bit >> (pixel_index % 8));
+      region->mask_data.data()[pixel_index/8] |= uint8_t(mask_bit >> (pixel_index % 8));
 
       pixel_index++;
     }
@@ -682,7 +682,7 @@ static struct heif_error heif_region_get_inline_mask_image(const struct heif_reg
       for (uint32_t x = 0; x < width; x++)
       {
         uint64_t mask_byte = pixel_index / 8;
-        uint8_t pixel_bit = 0x80U >> (pixel_index % 8);
+        uint8_t pixel_bit = uint8_t(0x80U >> (pixel_index % 8));
 
         p[y * stride + x] = (mask_data[mask_byte] & pixel_bit) ? 255 : 0;
 

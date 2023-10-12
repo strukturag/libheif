@@ -192,7 +192,7 @@ Error Box_uncC::parse(BitstreamRange& range)
   for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
     Component component;
     component.component_index = range.read16();
-    component.component_bit_depth = range.read8() + 1;
+    component.component_bit_depth = uint16_t(range.read8() + 1);
     component.component_format = range.read8();
     component.component_align_size = range.read8();
     m_components.push_back(component);
@@ -281,8 +281,12 @@ Error Box_uncC::write(StreamWriter& writer) const
   writer.write32(m_profile);
   writer.write32((uint32_t) m_components.size());
   for (const auto& component : m_components) {
+    if (component.component_bit_depth < 1 || component.component_bit_depth > 256) {
+      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component bit-depth out of range [1..256]"};
+    }
+
     writer.write16(component.component_index);
-    writer.write8(component.component_bit_depth - 1);
+    writer.write8(uint8_t(component.component_bit_depth - 1));
     writer.write8(component.component_format);
     writer.write8(component.component_align_size);
   }
@@ -290,11 +294,11 @@ Error Box_uncC::write(StreamWriter& writer) const
   writer.write8(m_interleave_type);
   writer.write8(m_block_size);
   uint8_t flags = 0;
-  flags |= (m_components_little_endian ? 1 : 0) << 7;
-  flags |= (m_block_pad_lsb ? 1 : 0) << 6;
-  flags |= (m_block_little_endian ? 1 : 0) << 5;
-  flags |= (m_block_reversed ? 1 : 0) << 4;
-  flags |= (m_pad_unknown ? 1 : 0) << 3;
+  flags |= (m_components_little_endian ? 0x80 : 0);
+  flags |= (m_block_pad_lsb ? 0x40 : 0);
+  flags |= (m_block_little_endian ? 0x20 : 0);
+  flags |= (m_block_reversed ? 0x10 : 0);
+  flags |= (m_pad_unknown ? 0x08 : 0);
   writer.write8(flags);
   writer.write32(m_pixel_size);
   writer.write32(m_row_align_size);
@@ -414,6 +418,10 @@ static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::
   for (Box_uncC::Component component : uncC->get_components()) {
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
+
+    if (component_type >= 16) {
+      return { heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, "a component_type >= 16 is not supported"};
+    }
 
     componentSet |= (1 << component_type);
   }

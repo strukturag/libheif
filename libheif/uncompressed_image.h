@@ -83,7 +83,7 @@ public:
   struct Component
   {
     uint16_t component_index;
-    uint8_t component_bit_depth;
+    uint16_t component_bit_depth; // range [1..256]
     uint8_t component_format;
     uint8_t component_align_size;
   };

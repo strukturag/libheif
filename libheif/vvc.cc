@@ -37,7 +37,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
   byte = range.read8();
   c.constantFrameRate = (byte & 0xc0) >> 6;
   c.numTemporalLayers = (byte & 0x38) >> 3;
-  c.lengthSize = (byte & 0x06) + 1;
+  c.lengthSize = uint8_t((byte & 0x06) + 1);
   c.ptl_present_flag = (byte & 0x01);
   // assert(c.ptl_present_flag == false); // TODO   (removed the assert since it will trigger the fuzzers)
 
@@ -46,7 +46,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
   c.chroma_format_idc = (byte & 0x60) >> 5;
 
   c.bit_depth_present_flag = (byte & 0x10);
-  c.bit_depth = ((byte & 0x0e) >> 1) + 8;
+  c.bit_depth = uint8_t(((byte & 0x0e) >> 1) + 8);
 
   c.numOfArrays = range.read8();
 

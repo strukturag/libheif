@@ -357,7 +357,7 @@ JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id
         JPEG2000_SIZ_segment::component comp;
         comp.precision = data[42 + c * 3];
         comp.is_signed = (comp.precision & 0x80);
-        comp.precision = (comp.precision & 0x7F) + 1;
+        comp.precision = uint8_t((comp.precision & 0x7F) + 1);
         comp.h_separation = data[43 + c * 3];
         comp.v_separation = data[44 + c * 3];
         siz.components.push_back(comp);
