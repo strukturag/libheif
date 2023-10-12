@@ -2430,7 +2430,7 @@ void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* wid
  * Get the number of regions within a region item.
  *
  * @param region_item the region item to query.
- * @return the number of regions 
+ * @return the number of regions
 */
 LIBHEIF_API
 int heif_region_item_get_number_of_regions(const struct heif_region_item* region_item);
@@ -2801,7 +2801,7 @@ size_t heif_region_get_inline_mask_data_len(const struct heif_region* region);
  * The mask location is represented by a top left corner position, and a size defined
  * by a width and height.
  *
- * The mask is held as inline data on the region, one bit per pixel, most significant 
+ * The mask is held as inline data on the region, one bit per pixel, most significant
  * bit first pixel, no padding. If the bit value is `1`, the corresponding pixel is
  * part of the region. If the bit value is `0`, the corresponding pixel is not part of the
  * region.
@@ -2963,7 +2963,7 @@ struct heif_error heif_region_item_add_region_polygon(struct heif_region_item* r
  * Add a polyline region to the region item.
  *
  * A polyline is a sequence of points that does not form a closed shape. Even if the
- * polyline is closed, the only points that are part of the region are those that 
+ * polyline is closed, the only points that are part of the region are those that
  * intersect (even minimally) a one-pixel line drawn along the polyline.
  * The points are provided as pairs of X,Y coordinates, in the order X<sub>1</sub>,
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
@@ -3032,7 +3032,7 @@ struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region
  * The region geometry is described by a top left corner position, and a size defined
  * by a width and height.
  *
- * The mask is held as inline data on the region, one bit per pixel, most significant 
+ * The mask is held as inline data on the region, one bit per pixel, most significant
  * bit first pixel, no padding. If the bit value is `1`, the corresponding pixel is
  * part of the region. If the bit value is `0`, the corresponding pixel is not part of the
  * region.
@@ -3066,7 +3066,7 @@ struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_regio
  * mask region. If the image width is less that the specified width, it is expanded
  * to match the width of the region (zero fill on the right). If the image height is
  * less than the specified height, it is expanded to match the height of the region
- * (zero fill on the bottom). If the image width or height is greater than the 
+ * (zero fill on the bottom). If the image width or height is greater than the
  * width or height (correspondingly) of the region, the image is cropped.
  *
  * @param region_item the region item that holds this mask region
