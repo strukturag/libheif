@@ -2605,6 +2605,35 @@ Error Box_iref::parse(BitstreamRange& range)
   }
 
 
+  // --- check number of total refs
+
+  size_t nTotalRefs = 0;
+  for (const auto& ref : m_references) {
+    nTotalRefs += ref.to_item_ID.size();
+  }
+
+  if (nTotalRefs > MAX_IREF_REFERENCES) {
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
+                 "Number of iref references exceeds security limit.");
+  }
+
+  // --- check for cyclic references
+
+  for (const auto& ref : m_references) {
+    std::set<heif_item_id> to_ids;
+    for (const auto to_id : ref.to_item_ID) {
+      if (to_ids.find(to_id) != to_ids.end()) {
+        to_ids.insert(to_id);
+      }
+      else {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "'iref' has double references");
+      }
+    }
+  }
+
+
   // --- check for cyclic references
 
   for (const auto& ref : m_references) {
@@ -2628,7 +2657,7 @@ Error Box_iref::parse(BitstreamRange& range)
           // Otherwise, put that ID into the 'todo' set.
 
           for (const auto& succ_ref_id : succ_ref.to_item_ID) {
-            if (reached_ids.find(succ_ref_id)  != reached_ids.end()) {
+            if (reached_ids.find(succ_ref_id) != reached_ids.end()) {
               return Error(heif_error_Invalid_input,
                            heif_suberror_Unspecified,
                            "'iref' has cyclic references");
