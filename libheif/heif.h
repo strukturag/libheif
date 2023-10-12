@@ -1209,6 +1209,10 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  heif_item_id metadata_id,
                                                  void* out_data);
 
+// Only valid for item type == "uri ", an absolute URI
+LIBHEIF_API
+const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
+                                                         heif_item_id metadata_id);
 
 // ------------------------- color profiles -------------------------
 

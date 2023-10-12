@@ -459,6 +459,16 @@ std::string HeifFile::get_content_type(heif_item_id ID) const
   return infe_box->get_content_type();
 }
 
+std::string HeifFile::get_item_uri_type(heif_item_id ID) const
+{
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
+    return "";
+  }
+
+  return infe_box->get_item_uri_type();
+}
+
 
 Error HeifFile::get_properties(heif_item_id imageID,
                                std::vector<std::shared_ptr<Box>>& properties) const

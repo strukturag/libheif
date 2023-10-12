@@ -428,9 +428,13 @@ int main(int argc, char** argv)
       for (int n = 0; n < numMetadata; n++) {
         std::string itemtype = heif_image_handle_get_metadata_type(handle, ids[n]);
         std::string contenttype = heif_image_handle_get_metadata_content_type(handle, ids[n]);
+        std::string item_uri_type = heif_image_handle_get_metadata_item_uri_type(handle, ids[n]);
         std::string ID{"unknown"};
         if (itemtype == "Exif") {
           ID = itemtype;
+        }
+        else if (itemtype == "uri ") {
+          ID = itemtype + "/" + item_uri_type;
         }
         else if (contenttype == "application/rdf+xml") {
           ID = "XMP";
