@@ -66,9 +66,6 @@ struct ffmpeg_decoder
     bool strict_decoding = false;
 };
 
-static const char kEmptyString[] = "";
-static const char kSuccess[] = "Success";
-
 static const int FFMPEG_DECODER_PLUGIN_PRIORITY = 90;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -163,7 +160,7 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
       if (4 > size - ptr) {
           struct heif_error err = { heif_error_Decoder_plugin_error,
                                    heif_suberror_End_of_data,
-                                   kEmptyString };
+                                   "insufficient data" };
           return err;
       }
 
@@ -173,7 +170,7 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
       if (nal_size > size - ptr) {
           struct heif_error err = { heif_error_Decoder_plugin_error,
                                    heif_suberror_End_of_data,
-                                   kEmptyString };
+                                   "insufficient data" };
           return err;
       }
 
@@ -243,7 +240,7 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
                 heif_image_release(*image);
                 err = { heif_error_Decoder_plugin_error,
                        heif_suberror_Invalid_image_size,
-                       kEmptyString };
+                       "invalid image size" };
                 return err;
             }
 
