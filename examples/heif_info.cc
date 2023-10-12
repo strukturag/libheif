@@ -38,6 +38,7 @@
 #endif
 
 #include <libheif/heif.h>
+#include <libheif/heif_regions.h>
 
 #include <fstream>
 #include <iostream>

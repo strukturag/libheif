@@ -22,9 +22,8 @@
 #include "error.h"
 #include "file.h"
 #include "box.h"
-#include "libheif/heif.h"
+#include "libheif/heif_regions.h"
 #include <algorithm>
-#include <cstdint>
 #include <utility>
 
 

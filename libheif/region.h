@@ -25,7 +25,7 @@
 #include <vector>
 #include <memory>
 #include "pixelimage.h"
-#include "libheif/heif.h"
+#include "libheif/heif_regions.h"
 
 
 class RegionGeometry;
