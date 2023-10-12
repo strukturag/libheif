@@ -21,20 +21,16 @@
 
 #include "libheif/heif_plugin.h"
 #include "libheif/region.h"
-#include "libheif/common_utils.h"
-#include <cstdint>
 #include "libheif/heif_regions.h"
 #include "file.h"
-#include "pixelimage.h"
 #include "api_structs.h"
 #include "context.h"
-#include "plugin_registry.h"
 #include "error.h"
-#include "bitstream.h"
-#include "init.h"
 #include <set>
-#include <limits>
 #include <cstring>
+#include <memory>
+#include <vector>
+#include <string>
 
 
 int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
