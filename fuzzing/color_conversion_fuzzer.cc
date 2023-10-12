@@ -64,7 +64,10 @@ static bool read_plane(BitstreamRange* range,
   if (width <= 0 || height <= 0) {
     return false;
   }
-  if (!range->prepare_read(static_cast<uint64_t>(width) * height)) {
+  if (std::numeric_limits<size_t>::max()/width/height == 0) {
+    return false;
+  }
+  if (!range->prepare_read(static_cast<size_t>(width) * height)) {
     return false;
   }
   if (!image->add_plane(channel, width, height, bit_depth)) {
@@ -87,7 +90,10 @@ static bool read_plane_interleaved(BitstreamRange* range,
   if (width <= 0 || height <= 0) {
     return false;
   }
-  if (!range->prepare_read(static_cast<uint64_t>(width) * height * comps)) {
+  if (std::numeric_limits<size_t>::max()/width/height/comps == 0) {
+    return false;
+  }
+  if (!range->prepare_read(static_cast<size_t>(width) * height * comps)) {
     return false;
   }
   if (!image->add_plane(channel, width, height, bit_depth)) {
