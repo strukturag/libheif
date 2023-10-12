@@ -24,8 +24,10 @@
 #include "file.h"
 
 #include <cstring>
-#include <algorithm>
 #include <memory>
+#include <vector>
+#include <string>
+
 
 int heif_item_get_properties_of_type(const struct heif_context* context,
                                      heif_item_id id,

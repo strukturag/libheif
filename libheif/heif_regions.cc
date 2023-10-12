@@ -25,12 +25,10 @@
 #include "file.h"
 #include "api_structs.h"
 #include "context.h"
-#include "error.h"
-#include <set>
 #include <cstring>
 #include <memory>
 #include <vector>
-#include <string>
+#include <algorithm>
 
 
 int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
