@@ -261,6 +261,11 @@ The plugins are loaded from the colon-separated (semicolon-separated on Windows)
 If this variable is empty, they are loaded from a directory specified in the CMake configuration.
 You can also add plugin directories programmatically.
 
+### Codec specific notes
+
+* the FFMPEG decoding plugin can make use of h265 hardware decoders. However, it currently (v1.17.0, ffmpeg v4.4.2) does not work
+  correctly with all streams. Thus, libheif still prefers the libde265 decoder if it is available.
+
 ## Encoder benchmark
 
 A current benchmark of the AVIF encoders (as of 14 Oct 2022) can be found on the Wiki page
