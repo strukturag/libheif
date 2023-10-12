@@ -37,6 +37,7 @@
 #include <string>
 
 #include <libheif/heif.h>
+#include <libheif/heif_properties.h>
 
 #if HAVE_LIBJPEG
 #include "decoder_jpeg.h"

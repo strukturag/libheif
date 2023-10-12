@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include "libheif/common_utils.h"
+#include "libheif/heif_properties.h"
 #include <cinttypes>
 #include <cstddef>
 

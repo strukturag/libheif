@@ -21,6 +21,7 @@
 #include "file.h"
 #include "libheif/box.h"
 #include "libheif/heif.h"
+#include "libheif/heif_properties.h"
 #include "libheif/jpeg2000.h"
 #include "libheif/jpeg.h"
 #include "libheif/vvc.h"

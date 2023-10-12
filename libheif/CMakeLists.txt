@@ -6,6 +6,7 @@ set(libheif_headers
         heif.h
         heif_cxx.h
         heif_plugin.h
+        heif_properties.h
         heif_regions.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
@@ -46,6 +47,8 @@ set(libheif_sources
         region.h
         heif_regions.h
         heif_regions.cc
+        heif_properties.h
+        heif_properties.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc

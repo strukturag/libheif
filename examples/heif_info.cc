@@ -39,6 +39,7 @@
 
 #include <libheif/heif.h>
 #include <libheif/heif_regions.h>
+#include <libheif/heif_properties.h>
 
 #include <fstream>
 #include <iostream>
