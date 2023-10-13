@@ -70,14 +70,27 @@ Fraction::Fraction(uint32_t num, uint32_t den)
   *this = Fraction(int32_t(num), int32_t(den));
 }
 
+Fraction::Fraction(int64_t num, int64_t den)
+{
+  while (num < std::numeric_limits<int32_t>::min() || num > std::numeric_limits<int32_t>::max() ||
+         den < std::numeric_limits<int32_t>::min() || den > std::numeric_limits<int32_t>::max()) {
+    num = (num + (num>=0 ? 1 : -1)) / 2;
+    den = (den + (den>=0 ? 1 : -1)) / 2;
+  }
+
+  numerator = static_cast<int32_t>(num);
+  denominator = static_cast<int32_t>(den);
+}
+
 Fraction Fraction::operator+(const Fraction& b) const
 {
   if (denominator == b.denominator) {
     return Fraction{numerator + b.numerator, denominator};
   }
   else {
-    return Fraction{numerator * b.denominator + b.numerator * denominator,
-                    denominator * b.denominator};
+    int64_t n = int64_t{numerator} * b.denominator + int64_t{b.numerator} * denominator;
+    int64_t d = int64_t{denominator} * b.denominator;
+    return Fraction{n,d};
   }
 }
 
@@ -87,8 +100,9 @@ Fraction Fraction::operator-(const Fraction& b) const
     return Fraction{numerator - b.numerator, denominator};
   }
   else {
-    return Fraction{numerator * b.denominator - b.numerator * denominator,
-                    denominator * b.denominator};
+    int64_t n = int64_t{numerator} * b.denominator - int64_t{b.numerator} * denominator;
+    int64_t d = int64_t{denominator} * b.denominator;
+    return Fraction{n,d};
   }
 }
 

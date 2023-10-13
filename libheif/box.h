@@ -71,6 +71,9 @@ public:
   // may only use values up to int32_t maximum
   Fraction(uint32_t num, uint32_t den);
 
+  // Values will be reduced until they fit into int32_t.
+  Fraction(int64_t num, int64_t den);
+
   Fraction operator+(const Fraction&) const;
 
   Fraction operator-(const Fraction&) const;
