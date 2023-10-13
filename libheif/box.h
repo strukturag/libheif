@@ -759,7 +759,7 @@ public:
 
   std::vector<Reference> get_references_from(heif_item_id itemID) const;
 
-  void add_reference(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids);
+  void add_references(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids);
 
 protected:
   Error parse(BitstreamRange& range) override;

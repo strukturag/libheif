@@ -1196,7 +1196,7 @@ void HeifFile::add_iref_reference(heif_item_id from, uint32_t type,
     m_meta_box->append_child_box(m_iref_box);
   }
 
-  m_iref_box->add_reference(from, type, to);
+  m_iref_box->add_references(from, type, to);
 }
 
 void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
