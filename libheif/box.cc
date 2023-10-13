@@ -2617,12 +2617,12 @@ Error Box_iref::parse(BitstreamRange& range)
                  "Number of iref references exceeds security limit.");
   }
 
-  // --- check for cyclic references
+  // --- check for duplicate references
 
   for (const auto& ref : m_references) {
     std::set<heif_item_id> to_ids;
     for (const auto to_id : ref.to_item_ID) {
-      if (to_ids.find(to_id) != to_ids.end()) {
+      if (to_ids.find(to_id) == to_ids.end()) {
         to_ids.insert(to_id);
       }
       else {
