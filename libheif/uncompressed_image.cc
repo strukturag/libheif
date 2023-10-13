@@ -51,6 +51,13 @@ enum heif_uncompressed_component_type
   component_type_key_black = 16
 };
 
+bool is_predefined_component_type(uint16_t type)
+{
+  // check whether the component type can be mapped to heif_uncompressed_component_type and we have a name defined for
+  // it in sNames_uncompressed_component_type.
+  return (type >= 0 && type <= 16);
+}
+
 static std::map<heif_uncompressed_component_type, const char*> sNames_uncompressed_component_type{
     {component_type_monochrome,   "monochrome"},
     {component_type_Y,            "Y"},
@@ -156,7 +163,14 @@ std::string Box_cmpd::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   for (const auto& component : m_components) {
-    sstr << indent << "component_type: " << get_name(heif_uncompressed_component_type(component.component_type), sNames_uncompressed_component_type) << "\n";
+    sstr << indent << "component_type: ";
+    if (is_predefined_component_type(component.component_type)) {
+      sstr << get_name(heif_uncompressed_component_type(component.component_type), sNames_uncompressed_component_type) << "\n";
+    }
+    else {
+      sstr << "0x" << std::hex << component.component_type << std::dec << "\n";
+    }
+
     if (component.component_type >= 0x8000) {
       sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
     }
