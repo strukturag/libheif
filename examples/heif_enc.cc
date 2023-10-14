@@ -608,6 +608,16 @@ int main(int argc, char** argv)
   }
 
 
+  // If we were given a list of filenames and no '-o' option, check whether the last filename is the desired output filename.
+
+  if (output_filename.empty() && argc>1) {
+    if (guess_compression_format_from_filename(argv[argc-1]) != heif_compression_undefined) {
+      output_filename = argv[argc-1];
+      argc--;
+    }
+  }
+
+
   // --- determine output compression format (from output filename or command line parameter)
 
   heif_compression_format compressionFormat;
