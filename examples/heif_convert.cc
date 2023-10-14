@@ -69,15 +69,16 @@ static void show_help(const char* argv0)
 {
   std::cerr << " heif-convert  libheif version: " << heif_get_version() << "\n"
             << "-------------------------------------------\n"
-               "Usage: heif-convert [options]  <input-image> <output-image>\n"
+               "Usage: heif-convert [options]  <input-image> [output-image]\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: jpg, jpeg, png, y4m."
+               "These suffixes are recognized: jpg, jpeg, png, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
                "  -v, --version                  show version\n"
                "  -q, --quality                  quality (for JPEG output)\n"
+               "  -o, --output FILENAME          write output to FILENAME (optional)\n"
                "  -d, --decoder ID               use a specific decoder (see --list-decoders)\n"
                "      --with-aux                 also write auxiliary images (e.g. depth images)\n"
                "      --with-xmp                 write XMP metadata to file (output filename with .xmp suffix)\n"
@@ -115,6 +116,7 @@ int option_with_exif = 0;
 int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
+std::string output_filename;
 
 std::string chroma_upsampling;
 
@@ -125,6 +127,7 @@ static struct option long_options[] = {
     {(char* const) "quality",          required_argument, 0,                        'q'},
     {(char* const) "strict",           no_argument,       0,                        's'},
     {(char* const) "decoder",          required_argument, 0,                        'd'},
+    {(char* const) "output",           required_argument, 0,                        'o'},
     {(char* const) "quiet",            no_argument,       &option_quiet,            1},
     {(char* const) "with-aux",         no_argument,       &option_aux,              1},
     {(char* const) "with-xmp",         no_argument,       &option_with_xmp,         1},
@@ -226,7 +229,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:v", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:C:vo:", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -273,6 +276,9 @@ int main(int argc, char** argv)
       case 'v':
         show_version();
         return 0;
+      case 'o':
+        output_filename = optarg;
+        break;
     }
   }
 
@@ -281,16 +287,36 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if (optind + 2 > argc) {
-    // Need input and output filenames as additional arguments.
+  if (optind >= argc || optind + 2 < argc) {
+    // Need at least input filename as additional argument, but not more as two filenames.
     show_help(argv[0]);
     return 5;
   }
 
   std::string input_filename(argv[optind++]);
-  std::string output_filename(argv[optind++]);
   std::string output_filename_stem;
   std::string output_filename_suffix;
+
+  if (output_filename.empty()) {
+    if (optind == argc) {
+      std::string input_stem;
+      size_t dot_pos = input_filename.rfind('.');
+      if (dot_pos != std::string::npos) {
+        input_stem = input_filename.substr(0, dot_pos);
+      }
+      else {
+        input_stem = input_filename;
+      }
+
+      output_filename = input_stem + ".jpg";
+    }
+    else if (optind == argc-1) {
+      output_filename = argv[optind];
+    }
+    else {
+      assert(false);
+    }
+  }
 
   std::unique_ptr<Encoder> encoder;
 
