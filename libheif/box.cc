@@ -108,32 +108,32 @@ Fraction Fraction::operator-(const Fraction& b) const
 
 Fraction Fraction::operator+(int v) const
 {
-  return Fraction{numerator + v * denominator, denominator};
+  return Fraction{numerator + v * int64_t(denominator), int64_t(denominator)};
 }
 
 Fraction Fraction::operator-(int v) const
 {
-  return Fraction{numerator - v * denominator, denominator};
+  return Fraction{numerator - v * int64_t(denominator), int64_t(denominator)};
 }
 
 Fraction Fraction::operator/(int v) const
 {
-  return Fraction{numerator, denominator * v};
+  return Fraction{int64_t(numerator), int64_t(denominator) * v};
 }
 
-int Fraction::round_down() const
+int32_t Fraction::round_down() const
 {
   return numerator / denominator;
 }
 
-int Fraction::round_up() const
+int32_t Fraction::round_up() const
 {
-  return (numerator + denominator - 1) / denominator;
+  return int32_t((numerator + int64_t(denominator) - 1) / denominator);
 }
 
-int Fraction::round() const
+int32_t Fraction::round() const
 {
-  return (numerator + denominator / 2) / denominator;
+  return int32_t((numerator + int64_t(denominator) / 2) / denominator);
 }
 
 bool Fraction::is_valid() const
