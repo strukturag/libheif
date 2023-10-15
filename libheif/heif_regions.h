@@ -196,11 +196,11 @@ void heif_region_item_release(struct heif_region_item* region_item);
  * When the reference size does not match the image size, the regions need to be
  * scaled to correspond.
  *
- * @param width the return value for the reference width (before any transformation)
- * @param height the return value for the reference height (before any transformation)
+ * @param out_width the return value for the reference width (before any transformation)
+ * @param out_height the return value for the reference height (before any transformation)
  */
 LIBHEIF_API
-void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* width, uint32_t* height);
+void heif_region_item_get_reference_size(struct heif_region_item*, uint32_t* out_width, uint32_t* out_height);
 
 /**
  * Get the number of regions within a region item.
@@ -256,12 +256,12 @@ void heif_region_release(const struct heif_region* region);
  * This should be called on the list of regions from heif_region_item_get_list_of_regions().
  *
  * @param regions_array the regions to release.
- * @param num the number of items in the array
+ * @param num_items the number of items in the array
  *
  * \sa heif_region_release() to release a single region
  */
 LIBHEIF_API
-void heif_region_release_many(const struct heif_region* const* regions_array, int num);
+void heif_region_release_many(const struct heif_region* const* regions_array, int num_items);
 
 /**
  * Get the region type for a specified region. 
@@ -282,14 +282,14 @@ enum heif_region_type heif_region_get_type(const struct heif_region* region);
  * This returns the coordinates in the reference coordinate space (from the parent region item).
  *
  * @param region the region to query, which must be of type #heif_region_type_point.
- * @param x the X coordinate, where 0 is the left-most column.
- * @param y the Y coordinate, where 0 is the top-most row.
+ * @param out_x the X coordinate, where 0 is the left-most column.
+ * @param out_y the Y coordinate, where 0 is the top-most row.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_point_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* x, int32_t* y);
+struct heif_error heif_region_get_point(const struct heif_region* region, int32_t* out_x, int32_t* out_y);
 
 /**
  * Get the transformed values for a point region.
@@ -297,15 +297,15 @@ struct heif_error heif_region_get_point(const struct heif_region* region, int32_
  * This returns the coordinates in pixels after all transformative properties have been applied.
  *
  * @param region the region to query, which must be of type #heif_region_type_point.
- * @param x the X coordinate, where 0 is the left-most column.
- * @param y the Y coordinate, where 0 is the top-most row.
+ * @param out_x the X coordinate, where 0 is the left-most column.
+ * @param out_y the Y coordinate, where 0 is the top-most row.
  * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_point() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_point_transformed(const struct heif_region* region, double* x, double* y,
+struct heif_error heif_region_get_point_transformed(const struct heif_region* region, double* out_x, double* out_y,
                                                     heif_item_id image_id);
 
 /**
@@ -317,18 +317,18 @@ struct heif_error heif_region_get_point_transformed(const struct heif_region* re
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_rectangle.
- * @param x the X coordinate for the top left corner, where 0 is the left-most column.
- * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
- * @param width the width of the rectangle
- * @param height the height of the rectangle
+ * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param out_width the width of the rectangle
+ * @param out_height the height of the rectangle
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_rectangle_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_rectangle(const struct heif_region* region,
-                                            int32_t* x, int32_t* y,
-                                            uint32_t* width, uint32_t* height);
+                                            int32_t* out_x, int32_t* out_y,
+                                            uint32_t* out_width, uint32_t* out_height);
 
 /**
  * Get the transformed values for a rectangle region.
@@ -339,10 +339,10 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_rectangle.
- * @param x the X coordinate for the top left corner, where 0 is the left-most column.
- * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
- * @param width the width of the rectangle
- * @param height the height of the rectangle
+ * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param out_width the width of the rectangle
+ * @param out_height the height of the rectangle
  * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
@@ -350,8 +350,8 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
  */
 LIBHEIF_API
 struct heif_error heif_region_get_rectangle_transformed(const struct heif_region* region,
-                                                        double* x, double* y,
-                                                        double* width, double* height,
+                                                        double* out_x, double* out_y,
+                                                        double* out_width, double* out_height,
                                                         heif_item_id image_id);
 
 /**
@@ -363,18 +363,18 @@ struct heif_error heif_region_get_rectangle_transformed(const struct heif_region
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_ellipse.
- * @param x the X coordinate for the centre point, where 0 is the left-most column.
- * @param y the Y coordinate for the centre point, where 0 is the top-most row.
- * @param radius_x the radius value in the X direction.
- * @param radius_y the radius value in the Y direction
+ * @param out_x the X coordinate for the centre point, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the centre point, where 0 is the top-most row.
+ * @param out_radius_x the radius value in the X direction.
+ * @param out_radius_y the radius value in the Y direction
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_ellipse_transformed() for a version in pixels after all transformative properties have been applied.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_ellipse(const struct heif_region* region,
-                                          int32_t* x, int32_t* y,
-                                          uint32_t* radius_x, uint32_t* radius_y);
+                                          int32_t* out_x, int32_t* out_y,
+                                          uint32_t* out_radius_x, uint32_t* out_radius_y);
 
 
 /**
@@ -386,10 +386,10 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_ellipse.
- * @param x the X coordinate for the centre point, where 0 is the left-most column.
- * @param y the Y coordinate for the centre point, where 0 is the top-most row.
- * @param radius_x the radius value in the X direction.
- * @param radius_y the radius value in the Y direction
+ * @param out_x the X coordinate for the centre point, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the centre point, where 0 is the top-most row.
+ * @param out_radius_x the radius value in the X direction.
+ * @param out_radius_y the radius value in the Y direction
  * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
@@ -397,8 +397,8 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
  */
 LIBHEIF_API
 struct heif_error heif_region_get_ellipse_transformed(const struct heif_region* region,
-                                                      double* x, double* y,
-                                                      double* radius_x, double* radius_y,
+                                                      double* out_x, double* out_y,
+                                                      double* out_radius_x, double* out_radius_y,
                                                       heif_item_id image_id);
 
 /**
@@ -547,18 +547,18 @@ struct heif_error heif_region_get_polyline_points_transformed(const struct heif_
  * correspond to higher probability values.
  *
  * @param region the region to query, which must be of type #heif_region_type_referenced_mask.
- * @param x the X coordinate for the top left corner, where 0 is the left-most column.
- * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
- * @param width the width of the mask region
- * @param height the height of the mask region
- * @param mask_item_id the item identifier for the image that provides the mask.
+ * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param out_width the width of the mask region
+ * @param out_height the height of the mask region
+ * @param out_mask_item_id the item identifier for the image that provides the mask.
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
 struct heif_error heif_region_get_referenced_mask_ID(const struct heif_region* region,
-                                                     int32_t* x, int32_t* y,
-                                                     uint32_t* width, uint32_t* height,
-                                                     heif_item_id *mask_item_id);
+                                                     int32_t* out_x, int32_t* out_y,
+                                                     uint32_t* out_width, uint32_t* out_height,
+                                                     heif_item_id *out_mask_item_id);
 
 /**
  * Get the length of the data in an inline mask region.
@@ -592,18 +592,18 @@ size_t heif_region_get_inline_mask_data_len(const struct heif_region* region);
  * @endcode
  *
  * @param region the region to query, which must be of type #heif_region_type_inline_mask.
- * @param x the X coordinate for the top left corner, where 0 is the left-most column.
- * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
- * @param width the width of the mask region
- * @param height the height of the mask region
- * @param mask_data the location to return the mask data
+ * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param out_width the width of the mask region
+ * @param out_height the height of the mask region
+ * @param out_mask_data the location to return the mask data
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  */
 LIBHEIF_API
 struct heif_error heif_region_get_inline_mask_data(const struct heif_region* region,
-                                                   int32_t* x, int32_t* y,
-                                                   uint32_t* width, uint32_t* height,
-                                                   uint8_t* mask_data);
+                                                   int32_t* out_x, int32_t* out_y,
+                                                   uint32_t* out_width, uint32_t* out_height,
+                                                   uint8_t* out_mask_data);
 
 /**
  * Get a mask region image.
@@ -623,20 +623,20 @@ struct heif_error heif_region_get_inline_mask_data(const struct heif_region* reg
  * pixel is not part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_inline_mask.
- * @param x the X coordinate for the top left corner, where 0 is the left-most column.
- * @param y the Y coordinate for the top left corner, where 0 is the top-most row.
- * @param width the width of the mask region
- * @param height the height of the mask region
- * @param mask_image the returned mask image
+ * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
+ * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
+ * @param out_width the width of the mask region
+ * @param out_height the height of the mask region
+ * @param out_mask_image the returned mask image
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \note the caller is responsible for releasing the mask image
  */
 LIBHEIF_API
 struct heif_error heif_region_get_mask_image(const struct heif_region* region,
-                                             int32_t* x, int32_t* y,
-                                             uint32_t* width, uint32_t* height,
-                                             struct heif_image** mask_image);
+                                             int32_t* out_x, int32_t* out_y,
+                                             uint32_t* out_width, uint32_t* out_height,
+                                             struct heif_image** out_mask_image);
 
 // --- adding region items
 
