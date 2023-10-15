@@ -96,21 +96,21 @@ endmacro()
 # libde265
 
 plugin_option(LIBDE265 "libde265 HEVC decoder" ON OFF)
-if (WITH_LIBDE265)
+if (WITH_LIBDE265 OR WITH_LIBDE265_PLUGIN)
     find_package(LIBDE265)
 endif()
 
 # x265
 
 plugin_option(X265 "x265 HEVC encoder" ON OFF)
-if (WITH_X265)
+if (WITH_X265 OR WITH_X265_PLUGIN)
     find_package(X265)
 endif()
 
 # kvazaar
 
 plugin_option(KVAZAAR "kvazaar HEVC encoder" OFF OFF)
-if (WITH_KVAZAAR)
+if (WITH_KVAZAAR OR WITH_KVAZAAR_PLUGIN)
     find_package(kvazaar)
     if (HAVE_KVAZAAR_ENABLE_LOGGING)
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=1)
@@ -122,7 +122,7 @@ endif ()
 # dav1d
 
 plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
-if (WITH_DAV1D)
+if (WITH_DAV1D OR WITH_DAV1D_PLUGIN)
     find_package(DAV1D)
 endif()
 
@@ -130,21 +130,21 @@ endif()
 
 plugin_option(AOM_DECODER "AOM AV1 decoder" ON OFF)
 plugin_option(AOM_ENCODER "AOM AV1 encoder" ON OFF)
-if (WITH_AOM_ENCODER OR WITH_AOM_DECODER)
+if (WITH_AOM_ENCODER OR WITH_AOM_DECODER OR WITH_AOM_ENCODER_PLUGIN OR WITH_AOM_DECODER_PLUGIN)
     find_package(AOM)
 endif()
 
 # svt
 
 plugin_option(SvtEnc "SVT AV1 encoder" OFF ON)
-if (WITH_SvtEnc)
+if (WITH_SvtEnc OR WITH_SvtEnc_PLUGIN)
     find_package(SvtEnc)
 endif()
 
 # rav1e
 
 plugin_option(RAV1E "Rav1e AV1 encoder" OFF ON)
-if (WITH_RAV1E)
+if (WITH_RAV1E OR WITH_RAV1E_PLUGIN)
     find_package(RAV1E)
 endif()
 
@@ -152,7 +152,7 @@ endif()
 
 plugin_option(JPEG_DECODER "JPEG decoder" OFF OFF)
 plugin_option(JPEG_ENCODER "JPEG encoder" OFF OFF)
-if (WITH_JPEG_ENCODER OR WITH_JPEG_DECODER)
+if (WITH_JPEG_ENCODER OR WITH_JPEG_DECODER OR WITH_JPEG_ENCODER_PLUGIN OR WITH_JPEG_DECODER_PLUGIN)
     find_package(JPEG)
 endif()
 
@@ -160,14 +160,14 @@ endif()
 
 plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
-if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
+if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER OR WITH_OpenJPEG_ENCODER_PLUGIN OR WITH_OpenJPEG_DECODER_PLUGIN)
     find_package(OpenJPEG)
 endif()
 
 # ffmpeg
 
 plugin_option(FFMPEG_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
-if (WITH_FFMPEG_DECODER)
+if (WITH_FFMPEG_DECODER OR WITH_FFMPEG_DECODER_PLUGIN)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
