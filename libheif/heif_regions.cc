@@ -294,7 +294,7 @@ struct heif_error heif_region_item_add_region_referenced_mask(struct heif_region
 struct heif_error heif_region_item_add_region_inline_mask_data(struct heif_region_item* item,
                                                                int32_t x, int32_t y,
                                                                uint32_t width, uint32_t height,
-                                                               uint8_t* mask_data,
+                                                               const uint8_t* mask_data,
                                                                size_t mask_data_len,
                                                                struct heif_region** out_region)
 {
