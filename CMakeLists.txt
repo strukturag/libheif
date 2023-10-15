@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.16.2)
+project(libheif LANGUAGES C CXX VERSION 1.17.0)
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(VERSION 3.0...3.22)
