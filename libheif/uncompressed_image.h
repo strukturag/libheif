@@ -50,6 +50,10 @@ public:
   {
     uint16_t component_type;
     std::string component_type_uri;
+
+    std::string get_component_type_name() const { return get_component_type_name(component_type); }
+
+    static std::string get_component_type_name(uint16_t type);
   };
 
   const std::vector<Component>& get_components() const { return m_components; }

@@ -85,6 +85,11 @@ enum heif_uncompressed_component_format
   component_format_complex = 2,
 };
 
+bool is_valid_component_format(uint8_t format)
+{
+  return format <= 2;
+}
+
 static std::map<heif_uncompressed_component_format, const char*> sNames_uncompressed_component_format{
     {component_format_unsigned, "unsigned"},
     {component_format_float,    "float"},
@@ -99,6 +104,11 @@ enum heif_uncompressed_sampling_type
   sampling_type_420 = 2,
   sampling_type_411 = 3
 };
+
+bool is_valid_sampling_type(uint8_t sampling)
+{
+  return sampling <= 3;
+}
 
 static std::map<heif_uncompressed_sampling_type, const char*> sNames_uncompressed_sampling_type{
     {sampling_type_no_subsampling, "no subsampling"},
@@ -116,6 +126,11 @@ enum heif_uncompressed_interleave_type
   interleave_type_tile_component = 4,
   interleave_type_multi_y = 5
 };
+
+bool is_valid_interleave_type(uint8_t sampling)
+{
+  return sampling <= 5;
+}
 
 static std::map<heif_uncompressed_interleave_type, const char*> sNames_uncompressed_interleave_type{
     {interleave_type_component,      "component"},
@@ -157,19 +172,28 @@ Error Box_cmpd::parse(BitstreamRange& range)
   return range.get_error();
 }
 
+std::string Box_cmpd::Component::get_component_type_name(uint16_t component_type)
+{
+  std::stringstream sstr;
+
+  if (is_predefined_component_type(component_type)) {
+    sstr << get_name(heif_uncompressed_component_type(component_type), sNames_uncompressed_component_type) << "\n";
+  }
+  else {
+    sstr << "0x" << std::hex << component_type << std::dec << "\n";
+  }
+
+  return sstr.str();
+}
+
+
 std::string Box_cmpd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
   for (const auto& component : m_components) {
-    sstr << indent << "component_type: ";
-    if (is_predefined_component_type(component.component_type)) {
-      sstr << get_name(heif_uncompressed_component_type(component.component_type), sNames_uncompressed_component_type) << "\n";
-    }
-    else {
-      sstr << "0x" << std::hex << component.component_type << std::dec << "\n";
-    }
+    sstr << indent << "component_type: " << component.get_component_type_name() << "\n";
 
     if (component.component_type >= 0x8000) {
       sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
@@ -210,11 +234,21 @@ Error Box_uncC::parse(BitstreamRange& range)
     component.component_format = range.read8();
     component.component_align_size = range.read8();
     m_components.push_back(component);
+
+    if (!is_valid_component_format(component.component_format)) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
+    }
   }
 
   m_sampling_type = range.read8();
+  if (!is_valid_sampling_type(m_sampling_type)) {
+    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling type"};
+  }
 
   m_interleave_type = range.read8();
+  if (!is_valid_interleave_type(m_interleave_type)) {
+    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave type"};
+  }
 
   m_block_size = range.read8();
 
