@@ -297,16 +297,15 @@ struct heif_error heif_region_get_point(const struct heif_region* region, int32_
  * This returns the coordinates in pixels after all transformative properties have been applied.
  *
  * @param region the region to query, which must be of type #heif_region_type_point.
+ * @param image_id the identifier for the image to transform / scale the region to
  * @param out_x the X coordinate, where 0 is the left-most column.
  * @param out_y the Y coordinate, where 0 is the top-most row.
- * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_point() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
-struct heif_error heif_region_get_point_transformed(const struct heif_region* region, double* out_x, double* out_y,
-                                                    heif_item_id image_id);
+struct heif_error heif_region_get_point_transformed(const struct heif_region* region, heif_item_id image_id, double* out_x, double* out_y);
 
 /**
  * Get the values for a rectangle region.
@@ -339,20 +338,20 @@ struct heif_error heif_region_get_rectangle(const struct heif_region* region,
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_rectangle.
+ * @param image_id the identifier for the image to transform / scale the region to
  * @param out_x the X coordinate for the top left corner, where 0 is the left-most column.
  * @param out_y the Y coordinate for the top left corner, where 0 is the top-most row.
  * @param out_width the width of the rectangle
  * @param out_height the height of the rectangle
- * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_rectangle() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_rectangle_transformed(const struct heif_region* region,
+                                                        heif_item_id image_id,
                                                         double* out_x, double* out_y,
-                                                        double* out_width, double* out_height,
-                                                        heif_item_id image_id);
+                                                        double* out_width, double* out_height);
 
 /**
  * Get the values for an ellipse region.
@@ -386,20 +385,20 @@ struct heif_error heif_region_get_ellipse(const struct heif_region* region,
  * part of the region.
  *
  * @param region the region to query, which must be of type #heif_region_type_ellipse.
+ * @param image_id the identifier for the image to transform / scale the region to
  * @param out_x the X coordinate for the centre point, where 0 is the left-most column.
  * @param out_y the Y coordinate for the centre point, where 0 is the top-most row.
  * @param out_radius_x the radius value in the X direction.
  * @param out_radius_y the radius value in the Y direction
- * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_ellipse() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_ellipse_transformed(const struct heif_region* region,
+                                                      heif_item_id image_id,
                                                       double* out_x, double* out_y,
-                                                      double* out_radius_x, double* out_radius_y,
-                                                      heif_item_id image_id);
+                                                      double* out_radius_x, double* out_radius_y);
 
 /**
  * Get the number of points in a polygon.
@@ -444,17 +443,17 @@ struct heif_error heif_region_get_polygon_points(const struct heif_region* regio
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
  * @param region the region to equery, which must be of type #heif_region_type_polygon
+ * @param image_id the identifier for the image to transform / scale the region to
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polygon.
- * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_polygon_points() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_polygon_points_transformed(const struct heif_region* region,
-                                                             double* out_pts_array,
-                                                             heif_item_id image_id);
+                                                             heif_item_id image_id,
+                                                             double* out_pts_array);
 /**
  * Get the number of points in a polyline.
  *
@@ -508,17 +507,17 @@ struct heif_error heif_region_get_polyline_points(const struct heif_region* regi
  * Y<sub>1</sub>, X<sub>2</sub>, Y<sub>2</sub>, ..., X<sub>n</sub>, Y<sub>n</sub>.
  *
  * @param region the region to equery, which must be of type #heif_region_type_polyline
+ * @param image_id the identifier for the image to transform / scale the region to
  * @param out_pts_array the array to return the points in, which must have twice as many entries as there are points
  * in the polyline.
- * @param image_id the identifier for the image to transform / scale the region to
  * @return heif_error_ok on success, or an error value indicating the problem on failure
  *
  * \sa heif_region_get_polyline_points() for a version that returns the values in the reference coordinate space.
  */
 LIBHEIF_API
 struct heif_error heif_region_get_polyline_points_transformed(const struct heif_region* region,
-                                                              double* out_pts_array,
-                                                              heif_item_id image_id);
+                                                              heif_item_id image_id,
+                                                              double* out_pts_array);
 
 /**
  * Get a referenced item mask region.
