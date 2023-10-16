@@ -365,6 +365,7 @@ You can [sponsor](https://github.com/sponsors/farindk) the development using the
 
 A big thank you goes to these major sponsors for supporting the development of libheif:
 
+* Pinterest
 * Shopify <img src="logos/sponsors/shopify.svg" alt="shopify-logo" height="20"/>
 * StrukturAG
 
