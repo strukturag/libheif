@@ -143,7 +143,7 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
   jpeg_create_decompress(&cinfo);
 
   cinfo.err = jpeg_std_error(&jerr);
-  jpeg_mem_src(&cinfo, decoder->data.data(), decoder->data.size());
+  jpeg_mem_src(&cinfo, decoder->data.data(), static_cast<unsigned long>(decoder->data.size()));
 
   /* Adding this part to prepare for icc profile reading. */
 //  jpeg_save_markers(&cinfo, JPEG_ICC_MARKER, 0xFFFF);
