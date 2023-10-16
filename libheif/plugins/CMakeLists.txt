@@ -53,11 +53,11 @@ plugin_compilation(dav1d DAV1D DAV1D DAV1D)
 
 set(AOM_DECODER_sources decoder_aom.cc decoder_aom.h)
 set(AOM_DECODER_extra_plugin_sources)
-plugin_compilation(aomdec AOM AOM_DECODER AOM_DECODER)
+plugin_compilation(aomdec AOM_DECODER AOM_DECODER AOM_DECODER)
 
 set(AOM_ENCODER_sources encoder_aom.cc encoder_aom.h)
 set(AOM_ENCODER_extra_plugin_sources ../error.cc ../common_utils.cc ../common_utils.h)
-plugin_compilation(aomenc AOM AOM_ENCODER AOM_ENCODER)
+plugin_compilation(aomenc AOM_ENCODER AOM_ENCODER AOM_ENCODER)
 
 set(SvtEnc_sources encoder_svt.cc encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)

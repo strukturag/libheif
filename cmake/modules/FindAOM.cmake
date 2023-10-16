@@ -22,7 +22,7 @@ else()
     set(AOM_DECODER_FOUND NO)
 endif()
 
-if((EXISTS "${AOM_INCLUDE_DIR}/aom/aom_encoder.h") AND (DEFINED aom_usage_flag_exists))
+if((EXISTS "${AOM_INCLUDE_DIR}/aom/aom_encoder.h") AND "${aom_usage_flag_exists}")
     set(AOM_ENCODER_FOUND YES)
 else()
     set(AOM_ENCODER_FOUND NO)
