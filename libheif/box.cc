@@ -85,7 +85,9 @@ Fraction::Fraction(int64_t num, int64_t den)
 Fraction Fraction::operator+(const Fraction& b) const
 {
   if (denominator == b.denominator) {
-    return Fraction{numerator + b.numerator, denominator};
+    int64_t n = numerator + b.numerator;
+    int64_t d = denominator;
+    return Fraction{n,d};
   }
   else {
     int64_t n = int64_t{numerator} * b.denominator + int64_t{b.numerator} * denominator;
@@ -97,7 +99,9 @@ Fraction Fraction::operator+(const Fraction& b) const
 Fraction Fraction::operator-(const Fraction& b) const
 {
   if (denominator == b.denominator) {
-    return Fraction{numerator - b.numerator, denominator};
+    int64_t n = numerator - b.numerator;
+    int64_t d = denominator;
+    return Fraction{n,d};
   }
   else {
     int64_t n = int64_t{numerator} * b.denominator - int64_t{b.numerator} * denominator;
