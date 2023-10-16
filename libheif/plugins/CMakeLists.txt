@@ -61,7 +61,7 @@ plugin_compilation(aomenc AOM AOM_ENCODER_FOUND AOM_ENCODER AOM_ENCODER)
 
 set(SvtEnc_sources encoder_svt.cc encoder_svt.h)
 set(SvtEnc_extra_plugin_sources)
-plugin_compilation(svtenc SvtEnc AvtEnc_FOUND SvtEnc SvtEnc)
+plugin_compilation(svtenc SvtEnc SvtEnc_FOUND SvtEnc SvtEnc)
 
 set(RAV1E_sources encoder_rav1e.cc encoder_rav1e.h)
 set(RAV1E_extra_plugin_sources ../error.cc)
