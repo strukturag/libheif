@@ -18,9 +18,10 @@ set(KVAZAAR_PROCESS_LIBS KVAZAAR_LIBRARY)
 set(KVAZAAR_PROCESS_INCLUDES KVAZAAR_INCLUDE_DIR)
 libfind_process(KVAZAAR)
 
+set(CMAKE_REQUIRED_INCLUDES ${KVAZAAR_INCLUDE_DIR})
 CHECK_STRUCT_HAS_MEMBER("struct kvz_config" enable_logging_output kvazaar.h
                         HAVE_KVAZAAR_ENABLE_LOGGING LANGUAGE CXX)
-set(HAVE_KVAZAAR_ENABLE_LOGGING HAVE_KVAZAAR_ENABLE_LOGGING)
+unset(CMAKE_REQUIRED_INCLUDES)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(kvazaar
