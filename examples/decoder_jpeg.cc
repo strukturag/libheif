@@ -357,7 +357,7 @@ InputImage loadJPEG(const char* filename)
 
     //read_raw = false;
 
-    cinfo.raw_data_out = read_raw;
+    cinfo.raw_data_out = boolean(read_raw);
 
     jpeg_start_decompress(&cinfo);
 
