@@ -2,6 +2,12 @@ cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
 project(libheif LANGUAGES C CXX VERSION 1.17.0)
 
+# compatibility_version is never allowed to be decreased for any specific SONAME.
+# Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
+# With v2.0.0, we can reset this to more closely follow the real version name, i.e. "2.0.0".
+# CMake 3.17.0 added "MACHO_COMPATIBILITY_VERSION", but we are currently stuck at cmake 3.16.3.
+set(MACOS_COMPATIBLE_VERSION "17.0.0")
+
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(VERSION 3.0...3.22)
 include(GNUInstallDirs)

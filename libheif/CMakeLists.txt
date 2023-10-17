@@ -100,13 +100,10 @@ set_target_properties(heif
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR})
 
-# compatibility_version defaults to 1.0.0 and is never allowed to be
-# decreased for any specific SONAME. Libtool in the libheif-1.15.1
-# release had set it to 17.0.0, so force it higher here.
 if (APPLE)
     set_target_properties(heif
             PROPERTIES
-	    LINK_FLAGS "-Wl,-compatibility_version,18.0.0")
+	    LINK_FLAGS "-Wl,-compatibility_version,${MACOS_COMPATIBLE_VERSION}")
 endif ()
 
 target_compile_definitions(heif
