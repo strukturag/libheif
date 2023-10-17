@@ -260,6 +260,9 @@ configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
+
+
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
