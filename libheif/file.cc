@@ -255,7 +255,11 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
     // When an EOF error is returned, this is not really a fatal exception,
     // but simply the indication that we reached the end of the file.
-    if (error != Error::Ok || range.error() || range.eof()) {
+    if (error != Error::Ok) {
+      return error;
+    }
+
+    if (range.error() || range.eof()) {
       break;
     }
 
