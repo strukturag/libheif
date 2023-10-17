@@ -33,6 +33,9 @@ target_link_libraries(heif-dec PRIVATE heif)
 install(TARGETS heif-dec RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-dec.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
+# create symbolic link from the old name `heif-convert` to `heif-dec`
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
+
 
 add_executable(heif-enc ${getopt_sources}
         heif_enc.cc
