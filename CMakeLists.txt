@@ -255,6 +255,14 @@ if (LIBSHARPYUV_FOUND)
 endif()
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
 
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(_LIBCPP_VERSION cstdlib HAVE_LIBCPP)
+if(HAVE_LIBCPP)
+  set(LIBS_PRIVATE "-lc++")
+else()
+  set(LIBS_PRIVATE "-lstdc++")
+endif()
+
 configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc

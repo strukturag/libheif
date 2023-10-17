@@ -19,5 +19,5 @@ Version: @PROJECT_VERSION@
 Requires:
 Requires.private: @REQUIRES_PRIVATE@
 Libs: -L${libdir} -lheif
-Libs.private: @LIBS@
+Libs.private: @LIBS_PRIVATE@
 Cflags: -I${includedir}
