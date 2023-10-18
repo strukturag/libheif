@@ -305,7 +305,7 @@ This is `libheif` running in JavaScript in your browser.
 ## Example programs
 
 Some example programs are provided in the `examples` directory.
-The program `heif-convert` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
+The program `heif-dec` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
 `heif-enc` lets you convert JPEG files to HEIF/AVIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
@@ -313,7 +313,7 @@ For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
 
 ```sh
 cd examples/
-./heif-convert example.heic example.jpeg
+./heif-dec example.heic example.jpeg
 ./heif-enc example-1.jpeg -o example.heif
 ```
 
