@@ -417,7 +417,12 @@ EMSCRIPTEN_BINDINGS(libheif) {
     emscripten::class_<heif_image>("heif_image");
     emscripten::value_object<heif_error>("heif_error")
     .field("code", &heif_error::code)
-    .field("subcode", &heif_error::subcode);
+    .field("subcode", &heif_error::subcode)
+    .field("message", emscripten::optional_override([](const struct heif_error& err) {
+        return std::string(err.message);
+    }), emscripten::optional_override([](struct heif_error& err, const std::string& value) {
+        err.message = value.c_str();
+    }));
 }
 
 #endif  // LIBHEIF_BOX_EMSCRIPTEN_H
