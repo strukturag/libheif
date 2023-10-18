@@ -104,6 +104,7 @@ emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
 VERBOSE=1 emmake make -j${CORES}
 
 LIBHEIFA="libheif/libheif.a"
+EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols | grep "^heif_\|^de265_\|^aom_" | grep "[^:]$" | sed 's/^/_/' | paste -sd "," -)
 
 echo "Running Emscripten..."
 
@@ -122,6 +123,7 @@ if [ "$DEBUG" = "1" ]; then
 fi
 
 emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
+    -sEXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_free,_malloc,_memcpy" \
     -sMODULARIZE \
     -sEXPORT_NAME="libheif" \
     -sWASM_ASYNC_COMPILATION=0 \

@@ -18,26 +18,27 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-(function() {
 
-    console.log("Running libheif JavaScript tests ...");
+const assert = require('assert');
+const fs = require('fs');
 
-    var libheif = require('../libheif.js')();
-    console.log("Loaded libheif.js", libheif.heif_get_version());
+console.log('Running libheif JavaScript tests ...');
 
-    // Decode the example file and make sure at least one image is returned.
-    var fs = require('fs');
-    fs.readFile('examples/example.heic', function(err, data) {
-        if (err) {
-            throw err; 
-        }
+const libheif = require('../libheif.js')();
 
-        var decoder = new libheif.HeifDecoder();
-        var image_data = decoder.decode(data);
-        console.log("Loaded images:", image_data.length);
-        if (!image_data.length) {
-            throw new Error("Should have loaded images");
-        }
-    });
+// Test Embind API.
+console.log('Loaded libheif.js', libheif.heif_get_version());
 
-})();
+// Test internal C API.
+assert(libheif.heif_get_version_number_major() === 1, 'libheif major version should be 1')
+
+// Test enum values.
+assert(libheif.heif_error_Ok.value === 0, 'heif_error_Ok should be 0')
+
+// Decode the example file and make sure at least one image is returned.
+const data = fs.readFileSync('examples/example.heic');
+const decoder = new libheif.HeifDecoder();
+const image_data = decoder.decode(data);
+
+console.log('Loaded images:', image_data.length);
+assert(image_data.length > 0, "Should have loaded images")

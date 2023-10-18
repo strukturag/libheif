@@ -147,3 +147,29 @@ var fourcc = function(s) {
 Module.HeifImage = HeifImage;
 Module.HeifDecoder = HeifDecoder;
 Module.fourcc = fourcc;
+
+// Expose enum values.
+const enums = [
+    'heif_error_code',
+    'heif_suberror_code',
+    'heif_compression_format',
+    'heif_chroma',
+    'heif_colorspace',
+    'heif_channel'
+];
+for (const e of enums) {
+    for (const key in Module[e]) {
+        if (!Module[e].hasOwnProperty(key) || key === 'values') {
+            continue;
+        }
+        Module[key] = Module[e][key];
+    }
+}
+
+// Expose internal C API.
+for (const key in Module) {
+    if (key.indexOf('_heif_') !== 0 || Module[key.slice(1)] !== undefined) {
+        continue;
+    }
+    Module[key.slice(1)] = Module[key];
+}
