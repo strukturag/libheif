@@ -38,11 +38,11 @@ if [ "$ENABLE_LIBDE265" = "1" ]; then
         -L \
         -o libde265-${LIBDE265_VERSION}.tar.gz \
         https://github.com/strukturag/libde265/releases/download/v${LIBDE265_VERSION}/libde265-${LIBDE265_VERSION}.tar.gz
-    if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
+    if [ ! -s "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.a" ]; then
         tar xf libde265-${LIBDE265_VERSION}.tar.gz
         cd libde265-${LIBDE265_VERSION}
         [ -x configure ] || ./autogen.sh
-        CXXFLAGS=-O3 emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
+        CXXFLAGS=-O3 emconfigure ./configure --enable-static --disable-shared --disable-sse --disable-dec265 --disable-sherlock265
         emmake make -j${CORES}
         cd ..
     fi
@@ -72,7 +72,7 @@ if [ "$ENABLE_AOM" = "1" ]; then
             -DENABLE_TOOLS=0 \
             -DCONFIG_MULTITHREAD=0 \
             -DCONFIG_RUNTIME_CPU_DETECT=0 \
-            -DBUILD_SHARED_LIBS=1 \
+            -DBUILD_SHARED_LIBS=0 \
             -DCMAKE_BUILD_TYPE=Release
 
         emmake make -j${CORES}
@@ -92,7 +92,7 @@ if [ "$STANDALONE" = "1" ]; then
     EXTRA_COMPILER_FLAGS="-D__EMSCRIPTEN_STANDALONE_WASM__=1"
 fi
 
-CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON -DENABLE_PLUGIN_LOADING=OFF"
+CONFIGURE_ARGS="-DENABLE_MULTITHREADING_SUPPORT=OFF -DWITH_GDK_PIXBUF=OFF -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DENABLE_PLUGIN_LOADING=OFF"
 emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="${EXTRA_COMPILER_FLAGS}" \
@@ -104,17 +104,16 @@ emcmake cmake ${SRCDIR} $CONFIGURE_ARGS \
 VERBOSE=1 emmake make -j${CORES}
 
 LIBHEIFA="libheif/libheif.a"
-EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols | grep "^heif_\|^de265_\|^aom_" | grep "[^:]$" | sed 's/^/_/' | paste -sd "," -)
 
 echo "Running Emscripten..."
 
-BUILD_FLAGS="-lembind -o libheif.js --pre-js ${SRCDIR}/pre.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM"
+BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM"
 RELEASE_BUILD_FLAGS="-O3"
 
 if [ "$STANDALONE" = "1" ]; then
     # Note: this intentionally overwrites the BUILD_FLAGS set above
     echo "Building in standalone (non-web) build mode"
-    BUILD_FLAGS="-s STANDALONE_WASM=1 -s WASM=1 -o libheif.wasm --no-entry"
+    BUILD_FLAGS="-sSTANDALONE_WASM -sWASM -o libheif.wasm --no-entry"
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -122,11 +121,11 @@ if [ "$DEBUG" = "1" ]; then
     RELEASE_BUILD_FLAGS="--profile -g"
 fi
 
-emcc "$LIBHEIFA" \
-    -s EXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_free,_malloc,_memcpy" \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
-    -s LLD_REPORT_UNDEFINED \
+emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
+    -sMODULARIZE \
+    -sEXPORT_NAME="libheif" \
+    -sWASM_ASYNC_COMPILATION=0 \
+    -sALLOW_MEMORY_GROWTH \
     --memory-init-file 0 \
     -std=c++11 \
     $LIBRARY_INCLUDE_FLAGS \

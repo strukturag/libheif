@@ -22,23 +22,8 @@
 
     console.log("Running libheif JavaScript tests ...");
 
-    var libheif = require('../libheif.js');
+    var libheif = require('../libheif.js')();
     console.log("Loaded libheif.js", libheif.heif_get_version());
-
-    // Ensure that no "undefined" properties are exported.
-    var key;
-    var missing = [];
-    for (key in libheif) {
-        if (!libheif.hasOwnProperty(key)) {
-            continue;
-        }
-        if (typeof(libheif[key]) === "undefined") {
-            missing.push(key);
-        }
-    }
-    if (missing.length) {
-        throw new Error("The following properties are not defined: " + missing);
-    }
 
     // Decode the example file and make sure at least one image is returned.
     var fs = require('fs');
