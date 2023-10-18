@@ -569,6 +569,8 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   auto* encoder = (struct encoder_struct_svt*) encoder_raw;
   EbErrorType res = EB_ErrorNone;
 
+  encoder->compressed_data.clear();
+
   int w = heif_image_get_width(image, heif_channel_Y);
   int h = heif_image_get_height(image, heif_channel_Y);
 
