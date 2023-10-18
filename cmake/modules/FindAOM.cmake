@@ -9,7 +9,9 @@ find_path(AOM_INCLUDE_DIR
     PATH_SUFFIXES AOM
 )
 
-check_symbol_exists(AOM_USAGE_GOOD_QUALITY ${AOM_INCLUDE_DIR}/aom/aom_encoder.h aom_usage_flag_exists)
+list(APPEND CMAKE_REQUIRED_INCLUDES ${AOM_INCLUDE_DIR})
+check_symbol_exists(AOM_USAGE_GOOD_QUALITY aom/aom_encoder.h aom_usage_flag_exists)
+unset(CMAKE_REQUIRED_INCLUDES)
 
 find_library(AOM_LIBRARY
     NAMES libaom aom
