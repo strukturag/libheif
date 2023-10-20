@@ -122,7 +122,7 @@ first, so that the configuration script will find this.
 Also install x265 and its development files if you want to use HEIF encoding, but note that x265 is GPL.
 An alternative to x265 is kvazaar (BSD).
 
-The basic build steps are as follows (CMake >= 3.21):
+The basic build steps are as follows (--preset argument needs CMake >= 3.21):
 
 ````sh
 mkdir build
@@ -180,7 +180,7 @@ Further options are:
     brew install cmake make pkg-config x265 libde265 libjpeg libtool
     ```
 
-2. Configure and build project (CMake >= 3.21)
+2. Configure and build project (--preset argument needs CMake >= 3.21):
 
     ```sh
     mkdir build
