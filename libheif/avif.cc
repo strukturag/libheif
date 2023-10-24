@@ -33,6 +33,13 @@ Error Box_av1C::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
+  if (!has_fixed_box_size()) {
+    // Note: in theory, it is allowed to have an av1C box with unspecified size (until the end of the file),
+    // but that would be very uncommon and give us problems in the calculation of `configOBUs_bytes` below.
+    // It's better to error on this case than to open a DoS vulnerability.
+    return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "av1C with unspecified box size"};
+  }
+
   uint8_t byte;
 
   auto& c = m_configuration; // abbreviation
