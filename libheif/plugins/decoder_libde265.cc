@@ -338,10 +338,25 @@ static struct heif_error libde265_v1_decode_image(void* decoder_raw,
 
       struct heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
 #if LIBDE265_NUMERIC_VERSION >= 0x01000700
-      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_color_primaries(nclx, static_cast<uint16_t>(de265_get_image_colour_primaries(image))), { heif_nclx_color_profile_free(nclx);});
-      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_transfer_characteristics(nclx, static_cast<uint16_t>(de265_get_image_transfer_characteristics(image))), { heif_nclx_color_profile_free(nclx);});
-      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_matrix_coefficients(nclx, static_cast<uint16_t>(de265_get_image_matrix_coefficients(image))), { heif_nclx_color_profile_free(nclx);});
-      nclx->full_range_flag = (bool)de265_get_image_full_range_flag(image);
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_color_primaries(nclx, static_cast<uint16_t>(de265_get_image_colour_primaries(image))),
+                        {
+                          heif_nclx_color_profile_free(nclx);
+                          heif_image_release(*out_img);
+                          *out_img = nullptr;
+                        });
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_transfer_characteristics(nclx, static_cast<uint16_t>(de265_get_image_transfer_characteristics(image))),
+                        {
+                          heif_nclx_color_profile_free(nclx);
+                          heif_image_release(*out_img);
+                          *out_img = nullptr;
+                        });
+      HEIF_WARN_OR_FAIL(decoder->strict_decoding, *out_img, heif_nclx_color_profile_set_matrix_coefficients(nclx, static_cast<uint16_t>(de265_get_image_matrix_coefficients(image))),
+                        {
+                          heif_nclx_color_profile_free(nclx);
+                          heif_image_release(*out_img);
+                          *out_img = nullptr;
+                        });
+      nclx->full_range_flag = (bool) de265_get_image_full_range_flag(image);
 #endif
       heif_image_set_nclx_color_profile(*out_img, nclx);
       heif_nclx_color_profile_free(nclx);
