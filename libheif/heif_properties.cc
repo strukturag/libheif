@@ -300,3 +300,35 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
   delete udes;
 }
 
+
+struct heif_error heif_property_add_clock_info(const struct heif_context* context,
+                                               heif_item_id itemId,
+                                               const struct heif_property_clock_info* clock_info,
+                                               heif_property_id* out_propertyId)
+{
+  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+}
+
+struct heif_error heif_property_get_clock_info(const struct heif_context* context,
+                                               heif_item_id itemId,
+                                               struct heif_property_clock_info** out)
+{
+  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+}
+
+struct heif_error heif_property_add_timestamp(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              const struct heif_property_timestamp* timestamp,
+                                              heif_property_id* out_propertyId)
+{
+  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+}
+
+struct heif_error heif_property_get_timestamp(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              struct heif_property_timestamp** out)
+{
+  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+}
+
+

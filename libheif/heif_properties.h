@@ -37,7 +37,9 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -130,6 +132,97 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
+
+// ========================= Timestamps =========================
+// The 'taic' Clock Info Property provides metadata about the source
+// clock used to record the TAI timestamps.
+struct heif_property_clock_info
+{
+  uint32_t version;
+  uint8_t flags;
+
+  /**
+   * time_uncertainty.
+   * 
+   * The standard deviation measurement uncertainty in nanoseconds 
+   * for the timestamp generation process. When the time_uncertainty
+   * is unknown, the value is set to "all ones". 
+   */
+  uint64_t time_uncertainty;
+
+  /**
+   * correction_offset.
+   * 
+   * The difference in nanoseconds between the clock’s reported timestamp and 
+   * true time value of the measurement event. When the correction_offset is
+   * unknown, the value shall be set to the maximum positive value.
+   */
+  int64_t correction_offset;
+
+  /**
+   * clock_drift_rate.
+   * 
+   * The difference between the synchronized and unsynchronized time, over a 
+   * period of one second. When unknown, the value shall be set to an IEEE 754
+   * quiet NaN value of 0x7FC0 0000. 
+   */
+  float clock_drift_rate;
+
+    /**
+   * clock_source.
+   * 
+   * 0 = Clock type is unkown
+   * 1 = The clock does not synchronize to an atomic source of absolute TAI time
+   * 2 = The clock can synchronize to an atomic source of absolute TAI time
+   * 3-255 = Reserved
+   */
+  uint8_t clock_source;
+};
+
+LIBHEIF_API
+struct heif_error heif_property_add_clock_info(const struct heif_context* context,
+                                               heif_item_id itemId,
+                                               const struct heif_property_clock_info* clock_info,
+                                               heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_property_get_clock_info(const struct heif_context* context,
+                                               heif_item_id itemId,
+                                               struct heif_property_clock_info** out);
+
+struct heif_property_timestamp
+{
+  uint32_t version;
+  uint8_t flags;
+
+  /**
+   * timestamp.
+   * 
+   * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
+   */
+  uint64_t timestamp;
+
+  /**
+   * status_bits.
+   * 
+   * Bit 0: Synchronization Status (0=unsynchronized, 1=synchronized)
+   * Bit 1: Timestamp validity (0=invalid, 1=valid)
+   * Bits 2-7: Reserved
+   */
+  uint8_t status_bits;
+};
+
+LIBHEIF_API
+struct heif_error heif_property_add_timestamp(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              const struct heif_property_timestamp* timestamp,
+                                              heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_property_get_timestamp(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              struct heif_property_timestamp** out);
+
 
 #ifdef __cplusplus
 }
