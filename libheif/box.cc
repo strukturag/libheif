@@ -617,7 +617,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
-  if (hdr.get_box_size() > 0 && hdr.get_box_size() < hdr.get_header_size()) {
+  if (hdr.has_fixed_box_size() && hdr.get_box_size() < hdr.get_header_size()) {
     std::stringstream sstr;
     sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
          << hdr.get_header_size() << " bytes)";
@@ -636,13 +636,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
   }
 
 
-  auto status = range.wait_for_available_bytes(hdr.get_box_size() - hdr.get_header_size());
-  if (status != StreamReader::size_reached) {
-    // TODO: return recoverable error at timeout
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+  if (hdr.has_fixed_box_size()) {
+    auto status = range.wait_for_available_bytes(hdr.get_box_size() - hdr.get_header_size());
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
   }
-
 
   // Security check: make sure that box size does not exceed int64 size.
 

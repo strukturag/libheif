@@ -115,6 +115,8 @@ public:
 
   uint64_t get_box_size() const { return m_size; }
 
+  bool has_fixed_box_size() const { return m_size != 0; }
+
   uint32_t get_header_size() const { return m_header_size; }
 
   uint32_t get_short_type() const { return m_type; }
