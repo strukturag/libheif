@@ -133,9 +133,10 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
 
+
 // ========================= Timestamps =========================
 // The 'taic' Clock Info Property provides metadata about the source
-// clock used to record the TAI timestamps.
+// clock that used to record the TAI timestamps.
 struct heif_property_clock_info
 {
   uint32_t version;
