@@ -617,7 +617,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
-  if (hdr.get_box_size() < hdr.get_header_size()) {
+  if (hdr.get_box_size() > 0 && hdr.get_box_size() < hdr.get_header_size()) {
     std::stringstream sstr;
     sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
          << hdr.get_header_size() << " bytes)";
