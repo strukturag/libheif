@@ -114,7 +114,7 @@ static struct option long_options[] = {
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
@@ -161,7 +161,7 @@ void show_help(const char* argv0)
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
             << "      --jpeg2000        encode as JPEG-2000 (experimental)\n"
-#if ENABLE_UNCOMPRESSED_ENCODER
+#if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
