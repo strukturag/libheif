@@ -657,7 +657,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   // Box size may not be larger than remaining bytes in parent box.
 
-  if ((int64_t)range.get_remaining_bytes() < box_size_without_header) {
+  if ((int64_t)range.get_remaining_bytes() < box_size_without_header || box_size_without_header < 0) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size);
   }
