@@ -653,7 +653,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
   }
 
   int64_t box_size = static_cast<int64_t>(hdr.get_box_size());
-  int64_t box_size_without_header = box_size - hdr.get_header_size();
+  int64_t box_size_without_header = hdr.has_fixed_box_size() ? (box_size - hdr.get_header_size()) : (int64_t)range.get_remaining_bytes();
 
   // Box size may not be larger than remaining bytes in parent box.
 

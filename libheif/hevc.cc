@@ -90,8 +90,9 @@ Error Box_hvcC::parse(BitstreamRange& range)
       if (range.prepare_read(size)) {
         nal_unit.resize(size);
         bool success = range.get_istream()->read((char*) nal_unit.data(), size);
-        assert(success);
-        (void) success;
+        if (!success) {
+          return Error{heif_error_Invalid_input, heif_suberror_End_of_data, "error while reading hvcC box"};
+        }
       }
 
       array.m_nal_units.push_back(std::move(nal_unit));
