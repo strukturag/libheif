@@ -146,7 +146,7 @@ struct heif_property_clock_info
    * time_uncertainty.
    * 
    * The standard deviation measurement uncertainty in nanoseconds for the timestamp generation process. 
-   * If unkown, the value is set to "all ones". 
+   * If unknown, the value is set to "all ones". 
    */
   uint64_t time_uncertainty;
 
