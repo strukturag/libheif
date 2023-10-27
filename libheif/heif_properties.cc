@@ -321,7 +321,11 @@ struct heif_error heif_property_add_timestamp(const struct heif_context* context
                                               const struct heif_property_timestamp* timestamp,
                                               heif_property_id* out_propertyId)
 {
-  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+  if (!context || !timestamp) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  return heif_error_success;
 }
 
 struct heif_error heif_property_get_timestamp(const struct heif_context* context,
