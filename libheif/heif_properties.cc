@@ -325,14 +325,55 @@ struct heif_error heif_property_add_timestamp(const struct heif_context* context
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
   }
 
+  auto itai = std::make_shared<Box_itai>();
+  itai->set_version(timestamp->version);
+  itai->set_flags(timestamp->flags);
+  itai->set_TAI_timestamp(timestamp->tai_timestamp);
+  itai->set_status_bits(timestamp->status_bits);
+
+  bool essential = false;
+  heif_property_id id = context->context->add_property(itemId, itai, essential);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
   return heif_error_success;
 }
 
 struct heif_error heif_property_get_timestamp(const struct heif_context* context,
                                               heif_item_id itemId,
-                                              struct heif_property_timestamp** out)
+                                              heif_property_id propertyId,
+                                              struct heif_property_timestamp* timestamp_out)
 {
-  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+  if (!timestamp_out) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  uint32_t propertyIndex = propertyId - 1;
+  if (propertyIndex < 0 || propertyIndex >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto itai = std::dynamic_pointer_cast<Box_itai>(properties[propertyIndex]);
+  if (!itai) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
+  }
+
+  timestamp_out->version = itai->get_version();
+  timestamp_out->flags = itai->get_flags(); 
+  timestamp_out->tai_timestamp = itai->get_TAI_timestamp();
+  timestamp_out->status_bits = itai->get_status_bits();
+
+  return heif_error_success;
 }
 
 

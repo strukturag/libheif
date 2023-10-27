@@ -1058,4 +1058,71 @@ private:
   std::string m_tags;
 };
 
+
+/**
+ * TAI Clock Info
+ * 
+ * Information about the source clock that generates the timestamps
+ */
+class Box_taic : public FullBox
+{
+public:
+  Box_taic()
+  {
+    set_short_type(fourcc("taic"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
+  void set_correction_offset(int64_t correction_offset) { m_correction_offset = correction_offset; }
+  void set_clock_drift_rate(float clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  void set_clock_source(uint8_t clock_source) { m_clock_source = clock_source; }
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  uint64_t m_time_uncertainty;
+  int64_t m_correction_offset;
+  float m_clock_drift_rate;
+  uint8_t m_clock_source;
+};
+
+/**
+ * TAI Timestamp Box
+ * 
+ * Nano-Precision Timestamp Property
+ * 
+ */
+class Box_itai : public FullBox 
+{
+public:
+  Box_itai()
+  {
+    set_short_type(fourcc("itai"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  void set_TAI_timestamp(uint64_t timestamp) { m_TAI_timestamp = timestamp; }
+
+  void set_status_bits(uint8_t status_bits) { m_status_bits = status_bits; }
+
+  uint64_t get_TAI_timestamp() const { return m_TAI_timestamp; }
+
+  uint8_t get_status_bits() const { return m_status_bits; }
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  uint64_t m_TAI_timestamp;
+  uint8_t m_status_bits;
+};
+
 #endif

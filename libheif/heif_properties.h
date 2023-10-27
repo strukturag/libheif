@@ -197,7 +197,7 @@ struct heif_property_timestamp
    * 
    * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
    */
-  uint64_t timestamp;
+  uint64_t tai_timestamp;
 
   /**
    * status_bits.
@@ -218,7 +218,8 @@ struct heif_error heif_property_add_timestamp(const struct heif_context* context
 LIBHEIF_API
 struct heif_error heif_property_get_timestamp(const struct heif_context* context,
                                               heif_item_id itemId,
-                                              struct heif_property_timestamp** out);
+                                              heif_property_id propertyId,
+                                              struct heif_property_timestamp* timestamp_out);
 
 
 #ifdef __cplusplus
