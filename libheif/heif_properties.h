@@ -142,37 +142,9 @@ struct heif_property_clock_info
   uint32_t version;
   uint8_t flags;
 
-  /**
-   * time_uncertainty.
-   * 
-   * The standard deviation measurement uncertainty in nanoseconds for the timestamp generation process. 
-   * If unknown, the value is set to "all ones". 
-   */
   uint64_t time_uncertainty;
-
-  /**
-   * correction_offset.
-   * 
-   * The difference in nanoseconds between the clock’s reported timestamp and true time value of the measurement event. 
-   * If unknown, the value shall be set to the maximum positive value.
-   */
   int64_t correction_offset;
-
-  /**
-   * clock_drift_rate.
-   * 
-   * The difference between the synchronized and unsynchronized time, over a period of one second. 
-   * If unknown, the value shall be set to an IEEE 754 quiet NaN value of 0x7FC0 0000. 
-   */
   float clock_drift_rate;
-
-  /**
-   * clock_source.
-   * 
-   * 0 = Clock type is unkown
-   * 1 = The clock does not synchronize to an atomic source of absolute TAI time
-   * 2 = The clock can synchronize to an atomic source of absolute TAI time
-   */
   uint8_t clock_source;
 };
 
@@ -191,21 +163,8 @@ struct heif_property_timestamp
 {
   uint32_t version;
   uint8_t flags;
-
-  /**
-   * timestamp.
-   * 
-   * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
-   */
+  
   uint64_t tai_timestamp;
-
-  /**
-   * status_bits.
-   * 
-   * Bit 0: Synchronization Status (0=unsynchronized, 1=synchronized)
-   * Bit 1: Timestamp validity (0=invalid, 1=valid)
-   * Bits 2-7: Reserved
-   */
   uint8_t status_bits;
 };
 
@@ -217,7 +176,7 @@ struct heif_error heif_property_add_timestamp(const struct heif_context* context
 
 LIBHEIF_API
 struct heif_error heif_property_get_timestamp(const struct heif_context* context,
-                                              heif_item_id itemId,
+                                              heif_item_id itemId, //Is this needed?
                                               heif_property_id propertyId,
                                               struct heif_property_timestamp* timestamp_out);
 

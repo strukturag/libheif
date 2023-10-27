@@ -1076,10 +1076,46 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  /**
+   * time_uncertainty.
+   * 
+   * The standard deviation measurement uncertainty in nanoseconds for the timestamp generation process. 
+   * If unknown, the value is set to "all ones". 
+   */
   void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
+  
+  /**
+   * correction_offset.
+   * 
+   * The difference in nanoseconds between the clock’s reported timestamp and true time value of the measurement event. 
+   * If unknown, the value shall be set to the maximum positive value.
+   */
   void set_correction_offset(int64_t correction_offset) { m_correction_offset = correction_offset; }
+  
+  /**
+   * clock_drift_rate.
+   * 
+   * The difference between the synchronized and unsynchronized time, over a period of one second. 
+   * If unknown, the value shall be set to an IEEE 754 quiet NaN value of 0x7FC0 0000. 
+   */
   void set_clock_drift_rate(float clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  
+  /**
+   * clock_source.
+   * 
+   * 0 = Clock type is unkown
+   * 1 = The clock does not synchronize to an atomic source of absolute TAI time
+   * 2 = The clock can synchronize to an atomic source of absolute TAI time
+   */
   void set_clock_source(uint8_t clock_source) { m_clock_source = clock_source; }
+
+  uint64_t get_time_uncertainty() { return m_time_uncertainty; }
+  
+  int64_t get_correction_offset() { return m_correction_offset; }
+  
+  float get_clock_drift_rate() { return m_clock_drift_rate; }
+  
+  uint8_t get_clock_source() { return m_clock_source; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1109,8 +1145,20 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  /**
+   * timestamp.
+   * 
+   * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
+   */
   void set_TAI_timestamp(uint64_t timestamp) { m_TAI_timestamp = timestamp; }
 
+  /**
+   * status_bits.
+   * 
+   * Bit 0: Synchronization Status (0=unsynchronized, 1=synchronized)
+   * Bit 1: Timestamp validity (0=invalid, 1=valid)
+   * Bits 2-7: Reserved
+   */
   void set_status_bits(uint8_t status_bits) { m_status_bits = status_bits; }
 
   uint64_t get_TAI_timestamp() const { return m_TAI_timestamp; }
