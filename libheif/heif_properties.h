@@ -145,37 +145,33 @@ struct heif_property_clock_info
   /**
    * time_uncertainty.
    * 
-   * The standard deviation measurement uncertainty in nanoseconds 
-   * for the timestamp generation process. When the time_uncertainty
-   * is unknown, the value is set to "all ones". 
+   * The standard deviation measurement uncertainty in nanoseconds for the timestamp generation process. 
+   * If unkown, the value is set to "all ones". 
    */
   uint64_t time_uncertainty;
 
   /**
    * correction_offset.
    * 
-   * The difference in nanoseconds between the clock’s reported timestamp and 
-   * true time value of the measurement event. When the correction_offset is
-   * unknown, the value shall be set to the maximum positive value.
+   * The difference in nanoseconds between the clock’s reported timestamp and true time value of the measurement event. 
+   * If unknown, the value shall be set to the maximum positive value.
    */
   int64_t correction_offset;
 
   /**
    * clock_drift_rate.
    * 
-   * The difference between the synchronized and unsynchronized time, over a 
-   * period of one second. When unknown, the value shall be set to an IEEE 754
-   * quiet NaN value of 0x7FC0 0000. 
+   * The difference between the synchronized and unsynchronized time, over a period of one second. 
+   * If unknown, the value shall be set to an IEEE 754 quiet NaN value of 0x7FC0 0000. 
    */
   float clock_drift_rate;
 
-    /**
+  /**
    * clock_source.
    * 
    * 0 = Clock type is unkown
    * 1 = The clock does not synchronize to an atomic source of absolute TAI time
    * 2 = The clock can synchronize to an atomic source of absolute TAI time
-   * 3-255 = Reserved
    */
   uint8_t clock_source;
 };
