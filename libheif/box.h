@@ -1059,11 +1059,7 @@ private:
 };
 
 
-/**
- * TAI Clock Info
- * 
- * Information about the source clock that generates the timestamps
- */
+
 class Box_taic : public FullBox
 {
 public:
@@ -1127,12 +1123,7 @@ private:
   uint8_t m_clock_source;
 };
 
-/**
- * TAI Timestamp Box
- * 
- * Nano-Precision Timestamp Property
- * 
- */
+
 class Box_itai : public FullBox 
 {
 public:

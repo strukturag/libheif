@@ -159,11 +159,12 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* contex
                                                heif_item_id itemId,
                                                struct heif_property_clock_info** out);
 
+// The 'itai' TAI Timestamp Box indicates the time in nanoseconds since January 1, 1958 
 struct heif_property_timestamp
 {
   uint32_t version;
   uint8_t flags;
-  
+
   uint64_t tai_timestamp;
   uint8_t status_bits;
 };
