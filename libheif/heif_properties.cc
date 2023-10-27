@@ -306,7 +306,26 @@ struct heif_error heif_property_add_clock_info(const struct heif_context* contex
                                                const struct heif_property_clock_info* clock_info,
                                                heif_property_id* out_propertyId)
 {
-  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+  if (!context) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  auto taic = std::make_shared<Box_taic>();
+  taic->set_version(clock_info->version);
+  taic->set_flags(clock_info->flags);
+  taic->set_time_uncertainty(clock_info->time_uncertainty);
+  taic->set_correction_offset(clock_info->correction_offset);
+  taic->set_clock_drift_rate(clock_info->clock_drift_rate);
+  taic->set_clock_source(clock_info->clock_source);
+
+  bool essential = false;
+  heif_property_id id = context->context->add_property(itemId, taic, essential);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
 }
 
 struct heif_error heif_property_get_clock_info(const struct heif_context* context,
