@@ -446,8 +446,7 @@ std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std
 
     // --- pass the color profiles to the new image
 
-    auto output_nclx = std::make_shared<color_profile_nclx>();
-    *output_nclx = step.output_state.nclx_profile;
+    auto output_nclx = std::make_shared<color_profile_nclx>(step.output_state.nclx_profile);
     out->set_color_profile_nclx(output_nclx);
     out->set_color_profile_icc(in->get_color_profile_icc());
 
@@ -546,7 +545,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
     output_state.nclx_profile = *target_profile;
   }
 
-  // If some output nclx values are unspecified, set the to the same as the input.
+  // If some output nclx values are unspecified, set them to the same as the input.
 
   if (output_state.nclx_profile.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
     output_state.nclx_profile.set_matrix_coefficients(input_state.nclx_profile.get_matrix_coefficients());
