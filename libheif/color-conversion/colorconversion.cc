@@ -520,18 +520,18 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
     input_state.nclx_profile = *input->get_color_profile_nclx();
   }
 
-  // If some input nclx values are unspecified, use CCIR-601 values as default.
+  // If some input nclx values are unspecified, use values that match sRGB as default.
 
   if (input_state.nclx_profile.get_matrix_coefficients() == heif_matrix_coefficients_unspecified) {
-    input_state.nclx_profile.set_matrix_coefficients(heif_matrix_coefficients_ITU_R_BT_601_6);
+    input_state.nclx_profile.set_matrix_coefficients(heif_matrix_coefficients_ITU_R_BT_709_5);
   }
 
   if (input_state.nclx_profile.get_colour_primaries() == heif_color_primaries_unspecified) {
-    input_state.nclx_profile.set_colour_primaries(heif_color_primaries_ITU_R_BT_601_6);
+    input_state.nclx_profile.set_colour_primaries(heif_color_primaries_ITU_R_BT_709_5);
   }
 
-  if (input_state.nclx_profile.get_transfer_characteristics() == heif_color_primaries_unspecified) {
-    input_state.nclx_profile.set_transfer_characteristics(heif_transfer_characteristic_ITU_R_BT_601_6);
+  if (input_state.nclx_profile.get_transfer_characteristics() == heif_transfer_characteristic_unspecified) {
+    input_state.nclx_profile.set_transfer_characteristics(heif_transfer_characteristic_IEC_61966_2_1);
   }
 
   std::set<enum heif_channel> channels = input->get_channel_set();
@@ -555,7 +555,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
     output_state.nclx_profile.set_colour_primaries(input_state.nclx_profile.get_colour_primaries());
   }
 
-  if (output_state.nclx_profile.get_transfer_characteristics() == heif_color_primaries_unspecified) {
+  if (output_state.nclx_profile.get_transfer_characteristics() == heif_transfer_characteristic_unspecified) {
     output_state.nclx_profile.set_transfer_characteristics(input_state.nclx_profile.get_transfer_characteristics());
   }
 
