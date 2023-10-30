@@ -2606,7 +2606,7 @@ static void set_default_options(heif_encoding_options& options)
   options.macOS_compatibility_workaround = false;
   options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
   options.output_nclx_profile = nullptr;
-  options.macOS_compatibility_workaround_no_nclx_profile = true;
+  options.macOS_compatibility_workaround_no_nclx_profile = false;
   options.image_orientation = heif_orientation_normal;
 
   options.color_conversion_options.version = 1;
