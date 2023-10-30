@@ -294,9 +294,11 @@ struct heif_color_profile_nclx* color_profile_nclx::alloc_nclx_color_profile()
 
   if (profile) {
     profile->version = 1;
-    profile->color_primaries = heif_color_primaries_ITU_R_BT_709_5;
-    profile->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
-    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5;
+
+    // sRGB defaults
+    profile->color_primaries = heif_color_primaries_ITU_R_BT_709_5; // 1
+    profile->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1; // 13
+    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G; // 5
     profile->full_range_flag = true;
   }
 
@@ -312,9 +314,10 @@ void color_profile_nclx::free_nclx_color_profile(struct heif_color_profile_nclx*
 
 void color_profile_nclx::set_default()
 {
+  // sRGB defaults
   m_colour_primaries = 1;
   m_transfer_characteristics = 13;
-  m_matrix_coefficients = 1;
+  m_matrix_coefficients = 5;
   m_full_range_flag = true;
 }
 
@@ -335,6 +338,22 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
     m_transfer_characteristics = nclx->transfer_characteristics;
     m_matrix_coefficients = nclx->matrix_coefficients;
     m_full_range_flag = nclx->full_range_flag;
+  }
+}
+
+
+void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
+{
+  if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
+    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
+  }
+
+  if (m_colour_primaries == heif_color_primaries_unspecified) {
+    m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
+  }
+
+  if (m_transfer_characteristics == heif_transfer_characteristic_unspecified) {
+    m_transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
   }
 }
 

@@ -2429,6 +2429,29 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
+static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
+{
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+
+  // If there is an output NCLX specified, use that.
+  if (output_nclx_profile) {
+    target_nclx_profile->set_from_heif_color_profile_nclx(output_nclx_profile);
+  }
+  // Otherwise, if there is an input NCLX, keep that.
+  else if (auto input_nclx = image->get_color_profile_nclx()) {
+    *target_nclx_profile = *input_nclx;
+  }
+  // Otherwise, just use the defaults (set below)
+  else {
+    target_nclx_profile->set_undefined();
+  }
+
+  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
+
+  return target_nclx_profile;
+}
+
+
 Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
@@ -2444,8 +2467,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2652,8 +2674,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2828,8 +2849,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 */
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
