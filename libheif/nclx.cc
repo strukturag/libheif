@@ -349,7 +349,7 @@ void color_profile_nclx::replace_undefined_values_with_defaults()
     m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
   }
 
-  if (m_transfer_characteristics == heif_color_primaries_unspecified) {
+  if (m_transfer_characteristics == heif_transfer_characteristic_unspecified) {
     m_transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
   }
 }
