@@ -121,7 +121,7 @@ private:
 class color_profile_nclx : public color_profile
 {
 public:
-  color_profile_nclx() { set_default(); }
+  color_profile_nclx() { set_sRGB_defaults(); }
 
   uint32_t get_type() const override { return fourcc("nclx"); }
 
@@ -147,7 +147,7 @@ public:
 
   void set_full_range_flag(bool full_range) { m_full_range_flag = full_range; }
 
-  void set_default();
+  void set_sRGB_defaults();
 
   void set_undefined();
 
