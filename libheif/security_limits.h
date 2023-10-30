@@ -27,6 +27,7 @@ static const size_t MAX_CHILDREN_PER_BOX = 20000;
 static const int MAX_ILOC_ITEMS = 20000;
 static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
 static const int MAX_MEMORY_BLOCK_SIZE = 512 * 1024 * 1024; // 512 MB
+static const int MAX_COLOR_PROFILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 // Artificial limit to avoid allocating too much memory.
 // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32

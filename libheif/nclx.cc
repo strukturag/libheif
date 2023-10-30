@@ -20,6 +20,7 @@
 
 
 #include "nclx.h"
+#include "security_limits.h"
 
 #include <cassert>
 #include <limits>
@@ -373,8 +374,12 @@ Error Box_colr::parse(BitstreamRange& range)
   }
   else if (colour_type == fourcc("prof") ||
            colour_type == fourcc("rICC")) {
+    if (!has_fixed_box_size()) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unspecified, "colr boxes with undefined box size are not supported");
+    }
+
     uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
-    if (profile_size_64 > std::numeric_limits<size_t>::max()) {
+    if (profile_size_64 > MAX_COLOR_PROFILE_SIZE) {
       return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
     }
 
