@@ -339,6 +339,22 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
 }
 
 
+void color_profile_nclx::replace_undefined_values_with_defaults()
+{
+  if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
+    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_709_5;
+  }
+
+  if (m_colour_primaries == heif_color_primaries_unspecified) {
+    m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
+  }
+
+  if (m_transfer_characteristics == heif_color_primaries_unspecified) {
+    m_transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
+  }
+}
+
+
 Error Box_colr::parse(BitstreamRange& range)
 {
   StreamReader::grow_status status;

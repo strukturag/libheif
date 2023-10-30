@@ -64,9 +64,9 @@ int metadata_compression = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
 
-uint16_t nclx_matrix_coefficients = 6;
-uint16_t nclx_colour_primaries = 2;
-uint16_t nclx_transfer_characteristic = 2;
+uint16_t nclx_matrix_coefficients = 1;
+uint16_t nclx_colour_primaries = 1;
+uint16_t nclx_transfer_characteristic = 13;
 int nclx_full_range = true;
 
 std::string property_pitm_description;
