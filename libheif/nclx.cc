@@ -317,7 +317,7 @@ void color_profile_nclx::set_default()
   // sRGB defaults
   m_colour_primaries = 1;
   m_transfer_characteristics = 13;
-  m_matrix_coefficients = 5;
+  m_matrix_coefficients = 6;
   m_full_range_flag = true;
 }
 
@@ -345,7 +345,7 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
 void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
 {
   if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
-    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_470_6_System_B_G;
+    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
   }
 
   if (m_colour_primaries == heif_color_primaries_unspecified) {

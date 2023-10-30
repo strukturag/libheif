@@ -66,7 +66,7 @@ std::string chroma_downsampling;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
-uint16_t nclx_matrix_coefficients = 5;
+uint16_t nclx_matrix_coefficients = 6;
 int nclx_full_range = true;
 
 std::string property_pitm_description;
