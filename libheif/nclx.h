@@ -159,7 +159,7 @@ public:
 
   void set_from_heif_color_profile_nclx(const struct heif_color_profile_nclx* nclx);
 
-  void replace_undefined_values_with_defaults();
+  void replace_undefined_values_with_sRGB_defaults();
 
 private:
   uint16_t m_colour_primaries = heif_color_primaries_unspecified;

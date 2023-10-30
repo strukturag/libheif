@@ -520,7 +520,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
     input_state.nclx_profile = *input->get_color_profile_nclx();
   }
 
-  input_state.nclx_profile.replace_undefined_values_with_defaults();
+  input_state.nclx_profile.replace_undefined_values_with_sRGB_defaults();
 
   std::set<enum heif_channel> channels = input->get_channel_set();
   assert(!channels.empty());

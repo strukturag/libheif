@@ -2446,7 +2446,7 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
     target_nclx_profile->set_undefined();
   }
 
-  target_nclx_profile->replace_undefined_values_with_defaults();
+  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
 
   return target_nclx_profile;
 }
