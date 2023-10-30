@@ -19,6 +19,7 @@
  */
 
 #include "jpeg.h"
+#include "security_limits.h"
 #include <string>
 
 std::string Box_jpgC::dump(Indent& indent) const
@@ -47,6 +48,9 @@ Error Box_jpgC::write(StreamWriter& writer) const
 Error Box_jpgC::parse(BitstreamRange& range)
 {
   size_t nBytes = range.get_remaining_bytes();
+  if (nBytes > MAX_MEMORY_BLOCK_SIZE) {
+    return Error{heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded, "jpgC exceeds maximum supported size"};
+  }
   m_data.resize(nBytes);
   range.read(m_data.data(), nBytes);
   return range.get_error();
