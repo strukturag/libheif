@@ -679,7 +679,8 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   for (Box_uncC::Component component : uncC->get_components()) {
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if (component_type == component_type_Y) {
+    if (component_type == component_type_Y ||
+        component_type == component_type_monochrome) {
       img->add_plane(heif_channel_Y, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Y);
       channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
@@ -751,7 +752,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
             long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
             long unsigned int src_offset = tile_base_offset + pixel_offset * tile_width * tile_height;
             long unsigned int dst_offset = row * stride + col;
-            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset /** + row * tile_width **/, tile_width);   // TODO: ** is a hack
           }
         }
       }
@@ -946,7 +947,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
       {
         int bpp_alpha = image->get_bits_per_pixel(heif_channel_Alpha);
         Box_uncC::Component component3 = {3, (uint8_t)(bpp_alpha), component_format_unsigned, 0};
-        uncC->add_component(component3);   
+        uncC->add_component(component3);
       }
     }
     uncC->set_sampling_type(sampling_type_no_subsampling);
@@ -1008,7 +1009,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
   }
   return Error::Ok;
 }
-                 
+
 
 Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                                         const std::shared_ptr<HeifPixelImage>& src_image,
