@@ -521,6 +521,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     }
   }
 
+  encoder->data_read = false;
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
