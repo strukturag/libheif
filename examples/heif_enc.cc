@@ -369,6 +369,7 @@ static const char* get_compression_format_name(heif_compression_format format)
       break;
     default:
       assert(false);
+      return "unknown";
   }
 }
 
