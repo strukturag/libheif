@@ -321,6 +321,9 @@ void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_
     if (encoder->chroma != heif_chroma_undefined) {
       *inout_chroma = encoder->chroma;
     }
+    else {
+      *inout_chroma = heif_chroma_444;
+    }
   }
 }
 
