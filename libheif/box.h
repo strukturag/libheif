@@ -459,6 +459,8 @@ public:
 
   void set_item_name(const std::string& name) { m_item_name = name; }
 
+  const std::string& get_item_name() const { return m_item_name; }
+
   const std::string& get_content_type() const { return m_content_type; }
 
   const std::string& get_content_encoding() const { return m_content_encoding; }

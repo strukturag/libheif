@@ -69,6 +69,8 @@ public:
 
   heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
 
+  size_t get_number_of_items() const { return m_infe_boxes.size(); }
+
   std::vector<heif_item_id> get_item_IDs() const;
 
   bool image_exists(heif_item_id ID) const;
