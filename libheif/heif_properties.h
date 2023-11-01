@@ -139,8 +139,8 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 // clock that used to record the TAI timestamps.
 struct heif_property_clock_info
 {
-  uint32_t version;
-  uint8_t flags;
+  uint8_t version;
+  uint32_t flags;
 
   uint64_t time_uncertainty;
   int64_t correction_offset;
@@ -159,11 +159,18 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* contex
                                                heif_item_id itemId,
                                                struct heif_property_clock_info** out);
 
+/*
+  *
+  * TODO - Verify if the two really need to be added together
+  * If true, the add_timestamp should take in the clock property.
+  * 
+*/
+
 // The 'itai' TAI Timestamp Box indicates the time in nanoseconds since January 1, 1958 
 struct heif_property_timestamp
 {
-  uint32_t version;
-  uint8_t flags;
+  uint8_t version;
+  uint32_t flags;
 
   uint64_t tai_timestamp;
   uint8_t status_bits;
