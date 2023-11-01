@@ -2099,6 +2099,15 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const void* data, int size,
                                                     const char* item_type, const char* content_type);
 
+// Add generic metadata with item_type "uri ". Items with this type do not have a content_type, but
+// an item_uri_type and they have no content_encoding (they are always stored uncompressed).
+LIBHEIF_API
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_uri_type,
+                                                    heif_item_id* out_item_id);
+
 // --- heif_image allocation
 
 // Create a new image of the specified resolution and colorspace.
