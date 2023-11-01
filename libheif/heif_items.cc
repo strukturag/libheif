@@ -37,10 +37,15 @@ int heif_context_get_number_of_items(const struct heif_context* ctx)
   return (int) ctx->context->get_heif_file()->get_number_of_items();
 }
 
+
 int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
                                       heif_item_id* ID_array,
                                       int count)
 {
+  if (!ID_array) {
+    return 0;
+  }
+
   auto ids = ctx->context->get_heif_file()->get_item_IDs();
   for (int i = 0; i < (int) ids.size(); i++) {
     if (i == count) {
@@ -52,6 +57,7 @@ int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
 
   return (int) ids.size();
 }
+
 
 uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id item_id)
 {
@@ -104,6 +110,11 @@ struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
   std::vector<uint8_t> data;
   Error err = ctx->context->get_heif_file()->get_compressed_image_data(item_id, &data);
   if (err) {
+    *out_data_size = 0;
+    if (out_data) {
+      *out_data = 0;
+    }
+
     return err.error_struct(ctx->context.get());
   }
   else {
@@ -118,13 +129,17 @@ struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
   }
 }
 
+
 void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data)
 {
-  (void)ctx;
+  (void) ctx;
 
-  delete[] *item_data;
-  *item_data = nullptr;
+  if (item_data) {
+    delete[] *item_data;
+    *item_data = nullptr;
+  }
 }
+
 
 struct heif_error heif_context_get_item_data(struct heif_context* ctx,
                                              heif_item_id item_id,
@@ -141,6 +156,54 @@ struct heif_error heif_context_get_item_data(struct heif_context* ctx,
     return heif_error_success;
   }
 }
+
+
+size_t heif_context_get_item_references(const struct heif_context* ctx,
+                                        heif_item_id from_item_id,
+                                        int index,
+                                        uint32_t* out_reference_type_4cc,
+                                        heif_item_id** out_references_to)
+{
+  if (index < 0) {
+    return 0;
+  }
+
+  auto iref = ctx->context->get_heif_file()->get_iref_box();
+  if (!iref) {
+    return 0;
+  }
+
+  auto refs = iref->get_references_from(from_item_id);
+  if (index >= (int) refs.size()) {
+    return 0;
+  }
+
+  const auto& ref = refs[index];
+  if (out_reference_type_4cc) {
+    *out_reference_type_4cc = ref.header.get_short_type();
+  }
+
+  if (out_references_to) {
+    *out_references_to = new heif_item_id[ref.to_item_ID.size()];
+    for (size_t i = 0; i < ref.to_item_ID.size(); i++) {
+      (*out_references_to)[i] = ref.to_item_ID[i];
+    }
+  }
+
+  return ref.to_item_ID.size();
+}
+
+
+void heif_release_item_references(const struct heif_context* ctx, heif_item_id** references)
+{
+  (void) ctx;
+
+  if (references) {
+    delete[] *references;
+    *references = nullptr;
+  }
+}
+
 
 // ------------------------- writing -------------------------
 

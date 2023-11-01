@@ -32,18 +32,18 @@ extern "C" {
 LIBHEIF_API
 int heif_context_get_number_of_items(const struct heif_context* ctx);
 
-// Fills in file level metadata IDs into the user-supplied int-array 'ID_array',
-// preallocated with 'count' entries.
-// Function returns the total number of IDs filled into the array.
+// Fills in the item IDs into the user-supplied array 'ID_array', preallocated with 'count' entries.
+// Function returns the total number of IDs filled into the array, which may be less than 'count'.
 LIBHEIF_API
 int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
                                       heif_item_id* ID_array,
                                       int count);
 
 /**
- * Gets the metadata type for a top-level metadata item.
- *
- * This is the 4CC code (e.g. `mime` or `uri `) for the item.
+ * Gets the item type.
+ * Usually, this is a four character code (e.g. `mime` or `uri `), but it can theoretically be
+ * any 4-byte number. Thus, the type is returned as an integer. You can use heif_fourcc() to map
+ * between the two representations.
  *
  * @param ctx the file context
  * @param item_id the item identifier for the item
@@ -57,9 +57,9 @@ uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id
 
 
 /**
- * Gets the content_type for an item.
+ * Gets the MIME content_type for an item.
  *
- * This is the MIME for the metadata item. Only valid if the item type is `mime`.
+ * Only valid if the item type is `mime`.
  * If the item does not exist, or if it is no 'mime' item, NULL is returned.
  *
  * @param ctx the file context
@@ -86,18 +86,28 @@ LIBHEIF_API
 const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item_id item_id);
 
 
-// Get the size of the raw metadata, as stored in the HEIF file.
-// Returns 0 if no data is stored for this item.
+// Get the raw metadata, as stored in the HEIF file.
 // If the data is compressed (in the sense of a "mime" item with "content_encoding"), the uncompressed data is returned.
 // It is legal to set 'out_data' to NULL. In that case, only the 'out_data_size' is filled.
+// If there is no data assigned to the item or there is an error, out_data_size is set to zero.
 LIBHEIF_API
 struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
                                              heif_item_id item_id,
                                              uint8_t** out_data, size_t* out_data_size);
 
-// Free the memory returned by heif_context_get_item_data().
+// Free the memory returned by heif_context_get_item_data() in 'out_data' and set the pointer to NULL.
 LIBHEIF_API
 void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data);
+
+LIBHEIF_API
+size_t heif_context_get_item_references(const struct heif_context* ctx,
+                                        heif_item_id from_item_id,
+                                        int index,
+                                        uint32_t* out_reference_type_4cc,
+                                        heif_item_id** out_references_to);
+
+LIBHEIF_API
+void heif_release_item_references(const struct heif_context* ctx, heif_item_id** references);
 
 // ------------------------- writing -------------------------
 

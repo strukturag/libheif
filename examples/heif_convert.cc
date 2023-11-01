@@ -415,28 +415,6 @@ int main(int argc, char** argv)
   }
 
 
-  int nItems = heif_context_get_number_of_items(ctx);
-  heif_item_id ids[nItems];
-  int nItems2 = heif_context_get_list_of_item_IDs(ctx, ids, nItems);
-  assert(nItems2 == nItems);
-  (void)nItems2;
-
-  for (int i=0;i<nItems;i++) {
-    uint32_t type = heif_context_get_item_type(ctx, ids[i]);
-    size_t data_size;
-    heif_context_get_item_data(ctx, ids[i], nullptr, &data_size);
-    const char* itemname = heif_context_get_item_name(ctx, ids[i]);
-
-    printf("%d : %c%c%c%c  size: %ld   %s\n", ids[i],
-           (type>>24)&0xFF,
-           (type>>16)&0xFF,
-           (type>>8)&0xFF,
-           (type>>0)&0xFF,
-           data_size,
-           itemname);
-  }
-
-
   int num_images = heif_context_get_number_of_top_level_images(ctx);
   if (num_images == 0) {
     fprintf(stderr, "File doesn't contain any images\n");
@@ -726,7 +704,7 @@ int main(int argc, char** argv)
 
                 offset = (exif[0]<<24) | (exif[1]<<16) | (exif[2]<<8) | exif[3];
                 offset += 4;
-                
+
                 if (offset >= exifSize) {
                   heif_image_handle_release(handle);
                   std::cerr << "Invalid EXIF metadata, offset out of range.\n";
