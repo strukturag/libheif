@@ -2829,7 +2829,7 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const char* item_type, const char* content_type)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   item_type, content_type, nullptr, heif_metadata_compression_off);
+                                                   item_type, content_type, nullptr, heif_metadata_compression_off, nullptr);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
@@ -2842,10 +2842,11 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
 struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
                                                         const struct heif_image_handle* image_handle,
                                                         const void* data, int size,
-                                                        const char* item_uri_type)
+                                                        const char* item_uri_type,
+                                                        heif_item_id* out_item_id)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   "uri ", nullptr, item_uri_type, heif_metadata_compression_off);
+                                                   "uri ", nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

@@ -3324,19 +3324,20 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image,
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr, nullptr, heif_metadata_compression_off);
+                              "Exif", nullptr, nullptr, heif_metadata_compression_off, nullptr);
 }
 
 
 Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression);
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression, nullptr);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression)
+                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
+                                        heif_item_id* out_item_id)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
@@ -3350,6 +3351,9 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
   }
 
   heif_item_id metadata_id = metadata_infe_box->get_item_ID();
+  if (out_item_id) {
+    *out_item_id = metadata_id;
+  }
 
 
   // we assign this data to the image
