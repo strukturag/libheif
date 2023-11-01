@@ -83,6 +83,7 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
+  std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
   std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
   {
