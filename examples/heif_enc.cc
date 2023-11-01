@@ -38,6 +38,7 @@
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
+#include "libheif/heif_items.h"
 
 #if HAVE_LIBJPEG
 #include "decoder_jpeg.h"
@@ -902,6 +903,14 @@ int main(int argc, char** argv)
         return 1;
       }
     }
+
+    const uint8_t dummydata[4] = {1,2,3,4};
+    heif_item_id metaitem_id;
+
+    error = heif_context_add_uri_item(context.get(), "urn:smpte:ul:060E2B34.020B0101.0E010301.01000000", dummydata, 4, &metaitem_id);
+    heif_context_add_item_name(context.get(), metaitem_id, "sample name");
+    heif_context_add_item_reference(context.get(), "cdsc", metaitem_id, heif_image_handle_get_item_id(handle));
+
 
     if (thumbnail_bbox_size > 0) {
       // encode thumbnail

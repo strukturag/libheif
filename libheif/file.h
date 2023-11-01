@@ -169,6 +169,14 @@ public:
 
   heif_property_id add_property(heif_item_id id, std::shared_ptr<Box> property, bool essential);
 
+  Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
+
+  Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
+
+  Result<heif_item_id> add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size);
+
+  Error set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression);
+
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 
   void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
