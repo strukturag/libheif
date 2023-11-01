@@ -64,9 +64,9 @@ int metadata_compression = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
 
+uint16_t nclx_colour_primaries = 1;
+uint16_t nclx_transfer_characteristic = 13;
 uint16_t nclx_matrix_coefficients = 6;
-uint16_t nclx_colour_primaries = 2;
-uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
 
 std::string property_pitm_description;
@@ -348,6 +348,30 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
   }
 }
 
+
+static const char* get_compression_format_name(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1:
+      return "AV1";
+      break;
+    case heif_compression_HEVC:
+      return "HEVC";
+      break;
+    case heif_compression_JPEG:
+      return "JPEG";
+      break;
+    case heif_compression_JPEG2000:
+      return "JPEG-2000";
+      break;
+    case heif_compression_uncompressed:
+      return "Uncompressed";
+      break;
+    default:
+      assert(false);
+      return "unknown";
+  }
+}
 
 static void show_list_of_all_encoders()
 {
@@ -687,7 +711,7 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << (compressionFormat == heif_compression_AV1 ? "AV1" : "HEVC") << " encoder available.\n";
+    std::cerr << "No " << get_compression_format_name(compressionFormat) << " encoder available.\n";
     return 5;
   }
 

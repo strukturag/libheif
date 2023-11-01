@@ -2429,6 +2429,29 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
+static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
+{
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+
+  // If there is an output NCLX specified, use that.
+  if (output_nclx_profile) {
+    target_nclx_profile->set_from_heif_color_profile_nclx(output_nclx_profile);
+  }
+  // Otherwise, if there is an input NCLX, keep that.
+  else if (auto input_nclx = image->get_color_profile_nclx()) {
+    *target_nclx_profile = *input_nclx;
+  }
+  // Otherwise, just use the defaults (set below)
+  else {
+    target_nclx_profile->set_undefined();
+  }
+
+  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
+
+  return target_nclx_profile;
+}
+
+
 Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
@@ -2444,8 +2467,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2652,8 +2674,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2828,8 +2849,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 */
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2853,6 +2873,38 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
     src_image = image;
   }
   // ---end---
+
+
+  // --- if there is an alpha channel, add it as an additional image
+
+  if (options.save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+
+    Error error = encode_image_as_jpeg2000(alpha_image, encoder, options,
+                                           heif_image_input_class_alpha,
+                                           heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
+
+    if (src_image->is_premultiplied_alpha()) {
+      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
+    }
+  }
 
 
   //Encode Image
@@ -3272,19 +3324,19 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image,
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr, heif_metadata_compression_off);
+                              "Exif", nullptr, nullptr, heif_metadata_compression_off);
 }
 
 
 Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", compression);
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type, heif_metadata_compression compression)
+                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
@@ -3292,6 +3344,9 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
   metadata_infe_box->set_hidden_item(true);
   if (content_type != nullptr) {
     metadata_infe_box->set_content_type(content_type);
+  }
+  if (item_uri_type != nullptr) {
+    metadata_infe_box->set_item_uri_type(item_uri_type);
   }
 
   heif_item_id metadata_id = metadata_infe_box->get_item_ID();

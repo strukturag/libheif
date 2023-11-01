@@ -449,7 +449,7 @@ public:
   Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, heif_metadata_compression compression);
 
   Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                             const char* item_type, const char* content_type,
+                             const char* item_type, const char* content_type, const char* item_uri_type,
                              heif_metadata_compression compression);
 
   heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);

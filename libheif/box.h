@@ -471,6 +471,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  void set_item_uri_type(const std::string& type) { m_item_uri_type = type; }
+
   const std::string& get_item_uri_type() const { return m_item_uri_type; }
 
 protected:

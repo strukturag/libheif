@@ -321,6 +321,9 @@ void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_
     if (encoder->chroma != heif_chroma_undefined) {
       *inout_chroma = encoder->chroma;
     }
+    else {
+      *inout_chroma = heif_chroma_444;
+    }
   }
 }
 
@@ -518,6 +521,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     }
   }
 
+  encoder->data_read = false;
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
