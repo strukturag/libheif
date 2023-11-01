@@ -1959,6 +1959,13 @@ struct heif_error heif_context_write(struct heif_context* ctx,
 }
 
 
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand)
+{
+  ctx->context->get_heif_file()->get_ftyp_box()->add_compatible_brand(compatible_brand);
+}
+
+
 int heif_context_get_encoder_descriptors(struct heif_context* ctx,
                                          enum heif_compression_format format,
                                          const char* name,
