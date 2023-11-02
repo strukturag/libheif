@@ -160,7 +160,7 @@ void show_help(const char* argv0)
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
-            << "      --jpeg2000        encode as JPEG-2000 (experimental)\n"
+            << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
@@ -362,7 +362,7 @@ static const char* get_compression_format_name(heif_compression_format format)
       return "JPEG";
       break;
     case heif_compression_JPEG2000:
-      return "JPEG-2000";
+      return "JPEG 2000";
       break;
     case heif_compression_uncompressed:
       return "Uncompressed";
@@ -392,7 +392,7 @@ static void show_list_of_all_encoders()
         std::cout << "JPEG";
         break;
       case heif_compression_JPEG2000:
-        std::cout << "JPEG-2000";
+        std::cout << "JPEG 2000";
         break;
       case heif_compression_uncompressed:
         std::cout << "Uncompressed";
