@@ -134,6 +134,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
   // --- write XMP metadata
 
+#ifdef PNG_iTXt_SUPPORTED
   // spec: https://raw.githubusercontent.com/adobe/xmp-docs/master/XMPSpecifications/XMPSpecificationPart3.pdf
   std::vector<uint8_t> xmp = get_xmp_metadata(handle);
   if (!xmp.empty()) {
@@ -156,6 +157,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
     xmp_text.itxt_length = text_length;
     png_set_text(png_ptr, info_ptr, &xmp_text, 1);
   }
+#endif
 
   png_write_info(png_ptr, info_ptr);
 
