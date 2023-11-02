@@ -163,19 +163,19 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} --list-encoders
 
 	echo "List available decoders"
-        ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} --list-decoders
+        ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} --list-decoders
 
         echo "Dumping information of sample file ..."
         ${BIN_WRAPPER} ./examples/heif-info${BIN_SUFFIX} --dump-boxes examples/example.heic
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_HEIF_DECODER" ]; then
             echo "Converting sample HEIF file to JPEG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.jpg
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} examples/example.heic example.jpg
             echo "Checking first generated file ..."
             [ -s "example-1.jpg" ] || exit 1
             echo "Checking second generated file ..."
             [ -s "example-2.jpg" ] || exit 1
             echo "Converting sample HEIF file to PNG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.heic example.png
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} examples/example.heic example.png
             echo "Checking first generated file ..."
             [ -s "example-1.png" ] || exit 1
             echo "Checking second generated file ..."
@@ -183,11 +183,11 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
         fi
         if [ ! -z "$WITH_GRAPHICS" ] && [ ! -z "$WITH_AVIF_DECODER" ]; then
             echo "Converting sample AVIF file to JPEG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.avif example.jpg
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} examples/example.avif example.jpg
             echo "Checking generated file ..."
             [ -s "example.jpg" ] || exit 1
             echo "Converting sample AVIF file to PNG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} examples/example.avif example.png
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} examples/example.avif example.png
             echo "Checking generated file ..."
             [ -s "example.png" ] || exit 1
         fi
@@ -197,14 +197,14 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
             echo "Checking generated file ..."
             [ -s "output-single.heic" ] || exit 1
             echo "Converting back generated heif to JPEG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-single.heic output-single.jpg
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} output-single.heic output-single.jpg
             echo "Checking generated file ..."
             [ -s "output-single.jpg" ] || exit 1
             echo "Converting multiple JPEG files to heif ..."
             ${BIN_WRAPPER} ./examples/heif-enc${BIN_SUFFIX} -o output-multi.heic --verbose --verbose --verbose --thumb 320x240 example-1.jpg example-2.jpg
             echo "Checking generated file ..."
             [ -s "output-multi.heic" ] || exit 1
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-multi.heic output-multi.jpg
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} output-multi.heic output-multi.jpg
             echo "Checking first generated file ..."
             [ -s "output-multi-1.jpg" ] || exit 1
             echo "Checking second generated file ..."
@@ -216,7 +216,7 @@ if [ -z "$EMSCRIPTEN_VERSION" ] && [ -z "$CHECK_LICENSES" ] && [ -z "$TARBALL" ]
             echo "Checking generated file ..."
             [ -s "output-jpeg.avif" ] || exit 1
             echo "Converting back generated AVIF to JPEG ..."
-            ${BIN_WRAPPER} ./examples/heif-convert${BIN_SUFFIX} output-jpeg.avif output-jpeg.jpg
+            ${BIN_WRAPPER} ./examples/heif-dec${BIN_SUFFIX} output-jpeg.avif output-jpeg.jpg
             echo "Checking generated file ..."
             [ -s "output-jpeg.jpg" ] || exit 1
         fi
