@@ -135,58 +135,38 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 
 // ========================= Timestamps =========================
-// The 'taic' Clock Info Property provides metadata about the source
+// The Clock Info Property provides metadata about the source
 // clock that used to record the TAI timestamps.
-struct heif_property_clock_info
-{
-  uint8_t version;
-  uint32_t flags;
-
-  uint64_t time_uncertainty;
-  int64_t correction_offset;
-  float clock_drift_rate;
-  uint8_t clock_source;
-};
-
+// The 'itai' TAI Timestamp Box indicates the time in nanoseconds since January 1, 1958 
 LIBHEIF_API
 struct heif_error heif_property_add_clock_info(const struct heif_context* context,
                                                heif_item_id itemId,
-                                               const struct heif_property_clock_info* clock_info,
+                                               const uint64_t* time_uncertainty,
+                                               const int64_t* correction_offset,
+                                               const float* clock_drift_rate,
+                                               const uint8_t* clock_source,
                                                heif_property_id* out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* context,
                                                heif_item_id itemId,
-                                               struct heif_property_clock_info** out);
+                                               uint64_t* out_time_uncertainty,
+                                               int64_t* out_correction_offset,
+                                               float* out_clock_drift_rate,
+                                               uint8_t* out_clock_source);
 
-/*
-  *
-  * TODO - Verify if the two really need to be added together
-  * If true, the add_timestamp should take in the clock property.
-  * 
-*/
-
-// The 'itai' TAI Timestamp Box indicates the time in nanoseconds since January 1, 1958 
-struct heif_property_timestamp
-{
-  uint8_t version;
-  uint32_t flags;
-
-  uint64_t tai_timestamp;
-  uint8_t status_bits;
-};
+struct heif_error heif_property_add_tai_timestamp(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  const uint64_t* tai_timestamp,
+                                                  const uint8_t* status_bits,
+                                                  heif_property_id* out_propertyId);
 
 LIBHEIF_API
-struct heif_error heif_property_add_timestamp(const struct heif_context* context,
-                                              heif_item_id itemId,
-                                              const struct heif_property_timestamp* timestamp,
-                                              heif_property_id* out_propertyId);
-
-LIBHEIF_API
-struct heif_error heif_property_get_timestamp(const struct heif_context* context,
-                                              heif_item_id itemId, //Is this needed?
-                                              heif_property_id propertyId,
-                                              struct heif_property_timestamp* timestamp_out);
+struct heif_error heif_property_get_tai_timestamp(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  uint64_t* out_tai_timestamp,
+                                                  uint8_t* out_status_bits);
 
 
 #ifdef __cplusplus

@@ -1075,24 +1075,24 @@ public:
   /**
    * time_uncertainty.
    * 
-   * The standard deviation measurement uncertainty in nanoseconds for the timestamp generation process. 
-   * If unknown, the value is set to "all ones". 
+   * The standard deviation measurement uncertainty in nanoseconds
+   * for the timestamp generation process. 
    */
   void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
   
   /**
    * correction_offset.
    * 
-   * The difference in nanoseconds between the clock’s reported timestamp and true time value of the measurement event. 
-   * If unknown, the value shall be set to the maximum positive value.
+   * The difference in nanoseconds between the clock’s reported
+   * timestamp and true time value of the measurement event. 
    */
   void set_correction_offset(int64_t correction_offset) { m_correction_offset = correction_offset; }
   
   /**
    * clock_drift_rate.
    * 
-   * The difference between the synchronized and unsynchronized time, over a period of one second. 
-   * If unknown, the value shall be set to an IEEE 754 quiet NaN value of 0x7FC0 0000. 
+   * The difference between the synchronized and unsynchronized
+   * time, over a period of one second. 
    */
   void set_clock_drift_rate(float clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
   
@@ -1105,22 +1105,23 @@ public:
    */
   void set_clock_source(uint8_t clock_source) { m_clock_source = clock_source; }
 
-  uint64_t get_time_uncertainty() { return m_time_uncertainty; }
+  uint64_t get_time_uncertainty() const { return m_time_uncertainty; }
   
-  int64_t get_correction_offset() { return m_correction_offset; }
+  int64_t get_correction_offset() const { return m_correction_offset; }
   
-  float get_clock_drift_rate() { return m_clock_drift_rate; }
+  float get_clock_drift_rate() const { return m_clock_drift_rate; }
   
-  uint8_t get_clock_source() { return m_clock_source; }
+  uint8_t get_clock_source() const { return m_clock_source; }
 
 protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  uint64_t m_time_uncertainty;
-  int64_t m_correction_offset;
-  float m_clock_drift_rate;
-  uint8_t m_clock_source;
+  //These default values are used if the true value in unkown. 
+  uint64_t m_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
+  int64_t m_correction_offset = 0x7FFFFFFFFFFFFFFF;
+  float m_clock_drift_rate = 0x7FC00000;// IEEE 754 quiet NAN
+  uint8_t m_clock_source = 0;
 };
 
 
