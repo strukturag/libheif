@@ -77,19 +77,18 @@ extern "C" {
 // Version string of linked libheif library.
 LIBHEIF_API const char* heif_get_version(void);
 
-// Numeric version of linked libheif library, encoded as BCD 0xHHMMLL00 = HH.MM.LL.
-// For example: 0x02143000 is version 2.14.30
+// Numeric version of linked libheif library, encoded as 0xHHMMLL00 = hh.mm.ll, where hh, mm, ll is the decimal representation of HH, MM, LL.
+// For example: 0x02150300 is version 2.21.3
 LIBHEIF_API uint32_t heif_get_version_number(void);
 
-// Numeric part "HH" from above. Returned as a decimal number (not BCD).
+// Numeric part "HH" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_major(void);
-// Numeric part "MM" from above. Returned as a decimal number (not BCD).
+// Numeric part "MM" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_minor(void);
-// Numeric part "LL" from above. Returned as a decimal number (not BCD).
+// Numeric part "LL" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_maintenance(void);
 
 // Helper macros to check for given versions of libheif at compile time.
-// Note: h, m, l should be 2-digit BCD numbers. I.e., decimal 17 = 0x17 (BCD)
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 

@@ -83,24 +83,19 @@ uint32_t heif_get_version_number(void)
   return (LIBHEIF_NUMERIC_VERSION);
 }
 
-static uint8_t bcd2dec(uint8_t v)
-{
-  return uint8_t((v >> 4) * 10 + (v & 0x0F));
-}
-
 int heif_get_version_number_major(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF;
 }
 
 int heif_get_version_number_minor(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF;
 }
 
 int heif_get_version_number_maintenance(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF;
 }
 
 
