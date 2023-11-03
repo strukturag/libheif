@@ -1120,7 +1120,7 @@ private:
   //These default values are used if the true value in unkown. 
   uint64_t m_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
   int64_t m_correction_offset = 0x7FFFFFFFFFFFFFFF;
-  float m_clock_drift_rate = 0x7FC00000;// IEEE 754 quiet NAN
+  float m_clock_drift_rate = std::numeric_limits<float>::quiet_NaN();
   uint8_t m_clock_source = 0;
 };
 

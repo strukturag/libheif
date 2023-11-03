@@ -339,12 +339,50 @@ struct heif_error heif_property_add_clock_info(const struct heif_context* contex
 
 struct heif_error heif_property_get_clock_info(const struct heif_context* context,
                                                heif_item_id itemId,
+                                               heif_property_id propertyId,
                                                uint64_t* out_time_uncertainty,
                                                int64_t* out_correction_offset,
                                                float* out_clock_drift_rate,
                                                uint8_t* out_clock_source)
 {
-  return {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "not yet implemented"};
+  if (!context) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  uint32_t propertyIndex = propertyId - 1;
+  if (propertyIndex < 0 || propertyIndex >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto taic = std::dynamic_pointer_cast<Box_taic>(properties[propertyIndex]);
+  if (!taic) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
+  }
+
+  if (out_time_uncertainty == nullptr) {
+    *out_time_uncertainty = taic->get_time_uncertainty();
+  }
+  if (out_correction_offset == nullptr) {
+    *out_correction_offset = taic->get_correction_offset();
+  }
+  if (out_clock_drift_rate == nullptr) {
+    *out_clock_drift_rate = taic->get_clock_drift_rate();
+  }
+  if (out_clock_source == nullptr) {
+    *out_clock_source = taic->get_clock_source();
+  }
+
+
+  return heif_error_success;
+
 }
 
 struct heif_error heif_property_add_tai_timestamp(const struct heif_context* context,
@@ -367,6 +405,19 @@ struct heif_error heif_property_add_tai_timestamp(const struct heif_context* con
 
   bool essential = false;
   heif_property_id id = context->context->add_property(itemId, itai, essential);
+  
+  // A taic box shall be present point to the same item as the itai box. 
+  heif_error err;
+  auto ipco = context->context->get_heif_file()->get_ipco_box();
+  auto impa = context->context->get_heif_file()->get_ipma_box();
+  auto taic = ipco->get_property_for_item_ID(itemId, impa, fourcc("taic"));
+  if (!taic) {
+    err = heif_property_add_clock_info(context, itemId, nullptr, nullptr, nullptr, nullptr, nullptr);
+    if (err.code != heif_error_Ok) {
+      return err;
+    }
+  }
+    
 
   if (out_propertyId) {
     *out_propertyId = id;

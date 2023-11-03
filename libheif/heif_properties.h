@@ -135,9 +135,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 
 // ========================= Timestamps =========================
-// The Clock Info Property provides metadata about the source
-// clock that used to record the TAI timestamps.
-// The 'itai' TAI Timestamp Box indicates the time in nanoseconds since January 1, 1958 
+// Add required metadata about 
 LIBHEIF_API
 struct heif_error heif_property_add_clock_info(const struct heif_context* context,
                                                heif_item_id itemId,
