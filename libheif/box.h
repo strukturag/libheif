@@ -1117,7 +1117,7 @@ protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  //These default values are used if the true value in unkown. 
+  // Initialized to "unknown" 
   uint64_t m_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
   int64_t m_correction_offset = 0x7FFFFFFFFFFFFFFF;
   float m_clock_drift_rate = std::numeric_limits<float>::quiet_NaN();
@@ -1161,8 +1161,9 @@ protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  uint64_t m_TAI_timestamp;
-  uint8_t m_status_bits;
+  // Initialized to "unknown" 
+  uint64_t m_TAI_timestamp = 0xFFFFFFFFFFFFFFFF;
+  uint8_t m_status_bits = 0;
 };
 
 #endif
