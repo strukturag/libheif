@@ -392,7 +392,7 @@ enum heif_compression_format
    */
   heif_compression_EVC = 6,
   /**
-   * JPEG 2000 compression. (Currently unused in libheif.)
+   * JPEG 2000 compression.
    *
    * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
    * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
@@ -401,7 +401,7 @@ enum heif_compression_format
   /**
    * Uncompressed encoding.
    *
-   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
+   * This is defined in ISO/IEC 23001-17:2023 (Final Draft International Standard).
   */
   heif_compression_uncompressed = 8,
   /**
@@ -479,24 +479,36 @@ struct heif_init_params
 };
 
 
-// You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
-// These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
-//
-// For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
-// will never be freed if you do not call heif_init()/heif_deinit().
-//
-// heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
-// want to load external plugins from the default path.
-// Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
-// will be available even without heif_init().
-//
-// Make sure that you don't have one part of your program use heif_init()/heif_deinit() and another part that doesn't
-// use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
-
-// You may pass nullptr to get default parameters. Currently, no parameters are supported.
+/**
+ * Initialise library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
+ * will never be freed if you do not call heif_init()/heif_deinit().
+ *
+ * heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
+ * want to load external plugins from the default path.
+ * Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
+ * will be available even without heif_init().
+ *
+ * Make sure that you do not have one part of your program use heif_init()/heif_deinit() and another part that does
+ * not use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
+ *
+ * You may pass nullptr to get default parameters. Currently, no parameters are supported.
+ */
 LIBHEIF_API
 struct heif_error heif_init(struct heif_init_params*);
 
+/**
+ * Deinitialise and clean up library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * \sa heif_init()
+ */
 LIBHEIF_API
 void heif_deinit(void);
 
