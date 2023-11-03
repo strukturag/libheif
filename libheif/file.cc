@@ -1013,7 +1013,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
       rotation_ccw = 180;
       break;
     case heif_orientation_flip_vertically:
-      mirror = heif_transform_mirror_direction_horizontal;
+      mirror = heif_transform_mirror_direction_vertical;
       has_mirror = true;
       break;
     case heif_orientation_rotate_90_cw_then_flip_horizontally:
@@ -1026,7 +1026,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
       break;
     case heif_orientation_rotate_90_cw_then_flip_vertically:
       rotation_ccw = 270;
-      mirror = heif_transform_mirror_direction_horizontal;
+      mirror = heif_transform_mirror_direction_vertical;
       has_mirror = true;
       break;
     case heif_orientation_rotate_270_cw:
