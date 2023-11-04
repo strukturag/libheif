@@ -3101,17 +3101,13 @@ std::string Box_taic::dump(Indent& indent) const {
 }
 
 Error Box_taic::write(StreamWriter& writer) const {
+  uint32_t cdr_uint32;
+  std::memcpy(&cdr_uint32, &m_clock_drift_rate, sizeof(float)); 
+  
   size_t box_start = reserve_box_header_space(writer);
   writer.write64(m_time_uncertainty);
   writer.write64(m_correction_offset);
-
-  //Use a union to convert to a uint32_t
-  union {
-    float    f;
-    uint32_t uint32;
-  } u_clock_drift_rate = { .f = m_clock_drift_rate };  
-  writer.write32(u_clock_drift_rate.uint32); //TODO - verify float to uint32_t convesion is correct
-
+  writer.write32(cdr_uint32);
   writer.write8(m_clock_source);
 
   prepend_header(writer, box_start);
