@@ -216,6 +216,7 @@ struct heif_error heif_context_add_item(struct heif_context* ctx,
 
   if (result && out_item_id) {
     *out_item_id = result.value;
+    ctx->context->get_heif_file()->set_primary_item_id(*out_item_id);
     return heif_error_success;
   }
   else {

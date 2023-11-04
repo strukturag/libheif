@@ -29,11 +29,28 @@ extern "C" {
 
 // ------------------------- reading -------------------------
 
+/**
+ * Gets the number of items.
+ *
+ * This is not the same as the number of images, since there can be other types of items,
+ * such as metadata.
+ *
+ * @param ctx the file context
+ * @return the number of items
+ */
 LIBHEIF_API
 int heif_context_get_number_of_items(const struct heif_context* ctx);
 
-// Fills in the item IDs into the user-supplied array 'ID_array', preallocated with 'count' entries.
-// Function returns the total number of IDs filled into the array, which may be less than 'count'.
+/**
+ * Get the item identifiers.
+ *
+ * Fills in the item IDs into the user-supplied array (@code ID_array), preallocated with (@code count) entries.
+ *
+ * @param ctx the file context
+ * @param ID_array the output array.
+ * @param count the number of items allocated within (@code ID_array).
+ * @return the total number of IDs filled into the array, which may be less than (@code count).
+ */
 LIBHEIF_API
 int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
                                       heif_item_id* ID_array,

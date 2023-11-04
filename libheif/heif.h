@@ -1700,6 +1700,9 @@ struct heif_error heif_context_write(struct heif_context*,
                                      struct heif_writer* writer,
                                      void* userdata);
 
+LIBHEIF_API
+void heif_context_set_major_brand(struct heif_context* ctx, heif_brand2 major_brand);
+
 // Add a compatible brand that is now added automatically by libheif when encoding images (e.g. some application brands like 'geo1').
 LIBHEIF_API
 void heif_context_add_compatible_brand(struct heif_context* ctx,

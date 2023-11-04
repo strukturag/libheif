@@ -26,6 +26,7 @@ endif()
 
 add_libheif_test(encode)
 add_libheif_test(region)
+add_libheif_test(items)
 
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
