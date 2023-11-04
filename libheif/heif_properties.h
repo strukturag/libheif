@@ -37,7 +37,9 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -130,6 +132,46 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
+
+
+// ========================= Timestamps =========================
+// Creates a clock info property if it doesn't already exist.
+// A null clock argument implies that the value is unknown.
+// Example:
+//    int64_t offset = 0x100;
+//    heif_property_id propertyId;
+//    heif_property_set_clock_info(ctx, itemId, nullptr, &offset, nullptr, nullptr, &propertyId);
+LIBHEIF_API
+struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               const uint64_t* time_uncertainty,
+                                               const int64_t* correction_offset,
+                                               const float* clock_drift_rate,
+                                               const uint8_t* clock_source,
+                                               heif_property_id* out_propertyId);
+
+// If the value is unknown, the pointer is set to nullptr.
+// A null clock argument implies that the value is unknown.
+LIBHEIF_API
+struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               uint64_t* out_time_uncertainty,
+                                               int64_t* out_correction_offset,
+                                               float* out_clock_drift_rate,
+                                               uint8_t* out_clock_source);
+
+struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  const uint64_t* tai_timestamp,
+                                                  const uint8_t* status_bits,
+                                                  heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  uint64_t* out_tai_timestamp,
+                                                  uint8_t* out_status_bits);
+
 
 #ifdef __cplusplus
 }
