@@ -32,16 +32,18 @@ static heif_filetype_result heif_js_check_filetype(const std::string& data)
 }
 
 static emscripten::val heif_js_context_get_image_handle(
-    struct heif_context* context, heif_item_id id)
+    struct heif_context *context, heif_item_id id)
 {
   emscripten::val result = emscripten::val::object();
-  if (!context) {
+  if (!context)
+  {
     return result;
   }
 
-  struct heif_image_handle* handle;
+  struct heif_image_handle *handle;
   struct heif_error err = heif_context_get_image_handle(context, id, &handle);
-  if (err.code != heif_error_Ok) {
+  if (err.code != heif_error_Ok)
+  {
     return emscripten::val(err);
   }
 
@@ -80,20 +82,23 @@ static emscripten::val heif_js_context_get_primary_image_handle(
 
 
 static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
-    struct heif_context* context)
+    struct heif_context *context)
 {
   emscripten::val result = emscripten::val::array();
-  if (!context) {
+  if (!context)
+  {
     return result;
   }
 
   int count = heif_context_get_number_of_top_level_images(context);
-  if (count <= 0) {
+  if (count <= 0)
+  {
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
-  if (!ids) {
+  heif_item_id *ids = (heif_item_id *)malloc(count * sizeof(heif_item_id));
+  if (!ids)
+  {
     struct heif_error err;
     err.code = heif_error_Memory_allocation_error;
     err.subcode = heif_suberror_Security_limit_exceeded;
@@ -101,12 +106,14 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   }
 
   int received = heif_context_get_list_of_top_level_image_IDs(context, ids, count);
-  if (!received) {
+  if (!received)
+  {
     free(ids);
     return result;
   }
 
-  for (int i = 0; i < received; i++) {
+  for (int i = 0; i < received; i++)
+  {
     result.set(i, ids[i]);
   }
   return result;
@@ -322,17 +329,19 @@ static emscripten::val heif_js_decode_image(struct heif_image_handle* handle,
  * The returned object includes a pointer to an heif_image in the property "image".
  * This image has to be released after the image data has been read (copied) with heif_image_release().
  */
-static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
+static emscripten::val heif_js_decode_image2(struct heif_image_handle *handle,
                                              enum heif_colorspace colorspace, enum heif_chroma chroma)
 {
   emscripten::val result = emscripten::val::object();
-  if (!handle) {
+  if (!handle)
+  {
     return result;
   }
 
-  struct heif_image* image;
+  struct heif_image *image;
   struct heif_error err = heif_decode_image(handle, &image, colorspace, chroma, nullptr);
-  if (err.code != heif_error_Ok) {
+  if (err.code != heif_error_Ok)
+  {
     return emscripten::val(err);
   }
 
@@ -354,26 +363,27 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
 
-  std::vector<heif_channel> channels {
-    heif_channel_Y,
-    heif_channel_Cb,
-    heif_channel_Cr,
-    heif_channel_R,
-    heif_channel_G,
-    heif_channel_B,
-    heif_channel_Alpha,
-    heif_channel_interleaved
-  };
+  std::vector<heif_channel> channels{
+      heif_channel_Y,
+      heif_channel_Cb,
+      heif_channel_Cr,
+      heif_channel_R,
+      heif_channel_G,
+      heif_channel_B,
+      heif_channel_Alpha,
+      heif_channel_interleaved};
 
   emscripten::val val_channels = emscripten::val::array();
 
-  for (auto channel : channels) {
-    if (heif_image_has_channel(image, channel)) {
+  for (auto channel : channels)
+  {
+    if (heif_image_has_channel(image, channel))
+    {
       emscripten::val val_channel_info = emscripten::val::object();
       val_channel_info.set("id", channel);
 
-      size_t stride;
-      const uint8_t* plane = heif_image_get_plane_readonly2(image, channel, &stride);
+      int stride = -1;
+      const uint8_t *plane = heif_image_get_plane_readonly(image, channel, &stride);
 
       val_channel_info.set("stride", stride);
       val_channel_info.set("data", emscripten::val(emscripten::typed_memory_view(stride * height, plane)));
@@ -392,6 +402,95 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   return result;
 }
 
+static emscripten::val heif_js_depth_img_decode(struct heif_image_handle *handle, heif_item_id depth_image_id)
+{
+  emscripten::val depth_result = emscripten::val::object();
+  struct heif_image_handle *depth_handle;
+  heif_image_handle_get_depth_image_handle(handle, depth_image_id, &depth_handle);
+  if (!depth_handle)
+  {
+    depth_result.set("err", "could not get handle of depth image");
+    depth_result.set("id", depth_image_id);
+    return depth_result;
+  }
+
+  int width = heif_image_handle_get_width(depth_handle);
+  depth_result.set("width", width);
+
+  int height = heif_image_handle_get_height(depth_handle);
+  depth_result.set("height", height);
+
+  struct heif_image *depth_image;
+  struct heif_error err = heif_decode_image(depth_handle, &depth_image, heif_colorspace_monochrome, heif_chroma_monochrome, nullptr);
+  if (err.code)
+  {
+    depth_result.set("err", "could not get image of depth image");
+    depth_result.set("msg", err.message);
+    depth_result.set("id", depth_image_id);
+    return depth_result;
+  }
+
+  depth_result.set("testdata", emscripten::val(emscripten::typed_memory_view(10, "123456890")));
+  return depth_result;
+  std::vector<heif_channel> channels{
+      heif_channel_Y,
+      heif_channel_Cb,
+      heif_channel_Cr,
+      heif_channel_R,
+      heif_channel_G,
+      heif_channel_B,
+      heif_channel_Alpha,
+      heif_channel_interleaved};
+
+  for (auto &&channel : channels)
+  {
+    if (heif_image_has_channel(depth_image, channel))
+    {
+      depth_result.set("c_width", heif_image_get_width(depth_image, channel));
+      depth_result.set("c_height", heif_image_get_height(depth_image, channel));
+
+      int stride;
+      const uint8_t *plane = heif_image_get_plane_readonly(depth_image, channel, &stride);
+      if (plane)
+      {
+        depth_result.set("stride", stride);
+        depth_result.set("data", emscripten::val(emscripten::typed_memory_view(stride * height, plane)));
+        depth_result.set("buffersize", stride * height);
+        depth_result.set("channel", channel);
+        depth_result.set("testdata", emscripten::val(emscripten::typed_memory_view(10, "123456890")));
+        return depth_result;
+      }
+    }
+  }
+
+  depth_result.set("err", "could get no plane of depth image");
+  depth_result.set("id", depth_image_id);
+  return depth_result;
+}
+static emscripten::val heif_js_get_depth_imgs_decoded(struct heif_image_handle *handle)
+{
+  // similar to https://github.com/bigcat88/pillow_heif/blob/b2bf2744d0e4203088481b938af91974b3a2006f/pillow_heif/_pillow_heif.c#L1094
+  emscripten::val results = emscripten::val::array();
+  if (!handle)
+  {
+    return results;
+  }
+  int n_images = heif_image_handle_get_number_of_depth_images(handle);
+  if (n_images == 0)
+    return results;
+  heif_item_id *ids = (heif_item_id *)malloc(n_images * sizeof(heif_item_id));
+
+  n_images = heif_image_handle_get_list_of_depth_image_IDs(handle, ids, n_images);
+  for (int i = 0; i < n_images; i++)
+  {
+
+    struct heif_image_handle *depth_handle;
+    heif_image_handle_get_depth_image_handle(handle, ids[i], &depth_handle);
+    results.call<void>("push", emscripten::val(depth_handle));
+  }
+  free(ids);
+  return results;
+}
 
 #define EXPORT_HEIF_FUNCTION(name) \
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
@@ -587,17 +686,16 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_filetype_yes_unsupported", heif_filetype_yes_unsupported)
     .value("heif_filetype_maybe", heif_filetype_maybe);
 
-    emscripten::class_<heif_context>("heif_context");
-    emscripten::class_<heif_image_handle>("heif_image_handle");
-    emscripten::class_<heif_image>("heif_image");
-    emscripten::value_object<heif_error>("heif_error")
-    .field("code", &heif_error::code)
-    .field("subcode", &heif_error::subcode)
-    .field("message", emscripten::optional_override([](const struct heif_error& err) {
-        return std::string(err.message);
-    }), emscripten::optional_override([](struct heif_error& err, const std::string& value) {
-        err.message = value.c_str();
-    }));
+  emscripten::class_<heif_context>("heif_context");
+  emscripten::class_<heif_image_handle>("heif_image_handle");
+  emscripten::class_<heif_image>("heif_image");
+  emscripten::value_object<heif_error>("heif_error")
+      .field("code", &heif_error::code)
+      .field("subcode", &heif_error::subcode)
+      .field("message", emscripten::optional_override([](const struct heif_error &err)
+                                                      { return std::string(err.message); }),
+             emscripten::optional_override([](struct heif_error &err, const std::string &value)
+                                           { err.message = value.c_str(); }));
 }
 
-#endif  // LIBHEIF_BOX_EMSCRIPTEN_H
+#endif // LIBHEIF_BOX_EMSCRIPTEN_H
