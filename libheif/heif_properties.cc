@@ -303,10 +303,10 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 
 struct heif_error heif_property_set_clock_info(const struct heif_context* context,
                                                heif_item_id itemId,
-                                               const uint64_t* time_uncertainty,
-                                               const int64_t* correction_offset,
-                                               const float* clock_drift_rate,
-                                               const uint8_t* clock_source,
+                                               uint64_t time_uncertainty,
+                                               int64_t correction_offset,
+                                               float clock_drift_rate,
+                                               uint8_t clock_source,
                                                heif_property_id* out_propertyId)
 {
   if (!context) {
@@ -316,24 +316,13 @@ struct heif_error heif_property_set_clock_info(const struct heif_context* contex
   // TODO - if the property already exists, we should update it instead of creating a new one.
   auto taic = std::make_shared<Box_taic>();
 
-
-  if (time_uncertainty != nullptr) {
-    taic->set_time_uncertainty(*time_uncertainty);
-  }
-  if (correction_offset != nullptr) {
-    taic->set_correction_offset(*correction_offset);
-  }
-  if (clock_drift_rate != nullptr) {
-    taic->set_clock_drift_rate(*clock_drift_rate);
-  }
-  if (clock_source != nullptr) {
-    taic->set_clock_source(*clock_source);
-  }
+  taic->set_time_uncertainty(time_uncertainty);
+  taic->set_correction_offset(correction_offset);
+  taic->set_clock_drift_rate(clock_drift_rate);
+  taic->set_clock_source(clock_source);
 
   bool essential = false;
   heif_property_id id = context->context->add_property(itemId, taic, essential);
-
-
 
   if (out_propertyId) {
     *out_propertyId = id;
@@ -385,8 +374,8 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* contex
 
 struct heif_error heif_property_set_tai_timestamp(const struct heif_context* context,
                                                   heif_item_id itemId,
-                                                  const uint64_t* tai_timestamp,
-                                                  const uint8_t* status_bits,
+                                                  uint64_t tai_timestamp,
+                                                  uint8_t status_bits,
                                                   heif_property_id* out_propertyId)
 {
   if (!context) {
@@ -396,29 +385,18 @@ struct heif_error heif_property_set_tai_timestamp(const struct heif_context* con
   // TODO - if the property already exists, we should update it instead of creating a new one.
   auto itai = std::make_shared<Box_itai>();
 
-
-  if (tai_timestamp != nullptr) {
-    itai->set_TAI_timestamp(*tai_timestamp);
-  }
-  if (status_bits != nullptr) {
-    itai->set_status_bits(*status_bits);
-  }
+  itai->set_TAI_timestamp(tai_timestamp);
+  itai->set_status_bits(status_bits);
 
   bool essential = false;
   heif_property_id id = context->context->add_property(itemId, itai, essential);
   
-  // A taic box shall be present point to the same item as the itai box. 
-  // TODO - use a function to get the taic instead of duplicating code. 
-  heif_error err;
-  auto file = context->context->get_heif_file();
-  auto ipco = file->get_ipco_box();
-  auto impa = file->get_ipma_box();
-  auto taic = ipco->get_property_for_item_ID(itemId, impa, fourcc("taic"));
+  // Add taic property if it doesn't exist.
+  auto taic = context->context->get_heif_file()->get_property<Box_taic>(itemId);
   if (!taic) {
-    err = heif_property_set_clock_info(context, itemId, nullptr, nullptr, nullptr, nullptr, nullptr);
-    if (err.code != heif_error_Ok) {
-      return err;
-    }
+    taic = std::make_shared<Box_taic>();
+    context->context->add_property(itemId, taic, essential);
+    // Should we output taic_id?
   }
     
 
