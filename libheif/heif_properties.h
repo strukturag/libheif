@@ -147,25 +147,20 @@ struct heif_tai_clock_info
   uint8_t clock_source;
 };
 
-//Creates a clock info property if it doesn't already exist.
+// Creates a new clock info property if it doesn't already exist.
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
                                                heif_tai_clock_info clock,
-                                               heif_property_id out_propertyId);
+                                               heif_property_id* out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
                                                heif_tai_clock_info* out_clock);
 
-/**
- * Creates a TAI timestamp property. If one already exists, then update it
- * Creates a clock info property if it doesn't already exist.
- * 
- * @param tai_timestamp if unknown: 0xFFFFFFFFFFFFFFFF
- * @param status_bits if unknown: 0
- */
+// Creates a new TAI timestamp property if one doesn't already exist for itemId.
+// Creates a new clock info property if one doesn't already exist for itemId.
 struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t tai_timestamp,
