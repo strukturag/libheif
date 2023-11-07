@@ -135,30 +135,29 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 
 // ========================= Timestamps =========================
-/**
- * Creates a clock info property if it doesn't already exist.
- * 
- * @param time_uncertainty if unknown: 0xFFFFFFFFFFFFFFFF
- * @param correction_offset if unknown: 0x7FFFFFFFFFFFFFFF
- * @param clock_drift_rate if unknown: NaN
- * @param clock_source if unknown: 0
- */
+const uint64_t HEIF_TAI_CLOCK_UNKNOWN_TIME_UNCERTAINTY = 0xFFFFFFFFFFFFFFFF;
+const int64_t  HEIF_TAI_CLOCK_UNKNOWN_CORRECTION_OFFSET = 0x7FFFFFFFFFFFFFFF;
+struct heif_tai_clock_info 
+{
+  uint8_t version;
+  
+  uint64_t time_uncertainty;
+  int64_t correction_offset;
+  float clock_drift_rate;
+  uint8_t clock_source;
+};
+
+//Creates a clock info property if it doesn't already exist.
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               uint64_t time_uncertainty,
-                                               int64_t correction_offset,
-                                               float clock_drift_rate,
-                                               uint8_t clock_source,
+                                               heif_tai_clock_info clock,
                                                heif_property_id out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               uint64_t* out_time_uncertainty,
-                                               int64_t* out_correction_offset,
-                                               float* out_clock_drift_rate,
-                                               uint8_t* out_clock_source);
+                                               heif_tai_clock_info* out_clock);
 
 /**
  * Creates a TAI timestamp property. If one already exists, then update it
