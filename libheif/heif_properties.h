@@ -168,6 +168,7 @@ struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx
                                                   heif_property_id* out_propertyId);
 
 LIBHEIF_API
+const uint64_t HEIF_TAI_TIMESTAMP_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t* out_tai_timestamp,
