@@ -391,7 +391,11 @@ Error Box::parse(BitstreamRange& range)
   }
   else {
     uint64_t content_size = get_box_size() - get_header_size();
-    if (range.prepare_read(content_size)) {
+    if (get_short_type() == fourcc("uuid")) {
+      m_uuid_data.resize(content_size);
+      range.read(m_uuid_data.data(), content_size);
+    }
+    else if (range.prepare_read(content_size)) {
       if (content_size > MAX_BOX_SIZE) {
         return Error(heif_error_Invalid_input,
                      heif_suberror_Invalid_box_size);
