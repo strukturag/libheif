@@ -2791,32 +2791,34 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   input_width = src_image->get_width();
   input_height = src_image->get_height();
 
-  // Note: 'ispe' must be before the transformation properties
-  m_heif_file->add_ispe_property(image_id, input_width, input_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+  uint32_t encoded_width = input_width, encoded_height = input_height;
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t encoded_width, encoded_height;
-
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (input_width != encoded_width ||
-        input_height != encoded_height) {
-      m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);
+  }
 
-      // MIAF 7.3.6.7
+  // Note: 'ispe' must be before the transformation properties
+  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                   encoded_width, encoded_height);
+
+    // MIAF 7.3.6.7
+
+    if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
+                                            out_image->get_height(),
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
     }
   }
+
 
 
   write_image_metadata(src_image, image_id);
