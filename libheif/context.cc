@@ -2803,20 +2803,25 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
 
   // Note: 'ispe' must be before the transformation properties
   m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   if (input_width != encoded_width ||
       input_height != encoded_height) {
     m_heif_file->add_clap_property(image_id, input_width, input_height,
                                    encoded_width, encoded_height);
 
-    // MIAF 7.3.6.7
+    // According to MIAF without Amd2, an image is required to be cropped to multiples of the chroma format raster.
+    // However, since AVIF is based on MIAF, the whole image would be invalid in that case.
+    // As this restriction was lifted with MIAF-Amd2, we include the MIAF brand for all AVIF images.
 
-    if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                            out_image->get_height(),
+    /*
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
                                             src_image->get_chroma_format())) {
       out_image->mark_not_miaf_compatible();
     }
+    */
+
+    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
   }
 
 
