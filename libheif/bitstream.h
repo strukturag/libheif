@@ -146,6 +146,10 @@ public:
 
   uint32_t read32();
 
+  uint64_t read64();
+
+  int64_t read64signed();
+
   float read_float32();
 
   std::string read_string();

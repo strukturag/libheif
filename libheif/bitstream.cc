@@ -223,6 +223,40 @@ uint32_t BitstreamRange::read32()
 }
 
 
+uint64_t BitstreamRange::read64()
+{
+  if (!prepare_read(8)) {
+    return 0;
+  }
+
+  uint8_t buf[8];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 8);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+  return ((static_cast<uint64_t>(buf[0]) << 56) |
+          (static_cast<uint64_t>(buf[1]) << 48) |
+          (static_cast<uint64_t>(buf[2]) << 40) |
+          (static_cast<uint64_t>(buf[3]) << 32) |
+          (static_cast<uint64_t>(buf[4]) << 24) |
+          (static_cast<uint64_t>(buf[5]) << 16) |
+          (static_cast<uint64_t>(buf[6]) << 8) |
+          (static_cast<uint64_t>(buf[7])));
+}
+
+
+int64_t BitstreamRange::read64signed()
+{
+  uint64_t val = read64();
+  return reinterpret_cast<int64_t&>(val);
+}
+
+
 float BitstreamRange::read_float32()
 {
   assert(sizeof(float)==4);

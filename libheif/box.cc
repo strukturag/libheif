@@ -3125,13 +3125,8 @@ Error Box_taic::write(StreamWriter& writer) const {
 Error Box_taic::parse(BitstreamRange& range) {
   parse_full_box_header(range);
 
-  uint64_t high = range.read32();
-  uint64_t low = range.read32();
-  m_time_uncertainty = (high << 32) | low;
-
-  high = range.read32();
-  low = range.read32();
-  m_correction_offset = (high << 32) | low;
+  m_time_uncertainty = range.read64();
+  m_correction_offset = range.read64signed();
 
   m_clock_drift_rate = range.read_float32();
   m_clock_source = range.read8();
