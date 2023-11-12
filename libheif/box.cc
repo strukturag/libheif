@@ -28,6 +28,7 @@
 #include "hevc.h"
 #include "mask_image.h"
 #include "vvc.h"
+#include "avc.h"
 
 #include <iomanip>
 #include <utility>
@@ -608,6 +609,12 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
+      break;
+
+    // --- AVC (H.264)
+
+    case fourcc("avcC"):
+      box = std::make_shared<Box_avcC>();
       break;
 
     default:
