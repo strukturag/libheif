@@ -998,6 +998,9 @@ heif_property_id HeifFile::add_property(heif_item_id id, std::shared_ptr<Box> pr
 
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
+  // Note: ISO/IEC 23000-22:2019(E) (MIAF) 7.3.6.7 requires the following order:
+  // clean aperture first, then rotation, then mirror
+
   int rotation_ccw = 0;
   heif_transform_mirror_direction mirror;
   bool has_mirror = false;

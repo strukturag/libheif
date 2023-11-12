@@ -2493,8 +2493,10 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   }
 
 
-  out_image->set_size(src_image->get_width(heif_channel_Y),
-                      src_image->get_height(heif_channel_Y));
+  int input_width = src_image->get_width(heif_channel_Y);
+  int input_height = src_image->get_height(heif_channel_Y);
+
+  out_image->set_size(input_width, input_height);
 
 
   m_heif_file->add_hvcC_property(image_id);
@@ -2560,27 +2562,26 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   //uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
   //uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
 
-  if (out_image->get_width() != encoded_width ||
-      out_image->get_height() != encoded_height) {
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
     m_heif_file->add_clap_property(image_id,
-                                   out_image->get_width(),
-                                   out_image->get_height(),
+                                   input_width,
+                                   input_height,
                                    encoded_width,
                                    encoded_height);
 
-    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
     // MIAF 7.3.6.7
+    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
+    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
 
-    if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                            out_image->get_height(),
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
                                             src_image->get_chroma_format())) {
       out_image->mark_not_miaf_compatible();
     }
   }
-  else {
-    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-  }
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   // --- choose which color profile to put into 'colr' box
 
@@ -2791,32 +2792,39 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   input_width = src_image->get_width();
   input_height = src_image->get_height();
 
-  // Note: 'ispe' must be before the transformation properties
-  m_heif_file->add_ispe_property(image_id, input_width, input_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+  uint32_t encoded_width = input_width, encoded_height = input_height;
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t encoded_width, encoded_height;
-
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (input_width != encoded_width ||
-        input_height != encoded_height) {
-      m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);
-
-      // MIAF 7.3.6.7
-
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
-    }
   }
+
+  // Note: 'ispe' must be before the transformation properties
+  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                   encoded_width, encoded_height);
+
+    // According to MIAF without Amd2, an image is required to be cropped to multiples of the chroma format raster.
+    // However, since AVIF is based on MIAF, the whole image would be invalid in that case.
+    // As this restriction was lifted with MIAF-Amd2, we include the MIAF brand for all AVIF images.
+
+    /*
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
+    }
+    */
+
+    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+  }
+
 
 
   write_image_metadata(src_image, image_id);
@@ -3123,31 +3131,36 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   // Note: 'ispe' must be before the transformation properties
   m_heif_file->add_ispe_property(image_id, input_width, input_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+
+  uint32_t encoded_width = input_width, encoded_height = input_height;
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t encoded_width, encoded_height;
 
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (input_width != encoded_width ||
-        input_height != encoded_height) {
-      m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);
+  }
 
-      // MIAF 7.3.6.7
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                   encoded_width, encoded_height);
 
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
+    // MIAF 7.3.6.7
+    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
+    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
+
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
     }
   }
 
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   write_image_metadata(src_image, image_id);
 
