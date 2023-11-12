@@ -225,6 +225,8 @@ uint32_t BitstreamRange::read32()
 
 float BitstreamRange::read_float32()
 {
+  assert(sizeof(float)==4);
+
   if (!prepare_read(4)) {
     return 0;
   }
@@ -239,7 +241,12 @@ float BitstreamRange::read_float32()
     return 0;
   }
 
-  return *(float*)(buf);
+#if IS_BIG_ENDIAN
+  std::swap(buf[0],buf[3]);
+  std::swap(buf[1],buf[2]);
+#endif
+
+  return *reinterpret_cast<float*>(buf);
 }
 
 
@@ -553,6 +560,30 @@ void StreamWriter::write64(uint64_t v)
   m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
 }
+
+
+void StreamWriter::write_float32(float v)
+{
+  assert(sizeof(float)==4);
+
+  uint8_t buf[4];
+  *reinterpret_cast<float*>(buf) = v;
+
+#if IS_BIG_ENDIAN
+  std::swap(buf[0], buf[3]);
+  std::swap(buf[1], buf[2]);
+#endif
+
+  if (m_position + 4 > m_data.size()) {
+    m_data.resize(m_position + 4);
+  }
+
+  m_data[m_position++] = buf[0];
+  m_data[m_position++] = buf[1];
+  m_data[m_position++] = buf[2];
+  m_data[m_position++] = buf[3];
+}
+
 
 
 void StreamWriter::write(int size, uint64_t value)

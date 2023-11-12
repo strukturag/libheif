@@ -295,6 +295,8 @@ public:
 
   void write(const StreamWriter&);
 
+  void write_float32(float);
+
   void skip(int n);
 
   void insert(int nBytes);
