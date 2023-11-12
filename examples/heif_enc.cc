@@ -38,6 +38,7 @@
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
+#include "libheif/heif_items.h"
 
 #if HAVE_LIBJPEG
 #include "decoder_jpeg.h"
@@ -64,9 +65,9 @@ int metadata_compression = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
 
+uint16_t nclx_colour_primaries = 1;
+uint16_t nclx_transfer_characteristic = 13;
 uint16_t nclx_matrix_coefficients = 6;
-uint16_t nclx_colour_primaries = 2;
-uint16_t nclx_transfer_characteristic = 2;
 int nclx_full_range = true;
 
 std::string property_pitm_description;
@@ -160,7 +161,7 @@ void show_help(const char* argv0)
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
-            << "      --jpeg2000        encode as JPEG-2000 (experimental)\n"
+            << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
@@ -349,6 +350,30 @@ static void show_list_of_encoders(const heif_encoder_descriptor* const* encoder_
 }
 
 
+static const char* get_compression_format_name(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_AV1:
+      return "AV1";
+      break;
+    case heif_compression_HEVC:
+      return "HEVC";
+      break;
+    case heif_compression_JPEG:
+      return "JPEG";
+      break;
+    case heif_compression_JPEG2000:
+      return "JPEG 2000";
+      break;
+    case heif_compression_uncompressed:
+      return "Uncompressed";
+      break;
+    default:
+      assert(false);
+      return "unknown";
+  }
+}
+
 static void show_list_of_all_encoders()
 {
   for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000
@@ -368,7 +393,7 @@ static void show_list_of_all_encoders()
         std::cout << "JPEG";
         break;
       case heif_compression_JPEG2000:
-        std::cout << "JPEG-2000";
+        std::cout << "JPEG 2000";
         break;
       case heif_compression_uncompressed:
         std::cout << "Uncompressed";
@@ -687,7 +712,7 @@ int main(int argc, char** argv)
     active_encoder_descriptor = encoder_descriptors[idx];
   }
   else {
-    std::cerr << "No " << (compressionFormat == heif_compression_AV1 ? "AV1" : "HEVC") << " encoder available.\n";
+    std::cerr << "No " << get_compression_format_name(compressionFormat) << " encoder available.\n";
     return 5;
   }
 

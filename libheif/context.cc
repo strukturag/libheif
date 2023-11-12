@@ -1193,7 +1193,7 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     return err;
   }
 
-  // TODO: this should be codec specific. JPEG-2000, for example, can use RGB internally.
+  // TODO: this should be codec specific. JPEG 2000, for example, can use RGB internally.
 
   *out_colorspace = heif_colorspace_YCbCr;
   *out_chroma = heif_chroma_undefined;
@@ -2429,6 +2429,29 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
+static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
+{
+  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
+
+  // If there is an output NCLX specified, use that.
+  if (output_nclx_profile) {
+    target_nclx_profile->set_from_heif_color_profile_nclx(output_nclx_profile);
+  }
+  // Otherwise, if there is an input NCLX, keep that.
+  else if (auto input_nclx = image->get_color_profile_nclx()) {
+    *target_nclx_profile = *input_nclx;
+  }
+  // Otherwise, just use the defaults (set below)
+  else {
+    target_nclx_profile->set_undefined();
+  }
+
+  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
+
+  return target_nclx_profile;
+}
+
+
 Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
@@ -2444,8 +2467,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2471,8 +2493,10 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   }
 
 
-  out_image->set_size(src_image->get_width(heif_channel_Y),
-                      src_image->get_height(heif_channel_Y));
+  int input_width = src_image->get_width(heif_channel_Y);
+  int input_height = src_image->get_height(heif_channel_Y);
+
+  out_image->set_size(input_width, input_height);
 
 
   m_heif_file->add_hvcC_property(image_id);
@@ -2538,27 +2562,26 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   //uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
   //uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
 
-  if (out_image->get_width() != encoded_width ||
-      out_image->get_height() != encoded_height) {
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
     m_heif_file->add_clap_property(image_id,
-                                   out_image->get_width(),
-                                   out_image->get_height(),
+                                   input_width,
+                                   input_height,
                                    encoded_width,
                                    encoded_height);
 
-    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
     // MIAF 7.3.6.7
+    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
+    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
 
-    if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                            out_image->get_height(),
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
                                             src_image->get_chroma_format())) {
       out_image->mark_not_miaf_compatible();
     }
   }
-  else {
-    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-  }
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   // --- choose which color profile to put into 'colr' box
 
@@ -2652,8 +2675,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2770,32 +2792,39 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
   input_width = src_image->get_width();
   input_height = src_image->get_height();
 
-  // Note: 'ispe' must be before the transformation properties
-  m_heif_file->add_ispe_property(image_id, input_width, input_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+  uint32_t encoded_width = input_width, encoded_height = input_height;
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t encoded_width, encoded_height;
-
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (input_width != encoded_width ||
-        input_height != encoded_height) {
-      m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);
-
-      // MIAF 7.3.6.7
-
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
-    }
   }
+
+  // Note: 'ispe' must be before the transformation properties
+  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                   encoded_width, encoded_height);
+
+    // According to MIAF without Amd2, an image is required to be cropped to multiples of the chroma format raster.
+    // However, since AVIF is based on MIAF, the whole image would be invalid in that case.
+    // As this restriction was lifted with MIAF-Amd2, we include the MIAF brand for all AVIF images.
+
+    /*
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
+    }
+    */
+
+    m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+  }
+
 
 
   write_image_metadata(src_image, image_id);
@@ -2828,8 +2857,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   auto nclx_profile = std::dynamic_pointer_cast<const color_profile_nclx>(color_profile);
 */
 
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(options.output_nclx_profile);
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2853,6 +2881,38 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
     src_image = image;
   }
   // ---end---
+
+
+  // --- if there is an alpha channel, add it as an additional image
+
+  if (options.save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+
+    Error error = encode_image_as_jpeg2000(alpha_image, encoder, options,
+                                           heif_image_input_class_alpha,
+                                           heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
+
+    if (src_image->is_premultiplied_alpha()) {
+      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
+    }
+  }
 
 
   //Encode Image
@@ -3071,31 +3131,36 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   // Note: 'ispe' must be before the transformation properties
   m_heif_file->add_ispe_property(image_id, input_width, input_height);
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+
+  uint32_t encoded_width = input_width, encoded_height = input_height;
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t encoded_width, encoded_height;
 
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
-    if (input_width != encoded_width ||
-        input_height != encoded_height) {
-      m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                     encoded_width, encoded_height);
+  }
 
-      // MIAF 7.3.6.7
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id, input_width, input_height,
+                                   encoded_width, encoded_height);
 
-      if (!is_integer_multiple_of_chroma_size(out_image->get_width(),
-                                              out_image->get_height(),
-                                              src_image->get_chroma_format())) {
-        out_image->mark_not_miaf_compatible();
-      }
+    // MIAF 7.3.6.7
+    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
+    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
+
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
     }
   }
 
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
 
   write_image_metadata(src_image, image_id);
 
@@ -3272,19 +3337,20 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image,
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr, heif_metadata_compression_off);
+                              "Exif", nullptr, nullptr, heif_metadata_compression_off, nullptr);
 }
 
 
 Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", compression);
+  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression, nullptr);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type, heif_metadata_compression compression)
+                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
+                                        heif_item_id* out_item_id)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
@@ -3295,6 +3361,9 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
   }
 
   heif_item_id metadata_id = metadata_infe_box->get_item_ID();
+  if (out_item_id) {
+    *out_item_id = metadata_id;
+  }
 
 
   // we assign this data to the image

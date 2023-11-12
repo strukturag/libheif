@@ -998,6 +998,9 @@ heif_property_id HeifFile::add_property(heif_item_id id, std::shared_ptr<Box> pr
 
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
+  // Note: ISO/IEC 23000-22:2019(E) (MIAF) 7.3.6.7 requires the following order:
+  // clean aperture first, then rotation, then mirror
+
   int rotation_ccw = 0;
   heif_transform_mirror_direction mirror;
   bool has_mirror = false;
@@ -1013,7 +1016,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
       rotation_ccw = 180;
       break;
     case heif_orientation_flip_vertically:
-      mirror = heif_transform_mirror_direction_horizontal;
+      mirror = heif_transform_mirror_direction_vertical;
       has_mirror = true;
       break;
     case heif_orientation_rotate_90_cw_then_flip_horizontally:
@@ -1026,7 +1029,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
       break;
     case heif_orientation_rotate_90_cw_then_flip_vertically:
       rotation_ccw = 270;
-      mirror = heif_transform_mirror_direction_horizontal;
+      mirror = heif_transform_mirror_direction_vertical;
       has_mirror = true;
       break;
     case heif_orientation_rotate_270_cw:
@@ -1168,6 +1171,102 @@ std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id)
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
   return j2kH;
+}
+
+
+Result<heif_item_id> HeifFile::add_infe(const char* item_type, const uint8_t* data, size_t size)
+{
+  Result<heif_item_id> result;
+
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  auto infe_box = add_new_infe_box(item_type);
+  infe_box->set_hidden_item(true);
+
+  heif_item_id metadata_id = infe_box->get_item_ID();
+  result.value = metadata_id;
+
+  set_item_data(infe_box, data, size, heif_metadata_compression_off);
+
+  return result;
+}
+
+
+Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size)
+{
+  Result<heif_item_id> result;
+
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  auto infe_box = add_new_infe_box("mime");
+  infe_box->set_hidden_item(true);
+  infe_box->set_content_type(content_type);
+
+  heif_item_id metadata_id = infe_box->get_item_ID();
+  result.value = metadata_id;
+
+  set_item_data(infe_box, data, size, content_encoding);
+
+  return result;
+}
+
+
+Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size)
+{
+  Result<heif_item_id> result;
+
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  auto infe_box = add_new_infe_box("uri ");
+  infe_box->set_hidden_item(true);
+  infe_box->set_item_uri_type(item_uri_type);
+
+  heif_item_id metadata_id = infe_box->get_item_ID();
+  result.value = metadata_id;
+
+  set_item_data(infe_box, data, size, heif_metadata_compression_off);
+
+  return result;
+}
+
+
+Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression)
+{
+  // --- metadata compression
+
+  if (compression == heif_metadata_compression_auto) {
+    compression = heif_metadata_compression_off; // currently, we don't use header compression by default
+  }
+
+  // only set metadata compression for MIME type data which has 'content_encoding' field
+  if (compression != heif_metadata_compression_off &&
+      item->get_item_type() != "mime") {
+    // TODO: error, compression not supported
+  }
+
+
+  std::vector<uint8_t> data_array;
+  if (compression == heif_metadata_compression_deflate) {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    data_array = deflate((const uint8_t*) data, size);
+    item->set_content_encoding("deflate");
+#else
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method);
+#endif
+  }
+  else {
+    // uncompressed data, plain copy
+
+    data_array.resize(size);
+    memcpy(data_array.data(), data, size);
+  }
+
+  // copy the data into the file, store the pointer to it in an iloc box entry
+
+  append_iloc_data(item->get_item_ID(), data_array);
+
+  return Error::Ok;
 }
 
 

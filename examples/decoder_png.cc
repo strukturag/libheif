@@ -213,6 +213,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
   // --- read XMP data
 
+#ifdef PNG_iTXt_SUPPORTED
   png_textp textPtr = nullptr;
   const png_uint_32 nTextChunks = png_get_text(png_ptr, info_ptr, &textPtr, nullptr);
   for (png_uint_32 i = 0; i < nTextChunks; i++, textPtr++) {
@@ -231,6 +232,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
       }
     }
   }
+#endif
 
   int band = png_get_channels(png_ptr, info_ptr);
 

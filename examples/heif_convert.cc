@@ -26,6 +26,7 @@
 
 #include <cstring>
 #include <getopt.h>
+#include "libheif/heif_items.h"
 
 #if defined(HAVE_UNISTD_H)
 
@@ -171,7 +172,7 @@ void list_all_decoders()
   std::cout << "JPEG decoders:\n";
   list_decoders(heif_compression_JPEG);
 
-  std::cout << "JPEG-2000 decoders:\n";
+  std::cout << "JPEG 2000 decoders:\n";
   list_decoders(heif_compression_JPEG2000);
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -412,6 +413,7 @@ int main(int argc, char** argv)
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
   }
+
 
   int num_images = heif_context_get_number_of_top_level_images(ctx);
   if (num_images == 0) {
@@ -702,7 +704,7 @@ int main(int argc, char** argv)
 
                 offset = (exif[0]<<24) | (exif[1]<<16) | (exif[2]<<8) | exif[3];
                 offset += 4;
-                
+
                 if (offset >= exifSize) {
                   heif_image_handle_release(handle);
                   std::cerr << "Invalid EXIF metadata, offset out of range.\n";

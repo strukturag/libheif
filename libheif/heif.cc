@@ -83,24 +83,19 @@ uint32_t heif_get_version_number(void)
   return (LIBHEIF_NUMERIC_VERSION);
 }
 
-static uint8_t bcd2dec(uint8_t v)
-{
-  return uint8_t((v >> 4) * 10 + (v & 0x0F));
-}
-
 int heif_get_version_number_major(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 24) & 0xFF;
 }
 
 int heif_get_version_number_minor(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 16) & 0xFF;
 }
 
 int heif_get_version_number_maintenance(void)
 {
-  return bcd2dec(((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF);
+  return ((LIBHEIF_NUMERIC_VERSION) >> 8) & 0xFF;
 }
 
 
@@ -1964,6 +1959,13 @@ struct heif_error heif_context_write(struct heif_context* ctx,
 }
 
 
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand)
+{
+  ctx->context->get_heif_file()->get_ftyp_box()->add_compatible_brand(compatible_brand);
+}
+
+
 int heif_context_get_encoder_descriptors(struct heif_context* ctx,
                                          enum heif_compression_format format,
                                          const char* name,
@@ -2606,7 +2608,7 @@ static void set_default_options(heif_encoding_options& options)
   options.macOS_compatibility_workaround = false;
   options.save_two_colr_boxes_when_ICC_and_nclx_available = false;
   options.output_nclx_profile = nullptr;
-  options.macOS_compatibility_workaround_no_nclx_profile = true;
+  options.macOS_compatibility_workaround_no_nclx_profile = false;
   options.image_orientation = heif_orientation_normal;
 
   options.color_conversion_options.version = 1;
@@ -2829,7 +2831,24 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const char* item_type, const char* content_type)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   item_type, content_type, heif_metadata_compression_off);
+                                                   item_type, content_type, nullptr, heif_metadata_compression_off, nullptr);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+  else {
+    return heif_error_success;
+  }
+}
+
+
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                        const struct heif_image_handle* image_handle,
+                                                        const void* data, int size,
+                                                        const char* item_uri_type,
+                                                        heif_item_id* out_item_id)
+{
+  Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
+                                                   "uri ", nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

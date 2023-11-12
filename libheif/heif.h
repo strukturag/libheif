@@ -77,19 +77,18 @@ extern "C" {
 // Version string of linked libheif library.
 LIBHEIF_API const char* heif_get_version(void);
 
-// Numeric version of linked libheif library, encoded as BCD 0xHHMMLL00 = HH.MM.LL.
-// For example: 0x02143000 is version 2.14.30
+// Numeric version of linked libheif library, encoded as 0xHHMMLL00 = hh.mm.ll, where hh, mm, ll is the decimal representation of HH, MM, LL.
+// For example: 0x02150300 is version 2.21.3
 LIBHEIF_API uint32_t heif_get_version_number(void);
 
-// Numeric part "HH" from above. Returned as a decimal number (not BCD).
+// Numeric part "HH" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_major(void);
-// Numeric part "MM" from above. Returned as a decimal number (not BCD).
+// Numeric part "MM" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_minor(void);
-// Numeric part "LL" from above. Returned as a decimal number (not BCD).
+// Numeric part "LL" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_maintenance(void);
 
 // Helper macros to check for given versions of libheif at compile time.
-// Note: h, m, l should be 2-digit BCD numbers. I.e., decimal 17 = 0x17 (BCD)
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
@@ -392,7 +391,7 @@ enum heif_compression_format
    */
   heif_compression_EVC = 6,
   /**
-   * JPEG 2000 compression. (Currently unused in libheif.)
+   * JPEG 2000 compression.
    *
    * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
    * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
@@ -401,7 +400,7 @@ enum heif_compression_format
   /**
    * Uncompressed encoding.
    *
-   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
+   * This is defined in ISO/IEC 23001-17:2023 (Final Draft International Standard).
   */
   heif_compression_uncompressed = 8,
   /**
@@ -479,24 +478,36 @@ struct heif_init_params
 };
 
 
-// You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
-// These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
-//
-// For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
-// will never be freed if you do not call heif_init()/heif_deinit().
-//
-// heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
-// want to load external plugins from the default path.
-// Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
-// will be available even without heif_init().
-//
-// Make sure that you don't have one part of your program use heif_init()/heif_deinit() and another part that doesn't
-// use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
-
-// You may pass nullptr to get default parameters. Currently, no parameters are supported.
+/**
+ * Initialise library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
+ * will never be freed if you do not call heif_init()/heif_deinit().
+ *
+ * heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
+ * want to load external plugins from the default path.
+ * Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
+ * will be available even without heif_init().
+ *
+ * Make sure that you do not have one part of your program use heif_init()/heif_deinit() and another part that does
+ * not use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
+ *
+ * You may pass nullptr to get default parameters. Currently, no parameters are supported.
+ */
 LIBHEIF_API
 struct heif_error heif_init(struct heif_init_params*);
 
+/**
+ * Deinitialise and clean up library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * \sa heif_init()
+ */
 LIBHEIF_API
 void heif_deinit(void);
 
@@ -1700,6 +1711,10 @@ struct heif_error heif_context_write(struct heif_context*,
                                      struct heif_writer* writer,
                                      void* userdata);
 
+// Add a compatible brand that is now added automatically by libheif when encoding images (e.g. some application brands like 'geo1').
+LIBHEIF_API
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand);
 
 // ----- encoder -----
 
@@ -2087,6 +2102,15 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const struct heif_image_handle* image_handle,
                                                     const void* data, int size,
                                                     const char* item_type, const char* content_type);
+
+// Add generic metadata with item_type "uri ". Items with this type do not have a content_type, but
+// an item_uri_type and they have no content_encoding (they are always stored uncompressed).
+LIBHEIF_API
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_uri_type,
+                                                    heif_item_id* out_item_id);
 
 // --- heif_image allocation
 
