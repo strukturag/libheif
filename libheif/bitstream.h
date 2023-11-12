@@ -291,6 +291,8 @@ public:
 
   void write64(uint64_t);
 
+  void write64(int64_t);
+
   void write(int size, uint64_t value);
 
   void write(const std::string&);
