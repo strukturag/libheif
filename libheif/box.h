@@ -475,6 +475,8 @@ public:
 
   const std::string& get_item_uri_type() const { return m_item_uri_type; }
 
+  void set_item_uri_type(const std::string& uritype) { m_item_uri_type = uritype; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
