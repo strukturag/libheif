@@ -39,7 +39,7 @@ enum heif_item_property_type
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
   heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
   heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
-  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i')
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -137,10 +137,13 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 // ========================= Timestamps =========================
 const uint64_t HEIF_TAI_CLOCK_UNKNOWN_TIME_UNCERTAINTY = 0xFFFFFFFFFFFFFFFF;
 const int64_t  HEIF_TAI_CLOCK_UNKNOWN_CORRECTION_OFFSET = 0x7FFFFFFFFFFFFFFF;
-struct heif_tai_clock_info 
+
+struct heif_tai_clock_info
 {
   uint8_t version;
-  
+
+  // version 1
+
   uint64_t time_uncertainty;
   int64_t correction_offset;
   float clock_drift_rate;
@@ -167,8 +170,9 @@ struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx
                                                   uint8_t status_bits,
                                                   heif_property_id* out_propertyId);
 
-LIBHEIF_API
 const uint64_t HEIF_TAI_TIMESTAMP_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
+
+LIBHEIF_API
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t* out_tai_timestamp,

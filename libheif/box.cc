@@ -610,6 +610,16 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_mskC>();
       break;
 
+    // --- TAI timestamps
+
+    case fourcc("itai"):
+      box = std::make_shared<Box_itai>();
+      break;
+
+    case fourcc("taic"):
+      box = std::make_shared<Box_taic>();
+      break;
+
     default:
       box = std::make_shared<Box>();
       break;
@@ -3096,7 +3106,7 @@ std::string Box_taic::dump(Indent& indent) const {
   sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
   sstr << indent << "correction_offset: " << m_correction_offset << "\n";
   sstr << indent << "clock_drift_rate: " << m_clock_drift_rate << "\n";
-  sstr << indent << "clock_source: " << m_clock_source << "\n";
+  sstr << indent << "clock_source: " << (int)m_clock_source << "\n";
   return sstr.str();
 }
 
@@ -3126,7 +3136,7 @@ Error Box_taic::parse(BitstreamRange& range) {
   low = range.read32();
   m_correction_offset = (high << 32) | low;
 
-  m_clock_drift_rate = (float) range.read32();
+  m_clock_drift_rate = range.read_float32();
   m_clock_source = range.read8();
   return range.get_error();
 }
@@ -3135,7 +3145,7 @@ std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "TAI_timestamp: " << m_TAI_timestamp << "\n";
-  sstr << indent << "status_bits: " << m_status_bits << "\n";
+  sstr << indent << "status_bits: " << (int)m_status_bits << "\n";
   return sstr.str();
 }
 

@@ -223,6 +223,26 @@ uint32_t BitstreamRange::read32()
 }
 
 
+float BitstreamRange::read_float32()
+{
+  if (!prepare_read(4)) {
+    return 0;
+  }
+
+  uint8_t buf[4];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 4);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+  return *(float*)(buf);
+}
+
+
 std::string BitstreamRange::read_string()
 {
   std::string str;
