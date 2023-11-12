@@ -3087,3 +3087,74 @@ Error Box_udes::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
   return Error::Ok;
 }
+
+
+
+std::string Box_taic::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
+  sstr << indent << "correction_offset: " << m_correction_offset << "\n";
+  sstr << indent << "clock_drift_rate: " << m_clock_drift_rate << "\n";
+  sstr << indent << "clock_source: " << m_clock_source << "\n";
+  return sstr.str();
+}
+
+Error Box_taic::write(StreamWriter& writer) const {
+  uint32_t cdr_uint32;
+  std::memcpy(&cdr_uint32, &m_clock_drift_rate, sizeof(float)); 
+  
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_time_uncertainty);
+  writer.write64(m_correction_offset);
+  writer.write32(cdr_uint32);
+  writer.write8(m_clock_source);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+Error Box_taic::parse(BitstreamRange& range) {
+  parse_full_box_header(range);
+
+  uint64_t high = range.read32();
+  uint64_t low = range.read32();
+  m_time_uncertainty = (high << 32) | low;
+
+  high = range.read32();
+  low = range.read32();
+  m_correction_offset = (high << 32) | low;
+
+  m_clock_drift_rate = (float) range.read32();
+  m_clock_source = range.read8();
+  return range.get_error();
+}
+
+std::string Box_itai::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "TAI_timestamp: " << m_TAI_timestamp << "\n";
+  sstr << indent << "status_bits: " << m_status_bits << "\n";
+  return sstr.str();
+}
+
+Error Box_itai::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_TAI_timestamp);
+  writer.write8(m_status_bits);
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+Error Box_itai::parse(BitstreamRange& range) {
+  parse_full_box_header(range);
+
+  uint64_t high = range.read32();
+  uint64_t low = range.read32();
+  m_TAI_timestamp = (high << 32) | low;
+
+  m_status_bits = range.read8();
+  return range.get_error();
+}

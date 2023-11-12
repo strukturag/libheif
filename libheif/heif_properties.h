@@ -37,7 +37,9 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i'),
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -130,6 +132,48 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
+
+
+// ========================= Timestamps =========================
+const uint64_t HEIF_TAI_CLOCK_UNKNOWN_TIME_UNCERTAINTY = 0xFFFFFFFFFFFFFFFF;
+const int64_t  HEIF_TAI_CLOCK_UNKNOWN_CORRECTION_OFFSET = 0x7FFFFFFFFFFFFFFF;
+struct heif_tai_clock_info 
+{
+  uint8_t version;
+  
+  uint64_t time_uncertainty;
+  int64_t correction_offset;
+  float clock_drift_rate;
+  uint8_t clock_source;
+};
+
+// Creates a new clock info property if it doesn't already exist.
+LIBHEIF_API
+struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               heif_tai_clock_info clock,
+                                               heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               heif_tai_clock_info* out_clock);
+
+// Creates a new TAI timestamp property if one doesn't already exist for itemId.
+// Creates a new clock info property if one doesn't already exist for itemId.
+struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  uint64_t tai_timestamp,
+                                                  uint8_t status_bits,
+                                                  heif_property_id* out_propertyId);
+
+LIBHEIF_API
+const uint64_t HEIF_TAI_TIMESTAMP_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
+struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  uint64_t* out_tai_timestamp,
+                                                  uint8_t* out_status_bits);
+
 
 #ifdef __cplusplus
 }
