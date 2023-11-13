@@ -162,6 +162,7 @@ struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
 
 // The `out_clock` struct passed in needs to have the `version` field set so that this
 // function knows which fields it is safe to fill.
+// When the read property is a lower version, the version variable of out_clock will be reduced.
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
