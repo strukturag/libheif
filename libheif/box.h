@@ -1121,8 +1121,8 @@ protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  uint64_t m_time_uncertainty = HEIF_TAI_CLOCK_UNKNOWN_TIME_UNCERTAINTY;
-  int64_t m_correction_offset = HEIF_TAI_CLOCK_UNKNOWN_CORRECTION_OFFSET;
+  uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
+  int64_t m_correction_offset = heif_tai_clock_info_unknown_correction_offset;
   float m_clock_drift_rate = std::numeric_limits<float>::quiet_NaN();
   uint8_t m_clock_source = 0;
 };

@@ -135,8 +135,10 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 
 // ========================= Timestamps =========================
-const uint64_t HEIF_TAI_CLOCK_UNKNOWN_TIME_UNCERTAINTY = 0xFFFFFFFFFFFFFFFF;
-const int64_t  HEIF_TAI_CLOCK_UNKNOWN_CORRECTION_OFFSET = 0x7FFFFFFFFFFFFFFF;
+LIBHEIF_API extern const uint64_t heif_tai_clock_info_unknown_time_uncertainty;
+LIBHEIF_API extern const int64_t  heif_tai_clock_info_unknown_correction_offset;
+LIBHEIF_API extern const uint64_t heif_unknown_tai_timestamp;
+
 
 struct heif_tai_clock_info
 {
@@ -170,13 +172,12 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
 // Creates a new TAI timestamp property if one doesn't already exist for itemId.
 // Creates a new clock info property if one doesn't already exist for itemId.
+LIBHEIF_API
 struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t tai_timestamp,
                                                   uint8_t status_bits,
                                                   heif_property_id* out_propertyId);
-
-const uint64_t HEIF_TAI_TIMESTAMP_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
 
 LIBHEIF_API
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,

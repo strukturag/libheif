@@ -301,6 +301,11 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 }
 
 
+const uint64_t heif_tai_clock_info_unknown_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
+const int64_t  heif_tai_clock_info_unknown_correction_offset = 0x7FFFFFFFFFFFFFFF;
+const uint64_t heif_unknown_tai_timestamp = 0xFFFFFFFFFFFFFFFF;
+
+
 int heif_is_tai_clock_info_drift_rate_undefined(float drift_rate)
 {
   float undef_clock_drift = std::numeric_limits<float>::quiet_NaN();
