@@ -303,7 +303,7 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 
 struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               heif_tai_clock_info clock, 
+                                               const heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId)
 {
   if (!ctx) {
@@ -322,10 +322,10 @@ struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
     taic = std::make_shared<Box_taic>();
   }
 
-  taic->set_time_uncertainty(clock.time_uncertainty);
-  taic->set_correction_offset(clock.correction_offset);
-  taic->set_clock_drift_rate(clock.clock_drift_rate);
-  taic->set_clock_source(clock.clock_source);
+  taic->set_time_uncertainty(clock->time_uncertainty);
+  taic->set_correction_offset(clock->correction_offset);
+  taic->set_clock_drift_rate(clock->clock_drift_rate);
+  taic->set_clock_source(clock->clock_source);
 
   bool essential = false;
   heif_property_id id = ctx->context->add_property(itemId, taic, essential);
@@ -361,11 +361,12 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
   }
 
-
-  out_clock->time_uncertainty = taic->get_time_uncertainty();
-  out_clock->correction_offset = taic->get_correction_offset();
-  out_clock->clock_drift_rate = taic->get_clock_drift_rate();
-  out_clock->clock_source = taic->get_clock_source();
+  if (out_clock->version >= 1) {
+    out_clock->time_uncertainty = taic->get_time_uncertainty();
+    out_clock->correction_offset = taic->get_correction_offset();
+    out_clock->clock_drift_rate = taic->get_clock_drift_rate();
+    out_clock->clock_source = taic->get_clock_source();
+  }
 
   return heif_error_success;
 

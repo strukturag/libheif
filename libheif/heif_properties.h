@@ -154,9 +154,11 @@ struct heif_tai_clock_info
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               heif_tai_clock_info clock,
+                                               const heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId);
 
+// The `out_clock` struct passed in needs to have the `version` field set so that this
+// function knows which fields it is safe to fill.
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
