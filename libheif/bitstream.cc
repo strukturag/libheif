@@ -275,7 +275,7 @@ float BitstreamRange::read_float32()
     return 0;
   }
 
-#if IS_BIG_ENDIAN
+#if !IS_BIG_ENDIAN
   std::swap(buf[0],buf[3]);
   std::swap(buf[1],buf[2]);
 #endif
@@ -609,7 +609,7 @@ void StreamWriter::write_float32(float v)
   uint8_t buf[4];
   *reinterpret_cast<float*>(buf) = v;
 
-#if IS_BIG_ENDIAN
+#if !IS_BIG_ENDIAN
   std::swap(buf[0], buf[3]);
   std::swap(buf[1], buf[2]);
 #endif
