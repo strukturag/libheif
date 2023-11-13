@@ -150,6 +150,9 @@ struct heif_tai_clock_info
   uint8_t clock_source;
 };
 
+int heif_is_tai_clock_info_drift_rate_undefined(float drift_rate);
+
+
 // Creates a new clock info property if it doesn't already exist.
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,

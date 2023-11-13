@@ -3105,7 +3105,14 @@ std::string Box_taic::dump(Indent& indent) const {
   sstr << Box::dump(indent);
   sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
   sstr << indent << "correction_offset: " << m_correction_offset << "\n";
-  sstr << indent << "clock_drift_rate: " << m_clock_drift_rate << "\n";
+  sstr << indent << "clock_drift_rate: ";
+  if (heif_is_tai_clock_info_drift_rate_undefined(m_clock_drift_rate)) {
+    sstr << "undefined\n";
+  }
+  else {
+    sstr << m_clock_drift_rate << "\n";
+  }
+
   sstr << indent << "clock_source: " << (int)m_clock_source << "\n";
   return sstr.str();
 }

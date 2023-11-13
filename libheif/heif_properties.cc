@@ -301,6 +301,15 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 }
 
 
+int heif_is_tai_clock_info_drift_rate_undefined(float drift_rate)
+{
+  float undef_clock_drift = std::numeric_limits<float>::quiet_NaN();
+  return memcmp(reinterpret_cast<const void*>(&undef_clock_drift),
+                reinterpret_cast<const void*>(&drift_rate),
+                sizeof(float)) == 0;
+}
+
+
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
                                                const heif_tai_clock_info* clock,
