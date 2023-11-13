@@ -152,7 +152,7 @@ struct heif_tai_clock_info
 
 // Creates a new clock info property if it doesn't already exist.
 LIBHEIF_API
-struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
+struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
                                                const heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId);
@@ -166,7 +166,7 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
 // Creates a new TAI timestamp property if one doesn't already exist for itemId.
 // Creates a new clock info property if one doesn't already exist for itemId.
-struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx,
+struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t tai_timestamp,
                                                   uint8_t status_bits,

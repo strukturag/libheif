@@ -301,7 +301,7 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 }
 
 
-struct heif_error heif_property_set_clock_info(const struct heif_context* ctx,
+struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
                                                const heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId)
@@ -369,10 +369,10 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
   }
 
   return heif_error_success;
-
 }
 
-struct heif_error heif_property_set_tai_timestamp(const struct heif_context* ctx,
+
+struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   uint64_t tai_timestamp,
                                                   uint8_t status_bits,
