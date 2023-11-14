@@ -22,6 +22,7 @@
 #include "libheif/heif_plugin.h"
 #include "encoder_kvazaar.h"
 #include <memory>
+#include <string>   // apparently, this is a false positive of cpplint
 #include <cstring>
 #include <cassert>
 #include <vector>
