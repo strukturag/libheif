@@ -510,7 +510,17 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 */
 
-  kvz_picture* pic = api->picture_alloc_csp(kvzChroma, config->width, config->height);
+  uint32_t pic_width = config->width;
+  if (pic_width % 8 != 0) {
+    pic_width += 8 - (pic_width % 8);
+  }
+
+  uint32_t pic_height = config->height;
+  if (pic_height % 8 != 0) {
+    pic_height += 8 - (pic_height % 8);
+  }
+
+  kvz_picture* pic = api->picture_alloc_csp(kvzChroma, pic_width, pic_height);
   if (!pic) {
     api->config_destroy(config);
     return heif_error{
