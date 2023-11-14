@@ -22,10 +22,10 @@
 #include "libheif/heif_plugin.h"
 #include "encoder_kvazaar.h"
 #include <memory>
-#include <string>
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <algorithm>
 
 extern "C" {
 #include <kvazaar.h>
