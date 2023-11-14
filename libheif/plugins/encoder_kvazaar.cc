@@ -302,7 +302,11 @@ static void kvazaar_query_input_colorspace2(void* encoder_raw, heif_colorspace* 
   }
   else {
     *colorspace = heif_colorspace_YCbCr;
-    //*chroma = encoder->chroma;
+    if (*chroma != heif_chroma_420 &&
+        *chroma != heif_chroma_422 &&
+        *chroma != heif_chroma_444) {
+      *chroma = heif_chroma_420;
+    }
   }
 }
 
