@@ -859,7 +859,7 @@ static const struct heif_encoder_plugin encoder_plugin_svt
         /* id_name */ "svt",
         /* priority */ SVT_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
-        /* supports_lossless_compression */ false,
+        /* supports_lossless_compression */ false, // https://gitlab.com/AOMediaCodec/SVT-AV1/-/issues/1636
         /* get_plugin_name */ svt_plugin_name,
         /* init_plugin */ svt_init_plugin,
         /* cleanup_plugin */ svt_cleanup_plugin,

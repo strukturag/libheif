@@ -2429,7 +2429,9 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
-static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
+static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image,
+                                                                       const heif_color_profile_nclx* output_nclx_profile,
+                                                                       bool lossless = false)
 {
   auto target_nclx_profile = std::make_shared<color_profile_nclx>();
 
@@ -2446,7 +2448,7 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
     target_nclx_profile->set_undefined();
   }
 
-  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
+  target_nclx_profile->replace_undefined_values_with_sRGB_defaults(lossless);
 
   return target_nclx_profile;
 }
@@ -2466,8 +2468,13 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
+  int lossless = 0;
 
-  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
+  if (encoder->plugin->supports_lossless_compression) {
+    encoder->plugin->get_parameter_lossless(encoder->encoder, &lossless);
+  }
+
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile, static_cast<bool>(lossless));
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
@@ -2688,8 +2695,13 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
 
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
+  int lossless = 0;
 
-  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
+  if (encoder->plugin->supports_lossless_compression) {
+    encoder->plugin->get_parameter_lossless(encoder->encoder, &lossless);
+  }
+
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile, static_cast<bool>(lossless));
 
   if (encoder->plugin->plugin_api_version >= 2) {
     encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);

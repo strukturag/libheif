@@ -343,10 +343,10 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
 }
 
 
-void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
+void color_profile_nclx::replace_undefined_values_with_sRGB_defaults(bool lossless)
 {
   if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
-    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+    m_matrix_coefficients = lossless ? heif_matrix_coefficients_RGB_GBR : heif_matrix_coefficients_ITU_R_BT_601_6;
   }
 
   if (m_colour_primaries == heif_color_primaries_unspecified) {

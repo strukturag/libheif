@@ -168,9 +168,9 @@ void show_help(const char* argv0)
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR  load all codec plugins in the directory\n"
             << "  -E, --even-size   [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
-            << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
-            << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
-            << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
+            << "  --colour_primaries        nclx profile: color primaries, default: 1 (see h.273)\n"
+            << "  --transfer_characteristic nclx profile: transfer characteristics, default: 13 (see h.273)\n"
+            << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default: 6 for lossy or 0 for lossless (see h.273)\n"
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
@@ -178,13 +178,7 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
-
-            << "\n"
-            << "Note: to get lossless encoding, you need this set of options:\n"
-            << "  -L                       switch encoder to lossless mode\n"
-            << "  -p chroma=444            switch off chroma subsampling\n"
-            << "  --matrix_coefficients=0  encode in RGB color-space\n";
+            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n";
 }
 
 
@@ -509,6 +503,7 @@ int main(int argc, char** argv)
         break;
       case 'L':
         lossless = true;
+        nclx_matrix_coefficients = 0;
         break;
       case 'o':
         output_filename = optarg;

@@ -677,7 +677,7 @@ static const struct heif_encoder_plugin encoder_plugin_rav1e
         /* id_name */ "rav1e",
         /* priority */ RAV1E_PLUGIN_PRIORITY,
         /* supports_lossy_compression */ true,
-        /* supports_lossless_compression */ false,
+        /* supports_lossless_compression */ false, // https://github.com/xiph/rav1e/issues/151
         /* get_plugin_name */ rav1e_plugin_name,
         /* init_plugin */ rav1e_init_plugin,
         /* cleanup_plugin */ rav1e_cleanup_plugin,
