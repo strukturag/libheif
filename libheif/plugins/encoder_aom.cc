@@ -430,6 +430,7 @@ struct heif_error aom_set_parameter_lossless(void* encoder_raw, int enable)
     encoder->alpha_min_q_set = true;
     encoder->alpha_max_q = 0;
     encoder->alpha_max_q_set = true;
+    encoder->chroma = heif_chroma_444;
   }
 
   encoder->lossless = enable;
@@ -990,9 +991,9 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries);
-    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients);
-    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics);
+    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, static_cast<aom_color_primaries>(nclx->color_primaries));
+    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, static_cast<aom_matrix_coefficients>(nclx->matrix_coefficients));
+    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, static_cast<aom_transfer_characteristics>(nclx->transfer_characteristics));
   }
 
   aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
