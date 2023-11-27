@@ -674,7 +674,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.logical_processors = encoder->threads;
 
   // disable 2-pass
-  svt_config.rc_stats_buffer = (SvtAv1FixedBuf) {nullptr, 0};
+  svt_config.rc_stats_buffer = {nullptr, 0};
 
   svt_config.rate_control_mode = 0; // constant rate factor
   //svt_config.enable_adaptive_quantization = 0;   // 2 is CRF (the default), 0 would be CQP
