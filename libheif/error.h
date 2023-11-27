@@ -104,14 +104,4 @@ inline std::ostream& operator<<(std::ostream& ostr, const Error& err)
   return ostr;
 }
 
-
-template <typename T> class Result
-{
-public:
-  operator bool() const { return error.error_code == heif_error_Ok; }
-
-  T value;
-  Error error;
-};
-
 #endif
