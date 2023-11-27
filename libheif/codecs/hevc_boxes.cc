@@ -433,7 +433,7 @@ static double read_depth_rep_info_element(BitReader& reader)
 }
 
 
-static Result<std::shared_ptr<SEIMessage>> read_depth_representation_info(BitReader& reader)
+static std::shared_ptr<SEIMessage> read_depth_representation_info(BitReader& reader)
 {
   auto msg = std::make_shared<SEIMessage_depth_representation_info>();
 
