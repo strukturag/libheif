@@ -531,6 +531,9 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   int alternate_channel_bits = 0;
   for (Box_uncC::Component component : uncC_box->get_components()) {
     uint16_t component_index = component.component_index;
+    if (component_index >= cmpd_box->get_components().size()) {
+      return -1;
+    }
     auto component_type = cmpd_box->get_components()[component_index].component_type;
     switch (component_type) {
       case component_type_monochrome:
