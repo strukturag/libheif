@@ -28,7 +28,7 @@
 
 static int32_t read32(const uint8_t* data, int size, int pos, bool littleEndian)
 {
-  if (pos + 4 > size) {
+  if (pos > size - 4) {
     return -1;
   }
 
@@ -45,7 +45,7 @@ static int32_t read32(const uint8_t* data, int size, int pos, bool littleEndian)
 
 static int32_t read16(const uint8_t* data, int size, int pos, bool littleEndian)
 {
-  if (pos + 2 > size) {
+  if (pos > size - 2) {
     return -1;
   }
 
@@ -62,7 +62,7 @@ static int32_t read16(const uint8_t* data, int size, int pos, bool littleEndian)
 
 static void write16(uint8_t* data, int size, int pos, uint16_t value, bool littleEndian)
 {
-  if (pos + 2 > size) {
+  if (pos > size - 2) {
     return;
   }
 
@@ -95,18 +95,18 @@ static int find_exif_tag(const uint8_t* exif, int  size, uint16_t query_tag, boo
   assert(out_littleEndian);
   *out_littleEndian = littleEndian;
 
-  int offset = read32(exif, size, 4, littleEndian);
+  int32_t offset = read32(exif, size, 4, littleEndian);
   if (offset < 0) {
     return -1;
   }
 
-  int cnt = read16(exif, size, offset, littleEndian);
+  int32_t cnt = read16(exif, size, offset, littleEndian);
   if (cnt < 1) {
     return -1;
   }
 
   for (int i = 0; i < cnt; i++) {
-    int tag = read16(exif, size, offset + 2 + i * 12, littleEndian);
+    int32_t tag = read16(exif, size, offset + 2 + i * 12, littleEndian);
     if (tag == query_tag) {
       return offset + 2 + i * 12;
     }
@@ -149,8 +149,8 @@ int read_exif_orientation_tag(const uint8_t* exif, int size)
     return DEFAULT_EXIF_ORIENTATION;
   }
 
-  int type = read16(exif, size, pos + 2, little_endian);
-  int count = read32(exif, size, pos + 4, little_endian);
+  int32_t type = read16(exif, size, pos + 2, little_endian);
+  int32_t count = read32(exif, size, pos + 4, little_endian);
 
   if (type == EXIF_TYPE_SHORT && count == 1) {
     return read16(exif, size, pos + 8, little_endian);
