@@ -48,7 +48,8 @@ enum heif_uncompressed_component_type
   component_type_cyan = 13,
   component_type_magenta = 14,
   component_type_yellow = 15,
-  component_type_key_black = 16
+  component_type_key_black = 16,
+  component_type_max_valid = component_type_key_black
 };
 
 bool is_predefined_component_type(uint16_t type)
@@ -467,8 +468,10 @@ static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
-    if (component_type >= 16) {
-      return { heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, "a component_type >= 16 is not supported"};
+    if (component_type > component_type_max_valid) {
+      std::stringstream sstr;
+      sstr << "a component_type > " << component_type_max_valid << " is not supported";
+      return { heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, sstr.str()};
     }
 
     componentSet |= (1 << component_type);
