@@ -117,15 +117,16 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
   if (exifdata) {
     if (exifsize > 4) {
       uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
-      skip += 4;
+      if (skip < (exifsize - 4)) {
+        skip += 4;
+        uint8_t* ptr = exifdata + skip;
+        size_t size = exifsize - skip;
 
-      uint8_t* ptr = exifdata + skip;
-      size_t size = exifsize - skip;
+        // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
+        modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
 
-      // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-      modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
-
-      png_set_eXIf_1(png_ptr, info_ptr, (png_uint_32)size, ptr);
+        png_set_eXIf_1(png_ptr, info_ptr, (png_uint_32)size, ptr);
+      }
     }
 
     free(exifdata);
