@@ -73,6 +73,7 @@ struct encoder_struct_aom
   bool lossless;
   bool lossless_alpha;
   bool auto_tiles;
+  bool intra_block_copy;
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   std::vector<custom_option> custom_options;
@@ -162,6 +163,7 @@ static const char* kParam_alpha_min_q = "alpha-min-q";
 static const char* kParam_alpha_max_q = "alpha-max-q";
 static const char* kParam_lossless_alpha = "lossless-alpha";
 static const char* kParam_auto_tiles = "auto-tiles";
+static const char* kParam_intra_block_copy = "intra-block-copy";
 static const char* kParam_threads = "threads";
 static const char* kParam_realtime = "realtime";
 static const char* kParam_speed = "speed";
@@ -200,7 +202,7 @@ static const char* aom_plugin_name()
 }
 
 
-#define MAX_NPARAMETERS 15
+#define MAX_NPARAMETERS 16
 
 static struct heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
 static const struct heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
@@ -372,6 +374,16 @@ static void aom_init_parameters()
   p->boolean.default_value = false;
   p->has_default = true;
   d[i++] = p++;
+
+#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_intra_block_copy;
+  p->type = heif_encoder_parameter_type_boolean;
+  p->boolean.default_value = true;
+  p->has_default = true;
+  d[i++] = p++;
+#endif
 
   assert(i < MAX_NPARAMETERS + 1);
   d[i++] = nullptr;
@@ -585,6 +597,11 @@ struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name,
   } else if (strcmp(name, kParam_auto_tiles) == 0) {
       encoder->auto_tiles = value;
       return heif_error_ok;
+#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
+  } else if (strcmp(name, kParam_intra_block_copy) == 0) {
+      encoder->intra_block_copy = value;
+      return heif_error_ok;
+#endif
   }
 
   set_value(kParam_realtime, realtime_mode);
@@ -1035,6 +1052,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     // which is disabled by default.
     aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1);
   }
+#endif
+
+#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
+  aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->intra_block_copy);
 #endif
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
