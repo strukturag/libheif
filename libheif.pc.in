@@ -3,15 +3,6 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-# Contrary to older versions of libheif (<= 1.14.2), the available-codec-variables are now all set to 'yes'
-# as since 1.14.0, codecs can be dynamically loaded at runtime and it is not possible anymore to determine
-# the available codecs at compile-time. You'll get an unknown codec error at runtime if you try to use an
-# unavailable codec.
-builtin_h265_decoder=yes
-builtin_h265_encoder=yes
-builtin_avif_decoder=yes
-builtin_avif_encoder=yes
-
 Name: libheif
 Description: HEIF image codec.
 URL: https://github.com/strukturag/libheif
