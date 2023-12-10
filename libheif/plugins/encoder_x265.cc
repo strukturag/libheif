@@ -299,6 +299,7 @@ static void x265_init_plugin()
 
 static void x265_cleanup_plugin()
 {
+  x265_cleanup();
 }
 
 
