@@ -21,6 +21,7 @@ else()
     add_libheif_test(conversion)
     add_libheif_test(jpeg2000)
     add_libheif_test(avc_box)
+    add_libheif_test(uncompressed_box)
 endif()
 
 # --- tests that only access the public API

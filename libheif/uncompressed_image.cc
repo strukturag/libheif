@@ -27,337 +27,9 @@
 #include <cassert>
 
 #include "libheif/heif.h"
+#include "uncompressed.h"
+#include "uncompressed_box.h"
 #include "uncompressed_image.h"
-
-
-enum heif_uncompressed_component_type
-{
-  component_type_monochrome = 0,
-  component_type_Y = 1,
-  component_type_Cb = 2,
-  component_type_Cr = 3,
-  component_type_red = 4,
-  component_type_green = 5,
-  component_type_blue = 6,
-  component_type_alpha = 7,
-  component_type_depth = 8,
-  component_type_disparity = 9,
-  component_type_palette = 10,
-  component_type_filter_array = 11,
-  component_type_padded = 12,
-  component_type_cyan = 13,
-  component_type_magenta = 14,
-  component_type_yellow = 15,
-  component_type_key_black = 16,
-  component_type_max_valid = component_type_key_black
-};
-
-bool is_predefined_component_type(uint16_t type)
-{
-  // check whether the component type can be mapped to heif_uncompressed_component_type and we have a name defined for
-  // it in sNames_uncompressed_component_type.
-  return (type >= 0 && type <= 16);
-}
-
-static std::map<heif_uncompressed_component_type, const char*> sNames_uncompressed_component_type{
-    {component_type_monochrome,   "monochrome"},
-    {component_type_Y,            "Y"},
-    {component_type_Cb,           "Cb"},
-    {component_type_Cr,           "Cr"},
-    {component_type_red,          "red"},
-    {component_type_green,        "green"},
-    {component_type_blue,         "blue"},
-    {component_type_alpha,        "alpha"},
-    {component_type_depth,        "depth"},
-    {component_type_disparity,    "disparity"},
-    {component_type_palette,      "palette"},
-    {component_type_filter_array, "filter-array"},
-    {component_type_padded,       "padded"},
-    {component_type_cyan,         "cyan"},
-    {component_type_magenta,      "magenta"},
-    {component_type_yellow,       "yellow"},
-    {component_type_key_black,    "key (black)"}
-};
-
-enum heif_uncompressed_component_format
-{
-  component_format_unsigned = 0,
-  component_format_float = 1,
-  component_format_complex = 2,
-};
-
-bool is_valid_component_format(uint8_t format)
-{
-  return format <= 2;
-}
-
-static std::map<heif_uncompressed_component_format, const char*> sNames_uncompressed_component_format{
-    {component_format_unsigned, "unsigned"},
-    {component_format_float,    "float"},
-    {component_format_complex,  "complex"}
-};
-
-
-enum heif_uncompressed_sampling_type
-{
-  sampling_type_no_subsampling = 0,
-  sampling_type_422 = 1,
-  sampling_type_420 = 2,
-  sampling_type_411 = 3
-};
-
-bool is_valid_sampling_type(uint8_t sampling)
-{
-  return sampling <= 3;
-}
-
-static std::map<heif_uncompressed_sampling_type, const char*> sNames_uncompressed_sampling_type{
-    {sampling_type_no_subsampling, "no subsampling"},
-    {sampling_type_422,            "4:2:2"},
-    {sampling_type_420,            "4:2:0"},
-    {sampling_type_411,            "4:1:1"}
-};
-
-enum heif_uncompressed_interleave_type
-{
-  interleave_type_component = 0,
-  interleave_type_pixel = 1,
-  interleave_type_mixed = 2,
-  interleave_type_row = 3,
-  interleave_type_tile_component = 4,
-  interleave_type_multi_y = 5
-};
-
-bool is_valid_interleave_type(uint8_t sampling)
-{
-  return sampling <= 5;
-}
-
-static std::map<heif_uncompressed_interleave_type, const char*> sNames_uncompressed_interleave_type{
-    {interleave_type_component,      "component"},
-    {interleave_type_pixel,          "pixel"},
-    {interleave_type_mixed,          "mixed"},
-    {interleave_type_row,            "row"},
-    {interleave_type_tile_component, "tile-component"},
-    {interleave_type_multi_y,        "multi-y"}
-};
-
-template <typename T> const char* get_name(T val, const std::map<T, const char*>& table)
-{
-  auto iter = table.find(val);
-  if (iter == table.end()) {
-    return "unknown";
-  }
-  else {
-    return iter->second;
-  }
-}
-
-
-Error Box_cmpd::parse(BitstreamRange& range)
-{
-  unsigned int component_count = range.read32();
-
-  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
-    Component component;
-    component.component_type = range.read16();
-    if (component.component_type >= 0x8000) {
-      component.component_type_uri = range.read_string();
-    }
-    else {
-      component.component_type_uri = std::string();
-    }
-    m_components.push_back(component);
-  }
-
-  return range.get_error();
-}
-
-std::string Box_cmpd::Component::get_component_type_name(uint16_t component_type)
-{
-  std::stringstream sstr;
-
-  if (is_predefined_component_type(component_type)) {
-    sstr << get_name(heif_uncompressed_component_type(component_type), sNames_uncompressed_component_type) << "\n";
-  }
-  else {
-    sstr << "0x" << std::hex << component_type << std::dec << "\n";
-  }
-
-  return sstr.str();
-}
-
-
-std::string Box_cmpd::dump(Indent& indent) const
-{
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-
-  for (const auto& component : m_components) {
-    sstr << indent << "component_type: " << component.get_component_type_name() << "\n";
-
-    if (component.component_type >= 0x8000) {
-      sstr << indent << "| component_type_uri: " << component.component_type_uri << "\n";
-    }
-  }
-
-  return sstr.str();
-}
-
-Error Box_cmpd::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  writer.write32((uint32_t) m_components.size());
-  for (const auto& component : m_components) {
-    writer.write16(component.component_type);
-    if (component.component_type >= 0x8000) {
-      writer.write(component.component_type_uri);
-    }
-  }
-
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
-}
-
-Error Box_uncC::parse(BitstreamRange& range)
-{
-  parse_full_box_header(range);
-  m_profile = range.read32();
-
-  unsigned int component_count = range.read32();
-
-  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
-    Component component;
-    component.component_index = range.read16();
-    component.component_bit_depth = uint16_t(range.read8() + 1);
-    component.component_format = range.read8();
-    component.component_align_size = range.read8();
-    m_components.push_back(component);
-
-    if (!is_valid_component_format(component.component_format)) {
-      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
-    }
-  }
-
-  m_sampling_type = range.read8();
-  if (!is_valid_sampling_type(m_sampling_type)) {
-    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling type"};
-  }
-
-  m_interleave_type = range.read8();
-  if (!is_valid_interleave_type(m_interleave_type)) {
-    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave type"};
-  }
-
-  m_block_size = range.read8();
-
-  uint8_t flags = range.read8();
-  m_components_little_endian = !!(flags & 0x80);
-  m_block_pad_lsb = !!(flags & 0x40);
-  m_block_little_endian = !!(flags & 0x20);
-  m_block_reversed = !!(flags & 0x10);
-  m_pad_unknown = !!(flags & 0x08);
-
-  m_pixel_size = range.read32();
-
-  m_row_align_size = range.read32();
-
-  m_tile_align_size = range.read32();
-
-  m_num_tile_cols = range.read32() + 1;
-
-  m_num_tile_rows = range.read32() + 1;
-
-  return range.get_error();
-}
-
-
-std::string Box_uncC::dump(Indent& indent) const
-{
-  std::ostringstream sstr;
-  sstr << Box::dump(indent);
-
-  sstr << indent << "profile: " << m_profile;
-  if (m_profile != 0) {
-    sstr << " (" << to_fourcc(m_profile) << ")";
-  }
-  sstr << "\n";
-
-  for (const auto& component : m_components) {
-    sstr << indent << "component_index: " << component.component_index << "\n";
-    sstr << indent << "component_bit_depth: " << (int) component.component_bit_depth << "\n";
-    sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
-    sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
-  }
-
-  sstr << indent << "sampling_type: " << get_name(heif_uncompressed_sampling_type(m_sampling_type), sNames_uncompressed_sampling_type) << "\n";
-
-  sstr << indent << "interleave_type: " << get_name(heif_uncompressed_interleave_type(m_interleave_type), sNames_uncompressed_interleave_type) << "\n";
-
-  sstr << indent << "block_size: " << (int) m_block_size << "\n";
-
-  sstr << indent << "components_little_endian: " << m_components_little_endian << "\n";
-  sstr << indent << "block_pad_lsb: " << m_block_pad_lsb << "\n";
-  sstr << indent << "block_little_endian: " << m_block_little_endian << "\n";
-  sstr << indent << "block_reversed: " << m_block_reversed << "\n";
-  sstr << indent << "pad_unknown: " << m_pad_unknown << "\n";
-
-  sstr << indent << "pixel_size: " << m_pixel_size << "\n";
-
-  sstr << indent << "row_align_size: " << m_row_align_size << "\n";
-
-  sstr << indent << "tile_align_size: " << m_tile_align_size << "\n";
-
-  sstr << indent << "num_tile_cols: " << m_num_tile_cols << "\n";
-
-  sstr << indent << "num_tile_rows: " << m_num_tile_rows << "\n";
-
-  return sstr.str();
-}
-
-bool Box_uncC::get_headers(std::vector<uint8_t>* dest) const
-{
-  // TODO: component_bit_depth?
-  return true;
-}
-
-Error Box_uncC::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  writer.write32(m_profile);
-  writer.write32((uint32_t) m_components.size());
-  for (const auto& component : m_components) {
-    if (component.component_bit_depth < 1 || component.component_bit_depth > 256) {
-      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component bit-depth out of range [1..256]"};
-    }
-
-    writer.write16(component.component_index);
-    writer.write8(uint8_t(component.component_bit_depth - 1));
-    writer.write8(component.component_format);
-    writer.write8(component.component_align_size);
-  }
-  writer.write8(m_sampling_type);
-  writer.write8(m_interleave_type);
-  writer.write8(m_block_size);
-  uint8_t flags = 0;
-  flags |= (m_components_little_endian ? 0x80 : 0);
-  flags |= (m_block_pad_lsb ? 0x40 : 0);
-  flags |= (m_block_little_endian ? 0x20 : 0);
-  flags |= (m_block_reversed ? 0x10 : 0);
-  flags |= (m_pad_unknown ? 0x08 : 0);
-  writer.write8(flags);
-  writer.write32(m_pixel_size);
-  writer.write32(m_row_align_size);
-  writer.write32(m_tile_align_size);
-  writer.write32(m_num_tile_cols - 1);
-  writer.write32(m_num_tile_rows - 1);
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
-}
 
 
 static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
@@ -394,16 +66,16 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                    sstr.str());
     }
   }
-  if (uncC->get_sampling_type() != sampling_type_no_subsampling) {
+  if (uncC->get_sampling_type() != sampling_mode_no_subsampling) {
     std::stringstream sstr;
     sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  sstr.str());
   }
-  if ((uncC->get_interleave_type() != interleave_type_component)
-      && (uncC->get_interleave_type() != interleave_type_pixel)
-      && (uncC->get_interleave_type() != interleave_type_row)
+  if ((uncC->get_interleave_type() != interleave_mode_component)
+      && (uncC->get_interleave_type() != interleave_mode_pixel)
+      && (uncC->get_interleave_type() != interleave_mode_row)
       ) {
     std::stringstream sstr;
     sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
@@ -732,7 +404,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   uint32_t numTileRows = uncC->get_number_of_tile_rows();
   uint32_t tile_width = width / numTileColumns;
   uint32_t tile_height = height / numTileRows;
-  if (uncC->get_interleave_type() == interleave_type_component) {
+  if (uncC->get_interleave_type() == interleave_mode_component) {
     // Source is planar
     // TODO: assumes 8 bits
     long unsigned int content_bytes_per_tile = tile_width * tile_height * get_bytes_per_pixel(uncC);
@@ -764,7 +436,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       }
     }
   }
-  else if (uncC->get_interleave_type() == interleave_type_pixel) {
+  else if (uncC->get_interleave_type() == interleave_mode_pixel) {
     // TODO: we need to be smarter about block size, etc
 
     // TODO: we can only do this if we are 8 bits
@@ -793,7 +465,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       }
     }
   }
-  else if (uncC->get_interleave_type() == interleave_type_row) {
+  else if (uncC->get_interleave_type() == interleave_mode_row) {
     // TODO: we need to be smarter about block size, etc
 
     // TODO: we can only do this if we are 8 bits
@@ -850,15 +522,15 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->add_component(component2);
     if (image->get_chroma_format() == heif_chroma_444)
     {
-      uncC->set_sampling_type(sampling_type_no_subsampling);
+      uncC->set_sampling_type(sampling_mode_no_subsampling);
     }
     else if (image->get_chroma_format() == heif_chroma_422)
     {
-      uncC->set_sampling_type(sampling_type_422);
+      uncC->set_sampling_type(sampling_mode_422);
     }
     else if (image->get_chroma_format() == heif_chroma_420)
     {
-      uncC->set_sampling_type(sampling_type_420);
+      uncC->set_sampling_type(sampling_mode_420);
     }
     else
     {
@@ -866,7 +538,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
                    heif_suberror_Unsupported_data_version,
                    "Unsupported YCbCr sub-sampling type");
     }
-    uncC->set_interleave_type(interleave_type_component);
+    uncC->set_interleave_type(interleave_mode_component);
     uncC->set_block_size(0);
     uncC->set_components_little_endian(false);
     uncC->set_block_pad_lsb(false);
@@ -913,7 +585,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
         (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE) ||
         (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
     {
-      uncC->set_interleave_type(interleave_type_pixel);
+      uncC->set_interleave_type(interleave_mode_pixel);
       int bpp = image->get_bits_per_pixel(heif_channel_interleaved);
       uint8_t component_align = 1;
       if (bpp == 8)
@@ -939,7 +611,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
         uncC->add_component(component3);
       }
     } else {
-      uncC->set_interleave_type(interleave_type_component);
+      uncC->set_interleave_type(interleave_mode_component);
       int bpp_red = image->get_bits_per_pixel(heif_channel_R);
       Box_uncC::Component component0 = {0, (uint8_t)(bpp_red), component_format_unsigned, 0};
       uncC->add_component(component0);
@@ -956,7 +628,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
         uncC->add_component(component3);
       }
     }
-    uncC->set_sampling_type(sampling_type_no_subsampling);
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
     uncC->set_block_size(0);
     if ((image->get_chroma_format() == heif_chroma_interleaved_RRGGBB_LE) ||
         (image->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE))
@@ -993,8 +665,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
       Box_uncC::Component component1 = {1, (uint8_t)(bpp), component_format_unsigned, 0};
       uncC->add_component(component1);
     }
-    uncC->set_sampling_type(sampling_type_no_subsampling);
-    uncC->set_interleave_type(interleave_type_component);
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_component);
     uncC->set_block_size(0);
     uncC->set_components_little_endian(false);
     uncC->set_block_pad_lsb(false);
