@@ -30,6 +30,12 @@ endif()
 add_libheif_test(encode)
 add_libheif_test(region)
 
+if (WITH_OPENJPH_ENCODER)
+    add_libheif_test(encode_htj2k)
+else()
+    message(INFO "Disabling HT-JPEG 2000 encoder tests because no HT-JPEG 2000 codec is enabled")
+endif()
+
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
     add_libheif_test(uncompressed_decode_mono)

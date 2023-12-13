@@ -185,6 +185,14 @@ if (WITH_FFMPEG_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
+# openjph
+
+plugin_option(OPENJPH_ENCODER "OpenJPH HT-J2K encoder" OFF ON)
+# plugin_option(OPENJPH_DECODER "OpenJPH HT-J2K decoder" OFF ON)
+if (WITH_OPENJPH_ENCODER OR WITH_OPENJPH_DECODER)
+    find_package(OPENJPH)
+endif()
+
 # uncompressed
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
@@ -206,7 +214,8 @@ plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
-
+# plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
+plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 
 # --- show summary which formats are supported
 
@@ -224,9 +233,9 @@ macro(format_compilation_info formatName decoding_supported encoding_supported)
     endif()
 
     string(LENGTH "${formatName}" len)
-    math(EXPR fill "10 - ${len}")
+    math(EXPR fill "12 - ${len}")
     string(SUBSTRING "                                        " 0 ${fill} filler)
-    message("${formatName}${filler}    ${decoding}       ${encoding}")
+    message("${formatName}${filler}    ${decoding}        ${encoding}")
     unset(msg)
 endmacro()
 
@@ -251,22 +260,31 @@ if (JPEG_FOUND AND WITH_JPEG_ENCODER)
 endif()
 if (OpenJPEG_FOUND AND WITH_OpenJPEG_DECODER)
     set(SUPPORTS_J2K_DECODING TRUE)
+    set(SUPPORTS_J2K_HT_DECODING TRUE)
 endif()
 if (OpenJPEG_FOUND AND WITH_OpenJPEG_ENCODER)
     set(SUPPORTS_J2K_ENCODING TRUE)
 endif()
+if (OPENJPH_FOUND AND WITH_OPENJPH_ENCODER)
+    set(SUPPORTS_J2K_HT_ENCODING TRUE)
+endif()
+if (OPENJPH_FOUND AND WITH_OPENJPH_DECODER)
+    set(SUPPORTS_J2K_HT_ENCODING TRUE)
+endif()
+
 if (WITH_UNCOMPRESSED_CODEC)
     set(SUPPORTS_UNCOMPRESSED_DECODING TRUE)
     set(SUPPORTS_UNCOMPRESSED_ENCODING TRUE)
 endif()
 
 message("\n=== Supported formats ===")
-message("format     decoding   encoding")
+message("format        decoding   encoding")
 format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
 format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
 format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
 format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
-format_compilation_info("Uncompr." SUPPORTS_UNCOMPRESSED_DECODING SUPPORTS_UNCOMPRESSED_ENCODING)
+format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)
+format_compilation_info("Uncompressed" SUPPORTS_UNCOMPRESSED_DECODING SUPPORTS_UNCOMPRESSED_ENCODING)
 message("")
 
 # --- Libsharpyuv color space transforms

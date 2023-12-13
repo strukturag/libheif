@@ -55,6 +55,7 @@ const (
 	CompressionEVC          = C.heif_compression_EVC
 	CompressionUncompressed = C.heif_compression_uncompressed
 	CompressionMask         = C.heif_compression_mask
+	CompressionHTJ2K        = C.heif_compression_HTJ2K
 )
 
 type Chroma C.enum_heif_chroma

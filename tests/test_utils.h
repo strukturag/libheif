@@ -37,3 +37,5 @@ struct heif_image * get_primary_image_mono(heif_image_handle * handle);
 struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chroma chroma);
 
 void fill_new_plane(heif_image* img, heif_channel channel, int w, int h);
+
+struct heif_image * createImage_RGB_planar();

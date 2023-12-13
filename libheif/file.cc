@@ -185,6 +185,7 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       break;
 
     case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K:
       m_ftyp_box->set_major_brand(fourcc("j2ki"));
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));

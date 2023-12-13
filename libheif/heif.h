@@ -409,7 +409,14 @@ enum heif_compression_format
    *
    * See ISO/IEC 23008-12:2022 Section 6.10.2
    */
-  heif_compression_mask = 9
+  heif_compression_mask = 9,
+  /**
+   * High Throughput JPEG 2000 (HT-J2K) compression.
+   *
+   * The encapsulation of HT-J2K is specified in ISO/IEC 15444-16:2021.
+   * The core encoding is defined in ISO/IEC 15444-15, or ITU-T T.814.
+  */
+  heif_compression_HTJ2K = 10
 };
 
 enum heif_chroma
