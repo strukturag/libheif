@@ -616,6 +616,13 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   if (error) {
     return error;
   }
+
+  if (!(uncompressed_data.data())) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Invalid data: uncompressed_data.data() is null for uncompressed codec");
+  }
+
   uint32_t width = 0;
   uint32_t height = 0;
   bool found_ispe = false;
