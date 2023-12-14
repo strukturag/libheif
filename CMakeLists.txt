@@ -259,6 +259,10 @@ endif()
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
+if (WITH_DEFLATE_HEADER_COMPRESSION)
+    list(APPEND REQUIRES_PRIVATE "zlib")
+endif()
+
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
 
 include(CheckCXXSymbolExists)
