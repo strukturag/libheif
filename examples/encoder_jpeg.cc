@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include <vector>
+#include <limits>
 
 #include "encoder_jpeg.h"
 #include "libheif/exif.h"
@@ -186,8 +187,15 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       uint8_t* ptr = exifdata + skip;
       size_t size = exifsize - skip;
 
+      if (size > std::numeric_limits<uint32_t>::max()) {
+        fprintf(stderr, "EXIF larger than 4GB is not supported");
+        return false;
+      }
+
+      auto size32 = static_cast<uint32_t>(size);
+
       // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-      modify_exif_orientation_tag_if_it_exists(ptr, size, 1);
+      modify_exif_orientation_tag_if_it_exists(ptr, size32, 1);
 
       // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
       if (size>0x1000000) {
