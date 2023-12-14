@@ -187,7 +187,7 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       size_t size = exifsize - skip;
 
       // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-      modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
+      modify_exif_orientation_tag_if_it_exists(ptr, size, 1);
 
       // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
       if (size>0x1000000) {
