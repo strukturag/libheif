@@ -609,18 +609,18 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
                                                         uint32_t maximum_image_height_limit,
                                                         const std::vector<uint8_t>& uncompressed_data)
 {
+  if (uncompressed_data.empty()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Uncompressed image data is empty"};
+  }
+
   // Get the properties for this item
   // We need: ispe, cmpd, uncC
   std::vector<std::shared_ptr<Box>> item_properties;
   Error error = heif_file->get_properties(ID, item_properties);
   if (error) {
     return error;
-  }
-
-  if (!(uncompressed_data.data())) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "Invalid data: uncompressed_data.data() is null for uncompressed codec");
   }
 
   uint32_t width = 0;
