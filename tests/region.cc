@@ -35,7 +35,7 @@
 
 
 TEST_CASE("no regions") {
-  auto context = get_context_for_test_file("uncompressed_rgb3.heif");
+  auto context = get_context_for_test_file("uncompressed_comp_RGB.heif");
   heif_image_handle *handle = get_primary_image_handle(context);
   int num_region_items = heif_image_handle_get_number_of_region_items(handle);
   REQUIRE(num_region_items == 0);

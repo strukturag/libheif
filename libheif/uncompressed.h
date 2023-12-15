@@ -227,7 +227,7 @@ enum heif_uncompressed_sampling_mode
   /**
    * Maximum valid sampling mode identifier.
    */
-  sampling_type_max_valid = sampling_mode_411
+  sampling_mode_max_valid = sampling_mode_411
 };
 
 

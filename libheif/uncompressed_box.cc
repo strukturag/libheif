@@ -31,6 +31,12 @@
 #include "uncompressed_box.h"
 
 
+/**
+ * Check for valid component format.
+ *
+ * @param format the format value to check
+ * @return true if the format is a valid value, or false otherwise
+ */
 bool is_valid_component_format(uint8_t format)
 {
   return format <= component_format_max_valid;
@@ -43,9 +49,15 @@ static std::map<heif_uncompressed_component_format, const char*> sNames_uncompre
 };
 
 
-bool is_valid_interleave_mode(uint8_t sampling)
+/**
+ * Check for valid interleave mode.
+ *
+ * @param interleave the interleave value to check
+ * @return true if the interleave mode is valid, or false otherwise
+ */
+bool is_valid_interleave_mode(uint8_t interleave)
 {
-  return sampling <= interleave_mode_max_valid;
+  return interleave <= interleave_mode_max_valid;
 }
 
 static std::map<heif_uncompressed_interleave_mode, const char*> sNames_uncompressed_interleave_mode{
@@ -58,9 +70,15 @@ static std::map<heif_uncompressed_interleave_mode, const char*> sNames_uncompres
 };
 
 
+/**
+ * Check for valid sampling mode.
+ *
+ * @param sampling the sampling value to check
+ * @return true if the sampling mode is valid, or false otherwise
+ */
 bool is_valid_sampling_mode(uint8_t sampling)
 {
-  return sampling <= sampling_type_max_valid;
+  return sampling <= sampling_mode_max_valid;
 }
 
 static std::map<heif_uncompressed_sampling_mode, const char*> sNames_uncompressed_sampling_mode{
@@ -180,6 +198,9 @@ Error Box_uncC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
   m_profile = range.read32();
+  if (get_version() != 0) {
+    return Error{heif_error_Invalid_input, heif_suberror_Unsupported_data_version, "Unsupported version (only 0 is currently supported)"};
+  }
 
   unsigned int component_count = range.read32();
 
@@ -272,11 +293,6 @@ std::string Box_uncC::dump(Indent& indent) const
   return sstr.str();
 }
 
-bool Box_uncC::get_headers(std::vector<uint8_t>* dest) const
-{
-  // TODO: component_bit_depth?
-  return true;
-}
 
 Error Box_uncC::write(StreamWriter& writer) const
 {

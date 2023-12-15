@@ -25,7 +25,9 @@
 */
 
 #include "catch.hpp"
+#include "libheif/box.h"
 #include "libheif/heif.h"
+#include "libheif/uncompressed.h"
 #include "libheif/uncompressed_box.h"
 #include <cstdint>
 #include <iostream>
@@ -128,3 +130,89 @@ TEST_CASE( "cmpd_custom" )
     REQUIRE(dump_output == "Box: cmpd -----\nsize: 0   (header size: 0)\ncomponent_type: 0x8000\n| component_type_uri: http://example.com/custom_component_uri\ncomponent_type: 0x8002\n| component_type_uri: http://example.com/another_custom_component_uri\n");
 }
 
+TEST_CASE( "uncC" )
+{
+    std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
+    uncC->set_profile(fourcc("rgba"));
+    REQUIRE(uncC->get_components().size() == 0);
+    Box_uncC::Component r;
+    r.component_index = 0;
+    r.component_bit_depth = 8;
+    r.component_format = component_format_unsigned;
+    r.component_align_size = 0;
+    uncC->add_component(r);
+    Box_uncC::Component g;
+    g.component_index = 1;
+    g.component_bit_depth = 8;
+    g.component_format = component_format_unsigned;
+    g.component_align_size = 0;
+    uncC->add_component(g);
+    Box_uncC::Component b;
+    b.component_index = 2;
+    b.component_bit_depth = 8;
+    b.component_format = component_format_unsigned;
+    b.component_align_size = 0;
+    uncC->add_component(b);
+    Box_uncC::Component a;
+    a.component_index = 3;
+    a.component_bit_depth = 8;
+    a.component_format = component_format_unsigned;
+    a.component_align_size = 0;
+    uncC->add_component(a);
+    uncC->set_sampling_type(sampling_mode_no_subsampling);
+    uncC->set_interleave_type(interleave_mode_pixel);
+
+    REQUIRE(uncC->get_components().size() == 4);
+    Box_uncC::Component component0 = uncC->get_components()[0];
+    REQUIRE(component0.component_index == 0);
+    REQUIRE(component0.component_bit_depth == 8);
+    REQUIRE(component0.component_format == 0);
+    REQUIRE(component0.component_align_size == 0);
+    Box_uncC::Component component1 = uncC->get_components()[1];
+    REQUIRE(component1.component_index == 1);
+    REQUIRE(component1.component_bit_depth == 8);
+    REQUIRE(component1.component_format == 0);
+    REQUIRE(component1.component_align_size == 0);
+    Box_uncC::Component component2 = uncC->get_components()[2];
+    REQUIRE(component2.component_index == 2);
+    REQUIRE(component2.component_bit_depth == 8);
+    REQUIRE(component2.component_format == 0);
+    REQUIRE(component2.component_align_size == 0);
+    Box_uncC::Component component3 = uncC->get_components()[3];
+    REQUIRE(component3.component_index == 3);
+    REQUIRE(component3.component_bit_depth == 8);
+    REQUIRE(component3.component_format == 0);
+    REQUIRE(component3.component_align_size == 0);
+    REQUIRE(uncC->get_sampling_type() == 0);
+    REQUIRE(uncC->get_interleave_type() == 1);
+    REQUIRE(uncC->get_block_size() == 0);
+    REQUIRE(uncC->is_components_little_endian() == false);
+    REQUIRE(uncC->is_block_pad_lsb() == false);
+    REQUIRE(uncC->is_block_little_endian() == false);
+    REQUIRE(uncC->is_pad_unknown() == false);
+    REQUIRE(uncC->get_pixel_size() == 0);
+    REQUIRE(uncC->get_row_align_size() == 0);
+    REQUIRE(uncC->get_tile_align_size() == 0);
+    REQUIRE(uncC->get_number_of_tile_columns() == 1);
+    REQUIRE(uncC->get_number_of_tile_rows() == 1);
+
+    StreamWriter writer;
+    Error err = uncC->write(writer);
+    REQUIRE(err.error_code == heif_error_Ok);
+    const std::vector<uint8_t> bytes = writer.get_data();
+    std::vector<uint8_t> expected = {
+    0x00, 0x00, 0x00, 0x40, 'u', 'n', 'c', 'C',
+    0x00, 0x00, 0x00, 0x00, 'r', 'g', 'b', 'a',
+    0x00, 0x00, 0x00, 0x04, 0, 0, 7, 0x00,
+    0x00, 0x00, 0x01, 0x07, 0x00, 0x00, 0x00, 0x02,
+    0x07, 0x00, 0x00, 0x00, 0x03, 0x07, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    REQUIRE(bytes == expected);
+
+    Indent indent;
+    std::string dump_output = uncC->dump(indent);
+    REQUIRE(dump_output == "Box: uncC -----\nsize: 0   (header size: 0)\nprofile: 1919378017 (rgba)\ncomponent_index: 0\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 1\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 2\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 3\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\nsampling_type: no subsampling\ninterleave_type: pixel\nblock_size: 0\ncomponents_little_endian: 0\nblock_pad_lsb: 0\nblock_little_endian: 0\nblock_reversed: 0\npad_unknown: 0\npixel_size: 0\nrow_align_size: 0\ntile_align_size: 0\nnum_tile_cols: 1\nnum_tile_rows: 1\n");
+}

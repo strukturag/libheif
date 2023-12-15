@@ -24,6 +24,7 @@
 
 #include "box.h"
 #include "bitstream.h"
+#include "libheif/uncompressed.h"
 
 #include <cstdint>
 #include <string>
@@ -69,18 +70,32 @@ protected:
   std::vector<Component> m_components;
 };
 
+/**
+ * Uncompressed Frame Configuration Box
+*/
 class Box_uncC : public FullBox
 {
 public:
-  Box_uncC()
+  Box_uncC() :
+    m_profile(0),
+    m_sampling_type(sampling_mode_no_subsampling),
+    m_interleave_type(interleave_mode_component),
+    m_block_size(0),
+    m_components_little_endian(false),
+    m_block_pad_lsb(false),
+    m_block_little_endian(false),
+    m_block_reversed(false),
+    m_pad_unknown(false),
+    m_pixel_size(0),
+    m_row_align_size(0),
+    m_tile_align_size(0),
+    m_num_tile_cols(1),
+    m_num_tile_rows(1)
   {
-    m_profile = 0;
     set_short_type(fourcc("uncC"));
   }
 
   std::string dump(Indent&) const override;
-
-  bool get_headers(std::vector<uint8_t>* dest) const;
 
   Error write(StreamWriter& writer) const override;
 

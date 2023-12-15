@@ -25,6 +25,7 @@
 */
 
 #include "test_utils.h"
+#include "libheif/heif.h"
 #include "test-config.h"
 #include <cstring>
 #include "catch.hpp"
@@ -61,6 +62,24 @@ struct heif_image * get_primary_image(heif_image_handle * handle)
   struct heif_error err;
   struct heif_image* img;
   err = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_444, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return img;
+}
+
+struct heif_image * get_primary_image_mono(heif_image_handle * handle)
+{
+  struct heif_error err;
+  struct heif_image* img;
+  err = heif_decode_image(handle, &img, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return img;
+}
+
+struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chroma chroma)
+{
+  struct heif_error err;
+  struct heif_image* img;
+  err = heif_decode_image(handle, &img, heif_colorspace_YCbCr, chroma, NULL);
   REQUIRE(err.code == heif_error_Ok);
   return img;
 }

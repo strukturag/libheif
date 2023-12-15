@@ -690,6 +690,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
     // TODO: make proper test for interleave to component translation
 
     // TODO: compare values
+    heif_image_release(decode_image);
     heif_image_handle_release(decode_image_handle);
     heif_context_free(decode_context);
   }
