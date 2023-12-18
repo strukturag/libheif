@@ -177,12 +177,11 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       static const uint8_t kExifMarker = JPEG_APP0 + 1;
 
       uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
-      skip += 4;
-
-      if (skip > exifsize) {
+      if (skip > (exifsize - 4)) {
         fprintf(stderr, "Invalid EXIF data (offset too large)\n");
         return false;
       }
+      skip += 4;
 
       uint8_t* ptr = exifdata + skip;
       size_t size = exifsize - skip;
