@@ -76,6 +76,8 @@ set(libheif_sources
         jpeg2000.cc
         vvc.h
         vvc.cc
+        avc.h
+        avc.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})
