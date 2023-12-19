@@ -16,9 +16,10 @@ endmacro()
 # --- tests that require access to internal symbols
 
 if (WITH_REDUCED_VISIBILITY)
-    message(WARNING "Conversion and JPEG 2000 box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+    message(WARNING "Conversion and box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
 else()
     add_libheif_test(conversion)
+    add_libheif_test(idat)
     add_libheif_test(jpeg2000)
 endif()
 
