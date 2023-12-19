@@ -783,44 +783,93 @@ int main(int argc, char** argv)
     }
 #endif
 
+    heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+    if (!nclx) {
+      std::cerr << "Cannot allocate NCLX color profile.\n";
+      exit(5);
+    }
+
     if (lossless) {
       if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
         heif_encoder_set_lossless(encoder, true);
-        nclx_matrix_coefficients = 0;
-        nclx_full_range = true;
-        raw_params.emplace_back("chroma=444");
+
+        if (heif_image_get_colorspace(primary_image.get()) == heif_colorspace_RGB) {
+          nclx_matrix_coefficients = 0;
+          nclx_full_range = true;
+          raw_params.emplace_back("chroma=444");
+        }
+        else {
+          heif_color_profile_nclx* input_nclx;
+
+          error = heif_image_get_nclx_color_profile(primary_image.get(), &input_nclx);
+          if (error.code == heif_error_Color_profile_does_not_exist) {
+            // NOP, use default NCLX profile
+          }
+          else if (error.code) {
+            std::cerr << "Cannot get input NCLX color profile.\n";
+            exit(5);
+          }
+          else {
+            nclx->matrix_coefficients = input_nclx->matrix_coefficients;
+            nclx->transfer_characteristics = input_nclx->transfer_characteristics;
+            nclx->color_primaries = input_nclx->color_primaries;
+            nclx->full_range_flag = input_nclx->full_range_flag;
+
+            heif_nclx_color_profile_free(input_nclx);
+          }
+
+          // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
+          switch (heif_image_get_chroma_format(primary_image.get())) {
+            case heif_chroma_420:
+            case heif_chroma_monochrome:
+              raw_params.emplace_back("chroma=420");
+              break;
+            case heif_chroma_422:
+              raw_params.emplace_back("chroma=422");
+              break;
+            case heif_chroma_444:
+              raw_params.emplace_back("chroma=444");
+              break;
+            default:
+              assert(false);
+              exit(5);
+          }
+        }
       }
       else {
         std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+        lossless = false;
       }
     }
 
-    heif_color_profile_nclx nclx;
-    error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
-    if (error.code) {
-      std::cerr << "Invalid matrix coefficients specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_transfer_characteristics(&nclx, nclx_transfer_characteristic);
-    if (error.code) {
-      std::cerr << "Invalid transfer characteristics specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_color_primaries(&nclx, nclx_colour_primaries);
-    if (error.code) {
-      std::cerr << "Invalid color primaries specified.\n";
-      exit(5);
-    }
-    nclx.full_range_flag = (uint8_t) nclx_full_range;
+    if (!lossless) {
+      error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
+      if (error.code) {
+        std::cerr << "Invalid matrix coefficients specified.\n";
+        exit(5);
+      }
+      error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
+      if (error.code) {
+        std::cerr << "Invalid transfer characteristics specified.\n";
+        exit(5);
+      }
+      error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
+      if (error.code) {
+        std::cerr << "Invalid color primaries specified.\n";
+        exit(5);
+      }
+      nclx->full_range_flag = (uint8_t) nclx_full_range;
 
-    heif_encoder_set_lossy_quality(encoder, quality);
+      heif_encoder_set_lossy_quality(encoder, quality);
+    }
+
     heif_encoder_set_logging_level(encoder, logging_level);
 
     set_params(encoder, raw_params);
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
-    options->output_nclx_profile = &nclx;
+    options->output_nclx_profile = nclx;
     options->image_orientation = input_image.orientation;
 
     if (chroma_downsampling == "average") {
@@ -851,6 +900,7 @@ int main(int argc, char** argv)
       error = heif_image_crop(image.get(), 0, right, 0, bottom);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
@@ -869,6 +919,7 @@ int main(int argc, char** argv)
                                       &handle);
     if (error.code != 0) {
       heif_encoding_options_free(options);
+      heif_nclx_color_profile_free(nclx);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
@@ -894,6 +945,7 @@ int main(int argc, char** argv)
                                              metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
         return 1;
       }
@@ -915,6 +967,7 @@ int main(int argc, char** argv)
                                             &thumbnail_handle);
       if (error.code) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -932,6 +985,7 @@ int main(int argc, char** argv)
 
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
+    heif_nclx_color_profile_free(nclx);
   }
 
   heif_encoder_release(encoder);
