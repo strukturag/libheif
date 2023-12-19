@@ -150,7 +150,7 @@ void show_help(const char* argv0)
             << "  -h, --help        show help\n"
             << "  -v, --version     show version\n"
             << "  -q, --quality     set output quality (0-100) for lossy compression\n"
-            << "  -L, --lossless    generate lossless output (-q has no effect)\n"
+            << "  -L, --lossless    generate lossless output (-q has no effect). Image will be encoded as RGB (matrix_coefficients=0).\n"
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
             << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
@@ -179,13 +179,7 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
-
-            << "\n"
-            << "Note: to get lossless encoding, you need this set of options:\n"
-            << "  -L                       switch encoder to lossless mode\n"
-            << "  -p chroma=444            switch off chroma subsampling\n"
-            << "  --matrix_coefficients=0  encode in RGB color-space\n";
+            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n";
 }
 
 
@@ -789,6 +783,18 @@ int main(int argc, char** argv)
     }
 #endif
 
+    if (lossless) {
+      if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
+        heif_encoder_set_lossless(encoder, true);
+        nclx_matrix_coefficients = 0;
+        nclx_full_range = true;
+        raw_params.emplace_back("chroma=444");
+      }
+      else {
+        std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+      }
+    }
+
     heif_color_profile_nclx nclx;
     error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
     if (error.code) {
@@ -806,17 +812,6 @@ int main(int argc, char** argv)
       exit(5);
     }
     nclx.full_range_flag = (uint8_t) nclx_full_range;
-
-    //heif_image_set_nclx_color_profile(image.get(), &nclx);
-
-    if (lossless) {
-      if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
-        heif_encoder_set_lossless(encoder, lossless);
-      }
-      else {
-        std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
-      }
-    }
 
     heif_encoder_set_lossy_quality(encoder, quality);
     heif_encoder_set_logging_level(encoder, logging_level);
