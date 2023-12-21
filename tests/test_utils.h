@@ -35,3 +35,5 @@ struct heif_image_handle * get_primary_image_handle(heif_context *context);
 struct heif_image * get_primary_image(heif_image_handle * handle);
 
 void fill_new_plane(heif_image* img, heif_channel channel, int w, int h);
+
+struct heif_image * createImage_RGB_planar();
