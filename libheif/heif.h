@@ -2132,13 +2132,13 @@ struct heif_error heif_image_create(int width, int height,
  * the {@code bit_depth} would be {@code 10} rather than {@code 30}.
  *
  * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
- * instead of the preferred 8 bits.
+ * instead of the preferred 8 bits. However, this use is deprecated.
  *
  * @param image the parent image to add the channel plane to
  * @param channel the channel of the plane to add
  * @param width the width of the plane
  * @param height the height of the plane
- * @param bit_depth the bit depth of the plane
+ * @param bit_depth the bit depth per color channel
  * @return whether the addition succeeded or there was an error
  *
  * @note The width and height are usually the same as the parent image, but can be
