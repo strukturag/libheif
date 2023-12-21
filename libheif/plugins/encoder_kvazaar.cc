@@ -382,8 +382,15 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
 
   kvz_config* config = api->config_alloc();
   api->config_init(config); // param, encoder->preset.c_str(), encoder->tune.c_str());
+
 #if HAVE_KVAZAAR_ENABLE_LOGGING
   config->enable_logging_output = 0;
+#endif
+
+#if !ENABLE_MULTITHREADING_SUPPORT
+  // 0: Process everything with main thread
+  // -1 (default): Select automatically.
+  config->threads = 0;
 #endif
 
 #if 1
