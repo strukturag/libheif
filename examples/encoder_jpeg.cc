@@ -179,6 +179,9 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
       if (skip > (exifsize - 4)) {
         fprintf(stderr, "Invalid EXIF data (offset too large)\n");
+        free(exifdata);
+        jpeg_destroy_compress(&cinfo);
+        fclose(fp);
         return false;
       }
       skip += 4;
@@ -188,6 +191,9 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
       if (size > std::numeric_limits<uint32_t>::max()) {
         fprintf(stderr, "EXIF larger than 4GB is not supported");
+        free(exifdata);
+        jpeg_destroy_compress(&cinfo);
+        fclose(fp);
         return false;
       }
 
@@ -258,6 +264,8 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
   if (heif_image_get_bits_per_pixel(image, heif_channel_Y) != 8) {
     fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
+    jpeg_destroy_compress(&cinfo);
+    fclose(fp);
     return false;
   }
 
