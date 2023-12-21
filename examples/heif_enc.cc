@@ -794,8 +794,8 @@ int main(int argc, char** argv)
         heif_encoder_set_lossless(encoder, true);
 
         if (heif_image_get_colorspace(primary_image.get()) == heif_colorspace_RGB) {
-          nclx_matrix_coefficients = 0;
-          nclx_full_range = true;
+          nclx->matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+          nclx->full_range_flag = true;
           raw_params.emplace_back("chroma=444");
         }
         else {
