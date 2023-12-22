@@ -1,6 +1,6 @@
 # stats available at
 # https://ci.appveyor.com/project/strukturag/libheif
-image: Visual Studio 2019
+image: Visual Studio 2022
 configuration: Release
 cache: c:\tools\vcpkg\installed\
 
