@@ -865,6 +865,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/libheif/heif.h \
+@CMAKE_CURRENT_SOURCE_DIR@/libheif/heif_items.h \
 @CMAKE_CURRENT_SOURCE_DIR@/libheif/heif_regions.h
 
 # This tag can be used to specify the character encoding of the source files
