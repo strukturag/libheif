@@ -182,8 +182,27 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) (in >> shift); // TODO: I think no rounding here, but am not sure.
           }
-      }
-      else {
+      } else if (input_bits < 8) {
+        int width = input->get_width(channel);
+        int height = input->get_height(channel);
+        if (!outimg->add_plane(channel, width, height, 8)) {
+          return nullptr;
+        }
+
+        int shift = 8 - input_bits;
+
+        int stride_in;
+        const uint8_t* p_in = input->get_plane(channel, &stride_in);
+
+        int stride_out;
+        uint8_t* p_out = outimg->get_plane(channel, &stride_out);
+
+        for (int y = 0; y < height; y++)
+          for (int x = 0; x < width; x++) {
+            int in = p_in[y * stride_in + x];
+            p_out[y * stride_out + x] = (uint8_t) (in << shift); // TODO: I think no rounding here, but am not sure.
+          }
+      } else {
         outimg->copy_new_plane_from(input, channel, channel);
       }
     }
