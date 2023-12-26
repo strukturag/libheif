@@ -698,7 +698,7 @@ TEST_CASE("RGB 5-6-5 to RGB")
 
   std::shared_ptr<HeifPixelImage> out = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options);
 
-  assert_plane(out, heif_channel_R, {8, 16, 24, 32, 40, 48});
+  assert_plane(out, heif_channel_R, {8, 16, 24, 33, 41, 49});
   assert_plane(out, heif_channel_G, {28, 32, 36, 40, 44, 48});
-  assert_plane(out, heif_channel_B, {104, 112, 120, 128, 136, 144});
+  assert_plane(out, heif_channel_B, {107, 115, 123, 132, 140, 148});
 }
