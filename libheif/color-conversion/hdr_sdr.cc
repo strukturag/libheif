@@ -80,7 +80,7 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       int output_bits = target_state.bits_per_pixel;
 
       int shift1 = output_bits - input_bits;
-      int shift2 = 8 - shift1;
+      int shift2 = 2 * input_bits - 16;
 
       const uint8_t* p_in;
       int stride_in;
