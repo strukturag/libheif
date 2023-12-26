@@ -73,7 +73,7 @@ __progname(char * nargv0)
  *	Parse argc/argv argument vector.
  */
 int
-getopt_internal(int nargc, char ** nargv, const char *ostr)
+getopt_internal(int nargc, char * const* nargv, const char *ostr)
 {
 	static char *place = EMSG;		/* option letter processing */
 	const char *oli;				/* option letter list index */
@@ -142,7 +142,7 @@ getopt2(int nargc, char * nargv, const char *ostr)
 
 	if ((retval = getopt_internal(nargc, nargv, ostr)) == -2) {
 		retval = -1;
-		++optind; 
+		++optind;
 	}
 	return(retval);
 }
@@ -175,11 +175,11 @@ getopt_long(int nargc, char ** nargv, char * options, struct option * long_optio
 		} else
 			current_argv_len = strlen(current_argv);
 
-		for (i = 0; long_options[i].name; i++) { 
+		for (i = 0; long_options[i].name; i++) {
 			if (strncmp(current_argv, long_options[i].name, current_argv_len))
 				continue;
 
-			if (strlen(long_options[i].name) == (unsigned)current_argv_len) { 
+			if (strlen(long_options[i].name) == (unsigned)current_argv_len) {
 				match = i;
 				break;
 			}
@@ -215,7 +215,7 @@ getopt_long(int nargc, char ** nargv, char * options, struct option * long_optio
 		if (long_options[match].flag) {
 			*long_options[match].flag = long_options[match].val;
 			retval = 0;
-		} else 
+		} else
 			retval = long_options[match].val;
 		if (index)
 			*index = match;

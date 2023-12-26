@@ -2411,7 +2411,7 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
     image_nclx = std::make_shared<color_profile_nclx>();
   }
 
-  if (image_nclx->get_full_range_flag() != spec_nclx->full_range_flag) {
+  if (image_nclx->get_full_range_flag() != ( spec_nclx->full_range_flag == 0 ? false : true ) ) {
     return false;
   }
 
@@ -2938,9 +2938,9 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   for (;;) {
     uint8_t* data;
     int size;
-    
+
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-    
+
     if (data == NULL) {
       break;
     }
@@ -2954,7 +2954,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
 
 
 
-  //Add 'ispe' Property 
+  //Add 'ispe' Property
   m_heif_file->add_ispe_property(image_id, image->get_width(), image->get_height());
 
   //Add 'colr' Property

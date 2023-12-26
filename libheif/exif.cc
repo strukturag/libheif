@@ -25,12 +25,12 @@
 #define DEFAULT_EXIF_ORIENTATION 1
 #define EXIF_TAG_ORIENTATION 0x112
 
+// Note: As far as I can see, it is not defined in the EXIF standard whether the offsets and counts of the IFD is signed or unsigned.
+// We assume that these are all unsigned.
 
-static int32_t read32(const uint8_t* data, int size, int pos, bool littleEndian)
+static uint32_t read32(const uint8_t* data, uint32_t size, uint32_t pos, bool littleEndian)
 {
-  if (pos + 4 > size) {
-    return -1;
-  }
+  assert(pos <= size - 4);
 
   const uint8_t* p = data + pos;
 
@@ -43,28 +43,24 @@ static int32_t read32(const uint8_t* data, int size, int pos, bool littleEndian)
 }
 
 
-static int32_t read16(const uint8_t* data, int size, int pos, bool littleEndian)
+static uint16_t read16(const uint8_t* data, uint32_t size, uint32_t pos, bool littleEndian)
 {
-  if (pos + 2 > size) {
-    return -1;
-  }
+  assert(pos <= size - 2);
 
   const uint8_t* p = data + pos;
 
   if (littleEndian) {
-    return (p[1] << 8) | p[0];
+    return static_cast<uint16_t>((p[1] << 8) | p[0]);
   }
   else {
-    return (p[0] << 8) | p[1];
+    return static_cast<uint16_t>((p[0] << 8) | p[1]);
   }
 }
 
 
-static void write16(uint8_t* data, int size, int pos, uint16_t value, bool littleEndian)
+static void write16(uint8_t* data, uint32_t size, uint32_t pos, uint16_t value, bool littleEndian)
 {
-  if (pos + 2 > size) {
-    return;
-  }
+  assert(pos <= size - 2);
 
   uint8_t* p = data + pos;
 
@@ -78,16 +74,16 @@ static void write16(uint8_t* data, int size, int pos, uint16_t value, bool littl
   }
 }
 
-
-static int find_exif_tag(const uint8_t* exif, int  size, uint16_t query_tag, bool* out_littleEndian)
+// Returns 0 if the query_tag was not found.
+static uint32_t find_exif_tag(const uint8_t* exif, uint32_t size, uint16_t query_tag, bool* out_littleEndian)
 {
   if (size < 4) {
-    return -1;
+    return 0;
   }
 
   if ((exif[0] != 'I' && exif[0] != 'M') ||
       (exif[1] != 'I' && exif[1] != 'M')) {
-    return -1;
+    return 0;
   }
 
   bool littleEndian = (exif[0] == 'I');
@@ -95,14 +91,22 @@ static int find_exif_tag(const uint8_t* exif, int  size, uint16_t query_tag, boo
   assert(out_littleEndian);
   *out_littleEndian = littleEndian;
 
-  int offset = read32(exif, size, 4, littleEndian);
-  if (offset < 0) {
-    return -1;
+  uint32_t offset = read32(exif, size, 4, littleEndian);
+
+  if (size - 2 < offset) {
+    return 0;
   }
 
-  int cnt = read16(exif, size, offset, littleEndian);
-  if (cnt < 1) {
-    return -1;
+  uint16_t cnt = read16(exif, size, offset, littleEndian);
+
+  // Does the IFD table fit into our memory range? We need this to prevent an underflow in the following statement.
+  if (2U + cnt * 12U > size) {
+    return 0;
+  }
+
+  // end of IFD table would exceed the end of the EXIF data
+  if (size - 2U - cnt * 12U > offset) {
+    return 0;
   }
 
   for (int i = 0; i < cnt; i++) {
@@ -114,20 +118,20 @@ static int find_exif_tag(const uint8_t* exif, int  size, uint16_t query_tag, boo
 
   // TODO: do we have to also scan the next IFD table ?
 
-  return -1;
+  return 0;
 }
 
 
-void modify_exif_tag_if_it_exists(uint8_t* exif, int size, uint16_t modify_tag, uint16_t modify_value)
+void modify_exif_tag_if_it_exists(uint8_t* exif, uint32_t size, uint16_t modify_tag, uint16_t modify_value)
 {
   bool little_endian;
-  int pos = find_exif_tag(exif, size, modify_tag, &little_endian);
-  if (pos < 0) {
+  uint32_t pos = find_exif_tag(exif, size, modify_tag, &little_endian);
+  if (pos == 0) {
     return;
   }
 
-  int type = read16(exif, size, pos + 2, little_endian);
-  int count = read32(exif, size, pos + 4, little_endian);
+  uint16_t type = read16(exif, size, pos + 2, little_endian);
+  uint32_t count = read32(exif, size, pos + 4, little_endian);
 
   if (type == EXIF_TYPE_SHORT && count == 1) {
     write16(exif, size, pos + 8, modify_value, little_endian);
@@ -135,22 +139,22 @@ void modify_exif_tag_if_it_exists(uint8_t* exif, int size, uint16_t modify_tag, 
 }
 
 
-void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, int size, uint16_t orientation)
+void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, uint32_t size, uint16_t orientation)
 {
   modify_exif_tag_if_it_exists(exifData, size, EXIF_TAG_ORIENTATION, orientation);
 }
 
 
-int read_exif_orientation_tag(const uint8_t* exif, int size)
+int read_exif_orientation_tag(const uint8_t* exif, uint32_t size)
 {
   bool little_endian;
-  int pos = find_exif_tag(exif, size, EXIF_TAG_ORIENTATION, &little_endian);
-  if (pos < 0) {
+  uint32_t pos = find_exif_tag(exif, size, EXIF_TAG_ORIENTATION, &little_endian);
+  if (pos == 0) {
     return DEFAULT_EXIF_ORIENTATION;
   }
 
-  int type = read16(exif, size, pos + 2, little_endian);
-  int count = read32(exif, size, pos + 4, little_endian);
+  uint16_t type = read16(exif, size, pos + 2, little_endian);
+  uint32_t count = read32(exif, size, pos + 4, little_endian);
 
   if (type == EXIF_TYPE_SHORT && count == 1) {
     return read16(exif, size, pos + 8, little_endian);

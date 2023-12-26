@@ -107,6 +107,12 @@ Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& h
                  "Unsupported bit depth for mask item");
   }
 
+  if (data.size() < width * height) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Mask image data is too short"};
+  }
+
   img = std::make_shared<HeifPixelImage>();
   img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
   img->add_plane(heif_channel_Y, width, height, mskC->get_bits_per_pixel());

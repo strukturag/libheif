@@ -2114,20 +2114,53 @@ struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx
 
 // --- heif_image allocation
 
-// Create a new image of the specified resolution and colorspace.
-// Note: no memory for the actual image data is reserved yet. You have to use
-// heif_image_add_plane() to add the image planes required by your colorspace/chroma.
+/**
+ * Create a new image of the specified resolution and colorspace.
+ *
+ * <p>This does not allocate memory for the image data. Use {@link heif_image_add_plane} to
+ * add the corresponding planes to match the specified {@code colorspace} and {@code chroma}.
+ *
+ * @param width the width of the image in pixels
+ * @param height the height of the image in pixels
+ * @param colorspace the colorspace of the image
+ * @param chroma the chroma of the image
+ * @param out_image pointer to pointer of the resulting image
+ * @return whether the creation succeeded or there was an error
+*/
 LIBHEIF_API
 struct heif_error heif_image_create(int width, int height,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma,
                                     struct heif_image** out_image);
 
-// The indicated bit_depth corresponds to the bit depth per channel.
-// I.e. for interleaved formats like RRGGBB, the bit_depth would be, e.g., 10 bit instead
-// of 30 bits or 3*16=48 bits.
-// For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
-// instead of the preferred 8 bits.
+/**
+ * Add an image plane to the image.
+ *
+ * <p>The image plane needs to match the colorspace and chroma of the image. Note
+ * that this does not need to be a single "planar" format - interleaved pixel channels
+ * can also be used if the chroma is interleaved.
+ *
+ * <p>The indicated bit_depth corresponds to the bit depth per channel. For example,
+ * with an interleaved format like RRGGBB where each color is represented by 10 bits,
+ * the {@code bit_depth} would be {@code 10} rather than {@code 30}.
+ *
+ * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
+ * instead of the preferred 8 bits. However, this use is deprecated.
+ *
+ * @param image the parent image to add the channel plane to
+ * @param channel the channel of the plane to add
+ * @param width the width of the plane
+ * @param height the height of the plane
+ * @param bit_depth the bit depth per color channel
+ * @return whether the addition succeeded or there was an error
+ *
+ * @note The width and height are usually the same as the parent image, but can be
+ * less for subsampling.
+ *
+ * @note The specified width can differ from the row stride of the resulting image plane.
+ * Always use the result of {@link heif_image_get_plane} or {@link heif_image_get_plane_readonly}
+ * to determine row stride.
+ */
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,
