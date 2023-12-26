@@ -39,7 +39,7 @@
 #include <cassert>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "uncompressed_box.h"
 #endif
 
 

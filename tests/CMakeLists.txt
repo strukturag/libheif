@@ -16,11 +16,12 @@ endmacro()
 # --- tests that require access to internal symbols
 
 if (WITH_REDUCED_VISIBILITY)
-    message(WARNING "Conversion, JPEG 2000 and AVC box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+    message(WARNING "Conversion and box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
 else()
     add_libheif_test(conversion)
     add_libheif_test(jpeg2000)
     add_libheif_test(avc_box)
+    add_libheif_test(uncompressed_box)
 endif()
 
 # --- tests that only access the public API
@@ -30,6 +31,14 @@ add_libheif_test(region)
 
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
+    add_libheif_test(uncompressed_decode_mono)
+    add_libheif_test(uncompressed_decode_rgb)
+    add_libheif_test(uncompressed_decode_rgb16)
+    add_libheif_test(uncompressed_decode_rgb565)
+    add_libheif_test(uncompressed_decode_rgb7)
+    add_libheif_test(uncompressed_decode_ycbcr)
+    add_libheif_test(uncompressed_decode_ycbcr420)
+    add_libheif_test(uncompressed_decode_ycbcr422)
     add_libheif_test(uncompressed_encode)
 else()
     message(WARNING "Tests of the 'uncompressed codec' are not compiled because the uncompressed codec is not enabled (WITH_UNCOMPRESSED_CODEC==OFF)")
