@@ -23,6 +23,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_properties.h"
 #include "compression.h"
+#include "codecs/avc.h"
 #include "codecs/jpeg2000.h"
 #include "codecs/jpeg.h"
 #include "codecs/vvc.h"
@@ -628,6 +629,16 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
       return -1;
     }
     return header.get_precision(0);
+  }
+
+  // AVC
+
+  if (image_type == "avc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("avcC"));
+    std::shared_ptr<Box_avcC> avcC_box = std::dynamic_pointer_cast<Box_avcC>(box);
+    if (avcC_box) {
+      return 8; // TODO.
+    }
   }
 
 #if WITH_UNCOMPRESSED_CODEC

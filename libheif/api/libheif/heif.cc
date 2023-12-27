@@ -166,7 +166,8 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
       heif_brand2_jpeg,
       heif_brand2_miaf,
       heif_brand2_mif1,
-      heif_brand2_mif2
+      heif_brand2_mif2,
+      heif_brand2_avci
   };
 
   auto it = supported_brands.find(main_brand);

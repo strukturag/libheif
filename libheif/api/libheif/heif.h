@@ -838,6 +838,13 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_miaf   heif_fourcc('m','i','a','f')
 
 /**
+ * AVC (H.264) image (`avci`) brand.
+ *
+ * See ISO/IEC 23008-12:2022 Annex E.4
+ */
+#define heif_brand2_avci   heif_fourcc('a','v','c','i')
+
+/**
  * Single picture file brand.
  *
  * This is a compatible brand indicating the file contains a single intra-coded picture.

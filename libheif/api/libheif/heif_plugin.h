@@ -34,21 +34,29 @@ extern "C" {
 
 // API versions table
 //
-// release    decoder   encoder   enc.params
-// -----------------------------------------
-//  1.0          1        N/A        N/A
-//  1.1          1         1          1
-//  1.4          1         1          2
-//  1.8          1         2          2
-//  1.13         2         3          2
-//  1.15         3         3          2
-
+// release    decoder  dec.config  encoder   enc.params
+// -----------------------------------------------------
+//  1.0          1        N/A        N/A        N/A
+//  1.1          1        N/A         1          1
+//  1.4          1        N/A         1          2
+//  1.8          1        N/A         2          2
+//  1.13         2        N/A         3          2
+//  1.15         3        N/A         3          2
+//  1.19         4         1          3          2
 
 // ====================================================================================================
 //  Decoder plugin API
 //  In order to decode images in other formats than HEVC, additional compression codecs can be
 //  added as plugins. A plugin has to implement the functions specified in heif_decoder_plugin
 //  and the plugin has to be registered to the libheif library using heif_register_decoder().
+
+struct heif_decoder_configuration
+{
+  int version; // current version: 1
+
+  // --- version 1 fields ---
+  heif_compression_format compression_format;
+};
 
 struct heif_decoder_plugin
 {
@@ -88,7 +96,7 @@ struct heif_decoder_plugin
   struct heif_error (* decode_image)(void* decoder, struct heif_image** out_img);
 
 
-  // --- version 2 functions will follow below ... ---
+  // --- version 2 functions follow below ... ---
 
   void (*set_strict_decoding)(void* decoder, int flag);
 
@@ -104,11 +112,16 @@ struct heif_decoder_plugin
   // Reset decoder, such that we can feed in new data for another image.
   // void (*reset_image)(void* decoder);
 
-  // --- version 3 functions will follow below ... ---
+  // --- version 3 functions follow below ... ---
 
   const char* id_name;
 
-  // --- version 4 functions will follow below ... ---
+  // --- version 4 functions follow below ... ---
+
+  // Create a new decoder context for decoding an image
+  struct heif_error (* new_decoder2)(void** decoder, const heif_decoder_configuration* decoder_config);
+
+  // --- version 5 functions will follow below ... ---
 };
 
 

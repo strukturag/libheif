@@ -550,7 +550,8 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "jpeg" ||
           (item_type == "mime" && content_type == "image/jpeg") ||
           item_type == "j2k1" ||
-          item_type == "mski");
+          item_type == "mski" ||
+          item_type == "avc1");
 }
 
 
@@ -1401,7 +1402,8 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       image_type == "av01" ||
       image_type == "j2k1" ||
       image_type == "jpeg" ||
-      (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg")) {
+      (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg") ||
+      image_type == "avc1") {
 
     heif_compression_format compression = heif_compression_undefined;
     if (image_type == "hvc1") {
@@ -1420,7 +1422,10 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     else if (image_type == "j2k1") {
       compression = heif_compression_JPEG2000;
     }
-
+    else if (image_type == "avc1") {
+      compression = heif_compression_AVC;
+    }
+  
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
     if (!decoder_plugin) {
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
@@ -1433,7 +1438,13 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
 
     void* decoder;
-    struct heif_error err = decoder_plugin->new_decoder(&decoder);
+    struct heif_error err;
+    if (decoder_plugin->plugin_api_version >= 4) {
+      heif_decoder_configuration decoder_configuration {.version = 1, .compression_format = compression};
+      err = decoder_plugin->new_decoder2(&decoder, &decoder_configuration);
+    } else {
+      err = decoder_plugin->new_decoder(&decoder);
+    }
     if (err.code != heif_error_Ok) {
       return Error(err.code, err.subcode, err.message);
     }

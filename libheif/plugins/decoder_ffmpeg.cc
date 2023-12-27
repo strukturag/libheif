@@ -21,6 +21,7 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "decoder_ffmpeg.h"
+#include "nalu.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -33,33 +34,9 @@ extern "C"
     #include <libavcodec/avcodec.h>
 }
 
-class NalUnit {
-public:
-    NalUnit();
-    ~NalUnit();
-    bool set_data(const unsigned char* in_data, int n);
-    int size() const { return nal_data_size; }
-    int unit_type() const { return nal_unit_type;  }
-    const unsigned char* data() const { return nal_data_ptr; }
-    int bitExtracted(int number, int bits_count, int position_nr)
-    {
-        return (((1 << bits_count) - 1) & (number >> (position_nr - 1)));
-    }
-private:
-    const unsigned char* nal_data_ptr;
-    int nal_unit_type;
-    int nal_data_size;
-};
-
 struct ffmpeg_decoder
 {
-    #define NAL_UNIT_VPS_NUT    32
-    #define NAL_UNIT_SPS_NUT    33
-    #define NAL_UNIT_PPS_NUT    34
-    #define NAL_UNIT_IDR_W_RADL 19
-    #define NAL_UNIT_IDR_N_LP   20
-
-    std::map<int,NalUnit*> NalMap;
+    NalUnitMap NalMap;
 
     bool strict_decoding = false;
 };
@@ -126,29 +103,9 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
   decoder->strict_decoding = flag;
 }
 
-NalUnit::NalUnit()
-{
-    nal_data_ptr = NULL;
-    nal_unit_type = 0;
-    nal_data_size = 0;
-}
-
-NalUnit::~NalUnit()
-{
-
-}
-
-bool NalUnit::set_data(const unsigned char* in_data, int n)
-{
-    nal_data_ptr = in_data;
-    nal_unit_type = bitExtracted(nal_data_ptr[0], 6, 2);
-    nal_data_size = n;
-    return true;
-}
 
 static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data, size_t size)
 {
-
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
@@ -332,92 +289,19 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
 {
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
-  int heif_idrpic_size;
-  int heif_vps_size;
-  int heif_sps_size;
-  int heif_pps_size;
-  const unsigned char* heif_vps_data;
-  const unsigned char* heif_sps_data;
-  const unsigned char* heif_pps_data;
-  const unsigned char* heif_idrpic_data;
-
-  if ((decoder->NalMap.count(NAL_UNIT_VPS_NUT) > 0)
-      && (decoder->NalMap.count(NAL_UNIT_SPS_NUT) > 0)
-      && (decoder->NalMap.count(NAL_UNIT_PPS_NUT) > 0)
-      )
+  if ((!decoder->NalMap.NUTs_are_valid()) || (!decoder->NalMap.IDR_is_valid()))
   {
-      heif_vps_size = decoder->NalMap[NAL_UNIT_VPS_NUT]->size();
-      heif_vps_data = decoder->NalMap[NAL_UNIT_VPS_NUT]->data();
-
-      heif_sps_size = decoder->NalMap[NAL_UNIT_SPS_NUT]->size();
-      heif_sps_data = decoder->NalMap[NAL_UNIT_SPS_NUT]->data();
-
-      heif_pps_size = decoder->NalMap[NAL_UNIT_PPS_NUT]->size();
-      heif_pps_data = decoder->NalMap[NAL_UNIT_PPS_NUT]->data();
-  }
-  else
-  {
-      struct heif_error err = { heif_error_Decoder_plugin_error,
-                                heif_suberror_End_of_data,
-                                "Unexpected end of data" };
-      return err;
+    struct heif_error err = { heif_error_Decoder_plugin_error,
+                              heif_suberror_End_of_data,
+                              "Unexpected end of data" };
+    return err;
   }
 
-  if ((decoder->NalMap.count(NAL_UNIT_IDR_W_RADL) > 0) || (decoder->NalMap.count(NAL_UNIT_IDR_N_LP) > 0))
-  {
-      if (decoder->NalMap.count(NAL_UNIT_IDR_W_RADL) > 0)
-      {
-          heif_idrpic_data = decoder->NalMap[NAL_UNIT_IDR_W_RADL]->data();
-          heif_idrpic_size = decoder->NalMap[NAL_UNIT_IDR_W_RADL]->size();
-      }
-      else
-      {
-          heif_idrpic_data = decoder->NalMap[NAL_UNIT_IDR_N_LP]->data();
-          heif_idrpic_size = decoder->NalMap[NAL_UNIT_IDR_N_LP]->size();
-      }
-  }
-  else
-  {
-      struct heif_error err = { heif_error_Decoder_plugin_error,
-                                heif_suberror_End_of_data,
-                                "Unexpected end of data" };
-      return err;
-  }
-
-  const char hevc_AnnexB_StartCode[] = { 0x00, 0x00, 0x00, 0x01 };
-  int hevc_AnnexB_StartCode_size = 4;
-
-  size_t hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
-  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size + AV_INPUT_BUFFER_PADDING_SIZE);
-
-  //Copy hevc pps data
-  uint8_t* hevc_data_ptr = hevc_data;
-  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
-  hevc_data_ptr += hevc_AnnexB_StartCode_size;
-  memcpy(hevc_data_ptr, heif_vps_data, heif_vps_size);
-  hevc_data_ptr += heif_vps_size;
-
-  //Copy hevc sps data
-  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
-  hevc_data_ptr += hevc_AnnexB_StartCode_size;
-  memcpy(hevc_data_ptr, heif_sps_data, heif_sps_size);
-  hevc_data_ptr += heif_sps_size;
-
-  //Copy hevc pps data
-  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
-  hevc_data_ptr += hevc_AnnexB_StartCode_size;
-  memcpy(hevc_data_ptr, heif_pps_data, heif_pps_size);
-  hevc_data_ptr += heif_pps_size;
-
-  //Copy hevc idrpic data
-  memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
-  hevc_data_ptr += hevc_AnnexB_StartCode_size;
-  memcpy(hevc_data_ptr, heif_idrpic_data, heif_idrpic_size);
+  uint8_t *hevc_data;
+  size_t hevc_data_size;
+  decoder->NalMap.buildWithStartCodesHEVC(&hevc_data, &hevc_data_size);
 
   //decoder->NalMap not needed anymore
-  for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
-      delete current->second;
-  }
   decoder->NalMap.clear();
 
   const AVCodec* hevc_codec = NULL;

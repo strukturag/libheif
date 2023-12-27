@@ -87,10 +87,9 @@ set(KVAZAAR_sources encoder_kvazaar.cc encoder_kvazaar.h)
 set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR_FOUND KVAZAAR KVAZAAR)
 
-set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
+set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h nalu.cc nalu.h)
 set(FFMPEG_DECODER_extra_plugin_sources ../error.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)
-
 
 set(OPENJPH_ENCODER_sources encoder_openjph.cc encoder_openjph.h)
 set(OPENJPH_ENCODER_extra_plugin_sources)
@@ -107,6 +106,13 @@ plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
 set(VVENC_sources encoder_vvenc.cc encoder_vvenc.h)
 set(VVENC_extra_plugin_sources)
 plugin_compilation(vvenc vvenc vvenc_FOUND VVENC VVENC)
+
+set(NV_DECODER_sources decoder_nvdec.cc decoder_nvdec.h nalu.cc nalu.h NvDecoder.cpp NvDecoder.h)
+set(NV_DECODER_extra_plugin_sources)
+plugin_compilation(nvdec NVDEC NVDEC_FOUND NV_DECODER NV_DECODER)
+
+# This is a hack
+target_link_libraries(heif PRIVATE CUDA::cuda_driver)
 
 target_sources(heif PRIVATE
                encoder_mask.h
