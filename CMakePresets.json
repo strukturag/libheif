@@ -8,8 +8,42 @@
   "configurePresets": [
     {
       "name": "default",
-      "displayName": "Default Config",
+      "displayName": "Default Config from CMakeLists.txt",
       "description": "Default building parameters",
+      "cacheVariables": {
+        "WITH_AOM_DECODER" : "ON",
+        "WITH_AOM_DECODER_PLUGIN" : "OFF",
+        "WITH_AOM_ENCODER" : "ON",
+        "WITH_AOM_ENCODER_PLUGIN" : "OFF",
+        "WITH_DAV1D" : "OFF",
+        "WITH_DAV1D_PLUGIN" : "ON",
+        "WITH_LIBDE265" : "ON",
+        "WITH_LIBDE265_PLUGIN" : "OFF",
+        "WITH_RAV1E" : "OFF",
+        "WITH_RAV1E_PLUGIN" : "ON",
+        "WITH_SvtEnc" : "OFF",
+        "WITH_SvtEnc_PLUGIN" : "ON",
+        "WITH_X265" : "ON",
+        "WITH_X265_PLUGIN" : "OFF",
+        "WITH_JPEG_DECODER" : "OFF",
+        "WITH_JPEG_DECODER_PLUGIN" : "OFF",
+        "WITH_JPEG_ENCODER" : "OFF",
+        "WITH_JPEG_ENCODER_PLUGIN" : "OFF",
+        "WITH_UNCOMPRESSED_CODEC" : "OFF",
+	"WITH_KVAZAAR" : "OFF",
+	"WITH_KVAZAAR_PLUGIN" : "OFF",
+	"WITH_OpenJPEG_DECODER" : "OFF",
+	"WITH_OpenJPEG_DECODER_PLUGIN" : "ON",
+	"WITH_OpenJPEG_ENCODER" : "OFF",
+	"WITH_OpenJPEG_ENCODER_PLUGIN" : "ON",
+	"WITH_FFMPEG_DECODER" : "OFF",
+	"WITH_FFMPEG_DECODER_PLUGIN" : "OFF"
+      }
+    },
+    {
+      "name": "base",
+      "displayName": "Base Config",
+      "description": "Default base building parameters",
       "cacheVariables": {
         "WITH_AOM_DECODER" : "ON",
         "WITH_AOM_DECODER_PLUGIN" : "ON",
@@ -42,7 +76,7 @@
     },
     {
       "name": "develop",
-      "inherits": "default",
+      "inherits": "base",
       "displayName": "development",
       "description": "Enable all experimental features. Do not use plugins, compile everything built-in.",
       "cacheVariables": {
@@ -73,7 +107,7 @@
     },
     {
       "name": "release",
-      "inherits": "default",
+      "inherits": "base",
       "displayName": "Standard release build",
       "description": "Recommended parameters for a release build.",
       "cacheVariables": {
@@ -112,7 +146,7 @@
     },
     {
       "name": "testing",
-      "inherits": "default",
+      "inherits": "base",
       "displayName": "Tests",
       "description": "For running the tests",
       "cacheVariables": {
@@ -124,7 +158,7 @@
     },
     {
       "name": "fuzzing",
-      "inherits": "default",
+      "inherits": "base",
       "displayName": "Fuzzing",
       "description": "For running the fuzzers",
       "cacheVariables": {
