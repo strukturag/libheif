@@ -398,7 +398,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box) const
+                                    const std::shared_ptr<Box_iref>& iref_box) const
 {
   std::unordered_set<heif_item_id> parent_items;
   return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
@@ -406,7 +406,7 @@ Error HeifFile::check_for_ref_cycle(heif_item_id ID,
 
 
 Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box,
+                                    const std::shared_ptr<Box_iref>& iref_box,
                                     std::unordered_set<heif_item_id>& parent_items) const {
   if (parent_items.find(ID) != parent_items.end()) {
     return Error(heif_error_Invalid_input,
@@ -697,6 +697,43 @@ int HeifFile::jpeg_get_bits_per_pixel(heif_item_id imageID) const
   return -1;
 }
 
+Error HeifFile::get_source_image_id(const heif_item_id from_ID, heif_item_id *to_ID) const
+{
+  // At this point iref is required (see ISO/IEC 23008-12:2022 Section 6.6.2.1)
+  if (!m_iref_box) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_iref_box);
+  }
+  Error error = check_for_ref_cycle(from_ID, m_iref_box);
+  if (error) {
+    return error;
+  }
+  std::vector<uint32_t> references = m_iref_box->get_references(from_ID, fourcc_to_uint32("dimg"));
+  if (references.size() != 1) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_missing_iref_reference);
+  }
+  heif_item_id id = references[0];
+
+  if (!image_exists(id)) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Nonexisting_item_referenced);
+  }
+
+  auto infe_box = get_infe(id);
+  if (!infe_box) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Nonexisting_item_referenced);
+  }
+
+  std::string item_type = infe_box->get_item_type();
+  if (item_type == "iden") {
+    return get_source_image_id(id, to_ID);
+  }
+  *to_ID = id;
+
+  return Error::Ok;
+}
 
 Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
@@ -718,6 +755,16 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   std::string item_type = infe_box->get_item_type();
   std::string content_type = infe_box->get_content_type();
+
+  if (item_type == "iden") {
+    // we want to return the image data for the source image
+    heif_item_id to_ID = 0;
+    Error error = get_source_image_id(ID, &to_ID);
+    if (error.error_code != heif_error_Ok) {
+      return error;
+    }
+    ID = to_ID;
+  }
 
   // --- get coded image data pointers
 
