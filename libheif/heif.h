@@ -229,6 +229,8 @@ enum heif_suberror_code
   // Invalid specification of region item
   heif_suberror_Invalid_region_data = 136,
 
+  // An item was referenced, but the iref entry didn't include it
+  heif_suberror_missing_iref_reference = 137,
 
   // --- Memory_allocation_error ---
 

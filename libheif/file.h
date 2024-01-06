@@ -221,15 +221,17 @@ private:
   Error parse_heif_file(BitstreamRange& bitstream);
 
   Error check_for_ref_cycle(heif_item_id ID,
-                            std::shared_ptr<Box_iref>& iref_box) const;
+                            const std::shared_ptr<Box_iref>& iref_box) const;
 
   Error check_for_ref_cycle_recursion(heif_item_id ID,
-                                      std::shared_ptr<Box_iref>& iref_box,
+                                      const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
 
   std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
 
   int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
+
+  Error get_source_image_id(const heif_item_id to_ID, heif_item_id *from_ID) const;
 };
 
 #endif

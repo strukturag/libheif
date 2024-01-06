@@ -300,6 +300,8 @@ const (
 
 	SuberrorInvalidRegionData = C.heif_suberror_Invalid_region_data
 
+	SuberrorMissingIrefReference = C.heif_suberror_missing_iref_reference
+
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
 
 	SuberrorUnknownNCLXColorPrimaries = C.heif_suberror_Unknown_NCLX_color_primaries

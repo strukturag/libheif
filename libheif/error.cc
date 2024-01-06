@@ -158,7 +158,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unknown NCLX matrix coefficients";
     case heif_suberror_Invalid_region_data:
       return "Invalid region item data";
-
+    case heif_suberror_missing_iref_reference:
+      return "'iref' box does not include a referenced item";
 
       // --- Memory_allocation_error ---
 
