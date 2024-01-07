@@ -134,7 +134,8 @@ function (_ffmpeg_find component headername)
   endif ()
 endfunction ()
 
-_ffmpeg_find(avutil     avutil.h)
+_ffmpeg_find(avutil     avutil.h
+  avutil)
 _ffmpeg_find(avresample avresample.h
   avutil)
 _ffmpeg_find(swresample swresample.h
