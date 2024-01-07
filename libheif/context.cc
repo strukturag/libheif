@@ -1321,7 +1321,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
     if (!decoder_plugin) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
+      return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
     }
 
     std::vector<uint8_t> data;

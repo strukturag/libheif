@@ -133,7 +133,7 @@ enum heif_error_code
   heif_error_Color_profile_does_not_exist = 10,
 
   // Error loading a dynamic plugin
-  heif_error_Plugin_loading_error = 11
+  heif_error_Plugin_loading_error = 11,
 };
 
 
@@ -304,9 +304,10 @@ enum heif_suberror_code
 
   // --- Plugin loading error ---
 
-  heif_suberror_Plugin_loading_error = 6000,        // a specific plugin file cannot be loaded
-  heif_suberror_Plugin_is_not_loaded = 6001,        // trying to remove a plugin that is not loaded
-  heif_suberror_Cannot_read_plugin_directory = 6002 // error while scanning the directory for plugins
+  heif_suberror_Plugin_loading_error = 6000,         // a specific plugin file cannot be loaded
+  heif_suberror_Plugin_is_not_loaded = 6001,         // trying to remove a plugin that is not loaded
+  heif_suberror_Cannot_read_plugin_directory = 6002, // error while scanning the directory for plugins
+  heif_suberror_No_matching_decoder_installed = 6003 // no decoder found for that compression format
 };
 
 

@@ -227,6 +227,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Trying to remove a plugin that is not loaded";
     case heif_suberror_Cannot_read_plugin_directory:
       return "Error while scanning the directory for plugins";
+    case heif_suberror_No_matching_decoder_installed:
+      return "No decoding plugin installed for this compression format";
   }
 
   assert(false);
