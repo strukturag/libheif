@@ -140,6 +140,9 @@ There are CMake presets to cover the most frequent use cases.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
 * `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
 
+Please note that the `default` preset mirrors the default options set in the CMakeLists.txt file. 
+This means that running `cmake --presets=default ..` is essentially equivalent to running `cmake ..` without using any presets.
+
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.
 
