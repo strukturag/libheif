@@ -138,10 +138,7 @@ There are CMake presets to cover the most frequent use cases.
 * `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
   A single library is built with support for HEIC and AVIF.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
-* `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
-
-Please note that the `default` preset mirrors the default options set in the CMakeLists.txt file. 
-This means that running `cmake --presets=default ..` is essentially equivalent to running `cmake ..` without using any presets.
+* `fuzzing`: all codecs like in release build, but configured into a self-contained library with enabled fuzzers. The library should not distributed.
 
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.
