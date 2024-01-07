@@ -231,7 +231,7 @@ macro(format_compilation_info formatName decoding_supported encoding_supported)
 endmacro()
 
 
-if (LIBDE265_FOUND OR FFMPEG_DECODER_FOUND)
+if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND)
     set(SUPPORTS_HEIC_DECODING TRUE)
 endif()
 if (X265_FOUND OR KVAZAAR_FOUND)
