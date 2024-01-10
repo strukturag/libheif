@@ -415,19 +415,22 @@ struct heif_error rav1e_get_parameter_string(void* encoder_raw, const char* name
 {
   struct encoder_struct_rav1e* encoder = (struct encoder_struct_rav1e*) encoder_raw;
 
-  switch (encoder->chroma) {
-    case heif_chroma_420:
-      save_strcpy(value, value_size, "420");
-      break;
-    case heif_chroma_422:
-      save_strcpy(value, value_size, "422");
-      break;
-    case heif_chroma_444:
-      save_strcpy(value, value_size, "444");
-      break;
-    default:
-      assert(false);
-      return heif_error_invalid_parameter_value;
+  if (strcmp(name, kParam_chroma) == 0) {
+    switch (encoder->chroma) {
+      case heif_chroma_420:
+        save_strcpy(value, value_size, "420");
+        break;
+      case heif_chroma_422:
+        save_strcpy(value, value_size, "422");
+        break;
+      case heif_chroma_444:
+        save_strcpy(value, value_size, "444");
+        break;
+      default:
+        assert(false);
+        return heif_error_invalid_parameter_value;
+    }
+    return heif_error_ok;
   }
 
   return heif_error_unsupported_parameter;
