@@ -660,6 +660,7 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
         assert(false);
         return heif_error_invalid_parameter_value;
     }
+    return heif_error_ok;
   }
   else if (strcmp(name, kParam_tune) == 0) {
     switch (encoder->tune) {
@@ -673,6 +674,7 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
         assert(false);
         return heif_error_invalid_parameter_value;
     }
+    return heif_error_ok;
   }
 
   return heif_error_unsupported_parameter;
