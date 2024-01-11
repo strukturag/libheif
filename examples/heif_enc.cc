@@ -712,6 +712,7 @@ int main(int argc, char** argv)
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
+    heif_encoder_release(encoder);
     return 0;
   }
 
@@ -889,6 +890,7 @@ int main(int argc, char** argv)
       if (heif_image_get_primary_width(image.get()) == 1 ||
           heif_image_get_primary_height(image.get()) == 1) {
         std::cerr << "Image only has a size of 1 pixel width or height. Cannot crop to even size.\n";
+        heif_encoder_release(encoder);
         return 1;
       }
 
@@ -901,6 +903,7 @@ int main(int argc, char** argv)
       if (error.code != 0) {
         heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
@@ -920,6 +923,7 @@ int main(int argc, char** argv)
     if (error.code != 0) {
       heif_encoding_options_free(options);
       heif_nclx_color_profile_free(nclx);
+      heif_encoder_release(encoder);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
@@ -933,6 +937,8 @@ int main(int argc, char** argv)
                                              input_image.exif.data(), (int) input_image.exif.size());
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not write EXIF metadata: " << error.message << "\n";
         return 1;
       }
@@ -946,6 +952,7 @@ int main(int argc, char** argv)
       if (error.code != 0) {
         heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
         return 1;
       }
@@ -968,6 +975,7 @@ int main(int argc, char** argv)
       if (error.code) {
         heif_encoding_options_free(options);
         heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
