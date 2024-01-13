@@ -2780,7 +2780,7 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
     if ((data[0] >> 1) == NAL_SPS) {
       Box_vvcC::configuration config;
 
-      parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
+      //parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
       m_heif_file->set_vvcC_configuration(image_id, config);
     }
