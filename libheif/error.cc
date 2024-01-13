@@ -102,6 +102,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No 'hdlr' box";
     case heif_suberror_No_hvcC_box:
       return "No 'hvcC' box";
+    case heif_suberror_No_vvcC_box:
+      return "No 'vvcC' box";
     case heif_suberror_No_av1C_box:
       return "No 'av1C' box";
     case heif_suberror_No_pitm_box:
