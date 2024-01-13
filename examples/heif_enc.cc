@@ -381,8 +381,8 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_VVC, heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, 
-                                  heif_compression_HTJ2K
+  for (auto compression_format : {heif_compression_VVC, heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, 
+                                  heif_compression_JPEG2000
 #if WITH_UNCOMPRESSED_CODEC
 , heif_compression_uncompressed
 #endif
