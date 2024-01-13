@@ -24,6 +24,7 @@
 #include "avif.h"
 #include "box.h"
 #include "hevc.h"
+#include "vvc.h"
 #include "nclx.h"
 
 #include <map>
@@ -142,6 +143,14 @@ public:
 
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
+
+  void add_vvcC_property(heif_item_id id);
+
+  Error append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+
+  Error append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
+
+  Error set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config);
 
   void add_hvcC_property(heif_item_id id);
 
