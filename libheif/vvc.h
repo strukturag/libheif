@@ -98,7 +98,7 @@ private:
     };
 
   configuration m_configuration;
-    uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
+    //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
 
     std::vector<NalArray> m_nal_array;
   std::vector<uint8_t> m_config_NALs;
