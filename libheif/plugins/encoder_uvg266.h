@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_ENCODER_UVG266_H
 #define LIBHEIF_ENCODER_UVG266_H
 
-#include "../common_utils.h"
+#include "libheif/common_utils.h"
 
 /* TODO: check whether this is also the case with uvg266.
  *
