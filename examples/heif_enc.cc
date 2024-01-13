@@ -393,7 +393,7 @@ static void show_list_of_all_encoders()
         std::cout << "AVIF";
         break;
       case heif_compression_VVC:
-        std::cout << "VIC";
+        std::cout << "VVIC";
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
@@ -444,7 +444,7 @@ heif_compression_format guess_compression_format_from_filename(const std::string
   if (ends_with(filename_lowercase, ".avif")) {
     return heif_compression_AV1;
   }
-  else if (ends_with(filename_lowercase, ".vic")) {
+  else if (ends_with(filename_lowercase, ".vvic")) {
     return heif_compression_VVC;
   }
   else if (ends_with(filename_lowercase, ".heic")) {
@@ -463,7 +463,7 @@ std::string suffix_for_compression_format(heif_compression_format format)
 {
   switch (format) {
     case heif_compression_AV1: return "avif";
-    case heif_compression_VVC: return "vic";
+    case heif_compression_VVC: return "vvic";
     case heif_compression_HEVC: return "heic";
     case heif_compression_JPEG2000: return "hej2";
     default: return "data";
