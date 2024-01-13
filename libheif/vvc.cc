@@ -19,6 +19,7 @@
  */
 
 #include "vvc.h"
+#include <cstring>
 #include <string>
 
 Error Box_vvcC::parse(BitstreamRange& range)
