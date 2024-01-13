@@ -50,6 +50,40 @@ Error Box_vvcC::parse(BitstreamRange& range)
 
   c.numOfArrays = range.read8();
 
+  int nArrays = range.read8();
+
+  for (int i = 0; i < nArrays && !range.error(); i++) {
+    byte = range.read8();
+
+    NalArray array;
+
+    array.m_array_completeness = (byte >> 6) & 1;
+    array.m_NAL_unit_type = (byte & 0x3F);
+
+    int nUnits = range.read16();
+    for (int u = 0; u < nUnits && !range.error(); u++) {
+
+      std::vector<uint8_t> nal_unit;
+      int size = range.read16();
+      if (!size) {
+        // Ignore empty NAL units.
+        continue;
+      }
+
+      if (range.prepare_read(size)) {
+        nal_unit.resize(size);
+        bool success = range.get_istream()->read((char*) nal_unit.data(), size);
+        if (!success) {
+          return Error{heif_error_Invalid_input, heif_suberror_End_of_data, "error while reading hvcC box"};
+        }
+      }
+
+      array.m_nal_units.push_back(std::move(nal_unit));
+    }
+
+    m_nal_array.push_back(std::move(array));
+  }
+
 #if 0
   const int64_t configOBUs_bytes = range.get_remaining_bytes();
   m_config_OBUs.resize(configOBUs_bytes);
@@ -60,6 +94,32 @@ Error Box_vvcC::parse(BitstreamRange& range)
 #endif
 
   return range.get_error();
+}
+
+
+void Box_vvcC::append_nal_data(const std::vector<uint8_t>& nal)
+{
+  NalArray array;
+  array.m_array_completeness = 0;
+  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
+  array.m_nal_units.push_back(nal);
+
+  m_nal_array.push_back(array);
+}
+
+
+void Box_vvcC::append_nal_data(const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> nal;
+  nal.resize(size);
+  memcpy(nal.data(), data, size);
+
+  NalArray array;
+  array.m_array_completeness = 0;
+  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
+  array.m_nal_units.push_back(std::move(nal));
+
+  m_nal_array.push_back(array);
 }
 
 
