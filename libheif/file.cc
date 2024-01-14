@@ -594,12 +594,12 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
-    if (siz.components.empty()) {
+    JPEG2000MainHeader header;
+    Error err = header.parseHeader(*this, imageID);
+    if (err) {
       return -1;
     }
-
-    return siz.components[0].precision;
+    return header.get_precision(0);
   }
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -657,13 +657,12 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
-    if (siz.components.size() <= 1) {
+    JPEG2000MainHeader header;
+    Error err = header.parseHeader(*this, imageID);
+    if (err) {
       return -1;
     }
-
-    // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
-    return siz.components[1].precision;
+    return header.get_precision(1);
   }
 
   return -1;

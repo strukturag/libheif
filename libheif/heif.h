@@ -229,6 +229,9 @@ enum heif_suberror_code
   // Invalid specification of region item
   heif_suberror_Invalid_region_data = 136,
 
+  // Invalid JPEG 2000 codestream - usually a missing marker
+  heif_suberror_Invalid_J2K_codestream = 140,
+
 
   // --- Memory_allocation_error ---
 

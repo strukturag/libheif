@@ -308,6 +308,8 @@ const (
 
 	SuberrorUnknownNCLXMatrixCoefficients = C.heif_suberror_Unknown_NCLX_matrix_coefficients
 
+	SuberrorInvalidJPEG2000Codestream = C.heif_suberror_Invalid_J2K_codestream
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.
