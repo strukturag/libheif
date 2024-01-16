@@ -95,6 +95,7 @@ const int OPTION_PITM_DESCRIPTION = 1005;
 const int OPTION_USE_JPEG_COMPRESSION = 1006;
 const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
 const int OPTION_VERBOSE = 1008;
+const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
 
 
 static struct option long_options[] = {
@@ -115,6 +116,7 @@ static struct option long_options[] = {
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
+    {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
@@ -162,6 +164,7 @@ void show_help(const char* argv0)
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
+            << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
@@ -359,6 +362,9 @@ static const char* get_compression_format_name(heif_compression_format format)
     case heif_compression_JPEG2000:
       return "JPEG 2000";
       break;
+    case heif_compression_HTJ2K:
+      return "HT-J2K";
+      break;
     case heif_compression_uncompressed:
       return "Uncompressed";
       break;
@@ -370,7 +376,7 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000
+  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
 #if WITH_UNCOMPRESSED_CODEC
 , heif_compression_uncompressed
 #endif
@@ -388,6 +394,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_JPEG2000:
         std::cout << "JPEG 2000";
+        break;
+      case heif_compression_HTJ2K:
+        std::cout << "HT-J2K";
         break;
       case heif_compression_uncompressed:
         std::cout << "Uncompressed";
@@ -477,6 +486,7 @@ int main(int argc, char** argv)
   bool force_enc_uncompressed = false;
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
+  bool force_enc_htj2k = false;
   bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
@@ -557,6 +567,9 @@ int main(int argc, char** argv)
         break;
       case OPTION_USE_JPEG2000_COMPRESSION:
         force_enc_jpeg2000 = true;
+        break;
+      case OPTION_USE_HTJ2K_COMPRESSION:
+        force_enc_htj2k = true;
         break;
       case OPTION_PLUGIN_DIRECTORY: {
         int nPlugins;
@@ -652,6 +665,9 @@ int main(int argc, char** argv)
   }
   else if (force_enc_jpeg2000) {
     compressionFormat = heif_compression_JPEG2000;
+  }
+  else if (force_enc_htj2k) {
+    compressionFormat = heif_compression_HTJ2K;
   }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);

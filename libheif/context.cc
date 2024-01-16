@@ -2272,7 +2272,8 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
                                   out_image);
     }
       break;
-    case heif_compression_JPEG2000: {
+    case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K: {
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
