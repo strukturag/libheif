@@ -191,3 +191,539 @@ TEST_CASE( "j2kL" )
     std::string dump_output = j2kL->dump(indent);
     REQUIRE(dump_output == "Box: j2kL -----\nsize: 0   (header size: 0)\nlayer_id: 1, discard_levels: 2, decode_layers: 3\n");
 }
+
+
+TEST_CASE( "codestream too short for SOC" )
+{
+    std::vector<uint8_t> data = {0xFF};
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+
+TEST_CASE( "codestream missing SOC" )
+{
+    std::vector<uint8_t> data = {0xFF, 0x4E};
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream too short for SIZ body" )
+{
+    std::vector<uint8_t> data = {0xFF, 0x4F, 0xFF, 0x51};
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream - COD + SIZ" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 1);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_monochrome);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+TEST_CASE( "codestream - COD + SIZ first plane subsampled" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x02, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 1);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 2);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_undefined);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+TEST_CASE( "codestream - COD + SIZ 4:4:4" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x06, 0x01, 0x01,
+    0x05, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[1].precision == 7);
+    REQUIRE(uut.get_SIZ().components[1].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[2].precision == 6);
+    REQUIRE(uut.get_SIZ().components[2].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_444);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.get_precision(1) == 7);
+    REQUIRE(uut.get_precision(2) == 6);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+TEST_CASE( "codestream - COD + SIZ 4:2:2" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x07, 0x02, 0x01,
+    0x07, 0x02, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[1].precision == 8);
+    REQUIRE(uut.get_SIZ().components[1].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[2].precision == 8);
+    REQUIRE(uut.get_SIZ().components[2].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_422);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.get_precision(1) == 8);
+    REQUIRE(uut.get_precision(2) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+TEST_CASE( "codestream - COD + SIZ 4:2:0" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x07, 0x02, 0x02,
+    0x07, 0x02, 0x02, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[1].precision == 8);
+    REQUIRE(uut.get_SIZ().components[1].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].precision == 8);
+    REQUIRE(uut.get_SIZ().components[2].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 2);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_420);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.get_precision(1) == 8);
+    REQUIRE(uut.get_precision(2) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
+
+
+TEST_CASE( "codestream - COD + SIZ mismatched v subsampling" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x07, 0x02, 0x02,
+    0x07, 0x02, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_undefined);
+}
+
+TEST_CASE( "codestream - COD + SIZ mismatched h subsampling" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x07, 0x01, 0x02,
+    0x07, 0x02, 0x02, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 2);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 2);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_undefined);
+}
+
+TEST_CASE( "codestream - COD + SIZ unsupported subsampling" )
+{
+    // This data is a subset of the example in ISO/IEC 15444-1:2019 Section J.10.1 "Main header"
+    // with modifications
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x2F, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x03, 0x07, 0x01, 0x01, 0x07, 0x04, 0x01,
+    0x07, 0x04, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().components.size() == 3);
+    REQUIRE(uut.get_SIZ().components[1].h_separation == 4);
+    REQUIRE(uut.get_SIZ().components[1].v_separation == 1);
+    REQUIRE(uut.get_SIZ().components[2].h_separation == 4);
+    REQUIRE(uut.get_SIZ().components[2].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_undefined);
+}
+
+
+TEST_CASE( "codestream wrong marker SIZ" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0xEF, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Lsiz too small" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x28, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Lsiz too large" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0xC0, 0x27, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Csiz too small" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Csiz too large" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x40, 0x01, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+
+TEST_CASE( "codestream bad Csiz" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x04, 0x07, 0x01, 0x01, 0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+
+TEST_CASE( "codestream missing segments" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream - COD + SIZ + CAP" )
+{
+    // This data is a modified version of subset of the example in ISO/IEC 15444-1:2019 Section
+    // J.10.1 "Main header"
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00,   0x00, 0x22,
+    0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 1);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_monochrome);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == true);
+}
+
+TEST_CASE( "codestream CAP short" )
+{
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00,   0x00
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Lcap short" )
+{
+std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00,   0x00, 0x22,
+    0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+TEST_CASE( "codestream Lcap long" )
+{
+std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x47, 0x00, 0x02, 0x00, 0x00,   0x00, 0x22,
+    0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Invalid_input);
+    REQUIRE(err.sub_error_code == heif_suberror_Invalid_J2K_codestream);
+}
+
+
+TEST_CASE( "codestream - COD + SIZ + CAP multiple" )
+{
+    // This data is a modified version of subset of the example in ISO/IEC 15444-1:2019 Section
+    // J.10.1 "Main header"
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x0A, 0x00, 0x12, 0x00, 0x00,   0xFF, 0xFF, 0x00, 0x22,
+    0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 1);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_monochrome);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == true);
+}
+
+
+TEST_CASE( "codestream - COD + SIZ + CAP other" )
+{
+    // This data is a modified version of subset of the example in ISO/IEC 15444-1:2019 Section
+    // J.10.1 "Main header"
+    // Note that the ccap2 value may not be valid
+    std::vector<uint8_t> data = {
+    0xFF, 0x4F, 0xFF, 0x51, 0x00, 0x29, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x01, 0x07, 0x01, 0x01, 
+    0xFF, 0x50, 0x00, 0x08, 0x00, 0x40, 0x00, 0x00,   0x00, 0x22,
+    0xFF, 0x5C, 0x00,
+    };
+    JPEG2000MainHeader uut;
+    uut.setHeaderData(data);
+    Error err = uut.doParse();
+    REQUIRE(err.error_code == heif_error_Ok);
+    REQUIRE(uut.get_SIZ().reference_grid_width == 1);
+    REQUIRE(uut.get_SIZ().reference_grid_height == 9);
+    REQUIRE(uut.get_SIZ().image_horizontal_offset == 0);
+    REQUIRE(uut.get_SIZ().image_vertical_offset == 0);
+    REQUIRE(uut.get_SIZ().tile_width == 1);
+    REQUIRE(uut.get_SIZ().tile_height == 9);
+    REQUIRE(uut.get_SIZ().tile_offset_x == 0);
+    REQUIRE(uut.get_SIZ().tile_offset_y == 0);
+    REQUIRE(uut.get_SIZ().components.size() == 1);
+    REQUIRE(uut.get_SIZ().components[0].precision == 8);
+    REQUIRE(uut.get_SIZ().components[0].is_signed == false);
+    REQUIRE(uut.get_SIZ().components[0].h_separation == 1);
+    REQUIRE(uut.get_SIZ().components[0].v_separation == 1);
+    REQUIRE(uut.get_chroma_format() == heif_chroma_monochrome);
+    REQUIRE(uut.get_precision(0) == 8);
+    REQUIRE(uut.hasHighThroughputExtension() == false);
+}
