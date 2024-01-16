@@ -40,6 +40,7 @@ struct encoder_struct_opj
 {
   int quality = 70;
   heif_chroma chroma = heif_chroma_undefined;
+  opj_cparameters_t parameters;
 
   // --- output
 
@@ -124,6 +125,7 @@ struct heif_error opj_new_encoder(void** encoder_out)
   *encoder_out = encoder;
 
   opj_set_default_parameters(encoder);
+  opj_set_default_encoder_parameters(&(encoder->parameters));
 
   return heif_error_ok;
 }
@@ -156,13 +158,17 @@ struct heif_error opj_get_parameter_quality(void* encoder_raw, int* quality)
   return heif_error_ok;
 }
 
-struct heif_error opj_set_parameter_lossless(void* encoder, int lossless)
+struct heif_error opj_set_parameter_lossless(void* encoder_raw, int lossless)
 {
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  encoder->parameters.irreversible = lossless ? 0 : 1;
   return heif_error_ok;
 }
 
-struct heif_error opj_get_parameter_lossless(void* encoder, int* lossless)
+struct heif_error opj_get_parameter_lossless(void* encoder_raw, int* lossless)
 {
+  auto* encoder = (struct encoder_struct_opj*) encoder_raw;
+  *lossless = (encoder->parameters.irreversible == 0);
   return heif_error_ok;
 }
 
@@ -358,12 +364,10 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
 {
   heif_error error;
   OPJ_BOOL success;
-  opj_cparameters_t parameters;
-  opj_set_default_encoder_parameters(&parameters);
 
-  parameters.cp_disto_alloc = 1;
-  parameters.tcp_numlayers = 1;
-  parameters.tcp_rates[0] = (float)(1 + (100 - encoder->quality)/2);
+  encoder->parameters.cp_disto_alloc = 1;
+  encoder->parameters.tcp_numlayers = 1;
+  encoder->parameters.tcp_rates[0] = (float)(1 + (100 - encoder->quality)/2);
 
 #if 0
   //Insert a human readable comment into the codestream
@@ -382,7 +386,7 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
   //OPJ_CODEC_JP2 - Generate the entire jp2 file (which contains a codestream)
   OPJ_CODEC_FORMAT codec_format = OPJ_CODEC_J2K;
   opj_codec_t* codec = opj_create_compress(codec_format);
-  success = opj_setup_encoder(codec, &parameters, image);
+  success = opj_setup_encoder(codec, &(encoder->parameters), image);
   if (!success) {
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to setup OpenJPEG encoder"};
     return error;

@@ -36,6 +36,12 @@ else()
     message(INFO "Disabling HT-JPEG 2000 encoder tests because no HT-JPEG 2000 codec is enabled")
 endif()
 
+if (WITH_OpenJPEG_ENCODER)
+    add_libheif_test(encode_jpeg2000)
+else()
+    message(INFO "Disabling JPEG 2000 encoder tests because no JPEG 2000 codec is enabled")
+endif()
+
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
     add_libheif_test(uncompressed_decode_mono)

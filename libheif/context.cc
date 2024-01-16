@@ -1205,8 +1205,12 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
   }
   else if (auto j2kH = m_heif_context->m_heif_file->get_property<Box_j2kH>(id)) {
-    JPEG2000_SIZ_segment siz = jpeg2000_get_SIZ_segment(*m_heif_context->m_heif_file, id);
-    *out_chroma = siz.get_chroma_format();
+    JPEG2000MainHeader jpeg2000Header;
+    err = jpeg2000Header.parseHeader(*m_heif_context->m_heif_file, id);
+    if (err) {
+      return err;
+    }
+    *out_chroma = jpeg2000Header.get_chroma_format();
   }
 
   return err;
