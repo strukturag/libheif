@@ -442,11 +442,18 @@ public:
 
     Error parseHeader(const HeifFile& file, const heif_item_id imageID);
 
+    // Use parseHeader instead - these are mainly for unit testing
+    Error doParse();
+    void setHeaderData(std::vector<uint8_t> data)
+    {
+        headerData = data;
+    }
+
     heif_chroma get_chroma_format() const;
 
     int get_precision(uint32_t index) const
     {
-        if (siz.components.size() <= 1) {
+        if (index >= siz.components.size()) {
             return -1;
         }
         // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
@@ -457,11 +464,26 @@ public:
         return cap.hasHighThroughputExtension();
     }
 
+    uint32_t getXSize() const
+    {
+        return siz.reference_grid_width;
+    }
+
+    uint32_t getYSize() const
+    {
+        return siz.reference_grid_height;
+    }
+
+    const JPEG2000_SIZ_segment get_SIZ()
+    {
+        return siz;
+    }
+
 private:
     Error parse_SOC_segment();
     Error parse_SIZ_segment();
     Error parse_CAP_segment_body();
-    Error parse_Ccap15();
+    void parse_Ccap15();
 
     static const int MARKER_LEN = 2;
 

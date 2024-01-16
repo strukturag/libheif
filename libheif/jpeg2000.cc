@@ -317,8 +317,13 @@ Error JPEG2000MainHeader::parseHeader(const HeifFile& file, const heif_item_id i
   if (err) {
     return err;
   }
+  return doParse();
+}
+
+Error JPEG2000MainHeader::doParse()
+{
   cursor = 0;
-  err = parse_SOC_segment();
+  Error err = parse_SOC_segment();
   if (err) {
     return err;
   }
@@ -341,9 +346,10 @@ Error JPEG2000MainHeader::parseHeader(const HeifFile& file, const heif_item_id i
 
 Error JPEG2000MainHeader::parse_SOC_segment()
 {
-  if (cursor > headerData.size() - MARKER_LEN) {
+  const size_t REQUIRED_BYTES = MARKER_LEN;
+  if ((headerData.size() < REQUIRED_BYTES) || (cursor > (headerData.size() - REQUIRED_BYTES))) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+                 heif_suberror_Invalid_J2K_codestream);
   }
   uint16_t marker = read16();
   if (marker == JPEG2000_SOC_MARKER) {
@@ -356,9 +362,10 @@ Error JPEG2000MainHeader::parse_SOC_segment()
 
 Error JPEG2000MainHeader::parse_SIZ_segment()
 {
-  if (cursor > headerData.size() - MARKER_LEN) {
+  size_t REQUIRED_BYTES = MARKER_LEN + 38 + 3 * 1;
+  if ((headerData.size() < REQUIRED_BYTES) || (cursor > (headerData.size() - REQUIRED_BYTES))) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+                 heif_suberror_Invalid_J2K_codestream);
   }
 
   uint16_t marker = read16();
@@ -366,10 +373,6 @@ Error JPEG2000MainHeader::parse_SIZ_segment()
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_J2K_codestream,
                  std::string("Missing required SIZ Marker"));
-  }
-  if (cursor > headerData.size() - (38 + 3 * 1)) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
   }
   uint16_t lsiz = read16();
   if ((lsiz < 41) || (lsiz > 49190)) {
@@ -394,7 +397,7 @@ Error JPEG2000MainHeader::parse_SIZ_segment()
   }
   if (cursor > headerData.size() - (3 * csiz)) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+                 heif_suberror_Invalid_J2K_codestream);
   }
   // TODO: consider checking for Lsiz consistent with Csiz
   for (uint16_t c = 0; c < csiz; c++) {
@@ -413,24 +416,20 @@ Error JPEG2000MainHeader::parse_CAP_segment_body()
 {
   if (cursor > headerData.size() - 8) {
     return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+                 heif_suberror_Invalid_J2K_codestream);
   }
-  uint16_t lsiz = read16();
-  if ((lsiz < 8) || (lsiz > 70)) {
+  uint16_t lcap = read16();
+  if ((lcap < 8) || (lcap > 70)) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_J2K_codestream,
-                 std::string("Out of range Lsiz value"));
+                 std::string("Out of range Lcap value"));
   }
   uint32_t pcap = read32();
-  Error err;
   for (uint8_t i = 2; i <= 32; i++) {
     if (pcap & (1 << (32 - i))) {
       switch (i) {
         case JPEG2000_Extension_Capability_HT::IDENT:
-          err = parse_Ccap15();
-          if (err) {
-            return err;
-          }
+          parse_Ccap15();
           break;
         default:
           std::cout << "unhandled extended capabilities value: " << (int)i << std::endl;
@@ -441,28 +440,27 @@ Error JPEG2000MainHeader::parse_CAP_segment_body()
   return Error::Ok;
 }
 
-Error JPEG2000MainHeader::parse_Ccap15()
+void JPEG2000MainHeader::parse_Ccap15()
 {
   uint16_t val = read16();
   JPEG2000_Extension_Capability_HT ccap;
   // We could parse more here, but we don't need that yet.
   ccap.setValue(val);
   cap.push_back(ccap);
-  return Error::Ok;
 }
 
 heif_chroma JPEG2000MainHeader::get_chroma_format() const
 {
+  // Y-plane must be full resolution
+  if (siz.components[0].h_separation != 1 || siz.components[0].v_separation != 1) {
+    return heif_chroma_undefined;
+  }
+
   if (siz.components.size() == 1) {
     return heif_chroma_monochrome;
   }
   else if (siz.components.size() == 3) {
     // TODO: we should map channels through `cdef` ?
-
-    // Y-plane must be full resolution
-    if (siz.components[0].h_separation != 1 || siz.components[0].v_separation != 1) {
-      return heif_chroma_undefined;
-    }
 
     // both chroma components must have the same sampling
     if (siz.components[1].h_separation != siz.components[2].h_separation ||
