@@ -389,7 +389,7 @@ Error JPEG2000MainHeader::parse_SIZ_segment()
   siz.tile_height = read32();
   siz.tile_offset_x = read32();
   siz.tile_offset_y = read32();
-  u_int16_t csiz = read16();
+  uint16_t csiz = read16();
   if ((csiz < 1) || (csiz > 16384)) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_J2K_codestream,
