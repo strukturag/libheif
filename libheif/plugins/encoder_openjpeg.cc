@@ -388,6 +388,7 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
   opj_codec_t* codec = opj_create_compress(codec_format);
   success = opj_setup_encoder(codec, &(encoder->parameters), image);
   if (!success) {
+    opj_destroy_codec(codec);
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to setup OpenJPEG encoder"};
     return error;
   }
@@ -397,6 +398,7 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
   size_t bufferSize = 64 * 1024; // 64k
   opj_stream_t* stream = opj_stream_create(bufferSize, false /* read only mode */);
   if (stream == NULL) {
+    opj_destroy_codec(codec);
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed to create opj_stream_t"};
     return error;
   }
@@ -415,21 +417,30 @@ static heif_error generate_codestream(opj_image_t* image, struct encoder_struct_
 
   success = opj_start_compress(codec, image, stream);
   if (!success) {
+    opj_stream_destroy(stream);
+    opj_destroy_codec(codec);
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_start_compress()"};
     return error;
   }
 
   success = opj_encode(codec, stream);
   if (!success) {
+    opj_stream_destroy(stream);
+    opj_destroy_codec(codec);
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_encode()"};
     return error;
   }
 
   success = opj_end_compress(codec, stream);
   if (!success) {
+    opj_stream_destroy(stream);
+    opj_destroy_codec(codec);
     error = {heif_error_Encoding_error, heif_suberror_Unspecified, "Failed opj_end_compress()"};
     return error;
   }
+
+  opj_stream_destroy(stream);
+  opj_destroy_codec(codec);
 
   return heif_error_ok;
 }
@@ -530,6 +541,8 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
 
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable
   err = generate_codestream(opj_image, encoder);
+
+  opj_image_destroy(opj_image);
 
   return err;
 }
