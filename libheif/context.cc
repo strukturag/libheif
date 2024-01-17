@@ -878,8 +878,9 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
-    // skip region annotations, handled next
-    if (item_type == "rgan") {
+    // 'rgan': skip region annotations, handled next
+    // 'iden': iden images are no metadata
+    if (item_type == "rgan" || item_type == "iden") {
       continue;
     }
     std::string content_type = m_heif_file->get_content_type(id);
@@ -896,10 +897,15 @@ Error HeifContext::interpret_heif_file()
 
     Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
     if (err) {
-      return err;
+      if (item_type == "Exif" || item_type == "mime") {
+        // these item types should have data
+        return err;
+      }
+      else {
+        // anything else is probably something that we don't understand yet
+        continue;
+      }
     }
-
-    //std::cerr.write((const char*)data.data(), data.size());
 
 
     // --- assign metadata to the image
