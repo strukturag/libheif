@@ -45,7 +45,7 @@ static heif_encoding_options * set_encoding_options()
 static void do_encode(heif_image* input_image, const char* filename, bool lossless)
 {
   REQUIRE(input_image != nullptr);
-
+  heif_init(nullptr);
   heif_context *ctx = heif_context_alloc();
   heif_encoder *encoder;
   struct heif_error err;
@@ -70,6 +70,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool lossle
   heif_image_release(input_image);
 
   heif_context_free(ctx);
+  heif_deinit();
 }
 
 TEST_CASE("Encode JPEG2000 lossy")
