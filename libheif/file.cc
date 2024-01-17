@@ -398,7 +398,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box) const
+                                    const std::shared_ptr<Box_iref>& iref_box) const
 {
   std::unordered_set<heif_item_id> parent_items;
   return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
@@ -406,7 +406,7 @@ Error HeifFile::check_for_ref_cycle(heif_item_id ID,
 
 
 Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box,
+                                    const std::shared_ptr<Box_iref>& iref_box,
                                     std::unordered_set<heif_item_id>& parent_items) const {
   if (parent_items.find(ID) != parent_items.end()) {
     return Error(heif_error_Invalid_input,
