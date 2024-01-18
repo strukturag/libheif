@@ -1,0 +1,17 @@
+MIME type: image/heif-sequence
+main brand: msf1
+compatible brands: mif1, msf1, hevc, iso8, miaf, MiHB
+
+image: 1280x720 (id=1003), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:

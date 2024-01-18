@@ -1,0 +1,239 @@
+Box: ftyp -----
+size: 24   (header size: 8)
+major brand: mif1
+minor version: 0
+compatible brands: heic,mif1
+
+Box: meta -----
+size: 791   (header size: 12)
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| pre_defined: 0
+| handler_type: pict
+| name: 
+| 
+| Box: pitm -----
+| size: 14   (header size: 12)
+| item_ID: 1002
+| 
+| Box: iloc -----
+| size: 116   (header size: 12)
+| item ID: 1002
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 815
+|   extents: 16,124054 
+| item ID: 1004
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 815
+|   extents: 124070,136091 
+| item ID: 1006
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 815
+|   extents: 260161,137190 
+| item ID: 1008
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 815
+|   extents: 397351,137792 
+| item ID: 1013
+|   construction method: 1
+|   data_reference_index: 0
+|   base_offset: 0
+|   extents: 0,8 
+| 
+| Box: iinf -----
+| size: 256   (header size: 12)
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1002
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1004
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1006
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1008
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 21   (header size: 12)
+| | item_ID: 1009
+| | item_protection_index: 0
+| | item_type: iden
+| | item_name: 
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 21   (header size: 12)
+| | item_ID: 1010
+| | item_protection_index: 0
+| | item_type: iden
+| | item_name: 
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 21   (header size: 12)
+| | item_ID: 1011
+| | item_protection_index: 0
+| | item_type: iden
+| | item_name: 
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 21   (header size: 12)
+| | item_ID: 1012
+| | item_protection_index: 0
+| | item_type: iden
+| | item_name: 
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 34   (header size: 12)
+| | item_ID: 1013
+| | item_protection_index: 0
+| | item_type: grid
+| | item_name: Derived image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| 
+| Box: iref -----
+| size: 88   (header size: 12)
+| reference with type 'dimg' from ID: 1009 to IDs: 1002 
+| reference with type 'dimg' from ID: 1010 to IDs: 1004 
+| reference with type 'dimg' from ID: 1011 to IDs: 1006 
+| reference with type 'dimg' from ID: 1012 to IDs: 1008 
+| reference with type 'dimg' from ID: 1013 to IDs: 1009 1010 1011 1012 
+| 
+| Box: idat -----
+| size: 16   (header size: 8)
+| number of data bytes: 8
+| 
+| Box: iprp -----
+| size: 256   (header size: 8)
+| | Box: ipco -----
+| | size: 188   (header size: 8)
+| | | Box: hvcC -----
+| | | size: 120   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 1
+| | | general_profile_compatibility_flags: 0110.0000 0000.0000 0000.0000 0000.0000 
+| | | general_constraint_indicator_flags: 10010000 00000000 00000000 00000000 00000000 00000000 
+| | | general_level_idc: 93
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 4:2:0
+| | | bit_depth_luma: 8
+| | | bit_depth_chroma: 8
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 01 ff ff 01 60 00 00 03 00 90 00 00 03 00 00 03 00 5d 99 8a 02 40 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 01 60 00 00 03 00 90 00 00 03 00 00 03 00 5d a0 02 80 80 2d 16 59 98 a9 24 21 1a e6 80 80 00 00 03 00 80 00 00 0c 84 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c1 76 b6 62 40 
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 1280
+| | | image height: 720
+| | | 
+| | | Box: clap -----
+| | | size: 40   (header size: 8)
+| | | clean_aperture: 640/1 x 360/1
+| | | offset: 0/1 ; 0/1
+| | 
+| | Box: ipma -----
+| | size: 60   (header size: 12)
+| | associations for item ID: 1002
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 1004
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 1006
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 1008
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 1009
+| | | property index: 2 (essential: false)
+| | | property index: 3 (essential: true)
+| | associations for item ID: 1010
+| | | property index: 2 (essential: false)
+| | | property index: 3 (essential: true)
+| | associations for item ID: 1011
+| | | property index: 2 (essential: false)
+| | | property index: 3 (essential: true)
+| | associations for item ID: 1012
+| | | property index: 2 (essential: false)
+| | | property index: 3 (essential: true)
+| | associations for item ID: 1013
+| | | property index: 2 (essential: false)
+
+Box: mdat -----
+size: 535143   (header size: 16)
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1

@@ -1,0 +1,3 @@
+MIME type: image/heif-sequence
+main brand: msf1
+compatible brands: msf1, hevc, iso8

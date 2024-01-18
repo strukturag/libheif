@@ -1,0 +1,108 @@
+Box: ftyp -----
+size: 28   (header size: 8)
+major brand: heis
+minor version: 0
+compatible brands: mif1,heis,avci
+
+Box: meta -----
+size: 607   (header size: 12)
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| pre_defined: 0
+| handler_type: pict
+| name: 
+| 
+| Box: pitm -----
+| size: 14   (header size: 12)
+| item_ID: 20003
+| 
+| Box: iloc -----
+| size: 52   (header size: 12)
+| item ID: 20003
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 643
+|   extents: 0,6829 
+| item ID: 20004
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 7480
+|   extents: 0,6636 
+| 
+| Box: iinf -----
+| size: 79   (header size: 12)
+| | Box: infe -----
+| | size: 30   (header size: 12)
+| | item_ID: 20003
+| | item_protection_index: 0
+| | item_type: avc1
+| | item_name: AVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 33   (header size: 12)
+| | item_ID: 20004
+| | item_protection_index: 0
+| | item_type: lhv1
+| | item_name: L-HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| 
+| Box: iref -----
+| size: 26   (header size: 12)
+| reference with type 'exbl' from ID: 20004 to IDs: 20003 
+| 
+| Box: iprp -----
+| size: 355   (header size: 8)
+| | Box: ipco -----
+| | size: 319   (header size: 8)
+| | | Box: avcC -----
+| | | size: 52   (header size: 8)
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 1024
+| | | image height: 512
+| | | 
+| | | Box: oinf -----
+| | | size: 78   (header size: 8)
+| | | 
+| | | Box: tols -----
+| | | size: 14   (header size: 8)
+| | | 
+| | | Box: lhvC -----
+| | | size: 147   (header size: 8)
+| | 
+| | Box: ipma -----
+| | size: 28   (header size: 12)
+| | associations for item ID: 20003
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 20004
+| | | property index: 3 (essential: true)
+| | | property index: 4 (essential: true)
+| | | property index: 5 (essential: true)
+| | | property index: 2 (essential: false)
+| 
+| Box: grpl -----
+| size: 36   (header size: 8)
+| group type: altr
+| | group id: 20005
+| | entity IDs: 20004 20003 
+
+Box: mdat -----
+size: 6837   (header size: 8)
+
+Box: mdat -----
+size: 6644   (header size: 8)
+
+Box: mdat -----
+size: 16   (header size: 8)
+MIME type: image/heic
+main brand: heis
+compatible brands: mif1, heis, avci

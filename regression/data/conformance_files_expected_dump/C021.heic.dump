@@ -1,0 +1,8 @@
+Box: ftyp -----
+size: 24   (header size: 8)
+major brand: mif1
+minor version: 0
+compatible brands: heic,mif1
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1

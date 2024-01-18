@@ -1,0 +1,17 @@
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1, miaf, MiHB
+
+image: 1280x720 (id=1002), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: yes 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
