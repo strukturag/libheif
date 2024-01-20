@@ -1,0 +1,17 @@
+MIME type: image/heic
+main brand: heis
+compatible brands: mif1, heic, heis
+
+image: 512x256 (id=20003), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:

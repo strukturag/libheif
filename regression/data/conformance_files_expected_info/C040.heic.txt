@@ -1,0 +1,73 @@
+MIME type: image/heif
+main brand: mif1
+compatible brands: mif1, heic
+
+image: 512x288 (id=1002)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x288 (id=1005)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x288 (id=1008)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x288 (id=1011)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 1024x576 (id=1014), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:

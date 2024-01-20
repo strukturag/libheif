@@ -469,6 +469,10 @@ endif()
 
 add_subdirectory (gnome)
 
+option(ENABLE_REGRESSION "Enable regression test framework (requires downloads)" OFF)
+if (ENABLE_REGRESSION)
+  add_subdirectory(regression)
+endif()
 
 # --- packaging (source code)
 

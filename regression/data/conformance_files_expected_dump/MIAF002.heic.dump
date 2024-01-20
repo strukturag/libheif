@@ -1,0 +1,161 @@
+Box: ftyp -----
+size: 32   (header size: 8)
+major brand: mif1
+minor version: 0
+compatible brands: heic,mif1,miaf,MiHA
+
+Box: meta -----
+size: 569   (header size: 12)
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| pre_defined: 0
+| handler_type: pict
+| name: 
+| 
+| Box: pitm -----
+| size: 14   (header size: 12)
+| item_ID: 1002
+| 
+| Box: iloc -----
+| size: 52   (header size: 12)
+| item ID: 1002
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 601
+|   extents: 16,7993 
+| item ID: 1005
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 601
+|   extents: 8009,227 
+| 
+| Box: iinf -----
+| size: 76   (header size: 12)
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1002
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1005
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| 
+| Box: iref -----
+| size: 26   (header size: 12)
+| reference with type 'thmb' from ID: 1005 to IDs: 1002 
+| 
+| Box: iprp -----
+| size: 356   (header size: 8)
+| | Box: ipco -----
+| | size: 320   (header size: 8)
+| | | Box: hvcC -----
+| | | size: 120   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 4
+| | | general_profile_compatibility_flags: 0000.1000 0000.0000 0000.0000 0000.0000 
+| | | general_constraint_indicator_flags: 10011101 10111000 00000000 00000000 00000000 00000000 
+| | | general_level_idc: 150
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 4:2:0
+| | | bit_depth_luma: 10
+| | | bit_depth_chroma: 10
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 01 ff ff 04 08 00 00 03 00 9d b8 00 00 03 00 00 96 99 8a 02 40 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 04 08 00 00 03 00 9d b8 00 00 03 00 00 96 a0 01 00 20 02 00 4d 96 66 2a 49 08 46 b9 a0 20 00 00 03 00 20 00 00 03 03 21 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c1 76 b6 62 40 
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 2048
+| | | image height: 2048
+| | | 
+| | | Box: hvcC -----
+| | | size: 120   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 3
+| | | general_profile_compatibility_flags: 0111.0000 0000.0000 0000.0000 0000.0000 
+| | | general_constraint_indicator_flags: 10010000 00000000 00000000 00000000 00000000 00000000 
+| | | general_level_idc: 60
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 4:2:0
+| | | bit_depth_luma: 8
+| | | bit_depth_chroma: 8
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 01 ff ff 03 70 00 00 03 00 90 00 00 03 00 00 03 00 3c 99 8a 02 40 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 03 70 00 00 03 00 90 00 00 03 00 00 03 00 3c a0 14 20 28 59 66 62 a4 90 84 6b 9a 02 00 00 03 00 02 00 00 03 00 32 10 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c1 76 b6 62 40 
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 160
+| | | image height: 160
+| | | 
+| | | Box: pixi -----
+| | | size: 16   (header size: 12)
+| | | bits_per_channel: 10,10,10
+| | | 
+| | | Box: pixi -----
+| | | size: 16   (header size: 12)
+| | | bits_per_channel: 8,8,8
+| | 
+| | Box: ipma -----
+| | size: 28   (header size: 12)
+| | associations for item ID: 1002
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | | property index: 5 (essential: false)
+| | associations for item ID: 1005
+| | | property index: 3 (essential: true)
+| | | property index: 4 (essential: false)
+| | | property index: 6 (essential: false)
+
+Box: mdat -----
+size: 8236   (header size: 16)
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1, miaf, MiHA
