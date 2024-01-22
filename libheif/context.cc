@@ -1403,6 +1403,12 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       image_type == "jpeg" ||
       (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg")) {
 
+    std::vector<uint8_t> data;
+    error = m_heif_file->get_compressed_image_data(ID, &data);
+    if (error) {
+      return error;
+    }
+  
     heif_compression_format compression = heif_compression_undefined;
     if (image_type == "hvc1") {
       compression = heif_compression_HEVC;
@@ -1418,7 +1424,14 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       compression = heif_compression_JPEG;
     }
     else if (image_type == "j2k1") {
-      compression = heif_compression_JPEG2000;
+      JPEG2000MainHeader j2k_header;
+      j2k_header.setHeaderData(data);
+      j2k_header.doParse();
+      if (j2k_header.hasHighThroughputExtension()) {
+        compression = heif_compression_HTJ2K;
+      } else {
+        compression = heif_compression_JPEG2000;
+      }
     }
 
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
@@ -1426,11 +1439,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
     }
 
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      return error;
-    }
+
 
     void* decoder;
     struct heif_error err = decoder_plugin->new_decoder(&decoder);
