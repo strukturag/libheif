@@ -62,7 +62,7 @@ static void openjpeg_deinit_plugin()
 
 static int openjpeg_does_support_format(enum heif_compression_format format)
 {
-  if (format == heif_compression_JPEG2000) {
+  if ((format == heif_compression_JPEG2000) || (format == heif_compression_HTJ2K)) {
     return OPENJPEG_PLUGIN_PRIORITY;
   }
   else {
