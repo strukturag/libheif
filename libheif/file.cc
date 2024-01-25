@@ -185,6 +185,7 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
       break;
 
     case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K:
       m_ftyp_box->set_major_brand(fourcc("j2ki"));
       m_ftyp_box->set_minor_version(0);
       m_ftyp_box->add_compatible_brand(fourcc("mif1"));
@@ -397,7 +398,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
 
 
 Error HeifFile::check_for_ref_cycle(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box) const
+                                    const std::shared_ptr<Box_iref>& iref_box) const
 {
   std::unordered_set<heif_item_id> parent_items;
   return check_for_ref_cycle_recursion(ID, iref_box, parent_items);
@@ -405,7 +406,7 @@ Error HeifFile::check_for_ref_cycle(heif_item_id ID,
 
 
 Error HeifFile::check_for_ref_cycle_recursion(heif_item_id ID,
-                                    std::shared_ptr<Box_iref>& iref_box,
+                                    const std::shared_ptr<Box_iref>& iref_box,
                                     std::unordered_set<heif_item_id>& parent_items) const {
   if (parent_items.find(ID) != parent_items.end()) {
     return Error(heif_error_Invalid_input,
@@ -594,12 +595,12 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
-    if (siz.components.empty()) {
+    JPEG2000MainHeader header;
+    Error err = header.parseHeader(*this, imageID);
+    if (err) {
       return -1;
     }
-
-    return siz.components[0].precision;
+    return header.get_precision(0);
   }
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -657,13 +658,12 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
   // JPEG 2000
 
   if (image_type == "j2k1") {
-    auto siz = jpeg2000_get_SIZ_segment(*this, imageID);
-    if (siz.components.size() <= 1) {
+    JPEG2000MainHeader header;
+    Error err = header.parseHeader(*this, imageID);
+    if (err) {
       return -1;
     }
-
-    // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
-    return siz.components[1].precision;
+    return header.get_precision(1);
   }
 
   return -1;
@@ -986,7 +986,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 }
 
 
-heif_property_id HeifFile::add_property(heif_item_id id, std::shared_ptr<Box> property, bool essential)
+heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
   int index = m_ipco_box->append_child_box(property);
 

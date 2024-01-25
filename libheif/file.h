@@ -170,7 +170,7 @@ public:
 
   void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0);
 
-  heif_property_id add_property(heif_item_id id, std::shared_ptr<Box> property, bool essential);
+  heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
 
   Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
 
@@ -232,10 +232,10 @@ private:
   Error parse_heif_file(BitstreamRange& bitstream);
 
   Error check_for_ref_cycle(heif_item_id ID,
-                            std::shared_ptr<Box_iref>& iref_box) const;
+                            const std::shared_ptr<Box_iref>& iref_box) const;
 
   Error check_for_ref_cycle_recursion(heif_item_id ID,
-                                      std::shared_ptr<Box_iref>& iref_box,
+                                      const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
 
   std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;

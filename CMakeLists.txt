@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.17.5)
+project(libheif LANGUAGES C CXX VERSION 1.17.6)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -142,6 +142,14 @@ plugin_option(AOM_DECODER "AOM AV1 decoder" ON OFF)
 plugin_option(AOM_ENCODER "AOM AV1 encoder" ON OFF)
 if (WITH_AOM_ENCODER OR WITH_AOM_DECODER)
     find_package(AOM)
+
+    # When decoding/encoding is disabled, overwrite the *_FOUND variables, because they are used to ultimately decide what to build.
+    if (NOT WITH_AOM_DECODER)
+        set(AOM_DECODER_FOUND FALSE)
+    endif()
+    if (NOT WITH_AOM_ENCODER)
+        set(AOM_ENCODER_FOUND FALSE)
+    endif()
 endif()
 
 # svt
@@ -181,6 +189,14 @@ if (WITH_FFMPEG_DECODER)
     find_package(FFMPEG COMPONENTS avcodec)
 endif ()
 
+# openjph
+
+plugin_option(OPENJPH_ENCODER "OpenJPH HT-J2K encoder" OFF ON)
+# plugin_option(OPENJPH_DECODER "OpenJPH HT-J2K decoder" OFF ON)
+if (WITH_OPENJPH_ENCODER OR WITH_OPENJPH_DECODER)
+    find_package(OPENJPH)
+endif()
+
 # uncompressed
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
@@ -188,7 +204,7 @@ option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed 
 
 # --- show codec compilation summary
 
-message("=== Summary of compiled codecs ===")
+message("\n=== Summary of compiled codecs ===")
 plugin_compilation_info(LIBDE265 LIBDE265 "libde265 HEVC decoder")
 plugin_compilation_info(FFMPEG_DECODER FFMPEG_avcodec "FFMPEG HEVC decoder (HW acc)")
 plugin_compilation_info(X265 X265 "x265 HEVC encoder")
@@ -202,7 +218,78 @@ plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
+# plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
+plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 
+# --- show summary which formats are supported
+
+macro(format_compilation_info formatName decoding_supported encoding_supported)
+    if (${decoding_supported})
+        set(decoding "YES")
+    else()
+        set(decoding "NO ")
+    endif()
+
+    if (${encoding_supported})
+        set(encoding "YES")
+    else()
+        set(encoding "NO ")
+    endif()
+
+    string(LENGTH "${formatName}" len)
+    math(EXPR fill "12 - ${len}")
+    string(SUBSTRING "                                        " 0 ${fill} filler)
+    message("${formatName}${filler}    ${decoding}        ${encoding}")
+    unset(msg)
+endmacro()
+
+
+if (LIBDE265_FOUND OR FFMPEG_avcodec_FOUND)
+    set(SUPPORTS_HEIC_DECODING TRUE)
+endif()
+if (X265_FOUND OR KVAZAAR_FOUND)
+    set(SUPPORTS_HEIC_ENCODING TRUE)
+endif()
+if (AOM_DECODER_FOUND OR DAV1D_FOUND)
+    set(SUPPORTS_AVIF_DECODING TRUE)
+endif()
+if (AOM_ENCODER_FOUND OR RAV1E_FOUND OR SvtEnc_FOUND)
+    set(SUPPORTS_AVIF_ENCODING TRUE)
+endif ()
+if (JPEG_FOUND AND WITH_JPEG_DECODER)
+    set(SUPPORTS_JPEG_DECODING TRUE)
+endif()
+if (JPEG_FOUND AND WITH_JPEG_ENCODER)
+    set(SUPPORTS_JPEG_ENCODING TRUE)
+endif()
+if (OpenJPEG_FOUND AND WITH_OpenJPEG_DECODER)
+    set(SUPPORTS_J2K_DECODING TRUE)
+    set(SUPPORTS_J2K_HT_DECODING TRUE)
+endif()
+if (OpenJPEG_FOUND AND WITH_OpenJPEG_ENCODER)
+    set(SUPPORTS_J2K_ENCODING TRUE)
+endif()
+if (OPENJPH_FOUND AND WITH_OPENJPH_ENCODER)
+    set(SUPPORTS_J2K_HT_ENCODING TRUE)
+endif()
+if (OPENJPH_FOUND AND WITH_OPENJPH_DECODER)
+    set(SUPPORTS_J2K_HT_ENCODING TRUE)
+endif()
+
+if (WITH_UNCOMPRESSED_CODEC)
+    set(SUPPORTS_UNCOMPRESSED_DECODING TRUE)
+    set(SUPPORTS_UNCOMPRESSED_ENCODING TRUE)
+endif()
+
+message("\n=== Supported formats ===")
+message("format        decoding   encoding")
+format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
+format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
+format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
+format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
+format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)
+format_compilation_info("Uncompressed" SUPPORTS_UNCOMPRESSED_DECODING SUPPORTS_UNCOMPRESSED_ENCODING)
+message("")
 
 # --- Libsharpyuv color space transforms
 
@@ -263,6 +350,10 @@ endif()
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
+if (WITH_DEFLATE_HEADER_COMPRESSION)
+    list(APPEND REQUIRES_PRIVATE "zlib")
+endif()
+
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
 
 include(CheckCXXSymbolExists)
@@ -323,6 +414,24 @@ else (DOXYGEN_FOUND)
 endif (DOXYGEN_FOUND)
 
 # --- Testing
+
+option(ENABLE_COVERAGE "" OFF)
+if(ENABLE_COVERAGE)
+  # set compiler flags
+  set(CMAKE_CXX_FLAGS "-O0 -coverage")
+
+  # find required tools
+  find_program(LCOV lcov REQUIRED)
+  find_program(GENHTML genhtml REQUIRED)
+
+  # add coverage target
+  add_custom_target(coverage
+    # gather data
+    COMMAND ${LCOV} --directory . --capture --output-file coverage.info
+    # generate report
+    COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
 
 option(BUILD_TESTING "" ON)
 include(CTest)

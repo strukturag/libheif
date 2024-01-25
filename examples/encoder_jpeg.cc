@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include <vector>
+#include <limits>
 
 #include "encoder_jpeg.h"
 #include "libheif/exif.h"
@@ -176,13 +177,30 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
       static const uint8_t kExifMarker = JPEG_APP0 + 1;
 
       uint32_t skip = (exifdata[0]<<24) | (exifdata[1]<<16) | (exifdata[2]<<8) | exifdata[3];
+      if (skip > (exifsize - 4)) {
+        fprintf(stderr, "Invalid EXIF data (offset too large)\n");
+        free(exifdata);
+        jpeg_destroy_compress(&cinfo);
+        fclose(fp);
+        return false;
+      }
       skip += 4;
 
       uint8_t* ptr = exifdata + skip;
       size_t size = exifsize - skip;
 
+      if (size > std::numeric_limits<uint32_t>::max()) {
+        fprintf(stderr, "EXIF larger than 4GB is not supported");
+        free(exifdata);
+        jpeg_destroy_compress(&cinfo);
+        fclose(fp);
+        return false;
+      }
+
+      auto size32 = static_cast<uint32_t>(size);
+
       // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
-      modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
+      modify_exif_orientation_tag_if_it_exists(ptr, size32, 1);
 
       // We have to limit the size for the memcpy, otherwise GCC warns that we exceed the maximum size.
       if (size>0x1000000) {
@@ -246,6 +264,8 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
 
   if (heif_image_get_bits_per_pixel(image, heif_channel_Y) != 8) {
     fprintf(stderr, "JPEG writer cannot handle image with >8 bpp.\n");
+    jpeg_destroy_compress(&cinfo);
+    fclose(fp);
     return false;
   }
 

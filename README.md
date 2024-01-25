@@ -37,7 +37,6 @@ Supported codecs:
 ## API
 
 The library has a C API for easy integration and wide language support.
-Note that the API is still work in progress and may still change.
 
 The decoder automatically supports both HEIF and AVIF through the same API. No changes are required to existing code to support AVIF.
 The encoder can be switched between HEIF and AVIF simply by setting `heif_compression_HEVC` or `heif_compression_AV1`
@@ -155,7 +154,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`
 
 Further options are:
 

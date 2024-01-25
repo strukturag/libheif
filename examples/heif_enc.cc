@@ -95,6 +95,7 @@ const int OPTION_PITM_DESCRIPTION = 1005;
 const int OPTION_USE_JPEG_COMPRESSION = 1006;
 const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
 const int OPTION_VERBOSE = 1008;
+const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
 
 
 static struct option long_options[] = {
@@ -115,6 +116,7 @@ static struct option long_options[] = {
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
+    {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
 #endif
@@ -150,7 +152,7 @@ void show_help(const char* argv0)
             << "  -h, --help        show help\n"
             << "  -v, --version     show version\n"
             << "  -q, --quality     set output quality (0-100) for lossy compression\n"
-            << "  -L, --lossless    generate lossless output (-q has no effect)\n"
+            << "  -L, --lossless    generate lossless output (-q has no effect). Image will be encoded as RGB (matrix_coefficients=0).\n"
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
             << "      --no-alpha    do not save alpha channel\n"
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
@@ -162,6 +164,7 @@ void show_help(const char* argv0)
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
             << "      --jpeg            encode as JPEG\n"
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
+            << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
             << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
 #endif
@@ -179,13 +182,7 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n"
-
-            << "\n"
-            << "Note: to get lossless encoding, you need this set of options:\n"
-            << "  -L                       switch encoder to lossless mode\n"
-            << "  -p chroma=444            switch off chroma subsampling\n"
-            << "  --matrix_coefficients=0  encode in RGB color-space\n";
+            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n";
 }
 
 
@@ -365,6 +362,9 @@ static const char* get_compression_format_name(heif_compression_format format)
     case heif_compression_JPEG2000:
       return "JPEG 2000";
       break;
+    case heif_compression_HTJ2K:
+      return "HT-J2K";
+      break;
     case heif_compression_uncompressed:
       return "Uncompressed";
       break;
@@ -376,7 +376,7 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000
+  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
 #if WITH_UNCOMPRESSED_CODEC
 , heif_compression_uncompressed
 #endif
@@ -394,6 +394,9 @@ static void show_list_of_all_encoders()
         break;
       case heif_compression_JPEG2000:
         std::cout << "JPEG 2000";
+        break;
+      case heif_compression_HTJ2K:
+        std::cout << "HT-J2K";
         break;
       case heif_compression_uncompressed:
         std::cout << "Uncompressed";
@@ -483,6 +486,7 @@ int main(int argc, char** argv)
   bool force_enc_uncompressed = false;
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
+  bool force_enc_htj2k = false;
   bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
@@ -563,6 +567,9 @@ int main(int argc, char** argv)
         break;
       case OPTION_USE_JPEG2000_COMPRESSION:
         force_enc_jpeg2000 = true;
+        break;
+      case OPTION_USE_HTJ2K_COMPRESSION:
+        force_enc_htj2k = true;
         break;
       case OPTION_PLUGIN_DIRECTORY: {
         int nPlugins;
@@ -659,6 +666,9 @@ int main(int argc, char** argv)
   else if (force_enc_jpeg2000) {
     compressionFormat = heif_compression_JPEG2000;
   }
+  else if (force_enc_htj2k) {
+    compressionFormat = heif_compression_HTJ2K;
+  }
   else {
     compressionFormat = guess_compression_format_from_filename(output_filename);
   }
@@ -718,6 +728,7 @@ int main(int argc, char** argv)
 
   if (option_show_parameters) {
     list_encoder_parameters(encoder);
+    heif_encoder_release(encoder);
     return 0;
   }
 
@@ -789,43 +800,93 @@ int main(int argc, char** argv)
     }
 #endif
 
-    heif_color_profile_nclx nclx;
-    error = heif_nclx_color_profile_set_matrix_coefficients(&nclx, nclx_matrix_coefficients);
-    if (error.code) {
-      std::cerr << "Invalid matrix coefficients specified.\n";
+    heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
+    if (!nclx) {
+      std::cerr << "Cannot allocate NCLX color profile.\n";
       exit(5);
     }
-    error = heif_nclx_color_profile_set_transfer_characteristics(&nclx, nclx_transfer_characteristic);
-    if (error.code) {
-      std::cerr << "Invalid transfer characteristics specified.\n";
-      exit(5);
-    }
-    error = heif_nclx_color_profile_set_color_primaries(&nclx, nclx_colour_primaries);
-    if (error.code) {
-      std::cerr << "Invalid color primaries specified.\n";
-      exit(5);
-    }
-    nclx.full_range_flag = (uint8_t) nclx_full_range;
-
-    //heif_image_set_nclx_color_profile(image.get(), &nclx);
 
     if (lossless) {
       if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
-        heif_encoder_set_lossless(encoder, lossless);
+        heif_encoder_set_lossless(encoder, true);
+
+        if (heif_image_get_colorspace(primary_image.get()) == heif_colorspace_RGB) {
+          nclx->matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+          nclx->full_range_flag = true;
+          raw_params.emplace_back("chroma=444");
+        }
+        else {
+          heif_color_profile_nclx* input_nclx;
+
+          error = heif_image_get_nclx_color_profile(primary_image.get(), &input_nclx);
+          if (error.code == heif_error_Color_profile_does_not_exist) {
+            // NOP, use default NCLX profile
+          }
+          else if (error.code) {
+            std::cerr << "Cannot get input NCLX color profile.\n";
+            exit(5);
+          }
+          else {
+            nclx->matrix_coefficients = input_nclx->matrix_coefficients;
+            nclx->transfer_characteristics = input_nclx->transfer_characteristics;
+            nclx->color_primaries = input_nclx->color_primaries;
+            nclx->full_range_flag = input_nclx->full_range_flag;
+
+            heif_nclx_color_profile_free(input_nclx);
+          }
+
+          // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
+          switch (heif_image_get_chroma_format(primary_image.get())) {
+            case heif_chroma_420:
+            case heif_chroma_monochrome:
+              raw_params.emplace_back("chroma=420");
+              break;
+            case heif_chroma_422:
+              raw_params.emplace_back("chroma=422");
+              break;
+            case heif_chroma_444:
+              raw_params.emplace_back("chroma=444");
+              break;
+            default:
+              assert(false);
+              exit(5);
+          }
+        }
       }
       else {
         std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+        lossless = false;
       }
     }
 
-    heif_encoder_set_lossy_quality(encoder, quality);
+    if (!lossless) {
+      error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
+      if (error.code) {
+        std::cerr << "Invalid matrix coefficients specified.\n";
+        exit(5);
+      }
+      error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
+      if (error.code) {
+        std::cerr << "Invalid transfer characteristics specified.\n";
+        exit(5);
+      }
+      error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
+      if (error.code) {
+        std::cerr << "Invalid color primaries specified.\n";
+        exit(5);
+      }
+      nclx->full_range_flag = (uint8_t) nclx_full_range;
+
+      heif_encoder_set_lossy_quality(encoder, quality);
+    }
+
     heif_encoder_set_logging_level(encoder, logging_level);
 
     set_params(encoder, raw_params);
     struct heif_encoding_options* options = heif_encoding_options_alloc();
     options->save_alpha_channel = (uint8_t) master_alpha;
     options->save_two_colr_boxes_when_ICC_and_nclx_available = (uint8_t) two_colr_boxes;
-    options->output_nclx_profile = &nclx;
+    options->output_nclx_profile = nclx;
     options->image_orientation = input_image.orientation;
 
     if (chroma_downsampling == "average") {
@@ -845,6 +906,7 @@ int main(int argc, char** argv)
       if (heif_image_get_primary_width(image.get()) == 1 ||
           heif_image_get_primary_height(image.get()) == 1) {
         std::cerr << "Image only has a size of 1 pixel width or height. Cannot crop to even size.\n";
+        heif_encoder_release(encoder);
         return 1;
       }
 
@@ -856,6 +918,8 @@ int main(int argc, char** argv)
       error = heif_image_crop(image.get(), 0, right, 0, bottom);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not crop image: " << error.message << "\n";
         return 1;
       }
@@ -874,6 +938,8 @@ int main(int argc, char** argv)
                                       &handle);
     if (error.code != 0) {
       heif_encoding_options_free(options);
+      heif_nclx_color_profile_free(nclx);
+      heif_encoder_release(encoder);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
       return 1;
     }
@@ -887,6 +953,8 @@ int main(int argc, char** argv)
                                              input_image.exif.data(), (int) input_image.exif.size());
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not write EXIF metadata: " << error.message << "\n";
         return 1;
       }
@@ -899,6 +967,8 @@ int main(int argc, char** argv)
                                              metadata_compression ? heif_metadata_compression_deflate : heif_metadata_compression_off);
       if (error.code != 0) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not write XMP metadata: " << error.message << "\n";
         return 1;
       }
@@ -920,6 +990,8 @@ int main(int argc, char** argv)
                                             &thumbnail_handle);
       if (error.code) {
         heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
         std::cerr << "Could not generate thumbnail: " << error.message << "\n";
         return 5;
       }
@@ -937,6 +1009,7 @@ int main(int argc, char** argv)
 
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
+    heif_nclx_color_profile_free(nclx);
   }
 
   heif_encoder_release(encoder);

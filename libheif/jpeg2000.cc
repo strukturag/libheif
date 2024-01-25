@@ -20,7 +20,13 @@
 
 #include "jpeg2000.h"
 #include <cstdint>
+#include <iostream>
 #include <stdio.h>
+
+static const uint16_t JPEG2000_CAP_MARKER = 0xFF50;
+static const uint16_t JPEG2000_SIZ_MARKER = 0xFF51;
+static const uint16_t JPEG2000_SOC_MARKER = 0xFF4F;
+
 
 Error Box_cdef::parse(BitstreamRange& range)
 {
@@ -305,98 +311,170 @@ std::string Box_j2kH::dump(Indent& indent) const
 }
 
 
-int read16(const std::vector<uint8_t>& data, int offset)
+Error JPEG2000MainHeader::parseHeader(const HeifFile& file, const heif_item_id imageID)
 {
-  return (data[offset] << 8) | data[offset + 1];
-}
-
-
-int read32(const std::vector<uint8_t>& data, int offset)
-{
-  return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-}
-
-
-JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID)
-{
-  std::vector<uint8_t> data;
-  Error err = file.get_compressed_image_data(imageID, &data);
+  Error err = file.get_compressed_image_data(imageID, &headerData);
   if (err) {
-    return {};
+    return err;
+  }
+  return doParse();
+}
+
+Error JPEG2000MainHeader::doParse()
+{
+  cursor = 0;
+  Error err = parse_SOC_segment();
+  if (err) {
+    return err;
+  }
+  err = parse_SIZ_segment();
+  if (err) {
+    return err;
+  }
+  if (cursor < headerData.size() - MARKER_LEN) {
+    uint16_t marker = read16();
+    if (marker == JPEG2000_CAP_MARKER) {
+      return parse_CAP_segment_body();
+    }
+    return Error::Ok;
+  }
+  // we should have at least COD and QCD, so this is probably broken.
+  return Error(heif_error_Invalid_input,
+               heif_suberror_Invalid_J2K_codestream,
+               std::string("Missing required header marker(s)"));
+}
+
+Error JPEG2000MainHeader::parse_SOC_segment()
+{
+  const size_t REQUIRED_BYTES = MARKER_LEN;
+  if ((headerData.size() < REQUIRED_BYTES) || (cursor > (headerData.size() - REQUIRED_BYTES))) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream);
+  }
+  uint16_t marker = read16();
+  if (marker == JPEG2000_SOC_MARKER) {
+    return Error::Ok;
+  }
+  return Error(heif_error_Invalid_input,
+               heif_suberror_Invalid_J2K_codestream,
+               std::string("Missing required SOC Marker"));
+}
+
+Error JPEG2000MainHeader::parse_SIZ_segment()
+{
+  size_t REQUIRED_BYTES = MARKER_LEN + 38 + 3 * 1;
+  if ((headerData.size() < REQUIRED_BYTES) || (cursor > (headerData.size() - REQUIRED_BYTES))) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream);
   }
 
-  for (size_t i = 0; i + 1 < data.size(); i++) {
-    if (data[i] == 0xFF && data[i + 1] & 0x51) {
+  uint16_t marker = read16();
+  if (marker != JPEG2000_SIZ_MARKER) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream,
+                 std::string("Missing required SIZ Marker"));
+  }
+  uint16_t lsiz = read16();
+  if ((lsiz < 41) || (lsiz > 49190)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream,
+                 std::string("Out of range Lsiz value"));
+  }
+  siz.decoder_capabilities = read16();
+  siz.reference_grid_width = read32();
+  siz.reference_grid_height = read32();
+  siz.image_horizontal_offset = read32();
+  siz.image_vertical_offset = read32();
+  siz.tile_width = read32();
+  siz.tile_height = read32();
+  siz.tile_offset_x = read32();
+  siz.tile_offset_y = read32();
+  uint16_t csiz = read16();
+  if ((csiz < 1) || (csiz > 16384)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream,
+                 std::string("Out of range Csiz value"));
+  }
+  if (cursor > headerData.size() - (3 * csiz)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream);
+  }
+  // TODO: consider checking for Lsiz consistent with Csiz
+  for (uint16_t c = 0; c < csiz; c++) {
+    JPEG2000_SIZ_segment::component comp;
+    uint8_t ssiz = read8();
+    comp.is_signed = (ssiz & 0x80);
+    comp.precision = uint8_t((ssiz & 0x7F) + 1);
+    comp.h_separation = read8();
+    comp.v_separation = read8();
+    siz.components.push_back(comp);
+  }
+  return Error::Ok;
+}
 
-      JPEG2000_SIZ_segment siz;
-
-      // space for full header and one component
-      if (i + 2 + 40 + 3 > data.size()) {
-        return {};
+Error JPEG2000MainHeader::parse_CAP_segment_body()
+{
+  if (cursor > headerData.size() - 8) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream);
+  }
+  uint16_t lcap = read16();
+  if ((lcap < 8) || (lcap > 70)) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_J2K_codestream,
+                 std::string("Out of range Lcap value"));
+  }
+  uint32_t pcap = read32();
+  for (uint8_t i = 2; i <= 32; i++) {
+    if (pcap & (1 << (32 - i))) {
+      switch (i) {
+        case JPEG2000_Extension_Capability_HT::IDENT:
+          parse_Ccap15();
+          break;
+        default:
+          std::cout << "unhandled extended capabilities value: " << (int)i << std::endl;
+          read16();
       }
-
-      // read number of components
-
-      int nComponents = read16(data, 40);
-
-      if (i + 2 + 40 + nComponents * 3 > data.size()) {
-        return {};
-      }
-
-      siz.decoder_capabilities = read16(data, 6);
-      siz.width = read32(data, 8);
-      siz.height = read32(data, 12);
-      siz.x0 = read32(data, 16);
-      siz.y0 = read32(data, 20);
-      siz.tile_width = read32(data, 24);
-      siz.tile_height = read32(data, 28);
-      siz.tile_x0 = read32(data, 32);
-      siz.tile_y0 = read32(data, 36);
-
-      for (int c = 0; c < nComponents; c++) {
-        JPEG2000_SIZ_segment::component comp;
-        comp.precision = data[42 + c * 3];
-        comp.is_signed = (comp.precision & 0x80);
-        comp.precision = uint8_t((comp.precision & 0x7F) + 1);
-        comp.h_separation = data[43 + c * 3];
-        comp.v_separation = data[44 + c * 3];
-        siz.components.push_back(comp);
-      }
-
-      return siz;
     }
   }
-
-  return {};
+  return Error::Ok;
 }
 
-
-heif_chroma JPEG2000_SIZ_segment::get_chroma_format() const
+void JPEG2000MainHeader::parse_Ccap15()
 {
-  if (components.size() == 1) {
+  uint16_t val = read16();
+  JPEG2000_Extension_Capability_HT ccap;
+  // We could parse more here, but we don't need that yet.
+  ccap.setValue(val);
+  cap.push_back(ccap);
+}
+
+heif_chroma JPEG2000MainHeader::get_chroma_format() const
+{
+  // Y-plane must be full resolution
+  if (siz.components[0].h_separation != 1 || siz.components[0].v_separation != 1) {
+    return heif_chroma_undefined;
+  }
+
+  if (siz.components.size() == 1) {
     return heif_chroma_monochrome;
   }
-  else if (components.size() == 3) {
+  else if (siz.components.size() == 3) {
     // TODO: we should map channels through `cdef` ?
 
-    // Y-plane must be full resolution
-    if (components[0].h_separation != 1 || components[0].v_separation != 1) {
-      return heif_chroma_undefined;
-    }
-
     // both chroma components must have the same sampling
-    if (components[1].h_separation != components[2].h_separation ||
-        components[1].v_separation != components[2].v_separation) {
+    if (siz.components[1].h_separation != siz.components[2].h_separation ||
+        siz.components[1].v_separation != siz.components[2].v_separation) {
       return heif_chroma_undefined;
     }
 
-    if (components[1].h_separation == 2 && components[1].v_separation==2) {
+    if (siz.components[1].h_separation == 2 && siz.components[1].v_separation==2) {
       return heif_chroma_420;
     }
-    if (components[1].h_separation == 2 && components[1].v_separation==1) {
+    if (siz.components[1].h_separation == 2 && siz.components[1].v_separation==1) {
       return heif_chroma_422;
     }
-    if (components[1].h_separation == 1 && components[1].v_separation==1) {
+    if (siz.components[1].h_separation == 1 && siz.components[1].v_separation==1) {
       return heif_chroma_444;
     }
   }

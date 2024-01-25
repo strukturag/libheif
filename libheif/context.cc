@@ -878,8 +878,9 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
-    // skip region annotations, handled next
-    if (item_type == "rgan") {
+    // 'rgan': skip region annotations, handled next
+    // 'iden': iden images are no metadata
+    if (item_type == "rgan" || item_type == "iden") {
       continue;
     }
     std::string content_type = m_heif_file->get_content_type(id);
@@ -896,10 +897,15 @@ Error HeifContext::interpret_heif_file()
 
     Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
     if (err) {
-      return err;
+      if (item_type == "Exif" || item_type == "mime") {
+        // these item types should have data
+        return err;
+      }
+      else {
+        // anything else is probably something that we don't understand yet
+        continue;
+      }
     }
-
-    //std::cerr.write((const char*)data.data(), data.size());
 
 
     // --- assign metadata to the image
@@ -1205,8 +1211,12 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
   }
   else if (auto j2kH = m_heif_context->m_heif_file->get_property<Box_j2kH>(id)) {
-    JPEG2000_SIZ_segment siz = jpeg2000_get_SIZ_segment(*m_heif_context->m_heif_file, id);
-    *out_chroma = siz.get_chroma_format();
+    JPEG2000MainHeader jpeg2000Header;
+    err = jpeg2000Header.parseHeader(*m_heif_context->m_heif_file, id);
+    if (err) {
+      return err;
+    }
+    *out_chroma = jpeg2000Header.get_chroma_format();
   }
 
   return err;
@@ -1321,7 +1331,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
     const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression, options.decoder_id);
     if (!decoder_plugin) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
+      return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
     }
 
     std::vector<uint8_t> data;
@@ -2268,7 +2278,8 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
                                   out_image);
     }
       break;
-    case heif_compression_JPEG2000: {
+    case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K: {
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
@@ -2411,7 +2422,7 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
     image_nclx = std::make_shared<color_profile_nclx>();
   }
 
-  if (image_nclx->get_full_range_flag() != spec_nclx->full_range_flag) {
+  if (image_nclx->get_full_range_flag() != ( spec_nclx->full_range_flag == 0 ? false : true ) ) {
     return false;
   }
 
@@ -2938,9 +2949,9 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   for (;;) {
     uint8_t* data;
     int size;
-    
+
     encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-    
+
     if (data == NULL) {
       break;
     }
@@ -2954,7 +2965,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
 
 
 
-  //Add 'ispe' Property 
+  //Add 'ispe' Property
   m_heif_file->add_ispe_property(image_id, image->get_width(), image->get_height());
 
   //Add 'colr' Property

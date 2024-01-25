@@ -76,6 +76,8 @@ set(libheif_sources
         jpeg2000.cc
         vvc.h
         vvc.cc
+        avc.h
+        avc.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})
@@ -149,6 +151,8 @@ endif ()
 if (WITH_UNCOMPRESSED_CODEC)
     target_compile_definitions(heif PUBLIC WITH_UNCOMPRESSED_CODEC=1)
     target_sources(heif PRIVATE
+            uncompressed_box.h
+            uncompressed_box.cc
             uncompressed_image.h
             uncompressed_image.cc)
 endif ()

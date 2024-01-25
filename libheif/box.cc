@@ -28,6 +28,7 @@
 #include "hevc.h"
 #include "mask_image.h"
 #include "vvc.h"
+#include "avc.h"
 
 #include <iomanip>
 #include <utility>
@@ -38,7 +39,7 @@
 #include <cassert>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "uncompressed_box.h"
 #endif
 
 
@@ -618,6 +619,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("taic"):
       box = std::make_shared<Box_taic>();
+
+    // --- AVC (H.264)
+
+    case fourcc("avcC"):
+      box = std::make_shared<Box_avcC>();
       break;
 
     default:
@@ -2864,7 +2870,11 @@ std::string Box_idat::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
+  if (get_box_size() >= get_header_size()) {
+    sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
+  } else {
+     sstr << indent << "number of data bytes is invalid\n";
+  }
 
   return sstr.str();
 }

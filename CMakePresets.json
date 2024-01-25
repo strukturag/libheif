@@ -63,6 +63,7 @@
         "WITH_KVAZAAR" : "ON",
         "WITH_OpenJPEG_DECODER" : "ON",
         "WITH_OpenJPEG_ENCODER" : "ON",
+        "WITH_OPENJPH_ENCODER" : "ON",
         "WITH_FFMPEG_DECODER" : "ON",
         "WITH_REDUCED_VISIBILITY" : "OFF",
         "WITH_DEFLATE_HEADER_COMPRESSION" : "ON",

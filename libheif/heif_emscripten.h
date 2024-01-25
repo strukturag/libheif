@@ -353,6 +353,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Item_reference_cycle", heif_suberror_Item_reference_cycle)
     .value("heif_suberror_Invalid_pixi_box", heif_suberror_Invalid_pixi_box)
     .value("heif_suberror_Invalid_region_data", heif_suberror_Invalid_region_data)
+    .value("heif_suberror_Invalid_J2K_codestream", heif_suberror_Invalid_J2K_codestream)
     .value("heif_suberror_Unsupported_codec", heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type", heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version", heif_suberror_Unsupported_data_version)
@@ -374,7 +375,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_compression_EVC", heif_compression_EVC)
     .value("heif_compression_JPEG2000", heif_compression_JPEG2000)
     .value("heif_compression_uncompressed", heif_compression_uncompressed)
-    .value("heif_compression_mask", heif_compression_mask);
+    .value("heif_compression_mask", heif_compression_mask)
+    .value("heif_compression_HTJ2K", heif_compression_HTJ2K);
     emscripten::enum_<heif_chroma>("heif_chroma")
     .value("heif_chroma_undefined", heif_chroma_undefined)
     .value("heif_chroma_monochrome", heif_chroma_monochrome)

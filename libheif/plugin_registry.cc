@@ -84,6 +84,10 @@
 
 #include "libheif/plugins/encoder_mask.h"
 
+#if HAVE_OPENJPH_ENCODER
+#include "libheif/plugins/encoder_openjph.h"
+#endif
+
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
 std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
@@ -169,6 +173,10 @@ void register_default_plugins()
 
 #if HAVE_OPENJPEG_DECODER
   register_decoder(get_decoder_plugin_openjpeg());
+#endif
+
+#if HAVE_OPENJPH_ENCODER
+  register_encoder(get_encoder_plugin_openjph());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
