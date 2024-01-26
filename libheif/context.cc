@@ -2255,7 +2255,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_hevc(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2264,7 +2264,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_av1(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2272,7 +2272,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
-                                       heif_image_input_class_normal,
+                                       input_class,
                                        out_image);
       }
       break;
@@ -2281,7 +2281,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2290,7 +2290,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_uncompressed(pixel_image,
                                            encoder,
                                            options,
-                                           heif_image_input_class_normal,
+                                           input_class,
                                            out_image);
     }
       break;
@@ -2299,7 +2299,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_mask(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
