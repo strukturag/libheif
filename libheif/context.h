@@ -37,6 +37,9 @@
 #include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header
 
 #include "region.h"
+#if WITH_EXPERIMENTAL_GAIN_MAP
+#include "gain_map_metadata.h"
+#endif
 
 class HeifContext;
 
@@ -52,6 +55,9 @@ class ImageMetadata
 public:
   heif_item_id item_id;
   std::string item_type;  // e.g. "Exif"
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::string item_name;
+#endif
   std::string content_type;
   std::string item_uri_type;
   std::vector<uint8_t> m_data;
@@ -359,6 +365,10 @@ public:
   }
 
   std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::shared_ptr<Image> get_gain_map_image() { return m_gain_map_image; }
+  std::shared_ptr<ImageMetadata> get_gain_map_metadata() { return m_gain_map_metadata; }
+#endif
 
   bool is_image(heif_item_id ID) const;
 
@@ -454,6 +464,17 @@ public:
 
   heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  void add_altr_property(heif_item_id id);
+
+  Error add_tmap_box(const std::vector<uint8_t>& metadata,
+                    heif_item_id &item_id);
+
+  Error link_gain_map(const std::shared_ptr<Image>& primary_image,
+                      const std::shared_ptr<Image>& gain_map_image,
+                      const heif_item_id tmap_id);
+#endif
+
   // --- region items
 
   void add_region_item(std::shared_ptr<RegionItem> region_item)
@@ -483,6 +504,11 @@ private:
   // We store this in a vector because we need stable indices for the C API.
   // TODO: stable indices are obsolet now...
   std::vector<std::shared_ptr<Image>> m_top_level_images;
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::shared_ptr<Image> m_gain_map_image;
+  std::shared_ptr<ImageMetadata> m_gain_map_metadata;
+#endif
 
   std::shared_ptr<Image> m_primary_image; // shortcut to primary image
 
