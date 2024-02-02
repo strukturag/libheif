@@ -2804,7 +2804,7 @@ struct heif_error heif_context_encode_gain_map_image(struct heif_context* ctx,
   }
 
   std::shared_ptr<HeifContext::Image> gain_map_image;
-  printf("[dichenzhang] heif_context_encode_gain_map_image() %d\n", heif_image_input_class_gain_map);
+
   error = ctx->context->encode_image(input_image->image,
                                      encoder,
                                      options,
