@@ -95,6 +95,9 @@ LIBHEIF_API int heif_get_version_number_maintenance(void);
 struct heif_context;
 struct heif_image_handle;
 struct heif_image;
+#if WITH_EXPERIMENTAL_GAIN_MAP
+struct GainMapMetadata;
+#endif
 
 
 enum heif_error_code
@@ -966,6 +969,19 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
                                                 heif_item_id id,
                                                 struct heif_image_handle**);
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+// Get id of the gain map image of the HEIF file. If no gain map image is available, this
+// method will return heif_suberror_No_item_data.
+LIBHEIF_API
+struct heif_error heif_context_get_gain_map_image_ID(struct heif_context* ctx, heif_item_id* id);
+
+// Get a handle to the gain map image of the HEIF file. If no gain map image is available, this
+// method will return heif_suberror_No_item_data.
+LIBHEIF_API
+struct heif_error heif_context_get_gain_map_image_handle(struct heif_context* ctx,
+                                                         struct heif_image_handle**);
+#endif
+
 // Print information about the boxes of a HEIF file to file descriptor.
 // This is for debugging and informational purposes only. You should not rely on
 // the output having a specific format. At best, you should not use this at all.
@@ -1224,6 +1240,13 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
 LIBHEIF_API
 const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image_handle* handle,
                                                          heif_item_id metadata_id);
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+// Get a pointer to the gain map metadata.
+LIBHEIF_API
+struct heif_error heif_image_get_gain_map_metadata(heif_context* ctx,
+                                                   GainMapMetadata* out_gm_metadata);
+#endif
 
 // ------------------------- color profiles -------------------------
 
@@ -2036,6 +2059,20 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_encoder* encoder,
                                             const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+// Compress the gain map image and write metadata.
+// Returns a handle to the coded image in 'out_image_handle' unless out_image_handle = NULL.
+// 'options' should be NULL for now.
+LIBHEIF_API
+struct heif_error heif_context_encode_gain_map_image(struct heif_context*,
+                                                     const struct heif_image* image,
+                                                     const struct heif_image_handle* primary_image_handle,
+                                                     struct heif_encoder* encoder,
+                                                     const struct heif_encoding_options* options,
+                                                     const struct GainMapMetadata* gain_map_metadata,
+                                                     struct heif_image_handle** out_image_handle);
+#endif
 
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
