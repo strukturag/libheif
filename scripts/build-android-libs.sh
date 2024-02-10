@@ -56,6 +56,7 @@ function build {
 	  -DWITH_X265=OFF \
 	  -DCMAKE_INSTALL_PREFIX=../../out/$1 \
 	  -DCMAKE_BUILD_TYPE=Release \
+	  -DCMAKE_CXX_STANDARD_LIBRARIES="-llog" \
 	  -Dld-version-script=OFF \
 	  ../../libheif-${HEIF_VERSION}
     make VERBOSE=1
