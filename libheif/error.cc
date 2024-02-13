@@ -120,6 +120,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No 'iref' box";
     case heif_suberror_No_infe_box:
       return "No 'infe' box";
+    case heif_suberror_No_dinf_box:
+      return "No 'dinf' box";
     case heif_suberror_No_pict_handler:
       return "Not a 'pict' handler";
     case heif_suberror_Ipma_box_references_nonexisting_property:

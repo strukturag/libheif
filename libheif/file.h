@@ -222,6 +222,7 @@ private:
   std::shared_ptr<Box_iinf> m_iinf_box;
 
   std::shared_ptr<Box_iprp> m_iprp_box;
+  std::shared_ptr<Box_dinf> m_dinf_box;
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
 
