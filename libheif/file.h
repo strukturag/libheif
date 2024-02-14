@@ -26,6 +26,7 @@
 #include "hevc.h"
 #include "nclx.h"
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
@@ -206,6 +207,7 @@ private:
 #endif
 
   std::shared_ptr<StreamReader> m_input_stream;
+  std::filesystem::path m_base_path;
 
   std::vector<std::shared_ptr<Box> > m_top_level_boxes;
 

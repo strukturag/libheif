@@ -1255,6 +1255,7 @@ Error Box_iloc::read_data(const Item& item,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           const std::shared_ptr<Box_dinf>& dinf,
+                          const std::filesystem::path base_path,
                           std::vector<uint8_t>* dest) const
 {
   // TODO: this function should always append the data to the output vector as this is used when
@@ -1313,11 +1314,12 @@ Error Box_iloc::read_data(const Item& item,
             (void) success;
           } else {
             std::string location = urlBox->get_location();
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
-            auto input_stream_istr = std::unique_ptr<std::istream>(new std::ifstream(convert_utf8_path_to_utf16(location).c_str(), std::ios_base::binary));
-#else
-            auto datafile_istr = std::unique_ptr<std::istream>(new std::ifstream(location.c_str(), std::ios_base::binary));
-#endif
+            // TODO: handle case where its really a URL
+            std::filesystem::path locationPath(location);
+            if (locationPath.is_relative()) {
+              locationPath = base_path / locationPath;
+            }
+            auto datafile_istr = std::unique_ptr<std::istream>(new std::ifstream(locationPath, std::ios_base::binary));
             if (!datafile_istr->good()) {
               std::stringstream sstr;
               sstr << "Error opening file: " << location << ", " << strerror(errno) << " (" << errno << ")\n";
@@ -1331,7 +1333,7 @@ Error Box_iloc::read_data(const Item& item,
           }
         } else {
           std::stringstream sstr;
-          sstr << "Item construction method 2 with data reference type " << dataentry->get_type_string() << "is not implemented";
+          sstr << "Item construction method 2 with data reference type " << dataentry->get_type_string() << " is not implemented";
           return Error(heif_error_Unsupported_feature,
                       heif_suberror_Unsupported_item_construction_method,
                       sstr.str());

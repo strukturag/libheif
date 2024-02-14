@@ -116,6 +116,8 @@ target_compile_definitions(heif
         LIBHEIF_EXPORTS
         HAVE_VISIBILITY)
 
+target_compile_features(heif PRIVATE cxx_std_17)
+
 if (PLUGIN_LOADING_SUPPORTED_AND_ENABLED)
     target_compile_definitions(heif PRIVATE ENABLE_PLUGIN_LOADING=1)
     target_link_libraries(heif PRIVATE ${CMAKE_DL_LIBS})

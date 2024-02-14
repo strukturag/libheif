@@ -34,6 +34,7 @@
 #include <istream>
 #include <bitset>
 #include <utility>
+#include <filesystem>
 
 #include "error.h"
 #include "heif.h"
@@ -392,6 +393,7 @@ public:
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
                   const std::shared_ptr<class Box_dinf>&,
+                  const std::filesystem::path base_path,
                   std::vector<uint8_t>* dest) const;
 
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
