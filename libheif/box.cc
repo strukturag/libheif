@@ -1314,22 +1314,31 @@ Error Box_iloc::read_data(const Item& item,
             (void) success;
           } else {
             std::string location = urlBox->get_location();
-            // TODO: handle case where its really a URL
-            std::filesystem::path locationPath(location);
-            if (locationPath.is_relative()) {
-              locationPath = base_path / locationPath;
-            }
-            auto datafile_istr = std::unique_ptr<std::istream>(new std::ifstream(locationPath, std::ios_base::binary));
-            if (!datafile_istr->good()) {
+            if (location.rfind("https://", 0) == 0) {
+              // TODO
               std::stringstream sstr;
-              sstr << "Error opening file: " << location << ", " << strerror(errno) << " (" << errno << ")\n";
-              return Error(heif_error_Input_does_not_exist, heif_suberror_Unspecified, sstr.str());
-            }
+              sstr << "Item construction method 2 with https location of " << location << " is not implemented";
+              return Error(heif_error_Unsupported_feature,
+                          heif_suberror_Unsupported_item_construction_method,
+                          sstr.str());
+            } else {
+              // See if we can read as a local file
+              std::filesystem::path locationPath(location);
+              if (locationPath.is_relative()) {
+                locationPath = base_path / locationPath;
+              }
+              auto datafile_istr = std::unique_ptr<std::istream>(new std::ifstream(locationPath, std::ios_base::binary));
+              if (!datafile_istr->good()) {
+                std::stringstream sstr;
+                sstr << "Error opening file: " << location << ", " << strerror(errno) << " (" << errno << ")\n";
+                return Error(heif_error_Input_does_not_exist, heif_suberror_Unspecified, sstr.str());
+              }
 
-            auto datafileReader = std::make_shared<StreamReader_istream>(std::move(datafile_istr));
-            bool success = read_extent(item, datafileReader, extent, dest);
-            assert(success);
-            (void) success;
+              auto datafileReader = std::make_shared<StreamReader_istream>(std::move(datafile_istr));
+              bool success = read_extent(item, datafileReader, extent, dest);
+              assert(success);
+              (void) success;
+            }
           }
         } else {
           std::stringstream sstr;

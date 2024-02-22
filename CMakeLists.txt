@@ -197,6 +197,8 @@ endif()
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
+# CURL
+find_package(CURL)
 
 # --- show codec compilation summary
 
@@ -300,6 +302,13 @@ elseif (WITH_${variableName})
 else()
     message("libsharpyuv: disabled")
 endif ()
+
+# --- CURL download library --
+if(CURL_FOUND)
+    message("curl: found")
+else()
+    message("curl: not found")
+endif()
 
 # --- Create libheif pkgconfig file
 
