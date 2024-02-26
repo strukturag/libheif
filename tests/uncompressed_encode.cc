@@ -565,7 +565,7 @@ struct heif_image *createImage_RGBA_planar()
   return image;
 }
 
-static void do_encode(heif_image* input_image, const char* filename, bool check_decode)
+static void do_encode(heif_image* input_image, const char* filename, bool check_decode, uint8_t preferMinimised = 0)
 {
   REQUIRE(input_image != nullptr);
 
@@ -580,6 +580,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
   options->macOS_compatibility_workaround = false;
   options->macOS_compatibility_workaround_no_nclx_profile = true;
   options->image_orientation = heif_orientation_normal;
+  options->prefer_minimised = preferMinimised;
   heif_image_handle *output_image_handle;
 
   err = heif_context_encode_image(ctx, input_image, encoder, options, &output_image_handle);
@@ -644,6 +645,11 @@ TEST_CASE("Encode Mono")
   do_encode(input_image, "encode_mono.heif", true);
 }
 
+TEST_CASE("Encode RGB Version1")
+{
+  heif_image *input_image = createImage_RGB_interleaved();
+  do_encode(input_image, "encode_rgb_version1.heif", true, true);
+}
 
 TEST_CASE("Encode Mono with alpha")
 {
@@ -706,6 +712,12 @@ TEST_CASE("Encode RGBA")
 {
   heif_image *input_image = createImage_RGBA_interleaved();
   do_encode(input_image, "encode_rgba.heif", true);
+}
+
+TEST_CASE("Encode RGBA Version 1")
+{
+  heif_image *input_image = createImage_RGBA_interleaved();
+  do_encode(input_image, "encode_rgba_version1.heif", true, true);
 }
 
 
