@@ -43,6 +43,9 @@
 #include "uncompressed_box.h"
 #endif
 
+#if HAVE_CURL
+#include <curl/curl.h>
+#endif
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -1251,6 +1254,15 @@ bool Box_iloc::read_extent(const Item& item,
   return success;
 }
 
+static size_t memoryHandler(void *contents, size_t size, size_t nmemb, void *userp)
+{
+  std::vector<u_int8_t> *fileData = (std::vector<uint8_t>*) userp;
+  size_t numBytes = size * nmemb;
+  uint8_t* data = (uint8_t*) contents;
+  fileData->insert(fileData->end(), data, data + numBytes);
+  return numBytes;
+}
+
 Error Box_iloc::read_data(const Item& item,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
@@ -1315,12 +1327,35 @@ Error Box_iloc::read_data(const Item& item,
           } else {
             std::string location = urlBox->get_location();
             if (location.rfind("https://", 0) == 0) {
-              // TODO
+#if HAVE_CURL
+              CURL *curl_handle;
+              CURLcode result;
+              curl_global_init(CURL_GLOBAL_ALL);
+              curl_handle = curl_easy_init();
+              std::vector<uint8_t> fileData;
+              curl_easy_setopt(curl_handle, CURLOPT_URL, location.c_str());
+              curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libheif/2.18.0");
+              curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, memoryHandler);
+              curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &fileData);
+              curl_easy_setopt(curl_handle, CURLOPT_BUFFERSIZE, 1024*1024);
+              result = curl_easy_perform(curl_handle);
+              curl_easy_cleanup(curl_handle);
+              if (result != CURLE_OK) {
+                std::stringstream sstr;
+                sstr << "Item construction method 2 with https location of " << location << " failed";
+                return Error(heif_error_Unsupported_feature,
+                            heif_suberror_Unsupported_item_construction_method,
+                            sstr.str());
+              }
+              auto memoryReader = std::make_shared<StreamReader_memory>(fileData.data(), fileData.size(), false);
+              bool success = read_extent(item, memoryReader, extent, dest);
+              assert(success);
+              (void) success;
+#else
               std::stringstream sstr;
-              sstr << "Item construction method 2 with https location of " << location << " is not implemented";
-              return Error(heif_error_Unsupported_feature,
-                          heif_suberror_Unsupported_item_construction_method,
-                          sstr.str());
+              sstr << "Item construction method 2 with https location of " << location << " is not supported without libcurl";
+              return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_item_construction_method, sstr.str());
+#endif
             } else {
               // See if we can read as a local file
               std::filesystem::path locationPath(location);
