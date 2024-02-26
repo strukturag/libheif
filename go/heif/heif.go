@@ -216,6 +216,8 @@ const (
 
 	SuberrorNoIrefBox = C.heif_suberror_No_iref_box
 
+	SuberrorNoDinfBox = C.heif_suberror_No_dinf_box
+
 	SuberrorNoPictHandler = C.heif_suberror_No_pict_handler
 
 	// An item property referenced in the 'ipma' box is not existing in the 'ipco' container.

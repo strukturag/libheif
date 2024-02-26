@@ -41,7 +41,7 @@ if(NOT MSVC)
   endif ()
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -197,6 +197,8 @@ endif()
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
 
+# CURL
+find_package(CURL)
 
 # --- show codec compilation summary
 
@@ -300,6 +302,13 @@ elseif (WITH_${variableName})
 else()
     message("libsharpyuv: disabled")
 endif ()
+
+# --- CURL download library --
+if(CURL_FOUND)
+    message("curl: found")
+else()
+    message("curl: not found")
+endif()
 
 # --- Create libheif pkgconfig file
 

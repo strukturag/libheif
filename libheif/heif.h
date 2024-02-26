@@ -232,6 +232,8 @@ enum heif_suberror_code
   // Invalid JPEG 2000 codestream - usually a missing marker
   heif_suberror_Invalid_J2K_codestream = 140,
 
+  heif_suberror_No_dinf_box = 141,
+
 
   // --- Memory_allocation_error ---
 

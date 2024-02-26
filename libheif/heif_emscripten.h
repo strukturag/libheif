@@ -321,6 +321,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_iinf_box", heif_suberror_No_iinf_box)
     .value("heif_suberror_No_iprp_box", heif_suberror_No_iprp_box)
     .value("heif_suberror_No_iref_box", heif_suberror_No_iref_box)
+    .value("heif_suberror_No_dinf_box", heif_suberror_No_dinf_box)
     .value("heif_suberror_No_pict_handler", heif_suberror_No_pict_handler)
     .value("heif_suberror_Ipma_box_references_nonexisting_property", heif_suberror_Ipma_box_references_nonexisting_property)
     .value("heif_suberror_No_properties_assigned_to_item", heif_suberror_No_properties_assigned_to_item)
