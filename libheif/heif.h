@@ -2090,6 +2090,11 @@ struct heif_encoding_options
   // version 6 options
 
   struct heif_color_conversion_options color_conversion_options;
+
+  // version 7 options
+
+  // Set this to true to used minimised versions of boxes where possible
+  uint8_t prefer_minimised;
 };
 
 LIBHEIF_API
