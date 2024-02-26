@@ -2642,7 +2642,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 
 static void set_default_options(heif_encoding_options& options)
 {
-  options.version = 6;
+  options.version = 7;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = false;
@@ -2655,11 +2655,16 @@ static void set_default_options(heif_encoding_options& options)
   options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
+  options.prefer_minimised = false;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
 {
   switch (input_options.version) {
+    case 7:
+      options.prefer_minimised = input_options.prefer_minimised;
+      // fallthrough
     case 6:
       options.color_conversion_options = input_options.color_conversion_options;
       // fallthrough

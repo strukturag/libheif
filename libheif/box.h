@@ -204,6 +204,16 @@ public:
 
   static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
 
+  /**
+   * Get any implied boxes for this box.
+   *
+   * This is intended to support short-cut or minified boxes returning the "implied" boxes.
+   * Most boxes will not need this.
+   */
+  virtual std::shared_ptr<std::vector<std::shared_ptr<Box>>> get_implied_boxes()
+  {
+    return nullptr;
+  };
 
 protected:
   virtual Error parse(BitstreamRange& range);

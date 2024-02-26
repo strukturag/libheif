@@ -2193,7 +2193,14 @@ Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
     }
 
     if (assoc.property_index > 0) {
-      out_properties.push_back(allProperties[assoc.property_index - 1]);
+      std::shared_ptr<Box> prop = allProperties[assoc.property_index - 1];
+      out_properties.push_back(prop);
+      std::shared_ptr<std::vector<std::shared_ptr<Box>>> implied_props = prop->get_implied_boxes();
+      if (implied_props) {
+        for(auto& implied_prop: *implied_props) {
+          out_properties.push_back(implied_prop);
+        }
+      }
     }
   }
 
@@ -2220,6 +2227,26 @@ std::shared_ptr<Box> Box_ipco::get_property_for_item_ID(heif_item_id itemID,
     const auto& property = allProperties[assoc.property_index - 1];
     if (property->get_short_type() == box_type) {
       return property;
+    }
+  }
+  // if we didn't find it in the child boxes, check if there is an implied property...
+  std::vector<std::shared_ptr<Box>> properties;
+  Error error = get_properties_for_item_ID(itemID, ipma, properties);
+  if (error.error_code == heif_error_Ok) {
+    for (const Box_ipma::PropertyAssociation& assoc : *property_assoc) {
+      if (assoc.property_index > allProperties.size() ||
+          assoc.property_index == 0) {
+        return nullptr;
+      }
+      const auto& property = allProperties[assoc.property_index - 1];
+      std::shared_ptr<std::vector<std::shared_ptr<Box>>> implied_props = property->get_implied_boxes();
+      if (implied_props) {
+        for(auto& implied_prop: *implied_props) {
+          if (implied_prop->get_short_type() == box_type) {
+            return implied_prop;
+          }
+        }
+      }
     }
   }
 

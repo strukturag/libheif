@@ -1089,22 +1089,48 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
 }
 
 
+static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+{
+  uncC->set_version(0);
+  if (image->get_colorspace() != heif_colorspace_RGB) {
+    return;
+  }
+  if (!((image->get_chroma_format() == heif_chroma_interleaved_RGB) || (image->get_chroma_format() == heif_chroma_interleaved_RGBA))) {
+    return;
+  }
+  if (image->get_bits_per_pixel(heif_channel_interleaved) != 8) {
+    return;
+  }
+  if (image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
+    uncC->set_profile(fourcc_to_uint32("rgba"));
+  } else {
+    uncC->set_profile(fourcc_to_uint32("rgb3"));
+  }
+  uncC->set_version(1);
+}
+
 Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                                         const std::shared_ptr<HeifPixelImage>& src_image,
                                                         void* encoder_struct,
                                                         const struct heif_encoding_options& options,
                                                         std::shared_ptr<HeifContext::Image>& out_image)
 {
-  std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
-  if (error)
-  {
-    return error;
+  if (options.prefer_minimised) {
+    maybe_make_minimised_uncC(uncC, src_image);
   }
-  heif_file->add_property(out_image->get_id(), cmpd, true);
-  heif_file->add_property(out_image->get_id(), uncC, true);
+  if (uncC->get_version() == 1) {
+    heif_file->add_property(out_image->get_id(), uncC, true);
+  } else {
+    std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
+    if (error) {
+      return error;
+    }
+    heif_file->add_property(out_image->get_id(), cmpd, true);
+    heif_file->add_property(out_image->get_id(), uncC, true);
+  }
   std::vector<uint8_t> data;
   if (src_image->get_colorspace() == heif_colorspace_YCbCr)
   {

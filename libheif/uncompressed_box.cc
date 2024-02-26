@@ -198,55 +198,110 @@ Error Box_uncC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
   m_profile = range.read32();
-  if (get_version() != 0) {
-    return Error{heif_error_Invalid_input, heif_suberror_Unsupported_data_version, "Unsupported version (only 0 is currently supported)"};
-  }
-
-  unsigned int component_count = range.read32();
-
-  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
-    Component component;
-    component.component_index = range.read16();
-    component.component_bit_depth = uint16_t(range.read8() + 1);
-    component.component_format = range.read8();
-    component.component_align_size = range.read8();
-    m_components.push_back(component);
-
-    if (!is_valid_component_format(component.component_format)) {
-      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
+  if (get_version() == 1) {
+    if (m_profile == fourcc_to_uint32("rgb3")) {
+      Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
+      add_component(component0);
+      Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
+      add_component(component1);
+      Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
+      add_component(component2);
+    } else if ((m_profile == fourcc_to_uint32("rgba")) || (m_profile == fourcc_to_uint32("abgr"))) {
+      Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
+      add_component(component0);
+      Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
+      add_component(component1);
+      Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
+      add_component(component2);
+      Box_uncC::Component component3 = {3, 8, component_format_unsigned, 0};
+      add_component(component3);
+    } else {
+        return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
     }
+  } else if (get_version() == 0) {
+
+    unsigned int component_count = range.read32();
+
+    for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
+      Component component;
+      component.component_index = range.read16();
+      component.component_bit_depth = uint16_t(range.read8() + 1);
+      component.component_format = range.read8();
+      component.component_align_size = range.read8();
+      m_components.push_back(component);
+
+      if (!is_valid_component_format(component.component_format)) {
+        return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
+      }
+    }
+
+    m_sampling_type = range.read8();
+    if (!is_valid_sampling_mode(m_sampling_type)) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling mode"};
+    }
+
+    m_interleave_type = range.read8();
+    if (!is_valid_interleave_mode(m_interleave_type)) {
+      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave mode"};
+    }
+
+    m_block_size = range.read8();
+
+    uint8_t flags = range.read8();
+    m_components_little_endian = !!(flags & 0x80);
+    m_block_pad_lsb = !!(flags & 0x40);
+    m_block_little_endian = !!(flags & 0x20);
+    m_block_reversed = !!(flags & 0x10);
+    m_pad_unknown = !!(flags & 0x08);
+
+    m_pixel_size = range.read32();
+
+    m_row_align_size = range.read32();
+
+    m_tile_align_size = range.read32();
+
+    m_num_tile_cols = range.read32() + 1;
+
+    m_num_tile_rows = range.read32() + 1;
   }
-
-  m_sampling_type = range.read8();
-  if (!is_valid_sampling_mode(m_sampling_type)) {
-    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling mode"};
-  }
-
-  m_interleave_type = range.read8();
-  if (!is_valid_interleave_mode(m_interleave_type)) {
-    return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave mode"};
-  }
-
-  m_block_size = range.read8();
-
-  uint8_t flags = range.read8();
-  m_components_little_endian = !!(flags & 0x80);
-  m_block_pad_lsb = !!(flags & 0x40);
-  m_block_little_endian = !!(flags & 0x20);
-  m_block_reversed = !!(flags & 0x10);
-  m_pad_unknown = !!(flags & 0x08);
-
-  m_pixel_size = range.read32();
-
-  m_row_align_size = range.read32();
-
-  m_tile_align_size = range.read32();
-
-  m_num_tile_cols = range.read32() + 1;
-
-  m_num_tile_rows = range.read32() + 1;
-
   return range.get_error();
+}
+
+std::shared_ptr<std::vector<std::shared_ptr<Box>>> Box_uncC::get_implied_boxes()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<Box>>> extra_boxes = std::make_shared<std::vector<std::shared_ptr<Box>>>();
+  if (get_version() == 1) {
+    std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
+    if (m_profile == fourcc_to_uint32("rgb3")) {
+      Box_cmpd::Component rComponent = {component_type_red};
+      cmpd->add_component(rComponent);
+      Box_cmpd::Component gComponent = {component_type_green};
+      cmpd->add_component(gComponent);
+      Box_cmpd::Component bComponent = {component_type_blue};
+      cmpd->add_component(bComponent);
+    } else if (m_profile == fourcc_to_uint32("rgba")) {
+      Box_cmpd::Component rComponent = {component_type_red};
+      cmpd->add_component(rComponent);
+      Box_cmpd::Component gComponent = {component_type_green};
+      cmpd->add_component(gComponent);
+      Box_cmpd::Component bComponent = {component_type_blue};
+      cmpd->add_component(bComponent);
+      Box_cmpd::Component aComponent = {component_type_alpha};
+      cmpd->add_component(aComponent);
+    } else if (m_profile == fourcc_to_uint32("abgr")) {
+      Box_cmpd::Component aComponent = {component_type_alpha};
+      cmpd->add_component(aComponent);
+      Box_cmpd::Component bComponent = {component_type_blue};
+      cmpd->add_component(bComponent);
+      Box_cmpd::Component gComponent = {component_type_green};
+      cmpd->add_component(gComponent);
+      Box_cmpd::Component rComponent = {component_type_red};
+      cmpd->add_component(rComponent);
+    }
+
+    extra_boxes->push_back(std::move(cmpd));
+  }
+  return extra_boxes;
 }
 
 
@@ -258,75 +313,76 @@ std::string Box_uncC::dump(Indent& indent) const
   sstr << indent << "profile: " << m_profile;
   if (m_profile != 0) {
     sstr << " (" << to_fourcc(m_profile) << ")";
+    sstr << "\n";
   }
-  sstr << "\n";
+  if (get_version() == 0) {
+    for (const auto& component : m_components) {
+      sstr << indent << "component_index: " << component.component_index << "\n";
+      sstr << indent << "component_bit_depth: " << (int) component.component_bit_depth << "\n";
+      sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
+      sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
+    }
 
-  for (const auto& component : m_components) {
-    sstr << indent << "component_index: " << component.component_index << "\n";
-    sstr << indent << "component_bit_depth: " << (int) component.component_bit_depth << "\n";
-    sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
-    sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
+    sstr << indent << "sampling_type: " << get_name(heif_uncompressed_sampling_mode(m_sampling_type), sNames_uncompressed_sampling_mode) << "\n";
+
+    sstr << indent << "interleave_type: " << get_name(heif_uncompressed_interleave_mode(m_interleave_type), sNames_uncompressed_interleave_mode) << "\n";
+
+    sstr << indent << "block_size: " << (int) m_block_size << "\n";
+
+    sstr << indent << "components_little_endian: " << m_components_little_endian << "\n";
+    sstr << indent << "block_pad_lsb: " << m_block_pad_lsb << "\n";
+    sstr << indent << "block_little_endian: " << m_block_little_endian << "\n";
+    sstr << indent << "block_reversed: " << m_block_reversed << "\n";
+    sstr << indent << "pad_unknown: " << m_pad_unknown << "\n";
+
+    sstr << indent << "pixel_size: " << m_pixel_size << "\n";
+
+    sstr << indent << "row_align_size: " << m_row_align_size << "\n";
+
+    sstr << indent << "tile_align_size: " << m_tile_align_size << "\n";
+
+    sstr << indent << "num_tile_cols: " << m_num_tile_cols << "\n";
+
+    sstr << indent << "num_tile_rows: " << m_num_tile_rows << "\n";
   }
-
-  sstr << indent << "sampling_type: " << get_name(heif_uncompressed_sampling_mode(m_sampling_type), sNames_uncompressed_sampling_mode) << "\n";
-
-  sstr << indent << "interleave_type: " << get_name(heif_uncompressed_interleave_mode(m_interleave_type), sNames_uncompressed_interleave_mode) << "\n";
-
-  sstr << indent << "block_size: " << (int) m_block_size << "\n";
-
-  sstr << indent << "components_little_endian: " << m_components_little_endian << "\n";
-  sstr << indent << "block_pad_lsb: " << m_block_pad_lsb << "\n";
-  sstr << indent << "block_little_endian: " << m_block_little_endian << "\n";
-  sstr << indent << "block_reversed: " << m_block_reversed << "\n";
-  sstr << indent << "pad_unknown: " << m_pad_unknown << "\n";
-
-  sstr << indent << "pixel_size: " << m_pixel_size << "\n";
-
-  sstr << indent << "row_align_size: " << m_row_align_size << "\n";
-
-  sstr << indent << "tile_align_size: " << m_tile_align_size << "\n";
-
-  sstr << indent << "num_tile_cols: " << m_num_tile_cols << "\n";
-
-  sstr << indent << "num_tile_rows: " << m_num_tile_rows << "\n";
-
   return sstr.str();
 }
-
 
 Error Box_uncC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
-
   writer.write32(m_profile);
-  writer.write32((uint32_t) m_components.size());
-  for (const auto& component : m_components) {
-    if (component.component_bit_depth < 1 || component.component_bit_depth > 256) {
-      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component bit-depth out of range [1..256]"};
-    }
-
-    writer.write16(component.component_index);
-    writer.write8(uint8_t(component.component_bit_depth - 1));
-    writer.write8(component.component_format);
-    writer.write8(component.component_align_size);
+  if (get_version() == 1) {
   }
-  writer.write8(m_sampling_type);
-  writer.write8(m_interleave_type);
-  writer.write8(m_block_size);
-  uint8_t flags = 0;
-  flags |= (m_components_little_endian ? 0x80 : 0);
-  flags |= (m_block_pad_lsb ? 0x40 : 0);
-  flags |= (m_block_little_endian ? 0x20 : 0);
-  flags |= (m_block_reversed ? 0x10 : 0);
-  flags |= (m_pad_unknown ? 0x08 : 0);
-  writer.write8(flags);
-  writer.write32(m_pixel_size);
-  writer.write32(m_row_align_size);
-  writer.write32(m_tile_align_size);
-  writer.write32(m_num_tile_cols - 1);
-  writer.write32(m_num_tile_rows - 1);
+  else if (get_version() == 0) {
+    writer.write32((uint32_t)m_components.size());
+    for (const auto &component : m_components) {
+      if (component.component_bit_depth < 1 || component.component_bit_depth > 256) {
+        return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "component bit-depth out of range [1..256]"};
+      }
+
+      writer.write16(component.component_index);
+      writer.write8(uint8_t(component.component_bit_depth - 1));
+      writer.write8(component.component_format);
+      writer.write8(component.component_align_size);
+    }
+    writer.write8(m_sampling_type);
+    writer.write8(m_interleave_type);
+    writer.write8(m_block_size);
+    uint8_t flags = 0;
+    flags |= (m_components_little_endian ? 0x80 : 0);
+    flags |= (m_block_pad_lsb ? 0x40 : 0);
+    flags |= (m_block_little_endian ? 0x20 : 0);
+    flags |= (m_block_reversed ? 0x10 : 0);
+    flags |= (m_pad_unknown ? 0x08 : 0);
+    writer.write8(flags);
+    writer.write32(m_pixel_size);
+    writer.write32(m_row_align_size);
+    writer.write32(m_tile_align_size);
+    writer.write32(m_num_tile_cols - 1);
+    writer.write32(m_num_tile_rows - 1);
+  }
   prepend_header(writer, box_start);
 
   return Error::Ok;
 }
-
