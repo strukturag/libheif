@@ -79,7 +79,7 @@ public:
   Box_uncC() :
     m_profile(0),
     m_sampling_type(sampling_mode_no_subsampling),
-    m_interleave_type(interleave_mode_component),
+    m_interleave_type(interleave_mode_pixel),
     m_block_size(0),
     m_components_little_endian(false),
     m_block_pad_lsb(false),
@@ -94,6 +94,8 @@ public:
   {
     set_short_type(fourcc("uncC"));
   }
+
+  void derive_box_version() override {};
 
   std::string dump(Indent&) const override;
 
@@ -211,6 +213,8 @@ public:
   {
     m_num_tile_rows = num_tile_rows;
   }
+
+  std::shared_ptr<std::vector<std::shared_ptr<Box>>> get_implied_boxes() override;
 
 protected:
   Error parse(BitstreamRange& range) override;
