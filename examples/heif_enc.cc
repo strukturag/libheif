@@ -148,7 +148,7 @@ void show_help(const char* argv0)
             << "Options:\n"
             << "  -h, --help        show help\n"
             << "  -v, --version     show version\n"
-            << "  -q, --quality     set output quality (0-100) for lossy compression\n"
+            << "  -q, --quality     set output quality (0-100) for lossy compression (default: 50)\n"
             << "  -L, --lossless    generate lossless output (-q has no effect)\n"
             << "  -t, --thumb #     generate thumbnail with maximum size # (default: off)\n"
             << "      --no-alpha    do not save alpha channel\n"
