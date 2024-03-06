@@ -809,6 +809,42 @@ protected:
 };
 
 
+class EntityGroup : public FullBox
+{
+public:
+  EntityGroup(uint32_t fourcc)
+  {
+    set_short_type(fourcc);
+  }
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+  virtual Error parse_remaining(BitstreamRange& range) { return Error::Ok; }
+  virtual std::string dump_remaining(Indent&) const { return ""; }
+
+public:
+  uint32_t m_group_id;
+  std::vector<heif_item_id> m_entity_ids;
+};
+
+
+class Box_ster : public EntityGroup
+{
+public:
+  Box_ster() : EntityGroup(fourcc("ster"))
+  {
+  }
+
+private:
+  bool m_left_view_flag;
+
+protected:
+  Error parse_remaining(BitstreamRange& range) override;
+  std::string dump_remaining(Indent&) const override;
+};
+
+
 class Box_grpl : public Box
 {
 public:
@@ -816,14 +852,6 @@ public:
 
 protected:
   Error parse(BitstreamRange& range) override;
-
-  struct EntityGroup
-  {
-    FullBox header;
-    uint32_t group_id;
-
-    std::vector<heif_item_id> entity_ids;
-  };
 
   std::vector<EntityGroup> m_entity_groups;
 };

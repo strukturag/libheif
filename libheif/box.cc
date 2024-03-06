@@ -520,6 +520,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_grpl>();
       break;
 
+    case fourcc("altr"):
+      box = std::make_shared<EntityGroup>(fourcc("altr"));
+      break;
+
+    case fourcc("ster"):
+      box = std::make_shared<Box_ster>();
+      break;
+
     case fourcc("dinf"):
       box = std::make_shared<Box_dinf>();
       break;
@@ -2925,34 +2933,7 @@ Error Box_grpl::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  //return read_children(range);
-
-  while (!range.eof()) {
-    EntityGroup group;
-    Error err = group.header.parse_header(range);
-    if (err != Error::Ok) {
-      return err;
-    }
-
-    err = group.header.parse_full_box_header(range);
-    if (err != Error::Ok) {
-      return err;
-    }
-
-    group.group_id = range.read32();
-    uint32_t nEntities = range.read32();
-    for (uint32_t i = 0; i < nEntities; i++) {
-      if (range.eof()) {
-        break;
-      }
-
-      group.entity_ids.push_back(range.read32());
-    }
-
-    m_entity_groups.push_back(group);
-  }
-
-  return range.get_error();
+  return read_children(range);
 }
 
 
@@ -2961,17 +2942,68 @@ std::string Box_grpl::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  for (const auto& group : m_entity_groups) {
-    sstr << indent << "group type: " << group.header.get_type_string() << "\n"
-         << indent << "| group id: " << group.group_id << "\n"
-         << indent << "| entity IDs: ";
+  sstr << dump_children(indent);
 
-    for (uint32_t id : group.entity_ids) {
-      sstr << id << " ";
-    }
+  return sstr.str();
+}
 
-    sstr << "\n";
+
+Error EntityGroup::parse(BitstreamRange& range)
+{
+
+  Error err = parse_full_box_header(range);
+  if (err != Error::Ok) {
+    return err;
   }
+
+  m_group_id = range.read32();
+  uint32_t nEntities = range.read32();
+  for (uint32_t i = 0; i < nEntities; i++) {
+    if (range.eof()) {
+      break;
+    }
+    m_entity_ids.push_back(range.read32());
+  }
+
+  parse_remaining(range);
+
+  return range.get_error();
+}
+
+
+std::string EntityGroup::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "group type: " << get_type_string() << "\n"
+        << indent << "| group id: " << m_group_id << "\n"
+        << indent << "| entity IDs: ";
+
+  for (uint32_t id : m_entity_ids) {
+    sstr << id << " ";
+  }
+
+  sstr << dump_remaining(indent);
+
+  sstr << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_ster::parse_remaining(BitstreamRange& range)
+{
+  uint32_t flags = range.read32();
+  m_left_view_flag = flags & 1;
+  return Error::Ok;
+}
+
+
+std::string Box_ster::dump_remaining(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << indent << "left view flag: " << m_left_view_flag << "\n";
 
   return sstr.str();
 }
