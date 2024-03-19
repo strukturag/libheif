@@ -20,7 +20,6 @@
 
 #include "hevc.h"
 #include "bitstream.h"
-#include "error.h"
 
 #include <cassert>
 #include <cmath>
@@ -347,10 +346,8 @@ static double read_depth_rep_info_element(BitReader& reader)
 }
 
 
-static Result<std::shared_ptr<SEIMessage>> read_depth_representation_info(BitReader& reader)
+static std::shared_ptr<SEIMessage> read_depth_representation_info(BitReader& reader)
 {
-  Result<std::shared_ptr<SEIMessage>> result;
-
   auto msg = std::make_shared<SEIMessage_depth_representation_info>();
 
 
@@ -372,15 +369,9 @@ static Result<std::shared_ptr<SEIMessage>> read_depth_representation_info(BitRea
 
   int rep_type;
   if (!reader.get_uvlc(&rep_type)) {
-    result.error = {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "invalid depth representation type in input"};
-    return result;
+    // TODO error
   }
-
-  if (rep_type < 0 || rep_type > 3) {
-    result.error = {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "input depth representation type out of range"};
-    return result;
-  }
-
+  // TODO: check rep_type range
   msg->depth_representation_type = (enum heif_depth_representation_type) rep_type;
 
   //printf("flags: %d %d %d %d\n",msg->has_z_near,msg->has_z_far,msg->has_d_min,msg->has_d_max);
@@ -389,8 +380,7 @@ static Result<std::shared_ptr<SEIMessage>> read_depth_representation_info(BitRea
   if (msg->has_d_min || msg->has_d_max) {
     int ref_view;
     if (!reader.get_uvlc(&ref_view)) {
-      result.error = {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "invalid disparity_reference_view in input"};
-      return result;
+      // TODO error
     }
     msg->disparity_reference_view = ref_view;
 
@@ -413,8 +403,7 @@ static Result<std::shared_ptr<SEIMessage>> read_depth_representation_info(BitRea
     // TODO: load non-uniform response curve
   }
 
-  result.value = msg;
-  return result;
+  return msg;
 }
 
 
@@ -455,12 +444,8 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 
       switch (payload_id) {
         case 177: // depth_representation_info
-          Result<std::shared_ptr<SEIMessage>> seiResult = read_depth_representation_info(sei_reader);
-          if (seiResult.error) {
-            return seiResult.error;
-          }
-
-          msgs.push_back(seiResult.value);
+          std::shared_ptr<SEIMessage> sei = read_depth_representation_info(sei_reader);
+          msgs.push_back(sei);
           break;
       }
     }
