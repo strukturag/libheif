@@ -714,12 +714,6 @@ Error HeifContext::interpret_heif_file()
           }
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many auxiliary image references");
-          }
-
 
           // alpha channel
 
@@ -727,27 +721,34 @@ Error HeifContext::interpret_heif_file()
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // MIAF
 
-            auto master_iter = m_all_images.find(refs[0]);
-            if (master_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Non-existing alpha image referenced");
-            }
+            for (heif_item_id ref: refs) {
+              auto master_iter = m_all_images.find(ref);
+              if (master_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Non-existing alpha image referenced");
+              }
 
-            auto master_img = master_iter->second;
+              auto master_img = master_iter->second;
 
-            if (image.get() == master_img.get()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Recursive alpha image detected");
-            }
+              if (image.get() == master_img.get()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Recursive alpha image detected");
+              }
 
+              if (image->get_width() == master_img->get_width() &&
+                  image->get_height() == master_img->get_height()) {
 
-            if (image->get_width() == master_img->get_width() &&
-                image->get_height() == master_img->get_height()) {
-
-              image->set_is_alpha_channel_of(refs[0], true);
-              master_img->set_alpha_channel(image);
+                image->set_is_alpha_channel_of(ref, true);
+                master_img->set_alpha_channel(image);
+              /* } else {
+                return Error(heif_error_Unsupported_feature,
+                            heif_suberror_Invalid_image_size,
+                            "No support for alpha image scaling at this time");
+              */
+              }
+              
             }
           }
 
