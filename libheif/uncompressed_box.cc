@@ -330,3 +330,86 @@ Error Box_uncC::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
+
+Error Box_cmpC::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+  compression_type = range.read32();
+  uint8_t v = range.read8();
+  can_decompress_contiguous_ranges = ((v & 0x80) == 0x80);
+  compressed_range_type = (v & 0x7f);
+  return range.get_error();
+}
+
+
+std::string Box_cmpC::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "compression_type: " << to_fourcc(compression_type) << "\n";
+  sstr << indent << "can_compress_contiguous_ranges: " << can_decompress_contiguous_ranges << "\n";
+  sstr << indent << "compressed_range_type: " << (int)compressed_range_type << "\n";
+  return sstr.str();
+}
+
+Error Box_cmpC::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(compression_type);
+  uint8_t v = can_decompress_contiguous_ranges ? 0x80 : 0x00;
+  v |= (compressed_range_type & 0x7F);
+  writer.write8(v);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_icbr::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+  uint32_t num_ranges = range.read32();
+  for (uint32_t r = 0; r < num_ranges; r++) {
+    struct ByteRange byteRange;
+    if (get_version() == 1) {
+      // TODO
+    } else if (get_version() == 0) {
+      byteRange.range_offset = range.read32();
+      byteRange.range_size = range.read32();
+    }
+    m_ranges.push_back(byteRange);
+  }
+  return range.get_error();
+}
+
+
+std::string Box_icbr::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "num_ranges: " << m_ranges.size() << "\n";
+  for (ByteRange range: m_ranges) {
+    sstr << indent << "range_offset: " << range.range_offset << ", range_size: " << range.range_size << "\n";
+  }
+  return sstr.str();
+}
+
+Error Box_icbr::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32((uint32_t)m_ranges.size());
+  for (ByteRange range: m_ranges) {
+    if (get_version() == 1) {
+      // TODO
+    } else if (get_version() == 0) {
+      writer.write32((uint32_t)range.range_offset);
+      writer.write32((uint32_t)range.range_size);
+    }
+  }
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}

@@ -41,8 +41,9 @@ set(libheif_sources
         logging.cc
         mask_image.cc
         mask_image.h
-        metadata_compression.cc
-        metadata_compression.h
+        brotli_compression.cc
+        zlib_compression.cc
+        compression.h
         common_utils.cc
         common_utils.h
         region.cc
@@ -133,11 +134,21 @@ else ()
     message("Not compiling 'libsharpyuv'")
 endif ()
 
-if (WITH_DEFLATE_HEADER_COMPRESSION)
+if (WITH_DEFLATE_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
     find_package(ZLIB REQUIRED)
     target_link_libraries(heif PRIVATE ZLIB::ZLIB)
+    target_compile_definitions(heif PRIVATE WITH_ZLIB_COMPRESSION=1)
+endif ()
+
+if (WITH_DEFLATE_HEADER_COMPRESSION)
     target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
 endif ()
+
+if (HAVE_BROTLI)
+    target_compile_definitions(heif PUBLIC HAVE_BROTLI=1)
+    target_include_directories(heif PRIVATE ${BROTLI_INCLUDE_DIRS})
+    target_link_libraries(heif PRIVATE ${BROTLI_LIBS})
+endif()
 
 if (ENABLE_MULTITHREADING_SUPPORT)
     find_package(Threads)

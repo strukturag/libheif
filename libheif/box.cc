@@ -607,6 +607,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     case fourcc("uncC"):
       box = std::make_shared<Box_uncC>();
       break;
+
+    case fourcc("cmpC"):
+      box = std::make_shared<Box_cmpC>();
+      break;
+
+    case fourcc("icbr"):
+      box = std::make_shared<Box_icbr>();
+      break;
 #endif
 
     // --- JPEG 2000

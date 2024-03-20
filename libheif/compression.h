@@ -17,17 +17,27 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBHEIF_METADATA_COMPRESSION_H
-#define LIBHEIF_METADATA_COMPRESSION_H
+#ifndef LIBHEIF_COMPRESSION_H
+#define LIBHEIF_COMPRESSION_H
 
 #include <vector>
 #include <cinttypes>
 #include <cstddef>
 
-#if WITH_DEFLATE_HEADER_COMPRESSION
+#include "libheif/error.h"
+
+#if WITH_ZLIB_COMPRESSION
 std::vector<uint8_t> deflate(const uint8_t* input, size_t size);
 
-std::vector<uint8_t> inflate(const std::vector<uint8_t>&);
+Error inflate_zlib(const std::vector<uint8_t>&compressed_input, std::vector<uint8_t> *output);
+Error inflate_deflate(const std::vector<uint8_t>&, std::vector<uint8_t> *output);
+
 #endif
 
-#endif //LIBHEIF_METADATA_COMPRESSION_H
+#if HAVE_BROTLI
+
+Error inflate_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output);
+
+#endif
+
+#endif //LIBHEIF_COMPRESSION_H

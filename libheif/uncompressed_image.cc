@@ -30,6 +30,7 @@
 #include "libheif/common_utils.h"
 #include "libheif/error.h"
 #include "libheif/heif.h"
+#include "compression.h"
 #include "uncompressed.h"
 #include "uncompressed_box.h"
 #include "uncompressed_image.h"
@@ -740,6 +741,13 @@ public:
     UncompressedBitReader srcBits(uncompressed_data);
 
     buildChannelList(img);
+    for (size_t i = 0; i < uncompressed_data.size(); i++) {
+      if ((i != 0) && ((i % 32) == 0)) {
+        // printf("\n");
+      }
+      // printf("0x%02x ", uncompressed_data[i]);
+    }
+    // printf("\n");
 
     for (ChannelListEntry &entry : channelList) {
       if (!entry.use_channel) {
@@ -787,9 +795,9 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
                                                         std::shared_ptr<HeifPixelImage>& img,
                                                         uint32_t maximum_image_width_limit,
                                                         uint32_t maximum_image_height_limit,
-                                                        const std::vector<uint8_t>& uncompressed_data)
+                                                        const std::vector<uint8_t>& source_data)
 {
-  if (uncompressed_data.empty()) {
+  if (source_data.empty()) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Uncompressed image data is empty"};
@@ -809,6 +817,9 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   bool found_ispe = false;
   std::shared_ptr<Box_cmpd> cmpd;
   std::shared_ptr<Box_uncC> uncC;
+  std::shared_ptr<Box_cmpC> cmpC;
+  std::shared_ptr<Box_icbr> icbr;
+
   for (const auto& prop : item_properties) {
     auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
     if (ispe) {
@@ -836,6 +847,16 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
     if (maybe_uncC) {
       uncC = maybe_uncC;
     }
+
+    auto maybe_cmpC = std::dynamic_pointer_cast<Box_cmpC>(prop);
+    if (maybe_cmpC) {
+      cmpC = maybe_cmpC;
+    }
+
+    auto maybe_icbr = std::dynamic_pointer_cast<Box_icbr>(prop);
+    if (maybe_icbr) {
+      icbr = maybe_icbr;
+    }
   }
 
 
@@ -847,7 +868,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
                  heif_suberror_Unsupported_data_version,
                  "Missing required box for uncompressed codec");
   }
-
 
   // check if we support the type of image
 
@@ -882,9 +902,52 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
 
   AbstractDecoder *decoder = makeDecoder(width, height, cmpd, uncC);
   if (decoder != nullptr) {
-    Error result = decoder->decode(uncompressed_data, img);
-    delete decoder;
-    return result;
+    if (!cmpC) {
+      Error result = decoder->decode(source_data, img);
+      delete decoder;
+      return result;
+    } else {
+      if (cmpC->get_compression_type() == fourcc("zlib")) {
+        std::vector<uint8_t> inflated_data;
+        Error error = inflate_zlib(source_data, &inflated_data);
+        if (error) {
+          delete decoder;
+          return error;
+        }
+        error = decoder->decode(inflated_data, img);
+        delete decoder;
+        return error;
+      } else if (cmpC->get_compression_type() == fourcc("defl")) {
+        std::vector<uint8_t> inflated_data;
+        Error error = inflate_deflate(source_data, &inflated_data);
+        if (error) {
+          delete decoder;
+          return error;
+        }
+        error = decoder->decode(inflated_data, img);
+        delete decoder;
+        return error;
+#if HAVE_BROTLI
+      } else if (cmpC->get_compression_type() == fourcc("brot")) {
+        std::vector<uint8_t> inflated_data;
+        Error error = inflate_brotli(source_data, &inflated_data);
+        if (error) {
+          delete decoder;
+          return error;
+        }
+        error = decoder->decode(inflated_data, img);
+        delete decoder;
+        return error;
+#endif
+      } else {
+        std::stringstream sstr;
+        sstr << "unsupported uncC compression type: " << to_fourcc(cmpC->get_compression_type()) << std::endl;
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_data_version,
+                     sstr.str());
+
+      }
+    }
   } else {
     printf("bad interleave mode - we should have detected this earlier: %d\n", uncC->get_interleave_type());
     std::stringstream sstr;

@@ -168,12 +168,16 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Camera extrinsic matrix undefined";
     case heif_suberror_Invalid_J2K_codestream:
       return "Invalid JPEG 2000 codestream";
+    case heif_suberror_Decompression_invalid_data:
+      return "Invalid data in generic compression inflation";
 
 
       // --- Memory_allocation_error ---
 
     case heif_suberror_Security_limit_exceeded:
       return "Security limit exceeded";
+    case heif_suberror_Compression_initialisation_error:
+      return "Compression initialisation method error";
 
       // --- Usage_error ---
 
@@ -210,6 +214,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported item construction method";
     case heif_suberror_Unsupported_header_compression_method:
       return "Unsupported header compression method";
+    case heif_suberror_Unsupported_generic_compression_method:
+      return "Unsupported generic compression method"; 
 
       // --- Encoder_plugin_error --
 

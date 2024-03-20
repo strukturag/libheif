@@ -216,6 +216,10 @@ const (
 
 	SuberrorNoIrefBox = C.heif_suberror_No_iref_box
 
+	SuberrorNoIspeProperty = C.heif_suberror_No_ispe_property
+
+	SuberrorNoVvcCBox = C.heif_suberror_No_vvcC_box
+
 	SuberrorNoPictHandler = C.heif_suberror_No_pict_handler
 
 	// An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
@@ -262,6 +266,14 @@ const (
 	SuberrorInvalidFractionalNumber = C.heif_suberror_Invalid_fractional_number
 
 	SuberrorInvalidImageSize = C.heif_suberror_Invalid_image_size
+	
+	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
+
+	SuberrorCameraIntrinsicMatrixUndefined = C.heif_suberror_Camera_intrinsic_matrix_undefined
+
+	SuberrorDecompressionInvalidData = C.heif_suberror_Decompression_invalid_data
+
+	SuberrorNoMatchingDecoderInstalled = C.heif_suberror_No_matching_decoder_installed
 
 	// --- Memory_allocation_error ---
 
@@ -269,6 +281,8 @@ const (
 	// Please check whether the file is valid. If it is, contact us so that we could increase the
 	// security limits further.
 	SuberrorSecurityLimitExceeded = C.heif_suberror_Security_limit_exceeded
+
+	CompressionInitialisationError = C.heif_suberror_Compression_initialisation_error
 
 	// --- Usage_error ---
 
@@ -320,6 +334,8 @@ const (
 	SuberrorUnsupportedImageType = C.heif_suberror_Unsupported_image_type
 
 	SuberrorUnsupportedDataVersion = C.heif_suberror_Unsupported_data_version
+
+	SuberrorUnsupportedGenericCompressionMethod = C.heif_suberror_Unsupported_generic_compression_method
 
 	// The conversion of the source image to the requested chroma / colorspace is not supported.
 	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion

@@ -44,7 +44,7 @@
 #include <windows.h>
 #endif
 
-#include "metadata_compression.h"
+#include "compression.h"
 #include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -958,7 +958,13 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
         error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
-        *data = inflate(compressed_data);
+        if (error) {
+          return error;
+        }
+        error = inflate_zlib(compressed_data, data);
+        if (error) {
+          return error;
+        }
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,

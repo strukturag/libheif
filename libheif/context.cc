@@ -47,7 +47,7 @@
 #include "plugin_registry.h"
 #include "libheif/color-conversion/colorconversion.h"
 #include "mask_image.h"
-#include "metadata_compression.h"
+#include "compression.h"
 #include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
