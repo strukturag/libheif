@@ -80,8 +80,8 @@ public:
 
   const configuration& get_configuration() const { return m_configuration; }
 
-  //void append_nal_data(const std::vector<uint8_t>& nal);
-  //void append_nal_data(const uint8_t* data, size_t size);
+  void append_nal_data(const std::vector<uint8_t>& nal);
+  void append_nal_data(const uint8_t* data, size_t size);
 
   Error write(StreamWriter& writer) const override;
 
@@ -89,8 +89,18 @@ protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  configuration m_configuration;
+    struct NalArray
+    {
+      uint8_t m_array_completeness;
+      uint8_t m_NAL_unit_type;
 
+      std::vector<std::vector<uint8_t> > m_nal_units;
+    };
+
+  configuration m_configuration;
+    //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
+
+    std::vector<NalArray> m_nal_array;
   std::vector<uint8_t> m_config_NALs;
 };
 

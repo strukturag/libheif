@@ -161,73 +161,75 @@ enum heif_suberror_code
 
   heif_suberror_No_hvcC_box = 106,
 
-  heif_suberror_No_pitm_box = 107,
+   heif_suberror_No_vvcC_box = 107,
 
-  heif_suberror_No_ipco_box = 108,
+  heif_suberror_No_pitm_box = 108,
 
-  heif_suberror_No_ipma_box = 109,
+  heif_suberror_No_ipco_box = 109,
 
-  heif_suberror_No_iloc_box = 110,
+  heif_suberror_No_ipma_box = 110,
 
-  heif_suberror_No_iinf_box = 111,
+  heif_suberror_No_iloc_box = 111,
 
-  heif_suberror_No_iprp_box = 112,
+  heif_suberror_No_iinf_box = 112,
 
-  heif_suberror_No_iref_box = 113,
+  heif_suberror_No_iprp_box = 113,
 
-  heif_suberror_No_pict_handler = 114,
+  heif_suberror_No_iref_box = 114,
+
+  heif_suberror_No_pict_handler = 115,
 
   // An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
-  heif_suberror_Ipma_box_references_nonexisting_property = 115,
+  heif_suberror_Ipma_box_references_nonexisting_property = 116,
 
   // No properties have been assigned to an item.
-  heif_suberror_No_properties_assigned_to_item = 116,
+  heif_suberror_No_properties_assigned_to_item = 117,
 
   // Image has no (compressed) data
-  heif_suberror_No_item_data = 117,
+  heif_suberror_No_item_data = 118,
 
   // Invalid specification of image grid (tiled image)
-  heif_suberror_Invalid_grid_data = 118,
+  heif_suberror_Invalid_grid_data = 119,
 
   // Tile-images in a grid image are missing
-  heif_suberror_Missing_grid_images = 119,
+  heif_suberror_Missing_grid_images = 120,
 
-  heif_suberror_Invalid_clean_aperture = 120,
+  heif_suberror_Invalid_clean_aperture = 121,
 
   // Invalid specification of overlay image
-  heif_suberror_Invalid_overlay_data = 121,
+  heif_suberror_Invalid_overlay_data = 122,
 
   // Overlay image completely outside of visible canvas area
-  heif_suberror_Overlay_image_outside_of_canvas = 122,
+  heif_suberror_Overlay_image_outside_of_canvas = 123,
 
-  heif_suberror_Auxiliary_image_type_unspecified = 123,
+  heif_suberror_Auxiliary_image_type_unspecified = 124,
 
-  heif_suberror_No_or_invalid_primary_item = 124,
+  heif_suberror_No_or_invalid_primary_item = 125,
 
-  heif_suberror_No_infe_box = 125,
+  heif_suberror_No_infe_box = 126,
 
-  heif_suberror_Unknown_color_profile_type = 126,
+  heif_suberror_Unknown_color_profile_type = 127,
 
-  heif_suberror_Wrong_tile_image_chroma_format = 127,
+  heif_suberror_Wrong_tile_image_chroma_format = 128,
 
-  heif_suberror_Invalid_fractional_number = 128,
+  heif_suberror_Invalid_fractional_number = 129,
 
-  heif_suberror_Invalid_image_size = 129,
+  heif_suberror_Invalid_image_size = 130,
 
-  heif_suberror_Invalid_pixi_box = 130,
+  heif_suberror_Invalid_pixi_box = 131,
 
-  heif_suberror_No_av1C_box = 131,
+  heif_suberror_No_av1C_box = 132,
 
-  heif_suberror_Wrong_tile_image_pixel_depth = 132,
+  heif_suberror_Wrong_tile_image_pixel_depth = 133,
 
-  heif_suberror_Unknown_NCLX_color_primaries = 133,
+  heif_suberror_Unknown_NCLX_color_primaries = 134,
 
-  heif_suberror_Unknown_NCLX_transfer_characteristics = 134,
+  heif_suberror_Unknown_NCLX_transfer_characteristics = 135,
 
-  heif_suberror_Unknown_NCLX_matrix_coefficients = 135,
+  heif_suberror_Unknown_NCLX_matrix_coefficients = 136,
 
   // Invalid specification of region item
-  heif_suberror_Invalid_region_data = 136,
+  heif_suberror_Invalid_region_data = 137,
 
 
   // --- Memory_allocation_error ---

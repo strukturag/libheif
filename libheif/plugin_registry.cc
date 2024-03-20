@@ -38,6 +38,10 @@
 #include "libheif/plugins/encoder_kvazaar.h"
 #endif
 
+#if HAVE_UVG266
+#include "libheif/plugins/encoder_uvg266.h"
+#endif
+
 #if HAVE_AOM_ENCODER
 #include "libheif/plugins/encoder_aom.h"
 #endif
@@ -129,6 +133,10 @@ void register_default_plugins()
 
 #if HAVE_KVAZAAR
   register_encoder(get_encoder_plugin_kvazaar());
+#endif
+
+#if HAVE_UVG266
+  register_encoder(get_encoder_plugin_uvg266());
 #endif
 
 #if HAVE_AOM_ENCODER
