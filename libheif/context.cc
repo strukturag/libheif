@@ -916,21 +916,17 @@ Error HeifContext::interpret_heif_file()
       for (const auto& ref : references) {
         if (ref.header.get_short_type() == fourcc("cdsc")) {
           std::vector<uint32_t> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Metadata not correctly assigned to image");
-          }
 
-          uint32_t exif_image_id = refs[0];
-          auto img_iter = m_all_images.find(exif_image_id);
-          if (img_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Metadata assigned to non-existing image");
+          for(uint32_t ref: refs) {
+            uint32_t exif_image_id = ref;
+            auto img_iter = m_all_images.find(exif_image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Metadata assigned to non-existing image");
+            }
+            img_iter->second->add_metadata(metadata);
           }
-
-          img_iter->second->add_metadata(metadata);
         }
         else if (ref.header.get_short_type() == fourcc("prem")) {
           uint32_t color_image_id = ref.from_item_ID;
@@ -965,20 +961,17 @@ Error HeifContext::interpret_heif_file()
         for (const auto& ref : references) {
           if (ref.header.get_short_type() == fourcc("cdsc")) {
             std::vector<uint32_t> refs = ref.to_item_ID;
-            if (refs.size() != 1) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Unspecified,
-                           "Region item not correctly assigned to image");
+            for (uint32_t ref: refs) {
+              uint32_t image_id = ref;
+              auto img_iter = m_all_images.find(image_id);
+              if (img_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Region item assigned to non-existing image");
+              }
+              img_iter->second->add_region_item_id(id);
+              m_region_items.push_back(region_item);
             }
-            uint32_t image_id = refs[0];
-            auto img_iter = m_all_images.find(image_id);
-            if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Region item assigned to non-existing image");
-            }
-            img_iter->second->add_region_item_id(id);
-            m_region_items.push_back(region_item);
           }
 
           /* When the geometry 'mask' of a region is represented by a mask stored in
