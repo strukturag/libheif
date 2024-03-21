@@ -150,6 +150,13 @@ if (WITH_UNCOMPRESSED_CODEC)
             uncompressed_image.cc)
 endif ()
 
+if (WITH_EXPERIMENTAL_GAIN_MAP)
+    target_compile_definitions(heif PUBLIC WITH_EXPERIMENTAL_GAIN_MAP=1)
+    target_sources(heif PRIVATE
+            gain_map_metadata.h
+            gain_map_metadata.cc)
+endif ()
+
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
 
 install(TARGETS heif EXPORT ${PROJECT_NAME}-config

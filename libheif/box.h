@@ -455,6 +455,10 @@ public:
 
   const std::string& get_item_type() const { return m_item_type; }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  const std::string& get_item_name() const { return m_item_name; }
+#endif
+
   void set_item_type(const std::string& type) { m_item_type = type; }
 
   void set_item_name(const std::string& name) { m_item_name = name; }
@@ -812,6 +816,13 @@ protected:
 class Box_grpl : public Box
 {
 public:
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  Box_grpl()
+  {
+    set_short_type(fourcc("grpl"));
+  }
+#endif
+
   std::string dump(Indent&) const override;
 
 protected:
@@ -965,6 +976,26 @@ protected:
   Error parse(BitstreamRange& range) override;
 };
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+class Box_altr : public Box
+{
+public:
+  Box_altr()
+  {
+    set_short_type(fourcc("altr"));
+  }
+
+  void add_item_id(heif_item_id id);
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  std::vector<heif_item_id> m_item_IDs;
+};
+#endif
 
 /**
  * User Description property.

@@ -517,6 +517,18 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "mski");
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+static bool item_type_is_gain_map_image(const std::string& item_type, const std::string& item_name) {
+  return  (item_name == "GMap" &&
+            (item_type == "hvc1" ||
+             item_type == "av01"));
+}
+
+static bool item_type_is_gain_map_metadata(const std::string& item_type, const std::string& item_name) {
+  return  (item_name == "GMap" && item_type == "tmap");
+}
+#endif
+
 
 void HeifContext::remove_top_level_image(const std::shared_ptr<Image>& image)
 {
@@ -537,6 +549,10 @@ Error HeifContext::interpret_heif_file()
   m_all_images.clear();
   m_top_level_images.clear();
   m_primary_image.reset();
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  m_gain_map_image.reset();
+  m_gain_map_metadata.reset();
+#endif
 
 
   // --- reference all non-hidden images
@@ -563,6 +579,13 @@ Error HeifContext::interpret_heif_file()
         m_top_level_images.push_back(image);
       }
     }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    if (item_type_is_gain_map_image(infe_box->get_item_type(), infe_box->get_item_name())) {
+      auto image = std::make_shared<Image>(this, id);
+      m_gain_map_image = std::move(image);
+    }
+#endif
   }
 
   if (!m_primary_image) {
@@ -882,8 +905,11 @@ Error HeifContext::interpret_heif_file()
     if (item_type == "rgan") {
       continue;
     }
-    std::string content_type = m_heif_file->get_content_type(id);
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    std::string item_name = m_heif_file->get_item_name(id);
+#endif
+    std::string content_type = m_heif_file->get_content_type(id);
     std::string item_uri_type = m_heif_file->get_item_uri_type(id);
 
     // we now assign all kinds of metadata to the image, not only 'Exif' and 'XMP'
@@ -891,6 +917,9 @@ Error HeifContext::interpret_heif_file()
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
     metadata->item_type = item_type;
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    metadata->item_name = item_name;
+#endif
     metadata->content_type = content_type;
     metadata->item_uri_type = item_uri_type;
 
@@ -924,8 +953,7 @@ Error HeifContext::interpret_heif_file()
           }
 
           img_iter->second->add_metadata(metadata);
-        }
-        else if (ref.header.get_short_type() == fourcc("prem")) {
+        } else if (ref.header.get_short_type() == fourcc("prem")) {
           uint32_t color_image_id = ref.from_item_ID;
           auto img_iter = m_all_images.find(color_image_id);
           if (img_iter == m_all_images.end()) {
@@ -934,10 +962,33 @@ Error HeifContext::interpret_heif_file()
                          "`prem` link assigned to non-existing image");
           }
 
-          img_iter->second->set_is_premultiplied_alpha(true);;
+          img_iter->second->set_is_premultiplied_alpha(true);
+#if WITH_EXPERIMENTAL_GAIN_MAP
+        } else if (ref.header.get_short_type() == fourcc("dimg")) {
+          if (item_type_is_gain_map_metadata(item_type, item_name)) {
+            for (auto to_id : ref.to_item_ID) {
+              auto img_iter = m_all_images.find(to_id);
+              if (img_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Nonexisting_item_referenced,
+                             "Metadata assigned to non-existing image");
+              }
+              img_iter->second->add_metadata(metadata);
+            }
+          }
         }
+#else
+        }
+#endif
       }
     }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    // --- asign gain map metadata
+    if (item_type_is_gain_map_metadata(item_type, item_name)) {
+      m_gain_map_metadata = metadata;
+    }
+#endif
   }
 
   // --- read region item and assign to image(s)
@@ -2255,7 +2306,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_hevc(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2264,7 +2315,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_av1(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2272,7 +2323,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
-                                       heif_image_input_class_normal,
+                                       input_class,
                                        out_image);
       }
       break;
@@ -2281,7 +2332,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2290,7 +2341,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_uncompressed(pixel_image,
                                            encoder,
                                            options,
-                                           heif_image_input_class_normal,
+                                           input_class,
                                            out_image);
     }
       break;
@@ -2299,7 +2350,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_mask(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2451,6 +2502,23 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
   return target_nclx_profile;
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+Error HeifContext::add_tmap_box(const std::vector<uint8_t>& data,
+                                heif_item_id &item_id) {
+  auto tmap_infe = m_heif_file->add_new_infe_box("tmap");  // gain map metadata
+  tmap_infe->set_item_name("GMap");
+  item_id = tmap_infe->get_item_ID();
+
+  m_heif_file->append_iloc_data(item_id, &data[0], data.size());
+
+  return Error::Ok;
+}
+
+void HeifContext::add_altr_property(heif_item_id item_id) {
+  m_heif_file->add_altr_property(item_id);
+}
+#endif
+
 
 Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
@@ -2458,7 +2526,20 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
                                         enum heif_image_input_class input_class,
                                         std::shared_ptr<Image>& out_image)
 {
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  heif_item_id image_id;
+  if (input_class == heif_image_input_class_gain_map) {
+    auto gain_map = m_heif_file->add_new_infe_box("hvc1");
+    gain_map->set_item_name("GMap");
+    gain_map->set_hidden_item(true);
+    image_id = gain_map->get_item_ID();
+  } else {
+    image_id = m_heif_file->add_new_image("hvc1");
+  }
+#else
   heif_item_id image_id = m_heif_file->add_new_image("hvc1");
+#endif
+
   out_image = std::make_shared<Image>(this, image_id);
 
 
@@ -2678,7 +2759,19 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
                                        enum heif_image_input_class input_class,
                                        std::shared_ptr<Image>& out_image)
 {
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  heif_item_id image_id;
+  if (input_class == heif_image_input_class_gain_map) {
+    auto gain_map = m_heif_file->add_new_infe_box("av01");
+    gain_map->set_item_name("GMap");
+    gain_map->set_hidden_item(true);
+    image_id = gain_map->get_item_ID();
+  } else {
+    image_id = m_heif_file->add_new_image("av01");
+  }
+#else
   heif_item_id image_id = m_heif_file->add_new_image("av01");
+#endif
 
   out_image = std::make_shared<Image>(this, image_id);
   m_top_level_images.push_back(out_image);
@@ -3267,6 +3360,18 @@ Error HeifContext::assign_thumbnail(const std::shared_ptr<Image>& master_image,
 
   return Error::Ok;
 }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+Error HeifContext::link_gain_map(const std::shared_ptr<Image>& primary_image,
+                                 const std::shared_ptr<Image>& gain_map_image,
+                                 const heif_item_id tmap_id)
+{
+  m_heif_file->add_iref_reference(tmap_id, fourcc("dimg"),
+                                  {primary_image->get_id(), gain_map_image->get_id()});
+
+  return Error::Ok;
+}
+#endif
 
 
 Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,

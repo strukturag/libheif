@@ -75,6 +75,10 @@ public:
 
   std::string get_item_type(heif_item_id ID) const;
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  std::string get_item_name(heif_item_id ID) const;
+#endif
+
   std::string get_content_type(heif_item_id ID) const;
 
   std::string get_item_uri_type(heif_item_id ID) const;
@@ -171,6 +175,10 @@ public:
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  void append_iloc_data(heif_item_id id, const uint8_t* data, size_t size);
+#endif
+
   void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 
   void set_primary_item_id(heif_item_id id);
@@ -184,6 +192,11 @@ public:
 
   // TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
   void set_hdlr_library_info(const std::string& encoder_plugin_version);
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  // Gain map support
+  void add_altr_property(heif_item_id id);
+#endif
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
   static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);
