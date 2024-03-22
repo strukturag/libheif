@@ -619,6 +619,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("taic"):
       box = std::make_shared<Box_taic>();
+      break;
 
     // --- AVC (H.264)
 
