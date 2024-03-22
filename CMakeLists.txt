@@ -167,7 +167,7 @@ endif()
 plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
-    find_package(OpenJPEG)
+    find_package(OpenJPEG 2)
 endif()
 
 # ffmpeg
