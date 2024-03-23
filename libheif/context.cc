@@ -656,34 +656,29 @@ Error HeifContext::interpret_heif_file()
           // --- this is a thumbnail image, attach to the main image
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many thumbnail references");
+          for (heif_item_id ref: refs) {
+            image->set_is_thumbnail();
+
+            auto master_iter = m_all_images.find(ref);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references a non-existing image");
+            }
+
+            if (master_iter->second->is_thumbnail()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references another thumbnail");
+            }
+
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Recursive thumbnail image detected");
+            }
+            master_iter->second->add_thumbnail(image);
           }
-
-          image->set_is_thumbnail_of(refs[0]);
-
-          auto master_iter = m_all_images.find(refs[0]);
-          if (master_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references a non-existing image");
-          }
-
-          if (master_iter->second->is_thumbnail()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references another thumbnail");
-          }
-
-          if (image.get() == master_iter->second.get()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Recursive thumbnail image detected");
-          }
-          master_iter->second->add_thumbnail(image);
-
           remove_top_level_image(image);
         }
         else if (type == fourcc("auxl")) {
