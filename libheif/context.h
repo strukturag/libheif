@@ -134,10 +134,9 @@ public:
 
     // -- thumbnails
 
-    void set_is_thumbnail_of(heif_item_id id)
+    void set_is_thumbnail()
     {
       m_is_thumbnail = true;
-      m_thumbnail_ref_id = id;
     }
 
     void add_thumbnail(const std::shared_ptr<Image>& img) { m_thumbnails.push_back(img); }
@@ -290,7 +289,6 @@ public:
     bool m_is_primary = false;
 
     bool m_is_thumbnail = false;
-    heif_item_id m_thumbnail_ref_id = 0;
 
     std::vector<std::shared_ptr<Image>> m_thumbnails;
 

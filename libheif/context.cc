@@ -656,34 +656,29 @@ Error HeifContext::interpret_heif_file()
           // --- this is a thumbnail image, attach to the main image
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many thumbnail references");
+          for (heif_item_id ref: refs) {
+            image->set_is_thumbnail();
+
+            auto master_iter = m_all_images.find(ref);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references a non-existing image");
+            }
+
+            if (master_iter->second->is_thumbnail()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references another thumbnail");
+            }
+
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Recursive thumbnail image detected");
+            }
+            master_iter->second->add_thumbnail(image);
           }
-
-          image->set_is_thumbnail_of(refs[0]);
-
-          auto master_iter = m_all_images.find(refs[0]);
-          if (master_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references a non-existing image");
-          }
-
-          if (master_iter->second->is_thumbnail()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references another thumbnail");
-          }
-
-          if (image.get() == master_iter->second.get()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Recursive thumbnail image detected");
-          }
-          master_iter->second->add_thumbnail(image);
-
           remove_top_level_image(image);
         }
         else if (type == fourcc("auxl")) {
@@ -714,12 +709,6 @@ Error HeifContext::interpret_heif_file()
           }
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many auxiliary image references");
-          }
-
 
           // alpha channel
 
@@ -727,27 +716,34 @@ Error HeifContext::interpret_heif_file()
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // MIAF
 
-            auto master_iter = m_all_images.find(refs[0]);
-            if (master_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Non-existing alpha image referenced");
-            }
+            for (heif_item_id ref: refs) {
+              auto master_iter = m_all_images.find(ref);
+              if (master_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Non-existing alpha image referenced");
+              }
 
-            auto master_img = master_iter->second;
+              auto master_img = master_iter->second;
 
-            if (image.get() == master_img.get()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Recursive alpha image detected");
-            }
+              if (image.get() == master_img.get()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Recursive alpha image detected");
+              }
 
+              if (image->get_width() == master_img->get_width() &&
+                  image->get_height() == master_img->get_height()) {
 
-            if (image->get_width() == master_img->get_width() &&
-                image->get_height() == master_img->get_height()) {
-
-              image->set_is_alpha_channel_of(refs[0], true);
-              master_img->set_alpha_channel(image);
+                image->set_is_alpha_channel_of(ref, true);
+                master_img->set_alpha_channel(image);
+              /* } else {
+                return Error(heif_error_Unsupported_feature,
+                            heif_suberror_Invalid_image_size,
+                            "No support for alpha image scaling at this time");
+              */
+              }
+              
             }
           }
 
@@ -915,21 +911,17 @@ Error HeifContext::interpret_heif_file()
       for (const auto& ref : references) {
         if (ref.header.get_short_type() == fourcc("cdsc")) {
           std::vector<uint32_t> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Metadata not correctly assigned to image");
-          }
 
-          uint32_t exif_image_id = refs[0];
-          auto img_iter = m_all_images.find(exif_image_id);
-          if (img_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Metadata assigned to non-existing image");
+          for(uint32_t ref: refs) {
+            uint32_t exif_image_id = ref;
+            auto img_iter = m_all_images.find(exif_image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Metadata assigned to non-existing image");
+            }
+            img_iter->second->add_metadata(metadata);
           }
-
-          img_iter->second->add_metadata(metadata);
         }
         else if (ref.header.get_short_type() == fourcc("prem")) {
           uint32_t color_image_id = ref.from_item_ID;
@@ -964,20 +956,17 @@ Error HeifContext::interpret_heif_file()
         for (const auto& ref : references) {
           if (ref.header.get_short_type() == fourcc("cdsc")) {
             std::vector<uint32_t> refs = ref.to_item_ID;
-            if (refs.size() != 1) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Unspecified,
-                           "Region item not correctly assigned to image");
+            for (uint32_t ref: refs) {
+              uint32_t image_id = ref;
+              auto img_iter = m_all_images.find(image_id);
+              if (img_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Region item assigned to non-existing image");
+              }
+              img_iter->second->add_region_item_id(id);
+              m_region_items.push_back(region_item);
             }
-            uint32_t image_id = refs[0];
-            auto img_iter = m_all_images.find(image_id);
-            if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Region item assigned to non-existing image");
-            }
-            img_iter->second->add_region_item_id(id);
-            m_region_items.push_back(region_item);
           }
 
           /* When the geometry 'mask' of a region is represented by a mask stored in
