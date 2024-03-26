@@ -37,7 +37,8 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd')
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -130,6 +131,29 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    heif_property_id propertyId,
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
+
+LIBHEIF_API
+struct heif_error heif_item_add_property_uuid(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              uint8_t* uuid_type,
+                                              uint8_t* data, size_t size,
+                                              heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_item_get_property_uuid_size(const struct heif_context* context,
+                                                   heif_item_id itemId,
+                                                   heif_property_id propertyId,
+                                                   size_t* size_out);
+
+/**
+ * @param data_out User-supplied array. The size given by heif_item_get_property_uuid_size().
+*/
+LIBHEIF_API
+struct heif_error heif_item_get_property_uuid(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              heif_property_id propertyId,
+                                              uint8_t* data_out);
+
 
 #ifdef __cplusplus
 }
