@@ -135,8 +135,8 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 LIBHEIF_API
 struct heif_error heif_item_add_property_uuid(const struct heif_context* context,
                                               heif_item_id itemId,
-                                              uint8_t* uuid_type,
-                                              uint8_t* data, size_t size,
+                                              const uint8_t* uuid_type,
+                                              const uint8_t* data, size_t size,
                                               heif_property_id* out_propertyId);
 
 LIBHEIF_API
