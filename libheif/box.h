@@ -125,8 +125,13 @@ public:
 
   std::string get_type_string() const;
 
+  std::vector<uint8_t> get_uuid_data() const { return m_uuid_data; }
+
   void set_short_type(uint32_t type) { m_type = type; }
 
+  void set_uuid_type(const std::vector<uint8_t>& uuid_type) { m_uuid_type = uuid_type; }
+
+  void set_uuid_data(const std::vector<uint8_t>& uuid_data) { m_uuid_data = uuid_data; }
 
   Error parse_header(BitstreamRange& range);
 
@@ -140,9 +145,10 @@ private:
   uint64_t m_size = 0;
 
   uint32_t m_type = 0;
-  std::vector<uint8_t> m_uuid_type;
 
 protected:
+  std::vector<uint8_t> m_uuid_type;
+  std::vector<uint8_t> m_uuid_data;
   uint32_t m_header_size = 0;
 };
 

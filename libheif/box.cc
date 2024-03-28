@@ -392,12 +392,14 @@ Error Box::parse(BitstreamRange& range)
   }
   else {
     uint64_t content_size = get_box_size() - get_header_size();
-    if (range.prepare_read(content_size)) {
-      if (content_size > MAX_BOX_SIZE) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_box_size);
-      }
-
+    if (content_size > MAX_BOX_SIZE) {
+      return Error(heif_error_Invalid_input, heif_suberror_Invalid_box_size);
+    }
+    else if (get_short_type() == fourcc("uuid")) {
+      m_uuid_data.resize(content_size);
+      range.read(m_uuid_data.data(), content_size);
+    }
+    else if (range.prepare_read(content_size)) {
       range.get_istream()->seek_cur(get_box_size() - get_header_size());
     }
   }
@@ -713,6 +715,10 @@ std::string FullBox::dump(Indent& indent) const
 Error Box::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
+
+  if (get_short_type() == fourcc("uuid")) {
+    writer.write(m_uuid_data);
+  }
 
   Error err = write_children(writer);
 
