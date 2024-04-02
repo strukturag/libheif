@@ -145,6 +145,50 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 }
 
 
+heif_filetype_result heif_check_filetype_full(const uint8_t* data, int len)
+{
+  if (len < 12) {
+    // It can't be a valid ISOBMFF file without the FourCC, major_brand and minor_version
+    return heif_filetype_no;
+  }
+
+  if (data[0] != 'f' ||
+      data[1] != 't' ||
+      data[2] != 'y' ||
+      data[3] != 'p') {
+        // It can't be a valid ISOBMFF file without this FourCC.
+    return heif_filetype_no;
+  }
+
+  std::set<heif_brand2> supported_brands{
+      heif_brand2_avif,
+      heif_brand2_heic,
+      heif_brand2_heix,
+      heif_brand2_j2ki,
+      heif_brand2_jpeg,
+      heif_brand2_miaf,
+      heif_brand2_mif1,
+      heif_brand2_mif2
+  };
+
+  heif_brand2 brand = heif_fourcc_to_brand((char*) (data + 4));
+  auto it = supported_brands.find(brand);
+  if (it != supported_brands.end()) {
+    return heif_filetype_yes_supported;
+  }
+
+  for (int offset = 12; offset < len; offset += 4) {
+    heif_brand2 compatible_brand = heif_fourcc_to_brand((char*) (data + offset));
+    it = supported_brands.find(compatible_brand);
+    if (it != supported_brands.end()) {
+      return heif_filetype_yes_supported;
+    }
+  }
+
+  return heif_filetype_yes_unsupported;
+}
+
+
 int heif_check_jpeg_filetype(const uint8_t* data, int len)
 {
   if (len < 12 || data == nullptr) {
