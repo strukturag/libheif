@@ -576,14 +576,16 @@ LIBHEIF_API
 enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
 
 /**
- * Check the filetype box content for a support file type.
+ * Check the filetype box content for a supported file type.
  *
- * <p>The data is assumed to start from the FourCC value (i.e. `ftyp`).
+ * <p>The data is assumed to start from the start of the `ftyp` box.
  *
  * <p>This function checks the compatible brands.
+ * 
+ * @returns heif_error_ok if a supported brand is found, or other error if not.
  */
 LIBHEIF_API
-enum heif_filetype_result heif_check_filetype_full(const uint8_t* data, int len);
+struct heif_error heif_has_compatible_filetype(const uint8_t* data, int len);
 
 LIBHEIF_API
 int heif_check_jpeg_filetype(const uint8_t* data, int len);
