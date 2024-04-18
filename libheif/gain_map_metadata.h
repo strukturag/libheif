@@ -22,6 +22,7 @@
 #define LIBHEIF_GAIN_MAP_METADATA_H
 
 #include "error.h"
+#include <vector>
 
 // Gain map metadata, for tone mapping between SDR and HDR.
 class GainMapMetadata {
