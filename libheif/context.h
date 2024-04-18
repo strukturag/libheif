@@ -38,7 +38,7 @@
 
 #include "region.h"
 #if WITH_EXPERIMENTAL_GAIN_MAP
-#include "gain_map_metadata.h"
+#include "heif_gain_map.h"
 #endif
 
 class HeifContext;

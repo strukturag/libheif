@@ -1406,7 +1406,7 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
 
 #if WITH_EXPERIMENTAL_GAIN_MAP
 struct heif_error heif_image_get_gain_map_metadata(heif_context* ctx,
-                                                   GainMapMetadata* out_gm_metadata) {
+                                                   heif_gain_map_metadata* out_gm_metadata) {
   if (!out_gm_metadata) {
     Error err(heif_error_Usage_error,
               heif_suberror_Null_pointer_argument);
@@ -1415,7 +1415,7 @@ struct heif_error heif_image_get_gain_map_metadata(heif_context* ctx,
 
   std::shared_ptr<ImageMetadata> metadata = ctx->context->get_gain_map_metadata();
 
-  GainMapMetadata::parse_gain_map_metadata(metadata->m_data, out_gm_metadata);
+  heif_gain_map_metadata::parse_gain_map_metadata(metadata->m_data, out_gm_metadata);
 
   return Error::Ok.error_struct(ctx->context.get());
 }
@@ -2774,7 +2774,7 @@ struct heif_error heif_context_encode_gain_map_image(struct heif_context* ctx,
                                                      const struct heif_image_handle* primary_image_handle,
                                                      struct heif_encoder* encoder,
                                                      const struct heif_encoding_options* input_options,
-                                                     const struct GainMapMetadata* gain_map_metadata,
+                                                     const struct heif_gain_map_metadata* gain_map_metadata,
                                                      struct heif_image_handle** out_image_handle)
 {
   if (!encoder) {
@@ -2789,7 +2789,7 @@ struct heif_error heif_context_encode_gain_map_image(struct heif_context* ctx,
   ctx->context->add_altr_property(primary_image_handle->image->get_id());
 
   std::vector<uint8_t> metadata;
-  error = GainMapMetadata::prepare_gain_map_metadata(gain_map_metadata, metadata);
+  error = heif_gain_map_metadata::prepare_gain_map_metadata(gain_map_metadata, metadata);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

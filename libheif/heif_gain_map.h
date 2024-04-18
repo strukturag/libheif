@@ -18,15 +18,14 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_GAIN_MAP_METADATA_H
-#define LIBHEIF_GAIN_MAP_METADATA_H
+#ifndef LIBHEIF_HEIF_GAIN_MAP_H
+#define LIBHEIF_HEIF_GAIN_MAP_H
 
 #include "error.h"
 #include <vector>
 
 // Gain map metadata, for tone mapping between SDR and HDR.
-class GainMapMetadata {
-public:
+struct heif_gain_map_metadata {
   uint32_t gainMapMinN[3];
   uint32_t gainMapMinD[3];
   uint32_t gainMapMaxN[3];
@@ -47,11 +46,11 @@ public:
   bool backwardDirection;
   bool useBaseColorSpace;
 
-  static Error prepare_gain_map_metadata(const GainMapMetadata* gain_map_metadata,
+  static Error prepare_gain_map_metadata(const heif_gain_map_metadata* gain_map_metadata,
                                          std::vector<uint8_t> &data);
 
   static Error parse_gain_map_metadata(const std::vector<uint8_t> &data,
-                                       GainMapMetadata* gain_map_metadata);
+                                       heif_gain_map_metadata* gain_map_metadata);
 
   void dump() const {
     printf("GAIN MAP METADATA: \n");

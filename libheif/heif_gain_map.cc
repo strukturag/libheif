@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gain_map_metadata.h"
+#include "heif_gain_map.h"
 
 Error streamWriteU8(std::vector<uint8_t> &data, uint8_t value) {
   data.push_back(value);
@@ -53,8 +53,8 @@ Error streamReadU32(const std::vector<uint8_t> &data, uint32_t &value, size_t &p
   return Error::Ok;
 }
 
-Error GainMapMetadata::prepare_gain_map_metadata(const GainMapMetadata* metadata,
-                                                 std::vector<uint8_t> &data) {
+Error heif_gain_map_metadata::prepare_gain_map_metadata(const heif_gain_map_metadata* metadata,
+                                                        std::vector<uint8_t> &data) {
   if (metadata == nullptr) {
     return Error(heif_error_Usage_error, heif_suberror_Null_pointer_argument);
   }
@@ -135,8 +135,8 @@ Error GainMapMetadata::prepare_gain_map_metadata(const GainMapMetadata* metadata
   return Error::Ok;
 }
 
-Error GainMapMetadata::parse_gain_map_metadata(const std::vector<uint8_t> &data,
-                                               GainMapMetadata* metadata) {
+Error heif_gain_map_metadata::parse_gain_map_metadata(const std::vector<uint8_t> &data,
+                                                      heif_gain_map_metadata* metadata) {
   if (metadata == nullptr) {
     return Error(heif_error_Usage_error, heif_suberror_Null_pointer_argument);
   }

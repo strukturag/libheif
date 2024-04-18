@@ -53,6 +53,9 @@
 #include "benchmark.h"
 #include "libheif/exif.h"
 #include "common.h"
+#if WITH_EXPERIMENTAL_GAIN_MAP
+#include "libheif/heif_gain_map.h"
+#endif
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -724,9 +727,17 @@ int main(int argc, char** argv)
   struct heif_error error;
 
   std::shared_ptr<heif_image> primary_image;
+  struct heif_image_handle* handle;
 
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    bool is_gain_map = false;
+    if (input_filename.find("gain_map") != std::string::npos) {
+      is_gain_map = true;
+    }
+#endif
 
     if (output_filename.empty()) {
       std::string filename_without_suffix;
@@ -865,12 +876,28 @@ int main(int argc, char** argv)
     }
 
 
-    struct heif_image_handle* handle;
     error = heif_context_encode_image(context.get(),
                                       image.get(),
                                       encoder,
                                       options,
                                       &handle);
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+    if (is_gain_map) {
+      struct heif_image_handle* gain_map_image_handle;
+      heif_gain_map_metadata gmm;
+
+      error = heif_context_encode_gain_map_image(context.get(),
+                                                 image.get(),
+                                                 handle,
+                                                 encoder,
+                                                 nullptr,
+                                                 &gmm,
+                                                 &gain_map_image_handle);
+      heif_image_handle_release(gain_map_image_handle);
+    }
+#endif
+
     if (error.code != 0) {
       heif_encoding_options_free(options);
       std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";

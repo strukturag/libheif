@@ -96,7 +96,7 @@ struct heif_context;
 struct heif_image_handle;
 struct heif_image;
 #if WITH_EXPERIMENTAL_GAIN_MAP
-struct GainMapMetadata;
+struct heif_gain_map_metadata;
 #endif
 
 
@@ -1245,7 +1245,7 @@ const char* heif_image_handle_get_metadata_item_uri_type(const struct heif_image
 // Get a pointer to the gain map metadata.
 LIBHEIF_API
 struct heif_error heif_image_get_gain_map_metadata(heif_context* ctx,
-                                                   GainMapMetadata* out_gm_metadata);
+                                                   heif_gain_map_metadata* out_gm_metadata);
 #endif
 
 // ------------------------- color profiles -------------------------
@@ -2070,7 +2070,7 @@ struct heif_error heif_context_encode_gain_map_image(struct heif_context*,
                                                      const struct heif_image_handle* primary_image_handle,
                                                      struct heif_encoder* encoder,
                                                      const struct heif_encoding_options* options,
-                                                     const struct GainMapMetadata* gain_map_metadata,
+                                                     const struct heif_gain_map_metadata* gain_map_metadata,
                                                      struct heif_image_handle** out_image_handle);
 #endif
 
