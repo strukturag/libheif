@@ -646,7 +646,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 
   if (nclx) {
     svt_config.color_description_present_flag = true;
-#if SVT_AV1_VERSION_MAJOR == 1
+#if SVT_AV1_VERSION_MAJOR >= 1
     svt_config.color_primaries = static_cast<EbColorPrimaries>(nclx->color_primaries);
     svt_config.transfer_characteristics = static_cast<EbTransferCharacteristics>(nclx->transfer_characteristics);
     svt_config.matrix_coefficients = static_cast<EbMatrixCoefficients>(nclx->matrix_coefficients);

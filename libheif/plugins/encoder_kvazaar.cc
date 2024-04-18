@@ -362,6 +362,11 @@ static void copy_plane(kvz_pixel* out_p, uint32_t out_stride, const uint8_t* in_
 }
 
 
+template<typename T, typename D>
+std::unique_ptr<T, D> make_guard(T* ptr, D&& deleter) {
+    return std::unique_ptr<T, D>(ptr, deleter);
+}
+
 static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct heif_image* image,
                                               heif_image_input_class input_class)
 {
@@ -381,7 +386,8 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
     return err;
   }
 
-  kvz_config* config = api->config_alloc();
+  auto uconfig = make_guard(api->config_alloc(), [api](kvz_config* cfg) { api->config_destroy(cfg); });
+  kvz_config* config = uconfig.get();
   api->config_init(config); // param, encoder->preset.c_str(), encoder->tune.c_str());
 
 #if HAVE_KVAZAAR_ENABLE_LOGGING
@@ -561,9 +567,9 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 */
 
-  kvz_picture* pic = api->picture_alloc_csp(kvzChroma, encoded_width, encoded_height);
+  auto upic = make_guard(api->picture_alloc_csp(kvzChroma, encoded_width, encoded_height), [api](kvz_picture* pic) { api->picture_free(pic); });
+  kvz_picture* pic = upic.get();
   if (!pic) {
-    api->config_destroy(config);
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
@@ -593,11 +599,9 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
                encoded_width >> chroma_stride_shift, encoded_height >> chroma_height_shift);
   }
 
-  kvz_encoder* kvzencoder = api->encoder_open(config);
+  auto uencoder = make_guard(api->encoder_open(config), [api](kvz_encoder* e) { api->encoder_close(e); });
+  kvz_encoder* kvzencoder = uencoder.get();
   if (!kvzencoder) {
-    api->picture_free(pic);
-    api->config_destroy(config);
-
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
@@ -606,14 +610,18 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 
   kvz_data_chunk* data = nullptr;
+  auto free_data = [api](kvz_data_chunk** data){
+    if(*data) {
+        api->chunk_free(*data);
+        *data = nullptr;
+    }
+  };
+  auto data_deleter = std::unique_ptr<kvz_data_chunk*, decltype(free_data)>(&data, free_data);
+
   uint32_t data_len;
   int success;
   success = api->encoder_headers(kvzencoder, &data, &data_len);
   if (!success) {
-    api->picture_free(pic);
-    api->config_destroy(config);
-    api->encoder_close(kvzencoder);
-
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
@@ -622,17 +630,13 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 
   append_chunk_data(data, encoder->output_data);
+  free_data(&data);
 
   success = api->encoder_encode(kvzencoder,
                                 pic,
                                 &data, &data_len,
                                 nullptr, nullptr, nullptr);
   if (!success) {
-    api->chunk_free(data);
-    api->picture_free(pic);
-    api->config_destroy(config);
-    api->encoder_close(kvzencoder);
-
     return heif_error{
         heif_error_Encoder_plugin_error,
         heif_suberror_Encoder_encoding,
@@ -641,6 +645,7 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
   }
 
   append_chunk_data(data, encoder->output_data);
+  free_data(&data);
 
   for (;;) {
     success = api->encoder_encode(kvzencoder,
@@ -648,11 +653,6 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
                                   &data, &data_len,
                                   nullptr, nullptr, nullptr);
     if (!success) {
-      api->chunk_free(data);
-      api->picture_free(pic);
-      api->config_destroy(config);
-      api->encoder_close(kvzencoder);
-
       return heif_error{
           heif_error_Encoder_plugin_error,
           heif_suberror_Encoder_encoding,
@@ -665,16 +665,10 @@ static struct heif_error kvazaar_encode_image(void* encoder_raw, const struct he
     }
 
     append_chunk_data(data, encoder->output_data);
+    free_data(&data);
   }
 
   (void) success;
-
-  api->chunk_free(data);
-
-  api->encoder_close(kvzencoder);
-  api->picture_free(pic);
-  api->config_destroy(config);
-
   return heif_error_ok;
 }
 
