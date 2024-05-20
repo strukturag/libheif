@@ -18,3 +18,8 @@ cmake -S . -B build.libavif -G Ninja -DCMAKE_INSTALL_PREFIX="$(pwd)/dist" -DCMAK
 ninja -C build.libavif
 ninja -C build.libavif install
 cd ..
+
+echo ""
+echo "----- NOTE ----"
+echo "Please add the path to the pkg-config file to your PKG_CONFIG_PATH, like this:"
+echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:`pwd`/aom/dist/lib/pkgconfig"
