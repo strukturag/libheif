@@ -22,4 +22,4 @@ cd ..
 echo ""
 echo "----- NOTE ----"
 echo "Please add the path to the pkg-config file to your PKG_CONFIG_PATH, like this:"
-echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:`pwd`/aom/dist/lib/pkgconfig"
+echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:$(pwd)/aom/dist/lib/pkgconfig"
