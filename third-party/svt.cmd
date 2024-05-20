@@ -10,10 +10,10 @@ git clone -b v1.2.1 --depth 1 https://gitlab.com/AOMediaCodec/SVT-AV1.git
 cd SVT-AV1
 cd Build/linux
 
-./build.sh release static no-dec no-apps prefix=`pwd`/install install
+./build.sh release static no-dec no-apps prefix=$(pwd)/install install
 cd ../../..
 
 echo ""
 echo "----- NOTE ----"
 echo "Please add the path to the pkg-config file to your PKG_CONFIG_PATH, like this:"
-echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:`pwd`/SVT-AV1/Build/linux/install/lib/pkgconfig"
+echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:$(pwd)/SVT-AV1/Build/linux/install/lib/pkgconfig"
