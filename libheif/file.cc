@@ -966,6 +966,19 @@ std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
 
 void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height)
 {
+  // Reuse matching ispe box if one exists.
+  auto properties = get_ipco_box()->get_all_child_boxes();
+  for (uint16_t i = 0; i < properties.size(); i++) {
+    auto property = properties[i];
+    if (property->get_short_type() == fourcc("ispe")) {
+      auto ispe = std::dynamic_pointer_cast<Box_ispe>(property);
+      if (ispe->get_width() == width && ispe->get_height() == height) {
+        m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(i + 1)});
+        return;
+      }
+    }
+  }
+
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
