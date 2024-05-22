@@ -740,6 +740,38 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 }
 
 
+int Box::find_or_append_child_box(const std::shared_ptr<Box>& box)
+{
+  for (size_t i = 0; i < m_children.size(); i++) {
+    if (Box::equal(m_children[i], box)) {
+      return i;
+    }
+  }
+  return append_child_box(box);
+}
+
+
+bool Box::operator==(const Box& other) const
+{
+  StreamWriter writer1;
+  StreamWriter writer2;
+
+  this->write(writer1);
+  other.write(writer2);
+
+  return writer1.get_data() == writer2.get_data();
+}
+
+
+bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2)
+{
+    if (!box1 || !box2) {
+        return false;
+    }
+    return *box1 == *box2;
+}
+
+
 Error Box::read_children(BitstreamRange& range, int max_number)
 {
   int count = 0;
