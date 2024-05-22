@@ -753,6 +753,10 @@ int Box::find_or_append_child_box(const std::shared_ptr<Box>& box)
 
 bool Box::operator==(const Box& other) const
 {
+  if (this->get_short_type() != other.get_short_type()) {
+    return false;
+  }
+
   StreamWriter writer1;
   StreamWriter writer2;
 
