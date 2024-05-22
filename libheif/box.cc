@@ -742,7 +742,7 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 
 int Box::find_or_append_child_box(const std::shared_ptr<Box>& box)
 {
-  for (size_t i = 0; i < m_children.size(); i++) {
+  for (int i = 0; i < (int) m_children.size(); i++) {
     if (Box::equal(m_children[i], box)) {
       return i;
     }
