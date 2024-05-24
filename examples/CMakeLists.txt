@@ -26,7 +26,6 @@ add_executable(heif-convert ${getopt_sources}
         encoder_y4m.h
         heif_convert.cc
         ../libheif/exif.cc
-        ../libheif/exif.cc
         common.cc
         common.h)
 target_link_libraries(heif-convert PRIVATE heif)
