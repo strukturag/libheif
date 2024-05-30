@@ -137,6 +137,16 @@ struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
 LIBHEIF_API
 void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data);
 
+/**
+ * Get the item ids that reference the given item.
+ *
+ * @param ctx the file context.
+ * @param from_item_id the item identifier for the item.
+ * @param index the index of the reference to get.
+ * @param out_reference_type_4cc The 4cc of the reference. (e.g dimg, thmb, cdsc, or auxl)
+ * @param out_references_to the item references. Use {@link heif_release_item_references} to free the memory.
+ * @return the number of items that reference the given item. Returns 0 if the index exceeds the number of references.
+ */
 LIBHEIF_API
 size_t heif_context_get_item_references(const struct heif_context* ctx,
                                         heif_item_id from_item_id,
