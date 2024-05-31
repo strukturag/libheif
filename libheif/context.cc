@@ -2314,47 +2314,45 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   return error;
 }
 
-Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& pixel_images,
+Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
                                uint16_t rows,
                                uint16_t columns,
                                struct heif_encoder* encoder,
                                const struct heif_encoding_options& options,
                                std::shared_ptr<Image>& out_grid_image)
 {
-  Error error;
-
-  int tile_width = pixel_images[0]->get_width(heif_channel_interleaved);
-  int tile_height = pixel_images[0]->get_height(heif_channel_interleaved);
-
+  // Create ImageGrid
   ImageGrid grid;
   grid.set_num_tiles(columns, rows);
+  int tile_width = tiles[0]->get_width(heif_channel_interleaved);
+  int tile_height = tiles[0]->get_height(heif_channel_interleaved);
   grid.set_output_size(tile_width * columns, tile_height * rows);
   std::vector<uint8_t> grid_data = grid.write();
 
-  std::vector<heif_item_id> image_ids;
-
   // Encode Tiles
+  Error error;
+  std::vector<heif_item_id> tile_ids;
   for (int i=0; i<rows*columns; i++) {
     std::shared_ptr<Image> out_tile;
-    error = encode_image(pixel_images[i],
-                        encoder,
-                        options,
-                        heif_image_input_class_normal,
-                        out_tile);
+    error = encode_image(tiles[i],
+                         encoder,
+                         options,
+                         heif_image_input_class_normal,
+                         out_tile);
     heif_item_id tile_id = out_tile->get_id();
     m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
-    image_ids.push_back(out_tile->get_id());
+    tile_ids.push_back(out_tile->get_id());
   }
 
-  // Add Grid Item
+  // Create Grid Item
   heif_item_id grid_id = m_heif_file->add_new_image("grid");
-  const int construction_method = 1; // 0=mdat 1=idat
-  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
   out_grid_image = std::make_shared<Image>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
 
   // Connect tiles to grid
-  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), image_ids);
+  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
 
   // Add ISPE property
   int image_width = tile_width * columns;
