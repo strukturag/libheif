@@ -2037,9 +2037,21 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
 
+/**
+ * @brief Encodes an array of images into a grid.
+ * 
+ * @param ctx The file context
+ * @param input_images User allocated array of tile images.
+ * @param rows The number of rows in the grid.
+ * @param columns The number of columns in the grid.
+ * @param encoder Defines the encoder to use. See heif_context_get_encoder_for_format()
+ * @param input_options Optional, may be nullptr.
+ * @param out_image_handle 
+ * @return struct heif_error
+ */
 LIBHEIF_API
 struct heif_error heif_context_encode_grid(struct heif_context* ctx,
-                                           struct heif_image** input_images,   // array of tile images
+                                           struct heif_image** input_images,
                                            uint16_t rows,
                                            uint16_t columns,
                                            struct heif_encoder* encoder,
