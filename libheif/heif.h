@@ -2041,17 +2041,17 @@ struct heif_error heif_context_encode_image(struct heif_context*,
  * @brief Encodes an array of images into a grid.
  * 
  * @param ctx The file context
- * @param input_images User allocated array of tile images.
+ * @param tiles User allocated array of images that will form the grid.
  * @param rows The number of rows in the grid.
  * @param columns The number of columns in the grid.
  * @param encoder Defines the encoder to use. See heif_context_get_encoder_for_format()
  * @param input_options Optional, may be nullptr.
- * @param out_image_handle 
+ * @param out_image_handle Returns a handle to the grid. The caller is responsible for freeing it.
  * @return struct heif_error
  */
 LIBHEIF_API
 struct heif_error heif_context_encode_grid(struct heif_context* ctx,
-                                           struct heif_image** input_images,
+                                           struct heif_image** tiles,
                                            uint16_t rows,
                                            uint16_t columns,
                                            struct heif_encoder* encoder,

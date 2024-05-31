@@ -2708,7 +2708,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
 
 struct heif_error heif_context_encode_grid(struct heif_context* ctx,
-                                           struct heif_image** input_images,   // array of tile images
+                                           struct heif_image** tiles,   // array of tile images
                                            uint16_t columns,
                                            uint16_t rows,
                                            struct heif_encoder* encoder,
@@ -2720,6 +2720,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
+  // TODO: Don't repeat this code from heif_context_encode_image()
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
   set_default_options(options);
@@ -2727,7 +2728,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
     copy_options(options, *input_options);
 
     if (options.output_nclx_profile == nullptr) {
-      auto input_nclx = input_images[0]->image->get_color_profile_nclx();
+      auto input_nclx = tiles[0]->image->get_color_profile_nclx();
       if (input_nclx) {
         options.output_nclx_profile = &nclx;
         nclx.version = 1;
@@ -2739,32 +2740,32 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
     }
   }
 
-  std::shared_ptr<HeifContext::Image> image;
-  Error error;
-
-  std::vector<std::shared_ptr<HeifPixelImage>> pixel_images;
+  // Convert heif_images to a vector of HeifPixelImages
+  std::vector<std::shared_ptr<HeifPixelImage>> pixel_tiles;
   for (int i=0; i<rows*columns; i++) {
-    pixel_images.push_back(input_images[i]->image);
+    pixel_tiles.push_back(tiles[i]->image);
   }
 
-  error = ctx->context->encode_grid(pixel_images,
+  // Encode Grid
+  Error error;
+  std::shared_ptr<HeifContext::Image> out_grid;
+  error = ctx->context->encode_grid(pixel_tiles,
                                     rows, columns,
                                     encoder,
                                     options,
-                                    image);
+                                    out_grid);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
 
-  // mark the new image as primary image
-
+  // Mark as primary image
   if (ctx->context->is_primary_image_set() == false) {
-    ctx->context->set_primary_image(image);
+    ctx->context->set_primary_image(out_grid);
   }
 
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;
-    (*out_image_handle)->image = image;
+    (*out_image_handle)->image = out_grid;
     (*out_image_handle)->context = ctx->context;
   }
 
