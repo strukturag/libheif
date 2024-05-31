@@ -2707,6 +2707,74 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 }
 
 
+struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
+                                                 struct heif_image** input_images,   // array of tile images
+                                                 uint16_t columns,
+                                                 uint16_t rows,
+                                                 struct heif_encoder* encoder,
+                                                 const struct heif_encoding_options* input_options,
+                                                 struct heif_image_handle** out_image_handle)
+{
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
+  heif_encoding_options options;
+  heif_color_profile_nclx nclx;
+  if (input_options == nullptr) {
+    set_default_options(options);
+  }
+  else {
+    copy_options(options, *input_options);
+
+    if (options.output_nclx_profile == nullptr) {
+      auto input_nclx = input_images[0]->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options.output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries)input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics)input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients)input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
+  }
+
+  std::shared_ptr<HeifContext::Image> image;
+  Error error;
+
+  std::vector<std::shared_ptr<HeifPixelImage>> pixel_images;
+  for (int i=0; i<rows*columns; i++) {
+    pixel_images.push_back(input_images[i]->image);
+  }
+
+  error = ctx->context->encode_grid_image(pixel_images,
+                                          rows, columns,
+                                          encoder,
+                                          options,
+                                          heif_image_input_class_normal,
+                                          image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  // mark the new image as primary image
+
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(image);
+  }
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = image;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image_handle* master_image,
                                                 const struct heif_image_handle* thumbnail_image)

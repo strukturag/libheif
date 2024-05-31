@@ -2314,6 +2314,66 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   return error;
 }
 
+Error HeifContext::encode_grid_image(const std::vector<std::shared_ptr<HeifPixelImage>>& pixel_images,
+                                     uint16_t rows,
+                                     uint16_t columns,
+                                     struct heif_encoder* encoder,
+                                     const struct heif_encoding_options& options,
+                                     enum heif_image_input_class input_class,
+                                     std::shared_ptr<Image>& out_grid_image)
+{
+  Error error;
+
+  // TODO: the hdlr box is not the right place for comments
+  // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
+
+  int tile_width = pixel_images[0]->get_width(heif_channel_interleaved);
+  int tile_height = pixel_images[0]->get_height(heif_channel_interleaved);
+
+  ImageGrid grid;
+  grid.set_num_tiles(columns, rows);
+  grid.set_output_size(tile_width * columns, tile_height * rows);
+  std::vector<uint8_t> grid_data = grid.write();
+
+  std::vector<heif_item_id> image_ids;
+
+  for (int i=0; i<rows*columns; i++) {
+    std::shared_ptr<Image> out_image;
+
+    error = encode_image(pixel_images[i],
+                        encoder,
+                        options,
+                        heif_image_input_class_normal,
+                        out_image);
+    
+    heif_item_id image_id = out_image->get_id();
+
+    // hide each individual image, only the full grid should be shown.
+    m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
+
+    image_ids.push_back(out_image->get_id());
+  }
+
+  // Add Grid
+  heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
+  out_grid_image = std::make_shared<Image>(this, grid_image_id);
+  m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), image_ids);
+  m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
+
+  // Add ISPE property
+  int image_width = tile_width * columns;
+  int image_height = tile_height * rows;
+  m_heif_file->add_ispe_property(grid_image_id, image_width, image_height);
+
+  m_heif_file->set_brand(encoder->plugin->compression_format,
+                         out_grid_image->is_miaf_compatible());
+
+  m_all_images.insert(std::make_pair(grid_image_id, out_grid_image));
+
+  return error;
+}
+
+
 /*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
 {
