@@ -2038,13 +2038,13 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
-struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
-                                                 struct heif_image** input_images,   // array of tile images
-                                                 uint16_t rows,
-                                                 uint16_t columns,
-                                                 struct heif_encoder* encoder,
-                                                 const struct heif_encoding_options* input_options,
-                                                 struct heif_image_handle** out_image_handle);
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** input_images,   // array of tile images
+                                           uint16_t rows,
+                                           uint16_t columns,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,

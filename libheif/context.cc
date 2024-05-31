@@ -2314,18 +2314,14 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   return error;
 }
 
-Error HeifContext::encode_grid_image(const std::vector<std::shared_ptr<HeifPixelImage>>& pixel_images,
-                                     uint16_t rows,
-                                     uint16_t columns,
-                                     struct heif_encoder* encoder,
-                                     const struct heif_encoding_options& options,
-                                     enum heif_image_input_class input_class,
-                                     std::shared_ptr<Image>& out_grid_image)
+Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& pixel_images,
+                               uint16_t rows,
+                               uint16_t columns,
+                               struct heif_encoder* encoder,
+                               const struct heif_encoding_options& options,
+                               std::shared_ptr<Image>& out_grid_image)
 {
   Error error;
-
-  // TODO: the hdlr box is not the right place for comments
-  // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
 
   int tile_width = pixel_images[0]->get_width(heif_channel_interleaved);
   int tile_height = pixel_images[0]->get_height(heif_channel_interleaved);
@@ -2337,38 +2333,37 @@ Error HeifContext::encode_grid_image(const std::vector<std::shared_ptr<HeifPixel
 
   std::vector<heif_item_id> image_ids;
 
+  // Encode Tiles
   for (int i=0; i<rows*columns; i++) {
-    std::shared_ptr<Image> out_image;
-
+    std::shared_ptr<Image> out_tile;
     error = encode_image(pixel_images[i],
                         encoder,
                         options,
                         heif_image_input_class_normal,
-                        out_image);
-    
-    heif_item_id image_id = out_image->get_id();
-
-    // hide each individual image, only the full grid should be shown.
-    m_heif_file->get_infe_box(image_id)->set_hidden_item(true);
-
-    image_ids.push_back(out_image->get_id());
+                        out_tile);
+    heif_item_id tile_id = out_tile->get_id();
+    m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
+    image_ids.push_back(out_tile->get_id());
   }
 
-  // Add Grid
-  heif_item_id grid_image_id = m_heif_file->add_new_image("grid");
-  out_grid_image = std::make_shared<Image>(this, grid_image_id);
-  m_heif_file->add_iref_reference(grid_image_id, fourcc("dimg"), image_ids);
-  m_heif_file->append_iloc_data(grid_image_id, grid_data, 1);
+  // Add Grid Item
+  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
+  out_grid_image = std::make_shared<Image>(this, grid_id);
+  m_all_images.insert(std::make_pair(grid_id, out_grid_image));
+
+  // Connect tiles to grid
+  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), image_ids);
 
   // Add ISPE property
   int image_width = tile_width * columns;
   int image_height = tile_height * rows;
-  m_heif_file->add_ispe_property(grid_image_id, image_width, image_height);
+  m_heif_file->add_ispe_property(grid_id, image_width, image_height);
 
+  // Set Brands
   m_heif_file->set_brand(encoder->plugin->compression_format,
                          out_grid_image->is_miaf_compatible());
-
-  m_all_images.insert(std::make_pair(grid_image_id, out_grid_image));
 
   return error;
 }

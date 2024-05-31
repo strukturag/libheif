@@ -2707,13 +2707,13 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
-                                                 struct heif_image** input_images,   // array of tile images
-                                                 uint16_t columns,
-                                                 uint16_t rows,
-                                                 struct heif_encoder* encoder,
-                                                 const struct heif_encoding_options* input_options,
-                                                 struct heif_image_handle** out_image_handle)
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** input_images,   // array of tile images
+                                           uint16_t columns,
+                                           uint16_t rows,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle)
 {
   if (!encoder) {
     return Error(heif_error_Usage_error,
@@ -2722,10 +2722,8 @@ struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
 
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  if (input_options == nullptr) {
-    set_default_options(options);
-  }
-  else {
+  set_default_options(options);
+  if (input_options) {
     copy_options(options, *input_options);
 
     if (options.output_nclx_profile == nullptr) {
@@ -2733,9 +2731,9 @@ struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
       if (input_nclx) {
         options.output_nclx_profile = &nclx;
         nclx.version = 1;
-        nclx.color_primaries = (enum heif_color_primaries)input_nclx->get_colour_primaries();
-        nclx.transfer_characteristics = (enum heif_transfer_characteristics)input_nclx->get_transfer_characteristics();
-        nclx.matrix_coefficients = (enum heif_matrix_coefficients)input_nclx->get_matrix_coefficients();
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
         nclx.full_range_flag = input_nclx->get_full_range_flag();
       }
     }
@@ -2749,12 +2747,11 @@ struct heif_error heif_context_encode_grid_image(struct heif_context* ctx,
     pixel_images.push_back(input_images[i]->image);
   }
 
-  error = ctx->context->encode_grid_image(pixel_images,
-                                          rows, columns,
-                                          encoder,
-                                          options,
-                                          heif_image_input_class_normal,
-                                          image);
+  error = ctx->context->encode_grid(pixel_images,
+                                    rows, columns,
+                                    encoder,
+                                    options,
+                                    image);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
