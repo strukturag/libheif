@@ -2047,7 +2047,7 @@ struct heif_error heif_context_encode_image(struct heif_context*,
  * @param encoder Defines the encoder to use. See heif_context_get_encoder_for_format()
  * @param input_options Optional, may be nullptr.
  * @param out_image_handle Returns a handle to the grid. The caller is responsible for freeing it.
- * @return struct heif_error
+ * @return Returns an error if ctx, tiles, or encoder is nullptr. If rows or columns is 0. 
  */
 LIBHEIF_API
 struct heif_error heif_context_encode_grid(struct heif_context* ctx,

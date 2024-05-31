@@ -2708,16 +2708,20 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
 
 struct heif_error heif_context_encode_grid(struct heif_context* ctx,
-                                           struct heif_image** tiles,   // array of tile images
+                                           struct heif_image** tiles,
                                            uint16_t columns,
                                            uint16_t rows,
                                            struct heif_encoder* encoder,
                                            const struct heif_encoding_options* input_options,
                                            struct heif_image_handle** out_image_handle)
 {
-  if (!encoder) {
+  if (!encoder || !tiles) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+  else if (rows == 0 || columns == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
   }
 
   // TODO: Don't repeat this code from heif_context_encode_image()
