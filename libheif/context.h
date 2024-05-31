@@ -390,7 +390,7 @@ public:
                      enum heif_image_input_class input_class,
                      std::shared_ptr<Image>& out_image);
 
-  Error encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& images,
+  Error encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
                     uint16_t rows,
                     uint16_t columns,
                     struct heif_encoder* encoder,
