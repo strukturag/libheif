@@ -969,7 +969,7 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
-  int index = m_ipco_box->append_child_box(ispe);
+  int index = m_ipco_box->find_or_append_child_box(ispe);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
@@ -1067,7 +1067,7 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
     pixi->add_channel_bits(c3);
   }
 
-  int index = m_ipco_box->append_child_box(pixi);
+  int index = m_ipco_box->find_or_append_child_box(pixi);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
