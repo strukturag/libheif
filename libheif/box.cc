@@ -2169,6 +2169,18 @@ Error Box_ispe::write(StreamWriter& writer) const
 }
 
 
+bool Box_ispe::operator==(const Box& other) const
+{
+  const auto* other_ispe = dynamic_cast<const Box_ispe*>(&other);
+  if (other_ispe == nullptr) {
+    return false;
+  }
+
+  return (m_image_width == other_ispe->m_image_width &&
+          m_image_height == other_ispe->m_image_height);
+}
+
+
 Error Box_ipma::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);

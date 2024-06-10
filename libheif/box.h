@@ -196,7 +196,7 @@ public:
 
   int find_or_append_child_box(const std::shared_ptr<Box>& box);
 
-  bool operator==(const Box& other) const;
+  virtual bool operator==(const Box& other) const;
 
   static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
 
@@ -583,6 +583,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  bool operator==(const Box& other) const override;
 
 protected:
   Error parse(BitstreamRange& range) override;
