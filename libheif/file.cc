@@ -1042,7 +1042,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto irot = std::make_shared<Box_irot>();
     irot->set_rotation_ccw(rotation_ccw);
 
-    int index = m_ipco_box->append_child_box(irot);
+    int index = m_ipco_box->find_or_append_child_box(irot);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1051,7 +1051,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto imir = std::make_shared<Box_imir>();
     imir->set_mirror_direction(mirror);
 
-    int index = m_ipco_box->append_child_box(imir);
+    int index = m_ipco_box->find_or_append_child_box(imir);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1085,7 +1085,7 @@ void HeifFile::add_av1C_property(heif_item_id id, const Box_av1C::configuration&
 std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id)
 {
   auto j2kH = std::make_shared<Box_j2kH>();
-  int index = m_ipco_box->append_child_box(j2kH);
+  int index = m_ipco_box->append_child_box(j2kH); // do not deduplicate because this can have a child box
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
@@ -1135,7 +1135,7 @@ void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
   auto auxC = std::make_shared<Box_auxC>();
   auxC->set_aux_type(type);
 
-  int index = m_ipco_box->append_child_box(auxC);
+  int index = m_ipco_box->find_or_append_child_box(auxC);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }

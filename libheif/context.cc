@@ -2366,7 +2366,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto pasp = std::make_shared<Box_pasp>();
     src_image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(pasp);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(pasp);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2377,7 +2377,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto clli = std::make_shared<Box_clli>();
     clli->clli = src_image->get_clli();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(clli);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(clli);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2388,7 +2388,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto mdcv = std::make_shared<Box_mdcv>();
     mdcv->mdcv = src_image->get_mdcv();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(mdcv);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(mdcv);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 }
@@ -3125,7 +3125,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
       jpgC->set_data(jpgC_data);
 
       auto ipma_box = m_heif_file->get_ipma_box();
-      int index = m_heif_file->get_ipco_box()->append_child_box(jpgC);
+      int index = m_heif_file->get_ipco_box()->find_or_append_child_box(jpgC);
       ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
       std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());
