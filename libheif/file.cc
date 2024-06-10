@@ -988,7 +988,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 
 heif_property_id HeifFile::add_property(heif_item_id id, std::shared_ptr<Box> property, bool essential)
 {
-  int index = m_ipco_box->append_child_box(property);
+  int index = m_ipco_box->find_or_append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 
@@ -1070,71 +1070,6 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
   int index = m_ipco_box->find_or_append_child_box(pixi);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
-}
-
-
-void HeifFile::add_hvcC_property(heif_item_id id)
-{
-  auto hvcC = std::make_shared<Box_hvcC>();
-  int index = m_ipco_box->append_child_box(hvcC);
-
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
-}
-
-
-Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
-{
-  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
-                                                                                       m_ipma_box,
-                                                                                       fourcc("hvcC")));
-
-  if (hvcC) {
-    hvcC->append_nal_data(nal_data);
-    return Error::Ok;
-  }
-  else {
-    // Should always have an hvcC box, because we are checking this in
-    // heif_context::interpret_heif_file()
-    assert(false);
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_hvcC_box);
-  }
-}
-
-
-Error HeifFile::set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config)
-{
-  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
-                                                                                       m_ipma_box,
-                                                                                       fourcc("hvcC")));
-
-  if (hvcC) {
-    hvcC->set_configuration(config);
-    return Error::Ok;
-  }
-  else {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_hvcC_box);
-  }
-}
-
-
-Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
-{
-  std::vector<std::shared_ptr<Box>> properties;
-
-  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
-                                                                                       m_ipma_box,
-                                                                                       fourcc("hvcC")));
-
-  if (hvcC) {
-    hvcC->append_nal_data(data, size);
-    return Error::Ok;
-  }
-  else {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_hvcC_box);
-  }
 }
 
 

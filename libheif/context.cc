@@ -2146,7 +2146,7 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
 {
-  m_heif_context->m_heif_file->add_hvcC_property(m_id);
+  auto hvcC = std::make_shared<Box_hvcC>();
 
 
   // --- parse the h265 stream and set hvcC headers and compressed image data
@@ -2209,8 +2209,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
           case 0x20:
           case 0x21:
           case 0x22:
-            m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, nal_data);
-            /*hvcC->append_nal_data(nal_data);*/
+            hvcC->append_nal_data(nal_data);
             break;
 
           default: {
@@ -2236,6 +2235,8 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
       break;
     }
   }
+
+  m_heif_context->m_heif_file->add_property(m_id, hvcC, true);
 }
 
 
@@ -2499,8 +2500,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   out_image->set_size(input_width, input_height);
 
 
-  m_heif_file->add_hvcC_property(image_id);
-
+  auto hvcC = std::make_shared<Box_hvcC>();
 
   heif_image c_api_image;
   c_api_image.image = src_image;
@@ -2533,14 +2533,14 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
-      m_heif_file->set_hvcC_configuration(image_id, config);
+      hvcC->set_configuration(config);
     }
 
     switch (data[0] >> 1) {
       case 0x20:
       case 0x21:
       case 0x22:
-        m_heif_file->append_hvcC_nal_data(image_id, data, size);
+        hvcC->append_nal_data(data, size);
         break;
 
       default:
@@ -2552,6 +2552,8 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
     return Error(heif_error_Encoder_plugin_error,
                  heif_suberror_Invalid_image_size);
   }
+
+  m_heif_file->add_property(image_id, hvcC, true);
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
