@@ -740,17 +740,6 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 }
 
 
-int Box::find_or_append_child_box(const std::shared_ptr<Box>& box)
-{
-  for (int i = 0; i < (int) m_children.size(); i++) {
-    if (Box::equal(m_children[i], box)) {
-      return i;
-    }
-  }
-  return append_child_box(box);
-}
-
-
 bool Box::operator==(const Box& other) const
 {
   if (this->get_short_type() != other.get_short_type()) {
@@ -1804,6 +1793,17 @@ std::string Box_iprp::dump(Indent& indent) const
   sstr << dump_children(indent);
 
   return sstr.str();
+}
+
+
+int Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
+{
+  for (int i = 0; i < (int) m_children.size(); i++) {
+    if (Box::equal(m_children[i], box)) {
+      return i;
+    }
+  }
+  return append_child_box(box);
 }
 
 
