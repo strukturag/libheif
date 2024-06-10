@@ -980,7 +980,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
   auto clap = std::make_shared<Box_clap>();
   clap->set(clap_width, clap_height, image_width, image_height);
 
-  int index = m_ipco_box->append_child_box(clap);
+  int index = m_ipco_box->find_or_append_child_box(clap);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
@@ -1226,7 +1226,7 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
   auto colr = std::make_shared<Box_colr>();
   colr->set_color_profile(profile);
 
-  int index = m_ipco_box->append_child_box(colr);
+  int index = m_ipco_box->find_or_append_child_box(colr);
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
