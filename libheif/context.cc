@@ -2800,9 +2800,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     m_heif_file->append_iloc_data(image_id, vec);
   }
 
-  m_heif_file->add_av1C_property(image_id);
-  m_heif_file->set_av1C_configuration(image_id, config);
-
+  m_heif_file->add_av1C_property(image_id, config);
 
   uint32_t input_width, input_height;
   input_width = src_image->get_width();

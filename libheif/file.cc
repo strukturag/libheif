@@ -1073,32 +1073,16 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
 }
 
 
-void HeifFile::add_av1C_property(heif_item_id id)
+void HeifFile::add_av1C_property(heif_item_id id, const Box_av1C::configuration& config)
 {
   auto av1C = std::make_shared<Box_av1C>();
-  int index = m_ipco_box->append_child_box(av1C);
+  av1C->set_configuration(config);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+  add_property(id, av1C, true);
 }
 
 
-Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config)
-{
-  auto av1C = std::dynamic_pointer_cast<Box_av1C>(m_ipco_box->get_property_for_item_ID(id,
-                                                                                       m_ipma_box,
-                                                                                       fourcc("av1C")));
-
-  if (av1C) {
-    av1C->set_configuration(config);
-    return Error::Ok;
-  }
-  else {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_av1C_box);
-  }
-}
-
-std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id) 
+std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id)
 {
   auto j2kH = std::make_shared<Box_j2kH>();
   int index = m_ipco_box->append_child_box(j2kH);
