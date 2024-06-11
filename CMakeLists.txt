@@ -260,7 +260,6 @@ configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-
 # ---
 
 option(WITH_EXAMPLES "Build examples" ON)
