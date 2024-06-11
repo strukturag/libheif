@@ -380,12 +380,12 @@ int main(int argc, char** argv)
   // TODO: check, whether reading from named pipes works at all.
 
   std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
-  std::vector<uint8_t> length(4);
+  std::array<uint8_t,4> length{};
   istr.read((char*) length.data(), length.size());
   uint32_t box_size = (length[0] << 24) + (length[1] << 16) + (length[2] << 8) + (length[3]);
   if ((box_size < 16) || (box_size > 512)) {
     fprintf(stderr, "Input file does not appear to start with a valid box length.");
-    if (box_size == 0xFFD8FFE0) {
+    if ((box_size & 0xFFFFFFF0) == 0xFFD8FFE0) {
       fprintf(stderr, " Possibly could be a JPEG file instead.\n");
     } else {
       fprintf(stderr, "\n");
