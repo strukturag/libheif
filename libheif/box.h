@@ -128,6 +128,12 @@ public:
   void set_short_type(uint32_t type) { m_type = type; }
 
 
+  // should only be called if get_short_type == fourcc("uuid")
+  std::vector<uint8_t> get_uuid_type() const;
+
+  void set_uuid_type(const std::vector<uint8_t>&);
+
+
   Error parse_header(BitstreamRange& range);
 
   virtual std::string dump(Indent&) const;
@@ -265,6 +271,10 @@ public:
   {
     set_short_type(short_type);
   }
+
+  const std::vector<uint8_t>& get_raw_data() const { return m_data; }
+
+  void set_raw_data(const std::vector<uint8_t>& data) { m_data = data; }
 
   Error write(StreamWriter& writer) const override;
 

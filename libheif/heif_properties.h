@@ -37,7 +37,8 @@ enum heif_item_property_type
   heif_item_property_type_transform_mirror = heif_fourcc('i', 'm', 'i', 'r'),
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
-  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e')
+  heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
+  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd')
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -131,6 +132,40 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
 
+
+/**
+ * @param context
+ * @param itemId      The image item id to which this property belongs.
+ * @param fourcc_type The short four-cc type of the property to add.
+ * @param uuid_type   If fourcc_type=='uuid', this should point to a 16-byte UUID type. It is ignored otherwise and can be NULL.
+ * @param data        Data to insert for this property (including a full-box header, if required for this box).
+ * @param size        Length of data in bytes.
+ * @param is_essential   Whether this property is essential (boolean).
+ * @param out_propertyId Outputs the id of the inserted property. Can be NULL.
+*/
+LIBHEIF_API
+struct heif_error heif_item_add_raw_property(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              uint32_t fourcc_type,
+                                              const uint8_t* uuid_type,
+                                              const uint8_t* data, size_t size,
+                                              int is_essential,
+                                              heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  size_t* size_out);
+
+/**
+ * @param data_out User-supplied array to write the property data to. The size given by heif_item_get_property_raw_size().
+*/
+LIBHEIF_API
+struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  uint8_t* data_out);
 #ifdef __cplusplus
 }
 #endif

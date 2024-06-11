@@ -300,3 +300,110 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
   delete udes;
 }
 
+
+struct heif_error heif_item_add_raw_property(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              uint32_t short_type,
+                                              const uint8_t* uuid_type,
+                                              const uint8_t* data, size_t size,
+                                              int is_essential,
+                                              heif_property_id* out_propertyId)
+{
+  if (!context || !data || (short_type == fourcc("uuid") && uuid_type==nullptr)) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+  }
+
+  auto raw_box = std::make_shared<Box_other>(short_type);
+
+  if (short_type == fourcc("uuid")) {
+    std::vector<uint8_t> uuid_type_vector(uuid_type, uuid_type + 16);
+    raw_box->set_uuid_type(uuid_type_vector);
+  }
+
+  std::vector<uint8_t> data_vector(data, data + size);
+  raw_box->set_raw_data(data_vector);
+
+  heif_property_id id = context->context->add_property(itemId, raw_box, is_essential != 0);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  size_t* size_out)
+{
+  if (!context || !size_out) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto box = properties[propertyId - 1];
+  auto box_other = std::dynamic_pointer_cast<Box_other>(box);
+
+  // TODO: every Box (not just Box_other) should have a get_raw_data() method.
+  if (box_other == nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
+  }
+
+  auto data = box_other->get_raw_data();
+
+  *size_out = data.size();
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_item_get_property_uuid(const struct heif_context* context,
+                                              heif_item_id itemId,
+                                              heif_property_id propertyId,
+                                              uint8_t* data_out)
+{
+  if (!context || !data_out) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+
+  auto box = properties[propertyId - 1];
+  auto box_other = std::dynamic_pointer_cast<Box_other>(box);
+
+  // TODO: every Box (not just Box_other) should have a get_raw_data() method.
+  if (box_other == nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
+  }
+
+  auto data = box_other->get_raw_data();
+
+
+  std::copy(data.begin(), data.end(), data_out);
+
+  return heif_error_success;
+}

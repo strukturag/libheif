@@ -211,6 +211,23 @@ std::string BoxHeader::get_type_string() const
 }
 
 
+std::vector<uint8_t> BoxHeader::get_uuid_type() const
+{
+  if (m_type != fourcc("uuid")) {
+    return {};
+  }
+
+  return m_uuid_type;
+}
+
+
+void BoxHeader::set_uuid_type(const std::vector<uint8_t>& type)
+{
+  m_type = fourcc("uuid");
+  m_uuid_type = type;
+}
+
+
 Error BoxHeader::parse_header(BitstreamRange& range)
 {
   StreamReader::grow_status status;
