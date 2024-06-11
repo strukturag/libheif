@@ -189,16 +189,14 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
 
 int heif_check_jpeg_filetype(const uint8_t* data, int len)
 {
-  if (len < 12 || data == nullptr) {
+  if (len < 4 || data == nullptr) {
     return -1;
   }
 
-  static uint8_t jpeg_signature[12] = {
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10,
-      0x4A, 0x46, 0x49, 0x46, 0x00, 0x01
-  };
-
-  return strncmp((const char*) data, (const char*) jpeg_signature, 12) == 0;
+  return (data[0] == 0xFF &&
+	  data[1] == 0xD8 &&
+	  data[2] == 0xFF &&
+	  (data[3] & 0xF0) == 0xE0);
 }
 
 

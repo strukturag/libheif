@@ -194,6 +194,11 @@ public:
     return (int) m_children.size() - 1;
   }
 
+  virtual bool operator==(const Box& other) const;
+
+  static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
+
+
 protected:
   virtual Error parse(BitstreamRange& range);
 
@@ -251,6 +256,27 @@ private:
   uint8_t m_version = 0;
   uint32_t m_flags = 0;
 };
+
+
+class Box_other : public Box
+{
+public:
+  Box_other(uint32_t short_type)
+  {
+    set_short_type(short_type);
+  }
+
+  Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  std::vector<uint8_t> m_data;
+};
+
+
 
 
 class Box_ftyp : public Box
@@ -540,6 +566,8 @@ public:
     set_short_type(fourcc("ipco"));
   }
 
+  int find_or_append_child_box(const std::shared_ptr<Box>& box);
+
   Error get_properties_for_item_ID(heif_item_id itemID,
                                    const std::shared_ptr<class Box_ipma>&,
                                    std::vector<std::shared_ptr<Box>>& out_properties) const;
@@ -580,6 +608,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  bool operator==(const Box& other) const override;
 
 protected:
   Error parse(BitstreamRange& range) override;

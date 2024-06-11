@@ -2150,7 +2150,7 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
 {
-  m_heif_context->m_heif_file->add_hvcC_property(m_id);
+  auto hvcC = std::make_shared<Box_hvcC>();
 
 
   // --- parse the h265 stream and set hvcC headers and compressed image data
@@ -2213,8 +2213,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
           case 0x20:
           case 0x21:
           case 0x22:
-            m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, nal_data);
-            /*hvcC->append_nal_data(nal_data);*/
+            hvcC->append_nal_data(nal_data);
             break;
 
           default: {
@@ -2240,6 +2239,8 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
       break;
     }
   }
+
+  m_heif_context->m_heif_file->add_property(m_id, hvcC, true);
 }
 
 
@@ -2259,7 +2260,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_hevc(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2268,7 +2269,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_av1(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2277,7 +2278,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
-                                       heif_image_input_class_normal,
+                                       input_class,
                                        out_image);
       }
       break;
@@ -2286,7 +2287,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2295,7 +2296,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_uncompressed(pixel_image,
                                            encoder,
                                            options,
-                                           heif_image_input_class_normal,
+                                           input_class,
                                            out_image);
     }
       break;
@@ -2304,7 +2305,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_mask(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2370,7 +2371,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto pasp = std::make_shared<Box_pasp>();
     src_image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(pasp);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(pasp);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2381,7 +2382,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto clli = std::make_shared<Box_clli>();
     clli->clli = src_image->get_clli();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(clli);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(clli);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2392,7 +2393,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto mdcv = std::make_shared<Box_mdcv>();
     mdcv->mdcv = src_image->get_mdcv();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(mdcv);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(mdcv);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 }
@@ -2504,8 +2505,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   out_image->set_size(input_width, input_height);
 
 
-  m_heif_file->add_hvcC_property(image_id);
-
+  auto hvcC = std::make_shared<Box_hvcC>();
 
   heif_image c_api_image;
   c_api_image.image = src_image;
@@ -2538,14 +2538,14 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
-      m_heif_file->set_hvcC_configuration(image_id, config);
+      hvcC->set_configuration(config);
     }
 
     switch (data[0] >> 1) {
       case 0x20:
       case 0x21:
       case 0x22:
-        m_heif_file->append_hvcC_nal_data(image_id, data, size);
+        hvcC->append_nal_data(data, size);
         break;
 
       default:
@@ -2557,6 +2557,8 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
     return Error(heif_error_Encoder_plugin_error,
                  heif_suberror_Invalid_image_size);
   }
+
+  m_heif_file->add_property(image_id, hvcC, true);
 
   if (encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
@@ -2803,9 +2805,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     m_heif_file->append_iloc_data(image_id, vec);
   }
 
-  m_heif_file->add_av1C_property(image_id);
-  m_heif_file->set_av1C_configuration(image_id, config);
-
+  m_heif_file->add_av1C_property(image_id, config);
 
   uint32_t input_width, input_height;
   input_width = src_image->get_width();
@@ -3130,7 +3130,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
       jpgC->set_data(jpgC_data);
 
       auto ipma_box = m_heif_file->get_ipma_box();
-      int index = m_heif_file->get_ipco_box()->append_child_box(jpgC);
+      int index = m_heif_file->get_ipco_box()->find_or_append_child_box(jpgC);
       ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
       std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());

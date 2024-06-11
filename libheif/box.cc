@@ -617,8 +617,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_avcC>();
       break;
 
-    default:
+    case fourcc("mdat"):
+      // avoid generating a 'Box_other'
       box = std::make_shared<Box>();
+      break;
+
+    default:
+      box = std::make_shared<Box_other>(hdr.get_short_type());
       break;
   }
 
@@ -747,6 +752,31 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
 }
 
 
+bool Box::operator==(const Box& other) const
+{
+  if (this->get_short_type() != other.get_short_type()) {
+    return false;
+  }
+
+  StreamWriter writer1;
+  StreamWriter writer2;
+
+  this->write(writer1);
+  other.write(writer2);
+
+  return writer1.get_data() == writer2.get_data();
+}
+
+
+bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2)
+{
+    if (!box1 || !box2) {
+        return false;
+    }
+    return *box1 == *box2;
+}
+
+
 Error Box::read_children(BitstreamRange& range, int max_number)
 {
   int count = 0;
@@ -828,6 +858,77 @@ void Box::derive_box_version_recursive()
   for (auto& child : m_children) {
     child->derive_box_version_recursive();
   }
+}
+
+
+Error Box_other::parse(BitstreamRange& range)
+{
+  if (has_fixed_box_size()) {
+    size_t len = get_box_size() - get_header_size();
+    m_data.resize(len);
+    range.read(m_data.data(), len);
+  }
+  else {
+    // TODO: boxes until end of file (we will probably never need this)
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_other::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_data);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_other::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << BoxHeader::dump(indent);
+
+  // --- show raw box content
+
+  sstr << std::hex << std::setfill('0');
+
+  size_t len = get_box_size() - get_header_size();
+
+  for (size_t i = 0; i < len; i++) {
+    if (i % 16 == 0) {
+      // start of line
+
+      if (i == 0) {
+        sstr << indent << "data: ";
+      }
+      else {
+        sstr << indent << "      ";
+      }
+      sstr << std::setw(4) << i << ": "; // address
+    }
+    else if (i % 16 == 8) {
+      // space in middle
+      sstr << "  ";
+    }
+    else {
+      // space between bytes
+      sstr << " ";
+    }
+
+    sstr << std::setw(2) << ((int) m_data[i]);
+
+    if (i % 16 == 15 || i == len - 1) {
+      sstr << "\n";
+    }
+  }
+
+  return sstr.str();
 }
 
 
@@ -1275,9 +1376,9 @@ Error Box_iloc::read_data(const Item& item,
     }
     else {
       std::stringstream sstr;
-      sstr << "Item construction method " << item.construction_method << " not implemented";
+      sstr << "Item construction method " << (int) item.construction_method << " not implemented";
       return Error(heif_error_Unsupported_feature,
-                   heif_suberror_No_idat_box,
+                   heif_suberror_Unsupported_item_construction_method,
                    sstr.str());
     }
   }
@@ -1778,6 +1879,17 @@ std::string Box_iprp::dump(Indent& indent) const
 }
 
 
+int Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
+{
+  for (int i = 0; i < (int) m_children.size(); i++) {
+    if (Box::equal(m_children[i], box)) {
+      return i;
+    }
+  }
+  return append_child_box(box);
+}
+
+
 Error Box_ipco::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
@@ -2137,6 +2249,18 @@ Error Box_ispe::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+
+bool Box_ispe::operator==(const Box& other) const
+{
+  const auto* other_ispe = dynamic_cast<const Box_ispe*>(&other);
+  if (other_ispe == nullptr) {
+    return false;
+  }
+
+  return (m_image_width == other_ispe->m_image_width &&
+          m_image_height == other_ispe->m_image_height);
 }
 
 

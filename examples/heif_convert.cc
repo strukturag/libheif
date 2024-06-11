@@ -617,6 +617,7 @@ int main(int argc, char** argv)
             const char* auxTypeC = nullptr;
             err = heif_image_handle_get_auxiliary_type(aux_handle, &auxTypeC);
             if (err.code) {
+              heif_image_release(aux_image);
               heif_image_handle_release(aux_handle);
               heif_image_handle_release(handle);
               std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";

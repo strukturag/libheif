@@ -360,7 +360,11 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
   }
 
   uint8_t* outbuffer = nullptr;
+#ifdef LIBJPEG_TURBO_VERSION
   unsigned long outlength = 0;
+#else
+  size_t outlength = 0;
+#endif
 
   jpeg_create_compress(&cinfo);
   jpeg_mem_dest(&cinfo, &outbuffer, &outlength);

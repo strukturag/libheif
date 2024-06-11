@@ -137,7 +137,7 @@ There are CMake presets to cover the most frequent use cases.
 * `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
   A single library is built with support for HEIC and AVIF.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
-* `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
+* `fuzzing`: all codecs like in release build, but configured into a self-contained library with enabled fuzzers. The library should not distributed.
 
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.
@@ -244,7 +244,7 @@ If you want to compile SVT-AV1 yourself,
   and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
 
 You have to enable SVT-AV1 with CMake.

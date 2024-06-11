@@ -158,7 +158,7 @@ void show_help(const char* argv0)
             << "      --no-thumb-alpha  do not save alpha channel in thumbnail image\n"
             << "  -o, --output          output filename (optional)\n"
             << "      --verbose         enable logging output (more will increase logging level)\n"
-            << "  -P, --params          show all encoder parameters\n"
+            << "  -P, --params          show all encoder parameters and exit, input file not required or used.\n"
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
@@ -634,22 +634,6 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if (optind > argc - 1) {
-    show_help(argv[0]);
-    return 0;
-  }
-
-
-  // If we were given a list of filenames and no '-o' option, check whether the last filename is the desired output filename.
-
-  if (output_filename.empty() && argc>1) {
-    if (guess_compression_format_from_filename(argv[argc-1]) != heif_compression_undefined) {
-      output_filename = argv[argc-1];
-      argc--;
-    }
-  }
-
-
   // --- determine output compression format (from output filename or command line parameter)
 
   heif_compression_format compressionFormat;
@@ -732,6 +716,20 @@ int main(int argc, char** argv)
     return 0;
   }
 
+  if (optind > argc - 1) {
+    show_help(argv[0]);
+    return 0;
+  }
+
+
+  // If we were given a list of filenames and no '-o' option, check whether the last filename is the desired output filename.
+
+  if (output_filename.empty() && argc>1) {
+    if (guess_compression_format_from_filename(argv[argc-1]) != heif_compression_undefined) {
+      output_filename = argv[argc-1];
+      argc--;
+    }
+  }
 
   struct heif_error error;
 
