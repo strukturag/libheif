@@ -1580,6 +1580,11 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
                        heif_suberror_Unsupported_color_conversion);
       }
 
+
+      // TODO: we should include a decoding option to control whether libheif should automatically scale the alpha channel, and if so, which scaling filter (enum: Off, NN, Bilinear, ...).
+      //       It might also be that a specific output format implies that alpha is scaled (RGBA32). That would favor an enum for the scaling filter option + a bool to switch auto-filtering on.
+      //       But we can only do this when libheif itself doesn't assume anymore that the alpha channel has the same resolution.
+
       if ((alpha_image->get_width() != img->get_width()) || (alpha_image->get_height() != img->get_height())) {
         std::shared_ptr<HeifPixelImage> scaled_alpha;
         err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height());
