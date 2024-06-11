@@ -258,6 +258,27 @@ private:
 };
 
 
+class Box_other : public Box
+{
+public:
+  Box_other(uint32_t short_type)
+  {
+    set_short_type(short_type);
+  }
+
+  Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  std::vector<uint8_t> m_data;
+};
+
+
+
+
 class Box_ftyp : public Box
 {
 public:
