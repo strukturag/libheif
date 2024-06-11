@@ -610,8 +610,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_mskC>();
       break;
 
-    default:
+    case fourcc("mdat"):
+      // avoid generating a 'Box_other'
       box = std::make_shared<Box>();
+      break;
+
+    default:
+      box = std::make_shared<Box_other>(hdr.get_short_type());
       break;
   }
 
@@ -846,6 +851,77 @@ void Box::derive_box_version_recursive()
   for (auto& child : m_children) {
     child->derive_box_version_recursive();
   }
+}
+
+
+Error Box_other::parse(BitstreamRange& range)
+{
+  if (has_fixed_box_size()) {
+    size_t len = get_box_size() - get_header_size();
+    m_data.resize(len);
+    range.read(m_data.data(), len);
+  }
+  else {
+    // TODO: boxes until end of file (we will probably never need this)
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_other::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_data);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_other::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << BoxHeader::dump(indent);
+
+  // --- show raw box content
+
+  sstr << std::hex << std::setfill('0');
+
+  size_t len = get_box_size() - get_header_size();
+
+  for (size_t i = 0; i < len; i++) {
+    if (i % 16 == 0) {
+      // start of line
+
+      if (i == 0) {
+        sstr << indent << "data: ";
+      }
+      else {
+        sstr << indent << "      ";
+      }
+      sstr << std::setw(4) << i << ": "; // address
+    }
+    else if (i % 16 == 8) {
+      // space in middle
+      sstr << "  ";
+    }
+    else {
+      // space between bytes
+      sstr << " ";
+    }
+
+    sstr << std::setw(2) << ((int) m_data[i]);
+
+    if (i % 16 == 15 || i == len - 1) {
+      sstr << "\n";
+    }
+  }
+
+  return sstr.str();
 }
 
 
