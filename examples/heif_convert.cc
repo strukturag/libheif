@@ -40,6 +40,7 @@
 #include <cassert>
 #include <algorithm>
 #include <vector>
+#include <array>
 #include <cctype>
 
 #include <libheif/heif.h>
