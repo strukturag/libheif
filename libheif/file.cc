@@ -253,19 +253,14 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
 
-    if (range.error() || range.eof()) {
-      break;
-    }
-
     // When an EOF error is returned, this is not really a fatal exception,
     // but simply the indication that we reached the end of the file.
-    // TODO: this design should be cleaned up
-    if (error.error_code == heif_error_Invalid_input && error.sub_error_code == heif_suberror_End_of_data) {
-      break;
-    }
-
     if (error != Error::Ok) {
       return error;
+    }
+
+    if (range.error() || range.eof()) {
+      break;
     }
 
     m_top_level_boxes.push_back(box);
