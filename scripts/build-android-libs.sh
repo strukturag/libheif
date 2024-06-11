@@ -21,15 +21,14 @@
 
 
 # This script builds binaries for all Android architectures. They are placed in the directory 'out'.
-# The libheif source has to be unpacked to a directory named "libheif-1.16.2" (replace version number with the value of HEIF_VERSION below).
+# The script should be run in the root directory of the libheif sources.
 
 # The configuration below builds libheif with heic decoding only.
 
 # Set these variables to suit your needs
 NDK_PATH= ... # for example .../android-sdk/sdk/ndk/25.1.8937393
 TOOLCHAIN=clang
-ANDROID_VERSION=19 # the minimum version of Android to support
-HEIF_VERSION=1.16.2
+ANDROID_VERSION=24 # the minimum version of Android to support
 
 function build {
     mkdir -p build/$1
@@ -58,7 +57,8 @@ function build {
 	  -DCMAKE_INSTALL_PREFIX=../../out/$1 \
 	  -DCMAKE_BUILD_TYPE=Release \
 	  -Dld-version-script=OFF \
-	  ../../libheif-${HEIF_VERSION}
+	  ../..
+
     make VERBOSE=1
     make install
     cd ../..
