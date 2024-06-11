@@ -213,6 +213,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
   // --- read XMP data
 
+#ifdef PNG_iTXt_SUPPORTED
   png_textp textPtr = nullptr;
   const png_uint_32 nTextChunks = png_get_text(png_ptr, info_ptr, &textPtr, nullptr);
   for (png_uint_32 i = 0; i < nTextChunks; i++, textPtr++) {
@@ -231,6 +232,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
       }
     }
   }
+#endif
 
   int band = png_get_channels(png_ptr, info_ptr);
 
@@ -352,12 +354,22 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     }
   }
   else {
-    err = heif_image_create((int) width, (int) height,
-                            heif_colorspace_RGB,
-                            has_alpha ?
-                            heif_chroma_interleaved_RRGGBBAA_LE :
-                            heif_chroma_interleaved_RRGGBB_LE,
-                            &image);
+    if (output_bit_depth == 8) {
+      err = heif_image_create((int) width, (int) height,
+                              heif_colorspace_RGB,
+                              has_alpha ?
+                              heif_chroma_interleaved_RGBA :
+                              heif_chroma_interleaved_RGB,
+                              &image);
+    }
+    else {
+      err = heif_image_create((int) width, (int) height,
+                              heif_colorspace_RGB,
+                              has_alpha ?
+                              heif_chroma_interleaved_RRGGBBAA_LE :
+                              heif_chroma_interleaved_RRGGBB_LE,
+                              &image);
+    }
     (void) err;
 
     int bdShift = 16 - output_bit_depth;
@@ -367,16 +379,32 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
     int stride;
     uint8_t* p_out = (uint8_t*) heif_image_get_plane(image, heif_channel_interleaved, &stride);
 
-    for (uint32_t y = 0; y < height; y++) {
-      uint8_t* p = row_pointers[y];
+    if (output_bit_depth==8) {
+      // convert HDR to SDR
 
-      uint32_t nVal = (has_alpha ? 4 : 3) * width;
+      for (uint32_t y = 0; y < height; y++) {
+        uint8_t* p = row_pointers[y];
 
-      for (uint32_t x = 0; x < nVal; x++) {
-        uint16_t v = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
-        p_out[2 * x + y * stride + 1] = (uint8_t) (v >> 8);
-        p_out[2 * x + y * stride + 0] = (uint8_t) (v & 0xFF);
-        p += 2;
+        uint32_t nVal = (has_alpha ? 4 : 3) * width;
+
+        for (uint32_t x = 0; x < nVal; x++) {
+          p_out[x + y * stride] = p[0];
+          p+=2;
+        }
+      }
+    }
+    else {
+      for (uint32_t y = 0; y < height; y++) {
+        uint8_t* p = row_pointers[y];
+
+        uint32_t nVal = (has_alpha ? 4 : 3) * width;
+
+        for (uint32_t x = 0; x < nVal; x++) {
+          uint16_t v = (uint16_t) (((p[0] << 8) | p[1]) >> bdShift);
+          p_out[2 * x + y * stride + 1] = (uint8_t) (v >> 8);
+          p_out[2 * x + y * stride + 0] = (uint8_t) (v & 0xFF);
+          p += 2;
+        }
       }
     }
   }
@@ -391,6 +419,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   } // for
 
   delete[] row_pointers;
+  fclose(fh);
 
   input_image.image = std::shared_ptr<heif_image>(image,
                                                   [](heif_image* img) { heif_image_release(img); });

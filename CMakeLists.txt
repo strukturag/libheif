@@ -1,6 +1,12 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.17.0)
+project(libheif LANGUAGES C CXX VERSION 1.17.6)
+
+# compatibility_version is never allowed to be decreased for any specific SONAME.
+# Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
+# With v2.0.0, we can reset this to more closely follow the real version name, i.e. "2.0.0".
+# CMake 3.17.0 added "MACHO_COMPATIBILITY_VERSION", but we are currently stuck at cmake 3.16.3.
+set(MACOS_COMPATIBLE_VERSION "17.0.0")
 
 # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
 cmake_policy(VERSION 3.0...3.22)
@@ -161,14 +167,14 @@ endif()
 plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
-    find_package(OpenJPEG)
+    find_package(OpenJPEG 2)
 endif()
 
 # ffmpeg
 
 plugin_option(FFMPEG_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
 if (WITH_FFMPEG_DECODER)
-    find_package(FFMPEG COMPONENTS avcodec)
+    find_package(FFMPEG COMPONENTS avcodec avutil)
 endif ()
 
 # uncompressed
@@ -228,6 +234,9 @@ endif()
 if (X265_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_X265_PLUGIN))
     list(APPEND REQUIRES_PRIVATE "x265")
 endif()
+if (KVAZAAR_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_KVAZAAR_PLUGIN))
+    list(APPEND REQUIRES_PRIVATE "kvazaar")
+endif()
 if ((AOM_DECODER_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_AOM_DECODER_PLUGIN))
         OR (AOM_ENCODER_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_AOM_ENCODER_PLUGIN)))
     list(APPEND REQUIRES_PRIVATE "aom")
@@ -253,7 +262,19 @@ endif()
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
+if (WITH_DEFLATE_HEADER_COMPRESSION)
+    list(APPEND REQUIRES_PRIVATE "zlib")
+endif()
+
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
+
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(_LIBCPP_VERSION cstdlib HAVE_LIBCPP)
+if(HAVE_LIBCPP)
+  set(LIBS_PRIVATE "-lc++")
+else()
+  set(LIBS_PRIVATE "-lstdc++")
+endif()
 
 configure_file(libheif.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libheif.pc @ONLY)
 

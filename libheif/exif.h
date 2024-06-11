@@ -24,8 +24,8 @@
 #include <vector>
 #include <cinttypes>
 
-int read_exif_orientation_tag(const uint8_t* exif, int size);
+int read_exif_orientation_tag(const uint8_t* exif, uint32_t size);
 
-void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, int size, uint16_t orientation);
+void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, uint32_t size, uint16_t orientation);
 
 #endif //LIBHEIF_EXIF_H

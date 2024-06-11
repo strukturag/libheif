@@ -10,7 +10,7 @@
 : # If you're running this on Windows, be sure you've already run this (from your VC2019 install dir):
 : #     "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvars64.bat"
 
-git clone -b v3.5.0 --depth 1 https://aomedia.googlesource.com/aom
+git clone -b v3.9.1 --depth 1 https://aomedia.googlesource.com/aom
 
 cd aom
 
@@ -18,3 +18,8 @@ cmake -S . -B build.libavif -G Ninja -DCMAKE_INSTALL_PREFIX="$(pwd)/dist" -DCMAK
 ninja -C build.libavif
 ninja -C build.libavif install
 cd ..
+
+echo ""
+echo "----- NOTE ----"
+echo "Please add the path to the pkg-config file to your PKG_CONFIG_PATH, like this:"
+echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:$(pwd)/aom/dist/lib/pkgconfig"

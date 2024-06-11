@@ -48,7 +48,8 @@ enum heif_uncompressed_component_type
   component_type_cyan = 13,
   component_type_magenta = 14,
   component_type_yellow = 15,
-  component_type_key_black = 16
+  component_type_key_black = 16,
+  component_type_max_valid = component_type_key_black
 };
 
 bool is_predefined_component_type(uint16_t type)
@@ -467,8 +468,10 @@ static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
 
-    if (component_type >= 16) {
-      return { heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, "a component_type >= 16 is not supported"};
+    if (component_type > component_type_max_valid) {
+      std::stringstream sstr;
+      sstr << "a component_type > " << component_type_max_valid << " is not supported";
+      return { heif_error_Unsupported_feature, heif_suberror_Invalid_parameter_value, sstr.str()};
     }
 
     componentSet |= (1 << component_type);
@@ -531,6 +534,9 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   int alternate_channel_bits = 0;
   for (Box_uncC::Component component : uncC_box->get_components()) {
     uint16_t component_index = component.component_index;
+    if (component_index >= cmpd_box->get_components().size()) {
+      return -1;
+    }
     auto component_type = cmpd_box->get_components()[component_index].component_type;
     switch (component_type) {
       case component_type_monochrome:
@@ -603,6 +609,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
                                                         uint32_t maximum_image_height_limit,
                                                         const std::vector<uint8_t>& uncompressed_data)
 {
+  if (uncompressed_data.empty()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Uncompressed image data is empty"};
+  }
+
   // Get the properties for this item
   // We need: ispe, cmpd, uncC
   std::vector<std::shared_ptr<Box>> item_properties;
@@ -610,6 +622,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   if (error) {
     return error;
   }
+
   uint32_t width = 0;
   uint32_t height = 0;
   bool found_ispe = false;
@@ -679,7 +692,8 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   for (Box_uncC::Component component : uncC->get_components()) {
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if (component_type == component_type_Y) {
+    if (component_type == component_type_Y ||
+        component_type == component_type_monochrome) {
       img->add_plane(heif_channel_Y, width, height, component.component_bit_depth);
       channels.push_back(heif_channel_Y);
       channel_to_pixelOffset.emplace(heif_channel_Y, componentOffset);
@@ -751,7 +765,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
             long unsigned int tile_base_offset = tile_idx * bytes_per_tile;
             long unsigned int src_offset = tile_base_offset + pixel_offset * tile_width * tile_height;
             long unsigned int dst_offset = row * stride + col;
-            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset, tile_width);
+            memcpy(dst + dst_offset, uncompressed_data.data() + src_offset /** + row * tile_width **/, tile_width);   // TODO: ** is a hack
           }
         }
       }
@@ -946,7 +960,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
       {
         int bpp_alpha = image->get_bits_per_pixel(heif_channel_Alpha);
         Box_uncC::Component component3 = {3, (uint8_t)(bpp_alpha), component_format_unsigned, 0};
-        uncC->add_component(component3);   
+        uncC->add_component(component3);
       }
     }
     uncC->set_sampling_type(sampling_type_no_subsampling);
@@ -1008,7 +1022,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
   }
   return Error::Ok;
 }
-                 
+
 
 Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                                         const std::shared_ptr<HeifPixelImage>& src_image,

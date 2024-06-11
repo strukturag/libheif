@@ -100,6 +100,12 @@ set_target_properties(heif
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR})
 
+if (APPLE)
+    set_target_properties(heif
+            PROPERTIES
+	    LINK_FLAGS "-Wl,-compatibility_version,${MACOS_COMPATIBLE_VERSION}")
+endif ()
+
 target_compile_definitions(heif
         PUBLIC
         LIBHEIF_EXPORTS

@@ -20,6 +20,7 @@
 
 
 #include "nclx.h"
+#include "security_limits.h"
 
 #include <cassert>
 #include <limits>
@@ -294,9 +295,11 @@ struct heif_color_profile_nclx* color_profile_nclx::alloc_nclx_color_profile()
 
   if (profile) {
     profile->version = 1;
-    profile->color_primaries = heif_color_primaries_unspecified;
-    profile->transfer_characteristics = heif_transfer_characteristic_unspecified;
-    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+
+    // sRGB defaults
+    profile->color_primaries = heif_color_primaries_ITU_R_BT_709_5; // 1
+    profile->transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1; // 13
+    profile->matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6; // 6
     profile->full_range_flag = true;
   }
 
@@ -310,10 +313,11 @@ void color_profile_nclx::free_nclx_color_profile(struct heif_color_profile_nclx*
 }
 
 
-void color_profile_nclx::set_default()
+void color_profile_nclx::set_sRGB_defaults()
 {
-  m_colour_primaries = 2;
-  m_transfer_characteristics = 2;
+  // sRGB defaults
+  m_colour_primaries = 1;
+  m_transfer_characteristics = 13;
   m_matrix_coefficients = 6;
   m_full_range_flag = true;
 }
@@ -339,6 +343,22 @@ void color_profile_nclx::set_from_heif_color_profile_nclx(const struct heif_colo
 }
 
 
+void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
+{
+  if (m_matrix_coefficients == heif_matrix_coefficients_unspecified) {
+    m_matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
+  }
+
+  if (m_colour_primaries == heif_color_primaries_unspecified) {
+    m_colour_primaries = heif_color_primaries_ITU_R_BT_709_5;
+  }
+
+  if (m_transfer_characteristics == heif_transfer_characteristic_unspecified) {
+    m_transfer_characteristics = heif_transfer_characteristic_IEC_61966_2_1;
+  }
+}
+
+
 Error Box_colr::parse(BitstreamRange& range)
 {
   StreamReader::grow_status status;
@@ -354,8 +374,12 @@ Error Box_colr::parse(BitstreamRange& range)
   }
   else if (colour_type == fourcc("prof") ||
            colour_type == fourcc("rICC")) {
+    if (!has_fixed_box_size()) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unspecified, "colr boxes with undefined box size are not supported");
+    }
+
     uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
-    if (profile_size_64 > std::numeric_limits<size_t>::max()) {
+    if (profile_size_64 > MAX_COLOR_PROFILE_SIZE) {
       return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
     }
 

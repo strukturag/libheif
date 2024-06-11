@@ -58,8 +58,8 @@
 #include "libheif/plugins/encoder_svt.h"
 #endif
 
-#if HAVE_FFMPEG_HEVC_DECODER
-#include "libheif/plugins/decoder_ffmpeg_hevc.h"
+#if HAVE_FFMPEG_DECODER
+#include "libheif/plugins/decoder_ffmpeg.h"
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -151,7 +151,7 @@ void register_default_plugins()
   register_encoder(get_encoder_plugin_svt());
 #endif
 
-#if HAVE_FFMPEG_HEVC_DECODER
+#if HAVE_FFMPEG_DECODER
   register_decoder(get_decoder_plugin_ffmpeg());
 #endif
 

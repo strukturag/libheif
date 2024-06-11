@@ -77,19 +77,18 @@ extern "C" {
 // Version string of linked libheif library.
 LIBHEIF_API const char* heif_get_version(void);
 
-// Numeric version of linked libheif library, encoded as BCD 0xHHMMLL00 = HH.MM.LL.
-// For example: 0x02143000 is version 2.14.30
+// Numeric version of linked libheif library, encoded as 0xHHMMLL00 = hh.mm.ll, where hh, mm, ll is the decimal representation of HH, MM, LL.
+// For example: 0x02150300 is version 2.21.3
 LIBHEIF_API uint32_t heif_get_version_number(void);
 
-// Numeric part "HH" from above. Returned as a decimal number (not BCD).
+// Numeric part "HH" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_major(void);
-// Numeric part "MM" from above. Returned as a decimal number (not BCD).
+// Numeric part "MM" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_minor(void);
-// Numeric part "LL" from above. Returned as a decimal number (not BCD).
+// Numeric part "LL" from above. Returned as a decimal number.
 LIBHEIF_API int heif_get_version_number_maintenance(void);
 
 // Helper macros to check for given versions of libheif at compile time.
-// Note: h, m, l should be 2-digit BCD numbers. I.e., decimal 17 = 0x17 (BCD)
 #define LIBHEIF_MAKE_VERSION(h, m, l) ((h) << 24 | (m) << 16 | (l) << 8)
 #define LIBHEIF_HAVE_VERSION(h, m, l) (LIBHEIF_NUMERIC_VERSION >= LIBHEIF_MAKE_VERSION(h, m, l))
 
@@ -392,7 +391,7 @@ enum heif_compression_format
    */
   heif_compression_EVC = 6,
   /**
-   * JPEG 2000 compression. (Currently unused in libheif.)
+   * JPEG 2000 compression.
    *
    * The encapsulation of JPEG 2000 is specified in ISO/IEC 15444-16:2021.
    * The core encoding is defined in ISO/IEC 15444-1, or ITU-T T.800.
@@ -401,7 +400,7 @@ enum heif_compression_format
   /**
    * Uncompressed encoding.
    *
-   * This is defined in ISO/IEC 23001-17:2023 (Draft International Standard).
+   * This is defined in ISO/IEC 23001-17:2023 (Final Draft International Standard).
   */
   heif_compression_uncompressed = 8,
   /**
@@ -479,24 +478,36 @@ struct heif_init_params
 };
 
 
-// You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
-// These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
-//
-// For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
-// will never be freed if you do not call heif_init()/heif_deinit().
-//
-// heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
-// want to load external plugins from the default path.
-// Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
-// will be available even without heif_init().
-//
-// Make sure that you don't have one part of your program use heif_init()/heif_deinit() and another part that doesn't
-// use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
-
-// You may pass nullptr to get default parameters. Currently, no parameters are supported.
+/**
+ * Initialise library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * For backwards compatibility, it is not really necessary to call heif_init(), but some library memory objects
+ * will never be freed if you do not call heif_init()/heif_deinit().
+ *
+ * heif_init() will load the external modules installed in the default plugin path. Thus, you need it when you
+ * want to load external plugins from the default path.
+ * Codec plugins that are compiled into the library directly (selected by the compile-time parameters of libheif)
+ * will be available even without heif_init().
+ *
+ * Make sure that you do not have one part of your program use heif_init()/heif_deinit() and another part that does
+ * not use it as the latter may try to use an uninitialized library. If in doubt, enclose everything with init/deinit.
+ *
+ * You may pass nullptr to get default parameters. Currently, no parameters are supported.
+ */
 LIBHEIF_API
 struct heif_error heif_init(struct heif_init_params*);
 
+/**
+ * Deinitialise and clean up library.
+ *
+ * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
+ * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ *
+ * \sa heif_init()
+ */
 LIBHEIF_API
 void heif_deinit(void);
 
@@ -2090,20 +2101,53 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
 
 // --- heif_image allocation
 
-// Create a new image of the specified resolution and colorspace.
-// Note: no memory for the actual image data is reserved yet. You have to use
-// heif_image_add_plane() to add the image planes required by your colorspace/chroma.
+/**
+ * Create a new image of the specified resolution and colorspace.
+ *
+ * <p>This does not allocate memory for the image data. Use {@link heif_image_add_plane} to
+ * add the corresponding planes to match the specified {@code colorspace} and {@code chroma}.
+ *
+ * @param width the width of the image in pixels
+ * @param height the height of the image in pixels
+ * @param colorspace the colorspace of the image
+ * @param chroma the chroma of the image
+ * @param out_image pointer to pointer of the resulting image
+ * @return whether the creation succeeded or there was an error
+*/
 LIBHEIF_API
 struct heif_error heif_image_create(int width, int height,
                                     enum heif_colorspace colorspace,
                                     enum heif_chroma chroma,
                                     struct heif_image** out_image);
 
-// The indicated bit_depth corresponds to the bit depth per channel.
-// I.e. for interleaved formats like RRGGBB, the bit_depth would be, e.g., 10 bit instead
-// of 30 bits or 3*16=48 bits.
-// For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
-// instead of the preferred 8 bits.
+/**
+ * Add an image plane to the image.
+ *
+ * <p>The image plane needs to match the colorspace and chroma of the image. Note
+ * that this does not need to be a single "planar" format - interleaved pixel channels
+ * can also be used if the chroma is interleaved.
+ *
+ * <p>The indicated bit_depth corresponds to the bit depth per channel. For example,
+ * with an interleaved format like RRGGBB where each color is represented by 10 bits,
+ * the {@code bit_depth} would be {@code 10} rather than {@code 30}.
+ *
+ * <p>For backward compatibility, one can also specify 24bits for RGB and 32bits for RGBA,
+ * instead of the preferred 8 bits. However, this use is deprecated.
+ *
+ * @param image the parent image to add the channel plane to
+ * @param channel the channel of the plane to add
+ * @param width the width of the plane
+ * @param height the height of the plane
+ * @param bit_depth the bit depth per color channel
+ * @return whether the addition succeeded or there was an error
+ *
+ * @note The width and height are usually the same as the parent image, but can be
+ * less for subsampling.
+ *
+ * @note The specified width can differ from the row stride of the resulting image plane.
+ * Always use the result of {@link heif_image_get_plane} or {@link heif_image_get_plane_readonly}
+ * to determine row stride.
+ */
 LIBHEIF_API
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        enum heif_channel channel,

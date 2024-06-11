@@ -411,6 +411,7 @@ struct heif_error jpeg_encode_image(void* encoder_raw, const struct heif_image* 
   jpeg_finish_compress(&cinfo);
   jpeg_destroy_compress(&cinfo);
 
+  encoder->data_read = false;
   encoder->compressed_data.resize(outlength);
   memcpy(encoder->compressed_data.data(), outbuffer, outlength);
 

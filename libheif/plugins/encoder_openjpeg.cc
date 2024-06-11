@@ -248,22 +248,25 @@ struct heif_error opj_get_parameter_string(void* encoder_raw, const char* name, 
 {
   struct encoder_struct_opj* encoder = (struct encoder_struct_opj*) encoder_raw;
 
-  switch (encoder->chroma) {
-    case heif_chroma_420:
-      save_strcpy(value, value_size, "420");
-      break;
-    case heif_chroma_422:
-      save_strcpy(value, value_size, "422");
-      break;
-    case heif_chroma_444:
-      save_strcpy(value, value_size, "444");
-      break;
-    case heif_chroma_undefined:
-      save_strcpy(value, value_size, "undefined");
-      break;
-    default:
-      assert(false);
-      return heif_error_invalid_parameter_value;
+  if (strcmp(name, kParam_chroma) == 0) {
+    switch (encoder->chroma) {
+      case heif_chroma_420:
+        save_strcpy(value, value_size, "420");
+        break;
+      case heif_chroma_422:
+        save_strcpy(value, value_size, "422");
+        break;
+      case heif_chroma_444:
+        save_strcpy(value, value_size, "444");
+        break;
+      case heif_chroma_undefined:
+        save_strcpy(value, value_size, "undefined");
+        break;
+      default:
+        assert(false);
+        return heif_error_invalid_parameter_value;
+      }
+      return heif_error_ok;
   }
 
   return heif_error_unsupported_parameter;
@@ -320,6 +323,9 @@ void opj_query_input_colorspace2(void* encoder_raw, enum heif_colorspace* inout_
 
     if (encoder->chroma != heif_chroma_undefined) {
       *inout_chroma = encoder->chroma;
+    }
+    else {
+      *inout_chroma = heif_chroma_444;
     }
   }
 }
@@ -518,6 +524,7 @@ struct heif_error opj_encode_image(void* encoder_raw, const struct heif_image* i
     }
   }
 
+  encoder->data_read = false;
   encoder->codestream.clear(); //Fixes issue when encoding multiple images and old data persists.
 
   //Encodes the image into a 'codestream' which is stored in the 'encoder' variable

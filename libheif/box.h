@@ -115,6 +115,8 @@ public:
 
   uint64_t get_box_size() const { return m_size; }
 
+  bool has_fixed_box_size() const { return m_size != 0; }
+
   uint32_t get_header_size() const { return m_header_size; }
 
   uint32_t get_short_type() const { return m_type; }
@@ -191,6 +193,11 @@ public:
     m_children.push_back(box);
     return (int) m_children.size() - 1;
   }
+
+  virtual bool operator==(const Box& other) const;
+
+  static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
+
 
 protected:
   virtual Error parse(BitstreamRange& range);
@@ -534,6 +541,8 @@ public:
     set_short_type(fourcc("ipco"));
   }
 
+  int find_or_append_child_box(const std::shared_ptr<Box>& box);
+
   Error get_properties_for_item_ID(heif_item_id itemID,
                                    const std::shared_ptr<class Box_ipma>&,
                                    std::vector<std::shared_ptr<Box>>& out_properties) const;
@@ -574,6 +583,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  bool operator==(const Box& other) const override;
 
 protected:
   Error parse(BitstreamRange& range) override;

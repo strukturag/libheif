@@ -122,7 +122,7 @@ first, so that the configuration script will find this.
 Also install x265 and its development files if you want to use HEIF encoding, but note that x265 is GPL.
 An alternative to x265 is kvazaar (BSD).
 
-The basic build steps are as follows:
+The basic build steps are as follows (--preset argument needs CMake >= 3.21):
 
 ````sh
 mkdir build
@@ -138,7 +138,7 @@ There are CMake presets to cover the most frequent use cases.
 * `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
   A single library is built with support for HEIC and AVIF.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
-* `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
+* `fuzzing`: all codecs like in release build, but configured into a self-contained library with enabled fuzzers. The library should not distributed.
 
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.
@@ -155,7 +155,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_HEVC_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`.
 
 Further options are:
 
@@ -168,7 +168,7 @@ Further options are:
 * `ENABLE_MULTITHREADING_SUPPORT`: can be used to disable any multithreading support, e.g. for embedded platforms.
 * `ENABLE_PARALLEL_TILE_DECODING`: when enabled, libheif will decode tiled images in parallel to speed up compilation.
 * `PLUGIN_DIRECTORY`: the directory where libheif will search for dynamic plugins when the environment
-  variable `LIBHEIF_PLUGIN_PAT` is not set.
+  variable `LIBHEIF_PLUGIN_PATH` is not set.
 * `WITH_REDUCED_VISIBILITY`: only export those symbols into the library that are public API.
   Has to be turned off for running the tests.
 
@@ -180,7 +180,7 @@ Further options are:
     brew install cmake make pkg-config x265 libde265 libjpeg libtool
     ```
 
-2. Configure and build project
+2. Configure and build project (--preset argument needs CMake >= 3.21):
 
     ```sh
     mkdir build
@@ -245,7 +245,7 @@ If you want to compile SVT-AV1 yourself,
   and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
 
 You have to enable SVT-AV1 with CMake.

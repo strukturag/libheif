@@ -85,7 +85,7 @@ Fraction::Fraction(int64_t num, int64_t den)
 Fraction Fraction::operator+(const Fraction& b) const
 {
   if (denominator == b.denominator) {
-    int64_t n = numerator + b.numerator;
+    int64_t n = int64_t{numerator} + b.numerator;
     int64_t d = denominator;
     return Fraction{n,d};
   }
@@ -99,7 +99,7 @@ Fraction Fraction::operator+(const Fraction& b) const
 Fraction Fraction::operator-(const Fraction& b) const
 {
   if (denominator == b.denominator) {
-    int64_t n = numerator - b.numerator;
+    int64_t n = int64_t{numerator} - b.numerator;
     int64_t d = denominator;
     return Fraction{n,d};
   }
@@ -617,7 +617,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
-  if (hdr.get_box_size() < hdr.get_header_size()) {
+  if (hdr.has_fixed_box_size() && hdr.get_box_size() < hdr.get_header_size()) {
     std::stringstream sstr;
     sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
          << hdr.get_header_size() << " bytes)";
@@ -636,13 +636,14 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
   }
 
 
-  auto status = range.wait_for_available_bytes(hdr.get_box_size() - hdr.get_header_size());
-  if (status != StreamReader::size_reached) {
-    // TODO: return recoverable error at timeout
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_End_of_data);
+  if (hdr.has_fixed_box_size()) {
+    auto status = range.wait_for_available_bytes(hdr.get_box_size() - hdr.get_header_size());
+    if (status != StreamReader::size_reached) {
+      // TODO: return recoverable error at timeout
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data);
+    }
   }
-
 
   // Security check: make sure that box size does not exceed int64 size.
 
@@ -652,7 +653,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
   }
 
   int64_t box_size = static_cast<int64_t>(hdr.get_box_size());
-  int64_t box_size_without_header = box_size - hdr.get_header_size();
+  int64_t box_size_without_header = hdr.has_fixed_box_size() ? (box_size - hdr.get_header_size()) : (int64_t)range.get_remaining_bytes();
 
   // Box size may not be larger than remaining bytes in parent box.
 
@@ -736,6 +737,31 @@ std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) cons
   }
 
   return result;
+}
+
+
+bool Box::operator==(const Box& other) const
+{
+  if (this->get_short_type() != other.get_short_type()) {
+    return false;
+  }
+
+  StreamWriter writer1;
+  StreamWriter writer2;
+
+  this->write(writer1);
+  other.write(writer2);
+
+  return writer1.get_data() == writer2.get_data();
+}
+
+
+bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2)
+{
+    if (!box1 || !box2) {
+        return false;
+    }
+    return *box1 == *box2;
 }
 
 
@@ -1267,9 +1293,9 @@ Error Box_iloc::read_data(const Item& item,
     }
     else {
       std::stringstream sstr;
-      sstr << "Item construction method " << item.construction_method << " not implemented";
+      sstr << "Item construction method " << (int) item.construction_method << " not implemented";
       return Error(heif_error_Unsupported_feature,
-                   heif_suberror_No_idat_box,
+                   heif_suberror_Unsupported_item_construction_method,
                    sstr.str());
     }
   }
@@ -1770,6 +1796,17 @@ std::string Box_iprp::dump(Indent& indent) const
 }
 
 
+int Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
+{
+  for (int i = 0; i < (int) m_children.size(); i++) {
+    if (Box::equal(m_children[i], box)) {
+      return i;
+    }
+  }
+  return append_child_box(box);
+}
+
+
 Error Box_ipco::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
@@ -2129,6 +2166,18 @@ Error Box_ispe::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+
+bool Box_ispe::operator==(const Box& other) const
+{
+  const auto* other_ispe = dynamic_cast<const Box_ispe*>(&other);
+  if (other_ispe == nullptr) {
+    return false;
+  }
+
+  return (m_image_width == other_ispe->m_image_width &&
+          m_image_height == other_ispe->m_image_height);
 }
 
 
@@ -2853,7 +2902,11 @@ std::string Box_idat::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
+  if (get_box_size() >= get_header_size()) {
+    sstr << indent << "number of data bytes: " << get_box_size() - get_header_size() << "\n";
+  } else {
+     sstr << indent << "number of data bytes is invalid\n";
+  }
 
   return sstr.str();
 }

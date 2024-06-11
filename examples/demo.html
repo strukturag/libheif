@@ -191,6 +191,8 @@ a {
         }.bind(this));
         this.drawer = new CanvasDrawer(canvas);
         this.decoder = new libheif.HeifDecoder();
+
+        console.log("Using libheif", libheif.heif_get_version());
         saveSupported = this.canvas.toBlob &&
             ((URL && URL.createObjectURL) || navigator.msSaveOrOpenBlob);
         if (saveSupported) {
@@ -313,8 +315,7 @@ a {
             return;
         }
 
-        console.log("Using libheif", libheif.heif_get_version());
-        var demo = new HeifDemo(libheif);
+        var demo = new HeifDemo(libheif());
 
         show("form");
 
