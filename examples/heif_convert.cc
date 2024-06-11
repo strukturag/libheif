@@ -380,26 +380,28 @@ int main(int argc, char** argv)
   // TODO: check, whether reading from named pipes works at all.
 
   std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
-  uint8_t magic[12];
-  istr.read((char*) magic, 12);
-
-  if (heif_check_jpeg_filetype(magic, 12)) {
-    fprintf(stderr, "Input file '%s' is a JPEG image\n", input_filename.c_str());
+  std::vector<uint8_t> length(4);
+  istr.read((char*) length.data(), length.size());
+  uint32_t box_size = (length[0] << 24) + (length[1] << 16) + (length[2] << 8) + (length[3]);
+  if ((box_size < 16) || (box_size > 512)) {
+    fprintf(stderr, "Input file does not appear to start with a valid box length.");
+    if (box_size == 0xFFD8FFE0) {
+      fprintf(stderr, " Possibly could be a JPEG file instead.\n");
+    } else {
+      fprintf(stderr, "\n");
+    }
     return 1;
   }
 
-  enum heif_filetype_result filetype_check = heif_check_filetype(magic, 12);
-  if (filetype_check == heif_filetype_no) {
-    fprintf(stderr, "Input file is not an HEIF/AVIF file\n");
+  std::vector<uint8_t> ftyp_bytes(box_size);
+  std::copy(length.begin(), length.end(), ftyp_bytes.begin());
+  istr.read((char*) ftyp_bytes.data() + 4, ftyp_bytes.size() - 4);
+
+  heif_error filetype_check = heif_has_compatible_filetype(ftyp_bytes.data(), (int)ftyp_bytes.size());
+  if (filetype_check.code != heif_error_Ok) {
+    fprintf(stderr, "Input file is not a supported format. %s\n", filetype_check.message);
     return 1;
   }
-
-  if (filetype_check == heif_filetype_yes_unsupported) {
-    fprintf(stderr, "Input file is an unsupported HEIF/AVIF file type\n");
-    return 1;
-  }
-
-
 
   // --- read the HEIF file
 

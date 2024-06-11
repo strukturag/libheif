@@ -145,6 +145,48 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 }
 
 
+heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
+{
+  // Get compatible brands first, because that does validity checks
+  heif_brand2* compatible_brands = nullptr;
+  int nBrands = 0;
+  struct heif_error err = heif_list_compatible_brands(data, len, &compatible_brands, &nBrands);
+  if (err.code) {
+    return err;
+  }
+
+  heif_brand2 main_brand = heif_read_main_brand(data, len);
+
+  std::set<heif_brand2> supported_brands{
+      heif_brand2_avif,
+      heif_brand2_heic,
+      heif_brand2_heix,
+      heif_brand2_j2ki,
+      heif_brand2_jpeg,
+      heif_brand2_miaf,
+      heif_brand2_mif1,
+      heif_brand2_mif2
+  };
+
+  auto it = supported_brands.find(main_brand);
+  if (it != supported_brands.end()) {
+    heif_free_list_of_compatible_brands(compatible_brands);
+    return heif_error_ok;
+  }
+
+  for (int i = 0; i < nBrands; i++) {
+    heif_brand2 compatible_brand = compatible_brands[i];
+    it = supported_brands.find(compatible_brand);
+    if (it != supported_brands.end()) {
+      heif_free_list_of_compatible_brands(compatible_brands);
+      return heif_error_ok;
+    }
+  }
+  heif_free_list_of_compatible_brands(compatible_brands);
+  return {heif_error_Invalid_input, heif_suberror_Unsupported_image_type, "No supported brands found."};;
+}
+
+
 int heif_check_jpeg_filetype(const uint8_t* data, int len)
 {
   if (len < 12 || data == nullptr) {
@@ -318,7 +360,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
 
   auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
   if (!ftyp) {
-    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is no ftyp box"};
+    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is not a ftyp box"};
   }
 
   auto brands = ftyp->list_brands();
