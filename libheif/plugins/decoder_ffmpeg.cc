@@ -332,7 +332,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   int hevc_AnnexB_StartCode_size = 4;
 
   size_t hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
-  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size);
+  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size + AV_INPUT_BUFFER_PADDING_SIZE);
 
   //Copy hevc pps data
   uint8_t* hevc_data_ptr = hevc_data;
