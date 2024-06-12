@@ -857,9 +857,16 @@ void Box::derive_box_version_recursive()
 Error Box_other::parse(BitstreamRange& range)
 {
   if (has_fixed_box_size()) {
-    size_t len = get_box_size() - get_header_size();
-    m_data.resize(len);
-    range.read(m_data.data(), len);
+    size_t len;
+    if (get_box_size() >= get_header_size()) {
+      len = get_box_size() - get_header_size();
+      m_data.resize(len);
+      range.read(m_data.data(), len);
+    }
+    else {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_box_size);
+    }
   }
   else {
     // TODO: boxes until end of file (we will probably never need this)
@@ -873,11 +880,15 @@ Error Box_other::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write(m_data);
-
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
+  if (get_box_size() >= get_header_size()) {
+    writer.write(m_data);
+    prepend_header(writer, box_start);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Invalid_box_size);
+  }
 }
 
 
@@ -891,7 +902,14 @@ std::string Box_other::dump(Indent& indent) const
 
   sstr << std::hex << std::setfill('0');
 
-  size_t len = get_box_size() - get_header_size();
+  size_t len = 0;
+  if (get_box_size() >= get_header_size()) {
+    len = get_box_size() - get_header_size();
+  }
+  else {
+    sstr << indent << "invalid box size " << get_box_size() << " (smaller than header)\n";
+    return sstr.str();
+  }
 
   for (size_t i = 0; i < len; i++) {
     if (i % 16 == 0) {
