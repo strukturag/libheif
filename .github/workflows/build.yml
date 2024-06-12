@@ -28,6 +28,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Cache cargo for rav1e
+      uses: actions/cache@v2
+      with:
+        path:
+         |
+           ~/.cargo/git
+           ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-rav1e-${{ hashFiles('third-party/rav1e.cmd') }}
+      if: ${{ env.WITH_RAV1E == '1' }}
+
     - name: Install dependencies
       run: |
         ./scripts/install-ci-linux.sh
