@@ -179,9 +179,7 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
 
       NalUnit* old_nal_unit = decoder->NalMap[nal_unit->unit_type()];
       decoder->NalMap[nal_unit->unit_type()] = nal_unit;
-      if (old_nal_unit != NULL) {
-          delete old_nal_unit;
-      }
+      delete old_nal_unit;
 
       ptr += nal_size;
   }
