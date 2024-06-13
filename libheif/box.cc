@@ -3284,7 +3284,10 @@ Error Box_cmin::parse(BitstreamRange& range)
     m_matrix.skew = range.read32s() / (double)skewDenominator;
   }
   else {
+    // TODO: this is wrong. We cannot simply set f_y = f_x because both use a different normalization.
+    //       However, we also cannot compute this here without knowing the image size.
     m_matrix.focal_length_y = m_matrix.focal_length_x;
+
     m_matrix.skew = 0;
   }
   return range.get_error();
