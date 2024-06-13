@@ -193,13 +193,13 @@ std::string BoxHeader::get_type_string() const
     std::ostringstream sstr;
     sstr << std::hex;
     sstr << std::setfill('0');
-    sstr << std::setw(2);
 
     for (int i = 0; i < 16; i++) {
       if (i == 4 || i == 6 || i == 8 || i == 10) {
         sstr << '-';
       }
 
+      sstr << std::setw(2);
       sstr << ((int) m_uuid_type[i]);
     }
 
@@ -582,6 +582,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_mdcv>();
       break;
 
+    case fourcc("cmin"):
+      box = std::make_shared<Box_cmin>();
+      break;
+
     case fourcc("udes"):
       box = std::make_shared<Box_udes>();
       break;
@@ -637,6 +641,15 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     case fourcc("mdat"):
       // avoid generating a 'Box_other'
       box = std::make_shared<Box>();
+      break;
+
+    case fourcc("uuid"):
+      if (hdr.get_uuid_type() == std::vector<uint8_t>{0x22, 0xcc, 0x04, 0xc7, 0xd6, 0xd9, 0x4e, 0x07, 0x9d, 0x90, 0x4e, 0xb6, 0xec, 0xba, 0xf3, 0xa3}) {
+        box = std::make_shared<Box_cmin>();
+      }
+      else {
+        box = std::make_shared<Box_other>(hdr.get_short_type());
+      }
       break;
 
     default:
@@ -3237,5 +3250,48 @@ Error Box_udes::write(StreamWriter& writer) const
   writer.write(m_description);
   writer.write(m_tags);
   prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+
+std::string Box_cmin::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "focal-length: " << m_matrix.focal_length_x << ", " << m_matrix.focal_length_y << "\n";
+  sstr << indent << "principal-point: " << m_matrix.principal_point_x << ", " << m_matrix.principal_point_y << "\n";
+  sstr << indent << "skew: " << m_matrix.skew << "\n";
+  return sstr.str();
+}
+
+
+Error Box_cmin::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  uint32_t denominatorShift = (get_flags() & 0x1F00) >> 8;
+  uint32_t denominator = (1 << denominatorShift);
+
+  m_matrix.focal_length_x = range.read32s() / (double)denominator;
+  m_matrix.principal_point_x = range.read32s() / (double)denominator;
+  m_matrix.principal_point_y = range.read32s() / (double)denominator;
+
+  if (get_flags() & 1) {
+    uint32_t skewDenominatorShift = ((get_flags()) & 0x1F0000) >> 16;
+    uint32_t skewDenominator = (1<<skewDenominatorShift);
+
+    m_matrix.focal_length_y = range.read32s() / (double)denominator;
+    m_matrix.skew = range.read32s() / (double)skewDenominator;
+  }
+  else {
+    m_matrix.focal_length_y = m_matrix.focal_length_x;
+    m_matrix.skew = 0;
+  }
+  return range.get_error();
+}
+
+
+Error Box_cmin::write(StreamWriter& writer) const
+{
   return Error::Ok;
 }

@@ -38,7 +38,8 @@ enum heif_item_property_type
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
   heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
-  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd')
+  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd'),
+  heif_item_property_type_camera_intrinsic_matrix = heif_fourcc('c', 'm', 'i', 'n')
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -166,6 +167,23 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
                                                   heif_item_id itemId,
                                                   heif_property_id propertyId,
                                                   uint8_t* data_out);
+
+
+struct heif_camera_intrinsic_matrix
+{
+  double focal_length_x;
+  double focal_length_y;
+  double principal_point_x;
+  double principal_point_y;
+  double skew;
+};
+
+LIBHEIF_API
+struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
+                                                                 heif_item_id itemId,
+                                                                 heif_property_id propertyId,
+                                                                 struct heif_camera_intrinsic_matrix* out_matrix);
+
 #ifdef __cplusplus
 }
 #endif

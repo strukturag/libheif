@@ -146,6 +146,8 @@ public:
 
   uint32_t read32();
 
+  int32_t read32s();
+
   std::string read_string();
 
   bool read(uint8_t* data, size_t n);

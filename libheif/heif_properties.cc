@@ -146,7 +146,7 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
                                                           heif_property_id propertyId,
                                                           struct heif_property_user_description** out)
 {
-  if (!out) {
+  if (!out || !context) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
   }
 
@@ -404,6 +404,38 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
 
 
   std::copy(data.begin(), data.end(), data_out);
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
+                                                                 heif_item_id itemId,
+                                                                 heif_property_id propertyId,
+                                                                 struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (!out_matrix || !context) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto cmin = std::dynamic_pointer_cast<Box_cmin>(properties[propertyId - 1]);
+  if (!cmin) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
+  }
+
+  *out_matrix = cmin->get_intrinsic_matrix();
 
   return heif_error_success;
 }
