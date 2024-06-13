@@ -457,6 +457,17 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
   return infe_box->get_item_type();
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+std::string HeifFile::get_item_name(heif_item_id ID) const
+{
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
+    return "";
+  }
+
+  return infe_box->get_item_name();
+}
+#endif
 
 std::string HeifFile::get_content_type(heif_item_id ID) const
 {
@@ -1098,6 +1109,17 @@ void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal
   m_iloc_box->append_data(id, nal_packets, construction_method);
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+void HeifFile::append_iloc_data(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<uint8_t> nal;
+  nal.resize(size);
+
+  memcpy(nal.data(), data, size);
+
+  append_iloc_data(id, nal);
+}
+#endif
 
 void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size)
 {
@@ -1157,6 +1179,23 @@ void HeifFile::set_hdlr_library_info(const std::string& encoder_plugin_version)
   sstr << "libheif (" << LIBHEIF_VERSION << ") / " << encoder_plugin_version;
   m_hdlr_box->set_name(sstr.str());
 }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+void HeifFile::add_altr_property(heif_item_id id) {
+  if (!m_iref_box) {
+    m_iref_box = std::make_shared<Box_iref>();
+  }
+
+  std::shared_ptr<Box_grpl> grpl_box = std::make_shared<Box_grpl>();
+  std::shared_ptr<Box_altr> altr_box = std::make_shared<Box_altr>();
+
+  m_meta_box->append_child_box(m_iref_box);
+  m_meta_box->append_child_box(grpl_box);
+  grpl_box->append_child_box(altr_box);
+
+  altr_box->add_item_id(id);
+}
+#endif
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 std::wstring HeifFile::convert_utf8_path_to_utf16(std::string str)

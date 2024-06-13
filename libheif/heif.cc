@@ -537,6 +537,52 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
   return Error::Ok.error_struct(ctx->context.get());
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+heif_error heif_context_get_gain_map_image_handle(heif_context* ctx, heif_image_handle** img)
+{
+  if (!img) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<HeifContext::Image> gain_map_image = ctx->context->get_gain_map_image();
+
+  // It is a requirement of an HEIF file there is always a primary image.
+  // If there is none, an error is generated when loading the file.
+  if (!gain_map_image) {
+    Error err(heif_error_Invalid_input,
+              heif_suberror_No_item_data);
+    return err.error_struct(ctx->context.get());
+  }
+
+  *img = new heif_image_handle();
+  (*img)->image = std::move(gain_map_image);
+  (*img)->context = ctx->context;
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+
+struct heif_error heif_context_get_gain_map_image_ID(struct heif_context* ctx, heif_item_id* id)
+{
+  if (!id) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<HeifContext::Image> gain_map_image = ctx->context->get_gain_map_image();
+  if (!gain_map_image) {
+    Error err(heif_error_Invalid_input,
+              heif_suberror_No_item_data);
+    return err.error_struct(ctx->context.get());
+  }
+
+  *id = gain_map_image->get_id();
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+#endif
+
 
 int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
 {
@@ -1358,6 +1404,22 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
   return image->image->get_plane(channel, out_stride);
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+struct heif_error heif_image_get_gain_map_metadata(heif_context* ctx,
+                                                   heif_gain_map_metadata* out_gm_metadata) {
+  if (!out_gm_metadata) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Null_pointer_argument);
+    return err.error_struct(ctx->context.get());
+  }
+
+  std::shared_ptr<ImageMetadata> metadata = ctx->context->get_gain_map_metadata();
+
+  heif_gain_map_metadata::parse_gain_map_metadata(metadata->m_data, out_gm_metadata);
+
+  return Error::Ok.error_struct(ctx->context.get());
+}
+#endif
 
 void heif_image_set_premultiplied_alpha(struct heif_image* image,
                                         int is_premultiplied_alpha)
@@ -2705,6 +2767,62 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   return heif_error_success;
 }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+struct heif_error heif_context_encode_gain_map_image(struct heif_context* ctx,
+                                                     const struct heif_image* input_image,
+                                                     const struct heif_image_handle* primary_image_handle,
+                                                     struct heif_encoder* encoder,
+                                                     const struct heif_encoding_options* input_options,
+                                                     const struct heif_gain_map_metadata* gain_map_metadata,
+                                                     struct heif_image_handle** out_image_handle)
+{
+  if (!encoder) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+
+  Error error;
+
+  heif_encoding_options options;
+  set_default_options(options);
+  ctx->context->add_altr_property(primary_image_handle->image->get_id());
+
+  std::vector<uint8_t> metadata;
+  error = heif_gain_map_metadata::prepare_gain_map_metadata(gain_map_metadata, metadata);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  heif_item_id tmap_item_id = -1;
+  ctx->context->add_tmap_box(metadata, tmap_item_id);
+
+  if (input_options != nullptr) {
+    copy_options(options, *input_options);
+  }
+
+  std::shared_ptr<HeifContext::Image> gain_map_image;
+
+  error = ctx->context->encode_image(input_image->image,
+                                     encoder,
+                                     options,
+                                     heif_image_input_class_gain_map,
+                                     gain_map_image);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  error = ctx->context->link_gain_map(primary_image_handle->image, gain_map_image, tmap_item_id);
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = gain_map_image;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+#endif
 
 
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,

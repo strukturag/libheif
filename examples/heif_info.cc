@@ -48,6 +48,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include "common.h"
+#if WITH_EXPERIMENTAL_GAIN_MAP
+#include "libheif/heif_gain_map.h"
+#endif
 
 
 /*
@@ -686,6 +689,23 @@ int main(int argc, char** argv)
         std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
       }
     }
+
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  // gain map pixels
+  heif_image_handle* gain_map_image_handle;
+  heif_image* gain_map_image;
+  err = heif_context_get_gain_map_image_handle(ctx.get(), &gain_map_image_handle);
+  if (err.code != heif_error_Ok) {
+    goto __exit;
+  }
+  heif_decode_image(gain_map_image_handle, &gain_map_image, heif_colorspace_undefined, heif_chroma_undefined, nullptr);
+
+  // gain map metadata
+  heif_gain_map_metadata gmm;
+  heif_image_get_gain_map_metadata(ctx.get(), &gmm);
+  gmm.dump();
+__exit:
+#endif
 
     heif_image_release(image);
 

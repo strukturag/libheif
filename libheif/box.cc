@@ -2148,6 +2148,30 @@ Error Box_mdcv::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
+#if WITH_EXPERIMENTAL_GAIN_MAP
+void Box_altr::add_item_id(heif_item_id id) {
+  m_item_IDs.push_back(id);
+}
+
+Error Box_altr::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(1);                             // unsigned int(32) group_id;
+  writer.write32((uint32_t) m_item_IDs.size());  // unsigned int(32) num_entities_in_group;
+  for (uint32_t i = 0; i < m_item_IDs.size(); i++) {
+    writer.write32((uint32_t) m_item_IDs[i]);    // unsigned int(32) entity_id;
+  }
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+Error Box_altr::parse(BitstreamRange& range)
+{
+  return range.get_error();
+}
+#endif
 
 Error Box_ipco::get_properties_for_item_ID(uint32_t itemID,
                                            const std::shared_ptr<class Box_ipma>& ipma,

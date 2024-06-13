@@ -128,7 +128,10 @@ enum heif_image_input_class
   heif_image_input_class_normal = 1,
   heif_image_input_class_alpha = 2,
   heif_image_input_class_depth = 3,
-  heif_image_input_class_thumbnail = 4
+  heif_image_input_class_thumbnail = 4,
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  heif_image_input_class_gain_map = 5
+#endif
 };
 
 
