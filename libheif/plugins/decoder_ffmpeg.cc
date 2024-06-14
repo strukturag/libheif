@@ -177,7 +177,9 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
       NalUnit* nal_unit = new NalUnit();
       nal_unit->set_data(cdata + ptr, nal_size);
 
+      NalUnit* old_nal_unit = decoder->NalMap[nal_unit->unit_type()];
       decoder->NalMap[nal_unit->unit_type()] = nal_unit;
+      delete old_nal_unit;
 
       ptr += nal_size;
   }
@@ -332,7 +334,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   int hevc_AnnexB_StartCode_size = 4;
 
   size_t hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
-  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size);
+  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size + AV_INPUT_BUFFER_PADDING_SIZE);
 
   //Copy hevc pps data
   uint8_t* hevc_data_ptr = hevc_data;
