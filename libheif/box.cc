@@ -928,9 +928,7 @@ std::string Box_other::dump(Indent& indent) const
 
   sstr << std::hex << std::setfill('0');
 
-  size_t len = get_box_size() - get_header_size();
-
-  for (size_t i = 0; i < len; i++) {
+  for (size_t i = 0; i < m_data.size(); i++) {
     if (i % 16 == 0) {
       // start of line
 
@@ -953,7 +951,7 @@ std::string Box_other::dump(Indent& indent) const
 
     sstr << std::setw(2) << ((int) m_data[i]);
 
-    if (i % 16 == 15 || i == len - 1) {
+    if (i % 16 == 15 || i == m_data.size() - 1) {
       sstr << "\n";
     }
   }
