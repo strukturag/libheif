@@ -409,10 +409,15 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
 }
 
 
+struct heif_camera_intrinsic_matrix
+{
+  Box_cmin::IntrinsicMatrix matrix;
+};
+
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_intrinsic_matrix* out_matrix)
+                                                                 struct heif_camera_intrinsic_matrix** out_matrix)
 {
   if (!out_matrix || !context) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
@@ -435,7 +440,64 @@ struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct he
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
   }
 
-  *out_matrix = cmin->get_intrinsic_matrix();
+  *out_matrix = new heif_camera_intrinsic_matrix;
+  (*out_matrix)->matrix = cmin->get_intrinsic_matrix();
+
+  return heif_error_success;
+}
+
+
+void heif_intrinsic_matrix_release(struct heif_camera_intrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+struct heif_error heif_intrinsic_matrix_get_focal_length(const struct heif_camera_intrinsic_matrix* matrix,
+                                                         int image_width, int image_height,
+                                                         double* out_focal_length_x,
+                                                         double* out_focal_length_y)
+{
+  if (!matrix) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed as matrix"};
+  }
+
+  double fx, fy;
+  matrix->matrix.compute_focal_length(image_width, image_height, fx,fy);
+
+  if (out_focal_length_x) *out_focal_length_x = fx;
+  if (out_focal_length_y) *out_focal_length_y = fy;
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_intrinsic_matrix_get_principal_point(const struct heif_camera_intrinsic_matrix* matrix,
+                                                            int image_width, int image_height,
+                                                            double* out_principal_point_x,
+                                                            double* out_principal_point_y)
+{
+  if (!matrix) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed as matrix"};
+  }
+
+  double px, py;
+  matrix->matrix.compute_principal_point(image_width, image_height, px,py);
+
+  if (out_principal_point_x) *out_principal_point_x = px;
+  if (out_principal_point_y) *out_principal_point_y = py;
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_intrinsic_matrix_get_skew(const struct heif_camera_intrinsic_matrix* matrix,
+                                                 double* out_skew)
+{
+  if (!matrix || !out_skew) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
+  }
+
+  *out_skew = matrix->matrix.skew;
 
   return heif_error_success;
 }

@@ -1018,11 +1018,28 @@ public:
     set_short_type(fourcc("cmin"));
   }
 
+  struct IntrinsicMatrix
+  {
+    double focal_length_x = 0;
+    double principal_point_x = 0;
+    double principal_point_y = 0;
+
+    bool is_anisotropic = false;
+    double focal_length_y = 0;
+    double skew = 0;
+
+    void compute_focal_length(int image_width, int image_height,
+                              double& out_focal_length_x, double& out_focal_length_y) const;
+
+    void compute_principal_point(int image_width, int image_height,
+                                 double& out_principal_point_x, double& out_principal_point_y) const;
+  };
+
   std::string dump(Indent&) const override;
 
-  heif_camera_intrinsic_matrix get_intrinsic_matrix() const { return m_matrix; }
+  IntrinsicMatrix get_intrinsic_matrix() const { return m_matrix; }
 
-  void set_intrinsic_matrix(heif_camera_intrinsic_matrix matrix) { m_matrix = matrix; }
+  void set_intrinsic_matrix(IntrinsicMatrix matrix) { m_matrix = matrix; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1030,7 +1047,7 @@ protected:
   Error write(StreamWriter& writer) const override;
 
 private:
-  heif_camera_intrinsic_matrix m_matrix;
+  IntrinsicMatrix m_matrix;
 };
 
 

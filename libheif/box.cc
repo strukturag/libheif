@@ -3272,13 +3272,42 @@ Error Box_udes::write(StreamWriter& writer) const
 }
 
 
+void Box_cmin::IntrinsicMatrix::compute_focal_length(int image_width, int image_height,
+                          double& out_focal_length_x, double& out_focal_length_y) const
+{
+  out_focal_length_x = focal_length_x * image_width;
+
+  if (is_anisotropic) {
+    out_focal_length_y = focal_length_y * image_height;
+  }
+  else {
+    out_focal_length_y = out_focal_length_x;
+  }
+}
+
+
+void Box_cmin::IntrinsicMatrix::compute_principal_point(int image_width, int image_height,
+                             double& out_principal_point_x, double& out_principal_point_y) const
+{
+  out_principal_point_x = principal_point_x * image_width;
+  out_principal_point_y = principal_point_y * image_height;
+}
+
+
 std::string Box_cmin::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "focal-length: " << m_matrix.focal_length_x << ", " << m_matrix.focal_length_y << "\n";
   sstr << indent << "principal-point: " << m_matrix.principal_point_x << ", " << m_matrix.principal_point_y << "\n";
-  sstr << indent << "skew: " << m_matrix.skew << "\n";
+  if (m_matrix.is_anisotropic) {
+    sstr << indent << "focal-length: " << m_matrix.focal_length_x << ", " << m_matrix.focal_length_y << "\n";
+    sstr << indent << "skew: " << m_matrix.skew << "\n";
+  }
+  else {
+    sstr << indent << "focal-length: " << m_matrix.focal_length_x << "\n";
+    sstr << indent << "no skew\n";
+  }
+
   return sstr.str();
 }
 

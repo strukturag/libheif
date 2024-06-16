@@ -169,20 +169,30 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
                                                   uint8_t* data_out);
 
 
-struct heif_camera_intrinsic_matrix
-{
-  double focal_length_x;
-  double focal_length_y;
-  double principal_point_x;
-  double principal_point_y;
-  double skew;
-};
-
 LIBHEIF_API
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_intrinsic_matrix* out_matrix);
+                                                                 struct heif_camera_intrinsic_matrix** out_matrix);
+
+LIBHEIF_API
+void heif_intrinsic_matrix_release(struct heif_camera_intrinsic_matrix* matrix);
+
+LIBHEIF_API
+struct heif_error heif_intrinsic_matrix_get_focal_length(const struct heif_camera_intrinsic_matrix* matrix,
+                                                         int image_width, int image_height,
+                                                         double* out_focal_length_x,
+                                                         double* out_focal_length_y);
+
+LIBHEIF_API
+struct heif_error heif_intrinsic_matrix_get_principal_point(const struct heif_camera_intrinsic_matrix* matrix,
+                                                            int image_width, int image_height,
+                                                            double* out_principal_point_x,
+                                                            double* out_principal_point_y);
+
+LIBHEIF_API
+struct heif_error heif_intrinsic_matrix_get_skew(const struct heif_camera_intrinsic_matrix* matrix,
+                                                 double* out_skew);
 
 #ifdef __cplusplus
 }
