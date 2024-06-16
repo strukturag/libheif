@@ -1054,6 +1054,69 @@ private:
 };
 
 
+class Box_cmex : public FullBox
+{
+public:
+  Box_cmex()
+  {
+    set_short_type(fourcc("cmex"));
+  }
+
+  struct ExtrinsicMatrix
+  {
+    // in micrometers (um)
+    int32_t pos_x = 0;
+    int32_t pos_y = 0;
+    int32_t pos_z = 0;
+
+    bool rotation_as_quaternions = true;
+    bool orientation_is_32bit = false;
+
+    double quaternion_x = 0;
+    double quaternion_y = 0;
+    double quaternion_z = 0;
+    double quaternion_w = 1.0;
+
+    // rotation angle in degrees
+    double rotation_yaw = 0;   //  [-180 ; 180)
+    double rotation_pitch = 0; //  [-90 ; 90]
+    double rotation_roll = 0;  //  [-180 ; 180)
+
+    uint32_t world_coordinate_system_id = 0;
+  };
+
+  std::string dump(Indent&) const override;
+
+  ExtrinsicMatrix get_extrinsic_matrix() const { return m_matrix; }
+
+  Error set_extrinsic_matrix(ExtrinsicMatrix matrix);
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  Error write(StreamWriter& writer) const override;
+
+private:
+  ExtrinsicMatrix m_matrix;
+
+  bool m_has_pos_x = false;
+  bool m_has_pos_y = false;
+  bool m_has_pos_z = false;
+  bool m_has_orientation = false;
+  bool m_has_world_coordinate_system_id;
+
+  enum Flags
+  {
+    pos_x_present = 0x01,
+    pos_y_present = 0x02,
+    pos_z_present = 0x04,
+    orientation_present = 0x08,
+    rot_large_field_size = 0x10,
+    id_present = 0x20
+  };
+};
+
+
 
 
 /**

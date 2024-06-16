@@ -586,6 +586,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_cmin>();
       break;
 
+    case fourcc("cmex"):
+      box = std::make_shared<Box_cmex>();
+      break;
+
     case fourcc("udes"):
       box = std::make_shared<Box_udes>();
       break;
@@ -646,6 +650,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     case fourcc("uuid"):
       if (hdr.get_uuid_type() == std::vector<uint8_t>{0x22, 0xcc, 0x04, 0xc7, 0xd6, 0xd9, 0x4e, 0x07, 0x9d, 0x90, 0x4e, 0xb6, 0xec, 0xba, 0xf3, 0xa3}) {
         box = std::make_shared<Box_cmin>();
+      }
+      else if (hdr.get_uuid_type() == std::vector<uint8_t>{0x43, 0x63, 0xe9, 0x14, 0x5b, 0x7d, 0x4a, 0xab, 0x97, 0xae, 0xbe, 0xa6, 0x98, 0x03, 0xb4, 0x34}) {
+        box = std::make_shared<Box_cmex>();
       }
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
@@ -3408,6 +3415,239 @@ Error Box_cmin::write(StreamWriter& writer) const
     uint32_t skewDenominator = (1 << m_skewDenominatorShift);
     writer.write32s(static_cast<int32_t>(m_matrix.skew * skewDenominator));
   }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_cmex::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  m_matrix = ExtrinsicMatrix{};
+
+  if (get_flags() & pos_x_present) {
+    m_has_pos_x = true;
+    m_matrix.pos_x = range.read32s();
+  }
+
+  if (get_flags() & pos_y_present) {
+    m_has_pos_y = true;
+    m_matrix.pos_y = range.read32s();
+  }
+
+  if (get_flags() & pos_z_present) {
+    m_has_pos_z = true;
+    m_matrix.pos_z = range.read32s();
+  }
+
+  if (get_flags() & orientation_present) {
+    m_has_orientation = true;
+
+    if (get_version() == 0) {
+      bool use32bit = (get_flags() & rot_large_field_size);
+      int32_t quat_x = use32bit ? range.read32s() : range.read16s();
+      int32_t quat_y = use32bit ? range.read32s() : range.read16s();
+      int32_t quat_z = use32bit ? range.read32s() : range.read16s();
+
+      uint32_t div = 1<<(14 + (use32bit ? 16 : 0));
+
+      m_matrix.rotation_as_quaternions = true;
+      m_matrix.quaternion_x = quat_x / (double)div;
+      m_matrix.quaternion_y = quat_y / (double)div;
+      m_matrix.quaternion_z = quat_z / (double)div;
+
+      double q_sum = (m_matrix.quaternion_x * m_matrix.quaternion_x +
+                      m_matrix.quaternion_y * m_matrix.quaternion_y +
+                      m_matrix.quaternion_z * m_matrix.quaternion_z);
+
+      if (q_sum > 1.0) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "Invalid quaternion in extrinsic rotation matrix");
+      }
+
+      m_matrix.quaternion_w = sqrt(1 - q_sum);
+
+    } else if (get_version() == 1) {
+      uint32_t div = 1<<16;
+      m_matrix.rotation_yaw = range.read32s() / (double)div;
+      m_matrix.rotation_pitch = range.read32s() / (double)div;
+      m_matrix.rotation_roll = range.read32s() / (double)div;
+    }
+  }
+
+  if (get_flags() & id_present) {
+    m_has_world_coordinate_system_id = true;
+    m_matrix.world_coordinate_system_id = range.read32();
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_cmex::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "camera position (um): ";
+  sstr << m_matrix.pos_x << " ; ";
+  sstr << m_matrix.pos_y << " ; ";
+  sstr << m_matrix.pos_z << "\n";
+
+  sstr << indent << "orientation ";
+  if (m_matrix.rotation_as_quaternions) {
+    sstr << "(quaterion)\n";
+    sstr << indent << "  q = ["
+         << m_matrix.quaternion_x << ";"
+         << m_matrix.quaternion_y << ";"
+         << m_matrix.quaternion_z << ";"
+         << m_matrix.quaternion_w << "]\n";
+  }
+  else {
+    sstr << "(angles)\n";
+    sstr << indent << "  yaw:   " << m_matrix.rotation_yaw << "\n";
+    sstr << indent << "  pitch: " << m_matrix.rotation_pitch << "\n";
+    sstr << indent << "  roll:  " << m_matrix.rotation_roll << "\n";
+  }
+
+  sstr << indent << "world coordinate system id: " << m_matrix.world_coordinate_system_id << "\n";
+
+  return sstr.str();
+}
+
+
+
+
+Error Box_cmex::set_extrinsic_matrix(ExtrinsicMatrix matrix)
+{
+  m_matrix = matrix;
+
+  uint32_t flags = 0;
+
+  m_has_pos_x = (matrix.pos_x != 0);
+  m_has_pos_y = (matrix.pos_y != 0);
+  m_has_pos_z = (matrix.pos_z != 0);
+
+  if (m_has_pos_x) {
+    flags |= pos_x_present;
+  }
+
+  if (m_has_pos_y) {
+    flags |= pos_y_present;
+  }
+
+  if (m_has_pos_z) {
+    flags |= pos_z_present;
+  }
+
+  if (matrix.rotation_as_quaternions) {
+    if (matrix.quaternion_x != 0 ||
+        matrix.quaternion_y != 0 ||
+        matrix.quaternion_z != 0) {
+      flags |= orientation_present;
+
+      double q_sum = (m_matrix.quaternion_x * m_matrix.quaternion_x +
+                      m_matrix.quaternion_y * m_matrix.quaternion_y +
+                      m_matrix.quaternion_z * m_matrix.quaternion_z);
+
+      if (q_sum > 1.0) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "Invalid quaternion in extrinsic rotation matrix");
+      }
+
+      if (matrix.quaternion_w < 0) {
+        matrix.quaternion_x = -matrix.quaternion_x;
+        matrix.quaternion_y = -matrix.quaternion_y;
+        matrix.quaternion_z = -matrix.quaternion_z;
+        matrix.quaternion_w = -matrix.quaternion_w;
+      }
+    }
+  }
+  else {
+    if (matrix.rotation_yaw != 0 ||
+        matrix.rotation_pitch != 0 ||
+        matrix.rotation_roll != 0) {
+      flags |= orientation_present;
+
+      if (matrix.rotation_yaw < -180.0 || matrix.rotation_yaw >= 180.0) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "Invalid yaw angle");
+      }
+
+      if (matrix.rotation_pitch < -90.0 || matrix.rotation_pitch > 90.0) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "Invalid pitch angle");
+      }
+
+      if (matrix.rotation_roll < -180.0 || matrix.rotation_roll >= 180.0) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unspecified,
+                     "Invalid roll angle");
+      }
+    }
+  }
+
+  if (matrix.orientation_is_32bit) {
+    flags |= rot_large_field_size;
+  }
+
+  if (matrix.world_coordinate_system_id != 0) {
+    flags |= id_present;
+  }
+
+  set_flags(flags);
+  set_version(m_matrix.rotation_as_quaternions ? 0 : 1);
+
+  return Error::Ok;
+}
+
+
+Error Box_cmex::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (m_has_pos_x) {
+    writer.write32s(m_matrix.pos_x);
+  }
+
+  if (m_has_pos_y) {
+    writer.write32s(m_matrix.pos_y);
+  }
+
+  if (m_has_pos_z) {
+    writer.write32s(m_matrix.pos_z);
+  }
+
+  if (m_has_orientation) {
+    if (m_matrix.rotation_as_quaternions) {
+      if (m_matrix.orientation_is_32bit) {
+        writer.write32s(static_cast<int32_t>(m_matrix.quaternion_x * (1<<30)));
+        writer.write32s(static_cast<int32_t>(m_matrix.quaternion_y * (1<<30)));
+        writer.write32s(static_cast<int32_t>(m_matrix.quaternion_z * (1<<30)));
+      }
+      else {
+        writer.write16s(static_cast<int16_t>(m_matrix.quaternion_x * (1<<14)));
+        writer.write16s(static_cast<int16_t>(m_matrix.quaternion_y * (1<<14)));
+        writer.write16s(static_cast<int16_t>(m_matrix.quaternion_z * (1<<14)));
+      }
+    }
+    else {
+      writer.write32s(static_cast<int32_t>(m_matrix.rotation_yaw * (1<<16)));
+      writer.write32s(static_cast<int32_t>(m_matrix.rotation_pitch * (1<<16)));
+      writer.write32s(static_cast<int32_t>(m_matrix.rotation_roll * (1<<16)));
+    }
+  }
+
+  if (m_has_world_coordinate_system_id) {
+    writer.write32(m_matrix.world_coordinate_system_id);
+  }
+
 
   prepend_header(writer, box_start);
 

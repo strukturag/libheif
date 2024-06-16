@@ -144,6 +144,8 @@ public:
 
   uint16_t read16();
 
+  int16_t read16s();
+
   uint32_t read32();
 
   int32_t read32s();
@@ -282,6 +284,8 @@ public:
   void write8(uint8_t);
 
   void write16(uint16_t);
+
+  void write16s(int16_t);
 
   void write32(uint32_t);
 
