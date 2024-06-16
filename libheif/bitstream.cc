@@ -529,6 +529,20 @@ void StreamWriter::write32(uint32_t v)
 }
 
 
+void StreamWriter::write32s(int32_t v32s)
+{
+  uint32_t v;
+  if (v32s >= 0) {
+    v = static_cast<uint32_t>(v32s);
+  }
+  else {
+    v = ~static_cast<uint32_t>((-v32s-1));
+  }
+
+  write32(v);
+}
+
+
 void StreamWriter::write64(uint64_t v)
 {
   size_t required_size = m_position + 8;

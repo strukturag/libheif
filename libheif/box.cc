@@ -3316,32 +3316,100 @@ Error Box_cmin::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  uint32_t denominatorShift = (get_flags() & 0x1F00) >> 8;
-  uint32_t denominator = (1 << denominatorShift);
+  m_denominatorShift = (get_flags() & 0x1F00) >> 8;
+  uint32_t denominator = (1 << m_denominatorShift);
 
   m_matrix.focal_length_x = range.read32s() / (double)denominator;
   m_matrix.principal_point_x = range.read32s() / (double)denominator;
   m_matrix.principal_point_y = range.read32s() / (double)denominator;
 
   if (get_flags() & 1) {
-    uint32_t skewDenominatorShift = ((get_flags()) & 0x1F0000) >> 16;
-    uint32_t skewDenominator = (1<<skewDenominatorShift);
+    m_skewDenominatorShift = ((get_flags()) & 0x1F0000) >> 16;
+    uint32_t skewDenominator = (1<<m_skewDenominatorShift);
 
     m_matrix.focal_length_y = range.read32s() / (double)denominator;
     m_matrix.skew = range.read32s() / (double)skewDenominator;
+
+    m_matrix.is_anisotropic = true;
   }
   else {
-    // TODO: this is wrong. We cannot simply set f_y = f_x because both use a different normalization.
-    //       However, we also cannot compute this here without knowing the image size.
-    m_matrix.focal_length_y = m_matrix.focal_length_x;
-
+    m_matrix.is_anisotropic = false;
+    m_matrix.focal_length_y = 0;
     m_matrix.skew = 0;
   }
   return range.get_error();
 }
 
 
+static uint32_t get_signed_fixed_point_shift(double v)
+{
+  if (v==0) {
+    return 31;
+  }
+
+  v = std::abs(v);
+
+  uint32_t shift = 0;
+  while (v < (1<<30)) {
+    v *= 2;
+    shift++;
+
+    if (shift==31) {
+      return shift;
+    }
+  }
+
+  return shift;
+}
+
+
+void Box_cmin::set_intrinsic_matrix(IntrinsicMatrix matrix)
+{
+  m_matrix = matrix;
+
+  uint32_t flags = 0;
+  flags |= matrix.is_anisotropic ? 1 : 0;
+
+  uint32_t shift_fx = get_signed_fixed_point_shift(matrix.focal_length_x);
+  uint32_t shift_px = get_signed_fixed_point_shift(matrix.principal_point_x);
+  uint32_t shift_py = get_signed_fixed_point_shift(matrix.principal_point_y);
+  m_denominatorShift = std::min(std::min(shift_fx, shift_px), shift_py);
+
+  if (matrix.is_anisotropic) {
+    uint32_t shift_fy = get_signed_fixed_point_shift(matrix.focal_length_y);
+    m_denominatorShift = std::min(m_denominatorShift, shift_fy);
+
+    m_skewDenominatorShift = get_signed_fixed_point_shift(matrix.skew);
+  }
+  else {
+    m_skewDenominatorShift = 0;
+  }
+
+  flags |= (m_denominatorShift << 8);
+  flags |= (m_skewDenominatorShift << 16);
+
+  set_flags(flags);
+}
+
+
 Error Box_cmin::write(StreamWriter& writer) const
 {
+  size_t box_start = reserve_box_header_space(writer);
+
+  uint32_t denominator = (1<<m_denominatorShift);
+
+  writer.write32s(static_cast<int32_t>(m_matrix.focal_length_x * denominator));
+  writer.write32s(static_cast<int32_t>(m_matrix.principal_point_x * denominator));
+  writer.write32s(static_cast<int32_t>(m_matrix.principal_point_y * denominator));
+
+  if (get_flags() & 1) {
+    writer.write32s(static_cast<int32_t>(m_matrix.focal_length_y * denominator));
+
+    uint32_t skewDenominator = (1 << m_skewDenominatorShift);
+    writer.write32s(static_cast<int32_t>(m_matrix.skew * skewDenominator));
+  }
+
+  prepend_header(writer, box_start);
+
   return Error::Ok;
 }

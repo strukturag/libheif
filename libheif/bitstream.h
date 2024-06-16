@@ -285,6 +285,8 @@ public:
 
   void write32(uint32_t);
 
+  void write32s(int32_t);
+
   void write64(uint64_t);
 
   void write(int size, uint64_t value);

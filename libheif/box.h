@@ -1039,7 +1039,7 @@ public:
 
   IntrinsicMatrix get_intrinsic_matrix() const { return m_matrix; }
 
-  void set_intrinsic_matrix(IntrinsicMatrix matrix) { m_matrix = matrix; }
+  void set_intrinsic_matrix(IntrinsicMatrix matrix);
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1048,6 +1048,9 @@ protected:
 
 private:
   IntrinsicMatrix m_matrix;
+
+  uint32_t m_denominatorShift = 0;
+  uint32_t m_skewDenominatorShift = 0;
 };
 
 
