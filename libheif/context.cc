@@ -54,14 +54,6 @@
 #endif
 
 
-void CameraIntrinsicMatrix::from_cmin(const Box_cmin::IntrinsicMatrix& cmin, int image_width, int image_height)
-{
-  cmin.compute_focal_length(image_width, image_height, focal_length_x, focal_length_y);
-  cmin.compute_principal_point(image_width, image_height, principal_point_x, principal_point_y);
-  skew = cmin.skew;
-}
-
-
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
     : plugin(_plugin)
 {

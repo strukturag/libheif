@@ -3294,8 +3294,8 @@ Error Box_udes::write(StreamWriter& writer) const
 }
 
 
-void Box_cmin::IntrinsicMatrix::compute_focal_length(int image_width, int image_height,
-                          double& out_focal_length_x, double& out_focal_length_y) const
+void Box_cmin::RelativeIntrinsicMatrix::compute_focal_length(int image_width, int image_height,
+                                                             double& out_focal_length_x, double& out_focal_length_y) const
 {
   out_focal_length_x = focal_length_x * image_width;
 
@@ -3308,11 +3308,22 @@ void Box_cmin::IntrinsicMatrix::compute_focal_length(int image_width, int image_
 }
 
 
-void Box_cmin::IntrinsicMatrix::compute_principal_point(int image_width, int image_height,
-                             double& out_principal_point_x, double& out_principal_point_y) const
+void Box_cmin::RelativeIntrinsicMatrix::compute_principal_point(int image_width, int image_height,
+                                                                double& out_principal_point_x, double& out_principal_point_y) const
 {
   out_principal_point_x = principal_point_x * image_width;
   out_principal_point_y = principal_point_y * image_height;
+}
+
+
+Box_cmin::AbsoluteIntrinsicMatrix Box_cmin::RelativeIntrinsicMatrix::to_absolute(int image_width, int image_height) const
+{
+  AbsoluteIntrinsicMatrix m{};
+  compute_focal_length(image_width, image_height, m.focal_length_x, m.focal_length_y);
+  compute_principal_point(image_width, image_height, m.principal_point_x, m.principal_point_y);
+  m.skew = skew;
+
+  return m;
 }
 
 
@@ -3385,7 +3396,7 @@ static uint32_t get_signed_fixed_point_shift(double v)
 }
 
 
-void Box_cmin::set_intrinsic_matrix(IntrinsicMatrix matrix)
+void Box_cmin::set_intrinsic_matrix(RelativeIntrinsicMatrix matrix)
 {
   m_matrix = matrix;
 

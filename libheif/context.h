@@ -58,39 +58,6 @@ public:
 };
 
 
-struct CameraIntrinsicMatrix : public heif_camera_intrinsic_matrix {
-
-  void from_cmin(const Box_cmin::IntrinsicMatrix& matrix, int image_width, int image_height);
-
-  void apply_clap(const Box_clap* clap, int image_width, int image_height) {
-    principal_point_x -= clap->left(image_width);
-    principal_point_y -= clap->top(image_height);
-  }
-
-  void apply_imir(const Box_imir* imir) {
-    switch (imir->get_mirror_direction()) {
-      case heif_transform_mirror_direction_horizontal:
-        focal_length_x *= -1;
-        skew *= -1;
-        principal_point_x *= -1;
-        break;
-      case heif_transform_mirror_direction_vertical:
-        focal_length_y *= -1;
-        principal_point_y *= -1;
-        break;
-      case heif_transform_mirror_direction_invalid:
-        break;
-    }
-  }
-};
-
-
-class CameraExtrinsicMatrix : public Box_cmex::ExtrinsicMatrix {
-public:
-
-};
-
-
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
 // The class also handles automatic color-space conversion.
@@ -305,28 +272,28 @@ public:
       }
     };
 
-    void set_intrinsic_matrix(const Box_cmin::IntrinsicMatrix& cmin) {
+    void set_intrinsic_matrix(const Box_cmin::RelativeIntrinsicMatrix& cmin) {
       m_has_intrinsic_matrix = true;
-      m_intrinsic_matrix.from_cmin(cmin, get_ispe_width(), get_ispe_height());
+      m_intrinsic_matrix = cmin.to_absolute(get_ispe_width(), get_ispe_height());
     }
 
     bool has_intrinsic_matrix() const { return m_has_intrinsic_matrix; }
 
-    CameraIntrinsicMatrix& get_intrinsic_matrix() { return m_intrinsic_matrix; }
+    Box_cmin::AbsoluteIntrinsicMatrix& get_intrinsic_matrix() { return m_intrinsic_matrix; }
 
-    const CameraIntrinsicMatrix& get_intrinsic_matrix() const { return m_intrinsic_matrix; }
+    const Box_cmin::AbsoluteIntrinsicMatrix& get_intrinsic_matrix() const { return m_intrinsic_matrix; }
 
 
     void set_extrinsic_matrix(const Box_cmex::ExtrinsicMatrix& cmex) {
       m_has_extrinsic_matrix = true;
-      *static_cast<Box_cmex::ExtrinsicMatrix*>(&m_extrinsic_matrix) = cmex;
+      m_extrinsic_matrix = cmex;
     }
 
     bool has_extrinsic_matrix() const { return m_has_extrinsic_matrix; }
 
-    CameraExtrinsicMatrix& get_extrinsic_matrix() { return m_extrinsic_matrix; }
+    Box_cmex::ExtrinsicMatrix& get_extrinsic_matrix() { return m_extrinsic_matrix; }
 
-    const CameraExtrinsicMatrix& get_extrinsic_matrix() const { return m_extrinsic_matrix; }
+    const Box_cmex::ExtrinsicMatrix& get_extrinsic_matrix() const { return m_extrinsic_matrix; }
 
 
     void add_region_item_id(heif_item_id id) { m_region_item_ids.push_back(id); }
@@ -368,10 +335,10 @@ public:
     std::vector<heif_item_id> m_region_item_ids;
 
     bool m_has_intrinsic_matrix = false;
-    CameraIntrinsicMatrix m_intrinsic_matrix{};
+    Box_cmin::AbsoluteIntrinsicMatrix m_intrinsic_matrix{};
 
     bool m_has_extrinsic_matrix = false;
-    CameraExtrinsicMatrix m_extrinsic_matrix{};
+    Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
   };
 
   std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }

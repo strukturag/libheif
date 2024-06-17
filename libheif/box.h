@@ -1025,7 +1025,9 @@ public:
     set_short_type(fourcc("cmin"));
   }
 
-  struct IntrinsicMatrix
+  struct AbsoluteIntrinsicMatrix;
+
+  struct RelativeIntrinsicMatrix
   {
     double focal_length_x = 0;
     double principal_point_x = 0;
@@ -1040,13 +1042,45 @@ public:
 
     void compute_principal_point(int image_width, int image_height,
                                  double& out_principal_point_x, double& out_principal_point_y) const;
+
+    struct AbsoluteIntrinsicMatrix to_absolute(int image_width, int image_height) const;
+  };
+
+  struct AbsoluteIntrinsicMatrix
+  {
+    double focal_length_x;
+    double focal_length_y;
+    double principal_point_x;
+    double principal_point_y;
+    double skew = 0;
+
+    void apply_clap(const Box_clap* clap, int image_width, int image_height) {
+      principal_point_x -= clap->left(image_width);
+      principal_point_y -= clap->top(image_height);
+    }
+
+    void apply_imir(const Box_imir* imir) {
+      switch (imir->get_mirror_direction()) {
+        case heif_transform_mirror_direction_horizontal:
+          focal_length_x *= -1;
+          skew *= -1;
+          principal_point_x *= -1;
+          break;
+        case heif_transform_mirror_direction_vertical:
+          focal_length_y *= -1;
+          principal_point_y *= -1;
+          break;
+        case heif_transform_mirror_direction_invalid:
+          break;
+      }
+    }
   };
 
   std::string dump(Indent&) const override;
 
-  IntrinsicMatrix get_intrinsic_matrix() const { return m_matrix; }
+  RelativeIntrinsicMatrix get_intrinsic_matrix() const { return m_matrix; }
 
-  void set_intrinsic_matrix(IntrinsicMatrix matrix);
+  void set_intrinsic_matrix(RelativeIntrinsicMatrix matrix);
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1054,7 +1088,7 @@ protected:
   Error write(StreamWriter& writer) const override;
 
 private:
-  IntrinsicMatrix m_matrix;
+  RelativeIntrinsicMatrix m_matrix;
 
   uint32_t m_denominatorShift = 0;
   uint32_t m_skewDenominatorShift = 0;

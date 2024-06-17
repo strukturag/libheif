@@ -411,7 +411,7 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
 
 struct heif_property_camera_intrinsic_matrix
 {
-  Box_cmin::IntrinsicMatrix matrix;
+  Box_cmin::RelativeIntrinsicMatrix matrix;
 };
 
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,

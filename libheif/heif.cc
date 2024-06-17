@@ -1906,13 +1906,23 @@ int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle
 struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
                                                                 struct heif_camera_intrinsic_matrix* out_matrix)
 {
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
   if (!handle->image->has_intrinsic_matrix()) {
     Error err(heif_error_Usage_error,
               heif_suberror_Camera_intrinsic_matrix_undefined);
     return err.error_struct(handle->image.get());
   }
 
-  *out_matrix = handle->image->get_intrinsic_matrix();
+  auto m = handle->image->get_intrinsic_matrix();
+  out_matrix->focal_length_x = m.focal_length_x;
+  out_matrix->focal_length_y = m.focal_length_y;
+  out_matrix->principal_point_x = m.principal_point_x;
+  out_matrix->principal_point_y = m.principal_point_y;
+  out_matrix->skew = m.skew;
 
   return heif_error_success;
 }
@@ -1928,12 +1938,17 @@ int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle
 
 struct heif_camera_extrinsic_matrix
 {
-  CameraExtrinsicMatrix matrix;
+  Box_cmex::ExtrinsicMatrix matrix;
 };
 
 struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
                                                                 struct heif_camera_extrinsic_matrix** out_matrix)
 {
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
   if (!handle->image->has_extrinsic_matrix()) {
     Error err(heif_error_Usage_error,
               heif_suberror_Camera_extrinsic_matrix_undefined);
