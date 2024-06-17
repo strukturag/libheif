@@ -637,6 +637,11 @@ Error HeifContext::interpret_heif_file()
       if (cmin) {
         image->set_intrinsic_matrix(cmin->get_intrinsic_matrix());
       }
+
+      auto cmex = std::dynamic_pointer_cast<Box_cmex>(prop);
+      if (cmex) {
+        image->set_extrinsic_matrix(cmex->get_extrinsic_matrix());
+      }
     }
 
 

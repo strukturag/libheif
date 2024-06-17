@@ -85,6 +85,11 @@ struct CameraIntrinsicMatrix : public heif_camera_intrinsic_matrix {
 };
 
 
+class CameraExtrinsicMatrix : public Box_cmex::ExtrinsicMatrix {
+public:
+
+};
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -311,6 +316,19 @@ public:
 
     const CameraIntrinsicMatrix& get_intrinsic_matrix() const { return m_intrinsic_matrix; }
 
+
+    void set_extrinsic_matrix(const Box_cmex::ExtrinsicMatrix& cmex) {
+      m_has_extrinsic_matrix = true;
+      *static_cast<Box_cmex::ExtrinsicMatrix*>(&m_extrinsic_matrix) = cmex;
+    }
+
+    bool has_extrinsic_matrix() const { return m_has_extrinsic_matrix; }
+
+    CameraExtrinsicMatrix& get_extrinsic_matrix() { return m_extrinsic_matrix; }
+
+    const CameraExtrinsicMatrix& get_extrinsic_matrix() const { return m_extrinsic_matrix; }
+
+
     void add_region_item_id(heif_item_id id) { m_region_item_ids.push_back(id); }
 
     const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
@@ -351,6 +369,9 @@ public:
 
     bool m_has_intrinsic_matrix = false;
     CameraIntrinsicMatrix m_intrinsic_matrix{};
+
+    bool m_has_extrinsic_matrix = false;
+    CameraExtrinsicMatrix m_extrinsic_matrix{};
   };
 
   std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }

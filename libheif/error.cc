@@ -162,6 +162,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No ispe property";
     case heif_suberror_Camera_intrinsic_matrix_undefined:
       return "Camera intrinsic matrix undefined";
+    case heif_suberror_Camera_extrinsic_matrix_undefined:
+      return "Camera extrinsic matrix undefined";
     case heif_suberror_Invalid_J2K_codestream:
       return "Invalid JPEG 2000 codestream";
 

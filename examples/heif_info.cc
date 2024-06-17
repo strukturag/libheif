@@ -652,6 +652,19 @@ int main(int argc, char** argv)
       printf("    skew: %f\n", matrix.skew);
     }
 
+    if (heif_image_handle_has_camera_extrinsic_matrix(handle)) {
+      heif_camera_extrinsic_matrix* matrix;
+      heif_image_handle_get_camera_extrinsic_matrix(handle, &matrix);
+      double rot[9];
+      heif_camera_extrinsic_matrix_get_rotation_matrix(matrix, rot);
+      printf("  camera extrinsic matrix:\n");
+      printf("    rotation matrix:\n");
+      printf("      %6.3f %6.3f %6.3f\n", rot[0], rot[1], rot[2]);
+      printf("      %6.3f %6.3f %6.3f\n", rot[3], rot[4], rot[5]);
+      printf("      %6.3f %6.3f %6.3f\n", rot[6], rot[7], rot[8]);
+      heif_camera_extrinsic_matrix_release(matrix);
+    }
+
 
     struct heif_image* image;
     err = heif_decode_image(handle,

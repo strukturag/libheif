@@ -569,7 +569,7 @@ struct heif_error heif_item_add_property_camera_intrinsic_matrix(const struct he
 }
 
 
-struct heif_camera_extrinsic_matrix
+struct heif_property_camera_extrinsic_matrix
 {
   Box_cmex::ExtrinsicMatrix matrix;
 };
@@ -578,7 +578,7 @@ struct heif_camera_extrinsic_matrix
 struct heif_error heif_item_get_property_camera_extrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_extrinsic_matrix** out_matrix)
+                                                                 struct heif_property_camera_extrinsic_matrix** out_matrix)
 {
   if (!out_matrix || !context) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
@@ -601,20 +601,20 @@ struct heif_error heif_item_get_property_camera_extrinsic_matrix(const struct he
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
   }
 
-  *out_matrix = new heif_camera_extrinsic_matrix;
+  *out_matrix = new heif_property_camera_extrinsic_matrix;
   (*out_matrix)->matrix = cmex->get_extrinsic_matrix();
 
   return heif_error_success;
 }
 
 
-void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+void heif_property_camera_extrinsic_matrix_release(struct heif_property_camera_extrinsic_matrix* matrix)
 {
   delete matrix;
 }
 
 
-struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+struct heif_error heif_property_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_property_camera_extrinsic_matrix* matrix,
                                                                    double* out_matrix)
 {
   if (!matrix || !out_matrix) {
@@ -630,7 +630,7 @@ struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct 
 }
 
 
-struct heif_error heif_camera_extrinsic_matrix_get_position_vector(const struct heif_camera_extrinsic_matrix* matrix,
+struct heif_error heif_property_camera_extrinsic_matrix_get_position_vector(const struct heif_property_camera_extrinsic_matrix* matrix,
                                                                    int32_t* out_vector)
 {
   if (!matrix || !out_vector) {
@@ -645,7 +645,7 @@ struct heif_error heif_camera_extrinsic_matrix_get_position_vector(const struct 
 }
 
 
-struct heif_error heif_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_camera_extrinsic_matrix* matrix,
+struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_property_camera_extrinsic_matrix* matrix,
                                                                               uint32_t* out_wcs_id)
 {
   if (!matrix || !out_wcs_id) {

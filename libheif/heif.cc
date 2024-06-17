@@ -1917,6 +1917,58 @@ struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct hei
   return heif_error_success;
 }
 
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_extrinsic_matrix();
+}
+
+struct heif_camera_extrinsic_matrix
+{
+  CameraExtrinsicMatrix matrix;
+};
+
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+{
+  if (!handle->image->has_extrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_extrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = new heif_camera_extrinsic_matrix;
+  (*out_matrix)->matrix = handle->image->get_extrinsic_matrix();
+
+  return heif_error_success;
+}
+
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+                                                      double* out_matrix_row_major)
+{
+  if (matrix == nullptr || out_matrix_row_major == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  auto m3x3 = matrix->matrix.calculate_rotation_matrix();
+
+  for (int i=0;i<9;i++) {
+    out_matrix_row_major[i] = m3x3[i];
+  }
+
+  return heif_error_success;
+}
+
+
 
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)

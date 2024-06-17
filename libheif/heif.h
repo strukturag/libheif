@@ -234,6 +234,8 @@ enum heif_suberror_code
 
   heif_suberror_Camera_intrinsic_matrix_undefined = 138,
 
+  heif_suberror_Camera_extrinsic_matrix_undefined = 139,
+
   // Invalid JPEG 2000 codestream - usually a missing marker
   heif_suberror_Invalid_J2K_codestream = 140,
 
@@ -1414,6 +1416,23 @@ int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle
 LIBHEIF_API
 struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
                                                                 struct heif_camera_intrinsic_matrix* out_matrix);
+
+
+struct heif_camera_extrinsic_matrix;
+
+LIBHEIF_API
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix);
+
+LIBHEIF_API
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix*);
+
+LIBHEIF_API
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix*,
+                                                                   double* out_matrix_row_major);
 
 
 

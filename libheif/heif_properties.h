@@ -222,24 +222,24 @@ LIBHEIF_API
 struct heif_error heif_item_get_property_camera_extrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_extrinsic_matrix** out_matrix);
+                                                                 struct heif_property_camera_extrinsic_matrix** out_matrix);
 
 LIBHEIF_API
-void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix);
+void heif_property_camera_extrinsic_matrix_release(struct heif_property_camera_extrinsic_matrix* matrix);
 
 // `out_matrix` must point to a 9-element matrix, which will be filled in row-major order.
 LIBHEIF_API
-struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
-                                                                   double* out_matrix);
+struct heif_error heif_property_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_property_camera_extrinsic_matrix* matrix,
+                                                                            double* out_matrix);
 
 // `out_vector` must point to a 3-element vector, which will be filled with the (X,Y,Z) coordinates (in micrometers).
 LIBHEIF_API
-struct heif_error heif_camera_extrinsic_matrix_get_position_vector(const struct heif_camera_extrinsic_matrix* matrix,
-                                                                   int32_t* out_vector);
+struct heif_error heif_property_camera_extrinsic_matrix_get_position_vector(const struct heif_property_camera_extrinsic_matrix* matrix,
+                                                                            int32_t* out_vector);
 
 LIBHEIF_API
-struct heif_error heif_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_camera_extrinsic_matrix* matrix,
-                                                                              uint32_t* out_wcs_id);
+struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_property_camera_extrinsic_matrix* matrix,
+                                                                                       uint32_t* out_wcs_id);
 
 #ifdef __cplusplus
 }
