@@ -3422,6 +3422,86 @@ Error Box_cmin::write(StreamWriter& writer) const
 }
 
 
+std::array<double,9> mul(const std::array<double,9>& a, const std::array<double,9>& b)
+{
+  std::array<double,9> m;
+
+  m[0] = a[0]*b[0] + a[1]*b[3] + a[2]*b[6];
+  m[1] = a[0]*b[1] + a[1]*b[4] + a[2]*b[7];
+  m[2] = a[0]*b[2] + a[1]*b[5] + a[2]*b[8];
+
+  m[3] = a[3]*b[0] + a[4]*b[3] + a[5]*b[6];
+  m[4] = a[3]*b[1] + a[4]*b[4] + a[5]*b[7];
+  m[5] = a[3]*b[2] + a[4]*b[5] + a[5]*b[8];
+
+  m[6] = a[6]*b[0] + a[7]*b[3] + a[8]*b[6];
+  m[7] = a[6]*b[1] + a[7]*b[4] + a[8]*b[7];
+  m[8] = a[6]*b[2] + a[7]*b[5] + a[8]*b[8];
+
+  return m;
+}
+
+
+std::array<double,9> Box_cmex::ExtrinsicMatrix::calculate_rotation_matrix() const
+{
+  std::array<double,9> m{};
+
+  if (rotation_as_quaternions) {
+    double qx = quaternion_x;
+    double qy = quaternion_y;
+    double qz = quaternion_z;
+    double qw = quaternion_w;
+
+    m[0] = 1-2*(qy*qy+qz*qz);
+    m[1] = 2*(qx*qy-qz*qw);
+    m[2] = 2*(qx*qz+qy*qw);
+    m[3] = 2*(qx*qy+qz*qw);
+    m[4] = 1-2*(qx*qx+qz*qz);
+    m[5] = 2*(qy*qz-qx*qw);
+    m[6] = 2*(qx*qz-qy*qw);
+    m[7] = 2*(qy*qz+qx*qw);
+    m[8] = 1-2*(qx*qx+qy*qy);
+  }
+  else {
+    // This rotation order fits the conformance data
+    // https://github.com/MPEGGroup/FileFormatConformance
+    // branch m62054_extrinsics : FileFormatConformance/data/file_features/under_consideration/ex_in_trinsics/extrinsic_rotation
+
+    std::array<double,9> m_yaw{};    // Z
+    std::array<double,9> m_pitch{};  // Y
+    std::array<double,9> m_roll{};   // X
+
+    const double d2r = M_PI/180;
+
+    double x = d2r * rotation_roll;
+    double y = d2r * rotation_pitch;
+    double z = d2r * rotation_yaw;
+
+    // X
+    m_roll[0] = 1;
+    m_roll[4] = m_roll[8] = cos(x);
+    m_roll[5] = -sin(x);
+    m_roll[7] = sin(x);
+
+    // Y
+    m_pitch[4] = 1;
+    m_pitch[0] = m_pitch[8] = cos(y);
+    m_pitch[6] = -sin(y);
+    m_pitch[2] = sin(y);
+
+    // Z
+    m_yaw[8] = 1;
+    m_yaw[0] = m_yaw[4] = cos(z);
+    m_yaw[1] = -sin(z);
+    m_yaw[3] = sin(z);
+
+    m = mul(m_yaw, mul(m_pitch, m_roll));
+  }
+
+  return m;
+}
+
+
 Error Box_cmex::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);

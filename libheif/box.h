@@ -1083,6 +1083,9 @@ public:
     double rotation_roll = 0;  //  [-180 ; 180)
 
     uint32_t world_coordinate_system_id = 0;
+
+    // Returns rotation matrix in row-major order.
+    std::array<double,9> calculate_rotation_matrix() const;
   };
 
   std::string dump(Indent&) const override;
