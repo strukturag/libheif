@@ -409,7 +409,7 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
 }
 
 
-struct heif_camera_intrinsic_matrix
+struct heif_property_camera_intrinsic_matrix
 {
   Box_cmin::IntrinsicMatrix matrix;
 };
@@ -417,7 +417,7 @@ struct heif_camera_intrinsic_matrix
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_intrinsic_matrix** out_matrix)
+                                                                 struct heif_property_camera_intrinsic_matrix** out_matrix)
 {
   if (!out_matrix || !context) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
@@ -440,19 +440,19 @@ struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct he
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "wrong property type"};
   }
 
-  *out_matrix = new heif_camera_intrinsic_matrix;
+  *out_matrix = new heif_property_camera_intrinsic_matrix;
   (*out_matrix)->matrix = cmin->get_intrinsic_matrix();
 
   return heif_error_success;
 }
 
 
-void heif_camera_intrinsic_matrix_release(struct heif_camera_intrinsic_matrix* matrix)
+void heif_property_camera_intrinsic_matrix_release(struct heif_property_camera_intrinsic_matrix* matrix)
 {
   delete matrix;
 }
 
-struct heif_error heif_camera_intrinsic_matrix_get_focal_length(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_focal_length(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                                 int image_width, int image_height,
                                                                 double* out_focal_length_x,
                                                                 double* out_focal_length_y)
@@ -471,7 +471,7 @@ struct heif_error heif_camera_intrinsic_matrix_get_focal_length(const struct hei
 }
 
 
-struct heif_error heif_camera_intrinsic_matrix_get_principal_point(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_principal_point(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                                    int image_width, int image_height,
                                                                    double* out_principal_point_x,
                                                                    double* out_principal_point_y)
@@ -490,7 +490,7 @@ struct heif_error heif_camera_intrinsic_matrix_get_principal_point(const struct 
 }
 
 
-struct heif_error heif_camera_intrinsic_matrix_get_skew(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_skew(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                         double* out_skew)
 {
   if (!matrix || !out_skew) {
@@ -503,12 +503,12 @@ struct heif_error heif_camera_intrinsic_matrix_get_skew(const struct heif_camera
 }
 
 
-struct heif_camera_intrinsic_matrix* heif_camera_intrinsic_matrix_alloc()
+struct heif_property_camera_intrinsic_matrix* heif_property_camera_intrinsic_matrix_alloc()
 {
-  return new heif_camera_intrinsic_matrix;
+  return new heif_property_camera_intrinsic_matrix;
 }
 
-void heif_camera_intrinsic_matrix_set_simple(struct heif_camera_intrinsic_matrix* matrix,
+void heif_property_camera_intrinsic_matrix_set_simple(struct heif_property_camera_intrinsic_matrix* matrix,
                                              int image_width, int image_height,
                                              double focal_length, double principal_point_x, double principal_point_y)
 {
@@ -522,7 +522,7 @@ void heif_camera_intrinsic_matrix_set_simple(struct heif_camera_intrinsic_matrix
   matrix->matrix.principal_point_y = principal_point_y / image_height;
 }
 
-void heif_camera_intrinsic_matrix_set_full(struct heif_camera_intrinsic_matrix* matrix,
+void heif_property_camera_intrinsic_matrix_set_full(struct heif_property_camera_intrinsic_matrix* matrix,
                                            int image_width, int image_height,
                                            double focal_length_x,
                                            double focal_length_y,
@@ -534,7 +534,7 @@ void heif_camera_intrinsic_matrix_set_full(struct heif_camera_intrinsic_matrix* 
   }
 
   if (focal_length_x == focal_length_y && skew == 0) {
-    heif_camera_intrinsic_matrix_set_simple(matrix, image_width, image_height, focal_length_x, principal_point_x, principal_point_y);
+    heif_property_camera_intrinsic_matrix_set_simple(matrix, image_width, image_height, focal_length_x, principal_point_x, principal_point_y);
     return;
   }
 
@@ -549,7 +549,7 @@ void heif_camera_intrinsic_matrix_set_full(struct heif_camera_intrinsic_matrix* 
 
 struct heif_error heif_item_add_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
-                                                                 const struct heif_camera_intrinsic_matrix* matrix,
+                                                                 const struct heif_property_camera_intrinsic_matrix* matrix,
                                                                  heif_property_id* out_propertyId)
 {
   if (!context || !matrix) {

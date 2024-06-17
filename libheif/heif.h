@@ -229,6 +229,11 @@ enum heif_suberror_code
   // Invalid specification of region item
   heif_suberror_Invalid_region_data = 136,
 
+  // Image has no ispe property
+  heif_suberror_No_ispe_property = 137,
+
+  heif_suberror_Camera_intrinsic_matrix_undefined = 138,
+
   // Invalid JPEG 2000 codestream - usually a missing marker
   heif_suberror_Invalid_J2K_codestream = 140,
 
@@ -1389,6 +1394,27 @@ struct heif_error heif_image_get_raw_color_profile(const struct heif_image* imag
 LIBHEIF_API
 struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* image,
                                                     struct heif_color_profile_nclx** out_data);
+
+
+// ------------------------- intrinsic and extrinsic matrices -------------------------
+
+struct heif_camera_intrinsic_matrix
+{
+  double focal_length_x;
+  double focal_length_y;
+  double principal_point_x;
+  double principal_point_y;
+  double skew;
+};
+
+
+LIBHEIF_API
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix);
+
 
 
 // ========================= heif_image =========================

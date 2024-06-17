@@ -158,6 +158,10 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unknown NCLX matrix coefficients";
     case heif_suberror_Invalid_region_data:
       return "Invalid region item data";
+    case heif_suberror_No_ispe_property:
+      return "No ispe property";
+    case heif_suberror_Camera_intrinsic_matrix_undefined:
+      return "Camera intrinsic matrix undefined";
     case heif_suberror_Invalid_J2K_codestream:
       return "Invalid JPEG 2000 codestream";
 

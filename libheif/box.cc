@@ -2714,6 +2714,21 @@ std::string Box_clap::dump(Indent& indent) const
 }
 
 
+double Box_clap::left(int image_width) const
+{
+  Fraction pcX = m_horizontal_offset + Fraction(image_width - 1, 2);
+  Fraction left = pcX - (m_clean_aperture_width - 1) / 2;
+  return left.to_double();
+}
+
+double Box_clap::top(int image_height) const
+{
+  Fraction pcY = m_vertical_offset + Fraction(image_height - 1, 2);
+  Fraction top = pcY - (m_clean_aperture_height - 1) / 2;
+  return top.to_double();
+}
+
+
 int Box_clap::left_rounded(int image_width) const
 {
   // pcX = horizOff + (width  - 1)/2

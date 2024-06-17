@@ -174,37 +174,37 @@ LIBHEIF_API
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
                                                                  heif_property_id propertyId,
-                                                                 struct heif_camera_intrinsic_matrix** out_matrix);
+                                                                 struct heif_property_camera_intrinsic_matrix** out_matrix);
 
 LIBHEIF_API
-void heif_camera_intrinsic_matrix_release(struct heif_camera_intrinsic_matrix* matrix);
+void heif_property_camera_intrinsic_matrix_release(struct heif_property_camera_intrinsic_matrix* matrix);
 
 LIBHEIF_API
-struct heif_error heif_camera_intrinsic_matrix_get_focal_length(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_focal_length(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                                 int image_width, int image_height,
                                                                 double* out_focal_length_x,
                                                                 double* out_focal_length_y);
 
 LIBHEIF_API
-struct heif_error heif_camera_intrinsic_matrix_get_principal_point(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_principal_point(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                                    int image_width, int image_height,
                                                                    double* out_principal_point_x,
                                                                    double* out_principal_point_y);
 
 LIBHEIF_API
-struct heif_error heif_camera_intrinsic_matrix_get_skew(const struct heif_camera_intrinsic_matrix* matrix,
+struct heif_error heif_property_camera_intrinsic_matrix_get_skew(const struct heif_property_camera_intrinsic_matrix* matrix,
                                                         double* out_skew);
 
 LIBHEIF_API
-struct heif_camera_intrinsic_matrix* heif_camera_intrinsic_matrix_alloc();
+struct heif_property_camera_intrinsic_matrix* heif_property_camera_intrinsic_matrix_alloc();
 
 LIBHEIF_API
-void heif_camera_intrinsic_matrix_set_simple(struct heif_camera_intrinsic_matrix* matrix,
+void heif_property_camera_intrinsic_matrix_set_simple(struct heif_property_camera_intrinsic_matrix* matrix,
                                              int image_width, int image_height,
                                              double focal_length, double principal_point_x, double principal_point_y);
 
 LIBHEIF_API
-void heif_camera_intrinsic_matrix_set_full(struct heif_camera_intrinsic_matrix* matrix,
+void heif_property_camera_intrinsic_matrix_set_full(struct heif_property_camera_intrinsic_matrix* matrix,
                                            int image_width, int image_height,
                                            double focal_length_x,
                                            double focal_length_y,
@@ -214,7 +214,7 @@ void heif_camera_intrinsic_matrix_set_full(struct heif_camera_intrinsic_matrix* 
 LIBHEIF_API
 struct heif_error heif_item_add_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                           heif_item_id itemId,
-                                                          const struct heif_camera_intrinsic_matrix* matrix,
+                                                          const struct heif_property_camera_intrinsic_matrix* matrix,
                                                           heif_property_id* out_propertyId);
 
 

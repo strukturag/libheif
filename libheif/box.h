@@ -92,6 +92,10 @@ public:
 
   bool is_valid() const;
 
+  double to_double() const {
+    return numerator / (double)denominator;
+  }
+
   int32_t numerator = 0;
   int32_t denominator = 1;
 };
@@ -762,6 +766,9 @@ public:
   int right_rounded(int image_width) const; // last column that is part of the cropped image
   int top_rounded(int image_height) const;   // first row
   int bottom_rounded(int image_height) const; // last row included in the cropped image
+
+  double left(int image_width) const;
+  double top(int image_height) const;
 
   int get_width_rounded() const;
 

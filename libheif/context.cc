@@ -53,6 +53,15 @@
 #include "uncompressed_image.h"
 #endif
 
+
+void CameraIntrinsicMatrix::from_cmin(const Box_cmin::IntrinsicMatrix& cmin, int image_width, int image_height)
+{
+  cmin.compute_focal_length(image_width, image_height, focal_length_x, focal_length_y);
+  cmin.compute_principal_point(image_width, image_height, principal_point_x, principal_point_y);
+  skew = cmin.skew;
+}
+
+
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
     : plugin(_plugin)
 {
@@ -608,29 +617,55 @@ Error HeifContext::interpret_heif_file()
         image->set_resolution(width, height);
         ispe_read = true;
       }
+    }
 
-      if (ispe_read) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
-        if (clap) {
-          image->set_resolution(clap->get_width_rounded(),
-                                clap->get_height_rounded());
-        }
+    if (!ispe_read) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_ispe_property,
+                   "Image has no 'ispe' property");
+    }
 
-        auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
-        if (irot) {
-          if (irot->get_rotation() == 90 ||
-              irot->get_rotation() == 270) {
-            // swap width and height
-            image->set_resolution(image->get_height(),
-                                  image->get_width());
-          }
-        }
-      }
-
+    for (const auto& prop : properties) {
       auto colr = std::dynamic_pointer_cast<Box_colr>(prop);
       if (colr) {
         auto profile = colr->get_color_profile();
         image->set_color_profile(profile);
+        continue;
+      }
+
+      auto cmin = std::dynamic_pointer_cast<Box_cmin>(prop);
+      if (cmin) {
+        image->set_intrinsic_matrix(cmin->get_intrinsic_matrix());
+      }
+    }
+
+
+    for (const auto& prop : properties) {
+      auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
+      if (clap) {
+        image->set_resolution(clap->get_width_rounded(),
+                              clap->get_height_rounded());
+
+        if (image->has_intrinsic_matrix()) {
+          image->get_intrinsic_matrix().apply_clap(clap.get(), image->get_width(), image->get_height());
+        }
+      }
+
+      auto imir = std::dynamic_pointer_cast<Box_imir>(prop);
+      if (imir) {
+        image->get_intrinsic_matrix().apply_imir(imir.get());
+      }
+
+      auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
+      if (irot) {
+        if (irot->get_rotation() == 90 ||
+            irot->get_rotation() == 270) {
+          // swap width and height
+          image->set_resolution(image->get_height(),
+                                image->get_width());
+        }
+
+        // TODO: apply irot to camera extrinsic matrix
       }
     }
   }

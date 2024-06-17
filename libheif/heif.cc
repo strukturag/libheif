@@ -1894,6 +1894,30 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
   color_profile_nclx::free_nclx_color_profile(nclx_profile);
 }
 
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_intrinsic_matrix();
+}
+
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (!handle->image->has_intrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_intrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = handle->image->get_intrinsic_matrix();
+
+  return heif_error_success;
+}
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {

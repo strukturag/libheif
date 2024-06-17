@@ -641,6 +641,18 @@ int main(int argc, char** argv)
       }
     }
 
+    // --- camera intrinsic and extrinsic parameters
+
+    if (heif_image_handle_has_camera_intrinsic_matrix(handle)) {
+      heif_camera_intrinsic_matrix matrix{};
+      heif_image_handle_get_camera_intrinsic_matrix(handle, &matrix);
+      printf("  camera intrinsic matrix:\n");
+      printf("    focal length: %f; %f\n", matrix.focal_length_x, matrix.focal_length_y);
+      printf("    principal point: %f; %f\n", matrix.principal_point_x, matrix.principal_point_y);
+      printf("    skew: %f\n", matrix.skew);
+    }
+
+
     struct heif_image* image;
     err = heif_decode_image(handle,
                             &image,
