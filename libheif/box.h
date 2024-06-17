@@ -1106,7 +1106,7 @@ private:
   bool m_has_pos_y = false;
   bool m_has_pos_z = false;
   bool m_has_orientation = false;
-  bool m_has_world_coordinate_system_id;
+  bool m_has_world_coordinate_system_id = false;
 
   enum Flags
   {
