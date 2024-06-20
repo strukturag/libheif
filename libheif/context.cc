@@ -650,7 +650,7 @@ Error HeifContext::interpret_heif_file()
 
       auto imir = std::dynamic_pointer_cast<Box_imir>(prop);
       if (imir) {
-        image->get_intrinsic_matrix().apply_imir(imir.get());
+        image->get_intrinsic_matrix().apply_imir(imir.get(), image->get_width(), image->get_height());
       }
 
       auto irot = std::dynamic_pointer_cast<Box_irot>(prop);

@@ -1059,16 +1059,16 @@ public:
       principal_point_y -= clap->top(image_height);
     }
 
-    void apply_imir(const Box_imir* imir) {
+    void apply_imir(const Box_imir* imir, int image_width, int image_height) {
       switch (imir->get_mirror_direction()) {
         case heif_transform_mirror_direction_horizontal:
           focal_length_x *= -1;
           skew *= -1;
-          principal_point_x *= -1;
+          principal_point_x = image_width - 1 - principal_point_x;
           break;
         case heif_transform_mirror_direction_vertical:
           focal_length_y *= -1;
-          principal_point_y *= -1;
+          principal_point_y = image_height - 1 - principal_point_y;
           break;
         case heif_transform_mirror_direction_invalid:
           break;
