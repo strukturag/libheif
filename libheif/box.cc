@@ -37,6 +37,7 @@
 #include <cstring>
 #include <set>
 #include <cassert>
+#include <array>
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "uncompressed_box.h"

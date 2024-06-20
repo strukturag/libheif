@@ -46,6 +46,7 @@
 #include <utility>
 #include <vector>
 #include <cstring>
+#include <array>
 
 #ifdef _WIN32
 // for _write

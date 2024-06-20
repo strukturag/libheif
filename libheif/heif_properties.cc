@@ -23,6 +23,7 @@
 #include "api_structs.h"
 #include "file.h"
 
+#include <array>
 #include <cstring>
 #include <memory>
 #include <vector>
