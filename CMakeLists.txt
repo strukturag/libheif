@@ -125,6 +125,18 @@ if (WITH_KVAZAAR)
     endif ()
 endif ()
 
+# uvg266
+
+plugin_option(UVG266 "uvg266 VVC encoder" OFF OFF)
+if (WITH_UVG266)
+    find_package(UVG266)
+    if ("${HAVE_UVG266_ENABLE_LOGGING}")
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=1)
+    else ()
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=0)
+    endif ()
+endif ()
+
 # dav1d
 
 plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
@@ -198,6 +210,7 @@ plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VCC encoder")
 
 
 # --- Libsharpyuv color space transforms
