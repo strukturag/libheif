@@ -506,6 +506,15 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   }
 
 
+  // VVC
+
+  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+  std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+  if (vvcC_box) {
+    return (heif_chroma) (vvcC_box->get_configuration().chroma_format_idc);
+  }
+
+
   // AV1
 
   box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("av1C"));
@@ -550,6 +559,23 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   }
 
 
+  // VVC
+
+  if (image_type == "vvc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+    if (vvcC_box) {
+      Box_vvcC::configuration config = vvcC_box->get_configuration();
+      if (config.bit_depth_present_flag) {
+        return config.bit_depth;
+      }
+      else {
+        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
+      }
+    }
+  }
+
+  
   // AV1
 
   if (image_type == "av01") {
@@ -569,21 +595,6 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     }
   }
 
-  // VVC
-
-  if (image_type == "vvc1") {
-    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
-    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
-    if (vvcC_box) {
-      Box_vvcC::configuration config = vvcC_box->get_configuration();
-      if (config.bit_depth_present_flag) {
-        return config.bit_depth;
-      }
-      else {
-        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
-      }
-    }
-  }
 
   // JPEG
 
@@ -626,6 +637,22 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
     std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
     if (hvcC_box) {
       return hvcC_box->get_configuration().bit_depth_chroma;
+    }
+  }
+
+  // VVC
+
+  if (image_type == "vvc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+    if (vvcC_box) {
+      Box_vvcC::configuration config = vvcC_box->get_configuration();
+      if (config.bit_depth_present_flag) {
+        return config.bit_depth;
+      }
+      else {
+        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
+      }
     }
   }
 
@@ -771,6 +798,43 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_hvcC_box);
     }
     else if (!hvcC_box->get_headers(data)) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data);
+    }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+  }
+  else if (item_type == "vvc1") {
+    // --- --- --- VVC
+
+    // --- get properties for this image
+
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_vvcC> vvcC_box;
+    for (auto& prop : properties) {
+      if (prop->get_short_type() == fourcc("vvcC")) {
+        vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(prop);
+        if (vvcC_box) {
+          break;
+        }
+      }
+    }
+
+    if (!vvcC_box) {
+      // Should always have an vvcC box, because we are checking this in
+      // heif_context::interpret_heif_file()
+      assert(false);
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_vvcC_box);
+    }
+    else if (!vvcC_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
@@ -1070,6 +1134,136 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
   int index = m_ipco_box->find_or_append_child_box(pixi);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+}
+
+
+void HeifFile::add_vvcC_property(heif_item_id id)
+{
+  auto vvcC = std::make_shared<Box_vvcC>();
+  int index = m_ipco_box->append_child_box(vvcC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
+Error HeifFile::append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
+{
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->append_nal_data(nal_data);
+    return Error::Ok;
+  }
+  else {
+    // Should always have an vvcC box, because we are checking this in
+    // heif_context::interpret_heif_file()
+    assert(false);
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
+}
+
+
+Error HeifFile::set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config)
+{
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->set_configuration(config);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
+}
+
+
+Error HeifFile::append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<std::shared_ptr<Box>> properties;
+
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->append_nal_data(data, size);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
+}
+
+
+void HeifFile::add_hvcC_property(heif_item_id id)
+{
+  auto hvcC = std::make_shared<Box_hvcC>();
+  int index = m_ipco_box->append_child_box(hvcC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
+Error HeifFile::append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
+{
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->append_nal_data(nal_data);
+    return Error::Ok;
+  }
+  else {
+    // Should always have an hvcC box, because we are checking this in
+    // heif_context::interpret_heif_file()
+    assert(false);
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
+}
+
+
+Error HeifFile::set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config)
+{
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->set_configuration(config);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
+}
+
+
+Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<std::shared_ptr<Box>> properties;
+
+  auto hvcC = std::dynamic_pointer_cast<Box_hvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("hvcC")));
+
+  if (hvcC) {
+    hvcC->append_nal_data(data, size);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_hvcC_box);
+  }
 }
 
 
