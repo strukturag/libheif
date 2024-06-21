@@ -900,8 +900,6 @@ std::string Box_other::dump(Indent& indent) const
 
   // --- show raw box content
 
-  sstr << std::hex << std::setfill('0');
-
   size_t len = 0;
   if (get_box_size() >= get_header_size()) {
     len = get_box_size() - get_header_size();
@@ -911,33 +909,9 @@ std::string Box_other::dump(Indent& indent) const
     return sstr.str();
   }
 
-  for (size_t i = 0; i < len; i++) {
-    if (i % 16 == 0) {
-      // start of line
-
-      if (i == 0) {
-        sstr << indent << "data: ";
-      }
-      else {
-        sstr << indent << "      ";
-      }
-      sstr << std::setw(4) << i << ": "; // address
-    }
-    else if (i % 16 == 8) {
-      // space in middle
-      sstr << "  ";
-    }
-    else {
-      // space between bytes
-      sstr << " ";
-    }
-
-    sstr << std::setw(2) << ((int) m_data[i]);
-
-    if (i % 16 == 15 || i == len - 1) {
-      sstr << "\n";
-    }
-  }
+  sstr << write_raw_data_as_hex(m_data.data(), len,
+                                "data: ",
+                                "      ");
 
   return sstr.str();
 }
