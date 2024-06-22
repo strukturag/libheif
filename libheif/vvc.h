@@ -38,9 +38,9 @@ public:
   {
     uint8_t configurationVersion = 1;
     uint16_t avgFrameRate_times_256;
-    uint8_t constantFrameRate;
-    uint8_t numTemporalLayers;
-    uint8_t lengthSize;
+    uint8_t constantFrameRate; // 2 bits
+    uint8_t numTemporalLayers; // 3 bits
+    uint8_t lengthSize;        // 2 bits
     bool ptl_present_flag;
     //if (ptl_present_flag) {
     //  VvcPTLRecord(numTemporalLayers) track_ptl;
@@ -51,20 +51,6 @@ public:
 
     bool bit_depth_present_flag;
     uint8_t bit_depth;
-
-    uint8_t numOfArrays;
-#if 0
-    for (j=0; j < numOfArrays; j++) {
-      unsigned int(1) array_completeness;
-      bit(1) reserved = 0;
-      unsigned int(6) NAL_unit_type;
-      unsigned int(16) numNalus;
-      for (i=0; i< numNalus; i++) {
-        unsigned int(16) nalUnitLength;
-        bit(8*nalUnitLength) nalUnit;
-      }
-    }
-#endif
   };
 
 
@@ -72,7 +58,11 @@ public:
 
   bool get_headers(std::vector<uint8_t>* dest) const
   {
+    // TODO
+
+#if 0
     *dest = m_config_NALs;
+#endif
     return true;
   }
 
@@ -91,17 +81,17 @@ protected:
 private:
     struct NalArray
     {
-      uint8_t m_array_completeness;
+      bool m_array_completeness;
       uint8_t m_NAL_unit_type;
 
       std::vector<std::vector<uint8_t> > m_nal_units;
     };
 
   configuration m_configuration;
-    //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
+  //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
 
-    std::vector<NalArray> m_nal_array;
-  std::vector<uint8_t> m_config_NALs;
+  std::vector<NalArray> m_nal_array;
+  //std::vector<uint8_t> m_config_NALs;
 };
 
 

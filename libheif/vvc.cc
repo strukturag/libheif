@@ -21,6 +21,8 @@
 #include "vvc.h"
 #include <cstring>
 #include <string>
+#include <cassert>
+#include <iomanip>
 
 Error Box_vvcC::parse(BitstreamRange& range)
 {
@@ -48,8 +50,6 @@ Error Box_vvcC::parse(BitstreamRange& range)
 
   c.bit_depth_present_flag = (byte & 0x10);
   c.bit_depth = uint8_t(((byte & 0x0e) >> 1) + 8);
-
-  c.numOfArrays = range.read8();
 
   int nArrays = range.read8();
 
@@ -128,14 +128,57 @@ Error Box_vvcC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-#if 0
-  const auto& c = m_configuration; // abbreviation
+  const auto& c = m_configuration;
 
-  writer.write8(c.version | 0x80);
+  writer.write8(c.configurationVersion);
+  writer.write16(c.avgFrameRate_times_256);
 
-  writer.write8((uint8_t) (((c.seq_profile & 0x7) << 5) |
-                           (c.seq_level_idx_0 & 0x1f)));
-#endif
+  uint8_t v = ((c.constantFrameRate << 6) |
+               (c.numTemporalLayers << 3) |
+               ((c.lengthSize - 1) << 1) |
+               (c.ptl_present_flag ? 1 : 0));
+  writer.write8(v);
+
+  if (c.ptl_present_flag) {
+    assert(false); // TODO
+    //VvcPTLRecord(numTemporalLayers) track_ptl;
+    //unsigned int(16) output_layer_set_idx;
+  }
+
+  v = 0;
+  if (c.chroma_format_present_flag) {
+    v |= 0x80 | (c.chroma_format_idc << 5);
+  }
+  else {
+    v |= 0x60;
+  }
+
+  if (c.bit_depth_present_flag) {
+    v |= 0x10 | ((c.bit_depth - 8) << 1);
+  }
+  else {
+    v |= 0x0e;
+  }
+
+  v |= 0x01; // reserved
+  writer.write8(v);
+
+  if (m_nal_array.size() >= 256) {
+    // TODO: error
+  }
+
+  writer.write8((int)m_nal_array.size());
+  for (const NalArray& nal_array : m_nal_array) {
+    uint8_t v2 = (nal_array.m_array_completeness ? 0x80 : 0);
+    v2 |= nal_array.m_NAL_unit_type;
+    writer.write8(v2);
+
+    writer.write16(nal_array.m_nal_units.size());
+    for (const auto& nal : nal_array.m_nal_units) {
+      writer.write16(nal.size());
+      writer.write(nal);
+    }
+  }
 
   prepend_header(writer, box_start);
 
@@ -173,16 +216,20 @@ std::string Box_vvcC::dump(Indent& indent) const
     sstr << "---\n";
   }
 
-  sstr << "num of arrays: " << ((int) c.numOfArrays) << "\n";
+  sstr << indent << "num of arrays: " << m_nal_array.size() << "\n";
 
-#if 0
   sstr << indent << "config OBUs:";
-  for (size_t i = 0; i < m_config_OBUs.size(); i++) {
-    sstr << " " << std::hex << std::setfill('0') << std::setw(2)
-         << ((int) m_config_OBUs[i]);
+  for (size_t i = 0; i < m_nal_array.size(); i++) {
+    indent++;
+    sstr << indent << "array completeness: " << ((int)m_nal_array[i].m_array_completeness) << "\n";
+    sstr << std::hex << std::setw(2) << std::setfill('0') << m_nal_array[i].m_NAL_unit_type << "\n";
+
+    for (const auto& nal : m_nal_array[i].m_nal_units) {
+      std::string ind = indent.get_string();
+      sstr << write_raw_data_as_hex(nal.data(), nal.size(), ind, ind);
+    }
   }
-  sstr << std::dec << "\n";
-#endif
+  sstr << std::dec << std::setw(0) << "\n";
 
   return sstr.str();
 }
