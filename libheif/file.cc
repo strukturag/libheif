@@ -27,6 +27,7 @@
 #include "libheif/vvc.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -83,7 +84,12 @@ Error HeifFile::read_from_file(const char* input_filename)
     sstr << "Error opening file: " << strerror(errno) << " (" << errno << ")\n";
     return Error(heif_error_Input_does_not_exist, heif_suberror_Unspecified, sstr.str());
   }
-
+  std::filesystem::path input_path(input_filename);
+  if (input_path.has_parent_path()) {
+    m_base_path = input_path.parent_path();
+  } else {
+    m_base_path.clear();
+  }
   auto input_stream = std::make_shared<StreamReader_istream>(std::move(input_stream_istr));
   return read(input_stream);
 }
@@ -377,6 +383,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                  heif_suberror_No_iinf_box);
   }
 
+  m_dinf_box = std::dynamic_pointer_cast<Box_dinf>(m_meta_box->get_child_box(fourcc("dinf")));
 
 
   // --- build list of images
@@ -775,7 +782,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_item_data);
     }
 
-    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, m_base_path, data);
   }
   else if (item_type == "av01") {
     // --- --- --- AV1
@@ -811,7 +818,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_item_data);
     }
 
-    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, m_base_path, data);
   }
   else if (item_type == "jpeg" ||
            (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
@@ -837,7 +844,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
       }
     }
 
-    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, m_base_path, data);
   }
   else if (item_type == "j2k1") {
     std::vector<std::shared_ptr<Box>> properties;
@@ -871,7 +878,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     //                heif_suberror_No_item_data);
     // }
 
-    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, m_base_path, data);
   }
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
            item_type == "grid" ||
@@ -886,7 +893,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 #if WITH_DEFLATE_HEADER_COMPRESSION
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, &compressed_data);
         *data = inflate(compressed_data);
 #else
         return Error(heif_error_Unsupported_feature,
@@ -897,7 +904,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     }
 
     if (read_uncompressed) {
-      error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+      error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, m_dinf_box, m_base_path, data);
     }
   }
 

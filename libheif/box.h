@@ -34,6 +34,7 @@
 #include <istream>
 #include <bitset>
 #include <utility>
+#include <filesystem>
 
 #include "error.h"
 #include "heif.h"
@@ -431,6 +432,8 @@ public:
   Error read_data(const Item& item,
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
+                  const std::shared_ptr<class Box_dinf>&,
+                  const std::filesystem::path base_path,
                   std::vector<uint8_t>* dest) const;
 
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
@@ -470,6 +473,10 @@ private:
   uint8_t m_index_size = 0;
 
   void patch_iloc_header(StreamWriter& writer) const;
+  bool read_extent(const Item& item,
+                           const std::shared_ptr<StreamReader>& istr,
+                           const Box_iloc::Extent extent,
+                           std::vector<uint8_t>* dest) const;
 
   int m_idat_offset = 0; // only for writing: offset of next data array
 };
@@ -904,6 +911,7 @@ class Box_url : public FullBox
 {
 public:
   std::string dump(Indent&) const override;
+  std::string get_location() const { return m_location; };
 
 protected:
   Error parse(BitstreamRange& range) override;
