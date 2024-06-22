@@ -448,6 +448,13 @@ std::shared_ptr<Box_infe> HeifFile::get_infe(heif_item_id ID) const
 }
 
 
+bool HeifFile::has_item_with_id(heif_item_id ID) const
+{
+  auto infe_box = get_infe(ID);
+  return infe_box != nullptr;
+}
+
+
 std::string HeifFile::get_item_type(heif_item_id ID) const
 {
   auto infe_box = get_infe(ID);

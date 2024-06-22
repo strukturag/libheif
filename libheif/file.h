@@ -76,6 +76,8 @@ public:
 
   bool image_exists(heif_item_id ID) const;
 
+  bool has_item_with_id(heif_item_id ID) const;
+
   std::string get_item_type(heif_item_id ID) const;
 
   std::string get_content_type(heif_item_id ID) const;

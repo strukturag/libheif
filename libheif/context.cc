@@ -811,9 +811,14 @@ Error HeifContext::interpret_heif_file()
           for (heif_item_id ref: refs) {
             auto master_iter = m_all_images.find(ref);
             if (master_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                          heif_suberror_Nonexisting_item_referenced,
-                          "Non-existing aux image referenced");
+
+              if (!m_heif_file->has_item_with_id(ref)) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Nonexisting_item_referenced,
+                             "Non-existing aux image referenced");
+              }
+
+              continue;
             }
             if (image.get() == master_iter->second.get()) {
               return Error(heif_error_Invalid_input,
@@ -952,9 +957,13 @@ Error HeifContext::interpret_heif_file()
             uint32_t exif_image_id = ref;
             auto img_iter = m_all_images.find(exif_image_id);
             if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                          heif_suberror_Nonexisting_item_referenced,
-                          "Metadata assigned to non-existing image");
+              if (!m_heif_file->has_item_with_id(exif_image_id)) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Nonexisting_item_referenced,
+                             "Metadata assigned to non-existing image");
+              }
+
+              continue;
             }
             img_iter->second->add_metadata(metadata);
           }
