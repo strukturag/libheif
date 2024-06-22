@@ -93,8 +93,8 @@ macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     endif ()
 
     string(LENGTH "${displayName}" len)
-    math(EXPR fill "29 - ${len}")
-    string(SUBSTRING "                                                " 0 ${fill} filler)
+    math(EXPR fill "32 - ${len}")
+    string(SUBSTRING "                                                   " 0 ${fill} filler)
     message("${displayName}${filler}: ${msg}")
     unset(msg)
 endmacro()
@@ -127,7 +127,7 @@ endif ()
 
 # uvg266
 
-plugin_option(UVG266 "uvg266 VVC encoder" OFF OFF)
+plugin_option(UVG266 "uvg266 VVC encoder (experimental)" OFF OFF)
 if (WITH_UVG266)
     find_package(UVG266)
     if ("${HAVE_UVG266_ENABLE_LOGGING}")
@@ -210,7 +210,7 @@ plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
-plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VCC encoder")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
 
 
 # --- Libsharpyuv color space transforms
