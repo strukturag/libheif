@@ -164,7 +164,7 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
-            << "      --vvc             encode as VVC (even more experimental)\n"
+            << "      --vvc             encode as VVC (experimental)\n"
             << "      --jpeg            encode as JPEG\n"
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
             << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
@@ -185,7 +185,7 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (EXPERIMENTAL) set user description for primary image\n";
+            << "  --pitm-description TEXT   (experimental) set user description for primary image\n";
 }
 
 
