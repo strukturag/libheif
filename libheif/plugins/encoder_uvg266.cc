@@ -32,6 +32,9 @@ extern "C" {
 #include <uvg266.h>
 }
 
+#include <libheif/logging.h>
+#include <iostream>
+
 
 static const char* kError_unspecified_error = "Unspecified encoder error";
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by uvg266";
@@ -339,6 +342,12 @@ static void append_chunk_data(uvg_data_chunk* data, std::vector<uint8_t>& out)
     return;
   }
 
+#if 0
+  std::cout << "DATA\n";
+  std::cout << write_raw_data_as_hex(data->data, data->len, {}, {});
+  std::cout << "---\n";
+#endif
+
   size_t old_size = out.size();
   out.resize(old_size + data->len);
   memcpy(out.data() + old_size, data->data, data->len);
@@ -616,7 +625,8 @@ static struct heif_error uvg266_encode_image(void* encoder_raw, const struct hei
     };
   }
 
-  append_chunk_data(data, encoder->output_data);
+  // If we write this, the data is twice in the output
+  //append_chunk_data(data, encoder->output_data);
 
   success = api->encoder_encode(kvzencoder,
                                 pic,

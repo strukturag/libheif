@@ -37,19 +37,19 @@ public:
   struct configuration
   {
     uint8_t configurationVersion = 1;
-    uint16_t avgFrameRate_times_256;
-    uint8_t constantFrameRate; // 2 bits
-    uint8_t numTemporalLayers; // 3 bits
-    uint8_t lengthSize;        // 2 bits
-    bool ptl_present_flag;
+    uint16_t avgFrameRate_times_256 = 0;
+    uint8_t constantFrameRate = 1; // 2 bits
+    uint8_t numTemporalLayers = 1; // 3 bits
+    uint8_t lengthSize = 1;        // 2 bits
+    bool ptl_present_flag = false;
     //if (ptl_present_flag) {
     //  VvcPTLRecord(numTemporalLayers) track_ptl;
     //  uint16_t output_layer_set_idx;
     //}
-    bool chroma_format_present_flag;
+    bool chroma_format_present_flag = false;
     uint8_t chroma_format_idc;
 
-    bool bit_depth_present_flag;
+    bool bit_depth_present_flag = false;
     uint8_t bit_depth;
   };
 
@@ -93,6 +93,11 @@ private:
   std::vector<NalArray> m_nal_array;
   //std::vector<uint8_t> m_config_NALs;
 };
+
+
+Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_vvcC::configuration* inout_config,
+                                       int* width, int* height);
 
 
 #endif // LIBHEIF_VVC_H

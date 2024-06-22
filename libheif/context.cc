@@ -2777,20 +2777,25 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
     }
 
 
-    const uint8_t NAL_SPS = 33;
+    const uint8_t NAL_SPS = 15;
 
-    if ((data[0] >> 1) == NAL_SPS) {
+    uint8_t nal_type = 0;
+    if (size>=2) {
+      nal_type = (data[1] >> 3) & 0x1F;
+    }
+
+    if (nal_type == NAL_SPS) {
       Box_vvcC::configuration config;
 
-      //parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
+      parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
       m_heif_file->set_vvcC_configuration(image_id, config);
     }
 
     switch (data[0] >> 1) {
-      case 0x20:
-      case 0x21:
-      case 0x22:
+      case 14: // VPS
+      case 15: // SPS
+      case 16: // PPS
         m_heif_file->append_vvcC_nal_data(image_id, data, size);
         break;
 

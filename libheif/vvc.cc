@@ -40,7 +40,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
   byte = range.read8();
   c.constantFrameRate = (byte & 0xc0) >> 6;
   c.numTemporalLayers = (byte & 0x38) >> 3;
-  c.lengthSize = uint8_t((byte & 0x06) + 1);
+  c.lengthSize = uint8_t(((byte & 0x06) >> 1) + 1);
   c.ptl_present_flag = (byte & 0x01);
   // assert(c.ptl_present_flag == false); // TODO   (removed the assert since it will trigger the fuzzers)
 
@@ -133,6 +133,8 @@ Error Box_vvcC::write(StreamWriter& writer) const
   writer.write8(c.configurationVersion);
   writer.write16(c.avgFrameRate_times_256);
 
+  assert(c.lengthSize == 1 || c.lengthSize == 2 || c.lengthSize == 4);
+
   uint8_t v = ((c.constantFrameRate << 6) |
                (c.numTemporalLayers << 3) |
                ((c.lengthSize - 1) << 1) |
@@ -218,7 +220,7 @@ std::string Box_vvcC::dump(Indent& indent) const
 
   sstr << indent << "num of arrays: " << m_nal_array.size() << "\n";
 
-  sstr << indent << "config OBUs:";
+  sstr << indent << "config NALs:";
   for (size_t i = 0; i < m_nal_array.size(); i++) {
     indent++;
     sstr << indent << "array completeness: " << ((int)m_nal_array[i].m_array_completeness) << "\n";
@@ -234,3 +236,135 @@ std::string Box_vvcC::dump(Indent& indent) const
   return sstr.str();
 }
 
+
+static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
+{
+  std::vector<uint8_t> out_data;
+
+  for (size_t i = 0; i < size; i++) {
+    if (i + 2 < size &&
+        sps[i] == 0 &&
+        sps[i + 1] == 0 &&
+        sps[i + 2] == 3) {
+      out_data.push_back(0);
+      out_data.push_back(0);
+      i += 2;
+    }
+    else {
+      out_data.push_back(sps[i]);
+    }
+  }
+
+  return out_data;
+}
+
+
+
+Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_vvcC::configuration* config,
+                                       int* width, int* height)
+{
+  // remove start-code emulation bytes from SPS header stream
+
+  std::vector<uint8_t> sps_no_emul = remove_start_code_emulation(sps, size);
+
+  sps = sps_no_emul.data();
+  size = sps_no_emul.size();
+
+  BitReader reader(sps, (int) size);
+
+  // skip NAL header
+  reader.skip_bits(2 * 8);
+
+  // skip SPS ID
+  reader.skip_bits(4);
+
+  // skip VPS ID
+  reader.skip_bits(4);
+
+  config->numTemporalLayers = reader.get_bits(3) + 1;
+  config->chroma_format_idc = reader.get_bits(2);
+  config->chroma_format_present_flag = true;
+  reader.skip_bits(2);
+
+  bool sps_ptl_dpb_hrd_params_present_flag = reader.get_bits(1);
+  if (sps_ptl_dpb_hrd_params_present_flag) {
+    // profile_tier_level( 1, sps_max_sublayers_minus1 )
+
+    if (true /*profileTierPresentFlag*/) {
+      //general_profile_idc
+          //general_tier_flag
+          reader.skip_bits(8);
+    }
+    reader.skip_bits(8); // general_level_idc
+    reader.skip_bits(1); //ptl_frame_only_constraint_flag
+    reader.skip_bits(1); //ptl_multilayer_enabled_flag
+    if (true /* profileTierPresentFlag*/ ) {
+      // general_constraints_info()
+
+      bool gci_present_flag = reader.get_bits(1);
+      if (gci_present_flag) {
+        assert(false);
+      }
+
+      reader.skip_to_byte_boundary();
+    }
+
+    std::vector<bool> ptl_sublayer_level_present_flag(config->numTemporalLayers);
+    for (int i = config->numTemporalLayers-2; i >= 0; i--) {
+      ptl_sublayer_level_present_flag[i] = reader.get_bits(1);
+    }
+
+    reader.skip_to_byte_boundary();
+
+    for (int i = config->numTemporalLayers-2; i >= 0; i--) {
+      if (ptl_sublayer_level_present_flag[i]) {
+        reader.skip_bits(8); // sublayer_level_idc[i]
+      }
+    }
+
+    if (true /*profileTierPresentFlag*/) {
+      int ptl_num_sub_profiles = reader.get_bits(8);
+      for (int i = 0; i < ptl_num_sub_profiles; i++) {
+        uint32_t idc = reader.get_bits(32); //general_sub_profile_idc[i]
+        (void) idc;
+      }
+    }
+  }
+
+  reader.skip_bits(1); // sps_gdr_enabled_flag
+  bool sps_ref_pic_resampling_enabled_flag = reader.get_bits(1);
+  if (sps_ref_pic_resampling_enabled_flag) {
+    reader.skip_bits(1); // sps_res_change_in_clvs_allowed_flag
+  }
+
+  int sps_pic_width_max_in_luma_samples;
+  int sps_pic_height_max_in_luma_samples;
+
+  bool success;
+  success = reader.get_uvlc(&sps_pic_width_max_in_luma_samples);
+  success = reader.get_uvlc(&sps_pic_height_max_in_luma_samples);
+  (void)success;
+
+  *width = sps_pic_width_max_in_luma_samples;
+  *height = sps_pic_height_max_in_luma_samples;
+
+  int sps_conformance_window_flag = reader.get_bits(1);
+  if (sps_conformance_window_flag) {
+    assert(false); // TODO
+  }
+
+  bool sps_subpic_info_present_flag = reader.get_bits(1);
+  if (sps_subpic_info_present_flag) {
+    assert(false); // TODO
+  }
+
+  int bitDepth_minus8;
+  success = reader.get_uvlc(&bitDepth_minus8);
+  (void)success;
+
+  config->bit_depth = bitDepth_minus8 + 8;
+  config->bit_depth_present_flag = true;
+
+  return Error::Ok;
+}
