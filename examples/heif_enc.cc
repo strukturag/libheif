@@ -96,6 +96,7 @@ const int OPTION_USE_JPEG_COMPRESSION = 1006;
 const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
 const int OPTION_VERBOSE = 1008;
 const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
+const int OPTION_USE_VVC_COMPRESSION = 1010;
 
 
 static struct option long_options[] = {
@@ -114,6 +115,7 @@ static struct option long_options[] = {
     {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
+    {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
     {(char* const) "jpeg",                    no_argument,       0,              OPTION_USE_JPEG_COMPRESSION},
     {(char* const) "jpeg2000",                no_argument,       0,              OPTION_USE_JPEG2000_COMPRESSION},
     {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
@@ -162,6 +164,7 @@ void show_help(const char* argv0)
             << "  -b, --bit-depth #     bit-depth of generated HEIF/AVIF file when using 16-bit PNG input (default: 10 bit)\n"
             << "  -p                    set encoder parameter (NAME=VALUE)\n"
             << "  -A, --avif            encode as AVIF (not needed if output filename with .avif suffix is provided)\n"
+            << "      --vvc             encode as VVC (even more experimental)\n"
             << "      --jpeg            encode as JPEG\n"
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
             << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
@@ -353,6 +356,9 @@ static const char* get_compression_format_name(heif_compression_format format)
     case heif_compression_AV1:
       return "AV1";
       break;
+    case heif_compression_VVC:
+      return "VVC";
+      break;
     case heif_compression_HEVC:
       return "HEVC";
       break;
@@ -376,7 +382,7 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-  for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
+    for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_VVC, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
 #if WITH_UNCOMPRESSED_CODEC
 , heif_compression_uncompressed
 #endif
@@ -385,6 +391,9 @@ static void show_list_of_all_encoders()
     switch (compression_format) {
       case heif_compression_AV1:
         std::cout << "AVIF";
+        break;
+      case heif_compression_VVC:
+        std::cout << "VVIC";
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
@@ -438,6 +447,9 @@ heif_compression_format guess_compression_format_from_filename(const std::string
   if (ends_with(filename_lowercase, ".avif")) {
     return heif_compression_AV1;
   }
+  else if (ends_with(filename_lowercase, ".vvic")) {
+    return heif_compression_VVC;
+  }
   else if (ends_with(filename_lowercase, ".heic")) {
     return heif_compression_HEVC;
   }
@@ -454,6 +466,7 @@ std::string suffix_for_compression_format(heif_compression_format format)
 {
   switch (format) {
     case heif_compression_AV1: return "avif";
+    case heif_compression_VVC: return "vvic";
     case heif_compression_HEVC: return "heic";
     case heif_compression_JPEG2000: return "hej2";
     default: return "data";
@@ -483,6 +496,7 @@ int main(int argc, char** argv)
   int thumbnail_bbox_size = 0;
   int output_bit_depth = 10;
   bool force_enc_av1f = false;
+  bool force_enc_vvc = false;
   bool force_enc_uncompressed = false;
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
@@ -562,6 +576,9 @@ int main(int argc, char** argv)
       case OPTION_PITM_DESCRIPTION:
         property_pitm_description = optarg;
         break;
+      case OPTION_USE_VVC_COMPRESSION:
+        force_enc_vvc = true;
+        break;
       case OPTION_USE_JPEG_COMPRESSION:
         force_enc_jpeg = true;
         break;
@@ -612,7 +629,8 @@ int main(int argc, char** argv)
     return 5;
   }
 
-  if ((force_enc_av1f ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) + (force_enc_jpeg2000 ? 1 : 0) > 1) {
+  if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) + 
+      (force_enc_jpeg2000 ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
   }
 
@@ -640,6 +658,9 @@ int main(int argc, char** argv)
 
   if (force_enc_av1f) {
     compressionFormat = heif_compression_AV1;
+  }
+  else if (force_enc_vvc) {
+    compressionFormat = heif_compression_VVC;
   }
   else if (force_enc_uncompressed) {
     compressionFormat = heif_compression_uncompressed;

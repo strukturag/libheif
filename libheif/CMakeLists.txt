@@ -38,6 +38,7 @@ set(libheif_sources
         init.cc init.h
         nclx.h
         logging.h
+        logging.cc
         mask_image.cc
         mask_image.h
         metadata_compression.cc

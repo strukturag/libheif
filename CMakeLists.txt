@@ -93,8 +93,8 @@ macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     endif ()
 
     string(LENGTH "${displayName}" len)
-    math(EXPR fill "29 - ${len}")
-    string(SUBSTRING "                                                " 0 ${fill} filler)
+    math(EXPR fill "32 - ${len}")
+    string(SUBSTRING "                                                   " 0 ${fill} filler)
     message("${displayName}${filler}: ${msg}")
     unset(msg)
 endmacro()
@@ -122,6 +122,18 @@ if (WITH_KVAZAAR)
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=1)
     else ()
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
+    endif ()
+endif ()
+
+# uvg266
+
+plugin_option(UVG266 "uvg266 VVC encoder (experimental)" OFF OFF)
+if (WITH_UVG266)
+    find_package(UVG266)
+    if ("${HAVE_UVG266_ENABLE_LOGGING}")
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=1)
+    else ()
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=0)
     endif ()
 endif ()
 
@@ -216,6 +228,7 @@ plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
 
 # --- show summary which formats are supported
 

@@ -314,6 +314,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_meta_box", heif_suberror_No_meta_box)
     .value("heif_suberror_No_hdlr_box", heif_suberror_No_hdlr_box)
     .value("heif_suberror_No_hvcC_box", heif_suberror_No_hvcC_box)
+    .value("heif_suberror_No_vvcC_box", heif_suberror_No_vvcC_box)
     .value("heif_suberror_No_pitm_box", heif_suberror_No_pitm_box)
     .value("heif_suberror_No_ipco_box", heif_suberror_No_ipco_box)
     .value("heif_suberror_No_ipma_box", heif_suberror_No_ipma_box)

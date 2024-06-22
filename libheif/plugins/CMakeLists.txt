@@ -91,9 +91,14 @@ set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
 set(FFMPEG_DECODER_extra_plugin_sources ../error.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)
 
+
 set(OPENJPH_ENCODER_sources encoder_openjph.cc encoder_openjph.h)
 set(OPENJPH_ENCODER_extra_plugin_sources)
 plugin_compilation(jphenc OPENJPH OPENJPH_FOUND OPENJPH_ENCODER OPENJPH_ENCODER)
+
+set(UVG266_sources encoder_uvg266.cc encoder_uvg266.h)
+set(UVG266_extra_plugin_sources)
+plugin_compilation(uvg266 UVG266 UVG266_FOUND UVG266 UVG266)
 
 target_sources(heif PRIVATE
                encoder_mask.h

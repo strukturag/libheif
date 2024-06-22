@@ -415,6 +415,12 @@ public:
                              enum heif_image_input_class input_class,
                              std::shared_ptr<Image>& out_image);
 
+  Error encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& image,
+                             struct heif_encoder* encoder,
+                             const struct heif_encoding_options& options,
+                             enum heif_image_input_class input_class,
+                             std::shared_ptr<Image>& out_image);
+
   Error encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& image,
                             struct heif_encoder* encoder,
                             const struct heif_encoding_options& options,
