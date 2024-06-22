@@ -95,6 +95,10 @@ set(OPENJPH_ENCODER_sources encoder_openjph.cc encoder_openjph.h)
 set(OPENJPH_ENCODER_extra_plugin_sources)
 plugin_compilation(jphenc OPENJPH OPENJPH_FOUND OPENJPH_ENCODER OPENJPH_ENCODER)
 
+set(OPENJPH_DECODER_sources decoder_openjph.cc decoder_openjph.h)
+set(OPENJPH_DECODER_extra_plugin_sources)
+plugin_compilation(jphdec OPENJPH OPENJPH_FOUND OPENJPH_DECODER OPENJPH_DECODER)
+
 target_sources(heif PRIVATE
                encoder_mask.h
                encoder_mask.cc)
