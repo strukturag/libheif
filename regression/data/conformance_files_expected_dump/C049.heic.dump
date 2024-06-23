@@ -1,0 +1,108 @@
+Box: ftyp -----
+size: 44   (header size: 8)
+major brand: mif1
+minor version: 0
+compatible brands: heic,mif1,mp42,isom,M4A ,miaf,MiHA
+
+Box: meta -----
+size: 377   (header size: 12)
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| pre_defined: 0
+| handler_type: pict
+| name: 
+| 
+| Box: pitm -----
+| size: 14   (header size: 12)
+| item_ID: 1820
+| 
+| Box: iloc -----
+| size: 34   (header size: 12)
+| item ID: 1820
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 2614
+|   extents: 122269,412059 
+| 
+| Box: iinf -----
+| size: 45   (header size: 12)
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 1820
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| 
+| Box: iref -----
+| size: 12   (header size: 12)
+| 
+| Box: iprp -----
+| size: 191   (header size: 8)
+| | Box: ipco -----
+| | size: 161   (header size: 8)
+| | | Box: hvcC -----
+| | | size: 117   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 4
+| | | general_profile_compatibility_flags: 0000.1000 0000.0000 0000.0000 0000.0000 
+| | | general_constraint_indicator_flags: 10011111 10101000 00000000 00000000 00000000 00000000 
+| | | general_level_idc: 120
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 4:2:0
+| | | bit_depth_luma: 8
+| | | bit_depth_chroma: 8
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 01 ff ff 04 08 00 00 03 00 9f a8 00 00 03 00 00 78 ba 02 40 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 04 08 00 00 03 00 9f a8 00 00 03 00 00 78 a0 03 c0 80 10 e5 96 ea 49 08 46 b9 a0 20 00 00 03 00 20 00 00 03 03 01 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c1 76 b0 62 40 
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 1920
+| | | image height: 1080
+| | | 
+| | | Box: pixi -----
+| | | size: 16   (header size: 12)
+| | | bits_per_channel: 8,8,8
+| | 
+| | Box: ipma -----
+| | size: 22   (header size: 12)
+| | associations for item ID: 1820
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | | property index: 3 (essential: false)
+| 
+| Box: grpl -----
+| size: 36   (header size: 8)
+| group type: iaug
+| | group id: 1821
+| | entity IDs: 1 1820 
+
+Box: moov -----
+size: 2193   (header size: 8)
+
+Box: mdat -----
+size: 534328   (header size: 16)
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1, mp42, isom, M4A , miaf, MiHA

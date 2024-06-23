@@ -1,0 +1,14 @@
+Box: ftyp -----
+size: 28   (header size: 8)
+major brand: msf1
+minor version: 0
+compatible brands: msf1,hevc,iso8
+
+Box: moov -----
+size: 1391   (header size: 8)
+
+Box: mdat -----
+size: 906135   (header size: 16)
+MIME type: image/heif-sequence
+main brand: msf1
+compatible brands: msf1, hevc, iso8

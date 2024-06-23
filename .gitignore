@@ -2,7 +2,9 @@
 # see here: https://stackoverflow.com/questions/7335420/global-git-ignore
 
 build
+regression/*/__pycache__/
 third-party/SVT-AV1/
 third-party/dav1d/
 third-party/libwebp/
 third-party/rav1e/
+

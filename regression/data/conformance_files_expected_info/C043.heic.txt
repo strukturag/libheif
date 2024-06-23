@@ -1,0 +1,45 @@
+MIME type: unknown
+main brand: mif2
+compatible brands: mif1, mif2, heic, miaf, MiHB
+
+image: 1280x720 (id=1002), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 1280x720 (id=1004)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 1280x720 (id=1006)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:

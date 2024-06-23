@@ -1,0 +1,135 @@
+Box: ftyp -----
+size: 28   (header size: 8)
+major brand: heis
+minor version: 0
+compatible brands: mif1,heic,heis
+
+Box: meta -----
+size: 741   (header size: 12)
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| pre_defined: 0
+| handler_type: pict
+| name: 
+| 
+| Box: pitm -----
+| size: 14   (header size: 12)
+| item_ID: 20003
+| 
+| Box: iloc -----
+| size: 52   (header size: 12)
+| item ID: 20003
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 777
+|   extents: 0,3815 
+| item ID: 20004
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 777
+|   extents: 0,3815 
+| 
+| Box: iinf -----
+| size: 80   (header size: 12)
+| | Box: infe -----
+| | size: 31   (header size: 12)
+| | item_ID: 20003
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name: HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| | 
+| | Box: infe -----
+| | size: 33   (header size: 12)
+| | item_ID: 20004
+| | item_protection_index: 0
+| | item_type: lhv1
+| | item_name: L-HEVC Image
+| | content_type: 
+| | content_encoding: 
+| | item uri type: 
+| | hidden item: false
+| 
+| Box: iprp -----
+| size: 514   (header size: 8)
+| | Box: ipco -----
+| | size: 477   (header size: 8)
+| | | Box: hvcC -----
+| | | size: 162   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 1
+| | | general_profile_compatibility_flags: 0110.0000 0000.0000 0000.0000 0000.0000 
+| | | general_constraint_indicator_flags: 00000000 00000000 00000000 00000000 00000000 00000000 
+| | | general_level_idc: 0
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 4:2:0
+| | | bit_depth_luma: 8
+| | | bit_depth_chroma: 8
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 11 ff ff 01 60 00 00 03 00 00 03 00 00 03 00 00 03 00 00 94 90 56 ff 00 20 00 21 1a 5c 18 08 00 00 03 00 3e 20 00 00 03 00 00 03 02 34 08 00 04 02 80 7e 14 a4 f4 80 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 01 60 00 00 03 00 00 03 00 00 03 00 00 03 00 00 a0 04 02 01 01 fe 59 49 92 46 d8 69 62 2a a4 c4 c3 2f b3 eb cd f9 67 d7 85 11 89 cb b6 a0 20 
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c5 a5 58 11 50 0a 
+| | | 
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | image width: 512
+| | | image height: 256
+| | | 
+| | | Box: oinf -----
+| | | size: 78   (header size: 8)
+| | | 
+| | | Box: tols -----
+| | | size: 14   (header size: 8)
+| | | 
+| | | Box: lsel -----
+| | | size: 10   (header size: 8)
+| | | layer_id: 1
+| | | 
+| | | Box: lhvC -----
+| | | size: 185   (header size: 8)
+| | 
+| | Box: ipma -----
+| | size: 29   (header size: 12)
+| | associations for item ID: 20003
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+| | associations for item ID: 20004
+| | | property index: 3 (essential: true)
+| | | property index: 4 (essential: true)
+| | | property index: 5 (essential: true)
+| | | property index: 6 (essential: true)
+| | | property index: 2 (essential: false)
+| 
+| Box: grpl -----
+| size: 36   (header size: 8)
+| group type: ster
+| | group id: 20005
+| | entity IDs: 20003 20004 
+
+Box: mdat -----
+size: 3823   (header size: 8)
+
+Box: mdat -----
+size: 16   (header size: 8)
+MIME type: image/heic
+main brand: heis
+compatible brands: mif1, heic, heis

@@ -1,0 +1,31 @@
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1
+
+image: 300x300 (id=1002), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  crop: left=490 top=210 right=490 bottom=210
+region annotations:
+  none
+properties:
+
+image: 300x300 (id=1005)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  crop: left=490 top=210 right=490 bottom=210
+region annotations:
+  none
+properties:

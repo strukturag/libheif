@@ -1,0 +1,87 @@
+MIME type: image/heic
+main brand: heis
+compatible brands: mif1, heic, heis
+
+image: 512x256 (id=20010), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x256 (id=20011)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x256 (id=20012)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 512x256 (id=20013)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 1024x512 (id=20018)
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
+
+image: 1024x512 (id=20019)
+  colorspace: YCbCr, unknown
+  bit depth: -1
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  none
+region annotations:
+  none
+properties:
