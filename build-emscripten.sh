@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR=$PWD
 
 if [[ $# -ne 1 ]] ; then
     echo "Usage: $0 SRCDIR"
@@ -27,7 +27,7 @@ STANDALONE="${STANDALONE:-0}"
 DEBUG="${DEBUG:-0}"
 USE_WASM="${USE_WASM:-1}"
 
-echo "Build using ${CORES} CPU cores"
+echo "Build using ${CORES} CPU cores in dir ${DIR}"
 
 LIBRARY_LINKER_FLAGS=""
 LIBRARY_INCLUDE_FLAGS=""
@@ -50,6 +50,7 @@ if [ "$ENABLE_LIBDE265" = "1" ]; then
     LIBRARY_LINKER_FLAGS="$LIBRARY_LINKER_FLAGS -lde265"
     LIBRARY_INCLUDE_FLAGS="$LIBRARY_INCLUDE_FLAGS -L${DIR}/libde265-${LIBDE265_VERSION}/libde265/.libs"
 fi
+echo "libde265: $CONFIGURE_ARGS_LIBDE265"
 
 CONFIGURE_ARGS_AOM=""
 if [ "$ENABLE_AOM" = "1" ]; then

@@ -259,6 +259,95 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   return result;
 }
 
+static emscripten::val heif_js_depth_img_decode(struct heif_image_handle *handle, heif_item_id depth_image_id)
+{
+  emscripten::val depth_result = emscripten::val::object();
+  struct heif_image_handle *depth_handle;
+  heif_image_handle_get_depth_image_handle(handle, depth_image_id, &depth_handle);
+  if (!depth_handle)
+  {
+    depth_result.set("err", "could not get handle of depth image");
+    depth_result.set("id", depth_image_id);
+    return depth_result;
+  }
+
+  int width = heif_image_handle_get_width(depth_handle);
+  depth_result.set("width", width);
+
+  int height = heif_image_handle_get_height(depth_handle);
+  depth_result.set("height", height);
+
+  struct heif_image *depth_image;
+  struct heif_error err = heif_decode_image(depth_handle, &depth_image, heif_colorspace_monochrome, heif_chroma_monochrome, nullptr);
+  if (err.code)
+  {
+    depth_result.set("err", "could not get image of depth image");
+    depth_result.set("msg", err.message);
+    depth_result.set("id", depth_image_id);
+    return depth_result;
+  }
+
+  depth_result.set("testdata", emscripten::val(emscripten::typed_memory_view(10, "123456890")));
+  return depth_result;
+  std::vector<heif_channel> channels{
+      heif_channel_Y,
+      heif_channel_Cb,
+      heif_channel_Cr,
+      heif_channel_R,
+      heif_channel_G,
+      heif_channel_B,
+      heif_channel_Alpha,
+      heif_channel_interleaved};
+
+  for (auto &&channel : channels)
+  {
+    if (heif_image_has_channel(depth_image, channel))
+    {
+      depth_result.set("c_width", heif_image_get_width(depth_image, channel));
+      depth_result.set("c_height", heif_image_get_height(depth_image, channel));
+
+      int stride;
+      const uint8_t *plane = heif_image_get_plane_readonly(depth_image, channel, &stride);
+      if (plane)
+      {
+        depth_result.set("stride", stride);
+        depth_result.set("data", emscripten::val(emscripten::typed_memory_view(stride * height, plane)));
+        depth_result.set("buffersize", stride * height);
+        depth_result.set("channel", channel);
+        depth_result.set("testdata", emscripten::val(emscripten::typed_memory_view(10, "123456890")));
+        return depth_result;
+      }
+    }
+  }
+
+  depth_result.set("err", "could get no plane of depth image");
+  depth_result.set("id", depth_image_id);
+  return depth_result;
+}
+static emscripten::val heif_js_get_depth_imgs_decoded(struct heif_image_handle *handle)
+{
+  // similar to https://github.com/bigcat88/pillow_heif/blob/b2bf2744d0e4203088481b938af91974b3a2006f/pillow_heif/_pillow_heif.c#L1094
+  emscripten::val results = emscripten::val::array();
+  if (!handle)
+  {
+    return results;
+  }
+  int n_images = heif_image_handle_get_number_of_depth_images(handle);
+  if (n_images == 0)
+    return results;
+  heif_item_id *ids = (heif_item_id *)malloc(n_images * sizeof(heif_item_id));
+
+  n_images = heif_image_handle_get_list_of_depth_image_IDs(handle, ids, n_images);
+  for (int i = 0; i < n_images; i++)
+  {
+
+    struct heif_image_handle *depth_handle;
+    heif_image_handle_get_depth_image_handle(handle, ids[i], &depth_handle);
+    results.call<void>("push", emscripten::val(depth_handle));
+  }
+  free(ids);
+  return results;
+}
 
 #define EXPORT_HEIF_FUNCTION(name) \
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
@@ -280,10 +369,18 @@ EMSCRIPTEN_BINDINGS(libheif) {
     //emscripten::function("heif_js_decode_image",
     //&heif_js_decode_image, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_decode_image2",
-    &heif_js_decode_image2, emscripten::allow_raw_pointers());
+                        &heif_js_decode_image2, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_depth_img_decode",
+                       &heif_js_depth_img_decode, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_get_depth_imgs_decoded",
+                       &heif_js_get_depth_imgs_decoded, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_image_handle_release);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_width);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_get_number_of_depth_images);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_get_list_of_depth_image_IDs);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_get_depth_image_handle);
+    EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_release);
 
