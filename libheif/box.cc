@@ -1688,6 +1688,21 @@ void Box_iloc::patch_iloc_header(StreamWriter& writer) const
 }
 
 
+/*
+ *                     version <= 1    version 2   version > 2    mime     uri
+ * -----------------------------------------------------------------------------------------------
+ * item id               16               16           32          16/32   16/32
+ * protection index      16               16           16          16      16
+ * item type             -                yes          yes         yes     yes
+ * item name             yes              yes          yes         yes     yes
+ * content type          yes              -            -           yes     -
+ * content encoding      yes              -            -           yes     -
+ * hidden item           -                yes          yes         yes     yes
+ * item uri type         -                -            -           -       yes
+ *
+ * Note: HEIF does not allow version 0 and version 1 boxes ! (see 23008-12, 10.2.1)
+ */
+
 Error Box_infe::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
@@ -1818,11 +1833,18 @@ std::string Box_infe::dump(Indent& indent) const
   sstr << indent << "item_ID: " << m_item_ID << "\n"
        << indent << "item_protection_index: " << m_item_protection_index << "\n"
        << indent << "item_type: " << m_item_type << "\n"
-       << indent << "item_name: " << m_item_name << "\n"
-       << indent << "content_type: " << m_content_type << "\n"
-       << indent << "content_encoding: " << m_content_encoding << "\n"
-       << indent << "item uri type: " << m_item_uri_type << "\n"
-       << indent << "hidden item: " << std::boolalpha << m_hidden_item << "\n";
+       << indent << "item_name: " << m_item_name << "\n";
+
+  if (m_item_type == "mime") {
+    sstr << indent << "content_type: " << m_content_type << "\n"
+         << indent << "content_encoding: " << m_content_encoding << "\n";
+  }
+
+  if (m_item_type == "uri ") {
+    sstr << indent << "item uri type: " << m_item_uri_type << "\n";
+  }
+
+  sstr << indent << "hidden item: " << std::boolalpha << m_hidden_item << "\n";
 
   return sstr.str();
 }
