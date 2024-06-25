@@ -2135,7 +2135,8 @@ enum heif_metadata_compression
 {
   heif_metadata_compression_off,
   heif_metadata_compression_auto,
-  heif_metadata_compression_deflate
+  heif_metadata_compression_deflate,
+  heif_metadata_compression_unknown
 };
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.

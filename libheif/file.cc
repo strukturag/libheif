@@ -980,6 +980,102 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 }
 
 
+Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const
+{
+  Error error;
+
+  auto infe_box = get_infe(ID);
+  if (!infe_box) {
+    return {heif_error_Usage_error,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
+  std::string item_type = infe_box->get_item_type();
+  std::string content_type = infe_box->get_content_type();
+
+  // --- get item
+
+  auto items = m_iloc_box->get_items();
+  const Box_iloc::Item* item = nullptr;
+  for (const auto& i : items) {
+    if (i.item_ID == ID) {
+      item = &i;
+      break;
+    }
+  }
+  if (!item) {
+    std::stringstream sstr;
+    sstr << "Item with ID " << ID << " has no data";
+
+    return {heif_error_Invalid_input,
+            heif_suberror_No_item_data,
+            sstr.str()};
+  }
+
+  // --- non 'mime' data (uncompressed)
+
+  if (item_type != "mime") {
+    if (out_compression) {
+      *out_compression = heif_metadata_compression_off;
+    }
+
+    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+  }
+
+
+  // --- mime data
+
+  std::string encoding = infe_box->get_content_encoding();
+
+  heif_metadata_compression compression;
+
+  if (encoding.empty()) {
+    // shortcut for case of uncompressed mime data
+
+    if (out_compression) {
+      *out_compression = heif_metadata_compression_off;
+    }
+
+    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+  }
+  else if (encoding == "deflate") {
+    compression = heif_metadata_compression_deflate;
+  }
+  else {
+    compression = heif_metadata_compression_unknown;
+  }
+
+  // read compressed data
+
+  std::vector<uint8_t> compressed_data;
+  error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+  if (error) {
+    return error;
+  }
+
+  // return compressed data, if we do not want to have it uncompressed
+
+  const bool do_decode = (out_compression == nullptr);
+  if (!do_decode) {
+    *out_compression = compression;
+    *out_data = std::move(compressed_data);
+    return Error::Ok;
+  }
+
+  // decompress the data
+
+  switch (compression) {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    case heif_metadata_compression_deflate:
+      *out_data = inflate(compressed_data);
+      return Error::Ok;
+#endif
+    default:
+      return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
+  }
+}
+
+
 heif_item_id HeifFile::get_unused_item_id() const
 {
   for (heif_item_id id = 1;;
@@ -1331,6 +1427,25 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
 }
 
 
+Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size)
+{
+  Result<heif_item_id> result;
+
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  auto infe_box = add_new_infe_box("mime");
+  infe_box->set_hidden_item(true);
+  infe_box->set_content_type(content_type);
+
+  heif_item_id metadata_id = infe_box->get_item_ID();
+  result.value = metadata_id;
+
+  set_precompressed_item_data(infe_box, data, size, content_encoding);
+
+  return result;
+}
+
+
 Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size)
 {
   Result<heif_item_id> result;
@@ -1381,6 +1496,29 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
     data_array.resize(size);
     memcpy(data_array.data(), data, size);
   }
+
+  // copy the data into the file, store the pointer to it in an iloc box entry
+
+  append_iloc_data(item->get_item_ID(), data_array);
+
+  return Error::Ok;
+}
+
+
+Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding)
+{
+  // only set metadata compression for MIME type data which has 'content_encoding' field
+  if (!content_encoding.empty() &&
+      item->get_item_type() != "mime") {
+    // TODO: error, compression not supported
+  }
+
+
+  std::vector<uint8_t> data_array;
+  data_array.resize(size);
+  memcpy(data_array.data(), data, size);
+
+  item->set_content_encoding(content_encoding);
 
   // copy the data into the file, store the pointer to it in an iloc box entry
 

@@ -86,6 +86,8 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
+  Error get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const;
+
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
   std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
@@ -188,9 +190,13 @@ public:
 
   Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
 
+  Result<heif_item_id> add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size);
+
   Result<heif_item_id> add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size);
 
   Error set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression);
+
+  Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 

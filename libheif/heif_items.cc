@@ -82,6 +82,19 @@ const char* heif_context_get_mime_item_content_type(const struct heif_context* c
   return infe->get_content_type().c_str();
 }
 
+const char* heif_context_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id)
+{
+  auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
+  if (!infe) { return nullptr; }
+
+  if (infe->get_item_type() != "mime") {
+    return nullptr;
+  }
+
+  return infe->get_content_encoding().c_str();
+}
+
+
 const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
@@ -105,10 +118,15 @@ const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item
 
 struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
                                              heif_item_id item_id,
+                                             heif_metadata_compression* out_compression_format,
                                              uint8_t** out_data, size_t* out_data_size)
 {
+  if (out_data && !out_data_size) {
+      return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "cannot return data with out_data_size==NULL"};
+  }
+
   std::vector<uint8_t> data;
-  Error err = ctx->context->get_heif_file()->get_compressed_image_data(item_id, &data);
+  Error err = ctx->context->get_heif_file()->get_item_data(item_id, &data, out_compression_format);
   if (err) {
     *out_data_size = 0;
     if (out_data) {
@@ -117,16 +135,17 @@ struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
 
     return err.error_struct(ctx->context.get());
   }
-  else {
+
+  if (out_data_size) {
     *out_data_size = data.size();
-
-    if (out_data) {
-      *out_data = new uint8_t[data.size()];
-      memcpy(*out_data, data.data(), data.size());
-    }
-
-    return heif_error_success;
   }
+
+  if (out_data) {
+    *out_data = new uint8_t[data.size()];
+    memcpy(*out_data, data.data(), data.size());
+  }
+
+  return heif_error_success;
 }
 
 
@@ -230,6 +249,24 @@ struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
                                              heif_item_id* out_item_id)
 {
   Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
+
+  if (result && out_item_id) {
+    *out_item_id = result.value;
+    return heif_error_success;
+  }
+  else {
+    return result.error.error_struct(ctx->context.get());
+  }
+}
+
+LIBHEIF_API
+struct heif_error heif_context_add_precompressed_mime_item(struct heif_context* ctx,
+                                                           const char* content_type,
+                                                           const char* content_encoding,
+                                                           const void* data, int size,
+                                                           heif_item_id* out_item_id)
+{
+  Result<heif_item_id> result = ctx->context->get_heif_file()->add_precompressed_infe_mime(content_type, content_encoding, (const uint8_t*) data, size);
 
   if (result && out_item_id) {
     *out_item_id = result.value;

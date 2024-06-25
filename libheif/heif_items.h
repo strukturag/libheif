@@ -88,6 +88,21 @@ LIBHEIF_API
 const char* heif_context_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id);
 
 /**
+ * Gets the content_encoding for a MIME item.
+ *
+ * Only valid if the item type is `mime`.
+ * If the item does not exist, or if it is not a `mime` item, NULL is returned.
+ *
+ * If the item is not encoded, the returned value will be an empty string (not null).
+ *
+ * @param ctx the file context
+ * @param item_id the item identifier for the item
+ * @return the item content_type
+ */
+LIBHEIF_API
+const char* heif_context_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id);
+
+/**
  * Gets the item_uri_type for an item.
  *
  * Only valid if the item type is `uri `.
@@ -107,15 +122,21 @@ const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item
 /**
  * Gets the raw metadata, as stored in the HEIF file.
  *
- * If the data is compressed (in the sense of a "mime" item with "content_encoding"), then
- * the uncompressed data is returned.
+ * Data in a "mime" item with "content_encoding" can be compressed.
+ * When `out_compression_format` is NULL, the decompressed data will be returned.
+ * Otherwise, the compressed data is returned and `out_compression_format` will be filled with the
+ * compression format.
+ * If the compression method is not supported, an error will be returned.
  *
  * It is valid to set `out_data` to NULL. In that case, only the `out_data_size` is filled.
+ * Note that it is inefficient to use `out_data=NULL` just to get the size of compressed data.
+ * In general, this should be avoided.
  *
  * If there is no data assigned to the item or there is an error, `out_data_size` is set to zero.
  *
  * @param ctx the file context
  * @param item_id the item identifier for the item
+ * @param out_compression_format how the data is compressed. If the pointer is NULL, the decompressed data will be returned.
  * @param out_data the corresponding raw metadata
  * @param out_data_size the size of the metadata in bytes
  * @return whether the call succeeded, or there was an error
@@ -123,12 +144,13 @@ const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item
 LIBHEIF_API
 struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
                                              heif_item_id item_id,
+                                             heif_metadata_compression* out_compression_format,
                                              uint8_t** out_data, size_t* out_data_size);
 
 /**
  * Free the item data.
  *
- * This is used to free memory assocaited with the data returned by
+ * This is used to free memory associated with the data returned by
  * {@link heif_context_get_item_data} in 'out_data' and set the pointer to NULL.
  *
  * @param ctx the file context
@@ -171,6 +193,13 @@ struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
                                              heif_metadata_compression content_encoding,
                                              const void* data, int size,
                                              heif_item_id* out_item_id);
+
+LIBHEIF_API
+struct heif_error heif_context_add_precompressed_mime_item(struct heif_context* ctx,
+                                                           const char* content_type,
+                                                           const char* content_encoding,
+                                                           const void* data, int size,
+                                                           heif_item_id* out_item_id);
 
 LIBHEIF_API
 struct heif_error heif_context_add_uri_item(struct heif_context* ctx,
