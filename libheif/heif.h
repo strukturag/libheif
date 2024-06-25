@@ -133,7 +133,7 @@ enum heif_error_code
   heif_error_Color_profile_does_not_exist = 10,
 
   // Error loading a dynamic plugin
-  heif_error_Plugin_loading_error = 11,
+  heif_error_Plugin_loading_error = 11
 };
 
 
