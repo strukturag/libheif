@@ -1191,7 +1191,7 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
                                                         std::shared_ptr<HeifContext::Image>& out_image)
 {
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options.prefer_minimised) {
+  if (options.prefer_uncC_short_form) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
   if (uncC->get_version() == 1) {
