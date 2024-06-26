@@ -156,16 +156,16 @@ LIBHEIF_API
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
                                                   heif_item_id itemId,
                                                   heif_property_id propertyId,
-                                                  size_t* size_out);
+                                                  size_t* out_size);
 
 /**
- * @param data_out User-supplied array to write the property data to. The size given by heif_item_get_property_raw_size().
+ * @param data_out User-supplied array to write the property data to. The required size of the output array is given by heif_item_get_property_raw_size().
 */
 LIBHEIF_API
 struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
                                                   heif_item_id itemId,
                                                   heif_property_id propertyId,
-                                                  uint8_t* data_out);
+                                                  uint8_t* out_data);
 
 #ifdef __cplusplus
 }
