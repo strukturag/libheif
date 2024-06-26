@@ -69,9 +69,9 @@
 
 static void show_help(const char* argv0)
 {
-  std::cerr << " heif-convert  libheif version: " << heif_get_version() << "\n"
-            << "-------------------------------------------\n"
-               "Usage: heif-convert [options]  <input-image> [output-image]\n"
+  std::cerr << " " << argv0 << "  libheif version: " << heif_get_version() << "\n"
+            << "---------------------------------------\n"
+               "Usage: " << argv0 << " [options]  <input-image> [output-image]\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
                "These suffixes are recognized: jpg, jpeg, png, y4m. If no output filename is specified, 'jpg' is used.\n"
