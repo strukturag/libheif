@@ -251,6 +251,8 @@ const (
 
 	SuberrorCannotReadPluginDirectory = C.heif_suberror_Cannot_read_plugin_directory
 
+	SuberrorNoMatchingDecoderInstalled = C.heif_suberror_No_matching_decoder_installed
+
 	SuberrorNoOrInvalidPrimaryItem = C.heif_suberror_No_or_invalid_primary_item
 
 	SuberrorNoInfeBox = C.heif_suberror_No_infe_box
@@ -262,6 +264,10 @@ const (
 	SuberrorInvalidFractionalNumber = C.heif_suberror_Invalid_fractional_number
 
 	SuberrorInvalidImageSize = C.heif_suberror_Invalid_image_size
+
+	SuberrorCameraIntrinsicMatrixUndefined = C.heif_suberror_Camera_intrinsic_matrix_undefined
+
+	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
 
 	// --- Memory_allocation_error ---
 
@@ -301,6 +307,8 @@ const (
 
 	SuberrorInvalidRegionData = C.heif_suberror_Invalid_region_data
 
+	SuberrorNoIspeProperty = C.heif_suberror_No_ispe_property
+
 	SuberrorWrongTileImagePixelDepth = C.heif_suberror_Wrong_tile_image_pixel_depth
 
 	SuberrorUnknownNCLXColorPrimaries = C.heif_suberror_Unknown_NCLX_color_primaries
@@ -309,7 +317,9 @@ const (
 
 	SuberrorUnknownNCLXMatrixCoefficients = C.heif_suberror_Unknown_NCLX_matrix_coefficients
 
-	SuberrorInvalidJPEG2000Codestream = C.heif_suberror_Invalid_J2K_codestream
+	SuberrorInvalidJ2KCodestream = C.heif_suberror_Invalid_J2K_codestream
+
+	SuberrorNoVcCBox = C.heif_suberror_No_vvcC_box
 
 	// --- Unsupported_feature ---
 
