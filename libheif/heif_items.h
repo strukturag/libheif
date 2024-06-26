@@ -27,7 +27,6 @@
 extern "C" {
 #endif
 
-// ------------------------- reading -------------------------
 
 /**
  * Gets the number of items.
@@ -68,13 +67,13 @@ int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
  * @return the item type
  */
 LIBHEIF_API
-uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id item_id);
+uint32_t heif_item_get_item_type(const struct heif_context* ctx, heif_item_id item_id);
 
 #define heif_item_type_mime   heif_fourcc('m','i','m','e')
 #define heif_item_type_uri    heif_fourcc('u','r','i',' ')
 
 LIBHEIF_API
-int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id);
+int heif_item_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id);
 
 
 /**
@@ -88,7 +87,7 @@ int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id ite
  * @return the item content_type
  */
 LIBHEIF_API
-const char* heif_context_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id);
+const char* heif_item_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id);
 
 /**
  * Gets the content_encoding for a MIME item.
@@ -103,7 +102,7 @@ const char* heif_context_get_mime_item_content_type(const struct heif_context* c
  * @return the item content_type
  */
 LIBHEIF_API
-const char* heif_context_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id);
+const char* heif_item_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id);
 
 /**
  * Gets the item_uri_type for an item.
@@ -116,10 +115,15 @@ const char* heif_context_get_mime_item_content_encoding(const struct heif_contex
  * @return the item item_uri_type
  */
 LIBHEIF_API
-const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, heif_item_id item_id);
+const char* heif_item_get_uri_item_uri_type(const struct heif_context* ctx, heif_item_id item_id);
 
 LIBHEIF_API
-const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item_id item_id);
+const char* heif_item_get_item_name(const struct heif_context* ctx, heif_item_id item_id);
+
+LIBHEIF_API
+struct heif_error heif_item_set_item_name(struct heif_context* ctx,
+                                          heif_item_id item,
+                                          const char* item_name);
 
 
 /**
@@ -145,10 +149,10 @@ const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item
  * @return whether the call succeeded, or there was an error
  */
 LIBHEIF_API
-struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
-                                             heif_item_id item_id,
-                                             heif_metadata_compression* out_compression_format,
-                                             uint8_t** out_data, size_t* out_data_size);
+struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
+                                          heif_item_id item_id,
+                                          heif_metadata_compression* out_compression_format,
+                                          uint8_t** out_data, size_t* out_data_size);
 
 /**
  * Free the item data.
@@ -161,6 +165,9 @@ struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
  */
 LIBHEIF_API
 void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data);
+
+
+// ------------------------- item references -------------------------
 
 /**
  * Get the item ids that reference the given item.
@@ -182,7 +189,20 @@ size_t heif_context_get_item_references(const struct heif_context* ctx,
 LIBHEIF_API
 void heif_release_item_references(const struct heif_context* ctx, heif_item_id** references);
 
-// ------------------------- writing -------------------------
+LIBHEIF_API
+struct heif_error heif_context_add_item_reference(struct heif_context* ctx,
+                                                  uint32_t reference_type,
+                                                  heif_item_id from_item,
+                                                  heif_item_id to_item);
+
+LIBHEIF_API
+struct heif_error heif_context_add_item_references(struct heif_context* ctx,
+                                                   uint32_t reference_type,
+                                                   heif_item_id from_item,
+                                                   const heif_item_id* to_item,
+                                                   int num_to_items);
+
+// ------------------------- adding new items -------------------------
 
 LIBHEIF_API
 struct heif_error heif_context_add_item(struct heif_context* ctx,
@@ -209,24 +229,6 @@ struct heif_error heif_context_add_uri_item(struct heif_context* ctx,
                                             const char* item_uri_type,
                                             const void* data, int size,
                                             heif_item_id* out_item_id);
-
-LIBHEIF_API
-struct heif_error heif_context_add_item_reference(struct heif_context* ctx,
-                                                  const char* reference_type,
-                                                  heif_item_id from_item,
-                                                  heif_item_id to_item);
-
-LIBHEIF_API
-struct heif_error heif_context_add_item_references(struct heif_context* ctx,
-                                                   const char* reference_type,
-                                                   heif_item_id from_item,
-                                                   const heif_item_id* to_item,
-                                                   int num_to_items);
-
-LIBHEIF_API
-struct heif_error heif_context_add_item_name(struct heif_context* ctx,
-                                             heif_item_id item,
-                                             const char* item_name);
 
 #ifdef __cplusplus
 }

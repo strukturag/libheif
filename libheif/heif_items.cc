@@ -308,18 +308,18 @@ struct heif_error heif_context_add_uri_item(struct heif_context* ctx,
 
 
 struct heif_error heif_context_add_item_reference(struct heif_context* ctx,
-                                                  const char* reference_type,
+                                                  uint32_t reference_type,
                                                   heif_item_id from_item,
                                                   heif_item_id to_item)
 {
   ctx->context->get_heif_file()->add_iref_reference(from_item,
-                                                    fourcc(reference_type), {to_item});
+                                                    reference_type, {to_item});
 
   return heif_error_success;
 }
 
 struct heif_error heif_context_add_item_references(struct heif_context* ctx,
-                                                   const char* reference_type,
+                                                   uint32_t reference_type,
                                                    heif_item_id from_item,
                                                    const heif_item_id* to_item,
                                                    int num_to_items)
@@ -327,12 +327,12 @@ struct heif_error heif_context_add_item_references(struct heif_context* ctx,
   std::vector<heif_item_id> to_refs(to_item, to_item + num_to_items);
 
   ctx->context->get_heif_file()->add_iref_reference(from_item,
-                                                    fourcc(reference_type), to_refs);
+                                                    reference_type, to_refs);
 
   return heif_error_success;
 }
 
-struct heif_error heif_context_add_item_name(struct heif_context* ctx,
+struct heif_error heif_context_set_item_name(struct heif_context* ctx,
                                              heif_item_id item,
                                              const char* item_name)
 {
