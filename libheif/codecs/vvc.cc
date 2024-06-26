@@ -136,10 +136,10 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
   assert(c.lengthSize == 1 || c.lengthSize == 2 || c.lengthSize == 4);
 
-  uint8_t v = ((c.constantFrameRate << 6) |
-               (c.numTemporalLayers << 3) |
-               ((c.lengthSize - 1) << 1) |
-               (c.ptl_present_flag ? 1 : 0));
+  uint8_t v = (uint8_t) ((c.constantFrameRate << 6) |
+                         (c.numTemporalLayers << 3) |
+                         ((c.lengthSize - 1) << 1) |
+                         (c.ptl_present_flag ? 1 : 0));
   writer.write8(v);
 
   if (c.ptl_present_flag) {
@@ -357,6 +357,7 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
 
   bool success;
   success = reader.get_uvlc(&sps_pic_width_max_in_luma_samples);
+  (void)success;
   success = reader.get_uvlc(&sps_pic_height_max_in_luma_samples);
   (void)success;
 
