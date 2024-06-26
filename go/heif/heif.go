@@ -216,6 +216,10 @@ const (
 
 	SuberrorNoIrefBox = C.heif_suberror_No_iref_box
 
+	SuberrorNoIspeProperty = C.heif_suberror_No_ispe_property
+
+	SuberrorNoVvcCBox = C.heif_suberror_No_vvcC_box
+
 	SuberrorNoPictHandler = C.heif_suberror_No_pict_handler
 
 	// An item property referenced in the 'ipma' box is not existing in the 'ipco' container.
@@ -264,6 +268,12 @@ const (
 	SuberrorInvalidFractionalNumber = C.heif_suberror_Invalid_fractional_number
 
 	SuberrorInvalidImageSize = C.heif_suberror_Invalid_image_size
+	
+	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
+
+	SuberrorCameraIntrinsicMatrixUndefined = C.heif_suberror_Camera_intrinsic_matrix_undefined
+
+	SuberrorNoMatchingDecoderInstalled = C.heif_suberror_No_matching_decoder_installed
 
 	SuberrorCameraIntrinsicMatrixUndefined = C.heif_suberror_Camera_intrinsic_matrix_undefined
 
