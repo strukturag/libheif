@@ -363,10 +363,11 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
   }
 
   auto brands = ftyp->list_brands();
-  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * brands.size());
-  *out_size = (int) brands.size();
+  size_t nBrands = brands.size();
+  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * nBrands);
+  *out_size = (int)nBrands;
 
-  for (int i = 0; i < (int) brands.size(); i++) {
+  for (size_t i = 0; i < nBrands; i++) {
     (*out_brands)[i] = brands[i];
   }
 
