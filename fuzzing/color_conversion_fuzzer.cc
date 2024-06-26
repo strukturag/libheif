@@ -22,9 +22,9 @@
 
 #include <sstream>
 
-#include "libheif/bitstream.h"
-#include "libheif/color-conversion/colorconversion.h"
-#include "libheif/pixelimage.h"
+#include "bitstream.h"
+#include "color-conversion/colorconversion.h"
+#include "pixelimage.h"
 
 static bool is_valid_chroma(uint8_t chroma)
 {

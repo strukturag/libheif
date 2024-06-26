@@ -20,9 +20,9 @@
 
 #include <sstream>
 
-#include "libheif/box.h"
-#include "libheif/bitstream.h"
-#include "libheif/logging.h"
+#include "box.h"
+#include "bitstream.h"
+#include "logging.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
