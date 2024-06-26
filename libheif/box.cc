@@ -3348,7 +3348,7 @@ Error Box_cmin::parse(BitstreamRange& range)
   parse_full_box_header(range);
 
   m_denominatorShift = (get_flags() & 0x1F00) >> 8;
-  uint32_t denominator = (1 << m_denominatorShift);
+  uint32_t denominator = (1U << m_denominatorShift);
 
   m_matrix.focal_length_x = range.read32s() / (double)denominator;
   m_matrix.principal_point_x = range.read32s() / (double)denominator;
@@ -3356,7 +3356,7 @@ Error Box_cmin::parse(BitstreamRange& range)
 
   if (get_flags() & 1) {
     m_skewDenominatorShift = ((get_flags()) & 0x1F0000) >> 16;
-    uint32_t skewDenominator = (1<<m_skewDenominatorShift);
+    uint32_t skewDenominator = (1U << m_skewDenominatorShift);
 
     m_matrix.focal_length_y = range.read32s() / (double)denominator;
     m_matrix.skew = range.read32s() / (double)skewDenominator;
@@ -3427,7 +3427,7 @@ Error Box_cmin::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  uint32_t denominator = (1<<m_denominatorShift);
+  uint32_t denominator = (1U << m_denominatorShift);
 
   writer.write32s(static_cast<int32_t>(m_matrix.focal_length_x * denominator));
   writer.write32s(static_cast<int32_t>(m_matrix.principal_point_x * denominator));
@@ -3436,7 +3436,7 @@ Error Box_cmin::write(StreamWriter& writer) const
   if (get_flags() & 1) {
     writer.write32s(static_cast<int32_t>(m_matrix.focal_length_y * denominator));
 
-    uint32_t skewDenominator = (1 << m_skewDenominatorShift);
+    uint32_t skewDenominator = (1U << m_skewDenominatorShift);
     writer.write32s(static_cast<int32_t>(m_matrix.skew * skewDenominator));
   }
 
@@ -3556,7 +3556,7 @@ Error Box_cmex::parse(BitstreamRange& range)
       int32_t quat_y = use32bit ? range.read32s() : range.read16s();
       int32_t quat_z = use32bit ? range.read32s() : range.read16s();
 
-      uint32_t div = 1<<(14 + (use32bit ? 16 : 0));
+      uint32_t div = 1U << (14 + (use32bit ? 16 : 0));
 
       m_matrix.rotation_as_quaternions = true;
       m_matrix.quaternion_x = quat_x / (double)div;
