@@ -145,12 +145,12 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 */
 LIBHEIF_API
 struct heif_error heif_item_add_raw_property(const struct heif_context* context,
-                                              heif_item_id itemId,
-                                              uint32_t fourcc_type,
-                                              const uint8_t* uuid_type,
-                                              const uint8_t* data, size_t size,
-                                              int is_essential,
-                                              heif_property_id* out_propertyId);
+                                             heif_item_id itemId,
+                                             uint32_t fourcc_type,
+                                             const uint8_t* uuid_type,
+                                             const uint8_t* data, size_t size,
+                                             int is_essential,
+                                             heif_property_id* out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
