@@ -336,6 +336,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Plugin_loading_error", heif_suberror_Plugin_loading_error)
     .value("heif_suberror_Auxiliary_image_type_unspecified", heif_suberror_Auxiliary_image_type_unspecified)
     .value("heif_suberror_Cannot_read_plugin_directory", heif_suberror_Cannot_read_plugin_directory)
+    .value("heif_suberror_No_matching_decoder_installed", heif_suberror_No_matching_decoder_installed)
     .value("heif_suberror_No_or_invalid_primary_item", heif_suberror_No_or_invalid_primary_item)
     .value("heif_suberror_No_infe_box", heif_suberror_No_infe_box)
     .value("heif_suberror_Security_limit_exceeded", heif_suberror_Security_limit_exceeded)
@@ -354,7 +355,6 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Item_reference_cycle", heif_suberror_Item_reference_cycle)
     .value("heif_suberror_Invalid_pixi_box", heif_suberror_Invalid_pixi_box)
     .value("heif_suberror_Invalid_region_data", heif_suberror_Invalid_region_data)
-    .value("heif_suberror_Invalid_J2K_codestream", heif_suberror_Invalid_J2K_codestream)
     .value("heif_suberror_Unsupported_codec", heif_suberror_Unsupported_codec)
     .value("heif_suberror_Unsupported_image_type", heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version", heif_suberror_Unsupported_data_version)
@@ -369,6 +369,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_No_ispe_property", heif_suberror_No_ispe_property)
     .value("heif_suberror_Camera_intrinsic_matrix_undefined", heif_suberror_Camera_intrinsic_matrix_undefined)
     .value("heif_suberror_Camera_extrinsic_matrix_undefined", heif_suberror_Camera_extrinsic_matrix_undefined)
+    .value("heif_suberror_Invalid_J2K_codestream", heif_suberror_Invalid_J2K_codestream)
     .value("heif_suberror_No_vvcC_box", heif_suberror_No_vvcC_box);
 
     emscripten::enum_<heif_compression_format>("heif_compression_format")
