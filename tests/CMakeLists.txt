@@ -23,6 +23,9 @@ else()
     add_libheif_test(idat)
     add_libheif_test(jpeg2000)
     add_libheif_test(avc_box)
+endif()
+
+if (NOT WITH_REDUCED_VISIBILITY AND WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_box)
 endif()
 
