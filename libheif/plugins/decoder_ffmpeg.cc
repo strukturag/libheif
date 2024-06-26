@@ -26,8 +26,6 @@
 #include "config.h"
 #endif
 
-#include <assert.h>
-#include <memory>
 #include <map>
 
 extern "C" 
@@ -217,7 +215,7 @@ static int ffmpeg_get_chroma_width(const AVFrame* frame, heif_channel channel, h
     }
     else if (chroma == heif_chroma_420 || chroma == heif_chroma_422)
     {
-        return (frame->width) / 2;
+        return (frame->width + 1) / 2;
     }
     else
     {
@@ -233,7 +231,7 @@ static int ffmpeg_get_chroma_height(const AVFrame* frame, heif_channel channel, 
     }
     else if (chroma == heif_chroma_420)
     {
-        return (frame->height) / 2;
+        return (frame->height + 1) / 2;
     }
     else
     {
