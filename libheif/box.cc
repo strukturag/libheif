@@ -1173,13 +1173,9 @@ Error Box_pitm::write(StreamWriter& writer) const
 
 Error Box_iloc::parse(BitstreamRange& range)
 {
-  /*
-  printf("box size: %d\n",get_box_size());
-  printf("header size: %d\n",get_header_size());
-  printf("start limit: %d\n",sizeLimit);
-  */
-
   parse_full_box_header(range);
+
+  const int version = get_version();
 
   uint16_t values4 = range.read16();
 
@@ -1188,15 +1184,15 @@ Error Box_iloc::parse(BitstreamRange& range)
   int base_offset_size = (values4 >> 4) & 0xF;
   int index_size = 0;
 
-  if (get_version() >= 1) {
+  if (version == 1 || version == 2) {
     index_size = (values4 & 0xF);
   }
 
-  uint32_t item_count;
-  if (get_version() < 2) {
+  uint32_t item_count = 0;
+  if (version < 2) {
     item_count = range.read16();
   }
-  else {
+  else if (version == 2) {
     item_count = range.read32();
   }
 
@@ -1214,14 +1210,14 @@ Error Box_iloc::parse(BitstreamRange& range)
   for (uint32_t i = 0; i < item_count; i++) {
     Item item;
 
-    if (get_version() < 2) {
+    if (version < 2) {
       item.item_ID = range.read16();
     }
-    else {
+    else if (version == 2) {
       item.item_ID = range.read32();
     }
 
-    if (get_version() >= 1) {
+    if (version >= 1) {
       values4 = range.read16();
       item.construction_method = (values4 & 0xF);
     }
@@ -1238,6 +1234,7 @@ Error Box_iloc::parse(BitstreamRange& range)
     }
 
     int extent_count = range.read16();
+
     // Sanity check.
     if (extent_count > MAX_ILOC_EXTENTS_PER_ITEM) {
       std::stringstream sstr;
@@ -1252,12 +1249,14 @@ Error Box_iloc::parse(BitstreamRange& range)
     for (int e = 0; e < extent_count; e++) {
       Extent extent;
 
-      if (index_size == 4) {
-        extent.index = range.read32();
-      }
-      else if (index_size == 8) {
-        extent.index = ((uint64_t) range.read32()) << 32;
-        extent.index |= range.read32();
+      if ((version == 1 || version == 2) && index_size > 0) {
+        if (index_size == 4) {
+          extent.index = range.read32();
+        }
+        else if (index_size == 8) {
+          extent.index = ((uint64_t) range.read32()) << 32;
+          extent.index |= range.read32();
+        }
       }
 
       extent.offset = 0;
@@ -1286,8 +1285,6 @@ Error Box_iloc::parse(BitstreamRange& range)
       m_items.push_back(item);
     }
   }
-
-  //printf("end limit: %d\n",sizeLimit);
 
   return range.get_error();
 }
