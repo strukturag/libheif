@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "avc.h"
+#include "codecs/avc.h"
 #include "error.h"
 #include <cstdint>
 #include <iostream>
