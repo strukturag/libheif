@@ -46,6 +46,8 @@ public:
     if (m_indent < 0) m_indent = 0;
   }
 
+  std::string get_string() const;
+
 private:
   int m_indent = 0;
 };
@@ -53,11 +55,12 @@ private:
 
 inline std::ostream& operator<<(std::ostream& ostr, const Indent& indent)
 {
-  for (int i = 0; i < indent.get_indent(); i++) {
-    ostr << "| ";
-  }
-
+  ostr << indent.get_string();
   return ostr;
 }
+
+std::string write_raw_data_as_hex(const uint8_t* data, size_t len,
+                                  const std::string& firstLineIndent,
+                                  const std::string& remainingLinesIndent);
 
 #endif

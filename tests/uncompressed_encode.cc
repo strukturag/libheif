@@ -486,78 +486,6 @@ struct heif_image *createImage_RGBA_interleaved()
   return image;
 }
 
-
-struct heif_image *createImage_RGB_planar()
-{
-  struct heif_image *image;
-  struct heif_error err;
-  int w = 1024;
-  int h = 768;
-  err = heif_image_create(w, h, heif_colorspace_RGB,
-                          heif_chroma_444, &image);
-  if (err.code) {
-    return nullptr;
-  }
-
-  err = heif_image_add_plane(image, heif_channel_R, w, h, 8);
-  REQUIRE(err.code == heif_error_Ok);
-  err = heif_image_add_plane(image, heif_channel_G, w, h, 8);
-  REQUIRE(err.code == heif_error_Ok);
-  err = heif_image_add_plane(image, heif_channel_B, w, h, 8);
-  REQUIRE(err.code == heif_error_Ok);
-
-
-  int stride;
-  uint8_t *r = heif_image_get_plane(image, heif_channel_R, &stride);
-  uint8_t *g = heif_image_get_plane(image, heif_channel_G, &stride);
-  uint8_t *b = heif_image_get_plane(image, heif_channel_B, &stride);
-
-  int y = 0;
-  for (; y < h / 2; y++) {
-    int x = 0;
-    for (; x < w / 3; x++) {
-      r[y * stride + x] = 1;
-      g[y * stride + x] = 255;
-      b[y * stride + x] = 2;
-    }
-    for (; x < 2 * w / 3; x++) {
-      r[y * stride + x] = 4;
-      g[y * stride + x] = 5;
-      b[y * stride + x] = 255;
-    }
-    for (; x < w; x++) {
-      r[y * stride + x] = 255;
-      g[y * stride + x] = 6;
-      b[y * stride + x] = 7;
-    }
-  }
-  for (; y < h; y++) {
-    int x = 0;
-    for (; x < w / 3; x++) {
-      r[y * stride + x]= 8;
-      g[y * stride + x] = 9;
-      b[y * stride + x] = 255;
-    }
-    for (; x < 2 * w / 3; x++) {
-      r[y * stride + x] = 253;
-      g[y * stride + x] = 10;
-      b[y * stride + x] = 11;
-    }
-    for (; x < w; x++) {
-      r[y * stride + x] = 13;
-      g[y * stride + x] = 252;
-      b[y * stride + x] = 12;
-    }
-  }
-  if (err.code) {
-    heif_image_release(image);
-    return nullptr;
-  }
-
-  return image;
-}
-
-
 struct heif_image *createImage_RGBA_planar()
 {
   struct heif_image *image;
@@ -690,6 +618,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
     // TODO: make proper test for interleave to component translation
 
     // TODO: compare values
+    heif_image_release(decode_image);
     heif_image_handle_release(decode_image_handle);
     heif_context_free(decode_context);
   }

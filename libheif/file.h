@@ -24,6 +24,7 @@
 #include "avif.h"
 #include "box.h"
 #include "hevc.h"
+#include "vvc.h"
 #include "nclx.h"
 
 #include <map>
@@ -69,9 +70,13 @@ public:
 
   heif_item_id get_primary_image_ID() const { return m_pitm_box->get_item_ID(); }
 
+  size_t get_number_of_items() const { return m_infe_boxes.size(); }
+
   std::vector<heif_item_id> get_item_IDs() const;
 
   bool image_exists(heif_item_id ID) const;
+
+  bool has_item_with_id(heif_item_id ID) const;
 
   std::string get_item_type(heif_item_id ID) const;
 
@@ -81,16 +86,13 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
+  Error get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const;
 
-  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
-  {
-    auto iter = m_infe_boxes.find(imageID);
-    if (iter == m_infe_boxes.end()) {
-      return nullptr;
-    }
+  std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
-    return iter->second;
-  }
+  std::shared_ptr<const Box_infe> get_infe_box(heif_item_id imageID) const;
+
+  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID);
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
@@ -143,7 +145,26 @@ public:
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
+
   void add_av1C_property(heif_item_id id, const Box_av1C::configuration& config);
+
+  void add_vvcC_property(heif_item_id id);
+
+  Error append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+
+  Error append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
+
+  Error set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config);
+
+  void add_hvcC_property(heif_item_id id);
+
+  Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+
+  Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
+
+  Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
+
+  Error set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config);
 
   std::shared_ptr<Box_j2kH> add_j2kH_property(heif_item_id id);
 
@@ -157,7 +178,19 @@ public:
 
   void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0);
 
-  heif_property_id add_property(heif_item_id id, std::shared_ptr<Box> property, bool essential);
+  heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
+
+  Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
+
+  Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
+
+  Result<heif_item_id> add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size);
+
+  Result<heif_item_id> add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size);
+
+  Error set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression);
+
+  Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 
@@ -211,13 +244,11 @@ private:
   Error parse_heif_file(BitstreamRange& bitstream);
 
   Error check_for_ref_cycle(heif_item_id ID,
-                            std::shared_ptr<Box_iref>& iref_box) const;
+                            const std::shared_ptr<Box_iref>& iref_box) const;
 
   Error check_for_ref_cycle_recursion(heif_item_id ID,
-                                      std::shared_ptr<Box_iref>& iref_box,
+                                      const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
-
-  std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
 
   int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
 };

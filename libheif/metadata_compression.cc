@@ -26,7 +26,7 @@
 #include <zlib.h>
 #include <cstring>
 
-std::vector<uint8_t> deflate(const uint8_t* input, int size)
+std::vector<uint8_t> deflate(const uint8_t* input, size_t size)
 {
   std::vector<uint8_t> output;
 
@@ -38,7 +38,7 @@ std::vector<uint8_t> deflate(const uint8_t* input, int size)
   z_stream strm;
   memset(&strm, 0, sizeof(z_stream));
 
-  strm.avail_in = size;
+  strm.avail_in = (uInt)size;
   strm.next_in = (Bytef*)input;
 
   strm.avail_out = outBufferSize;

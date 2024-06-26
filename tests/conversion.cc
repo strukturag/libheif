@@ -615,6 +615,7 @@ static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channe
 
 static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, const std::vector<uint8_t>& pixels)
 {
+  INFO("channel: " << channel);
   int w = img->get_width(channel);
   int h = img->get_height(channel);
 
@@ -622,7 +623,9 @@ static void assert_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel chan
   uint8_t* p = img->get_plane(channel, &stride);
 
   for (int y = 0; y < h; y++) {
+    INFO("row: " << y);
     for (int x = 0; x < w; x++) {
+      INFO("column: " << x);
       REQUIRE((int)p[y * stride + x] == (int)pixels[y * w + x]);
     }
   }
@@ -664,4 +667,38 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
                    101, 88, 63, 50,
                    50, 38, 13, 0
                });
+}
+
+TEST_CASE("RGB 5-6-5 to RGB")
+{
+  heif_color_conversion_options options = {};
+
+  std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
+  const int width = 3;
+  const int height = 2;
+  img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
+  img->add_plane(heif_channel_R, width, height, 5);
+  REQUIRE(img->get_bits_per_pixel(heif_channel_R) == 5);
+  img->add_plane(heif_channel_G, width, height, 6);
+  REQUIRE(img->get_bits_per_pixel(heif_channel_G) == 6);
+  img->add_plane(heif_channel_B, width, height, 5);
+  REQUIRE(img->get_bits_per_pixel(heif_channel_B) == 5);
+
+  uint8_t v = 1;
+  for (heif_channel plane: {heif_channel_R, heif_channel_G, heif_channel_B}) {
+    int dst_stride = 0;
+    uint8_t *dst = img->get_plane(plane, &dst_stride);
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        dst[y * dst_stride + x] = v;
+        v += 1;
+      }
+    }
+  }
+
+  std::shared_ptr<HeifPixelImage> out = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options);
+
+  assert_plane(out, heif_channel_R, {8, 16, 24, 33, 41, 49});
+  assert_plane(out, heif_channel_G, {28, 32, 36, 40, 44, 48});
+  assert_plane(out, heif_channel_B, {107, 115, 123, 132, 140, 148});
 }

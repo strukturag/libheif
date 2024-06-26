@@ -18,6 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
 #include "hdr_sdr.h"
 
 
@@ -80,7 +81,7 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       int output_bits = target_state.bits_per_pixel;
 
       int shift1 = output_bits - input_bits;
-      int shift2 = 8 - shift1;
+      int shift2 = 2 * input_bits - output_bits;
 
       const uint8_t* p_in;
       int stride_in;
@@ -182,8 +183,49 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) (in >> shift); // TODO: I think no rounding here, but am not sure.
           }
-      }
-      else {
+      } else if (input_bits < 8) {
+        int width = input->get_width(channel);
+        int height = input->get_height(channel);
+        if (!outimg->add_plane(channel, width, height, 8)) {
+          return nullptr;
+        }
+
+        // We also want to support converting inputs with < 4 bits per pixel covering the whole output range.
+        // E.g. a 1-bit input should map to the output 0x00 / 0xFF.
+        // We do so by constructing a fixed-point multiplication factor that effectively shifts and combines the input to
+        // a string of bits that completely fills the output.
+        //
+        // Example: input 3 bit.
+        // Factor (binary): 00100100|10010010
+        // Input copies:    AAABBBCC|CDDDEEE0
+        //                  \      /
+        //                   output
+
+        assert(input_bits > 0 && input_bits < 8);
+        uint16_t bit = static_cast<uint16_t>(1 << (16 - input_bits));
+        uint16_t mulFactor = bit;
+
+        for (;;) {
+          bit >>= input_bits;
+          if (!bit) {
+            break;
+          }
+
+          mulFactor |= bit;
+        }
+
+        int stride_in;
+        const uint8_t* p_in = input->get_plane(channel, &stride_in);
+
+        int stride_out;
+        uint8_t* p_out = outimg->get_plane(channel, &stride_out);
+
+        for (int y = 0; y < height; y++)
+          for (int x = 0; x < width; x++) {
+            int in = p_in[y * stride_in + x];
+            p_out[y * stride_out + x] = (uint8_t) ((in * mulFactor) >> 8);
+          }
+      } else {
         outimg->copy_new_plane_from(input, channel, channel);
       }
     }

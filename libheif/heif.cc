@@ -46,6 +46,7 @@
 #include <utility>
 #include <vector>
 #include <cstring>
+#include <array>
 
 #ifdef _WIN32
 // for _write
@@ -142,6 +143,48 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
   }
 
   return heif_filetype_maybe;
+}
+
+
+heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
+{
+  // Get compatible brands first, because that does validity checks
+  heif_brand2* compatible_brands = nullptr;
+  int nBrands = 0;
+  struct heif_error err = heif_list_compatible_brands(data, len, &compatible_brands, &nBrands);
+  if (err.code) {
+    return err;
+  }
+
+  heif_brand2 main_brand = heif_read_main_brand(data, len);
+
+  std::set<heif_brand2> supported_brands{
+      heif_brand2_avif,
+      heif_brand2_heic,
+      heif_brand2_heix,
+      heif_brand2_j2ki,
+      heif_brand2_jpeg,
+      heif_brand2_miaf,
+      heif_brand2_mif1,
+      heif_brand2_mif2
+  };
+
+  auto it = supported_brands.find(main_brand);
+  if (it != supported_brands.end()) {
+    heif_free_list_of_compatible_brands(compatible_brands);
+    return heif_error_ok;
+  }
+
+  for (int i = 0; i < nBrands; i++) {
+    heif_brand2 compatible_brand = compatible_brands[i];
+    it = supported_brands.find(compatible_brand);
+    if (it != supported_brands.end()) {
+      heif_free_list_of_compatible_brands(compatible_brands);
+      return heif_error_ok;
+    }
+  }
+  heif_free_list_of_compatible_brands(compatible_brands);
+  return {heif_error_Invalid_input, heif_suberror_Unsupported_image_type, "No supported brands found."};;
 }
 
 
@@ -316,7 +359,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
 
   auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
   if (!ftyp) {
-    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is no ftyp box"};
+    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is not a ftyp box"};
   }
 
   auto brands = ftyp->list_brands();
@@ -1852,6 +1895,97 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
   color_profile_nclx::free_nclx_color_profile(nclx_profile);
 }
 
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_intrinsic_matrix();
+}
+
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_intrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_intrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto m = handle->image->get_intrinsic_matrix();
+  out_matrix->focal_length_x = m.focal_length_x;
+  out_matrix->focal_length_y = m.focal_length_y;
+  out_matrix->principal_point_x = m.principal_point_x;
+  out_matrix->principal_point_y = m.principal_point_y;
+  out_matrix->skew = m.skew;
+
+  return heif_error_success;
+}
+
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_extrinsic_matrix();
+}
+
+struct heif_camera_extrinsic_matrix
+{
+  Box_cmex::ExtrinsicMatrix matrix;
+};
+
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_extrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_extrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = new heif_camera_extrinsic_matrix;
+  (*out_matrix)->matrix = handle->image->get_extrinsic_matrix();
+
+  return heif_error_success;
+}
+
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+                                                      double* out_matrix_row_major)
+{
+  if (matrix == nullptr || out_matrix_row_major == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  auto m3x3 = matrix->matrix.calculate_rotation_matrix();
+
+  for (int i=0;i<9;i++) {
+    out_matrix_row_major[i] = m3x3[i];
+  }
+
+  return heif_error_success;
+}
+
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
@@ -1957,6 +2091,13 @@ struct heif_error heif_context_write(struct heif_context* ctx,
 }
 
 
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand)
+{
+  ctx->context->get_heif_file()->get_ftyp_box()->add_compatible_brand(compatible_brand);
+}
+
+
 int heif_context_get_encoder_descriptors(struct heif_context* ctx,
                                          enum heif_compression_format format,
                                          const char* name,
@@ -2017,7 +2158,7 @@ int heif_get_decoder_descriptors(enum heif_compression_format format_filter,
   std::vector<decoder_with_priority> plugins;
   std::vector<heif_compression_format> formats;
   if (format_filter == heif_compression_undefined) {
-    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_VVC};
+    formats = {heif_compression_HEVC, heif_compression_AV1, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K, heif_compression_VVC};
   }
   else {
     formats.emplace_back(format_filter);
@@ -2707,6 +2848,76 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 }
 
 
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** tiles,
+                                           uint16_t columns,
+                                           uint16_t rows,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle)
+{
+  if (!encoder || !tiles) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+  else if (rows == 0 || columns == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
+  }
+
+  // TODO: Don't repeat this code from heif_context_encode_image()
+  heif_encoding_options options;
+  heif_color_profile_nclx nclx;
+  set_default_options(options);
+  if (input_options) {
+    copy_options(options, *input_options);
+
+    if (options.output_nclx_profile == nullptr) {
+      auto input_nclx = tiles[0]->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options.output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
+  }
+
+  // Convert heif_images to a vector of HeifPixelImages
+  std::vector<std::shared_ptr<HeifPixelImage>> pixel_tiles;
+  for (int i=0; i<rows*columns; i++) {
+    pixel_tiles.push_back(tiles[i]->image);
+  }
+
+  // Encode Grid
+  Error error;
+  std::shared_ptr<HeifContext::Image> out_grid;
+  error = ctx->context->encode_grid(pixel_tiles,
+                                    rows, columns,
+                                    encoder,
+                                    options,
+                                    out_grid);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  // Mark as primary image
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(out_grid);
+  }
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = out_grid;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image_handle* master_image,
                                                 const struct heif_image_handle* thumbnail_image)
@@ -2822,7 +3033,24 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const char* item_type, const char* content_type)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   item_type, content_type, heif_metadata_compression_off);
+                                                   item_type, content_type, nullptr, heif_metadata_compression_off, nullptr);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+  else {
+    return heif_error_success;
+  }
+}
+
+
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                        const struct heif_image_handle* image_handle,
+                                                        const void* data, int size,
+                                                        const char* item_uri_type,
+                                                        heif_item_id* out_item_id)
+{
+  Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
+                                                   "uri ", nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

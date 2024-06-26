@@ -144,7 +144,11 @@ public:
 
   uint16_t read16();
 
+  int16_t read16s();
+
   uint32_t read32();
+
+  int32_t read32s();
 
   std::string read_string();
 
@@ -281,7 +285,11 @@ public:
 
   void write16(uint16_t);
 
+  void write16s(int16_t);
+
   void write32(uint32_t);
+
+  void write32s(int32_t);
 
   void write64(uint64_t);
 

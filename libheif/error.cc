@@ -102,6 +102,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No 'hdlr' box";
     case heif_suberror_No_hvcC_box:
       return "No 'hvcC' box";
+    case heif_suberror_No_vvcC_box:
+      return "No 'vvcC' box";
     case heif_suberror_No_av1C_box:
       return "No 'av1C' box";
     case heif_suberror_No_pitm_box:
@@ -158,6 +160,14 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unknown NCLX matrix coefficients";
     case heif_suberror_Invalid_region_data:
       return "Invalid region item data";
+    case heif_suberror_No_ispe_property:
+      return "No ispe property";
+    case heif_suberror_Camera_intrinsic_matrix_undefined:
+      return "Camera intrinsic matrix undefined";
+    case heif_suberror_Camera_extrinsic_matrix_undefined:
+      return "Camera extrinsic matrix undefined";
+    case heif_suberror_Invalid_J2K_codestream:
+      return "Invalid JPEG 2000 codestream";
 
 
       // --- Memory_allocation_error ---
@@ -227,6 +237,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Trying to remove a plugin that is not loaded";
     case heif_suberror_Cannot_read_plugin_directory:
       return "Error while scanning the directory for plugins";
+    case heif_suberror_No_matching_decoder_installed:
+      return "No decoding plugin installed for this compression format";
   }
 
   assert(false);

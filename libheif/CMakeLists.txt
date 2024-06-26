@@ -8,6 +8,7 @@ set(libheif_headers
         heif_plugin.h
         heif_properties.h
         heif_regions.h
+        heif_items.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
@@ -37,6 +38,7 @@ set(libheif_sources
         init.cc init.h
         nclx.h
         logging.h
+        logging.cc
         mask_image.cc
         mask_image.h
         metadata_compression.cc
@@ -49,6 +51,10 @@ set(libheif_sources
         heif_regions.cc
         heif_properties.h
         heif_properties.cc
+        heif_items.h
+        heif_items.cc
+        heif_experimental.h
+        heif_experimental.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc
@@ -73,6 +79,8 @@ set(libheif_sources
         jpeg2000.cc
         vvc.h
         vvc.cc
+        avc.h
+        avc.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})
@@ -146,6 +154,8 @@ endif ()
 if (WITH_UNCOMPRESSED_CODEC)
     target_compile_definitions(heif PUBLIC WITH_UNCOMPRESSED_CODEC=1)
     target_sources(heif PRIVATE
+            uncompressed_box.h
+            uncompressed_box.cc
             uncompressed_image.h
             uncompressed_image.cc)
 endif ()

@@ -55,6 +55,7 @@ const (
 	CompressionEVC          = C.heif_compression_EVC
 	CompressionUncompressed = C.heif_compression_uncompressed
 	CompressionMask         = C.heif_compression_mask
+	CompressionHTJ2K        = C.heif_compression_HTJ2K
 )
 
 type Chroma C.enum_heif_chroma
@@ -307,6 +308,8 @@ const (
 	SuberrorUnknownNCLXTransferCharacteristics = C.heif_suberror_Unknown_NCLX_transfer_characteristics
 
 	SuberrorUnknownNCLXMatrixCoefficients = C.heif_suberror_Unknown_NCLX_matrix_coefficients
+
+	SuberrorInvalidJPEG2000Codestream = C.heif_suberror_Invalid_J2K_codestream
 
 	// --- Unsupported_feature ---
 

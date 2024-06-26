@@ -134,10 +134,9 @@ public:
 
     // -- thumbnails
 
-    void set_is_thumbnail_of(heif_item_id id)
+    void set_is_thumbnail()
     {
       m_is_thumbnail = true;
-      m_thumbnail_ref_id = id;
     }
 
     void add_thumbnail(const std::shared_ptr<Image>& img) { m_thumbnails.push_back(img); }
@@ -149,11 +148,9 @@ public:
 
     // --- alpha channel
 
-    void set_is_alpha_channel_of(heif_item_id id, bool consumed)
+    void set_is_alpha_channel()
     {
       m_is_alpha_channel = true;
-      m_alpha_channel_ref_id = id;
-      m_implicitly_consumed_alpha = consumed;
     }
 
     void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel = std::move(img); }
@@ -169,10 +166,9 @@ public:
 
     // --- depth channel
 
-    void set_is_depth_channel_of(heif_item_id id)
+    void set_is_depth_channel()
     {
       m_is_depth_channel = true;
-      m_depth_channel_ref_id = id;
     }
 
     void set_depth_channel(std::shared_ptr<Image> img) { m_depth_channel = std::move(img); }
@@ -201,10 +197,9 @@ public:
 
     // --- generic aux image
 
-    void set_is_aux_image_of(heif_item_id id, const std::string& aux_type)
+    void set_is_aux_image(const std::string& aux_type)
     {
       m_is_aux_image = true;
-      m_aux_image_ref_id = id;
       m_aux_image_type = aux_type;
     }
 
@@ -222,8 +217,7 @@ public:
       else {
         std::vector<std::shared_ptr<Image>> auxImgs;
         for (const auto& aux : m_aux_images) {
-          if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA) &&
-              aux->is_alpha_channel() && aux->m_implicitly_consumed_alpha) {
+          if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA) && aux->is_alpha_channel()) {
             continue;
           }
 
@@ -278,6 +272,30 @@ public:
       }
     };
 
+    void set_intrinsic_matrix(const Box_cmin::RelativeIntrinsicMatrix& cmin) {
+      m_has_intrinsic_matrix = true;
+      m_intrinsic_matrix = cmin.to_absolute(get_ispe_width(), get_ispe_height());
+    }
+
+    bool has_intrinsic_matrix() const { return m_has_intrinsic_matrix; }
+
+    Box_cmin::AbsoluteIntrinsicMatrix& get_intrinsic_matrix() { return m_intrinsic_matrix; }
+
+    const Box_cmin::AbsoluteIntrinsicMatrix& get_intrinsic_matrix() const { return m_intrinsic_matrix; }
+
+
+    void set_extrinsic_matrix(const Box_cmex::ExtrinsicMatrix& cmex) {
+      m_has_extrinsic_matrix = true;
+      m_extrinsic_matrix = cmex;
+    }
+
+    bool has_extrinsic_matrix() const { return m_has_extrinsic_matrix; }
+
+    Box_cmex::ExtrinsicMatrix& get_extrinsic_matrix() { return m_extrinsic_matrix; }
+
+    const Box_cmex::ExtrinsicMatrix& get_extrinsic_matrix() const { return m_extrinsic_matrix; }
+
+
     void add_region_item_id(heif_item_id id) { m_region_item_ids.push_back(id); }
 
     const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
@@ -290,24 +308,19 @@ public:
     bool m_is_primary = false;
 
     bool m_is_thumbnail = false;
-    heif_item_id m_thumbnail_ref_id = 0;
 
     std::vector<std::shared_ptr<Image>> m_thumbnails;
 
     bool m_is_alpha_channel = false;
     bool m_premultiplied_alpha = false;
-    bool m_implicitly_consumed_alpha = false; // alpha data was integrated into main color image
-    heif_item_id m_alpha_channel_ref_id = 0;
     std::shared_ptr<Image> m_alpha_channel;
 
     bool m_is_depth_channel = false;
-    heif_item_id m_depth_channel_ref_id = 0;
     std::shared_ptr<Image> m_depth_channel;
 
     bool m_has_depth_representation_info = false;
     struct heif_depth_representation_info m_depth_representation_info;
 
-    heif_item_id m_aux_image_ref_id = 0;
     bool m_is_aux_image = false;
     std::string m_aux_image_type;
     std::vector<std::shared_ptr<Image>> m_aux_images;
@@ -320,6 +333,12 @@ public:
     bool m_miaf_compatible = true;
 
     std::vector<heif_item_id> m_region_item_ids;
+
+    bool m_has_intrinsic_matrix = false;
+    Box_cmin::AbsoluteIntrinsicMatrix m_intrinsic_matrix{};
+
+    bool m_has_extrinsic_matrix = false;
+    Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
   };
 
   std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }
@@ -390,7 +409,20 @@ public:
                      enum heif_image_input_class input_class,
                      std::shared_ptr<Image>& out_image);
 
+  Error encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
+                    uint16_t rows,
+                    uint16_t columns,
+                    struct heif_encoder* encoder,
+                    const struct heif_encoding_options& options,
+                    std::shared_ptr<Image>& out_image);
+
   Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
+                             struct heif_encoder* encoder,
+                             const struct heif_encoding_options& options,
+                             enum heif_image_input_class input_class,
+                             std::shared_ptr<Image>& out_image);
+
+  Error encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
@@ -449,8 +481,8 @@ public:
   Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, heif_metadata_compression compression);
 
   Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
-                             const char* item_type, const char* content_type,
-                             heif_metadata_compression compression);
+                             const char* item_type, const char* content_type, const char* item_uri_type,
+                             heif_metadata_compression compression, heif_item_id* out_item_id);
 
   heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);
 
