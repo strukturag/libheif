@@ -23,6 +23,7 @@
 #include <string>
 #include <cassert>
 #include <iomanip>
+#include <utility>
 
 Error Box_vvcC::parse(BitstreamRange& range)
 {

@@ -28,6 +28,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 
 int heif_item_get_properties_of_type(const struct heif_context* context,

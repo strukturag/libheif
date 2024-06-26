@@ -19,7 +19,6 @@
  */
 
 #include "avc.h"
-#include <cassert>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
