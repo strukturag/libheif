@@ -76,22 +76,7 @@ protected:
 class Box_uncC : public FullBox
 {
 public:
-  Box_uncC() :
-    m_profile(0),
-    m_sampling_type(sampling_mode_no_subsampling),
-    m_interleave_type(interleave_mode_pixel),
-    m_block_size(0),
-    m_components_little_endian(false),
-    m_block_pad_lsb(false),
-    m_block_little_endian(false),
-    m_block_reversed(false),
-    m_pad_unknown(false),
-    m_pixel_size(0),
-    m_row_align_size(0),
-    m_tile_align_size(0),
-    m_num_tile_cols(1),
-    m_num_tile_rows(1)
-  {
+  Box_uncC() {
     set_short_type(fourcc("uncC"));
   }
 
@@ -220,19 +205,19 @@ protected:
   uint32_t m_profile = 0; // not compliant to any profile
 
   std::vector<Component> m_components;
-  uint8_t m_sampling_type = 0; // no subsampling
-  uint8_t m_interleave_type = 0; // component interleaving
+  uint8_t m_sampling_type = sampling_mode_no_subsampling; // no subsampling
+  uint8_t m_interleave_type = interleave_mode_pixel; // component interleaving
   uint8_t m_block_size = 0;
-  bool m_components_little_endian = true;
+  bool m_components_little_endian = false;
   bool m_block_pad_lsb = false;
-  bool m_block_little_endian = true;
+  bool m_block_little_endian = false;
   bool m_block_reversed = false;
-  bool m_pad_unknown = true;
+  bool m_pad_unknown = false;
   uint32_t m_pixel_size = 0;
   uint32_t m_row_align_size = 0;
   uint32_t m_tile_align_size = 0;
-  uint32_t m_num_tile_cols = 0;
-  uint32_t m_num_tile_rows = 0;
+  uint32_t m_num_tile_cols = 1;
+  uint32_t m_num_tile_rows = 1;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H
