@@ -90,15 +90,9 @@ public:
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
-  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
-  {
-    auto iter = m_infe_boxes.find(imageID);
-    if (iter == m_infe_boxes.end()) {
-      return nullptr;
-    }
+  std::shared_ptr<const Box_infe> get_infe_box(heif_item_id imageID) const;
 
-    return iter->second;
-  }
+  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID);
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
@@ -255,8 +249,6 @@ private:
   Error check_for_ref_cycle_recursion(heif_item_id ID,
                                       const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
-
-  std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
 
   int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
 };

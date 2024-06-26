@@ -70,6 +70,19 @@ uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id
   }
 }
 
+
+int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id)
+{
+  auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
+  if (infe == nullptr) {
+    return true;
+  }
+  else {
+    return infe->is_hidden_item();
+  }
+}
+
+
 const char* heif_context_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);

@@ -71,6 +71,28 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
 }
 
 
+std::shared_ptr<const Box_infe> HeifFile::get_infe_box(heif_item_id ID) const
+{
+  auto iter = m_infe_boxes.find(ID);
+  if (iter == m_infe_boxes.end()) {
+    return nullptr;
+  }
+
+  return iter->second;
+}
+
+
+std::shared_ptr<Box_infe> HeifFile::get_infe_box(heif_item_id ID)
+{
+  auto iter = m_infe_boxes.find(ID);
+  if (iter == m_infe_boxes.end()) {
+    return nullptr;
+  }
+
+  return iter->second;
+}
+
+
 Error HeifFile::read_from_file(const char* input_filename)
 {
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
@@ -435,29 +457,16 @@ bool HeifFile::image_exists(heif_item_id ID) const
 }
 
 
-std::shared_ptr<Box_infe> HeifFile::get_infe(heif_item_id ID) const
-{
-  // --- get the image from the list of all images
-
-  auto image_iter = m_infe_boxes.find(ID);
-  if (image_iter == m_infe_boxes.end()) {
-    return nullptr;
-  }
-
-  return image_iter->second;
-}
-
-
 bool HeifFile::has_item_with_id(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   return infe_box != nullptr;
 }
 
 
 std::string HeifFile::get_item_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -468,7 +477,7 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
 
 std::string HeifFile::get_content_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -478,7 +487,7 @@ std::string HeifFile::get_content_type(heif_item_id ID) const
 
 std::string HeifFile::get_item_uri_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -743,7 +752,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                  heif_suberror_Nonexisting_item_referenced);
   }
 
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Nonexisting_item_referenced);
@@ -984,7 +993,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 {
   Error error;
 
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return {heif_error_Usage_error,
             heif_suberror_Nonexisting_item_referenced};

@@ -73,6 +73,9 @@ uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id
 #define heif_item_type_mime   heif_fourcc('m','i','m','e')
 #define heif_item_type_uri    heif_fourcc('u','r','i',' ')
 
+LIBHEIF_API
+int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id);
+
 
 /**
  * Gets the MIME content_type for an item.
