@@ -468,7 +468,7 @@ protected:
       return dst_row_number * dst_plane_stride;
     }
 
-    heif_channel channel;
+    heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane;
     uint8_t* other_chroma_dst_plane;
     int dst_plane_stride;

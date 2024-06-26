@@ -215,22 +215,22 @@ public:
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint32_t m_profile;
+  uint32_t m_profile = 0; // not compliant to any profile
 
   std::vector<Component> m_components;
-  uint8_t m_sampling_type;
-  uint8_t m_interleave_type;
-  uint8_t m_block_size;
-  bool m_components_little_endian;
-  bool m_block_pad_lsb;
-  bool m_block_little_endian;
-  bool m_block_reversed;
-  bool m_pad_unknown;
-  uint32_t m_pixel_size;
-  uint32_t m_row_align_size;
-  uint32_t m_tile_align_size;
-  uint32_t m_num_tile_cols;
-  uint32_t m_num_tile_rows;
+  uint8_t m_sampling_type = 0; // no subsampling
+  uint8_t m_interleave_type = 0; // component interleaving
+  uint8_t m_block_size = 0;
+  bool m_components_little_endian = true;
+  bool m_block_pad_lsb = false;
+  bool m_block_little_endian = true;
+  bool m_block_reversed = false;
+  bool m_pad_unknown = true;
+  uint32_t m_pixel_size = 0;
+  uint32_t m_row_align_size = 0;
+  uint32_t m_tile_align_size = 0;
+  uint32_t m_num_tile_cols = 0;
+  uint32_t m_num_tile_rows = 0;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H
