@@ -156,7 +156,7 @@ Error Box_vvcC::write(StreamWriter& writer) const
   }
 
   if (c.bit_depth_present_flag) {
-    v |= 0x10 | ((c.bit_depth - 8) << 1);
+    v |= (uint8_t)(0x10 | ((c.bit_depth - 8) << 1));
   }
   else {
     v |= 0x0e;
@@ -169,15 +169,28 @@ Error Box_vvcC::write(StreamWriter& writer) const
     // TODO: error
   }
 
-  writer.write8((int)m_nal_array.size());
+  if (m_nal_array.size() > 255) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "Too many VVC NAL arrays."};
+  }
+
+  writer.write8((uint8_t)m_nal_array.size());
   for (const NalArray& nal_array : m_nal_array) {
     uint8_t v2 = (nal_array.m_array_completeness ? 0x80 : 0);
     v2 |= nal_array.m_NAL_unit_type;
     writer.write8(v2);
 
-    writer.write16(nal_array.m_nal_units.size());
+    if (nal_array.m_nal_units.size() > 0xFFFF) {
+      return {heif_error_Encoding_error, heif_suberror_Unspecified, "Too many VVC NAL units."};
+    }
+
+    writer.write16((uint16_t)nal_array.m_nal_units.size());
     for (const auto& nal : nal_array.m_nal_units) {
-      writer.write16(nal.size());
+
+      if (nal.size() > 0xFFFF) {
+        return {heif_error_Encoding_error, heif_suberror_Unspecified, "VVC NAL too large."};
+      }
+
+      writer.write16((uint16_t)nal.size());
       writer.write(nal);
     }
   }
@@ -282,8 +295,8 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
   // skip VPS ID
   reader.skip_bits(4);
 
-  config->numTemporalLayers = reader.get_bits(3) + 1;
-  config->chroma_format_idc = reader.get_bits(2);
+  config->numTemporalLayers = (uint8_t)(reader.get_bits(3) + 1);
+  config->chroma_format_idc = (uint8_t)(reader.get_bits(2));
   config->chroma_format_present_flag = true;
   reader.skip_bits(2);
 
@@ -363,7 +376,11 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
   success = reader.get_uvlc(&bitDepth_minus8);
   (void)success;
 
-  config->bit_depth = bitDepth_minus8 + 8;
+  if (bitDepth_minus8 > 0xFF - 8) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "VCC bit depth out of range."};
+  }
+
+  config->bit_depth = (uint8_t)(bitDepth_minus8 + 8);
   config->bit_depth_present_flag = true;
 
   return Error::Ok;
