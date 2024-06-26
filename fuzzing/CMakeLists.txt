@@ -1,4 +1,4 @@
-include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
+include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api)
 
 
 add_executable(box_fuzzer box_fuzzer.cc)

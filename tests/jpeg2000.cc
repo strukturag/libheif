@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "heif.h"
+#include "libheif/heif.h"
 #include "jpeg2000.h"
 #include <cstdint>
 #include <iostream>
