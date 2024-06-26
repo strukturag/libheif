@@ -229,6 +229,18 @@ enum heif_suberror_code
   // Invalid specification of region item
   heif_suberror_Invalid_region_data = 136,
 
+  // Image has no ispe property
+  heif_suberror_No_ispe_property = 137,
+
+  heif_suberror_Camera_intrinsic_matrix_undefined = 138,
+
+  heif_suberror_Camera_extrinsic_matrix_undefined = 139,
+
+  // Invalid JPEG 2000 codestream - usually a missing marker
+  heif_suberror_Invalid_J2K_codestream = 140,
+
+  heif_suberror_No_vvcC_box = 141,
+
 
   // --- Memory_allocation_error ---
 
@@ -304,9 +316,10 @@ enum heif_suberror_code
 
   // --- Plugin loading error ---
 
-  heif_suberror_Plugin_loading_error = 6000,        // a specific plugin file cannot be loaded
-  heif_suberror_Plugin_is_not_loaded = 6001,        // trying to remove a plugin that is not loaded
-  heif_suberror_Cannot_read_plugin_directory = 6002 // error while scanning the directory for plugins
+  heif_suberror_Plugin_loading_error = 6000,         // a specific plugin file cannot be loaded
+  heif_suberror_Plugin_is_not_loaded = 6001,         // trying to remove a plugin that is not loaded
+  heif_suberror_Cannot_read_plugin_directory = 6002, // error while scanning the directory for plugins
+  heif_suberror_No_matching_decoder_installed = 6003 // no decoder found for that compression format
 };
 
 
@@ -408,7 +421,14 @@ enum heif_compression_format
    *
    * See ISO/IEC 23008-12:2022 Section 6.10.2
    */
-  heif_compression_mask = 9
+  heif_compression_mask = 9,
+  /**
+   * High Throughput JPEG 2000 (HT-J2K) compression.
+   *
+   * The encapsulation of HT-J2K is specified in ISO/IEC 15444-16:2021.
+   * The core encoding is defined in ISO/IEC 15444-15, or ITU-T T.814.
+  */
+  heif_compression_HTJ2K = 10
 };
 
 enum heif_chroma
@@ -563,6 +583,18 @@ enum heif_filetype_result
 // input data should be at least 12 bytes
 LIBHEIF_API
 enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
+
+/**
+ * Check the filetype box content for a supported file type.
+ *
+ * <p>The data is assumed to start from the start of the `ftyp` box.
+ *
+ * <p>This function checks the compatible brands.
+ * 
+ * @returns heif_error_ok if a supported brand is found, or other error if not.
+ */
+LIBHEIF_API
+struct heif_error heif_has_compatible_filetype(const uint8_t* data, int len);
 
 LIBHEIF_API
 int heif_check_jpeg_filetype(const uint8_t* data, int len);
@@ -1368,6 +1400,44 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
                                                     struct heif_color_profile_nclx** out_data);
 
 
+// ------------------------- intrinsic and extrinsic matrices -------------------------
+
+struct heif_camera_intrinsic_matrix
+{
+  double focal_length_x;
+  double focal_length_y;
+  double principal_point_x;
+  double principal_point_y;
+  double skew;
+};
+
+
+LIBHEIF_API
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix);
+
+
+struct heif_camera_extrinsic_matrix;
+
+LIBHEIF_API
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix);
+
+LIBHEIF_API
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix*);
+
+LIBHEIF_API
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix*,
+                                                                   double* out_matrix_row_major);
+
+
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
@@ -1711,6 +1781,10 @@ struct heif_error heif_context_write(struct heif_context*,
                                      struct heif_writer* writer,
                                      void* userdata);
 
+// Add a compatible brand that is now added automatically by libheif when encoding images (e.g. some application brands like 'geo1').
+LIBHEIF_API
+void heif_context_add_compatible_brand(struct heif_context* ctx,
+                                       heif_brand2 compatible_brand);
 
 // ----- encoder -----
 
@@ -2082,7 +2156,8 @@ enum heif_metadata_compression
 {
   heif_metadata_compression_off,
   heif_metadata_compression_auto,
-  heif_metadata_compression_deflate
+  heif_metadata_compression_deflate,
+  heif_metadata_compression_unknown
 };
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
@@ -2119,6 +2194,15 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const struct heif_image_handle* image_handle,
                                                     const void* data, int size,
                                                     const char* item_type, const char* content_type);
+
+// Add generic metadata with item_type "uri ". Items with this type do not have a content_type, but
+// an item_uri_type and they have no content_encoding (they are always stored uncompressed).
+LIBHEIF_API
+struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx,
+                                                    const struct heif_image_handle* image_handle,
+                                                    const void* data, int size,
+                                                    const char* item_uri_type,
+                                                    heif_item_id* out_item_id);
 
 // --- heif_image allocation
 

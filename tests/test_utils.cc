@@ -25,6 +25,7 @@
 */
 
 #include "test_utils.h"
+#include "libheif/heif.h"
 #include "test-config.h"
 #include <cstring>
 #include "catch.hpp"
@@ -65,6 +66,24 @@ struct heif_image * get_primary_image(heif_image_handle * handle)
   return img;
 }
 
+struct heif_image * get_primary_image_mono(heif_image_handle * handle)
+{
+  struct heif_error err;
+  struct heif_image* img;
+  err = heif_decode_image(handle, &img, heif_colorspace_monochrome, heif_chroma_monochrome, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return img;
+}
+
+struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chroma chroma)
+{
+  struct heif_error err;
+  struct heif_image* img;
+  err = heif_decode_image(handle, &img, heif_colorspace_YCbCr, chroma, NULL);
+  REQUIRE(err.code == heif_error_Ok);
+  return img;
+}
+
 void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
 {
   struct heif_error err;
@@ -78,4 +97,74 @@ void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
   for (int y = 0; y < h; y++) {
     memset(p + y * stride, 128, w);
   }
+}
+
+struct heif_image * createImage_RGB_planar()
+{
+  struct heif_image *image;
+  struct heif_error err;
+  int w = 1024;
+  int h = 768;
+  err = heif_image_create(w, h, heif_colorspace_RGB,
+                          heif_chroma_444, &image);
+  if (err.code) {
+    return nullptr;
+  }
+
+  err = heif_image_add_plane(image, heif_channel_R, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_G, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+  err = heif_image_add_plane(image, heif_channel_B, w, h, 8);
+  REQUIRE(err.code == heif_error_Ok);
+
+
+  int stride;
+  uint8_t *r = heif_image_get_plane(image, heif_channel_R, &stride);
+  uint8_t *g = heif_image_get_plane(image, heif_channel_G, &stride);
+  uint8_t *b = heif_image_get_plane(image, heif_channel_B, &stride);
+
+  int y = 0;
+  for (; y < h / 2; y++) {
+    int x = 0;
+    for (; x < w / 3; x++) {
+      r[y * stride + x] = 1;
+      g[y * stride + x] = 255;
+      b[y * stride + x] = 2;
+    }
+    for (; x < 2 * w / 3; x++) {
+      r[y * stride + x] = 4;
+      g[y * stride + x] = 5;
+      b[y * stride + x] = 255;
+    }
+    for (; x < w; x++) {
+      r[y * stride + x] = 255;
+      g[y * stride + x] = 6;
+      b[y * stride + x] = 7;
+    }
+  }
+  for (; y < h; y++) {
+    int x = 0;
+    for (; x < w / 3; x++) {
+      r[y * stride + x]= 8;
+      g[y * stride + x] = 9;
+      b[y * stride + x] = 255;
+    }
+    for (; x < 2 * w / 3; x++) {
+      r[y * stride + x] = 253;
+      g[y * stride + x] = 10;
+      b[y * stride + x] = 11;
+    }
+    for (; x < w; x++) {
+      r[y * stride + x] = 13;
+      g[y * stride + x] = 252;
+      b[y * stride + x] = 12;
+    }
+  }
+  if (err.code) {
+    heif_image_release(image);
+    return nullptr;
+  }
+
+  return image;
 }

@@ -38,6 +38,10 @@
 #include "libheif/plugins/encoder_kvazaar.h"
 #endif
 
+#if HAVE_UVG266
+#include "libheif/plugins/encoder_uvg266.h"
+#endif
+
 #if HAVE_AOM_ENCODER
 #include "libheif/plugins/encoder_aom.h"
 #endif
@@ -83,6 +87,10 @@
 #endif
 
 #include "libheif/plugins/encoder_mask.h"
+
+#if HAVE_OPENJPH_ENCODER
+#include "libheif/plugins/encoder_openjph.h"
+#endif
 
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
@@ -131,6 +139,10 @@ void register_default_plugins()
   register_encoder(get_encoder_plugin_kvazaar());
 #endif
 
+#if HAVE_UVG266
+  register_encoder(get_encoder_plugin_uvg266());
+#endif
+
 #if HAVE_AOM_ENCODER
   register_encoder(get_encoder_plugin_aom());
 #endif
@@ -169,6 +181,10 @@ void register_default_plugins()
 
 #if HAVE_OPENJPEG_DECODER
   register_decoder(get_decoder_plugin_openjpeg());
+#endif
+
+#if HAVE_OPENJPH_ENCODER
+  register_encoder(get_encoder_plugin_openjph());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

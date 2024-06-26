@@ -340,26 +340,179 @@ public:
 
 struct JPEG2000_SIZ_segment
 {
-  int x0 = 0, y0 = 0;
-  int width = 0, height = 0;
+    /**
+     * Decoder capabilities bitmap (Rsiz).
+     */
+    uint16_t decoder_capabilities = 0;
+    /**
+     * Width of the reference grid (Xsiz).
+     */
+    uint32_t reference_grid_width = 0;
+    /**
+     * Height of the reference grid (Ysiz).
+     */
+    uint32_t reference_grid_height = 0;
+    /**
+     * Horizontal offset from reference grid origin to image left side (XOsiz).
+     */
+    uint32_t image_horizontal_offset = 0;
+    /**
+     * Vertical offset from reference grid origin to image top size (YOsiz).
+     */
+    uint32_t image_vertical_offset = 0;
+    /**
+     * Width of one reference tile with respect to the reference grid (XTsiz).
+     */
+    uint32_t tile_width = 0;
+    /**
+     * Height of one reference tile with respect to the reference grid (YTsiz).
+     */
+    uint32_t tile_height = 0;
+    /**
+     * Horizontal offset from the origin of the reference grid to left side of first tile (XTOsiz).
+     */
+    uint32_t tile_offset_x = 0;
+    /**
+     * Vertical offset from the origin of the reference grid to top side of first tile (YTOsiz).
+     */
+    uint32_t tile_offset_y = 0;
 
-  int tile_x0 = 0, tile_y0 = 0;
-  int tile_width = 0, tile_height = 0;
+    struct component
+    {
+        uint8_t h_separation, v_separation;
+        uint8_t precision;
+        bool is_signed;
+    };
 
-  int decoder_capabilities = 0;
-
-  struct component
-  {
-    uint8_t h_separation, v_separation;
-    uint8_t precision;
-    bool is_signed;
-  };
-
-  std::vector<component> components;
-
-  heif_chroma get_chroma_format() const;
+    std::vector<component> components;
 };
 
-JPEG2000_SIZ_segment jpeg2000_get_SIZ_segment(const HeifFile& file, heif_item_id imageID);
+class JPEG2000_Extension_Capability {
+public:
+    JPEG2000_Extension_Capability(const uint8_t i) : ident(i) {}
+
+    uint8_t getIdent() const {
+        return ident;
+    }
+
+    uint16_t getValue() const {
+        return value;
+    }
+
+    void setValue(uint16_t val) {
+        value = val;
+    }
+
+private:
+    const uint8_t ident;
+    uint16_t value;
+};
+
+class JPEG2000_Extension_Capability_HT : public JPEG2000_Extension_Capability
+{
+public:
+    static const int IDENT = 15;
+    JPEG2000_Extension_Capability_HT(): JPEG2000_Extension_Capability(IDENT)
+    {};
+};
+
+class JPEG2000_CAP_segment
+{
+public:
+    void push_back(JPEG2000_Extension_Capability ccap) {
+        extensions.push_back(ccap);
+    }
+    bool hasHighThroughputExtension() const {
+        for (auto &extension : extensions) {
+            if (extension.getIdent() == 15) {
+                return true;
+            }
+        }
+        return false;
+    }
+private:
+    std::vector<JPEG2000_Extension_Capability> extensions;
+
+};
+
+struct JPEG2000MainHeader
+{
+public:
+    JPEG2000MainHeader() {}
+
+    Error parseHeader(const HeifFile& file, const heif_item_id imageID);
+
+    // Use parseHeader instead - these are mainly for unit testing
+    Error doParse();
+    void setHeaderData(std::vector<uint8_t> data)
+    {
+        headerData = data;
+    }
+
+    heif_chroma get_chroma_format() const;
+
+    int get_precision(uint32_t index) const
+    {
+        if (index >= siz.components.size()) {
+            return -1;
+        }
+        // TODO: this is a quick hack. It is more complicated for JPEG2000 because these can be any kind of colorspace (e.g. RGB).
+        return siz.components[index].precision;
+    }
+
+    bool hasHighThroughputExtension() {
+        return cap.hasHighThroughputExtension();
+    }
+
+    uint32_t getXSize() const
+    {
+        return siz.reference_grid_width;
+    }
+
+    uint32_t getYSize() const
+    {
+        return siz.reference_grid_height;
+    }
+
+    const JPEG2000_SIZ_segment get_SIZ()
+    {
+        return siz;
+    }
+
+private:
+    Error parse_SOC_segment();
+    Error parse_SIZ_segment();
+    Error parse_CAP_segment_body();
+    void parse_Ccap15();
+
+    static const int MARKER_LEN = 2;
+
+    JPEG2000_SIZ_segment siz;
+    JPEG2000_CAP_segment cap;
+
+    uint8_t read8()
+    {
+        uint8_t res = headerData[cursor];
+        cursor += 1;
+        return res;
+    }
+
+    uint16_t read16()
+    {
+        uint16_t res = (headerData[cursor] << 8) | headerData[cursor + 1];
+        cursor += 2;
+        return res;
+    }
+
+    uint32_t read32()
+    {
+        uint32_t res = (headerData[cursor] << 24) | (headerData[cursor + 1] << 16) | (headerData[cursor + 2] << 8) | headerData[cursor + 3];
+        cursor += 4;
+        return res;
+    }
+
+    std::vector<uint8_t> headerData;
+    size_t cursor;
+};
 
 #endif // LIBHEIF_JPEG2000_H

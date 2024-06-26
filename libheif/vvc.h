@@ -37,34 +37,20 @@ public:
   struct configuration
   {
     uint8_t configurationVersion = 1;
-    uint16_t avgFrameRate_times_256;
-    uint8_t constantFrameRate;
-    uint8_t numTemporalLayers;
-    uint8_t lengthSize;
-    bool ptl_present_flag;
+    uint16_t avgFrameRate_times_256 = 0;
+    uint8_t constantFrameRate = 1; // 2 bits
+    uint8_t numTemporalLayers = 1; // 3 bits
+    uint8_t lengthSize = 1;        // 2 bits
+    bool ptl_present_flag = false;
     //if (ptl_present_flag) {
     //  VvcPTLRecord(numTemporalLayers) track_ptl;
     //  uint16_t output_layer_set_idx;
     //}
-    bool chroma_format_present_flag;
+    bool chroma_format_present_flag = false;
     uint8_t chroma_format_idc;
 
-    bool bit_depth_present_flag;
+    bool bit_depth_present_flag = false;
     uint8_t bit_depth;
-
-    uint8_t numOfArrays;
-#if 0
-    for (j=0; j < numOfArrays; j++) {
-      unsigned int(1) array_completeness;
-      bit(1) reserved = 0;
-      unsigned int(6) NAL_unit_type;
-      unsigned int(16) numNalus;
-      for (i=0; i< numNalus; i++) {
-        unsigned int(16) nalUnitLength;
-        bit(8*nalUnitLength) nalUnit;
-      }
-    }
-#endif
   };
 
 
@@ -72,7 +58,11 @@ public:
 
   bool get_headers(std::vector<uint8_t>* dest) const
   {
+    // TODO
+
+#if 0
     *dest = m_config_NALs;
+#endif
     return true;
   }
 
@@ -80,8 +70,8 @@ public:
 
   const configuration& get_configuration() const { return m_configuration; }
 
-  //void append_nal_data(const std::vector<uint8_t>& nal);
-  //void append_nal_data(const uint8_t* data, size_t size);
+  void append_nal_data(const std::vector<uint8_t>& nal);
+  void append_nal_data(const uint8_t* data, size_t size);
 
   Error write(StreamWriter& writer) const override;
 
@@ -89,10 +79,25 @@ protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  configuration m_configuration;
+    struct NalArray
+    {
+      bool m_array_completeness;
+      uint8_t m_NAL_unit_type;
 
-  std::vector<uint8_t> m_config_NALs;
+      std::vector<std::vector<uint8_t> > m_nal_units;
+    };
+
+  configuration m_configuration;
+  //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
+
+  std::vector<NalArray> m_nal_array;
+  //std::vector<uint8_t> m_config_NALs;
 };
+
+
+Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
+                                       Box_vvcC::configuration* inout_config,
+                                       int* width, int* height);
 
 
 #endif // LIBHEIF_VVC_H

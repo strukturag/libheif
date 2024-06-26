@@ -22,9 +22,10 @@
 
 #include <vector>
 #include <cinttypes>
+#include <cstddef>
 
 #if WITH_DEFLATE_HEADER_COMPRESSION
-std::vector<uint8_t> deflate(const uint8_t* input, int size);
+std::vector<uint8_t> deflate(const uint8_t* input, size_t size);
 
 std::vector<uint8_t> inflate(const std::vector<uint8_t>&);
 #endif

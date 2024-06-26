@@ -417,7 +417,7 @@ void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, in
 
   int num_interleaved = num_interleaved_pixels_per_plane(m_chroma);
 
-  if (bpp == 8) {
+  if (bpp <= 8) {
     uint8_t* dst;
     int dst_stride = 0;
     dst = get_plane(dst_channel, &dst_stride);
