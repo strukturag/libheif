@@ -53,6 +53,8 @@ set(libheif_sources
         heif_properties.cc
         heif_items.h
         heif_items.cc
+        heif_experimental.h
+        heif_experimental.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc
