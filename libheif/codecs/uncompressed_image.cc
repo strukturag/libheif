@@ -27,8 +27,8 @@
 #include <cassert>
 #include <utility>
 
-#include "libheif/common_utils.h"
-#include "libheif/error.h"
+#include "common_utils.h"
+#include "error.h"
 #include "libheif/heif.h"
 #include "uncompressed.h"
 #include "uncompressed_box.h"

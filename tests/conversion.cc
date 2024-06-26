@@ -26,8 +26,8 @@
 
 #include <iomanip>
 #include "catch.hpp"
-#include "libheif/color-conversion/colorconversion.h"
-#include "libheif/pixelimage.h"
+#include "color-conversion/colorconversion.h"
+#include "pixelimage.h"
 
 // Enable for more verbose test output.
 constexpr bool kEnableDebugOutput = false;

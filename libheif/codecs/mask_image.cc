@@ -25,10 +25,10 @@
 #include <cstring>
 #include <algorithm>
 #include <map>
-#include <string.h>
+#include <cstring>
 
 #include "libheif/heif.h"
-#include "libheif/logging.h"
+#include "logging.h"
 #include "mask_image.h"
 
 Error Box_mskC::parse(BitstreamRange& range)

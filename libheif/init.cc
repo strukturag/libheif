@@ -19,11 +19,11 @@
  */
 
 #include "init.h"
-#include "heif.h"
+#include "libheif/heif.h"
 #include "error.h"
 #include "plugin_registry.h"
 #include "common_utils.h"
-#include "libheif/color-conversion/colorconversion.h"
+#include "color-conversion/colorconversion.h"
 
 #if ENABLE_MULTITHREADING_SUPPORT
 

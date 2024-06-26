@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_ENCODER_X265_H
 #define LIBHEIF_ENCODER_X265_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 /* Image sizes in HEVC: since HEVC does not allow for odd image dimensions when
    using chroma 4:2:0, our strategy is as follows.

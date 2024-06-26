@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "libheif/box.h"
+#include "box.h"
 #include <cstdint>
 #include <iostream>
 

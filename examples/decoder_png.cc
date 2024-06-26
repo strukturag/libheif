@@ -30,7 +30,7 @@
 #include <iostream>
 #include <memory>
 #include "decoder_png.h"
-#include "libheif/exif.h"
+#include "exif.h"
 
 extern "C" {
 #include <png.h>

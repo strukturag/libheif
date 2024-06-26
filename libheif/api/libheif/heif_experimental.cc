@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/heif_experimental.h"
+#include "heif_experimental.h"
 #include "context.h"
 #include "api_structs.h"
 #include "file.h"

@@ -52,7 +52,7 @@
 
 #include <assert.h>
 #include "benchmark.h"
-#include "libheif/exif.h"
+#include "exif.h"
 #include "common.h"
 
 int master_alpha = 1;

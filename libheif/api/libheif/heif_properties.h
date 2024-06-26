@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_HEIF_PROPERTIES_H
 #define LIBHEIF_HEIF_PROPERTIES_H
 
-#include "libheif/heif.h"
+#include "heif.h"
 
 #ifdef __cplusplus
 extern "C" {

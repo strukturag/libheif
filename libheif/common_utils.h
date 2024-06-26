@@ -22,7 +22,7 @@
 #define LIBHEIF_COMMON_UTILS_H
 
 #include <cinttypes>
-#include <libheif/heif.h>
+#include "libheif/heif.h"
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED

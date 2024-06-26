@@ -19,12 +19,13 @@
  */
 
 #include "file.h"
-#include "libheif/box.h"
+#include "box.h"
 #include "libheif/heif.h"
 #include "libheif/heif_properties.h"
-#include "libheif/jpeg2000.h"
-#include "libheif/jpeg.h"
-#include "libheif/vvc.h"
+#include "metadata_compression.h"
+#include "codecs/jpeg2000.h"
+#include "codecs/jpeg.h"
+#include "codecs/vvc.h"
 
 #include <cstdint>
 #include <fstream>
@@ -44,11 +45,9 @@
 #include <windows.h>
 #endif
 
-#include "metadata_compression.h"
-#include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "codecs/uncompressed_image.h"
 #endif
 
 // TODO: make this a decoder option

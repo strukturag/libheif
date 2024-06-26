@@ -22,7 +22,8 @@
 #define LIBHEIF_BOX_H
 
 #include <cstdint>
-#include "libheif/common_utils.h"
+#include "common_utils.h"
+#include "libheif/heif.h"
 #include "libheif/heif_properties.h"
 #include <cinttypes>
 #include <cstddef>
@@ -36,7 +37,6 @@
 #include <utility>
 
 #include "error.h"
-#include "heif.h"
 #include "logging.h"
 #include "bitstream.h"
 

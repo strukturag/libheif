@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_COLORCONVERSION_RGB2YUV_H
 #define LIBHEIF_COLORCONVERSION_RGB2YUV_H
 
-#include "libheif/color-conversion/colorconversion.h"
+#include "color-conversion/colorconversion.h"
 #include <vector>
 #include <memory>
 

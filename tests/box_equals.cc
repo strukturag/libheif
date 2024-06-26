@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "libheif/box.h"
+#include "box.h"
 
 TEST_CASE("box equals") {
   std::shared_ptr<Box_ispe> ispe1 = std::make_shared<Box_ispe>();

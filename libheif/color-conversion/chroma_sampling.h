@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_CHROMA_SAMPLING_H
 #define LIBHEIF_CHROMA_SAMPLING_H
 
-#include "libheif/color-conversion/colorconversion.h"
+#include "color-conversion/colorconversion.h"
 #include <memory>
 #include <vector>
 

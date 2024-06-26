@@ -19,9 +19,9 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/heif_plugin.h"
-#include "libheif/region.h"
-#include "libheif/heif_regions.h"
+#include "heif_plugin.h"
+#include "region.h"
+#include "heif_regions.h"
 #include "file.h"
 #include "api_structs.h"
 #include "context.h"

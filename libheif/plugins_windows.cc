@@ -20,7 +20,7 @@
 
 
 #include "plugins_windows.h"
-#include "heif_plugin.h"
+#include "libheif/heif_plugin.h"
 #include <sstream>
 
 

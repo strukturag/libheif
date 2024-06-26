@@ -27,69 +27,69 @@
 
 
 #if HAVE_LIBDE265
-#include "libheif/plugins/decoder_libde265.h"
+#include "plugins/decoder_libde265.h"
 #endif
 
 #if HAVE_X265
-#include "libheif/plugins/encoder_x265.h"
+#include "plugins/encoder_x265.h"
 #endif
 
 #if HAVE_KVAZAAR
-#include "libheif/plugins/encoder_kvazaar.h"
+#include "plugins/encoder_kvazaar.h"
 #endif
 
 #if HAVE_UVG266
-#include "libheif/plugins/encoder_uvg266.h"
+#include "plugins/encoder_uvg266.h"
 #endif
 
 #if HAVE_AOM_ENCODER
-#include "libheif/plugins/encoder_aom.h"
+#include "plugins/encoder_aom.h"
 #endif
 
 #if HAVE_AOM_DECODER
-#include "libheif/plugins/decoder_aom.h"
+#include "plugins/decoder_aom.h"
 #endif
 
 #if HAVE_RAV1E
-#include "libheif/plugins/encoder_rav1e.h"
+#include "plugins/encoder_rav1e.h"
 #endif
 
 #if HAVE_DAV1D
-#include "libheif/plugins/decoder_dav1d.h"
+#include "plugins/decoder_dav1d.h"
 #endif
 
 #if HAVE_SvtEnc
-#include "libheif/plugins/encoder_svt.h"
+#include "plugins/encoder_svt.h"
 #endif
 
 #if HAVE_FFMPEG_DECODER
-#include "libheif/plugins/decoder_ffmpeg.h"
+#include "plugins/decoder_ffmpeg.h"
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "libheif/plugins/encoder_uncompressed.h"
+#include "plugins/encoder_uncompressed.h"
 #endif
 
 #if HAVE_JPEG_DECODER
-#include "libheif/plugins/decoder_jpeg.h"
+#include "plugins/decoder_jpeg.h"
 #endif
 
 #if HAVE_JPEG_ENCODER
-#include "libheif/plugins/encoder_jpeg.h"
+#include "plugins/encoder_jpeg.h"
 #endif
 
 #if HAVE_OPENJPEG_ENCODER
-#include "libheif/plugins/encoder_openjpeg.h"
+#include "plugins/encoder_openjpeg.h"
 #endif
 
 #if HAVE_OPENJPEG_DECODER
-#include "libheif/plugins/decoder_openjpeg.h"
+#include "plugins/decoder_openjpeg.h"
 #endif
 
-#include "libheif/plugins/encoder_mask.h"
+#include "plugins/encoder_mask.h"
 
 #if HAVE_OPENJPH_ENCODER
-#include "libheif/plugins/encoder_openjph.h"
+#include "plugins/encoder_openjph.h"
 #endif
 
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;

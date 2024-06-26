@@ -21,7 +21,7 @@
 #ifndef HEIF_HEVC_H
 #define HEIF_HEVC_H
 
-#include "heif.h"
+#include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
 

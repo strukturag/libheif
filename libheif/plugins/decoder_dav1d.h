@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_DECODER_DAV1D_H
 #define LIBHEIF_DECODER_DAV1D_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 const struct heif_decoder_plugin* get_decoder_plugin_dav1d();
 

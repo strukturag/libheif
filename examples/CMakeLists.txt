@@ -1,5 +1,5 @@
 # Needed to find libheif/heif_version.h while compiling the library
-include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
+include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api ${libheif_SOURCE_DIR}/libheif)
 
 if (MSVC)
     set(getopt_sources

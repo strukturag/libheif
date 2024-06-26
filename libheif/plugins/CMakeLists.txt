@@ -5,7 +5,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
             message("Compiling '" ${name} "' as dynamic plugin")
             add_library(heif-${name}
                     MODULE ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
-                    ../heif_plugin.cc
+                    ../api/libheif/heif_plugin.cc
                     )
             if (NOT APPLE)
                 set_target_properties(heif-${name}
@@ -18,7 +18,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
                     LIBHEIF_EXPORTS
                     HAVE_VISIBILITY)
             target_compile_definitions(heif-${name} PRIVATE PLUGIN_${defineName}=1)
-            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIRS})
+            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} heif)
 
             install(TARGETS heif-${name}

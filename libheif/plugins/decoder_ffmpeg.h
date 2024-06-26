@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_HEIF_DECODER_FFMPEG_H
 #define LIBHEIF_HEIF_DECODER_FFMPEG_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 const struct heif_decoder_plugin* get_decoder_plugin_ffmpeg();
 

@@ -32,9 +32,6 @@ extern "C" {
 #include <uvg266.h>
 }
 
-#include <libheif/logging.h>
-#include <iostream>
-
 
 static const char* kError_unspecified_error = "Unspecified encoder error";
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by uvg266";

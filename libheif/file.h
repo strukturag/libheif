@@ -21,11 +21,11 @@
 #ifndef LIBHEIF_FILE_H
 #define LIBHEIF_FILE_H
 
-#include "avif.h"
 #include "box.h"
-#include "hevc.h"
-#include "vvc.h"
 #include "nclx.h"
+#include "codecs/avif.h"
+#include "codecs/hevc.h"
+#include "codecs/vvc.h"
 
 #include <map>
 #include <memory>

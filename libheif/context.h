@@ -30,8 +30,8 @@
 
 #include "error.h"
 
-#include "heif.h"
-#include "heif_plugin.h"
+#include "libheif/heif.h"
+#include "libheif/heif_plugin.h"
 #include "bitstream.h"
 
 #include "box.h" // only for color_profile, TODO: maybe move the color_profiles to its own header

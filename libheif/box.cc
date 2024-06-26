@@ -23,12 +23,12 @@
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
-#include "jpeg.h"
-#include "jpeg2000.h"
-#include "hevc.h"
-#include "mask_image.h"
-#include "vvc.h"
-#include "avc.h"
+#include "codecs/jpeg.h"
+#include "codecs/jpeg2000.h"
+#include "codecs/hevc.h"
+#include "codecs/mask_image.h"
+#include "codecs/vvc.h"
+#include "codecs/avc.h"
 
 #include <iomanip>
 #include <utility>
@@ -40,7 +40,7 @@
 #include <array>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_box.h"
+#include "codecs/uncompressed_box.h"
 #endif
 
 #ifndef M_PI

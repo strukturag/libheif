@@ -29,8 +29,8 @@
 
 #include "error.h"
 
-#include "heif.h"
-#include "heif_plugin.h"
+#include "libheif/heif.h"
+#include "libheif/heif_plugin.h"
 
 
 struct heif_encoder_descriptor

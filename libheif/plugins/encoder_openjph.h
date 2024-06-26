@@ -23,7 +23,7 @@
 #ifndef LIBHEIF_ENCODER_OPENJPH_H
 #define LIBHEIF_ENCODER_OPENJPH_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 
 const struct heif_encoder_plugin* get_encoder_plugin_openjph();

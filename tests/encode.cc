@@ -26,7 +26,7 @@
 
 #include "catch.hpp"
 #include "libheif/heif.h"
-#include "libheif/pixelimage.h"
+#include "pixelimage.h"
 #include "libheif/api_structs.h"
 
 #include <string.h>

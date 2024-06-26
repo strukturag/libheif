@@ -18,10 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/box.h"
-#include "libheif/error.h"
+#include "box.h"
+#include "error.h"
 #include "libheif/heif.h"
-#include "libheif/region.h"
+#include "region.h"
 #include <cstdint>
 #include <cassert>
 #include <cstring>
@@ -38,20 +38,20 @@
 #include "context.h"
 #include "file.h"
 #include "pixelimage.h"
-#include "api_structs.h"
+#include "libheif/api_structs.h"
 #include "security_limits.h"
-#include "hevc.h"
-#include "vvc.h"
-#include "avif.h"
-#include "jpeg.h"
-#include "plugin_registry.h"
-#include "libheif/color-conversion/colorconversion.h"
-#include "mask_image.h"
 #include "metadata_compression.h"
-#include "jpeg2000.h"
+#include "color-conversion/colorconversion.h"
+#include "plugin_registry.h"
+#include "codecs/hevc.h"
+#include "codecs/vvc.h"
+#include "codecs/avif.h"
+#include "codecs/jpeg.h"
+#include "codecs/mask_image.h"
+#include "codecs/jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "codecs/uncompressed_image.h"
 #endif
 
 

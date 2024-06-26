@@ -24,7 +24,7 @@
 
 #include "box.h"
 #include "bitstream.h"
-#include "libheif/uncompressed.h"
+#include "uncompressed.h"
 
 #include <cstdint>
 #include <string>

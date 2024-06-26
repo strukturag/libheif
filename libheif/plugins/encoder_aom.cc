@@ -20,7 +20,7 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 #include <algorithm>
 #include <cstring>
 #include <cassert>

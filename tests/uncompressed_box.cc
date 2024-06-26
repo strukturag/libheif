@@ -27,8 +27,8 @@
 #include "catch.hpp"
 #include "libheif/box.h"
 #include "libheif/heif.h"
-#include "libheif/uncompressed.h"
-#include "libheif/uncompressed_box.h"
+#include "libheif/codecs/uncompressed.h"
+#include "libheif/codecs/uncompressed_box.h"
 #include <cstdint>
 #include <iostream>
 

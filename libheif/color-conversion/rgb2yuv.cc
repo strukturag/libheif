@@ -23,8 +23,8 @@
 #include <memory>
 #include <vector>
 #include "rgb2yuv.h"
-#include "libheif/nclx.h"
-#include "libheif/common_utils.h"
+#include "nclx.h"
+#include "common_utils.h"
 
 
 template<class Pixel>

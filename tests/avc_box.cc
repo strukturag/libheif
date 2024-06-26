@@ -25,8 +25,8 @@
 */
 
 #include "catch.hpp"
-#include "libheif/avc.h"
-#include "libheif/error.h"
+#include "avc.h"
+#include "error.h"
 #include <cstdint>
 #include <iostream>
 #include <memory>
