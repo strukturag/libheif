@@ -565,7 +565,7 @@ struct heif_image *createImage_RGBA_planar()
   return image;
 }
 
-static void do_encode(heif_image* input_image, const char* filename, bool check_decode, uint8_t preferMinimised = 0)
+static void do_encode(heif_image* input_image, const char* filename, bool check_decode, uint8_t prefer_uncC_short_form = 0)
 {
   REQUIRE(input_image != nullptr);
 
@@ -580,7 +580,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
   options->macOS_compatibility_workaround = false;
   options->macOS_compatibility_workaround_no_nclx_profile = true;
   options->image_orientation = heif_orientation_normal;
-  options->prefer_minimised = preferMinimised;
+  options->prefer_uncC_short_form = prefer_uncC_short_form;
   heif_image_handle *output_image_handle;
 
   err = heif_context_encode_image(ctx, input_image, encoder, options, &output_image_handle);

@@ -2093,8 +2093,8 @@ struct heif_encoding_options
 
   // version 7 options
 
-  // Set this to true to used minimised versions of boxes where possible
-  uint8_t prefer_minimised;
+  // Set this to true to use compressed form of uncC where possible
+  uint8_t prefer_uncC_short_form;
 };
 
 LIBHEIF_API

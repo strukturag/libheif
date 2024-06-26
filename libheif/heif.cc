@@ -2748,14 +2748,14 @@ static void set_default_options(heif_encoding_options& options)
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
 
-  options.prefer_minimised = false;
+  options.prefer_uncC_short_form = true;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
 {
   switch (input_options.version) {
     case 7:
-      options.prefer_minimised = input_options.prefer_minimised;
+      options.prefer_uncC_short_form = input_options.prefer_uncC_short_form;
       // fallthrough
     case 6:
       options.color_conversion_options = input_options.color_conversion_options;
