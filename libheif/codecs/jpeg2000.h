@@ -405,7 +405,7 @@ public:
 
 private:
     const uint8_t ident;
-    uint16_t value;
+    uint16_t value = 0;
 };
 
 class JPEG2000_Extension_Capability_HT : public JPEG2000_Extension_Capability
