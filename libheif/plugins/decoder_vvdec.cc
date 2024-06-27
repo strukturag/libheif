@@ -23,9 +23,10 @@
 #include "decoder_vvdec.h"
 #include <cstring>
 #include <cassert>
+#include <vector>
+#include <algorithm>
 
 #include <vvdec/vvdec.h>
-#include <vector>
 
 
 struct vvdec_decoder
