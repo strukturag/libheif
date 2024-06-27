@@ -26,14 +26,14 @@ libheif has support for:
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 
 Supported codecs:
-| Format       |  Decoders        |  Encoders             |
-|:-------------|:----------------:|:---------------------:|
-| HEIC         | libde265, ffmpeg | x265, kvazaar         |
-| AVIF         | AOM, dav1d       | AOM, rav1e, svt-av1   |
-| VVC          | -                | uvg266 (experimental) |
-| JPEG         | libjpeg(-turbo)  | libjpeg(-turbo)       |
-| JPEG2000     | OpenJPEG         | OpenJPEG              |
-| uncompressed | built-in         | built-in              |
+| Format       |  Decoders           |  Encoders             |
+|:-------------|:-------------------:|:---------------------:|
+| HEIC         | libde265, ffmpeg    | x265, kvazaar         |
+| AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1   |
+| VVC          | vvdec (experimental)| uvg266 (experimental) |
+| JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)       |
+| JPEG2000     | OpenJPEG            | OpenJPEG              |
+| uncompressed | built-in            | built-in              |
 
 ## API
 
@@ -155,7 +155,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `UVG266`.
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `UVG266`, `VVDEC`.
 
 Further options are:
 
