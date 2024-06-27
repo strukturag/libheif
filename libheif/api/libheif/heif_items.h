@@ -158,7 +158,7 @@ struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
  * Free the item data.
  *
  * This is used to free memory associated with the data returned by
- * {@link heif_context_get_item_data} in 'out_data' and set the pointer to NULL.
+ * {@link heif_item_get_item_data} in 'out_data' and set the pointer to NULL.
  *
  * @param ctx the file context
  * @param item_data the data to free
