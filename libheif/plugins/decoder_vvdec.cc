@@ -21,19 +21,17 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "decoder_vvdec.h"
-#include "logging.h"
-#include <memory>
 #include <cstring>
 #include <cassert>
 
 #include <vvdec/vvdec.h>
+#include <vector>
 
 
 struct vvdec_decoder
 {
   vvdecDecoder* decoder = nullptr;
   vvdecAccessUnit* au = nullptr;
-  size_t au_maxsize = 0;
 
   bool strict_decoding = false;
 
@@ -57,8 +55,7 @@ static const char* vvdec_plugin_name()
   if (strlen(version) < 60) {
     sprintf(plugin_name, "VVCDEC decoder (%s)", version);
   }
-  else
-  {
+  else {
     strcpy(plugin_name, "VVDEC decoder");
   }
 
@@ -89,7 +86,7 @@ static int vvdec_does_support_format(enum heif_compression_format format)
 
 struct heif_error vvdec_new_decoder(void** dec)
 {
-  struct vvdec_decoder* decoder = new vvdec_decoder();
+  auto* decoder = new vvdec_decoder();
 
   vvdecParams params;
   vvdec_params_default(&params);
@@ -100,7 +97,6 @@ struct heif_error vvdec_new_decoder(void** dec)
   decoder->au = vvdec_accessUnit_alloc();
   vvdec_accessUnit_default(decoder->au);
   vvdec_accessUnit_alloc_payload(decoder->au, MaxNaluSize);
-  decoder->au_maxsize = MaxNaluSize;
 
   *dec = decoder;
 
@@ -111,7 +107,7 @@ struct heif_error vvdec_new_decoder(void** dec)
 
 void vvdec_free_decoder(void* decoder_raw)
 {
-  struct vvdec_decoder* decoder = (vvdec_decoder*) decoder_raw;
+  auto* decoder = (vvdec_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -120,7 +116,6 @@ void vvdec_free_decoder(void* decoder_raw)
   if (decoder->au) {
     vvdec_accessUnit_free(decoder->au);
     decoder->au = nullptr;
-    decoder->au_maxsize = 0;
   }
 
   if (decoder->decoder) {
@@ -134,7 +129,7 @@ void vvdec_free_decoder(void* decoder_raw)
 
 void vvdec_set_strict_decoding(void* decoder_raw, int flag)
 {
-  struct vvdec_decoder* decoder = (vvdec_decoder*) decoder_raw;
+  auto* decoder = (vvdec_decoder*) decoder_raw;
 
   decoder->strict_decoding = flag;
 }
@@ -142,9 +137,9 @@ void vvdec_set_strict_decoding(void* decoder_raw, int flag)
 
 struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  struct vvdec_decoder* decoder = (struct vvdec_decoder*) decoder_raw;
+  auto* decoder = (struct vvdec_decoder*) decoder_raw;
 
-  uint8_t* data = (uint8_t*) frame_data;
+  const auto* data = (const uint8_t*) frame_data;
 
   for (;;) {
     uint32_t size = ((((uint32_t) data[0]) << 24) |
@@ -175,27 +170,37 @@ struct heif_error vvdec_push_data(void* decoder_raw, const void* frame_data, siz
 
 struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
-  struct vvdec_decoder* decoder = (struct vvdec_decoder*) decoder_raw;
+  auto* decoder = (struct vvdec_decoder*) decoder_raw;
 
   vvdecFrame* frame = nullptr;
+
+  // --- prepare AU payload with maximum NALU size
+
+  size_t max_payload_size = 0;
+  for (const auto& nalu : decoder->nalus) {
+    max_payload_size = std::max(max_payload_size, nalu.size());
+  }
+
+  if (decoder->au == nullptr || max_payload_size > (size_t) decoder->au->payloadSize) {
+    if (decoder->au) {
+      vvdec_accessUnit_free(decoder->au);
+    }
+
+    decoder->au = vvdec_accessUnit_alloc();
+    vvdec_accessUnit_default(decoder->au);
+    vvdec_accessUnit_alloc_payload(decoder->au, (int)max_payload_size);
+  }
+
+  // --- feed NALUs into decoder, flush when done
 
   for (int i = 0;; i++) {
     int ret;
 
-    if (i < (int)decoder->nalus.size()) {
+    if (i < (int) decoder->nalus.size()) {
       const auto& nalu = decoder->nalus[i];
 
-      if (nalu.size() > decoder->au_maxsize) {
-        vvdec_accessUnit_free(decoder->au);
-
-        decoder->au = vvdec_accessUnit_alloc();
-        vvdec_accessUnit_default(decoder->au);
-        vvdec_accessUnit_alloc_payload(decoder->au, nalu.size());
-        decoder->au_maxsize = nalu.size();
-      }
-
       memcpy(decoder->au->payload, nalu.data(), nalu.size());
-      decoder->au->payloadUsedSize = nalu.size();
+      decoder->au->payloadUsedSize = (int) nalu.size();
 
       ret = vvdec_decode(decoder->decoder, decoder->au, &frame);
     }
@@ -210,10 +215,16 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
     if (frame) {
       break;
     }
+
+    if (ret == VVDEC_EOF) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "no frame decoded"};
+    }
   }
 
 
   decoder->nalus.clear();
+
+  // --- convert decoded frame to heif_image
 
   heif_chroma chroma;
   heif_colorspace colorspace;
@@ -236,7 +247,8 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
   }
 
   struct heif_image* heif_img = nullptr;
-  struct heif_error err = heif_image_create(frame->width, frame->height,
+  struct heif_error err = heif_image_create((int)frame->width,
+                                            (int)frame->height,
                                             colorspace,
                                             chroma,
                                             &heif_img);
@@ -270,14 +282,14 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
   int num_planes = (chroma == heif_chroma_monochrome ? 1 : 3);
 
   for (int c = 0; c < num_planes; c++) {
-    int bpp = frame->bitDepth;
+    int bpp = (int)frame->bitDepth;
 
     const auto& plane = frame->planes[c];
     const uint8_t* data = plane.ptr;
-    int stride = plane.stride;
+    int stride = (int)plane.stride;
 
-    int w = plane.width;
-    int h = plane.height;
+    int w = (int)plane.width;
+    int h = (int)plane.height;
 
     err = heif_image_add_plane(heif_img, channel2plane[c], w, h, bpp);
     if (err.code != heif_error_Ok) {
