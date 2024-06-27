@@ -42,6 +42,10 @@
 #include "plugins/encoder_uvg266.h"
 #endif
 
+#if HAVE_VVDEC
+#include "plugins/decoder_vvdec.h"
+#endif
+
 #if HAVE_AOM_ENCODER
 #include "plugins/encoder_aom.h"
 #endif
@@ -141,6 +145,10 @@ void register_default_plugins()
 
 #if HAVE_UVG266
   register_encoder(get_encoder_plugin_uvg266());
+#endif
+
+#if HAVE_VVDEC
+  register_decoder(get_decoder_plugin_vvdec());
 #endif
 
 #if HAVE_AOM_ENCODER

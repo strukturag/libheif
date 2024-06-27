@@ -137,6 +137,18 @@ if (WITH_UVG266)
     endif ()
 endif ()
 
+# vvdec
+
+plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
+if (WITH_VVDEC)
+    # TODO: how to do configure vvdec cleanly?
+    find_package(Threads REQUIRED)
+    find_package(vvdec 2.3.0)
+    if (vvdec_FOUND)
+        set(vvdec_LIBRARIES vvdec::vvdec)
+    endif()
+endif ()
+
 # dav1d
 
 plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
@@ -229,6 +241,7 @@ plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
+plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
 
 # --- show summary which formats are supported
 

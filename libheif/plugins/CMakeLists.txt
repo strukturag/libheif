@@ -100,6 +100,10 @@ set(UVG266_sources encoder_uvg266.cc encoder_uvg266.h)
 set(UVG266_extra_plugin_sources)
 plugin_compilation(uvg266 UVG266 UVG266_FOUND UVG266 UVG266)
 
+set(VVDEC_sources decoder_vvdec.cc decoder_vvdec.h)
+set(VVDEC_extra_plugin_sources)
+plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
+
 target_sources(heif PRIVATE
                encoder_mask.h
                encoder_mask.cc)
