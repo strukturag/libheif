@@ -1,0 +1,24 @@
+include(LibFindMacros)
+libfind_pkg_check_modules(UVG266_PKGCONF uvg266)
+
+find_path(UVG266_INCLUDE_DIR
+    NAMES uvg266.h
+    HINTS ${UVG266_PKGCONF_INCLUDE_DIRS} ${UVG266_PKGCONF_INCLUDEDIR}
+    PATH_SUFFIXES UVG266 uvg266
+)
+
+find_library(UVG266_LIBRARY
+    NAMES libuvg266 uvg266 uvg266.dll
+    HINTS ${UVG266_PKGCONF_LIBRARY_DIRS} ${UVG266_PKGCONF_LIBDIR}
+)
+
+set(UVG266_PROCESS_LIBS UVG266_LIBRARY)
+set(UVG266_PROCESS_INCLUDES UVG266_INCLUDE_DIR)
+libfind_process(UVG266)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(UVG266
+    REQUIRED_VARS
+        UVG266_INCLUDE_DIR
+        UVG266_LIBRARIES
+)
