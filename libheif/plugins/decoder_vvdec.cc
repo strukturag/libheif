@@ -40,7 +40,6 @@ struct vvdec_decoder
 };
 
 static const char kSuccess[] = "Success";
-static const char kEmptyString[] = "";
 
 static const int VVDEC_PLUGIN_PRIORITY = 100;
 
