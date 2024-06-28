@@ -399,8 +399,7 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
 HeifContext::HeifContext()
 {
-  m_maximum_image_width_limit = MAX_IMAGE_WIDTH;
-  m_maximum_image_height_limit = MAX_IMAGE_HEIGHT;
+  m_maximum_image_size_limit = MAX_IMAGE_SIZE;
 
   reset_to_empty_heif();
 }
@@ -455,6 +454,23 @@ void HeifContext::reset_to_empty_heif()
   m_all_images.clear();
   m_top_level_images.clear();
   m_primary_image.reset();
+}
+
+Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
+  // --- check whether the image size is "too large"
+  uint32_t max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
+  if ((width > max_width_height || height > max_width_height) ||
+      (height != 0 && width > m_maximum_image_size_limit / height)) {
+    std::stringstream sstr;
+    sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+          << m_maximum_image_size_limit << "\n";
+
+    return Error(heif_error_Memory_allocation_error,
+                  heif_suberror_Security_limit_exceeded,
+                  sstr.str());
+  }
+
+  return Error::Ok;
 }
 
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
@@ -595,16 +611,9 @@ Error HeifContext::interpret_heif_file()
 
 
         // --- check whether the image size is "too large"
-
-        if (width > m_maximum_image_width_limit ||
-            height > m_maximum_image_height_limit) {
-          std::stringstream sstr;
-          sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-               << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
-
-          return Error(heif_error_Memory_allocation_error,
-                       heif_suberror_Security_limit_exceeded,
-                       sstr.str());
+        err = check_resolution(width, height);
+        if (err) {
+          return err;
         }
 
         image->set_resolution(width, height);
@@ -1510,11 +1519,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     if (error) {
       return error;
     }
-    error = UncompressedImageCodec::decode_uncompressed_image(m_heif_file,
+    error = UncompressedImageCodec::decode_uncompressed_image(this,
                                                               ID,
                                                               img,
-                                                              m_maximum_image_width_limit,
-                                                              m_maximum_image_height_limit,
                                                               data);
     if (error) {
       return error;
@@ -1528,11 +1535,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
       std::cout << "mski error 1" << std::endl;
       return error;
     }
-    error = MaskImageCodec::decode_mask_image(m_heif_file,
+    error = MaskImageCodec::decode_mask_image(this,
                                               ID,
                                               img,
-                                              m_maximum_image_width_limit,
-                                              m_maximum_image_height_limit,
                                               data);
     if (error) {
       return error;
@@ -1784,16 +1789,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   // --- generate image of full output size
 
-  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
-    std::stringstream sstr;
-    sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
-
-    return Error(heif_error_Memory_allocation_error,
-                 heif_suberror_Security_limit_exceeded,
-                 sstr.str());
+  err = check_resolution(w, h);
+  if (err) {
+    return err;
   }
-
 
   img = std::make_shared<HeifPixelImage>();
   img->create(w, h,
@@ -2134,14 +2133,9 @@ Error HeifContext::decode_overlay_image(heif_item_id ID,
   uint32_t w = overlay.get_canvas_width();
   uint32_t h = overlay.get_canvas_height();
 
-  if (w >= m_maximum_image_width_limit || h >= m_maximum_image_height_limit) {
-    std::stringstream sstr;
-    sstr << "Image size " << w << "x" << h << " exceeds the maximum image size "
-         << m_maximum_image_width_limit << "x" << m_maximum_image_height_limit << "\n";
-
-    return Error(heif_error_Memory_allocation_error,
-                 heif_suberror_Security_limit_exceeded,
-                 sstr.str());
+  err = check_resolution(w, h);
+  if (err) {
+    return err;
   }
 
   // TODO: seems we always have to compose this in RGB since the background color is an RGB value
