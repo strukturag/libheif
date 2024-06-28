@@ -34,9 +34,8 @@ static const int MAX_COLOR_PROFILE_SIZE = 100 * 1024 * 1024; // 100 MB
 static const int MAX_IMAGE_WIDTH = 32768;
 static const int MAX_IMAGE_HEIGHT = 32768;
 
-// Artificial limit on how many tiles or grid items (TODO) in either
-// row direction or column direction
-static const int MAX_TILE_GRID_ROW_OR_COLUMN = 32768;
+// Artificial limit on how many tiles there can be in either row direction or column direction
+static const uint32_t MAX_TILE_GRID_ROW_OR_COLUMN = 32768;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.
