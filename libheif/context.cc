@@ -40,7 +40,7 @@
 #include "pixelimage.h"
 #include "libheif/api_structs.h"
 #include "security_limits.h"
-#include "metadata_compression.h"
+#include "compression.h"
 #include "color-conversion/colorconversion.h"
 #include "plugin_registry.h"
 #include "codecs/hevc.h"

@@ -19,12 +19,14 @@
  */
 
 
-#include "metadata_compression.h"
+#include "compression.h"
 
 
-#if WITH_DEFLATE_HEADER_COMPRESSION
+#if WITH_ZLIB_COMPRESSION
+
 #include <zlib.h>
 #include <cstring>
+#include <iostream>
 
 std::vector<uint8_t> deflate(const uint8_t* input, size_t size)
 {
@@ -78,9 +80,8 @@ std::vector<uint8_t> deflate(const uint8_t* input, size_t size)
 }
 
 
-std::vector<uint8_t> inflate(const std::vector<uint8_t>& compressed_input)
+Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, std::vector<uint8_t> *output)
 {
-  std::vector<uint8_t> output;
 
   // decompress data with zlib
 
@@ -102,10 +103,11 @@ std::vector<uint8_t> inflate(const std::vector<uint8_t>& compressed_input)
 
   int err = -1;
 
-  err = inflateInit(&strm);
+  err = inflateInit2(&strm, windowSize);
   if (err != Z_OK) {
-    // TODO: return error
-    return {};
+    std::stringstream sstr;
+    sstr << "Error initialising zlib inflate: " << strm.msg << " (" << err << ")\n";
+    return Error(heif_error_Memory_allocation_error, heif_suberror_Compression_initialisation_error, sstr.str());
   }
 
   do {
@@ -118,19 +120,28 @@ std::vector<uint8_t> inflate(const std::vector<uint8_t>& compressed_input)
       // -> do nothing
     }
     else if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
-      // TODO: return error
-      return {};
+      std::stringstream sstr;
+      sstr << "Error performing zlib inflate: " << strm.msg << " (" << err << ")\n";
+      return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
     }
 
-
     // append decoded data to output
-
-    output.insert(output.end(), dst, dst + outBufferSize - strm.avail_out);
+    output->insert(output->end(), dst, dst + outBufferSize - strm.avail_out);
   } while (err != Z_STREAM_END);
 
 
   inflateEnd(&strm);
 
-  return output;
+  return Error::Ok;
+}
+
+Error inflate_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+{
+  return do_inflate(compressed_input, 15, output);
+}
+
+Error inflate_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+{
+  return do_inflate(compressed_input, -15, output);
 }
 #endif

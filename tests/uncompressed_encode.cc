@@ -565,6 +565,8 @@ struct heif_image *createImage_RGBA_planar()
   return image;
 }
 
+#include <iostream>
+
 static void do_encode(heif_image* input_image, const char* filename, bool check_decode, uint8_t prefer_uncC_short_form = 0)
 {
   REQUIRE(input_image != nullptr);
@@ -607,6 +609,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
     REQUIRE(height == heif_image_get_primary_height(input_image));
     heif_image* decode_image;
     err = heif_decode_image(decode_image_handle, &decode_image, heif_colorspace_undefined, heif_chroma_undefined, NULL);
+    std::cout << "error message: " << err.message << std::endl;
     REQUIRE(err.code == heif_error_Ok);
     // REQUIRE(heif_image_has_channel(input_image, heif_channel_Y) == heif_image_has_channel(decode_image, heif_channel_Y));
     REQUIRE(heif_image_has_channel(input_image, heif_channel_Cb) == heif_image_has_channel(decode_image, heif_channel_Cb));

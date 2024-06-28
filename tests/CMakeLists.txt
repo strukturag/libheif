@@ -48,6 +48,7 @@ endif()
 
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
+    add_libheif_test(uncompressed_decode_generic_compression)
     add_libheif_test(uncompressed_decode_mono)
     add_libheif_test(uncompressed_decode_rgb)
     add_libheif_test(uncompressed_decode_rgb16)
