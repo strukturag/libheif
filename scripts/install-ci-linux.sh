@@ -107,6 +107,7 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         libgdk-pixbuf2.0-dev \
         libjpeg-dev \
         libpng-dev \
+        libtiff-dev \
         "
 fi
 

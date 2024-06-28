@@ -48,6 +48,10 @@
 #include "decoder_png.h"
 #endif
 
+#if HAVE_LIBTIFF
+#include "decoder_tiff.h"
+#endif
+
 #include "decoder_y4m.h"
 
 #include <assert.h>
@@ -204,6 +208,17 @@ InputImage loadJPEG(const char* filename)
 InputImage loadPNG(const char* filename, int output_bit_depth)
 {
   std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
+  exit(1);
+
+  return {};
+}
+#endif
+
+
+#if !HAVE_LIBTIFF
+InputImage loadTIFF(const char* filename)
+{
+  std::cerr << "Cannot load TIFF because libtiff support was not compiled.\n";
   exit(1);
 
   return {};
@@ -629,7 +644,7 @@ int main(int argc, char** argv)
     return 5;
   }
 
-  if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) + 
+  if ((force_enc_av1f ? 1 : 0) + (force_enc_vvc ? 1 : 0) + (force_enc_uncompressed ? 1 : 0) + (force_enc_jpeg ? 1 : 0) +
       (force_enc_jpeg2000 ? 1 : 0) > 1) {
     std::cerr << "Choose at most one output compression format.\n";
   }
@@ -787,13 +802,15 @@ int main(int argc, char** argv)
 
     enum
     {
-      PNG, JPEG, Y4M
+      PNG, JPEG, Y4M, TIFF
     } filetype = JPEG;
     if (suffix == "png") {
       filetype = PNG;
     }
     else if (suffix == "y4m") {
       filetype = Y4M;
+    } else if (suffix == "tif" || suffix == "tiff") {
+      filetype = TIFF;
     }
 
     InputImage input_image;
@@ -802,6 +819,9 @@ int main(int argc, char** argv)
     }
     else if (filetype == Y4M) {
       input_image = loadY4M(input_filename.c_str());
+    }
+    else if (filetype == TIFF) {
+      input_image = loadTIFF(input_filename.c_str());
     }
     else {
       input_image = loadJPEG(input_filename.c_str());
