@@ -90,7 +90,7 @@ struct heif_error dav1d_new_decoder(void** dec)
 
   dav1d_default_settings(&decoder->settings);
 
-  decoder->settings.frame_size_limit = MAX_IMAGE_WIDTH * MAX_IMAGE_HEIGHT;
+  decoder->settings.frame_size_limit = MAX_IMAGE_SIZE;
   decoder->settings.all_layers = 0;
 
   if (dav1d_open(&decoder->context, &decoder->settings) != 0) {

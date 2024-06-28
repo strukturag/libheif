@@ -70,10 +70,11 @@ public:
 
   void set_max_decoding_threads(int max_threads) { m_max_decoding_threads = max_threads; }
 
+  // Sets the maximum size of both width and height of an image. The total limit
+  // of the image size (width * height) will be "maximum_size * maximum_size".
   void set_maximum_image_size_limit(int maximum_size)
   {
-    m_maximum_image_width_limit = maximum_size;
-    m_maximum_image_height_limit = maximum_size;
+    m_maximum_image_size_limit = int64_t(maximum_size) * maximum_size;
   }
 
   Error read(const std::shared_ptr<StreamReader>& reader);
@@ -95,6 +96,10 @@ public:
       m_alpha_channel.reset();
       m_depth_channel.reset();
       m_aux_images.clear();
+    }
+
+    Error check_resolution(uint32_t w, uint32_t h) const {
+      return m_heif_context->check_resolution(w, h);
     }
 
     void set_resolution(int w, int h)
@@ -341,7 +346,9 @@ public:
     Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
   };
 
-  std::shared_ptr<HeifFile> get_heif_file() { return m_heif_file; }
+  Error check_resolution(uint32_t width, uint32_t height) const;
+
+  std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
   std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
 
@@ -522,8 +529,8 @@ private:
 
   int m_max_decoding_threads = 4;
 
-  uint32_t m_maximum_image_width_limit;
-  uint32_t m_maximum_image_height_limit;
+  // Maximum image size in pixels (width * height).
+  uint64_t m_maximum_image_size_limit;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
 
