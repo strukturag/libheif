@@ -269,12 +269,16 @@ const (
 
 	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
 
+	SuberrorDecompressionInvalidData = C.heif_suberror_Decompression_invalid_data
+
 	// --- Memory_allocation_error ---
 
 	// A security limit preventing unreasonable memory allocations was exceeded by the input file.
 	// Please check whether the file is valid. If it is, contact us so that we could increase the
 	// security limits further.
 	SuberrorSecurityLimitExceeded = C.heif_suberror_Security_limit_exceeded
+
+	CompressionInitialisationError = C.heif_suberror_Compression_initialisation_error
 
 	// --- Usage_error ---
 
@@ -330,6 +334,8 @@ const (
 	SuberrorUnsupportedImageType = C.heif_suberror_Unsupported_image_type
 
 	SuberrorUnsupportedDataVersion = C.heif_suberror_Unsupported_data_version
+
+	SuberrorUnsupportedGenericCompressionMethod = C.heif_suberror_Unsupported_generic_compression_method
 
 	// The conversion of the source image to the requested chroma / colorspace is not supported.
 	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion

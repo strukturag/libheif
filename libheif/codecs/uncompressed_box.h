@@ -76,7 +76,22 @@ protected:
 class Box_uncC : public FullBox
 {
 public:
-  Box_uncC() {
+  Box_uncC() :
+    m_profile(0),
+    m_sampling_type(sampling_mode_no_subsampling),
+    m_interleave_type(interleave_mode_component),
+    m_block_size(0),
+    m_components_little_endian(false),
+    m_block_pad_lsb(false),
+    m_block_little_endian(false),
+    m_block_reversed(false),
+    m_pad_unknown(false),
+    m_pixel_size(0),
+    m_row_align_size(0),
+    m_tile_align_size(0),
+    m_num_tile_cols(1),
+    m_num_tile_rows(1)
+  {
     set_short_type(fourcc("uncC"));
   }
 
@@ -218,6 +233,68 @@ protected:
   uint32_t m_tile_align_size = 0;
   uint32_t m_num_tile_cols = 1;
   uint32_t m_num_tile_rows = 1;
+};
+
+/**
+ * Generic compression box (cmpC).
+ *
+ * This is from ISO/IEC 23001-17 Amd 2.
+ */
+class Box_cmpC : public FullBox
+{
+public:
+  Box_cmpC()
+  {
+    set_short_type(fourcc("cmpC"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  uint32_t get_compression_type() const { return compression_type; }
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  uint32_t compression_type;
+  bool can_decompress_contiguous_ranges;
+  uint8_t compressed_range_type;
+};
+
+/**
+ * Item compressed byte range info (icbr).
+ * 
+ * This is from ISO/IEC 23001-17 Amd 2.
+ */
+class Box_icbr : public FullBox
+{
+public:
+  Box_icbr()
+  {
+    set_short_type(fourcc("icbr"));
+  }
+
+  struct ByteRange
+  {
+    uint64_t range_offset;
+    uint64_t range_size;
+  };
+
+  const std::vector<ByteRange>& get_ranges() const { return m_ranges; }
+
+  void add_component(const ByteRange& range)
+  {
+    m_ranges.push_back(range);
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  std::vector<ByteRange> m_ranges;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H
