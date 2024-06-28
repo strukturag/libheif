@@ -986,13 +986,13 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     cmpd->add_component(cbComponent);
     Box_cmpd::Component crComponent = {component_type_Cr};
     cmpd->add_component(crComponent);
-    u_int8_t bpp_y = image->get_bits_per_pixel(heif_channel_Y);
+    uint8_t bpp_y = image->get_bits_per_pixel(heif_channel_Y);
     Box_uncC::Component component0 = {0, bpp_y, component_format_unsigned, 0};
     uncC->add_component(component0);
-    u_int8_t bpp_cb = image->get_bits_per_pixel(heif_channel_Cb);
+    uint8_t bpp_cb = image->get_bits_per_pixel(heif_channel_Cb);
     Box_uncC::Component component1 = {1, bpp_cb, component_format_unsigned, 0};
     uncC->add_component(component1);
-    u_int8_t bpp_cr = image->get_bits_per_pixel(heif_channel_Cr);
+    uint8_t bpp_cr = image->get_bits_per_pixel(heif_channel_Cr);
     Box_uncC::Component component2 = {2, bpp_cr, component_format_unsigned, 0};
     uncC->add_component(component2);
     if (image->get_chroma_format() == heif_chroma_444)
