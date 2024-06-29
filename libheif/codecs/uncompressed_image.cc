@@ -1018,6 +1018,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
       } else 
 #endif
       {
+        delete decoder;
         std::stringstream sstr;
         sstr << "unsupported uncC compression type: " << to_fourcc(cmpC->get_compression_type()) << std::endl;
         return Error(heif_error_Unsupported_feature,
