@@ -76,8 +76,7 @@ protected:
 class Box_uncC : public FullBox
 {
 public:
-  Box_uncC() :
-    m_profile(0)
+  Box_uncC()
   {
     set_short_type(fourcc("uncC"));
   }

@@ -216,3 +216,29 @@ TEST_CASE( "uncC" )
     std::string dump_output = uncC->dump(indent);
     REQUIRE(dump_output == "Box: uncC -----\nsize: 0   (header size: 0)\nprofile: 1919378017 (rgba)\ncomponent_index: 0\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 1\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 2\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 3\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\nsampling_type: no subsampling\ninterleave_type: pixel\nblock_size: 0\ncomponents_little_endian: 0\nblock_pad_lsb: 0\nblock_little_endian: 0\nblock_reversed: 0\npad_unknown: 0\npixel_size: 0\nrow_align_size: 0\ntile_align_size: 0\nnum_tile_cols: 1\nnum_tile_rows: 1\n");
 }
+
+
+TEST_CASE("cmpC_defl") {
+  std::vector<uint8_t> byteArray{
+    0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
+    0x00, 0x00, 0x00, 0x00, 'd', 'e', 'f', 'l',
+    0x00
+    };
+
+  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                      byteArray.size(), false);
+
+  BitstreamRange range(reader, byteArray.size());
+  std::shared_ptr<Box> box;
+  Error error = Box::read(range, &box);
+  REQUIRE(error == Error::Ok);
+  REQUIRE(range.error() == 0);
+
+  REQUIRE(box->get_short_type() == fourcc("cmpC"));
+  REQUIRE(box->get_type_string() == "cmpC");
+  std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
+  REQUIRE(cmpC != nullptr);
+  REQUIRE(cmpC->get_compression_type() == fourcc("defl"));
+  // rest
+
+}
