@@ -324,8 +324,15 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
   auto box2 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("cmpd"));
   std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
-  if (!uncC_box || !cmpd_box) {
+  if (!uncC_box) {
     return -1;
+  }
+  if (!cmpd_box) {
+    if (isKnownUncompressedFrameConfigurationBoxProfile(uncC_box)) {
+      return 8;
+    } else {
+      return -1;
+    }
   }
 
   int luma_bits = 0;
