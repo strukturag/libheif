@@ -208,8 +208,8 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
 
   try {
-    uint8_t* allocated_mem_8 = new uint8_t[m_mem_height * stride + alignment - 1];
-    uint8_t* mem_8 = allocated_mem_8;
+    allocated_mem = new uint8_t[m_mem_height * stride + alignment - 1];
+    uint8_t* mem_8 = allocated_mem;
 
     // shift beginning of image data to aligned memory position
 
@@ -220,7 +220,6 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
     }
 
     mem = mem_8;
-    allocated_mem = allocated_mem_8;
 
     return true;
   }
