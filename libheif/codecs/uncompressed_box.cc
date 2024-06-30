@@ -369,8 +369,8 @@ std::string Box_cmpC::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "compression_type: " << to_fourcc(compression_type) << "\n";
-  sstr << indent << "can_compress_contiguous_ranges: " << can_decompress_contiguous_ranges << "\n";
-  sstr << indent << "compressed_range_type: " << (int)compressed_range_type << "\n";
+  sstr << indent << "can_decompress_contiguous_ranges: " << can_decompress_contiguous_ranges << "\n";
+  sstr << indent << "compressed_entity_type: " << (int)compressed_range_type << "\n";
   return sstr.str();
 }
 

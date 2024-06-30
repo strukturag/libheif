@@ -219,26 +219,110 @@ TEST_CASE( "uncC" )
 
 
 TEST_CASE("cmpC_defl") {
-  std::vector<uint8_t> byteArray{
-    0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
-    0x00, 0x00, 0x00, 0x00, 'd', 'e', 'f', 'l',
-    0x00
-    };
+    std::vector<uint8_t> byteArray{
+      0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
+      0x00, 0x00, 0x00, 0x00, 'd', 'e', 'f', 'l',
+      0x00
+      };
 
-  auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
-                                                      byteArray.size(), false);
+    auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                        byteArray.size(), false);
 
-  BitstreamRange range(reader, byteArray.size());
-  std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
-  REQUIRE(error == Error::Ok);
-  REQUIRE(range.error() == 0);
+    BitstreamRange range(reader, byteArray.size());
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    REQUIRE(error == Error::Ok);
+    REQUIRE(range.error() == 0);
 
-  REQUIRE(box->get_short_type() == fourcc("cmpC"));
-  REQUIRE(box->get_type_string() == "cmpC");
-  std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
-  REQUIRE(cmpC != nullptr);
-  REQUIRE(cmpC->get_compression_type() == fourcc("defl"));
-  // rest
+    REQUIRE(box->get_short_type() == fourcc("cmpC"));
+    REQUIRE(box->get_type_string() == "cmpC");
+    std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
+    REQUIRE(cmpC != nullptr);
+    REQUIRE(cmpC->get_compression_type() == fourcc("defl"));
+    REQUIRE(cmpC->get_can_decompress_contiguous_ranges() == false);
+    REQUIRE(cmpC->get_compressed_range_type() == 0);
+
+    StreamWriter writer;
+    Error err = cmpC->write(writer);
+    REQUIRE(err.error_code == heif_error_Ok);
+    const std::vector<uint8_t> written = writer.get_data();
+    REQUIRE(written == byteArray);
+
+    Indent indent;
+    std::string dump_output = cmpC->dump(indent);
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: defl\ncan_decompress_contiguous_ranges: 0\ncompressed_entity_type: 0\n");
 
 }
+
+
+TEST_CASE("cmpC_zlib") {
+    std::vector<uint8_t> byteArray{
+      0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
+      0x00, 0x00, 0x00, 0x00, 'z', 'l', 'i', 'b',
+      0x82
+      };
+
+    auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                        byteArray.size(), false);
+
+    BitstreamRange range(reader, byteArray.size());
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    REQUIRE(error == Error::Ok);
+    REQUIRE(range.error() == 0);
+
+    REQUIRE(box->get_short_type() == fourcc("cmpC"));
+    REQUIRE(box->get_type_string() == "cmpC");
+    std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
+    REQUIRE(cmpC != nullptr);
+    REQUIRE(cmpC->get_compression_type() == fourcc("zlib"));
+    REQUIRE(cmpC->get_can_decompress_contiguous_ranges() == true);
+    REQUIRE(cmpC->get_compressed_range_type() == 2);
+
+    StreamWriter writer;
+    Error err = cmpC->write(writer);
+    REQUIRE(err.error_code == heif_error_Ok);
+    const std::vector<uint8_t> written = writer.get_data();
+    REQUIRE(written == byteArray);
+
+    Indent indent;
+    std::string dump_output = cmpC->dump(indent);
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: zlib\ncan_decompress_contiguous_ranges: 1\ncompressed_entity_type: 2\n");
+
+}
+
+TEST_CASE("cmpC_brot") {
+    std::vector<uint8_t> byteArray{
+      0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
+      0x00, 0x00, 0x00, 0x00, 'b', 'r', 'o', 't',
+      0x81
+      };
+
+    auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                        byteArray.size(), false);
+
+    BitstreamRange range(reader, byteArray.size());
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    REQUIRE(error == Error::Ok);
+    REQUIRE(range.error() == 0);
+
+    REQUIRE(box->get_short_type() == fourcc("cmpC"));
+    REQUIRE(box->get_type_string() == "cmpC");
+    std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
+    REQUIRE(cmpC != nullptr);
+    REQUIRE(cmpC->get_compression_type() == fourcc("brot"));
+    REQUIRE(cmpC->get_can_decompress_contiguous_ranges() == true);
+    REQUIRE(cmpC->get_compressed_range_type() == 1);
+
+    StreamWriter writer;
+    Error err = cmpC->write(writer);
+    REQUIRE(err.error_code == heif_error_Ok);
+    const std::vector<uint8_t> written = writer.get_data();
+    REQUIRE(written == byteArray);
+
+    Indent indent;
+    std::string dump_output = cmpC->dump(indent);
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: brot\ncan_decompress_contiguous_ranges: 1\ncompressed_entity_type: 1\n");
+
+  }

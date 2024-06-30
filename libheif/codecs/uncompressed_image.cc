@@ -943,7 +943,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
   if (!cmpd) {
     printf("No cmpd\n");
   }
-  printf("uncC version: %d\n", uncC->get_version());
   if (!cmpd && (uncC->get_version() !=1)) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,

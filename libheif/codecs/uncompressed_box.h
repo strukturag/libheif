@@ -237,6 +237,9 @@ public:
   std::string dump(Indent&) const override;
 
   uint32_t get_compression_type() const { return compression_type; }
+  bool get_can_decompress_contiguous_ranges() const { return can_decompress_contiguous_ranges; }
+  uint8_t get_compressed_range_type() const { return compressed_range_type; }
+  
   Error write(StreamWriter& writer) const override;
 
 protected:

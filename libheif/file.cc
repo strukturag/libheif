@@ -632,7 +632,7 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
 #if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
-  if (image_type == "unci") {
+  if ((image_type == "unci") || (image_type == "gnci")) {
     int bpp = UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(*this, imageID);
     return bpp;
   }
