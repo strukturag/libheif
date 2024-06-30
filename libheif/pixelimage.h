@@ -58,6 +58,8 @@ public:
 
   bool add_plane(heif_channel channel, int width, int height, int bit_depth);
 
+  bool add_channel(heif_channel channel, int width, int height, heif_channel_datatype datatype, int bit_depth);
+
   bool has_channel(heif_channel channel) const;
 
   // Has alpha information either as a separate channel or in the interleaved format.
@@ -172,8 +174,9 @@ public:
 private:
   struct ImagePlane
   {
-    bool alloc(int width, int height, int bit_depth, heif_chroma chroma);
+    bool alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, heif_chroma chroma);
 
+    heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
 
     // the "visible" area of the plane
@@ -184,9 +187,18 @@ private:
     int m_mem_width = 0;
     int m_mem_height = 0;
 
-    uint8_t* mem = nullptr; // aligned memory start
-    uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
+    void* mem = nullptr; // aligned memory start
+    void* allocated_mem = nullptr; // unaligned memory we allocated
     uint32_t stride = 0; // bytes per line
+
+    int get_bytes_per_pixel() const;
+
+    template <typename T> void mirror_inplace(heif_transform_mirror_direction);
+
+    template<typename T>
+    void rotate_ccw(int angle_degrees, ImagePlane& out_plane) const;
+
+    void crop(int left, int right, int top, int bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
   int m_width = 0;

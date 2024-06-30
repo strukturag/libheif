@@ -472,7 +472,10 @@ enum heif_colorspace
   heif_colorspace_RGB = 1,
 
   // heif_colorspace_monochrome should only be used with heif_chroma = heif_chroma_monochrome
-  heif_colorspace_monochrome = 2
+  heif_colorspace_monochrome = 2,
+
+  // Indicates that this image has no visual channels.
+  heif_colorspace_nonvisual = 3
 };
 
 enum heif_channel
@@ -484,9 +487,18 @@ enum heif_channel
   heif_channel_G = 4,
   heif_channel_B = 5,
   heif_channel_Alpha = 6,
-  heif_channel_interleaved = 10
+  heif_channel_interleaved = 10,
+  heif_channel_other_first = 128,
+  heif_channel_other_last = 255
 };
 
+enum heif_channel_datatype
+{
+    heif_channel_datatype_unsigned_integer = 1,
+    heif_channel_datatype_signed_integer = 2,
+    heif_channel_datatype_floating_point = 3,
+    heif_channel_datatype_complex_number = 4
+};
 
 // ========================= library initialization ======================
 
