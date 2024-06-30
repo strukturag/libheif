@@ -188,7 +188,7 @@ private:
     int m_mem_height = 0;
 
     void* mem = nullptr; // aligned memory start
-    void* allocated_mem = nullptr; // unaligned memory we allocated
+    uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
     uint32_t stride = 0; // bytes per line
 
     int get_bytes_per_pixel() const;
