@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <cassert>
 
 
 heif_chroma chroma_from_subsampling(int h, int v);
@@ -45,6 +46,15 @@ bool is_integer_multiple_of_chroma_size(int width,
 
 // Returns the list of valid heif_chroma values for a given colorspace.
 std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
+
+struct complex32 {
+  float real, imaginary;
+};
+
+struct complex64 {
+  double real, imaginary;
+};
+
 
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ErrorBuffer
@@ -87,9 +97,32 @@ public:
 
   uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, int* out_stride);
+  uint8_t* get_plane(enum heif_channel channel, int* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
 
-  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
+  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+
+  template <typename T>
+  T* get_channel(enum heif_channel channel, int* out_stride)
+  {
+    auto iter = m_planes.find(channel);
+    if (iter == m_planes.end()) {
+      return nullptr;
+    }
+
+    if (out_stride) {
+      *out_stride = iter->second.stride;
+    }
+
+    assert(sizeof(T) == iter->second.get_bytes_per_pixel());
+
+    return static_cast<T*>(iter->second.mem);
+  }
+
+  template <typename T>
+  const T* get_channel(enum heif_channel channel, int* out_stride) const
+  {
+    return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
+  }
 
   void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                            heif_channel src_channel,
