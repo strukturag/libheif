@@ -123,6 +123,13 @@ if (TARGET PNG::PNG)
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif ()
 
+find_package(TIFF)
+if (TIFF_FOUND)
+    target_link_libraries(heif-enc PRIVATE TIFF::TIFF)
+    target_sources(heif-enc PRIVATE decoder_tiff.cc decoder_tiff.h)
+    target_compile_definitions(heif-enc PUBLIC HAVE_LIBTIFF=1)
+endif ()
+
 # --- on Windows, copy the DLL into the executable directory for easier development
 
 function(add_dll_copy_command executable)
