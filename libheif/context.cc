@@ -40,7 +40,7 @@
 #include "pixelimage.h"
 #include "libheif/api_structs.h"
 #include "security_limits.h"
-#include "metadata_compression.h"
+#include "compression.h"
 #include "color-conversion/colorconversion.h"
 #include "plugin_registry.h"
 #include "codecs/hevc.h"
@@ -512,6 +512,7 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "iovl" ||
           item_type == "av01" ||
           item_type == "unci" ||
+          item_type == "gnci" ||
           item_type == "vvc1" ||
           item_type == "jpeg" ||
           (item_type == "mime" && content_type == "image/jpeg") ||
@@ -1494,7 +1495,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
 #if WITH_UNCOMPRESSED_CODEC
   }
-  else if (image_type == "unci") {
+  else if ((image_type == "unci") || (image_type == "gnci")) {
     std::vector<uint8_t> data;
     error = m_heif_file->get_compressed_image_data(ID, &data);
     if (error) {

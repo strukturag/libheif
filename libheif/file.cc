@@ -22,7 +22,7 @@
 #include "box.h"
 #include "libheif/heif.h"
 #include "libheif/heif_properties.h"
-#include "metadata_compression.h"
+#include "compression.h"
 #include "codecs/jpeg2000.h"
 #include "codecs/jpeg.h"
 #include "codecs/vvc.h"
@@ -632,7 +632,7 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
 #if WITH_UNCOMPRESSED_CODEC
   // Uncompressed
 
-  if (image_type == "unci") {
+  if ((image_type == "unci") || (image_type == "gnci")) {
     int bpp = UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(*this, imageID);
     return bpp;
   }
@@ -966,7 +966,13 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
         error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
-        *data = inflate(compressed_data);
+        if (error) {
+          return error;
+        }
+        error = inflate_zlib(compressed_data, data);
+        if (error) {
+          return error;
+        }
 #else
         return Error(heif_error_Unsupported_feature,
                      heif_suberror_Unsupported_header_compression_method,
@@ -1075,8 +1081,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   switch (compression) {
 #if WITH_DEFLATE_HEADER_COMPRESSION
     case heif_metadata_compression_deflate:
-      *out_data = inflate(compressed_data);
-      return Error::Ok;
+      return inflate_zlib(compressed_data, out_data);
 #endif
     default:
       return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
