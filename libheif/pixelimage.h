@@ -110,10 +110,10 @@ public:
     }
 
     if (out_stride) {
-      *out_stride = iter->second.stride;
+      *out_stride = iter->second.stride / sizeof(T);
     }
 
-    assert(sizeof(T) == iter->second.get_bytes_per_pixel());
+    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
 
     return static_cast<T*>(iter->second.mem);
   }
@@ -207,7 +207,7 @@ public:
 private:
   struct ImagePlane
   {
-    bool alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, heif_chroma chroma);
+    bool alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;

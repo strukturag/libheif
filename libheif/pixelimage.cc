@@ -145,7 +145,19 @@ static uint32_t rounded_size(uint32_t s)
 bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int bit_depth)
 {
   ImagePlane plane;
-  if (plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, m_chroma)) {
+  int num_interleaved_pixels = num_interleaved_pixels_per_plane(m_chroma);
+
+  // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
+
+  if (m_chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
+    bit_depth = 8;
+  }
+
+  if (m_chroma == heif_chroma_interleaved_RGBA && bit_depth == 32) {
+    bit_depth = 8;
+  }
+
+  if (plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels)) {
     m_planes.insert(std::make_pair(channel, plane));
     return true;
   }
@@ -158,7 +170,7 @@ bool HeifPixelImage::add_plane(heif_channel channel, int width, int height, int 
 bool HeifPixelImage::add_channel(heif_channel channel, int width, int height, heif_channel_datatype datatype, int bit_depth)
 {
   ImagePlane plane;
-  if (plane.alloc(width, height, datatype, bit_depth, m_chroma)) {
+  if (plane.alloc(width, height, datatype, bit_depth, 1)) {
     m_planes.insert(std::make_pair(channel, plane));
     return true;
   }
@@ -168,14 +180,15 @@ bool HeifPixelImage::add_channel(heif_channel channel, int width, int height, he
 }
 
 
-bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, heif_chroma chroma)
+bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datatype datatype, int bit_depth,
+                                       int num_interleaved_components) // heif_chroma chroma)
 {
   assert(width >= 0);
   assert(height >= 0);
   assert(bit_depth >= 1);
   assert(bit_depth <= 32);
 
-  // use 16 byte alignment
+  // use 16 byte alignment (enough for 128 bit data-types). Every row is an integer number of data-elements.
   uint16_t alignment = 16; // must be power of two
 
   m_width = width;
@@ -184,23 +197,12 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
   m_mem_width = rounded_size(width);
   m_mem_height = rounded_size(height);
 
-  // for backwards compatibility, allow for 24/32 bits for RGB/RGBA interleaved chromas
-
-  if (chroma == heif_chroma_interleaved_RGB && bit_depth == 24) {
-    bit_depth = 8;
-  }
-
-  if (chroma == heif_chroma_interleaved_RGBA && bit_depth == 32) {
-    bit_depth = 8;
-  }
-
-  assert(m_bit_depth <= 16);
   m_bit_depth = static_cast<uint8_t>(bit_depth);
   m_datatype = datatype;
 
 
-  int bytes_per_component = (m_bit_depth + 7) / 8;
-  int bytes_per_pixel = num_interleaved_pixels_per_plane(chroma) * bytes_per_component;
+  int bytes_per_component = get_bytes_per_pixel();
+  int bytes_per_pixel = num_interleaved_components * bytes_per_component;
 
   stride = m_mem_width * bytes_per_pixel;
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
@@ -243,7 +245,7 @@ bool HeifPixelImage::extend_padding_to_size(int width, int height)
         plane->m_mem_height < subsampled_height) {
 
       ImagePlane newPlane;
-      if (!newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, m_chroma)) {
+      if (!newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
         return false;
       }
 
