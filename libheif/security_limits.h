@@ -31,8 +31,7 @@ static const int MAX_COLOR_PROFILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 // Artificial limit to avoid allocating too much memory.
 // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
-static const int MAX_IMAGE_WIDTH = 32768;
-static const int MAX_IMAGE_HEIGHT = 32768;
+static const int64_t MAX_IMAGE_SIZE = 32768 * 32768;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.

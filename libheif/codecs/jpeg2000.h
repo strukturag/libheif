@@ -324,11 +324,9 @@ class Jpeg2000ImageCodec
 {
 public:
 
-//   static Error decode_jpeg2000_image(const std::shared_ptr<const HeifFile>& heif_file,
+//   static Error decode_jpeg2000_image(const HeifContext* context,
 //                                      heif_item_id ID,
 //                                      std::shared_ptr<HeifPixelImage>& img,
-//                                      uint32_t maximum_image_width_limit,
-//                                      uint32_t maximum_image_height_limit,
 //                                      const std::vector<uint8_t>& uncompressed_data);
 
   static Error encode_jpeg2000_image(const std::shared_ptr<HeifFile>& heif_file,

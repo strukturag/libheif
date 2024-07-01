@@ -21,7 +21,7 @@ set -eu
 #
 
 echo "Checking licenses..."
-CHECK_RESULT=`/usr/bin/licensecheck --recursive --ignore 'emscripten|libde265|README\.md|post\.js|/.git/|clusterfuzz-testcase-.*' .`
+CHECK_RESULT=`/usr/bin/licensecheck --recursive --ignore 'emscripten|libde265|README\.md|post\.js|/.git/|clusterfuzz-testcase-.*|fuzzing/data/.*' .`
 
 FOUND=
 while read -r line; do

@@ -1669,8 +1669,8 @@ static const std::set<typename std::underlying_type<heif_color_primaries>::type>
 
 struct heif_error heif_nclx_color_profile_set_color_primaries(heif_color_profile_nclx* nclx, uint16_t cp)
 {
-  if (cp < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
-      cp > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {
+  if (static_cast<std::underlying_type<heif_color_primaries>::type>(cp) < std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::min() ||
+      static_cast<std::underlying_type<heif_color_primaries>::type>(cp) > std::numeric_limits<std::underlying_type<heif_color_primaries>::type>::max()) {
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_color_primaries).error_struct(nullptr);
   }
 
@@ -1710,8 +1710,8 @@ static const std::set<typename std::underlying_type<heif_transfer_characteristic
 
 struct heif_error heif_nclx_color_profile_set_transfer_characteristics(struct heif_color_profile_nclx* nclx, uint16_t tc)
 {
-  if (tc < std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::min() ||
-      tc > std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::max()) {
+  if (static_cast<std::underlying_type<heif_color_primaries>::type>(tc) < std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::min() ||
+      static_cast<std::underlying_type<heif_color_primaries>::type>(tc) > std::numeric_limits<std::underlying_type<heif_transfer_characteristics>::type>::max()) {
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_transfer_characteristics).error_struct(nullptr);
   }
 
@@ -1747,8 +1747,8 @@ static const std::set<typename std::underlying_type<heif_matrix_coefficients>::t
 
 struct heif_error heif_nclx_color_profile_set_matrix_coefficients(struct heif_color_profile_nclx* nclx, uint16_t mc)
 {
-  if (mc < std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::min() ||
-      mc > std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::max()) {
+  if (static_cast<std::underlying_type<heif_color_primaries>::type>(mc) < std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::min() ||
+      static_cast<std::underlying_type<heif_color_primaries>::type>(mc) > std::numeric_limits<std::underlying_type<heif_matrix_coefficients>::type>::max()) {
     return Error(heif_error_Invalid_input, heif_suberror_Unknown_NCLX_matrix_coefficients).error_struct(nullptr);
   }
 

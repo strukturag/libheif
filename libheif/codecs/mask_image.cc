@@ -55,15 +55,13 @@ Error Box_mskC::write(StreamWriter& writer) const
 }
 
 
-Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& heif_file,
+Error MaskImageCodec::decode_mask_image(const HeifContext* context,
                                         heif_item_id ID,
                                         std::shared_ptr<HeifPixelImage>& img,
-                                        uint32_t maximum_image_width_limit,
-                                        uint32_t maximum_image_height_limit,
                                         const std::vector<uint8_t>& data)
 {
   std::vector<std::shared_ptr<Box>> item_properties;
-  Error error = heif_file->get_properties(ID, item_properties);
+  Error error = context->get_heif_file()->get_properties(ID, item_properties);
   if (error) {
     return error;
   }
@@ -76,16 +74,11 @@ Error MaskImageCodec::decode_mask_image(const std::shared_ptr<const HeifFile>& h
     if (ispe) {
       width = ispe->get_width();
       height = ispe->get_height();
-
-      if (width >= maximum_image_width_limit || height >= maximum_image_height_limit) {
-        std::stringstream sstr;
-        sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-              << maximum_image_width_limit << "x" << maximum_image_height_limit << "\n";
-
-        return Error(heif_error_Memory_allocation_error,
-                      heif_suberror_Security_limit_exceeded,
-                      sstr.str());
+      error = context->check_resolution(width, height);
+      if (error) {
+        return error;
       }
+
       found_ispe = true;
     }
 
