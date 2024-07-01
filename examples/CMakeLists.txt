@@ -122,19 +122,3 @@ if (TARGET PNG::PNG)
     install(TARGETS heif-thumbnailer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES heif-thumbnailer.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif ()
-
-# --- on Windows, copy the DLL into the executable directory for easier development
-
-function(add_dll_copy_command executable)
-    if (WIN32)
-        add_custom_command(TARGET ${executable} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy
-                $<TARGET_FILE:heif>
-                $<TARGET_FILE_DIR:${executable}>
-        )
-    endif ()
-endfunction()
-
-add_dll_copy_command(heif-enc)
-add_dll_copy_command(heif-dec)
-add_dll_copy_command(heif-info)

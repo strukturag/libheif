@@ -172,3 +172,14 @@ install(EXPORT ${PROJECT_NAME}-config DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION
         "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+
+
+# --- on Windows, copy the DLL into the executable directory for easier development
+
+if (WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(TARGET heif POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:heif>
+            $<TARGET_FILE_DIR:heif>/../examples
+    )
+endif ()
