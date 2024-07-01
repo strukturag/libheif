@@ -750,9 +750,14 @@ Error HeifContext::interpret_heif_file()
             for (heif_item_id ref: refs) {
               auto master_iter = m_all_images.find(ref);
               if (master_iter == m_all_images.end()) {
-                return Error(heif_error_Invalid_input,
-                            heif_suberror_Nonexisting_item_referenced,
-                            "Non-existing alpha image referenced");
+
+                if (!m_heif_file->has_item_with_id(ref)) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Nonexisting_item_referenced,
+                               "Non-existing alpha image referenced");
+                }
+
+                continue;
               }
 
               auto master_img = master_iter->second;
@@ -778,9 +783,14 @@ Error HeifContext::interpret_heif_file()
             for (heif_item_id ref: refs) {
               auto master_iter = m_all_images.find(ref);
               if (master_iter == m_all_images.end()) {
-                return Error(heif_error_Invalid_input,
-                            heif_suberror_Nonexisting_item_referenced,
-                            "Non-existing depth image referenced");
+
+                if (!m_heif_file->has_item_with_id(ref)) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Nonexisting_item_referenced,
+                               "Non-existing depth image referenced");
+                }
+
+                continue;
               }
               if (image.get() == master_iter->second.get()) {
                 return Error(heif_error_Invalid_input,
