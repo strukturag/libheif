@@ -249,6 +249,67 @@ int32_t BitstreamRange::read32s()
 }
 
 
+uint64_t BitstreamRange::read64()
+{
+  if (!prepare_read(8)) {
+    return 0;
+  }
+
+  uint8_t buf[8];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 8);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+  return ((static_cast<uint64_t>(buf[0]) << 56) |
+          (static_cast<uint64_t>(buf[1]) << 48) |
+          (static_cast<uint64_t>(buf[2]) << 40) |
+          (static_cast<uint64_t>(buf[3]) << 32) |
+          (static_cast<uint64_t>(buf[4]) << 24) |
+          (static_cast<uint64_t>(buf[5]) << 16) |
+          (static_cast<uint64_t>(buf[6]) << 8) |
+          (static_cast<uint64_t>(buf[7])));
+}
+
+
+int64_t BitstreamRange::read64s()
+{
+  uint64_t val = read64();
+  return reinterpret_cast<int64_t&>(val);
+}
+
+
+float BitstreamRange::read_float32()
+{
+  assert(sizeof(float)==4);
+
+  if (!prepare_read(4)) {
+    return 0;
+  }
+
+  uint8_t buf[4];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 4);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+#if !IS_BIG_ENDIAN
+  std::swap(buf[0],buf[3]);
+  std::swap(buf[1],buf[2]);
+#endif
+
+  return *reinterpret_cast<float*>(buf);
+}
+
+
 std::string BitstreamRange::read_string()
 {
   std::string str;
@@ -587,6 +648,36 @@ void StreamWriter::write64(uint64_t v)
   m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
 }
+
+
+void StreamWriter::write64(int64_t v)
+{
+  write64(reinterpret_cast<uint64_t&>(v));
+}
+
+
+void StreamWriter::write_float32(float v)
+{
+  assert(sizeof(float)==4);
+
+  uint8_t buf[4];
+  *reinterpret_cast<float*>(buf) = v;
+
+#if !IS_BIG_ENDIAN
+  std::swap(buf[0], buf[3]);
+  std::swap(buf[1], buf[2]);
+#endif
+
+  if (m_position + 4 > m_data.size()) {
+    m_data.resize(m_position + 4);
+  }
+
+  m_data[m_position++] = buf[0];
+  m_data[m_position++] = buf[1];
+  m_data[m_position++] = buf[2];
+  m_data[m_position++] = buf[3];
+}
+
 
 
 void StreamWriter::write(int size, uint64_t value)

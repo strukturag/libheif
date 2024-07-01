@@ -641,6 +641,16 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_mskC>();
       break;
 
+    // --- TAI timestamps
+
+    case fourcc("itai"):
+      box = std::make_shared<Box_itai>();
+      break;
+
+    case fourcc("taic"):
+      box = std::make_shared<Box_taic>();
+      break;
+
     // --- AVC (H.264)
 
     case fourcc("avcC"):
@@ -3289,6 +3299,75 @@ Error Box_udes::write(StreamWriter& writer) const
   writer.write(m_tags);
   prepend_header(writer, box_start);
   return Error::Ok;
+}
+
+
+std::string Box_taic::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
+  sstr << indent << "correction_offset: " << m_correction_offset << "\n";
+  sstr << indent << "clock_drift_rate: ";
+  if (heif_is_tai_clock_info_drift_rate_undefined(m_clock_drift_rate)) {
+    sstr << "undefined\n";
+  }
+  else {
+    sstr << m_clock_drift_rate << "\n";
+  }
+
+  sstr << indent << "clock_source: " << (int)m_clock_source << "\n";
+  return sstr.str();
+}
+
+Error Box_taic::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_time_uncertainty);
+  writer.write64(m_correction_offset);
+  writer.write_float32(m_clock_drift_rate);
+  writer.write8(m_clock_source);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+Error Box_taic::parse(BitstreamRange& range) {
+  parse_full_box_header(range);
+
+  m_time_uncertainty = range.read64();
+  m_correction_offset = range.read64s();
+
+  m_clock_drift_rate = range.read_float32();
+  m_clock_source = range.read8();
+  return range.get_error();
+}
+
+std::string Box_itai::dump(Indent& indent) const {
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "TAI_timestamp: " << m_TAI_timestamp << "\n";
+  sstr << indent << "status_bits: " << (int)m_status_bits << "\n";
+  return sstr.str();
+}
+
+Error Box_itai::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+  writer.write64(m_TAI_timestamp);
+  writer.write8(m_status_bits);
+
+  prepend_header(writer, box_start);
+  return Error::Ok;
+}
+
+Error Box_itai::parse(BitstreamRange& range) {
+  parse_full_box_header(range);
+
+  uint64_t high = range.read32();
+  uint64_t low = range.read32();
+  m_TAI_timestamp = (high << 32) | low;
+
+  m_status_bits = range.read8();
+  return range.get_error();
 }
 
 
