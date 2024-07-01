@@ -26,8 +26,6 @@
 #include <cstring>
 #include <utility>
 
-struct complex64 { uint64_t a,b; }; // dummy data structure, 128 bits long
-
 
 heif_chroma chroma_from_subsampling(int h, int v)
 {
@@ -372,36 +370,6 @@ uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 }
 
 
-uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride)
-{
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
-    return nullptr;
-  }
-
-  if (out_stride) {
-    *out_stride = iter->second.stride;
-  }
-
-  return static_cast<uint8_t*>(iter->second.mem);
-}
-
-
-const uint8_t* HeifPixelImage::get_plane(enum heif_channel channel, int* out_stride) const
-{
-  auto iter = m_planes.find(channel);
-  if (iter == m_planes.end()) {
-    return nullptr;
-  }
-
-  if (out_stride) {
-    *out_stride = iter->second.stride;
-  }
-
-  return static_cast<uint8_t*>(iter->second.mem);
-}
-
-
 void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                                          heif_channel src_channel,
                                          heif_channel dst_channel)
@@ -671,19 +639,20 @@ Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
 int HeifPixelImage::ImagePlane::get_bytes_per_pixel() const
 {
   if (m_bit_depth <= 8) {
-    return 8;
+    return 1;
   }
   else if (m_bit_depth <= 16) {
-    return 16;
+    return 2;
   }
   else if (m_bit_depth <= 32) {
-    return 32;
+    return 4;
   }
   else if (m_bit_depth <= 64) {
-    return 64;
+    return 8;
   }
   else {
-    return 128;
+    assert(m_bit_depth <= 128);
+    return 16;
   }
 }
 
