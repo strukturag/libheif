@@ -227,7 +227,7 @@ Op_mono_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   }
 
   const uint8_t* in_y, * in_a = nullptr;
-  int in_y_stride = 0, in_a_stride;
+  int in_y_stride = 0, in_a_stride = 0;
 
   uint8_t* out_p;
   int out_p_stride = 0;

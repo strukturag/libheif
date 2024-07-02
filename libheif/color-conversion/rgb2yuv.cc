@@ -837,7 +837,7 @@ Op_RGB24_32_to_YCbCr444_GBR::convert_colorspace(const std::shared_ptr<const Heif
     }
   }
 
-  uint8_t* out_cb, * out_cr, * out_y, * out_a;
+  uint8_t* out_cb, * out_cr, * out_y, * out_a = nullptr;
   int out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0, out_a_stride = 0;
 
   const uint8_t* in_p;

@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <cassert>
 
 
 heif_chroma chroma_from_subsampling(int h, int v);
@@ -46,6 +47,7 @@ bool is_integer_multiple_of_chroma_size(int width,
 // Returns the list of valid heif_chroma values for a given colorspace.
 std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
 
+
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ErrorBuffer
 {
@@ -57,6 +59,8 @@ public:
   void create(int width, int height, heif_colorspace colorspace, heif_chroma chroma);
 
   bool add_plane(heif_channel channel, int width, int height, int bit_depth);
+
+  bool add_channel(heif_channel channel, int width, int height, heif_channel_datatype datatype, int bit_depth);
 
   bool has_channel(heif_channel channel) const;
 
@@ -85,9 +89,39 @@ public:
 
   uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, int* out_stride);
+  heif_channel_datatype get_datatype(enum heif_channel channel) const;
 
-  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const;
+  int get_number_of_interleaved_components(heif_channel channel) const;
+
+  uint8_t* get_plane(enum heif_channel channel, int* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+
+  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+
+  template <typename T>
+  T* get_channel(enum heif_channel channel, int* out_stride)
+  {
+    auto iter = m_planes.find(channel);
+    if (iter == m_planes.end()) {
+      if (out_stride)
+        *out_stride = 0;
+
+      return nullptr;
+    }
+
+    if (out_stride) {
+      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
+    }
+
+    //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
+
+    return static_cast<T*>(iter->second.mem);
+  }
+
+  template <typename T>
+  const T* get_channel(enum heif_channel channel, int* out_stride) const
+  {
+    return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
+  }
 
   void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                            heif_channel src_channel,
@@ -172,9 +206,11 @@ public:
 private:
   struct ImagePlane
   {
-    bool alloc(int width, int height, int bit_depth, heif_chroma chroma);
+    bool alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
 
+    heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
+    uint8_t m_num_interleaved_components = 1;
 
     // the "visible" area of the plane
     int m_width = 0;
@@ -184,9 +220,18 @@ private:
     int m_mem_width = 0;
     int m_mem_height = 0;
 
-    uint8_t* mem = nullptr; // aligned memory start
+    void* mem = nullptr; // aligned memory start
     uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
     uint32_t stride = 0; // bytes per line
+
+    int get_bytes_per_pixel() const;
+
+    template <typename T> void mirror_inplace(heif_transform_mirror_direction);
+
+    template<typename T>
+    void rotate_ccw(int angle_degrees, ImagePlane& out_plane) const;
+
+    void crop(int left, int right, int top, int bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
   int m_width = 0;
