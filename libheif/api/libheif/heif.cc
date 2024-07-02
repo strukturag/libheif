@@ -1430,6 +1430,32 @@ enum heif_channel_datatype heif_image_get_datatype(const struct heif_image* imag
 }
 
 
+int heif_image_list_channels(struct heif_image* image,
+                             enum heif_channel** out_channels)
+{
+  if (!image || !out_channels) {
+    return 0;
+  }
+
+  auto channels = image->image->get_channel_set();
+
+  *out_channels = new heif_channel[channels.size()];
+  heif_channel* p = *out_channels;
+  for (heif_channel c : channels) {
+    *p++ = c;
+  }
+
+  return channels.size();
+}
+
+
+void heif_channel_release_list(enum heif_channel** channels)
+{
+  delete[] channels;
+}
+
+
+
 #define heif_image_get_channel_X(name, type, datatype, bits) \
 const type* heif_image_get_channel_ ## name ## _readonly(const struct heif_image* image, \
                                                          enum heif_channel channel, \

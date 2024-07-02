@@ -1672,6 +1672,14 @@ uint8_t* heif_image_get_plane(struct heif_image*,
                               int* out_stride);
 
 
+LIBHEIF_API
+int heif_image_list_channels(struct heif_image*,
+                             enum heif_channel** out_channels);
+
+LIBHEIF_API
+void heif_channel_release_list(enum heif_channel** channels);
+
+
 struct heif_complex32 {
   float real, imaginary;
 };
