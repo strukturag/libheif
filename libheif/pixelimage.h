@@ -211,6 +211,7 @@ private:
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
+    uint8_t m_num_interleaved_components = 1;
 
     // the "visible" area of the plane
     int m_width = 0;

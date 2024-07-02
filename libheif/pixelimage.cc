@@ -197,6 +197,7 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
   m_mem_height = rounded_size(height);
 
   m_bit_depth = static_cast<uint8_t>(bit_depth);
+  m_num_interleaved_components = num_interleaved_components;
   m_datatype = datatype;
 
 
