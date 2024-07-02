@@ -1732,14 +1732,14 @@ double* heif_image_get_channel_float64(struct heif_image*,
                                        int* out_stride);
 
 LIBHEIF_API
-heif_complex32* heif_image_get_channel_complex32(struct heif_image*,
-                                                 enum heif_channel channel,
-                                                 int* out_stride);
+struct heif_complex32* heif_image_get_channel_complex32(struct heif_image*,
+                                                        enum heif_channel channel,
+                                                        int* out_stride);
 
 LIBHEIF_API
-heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
-                                                 enum heif_channel channel,
-                                                 int* out_stride);
+struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
+                                                        enum heif_channel channel,
+                                                        int* out_stride);
 
 
 struct heif_scaling_options;
