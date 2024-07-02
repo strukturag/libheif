@@ -2362,7 +2362,7 @@ LIBHEIF_API
 struct heif_error heif_image_add_channel(struct heif_image* image,
                                          enum heif_channel channel,
                                          int width, int height,
-                                         heif_channel_datatype datatype, int bit_depth);
+                                         enum heif_channel_datatype datatype, int bit_depth);
 
 // Signal that the image is premultiplied by the alpha pixel values.
 LIBHEIF_API
