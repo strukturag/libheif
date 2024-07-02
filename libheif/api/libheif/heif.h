@@ -1697,6 +1697,21 @@ const uint64_t* heif_image_get_channel_uint64_readonly(const struct heif_image*,
                                                        int* out_stride);
 
 LIBHEIF_API
+const int16_t* heif_image_get_channel_int16_readonly(const struct heif_image*,
+                                                     enum heif_channel channel,
+                                                     int* out_stride);
+
+LIBHEIF_API
+const int32_t* heif_image_get_channel_int32_readonly(const struct heif_image*,
+                                                     enum heif_channel channel,
+                                                     int* out_stride);
+
+LIBHEIF_API
+const int64_t* heif_image_get_channel_int64_readonly(const struct heif_image*,
+                                                     enum heif_channel channel,
+                                                     int* out_stride);
+
+LIBHEIF_API
 const float* heif_image_get_channel_float32_readonly(const struct heif_image*,
                                                      enum heif_channel channel,
                                                      int* out_stride);
@@ -1707,14 +1722,14 @@ const double* heif_image_get_channel_float64_readonly(const struct heif_image*,
                                                       int* out_stride);
 
 LIBHEIF_API
-const heif_complex32* heif_image_get_channel_complex32_readonly(const struct heif_image*,
-                                                                enum heif_channel channel,
-                                                                int* out_stride);
+const struct heif_complex32* heif_image_get_channel_complex32_readonly(const struct heif_image*,
+                                                                       enum heif_channel channel,
+                                                                       int* out_stride);
 
 LIBHEIF_API
-const heif_complex64* heif_image_get_channel_complex64_readonly(const struct heif_image*,
-                                                                enum heif_channel channel,
-                                                                int* out_stride);
+const struct heif_complex64* heif_image_get_channel_complex64_readonly(const struct heif_image*,
+                                                                       enum heif_channel channel,
+                                                                       int* out_stride);
 
 LIBHEIF_API
 uint16_t* heif_image_get_channel_uint16(struct heif_image*,
@@ -1730,6 +1745,21 @@ LIBHEIF_API
 uint64_t* heif_image_get_channel_uint64(struct heif_image*,
                                         enum heif_channel channel,
                                         int* out_stride);
+
+LIBHEIF_API
+int16_t* heif_image_get_channel_int16(struct heif_image*,
+                                      enum heif_channel channel,
+                                      int* out_stride);
+
+LIBHEIF_API
+int32_t* heif_image_get_channel_int32(struct heif_image*,
+                                      enum heif_channel channel,
+                                      int* out_stride);
+
+LIBHEIF_API
+int64_t* heif_image_get_channel_int64(struct heif_image*,
+                                      enum heif_channel channel,
+                                      int* out_stride);
 
 LIBHEIF_API
 float* heif_image_get_channel_float32(struct heif_image*,
