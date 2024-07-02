@@ -223,6 +223,19 @@ uint32_t BitstreamRange::read32()
 }
 
 
+int32_t BitstreamRange::read32s()
+{
+  uint32_t v = read32();
+
+  if (v & 0x80000000) {
+    return -static_cast<int32_t>((~v) & 0x7fffffff) -1;
+  }
+  else {
+    return static_cast<int32_t>(v);
+  }
+}
+
+
 uint64_t BitstreamRange::read64()
 {
   if (!prepare_read(8)) {
