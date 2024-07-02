@@ -102,6 +102,9 @@ public:
   {
     auto iter = m_planes.find(channel);
     if (iter == m_planes.end()) {
+      if (out_stride)
+        *out_stride = 0;
+
       return nullptr;
     }
 
