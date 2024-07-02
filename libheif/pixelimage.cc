@@ -587,10 +587,10 @@ void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
   int w = m_width;
   int h = m_height;
 
-  uint32_t in_stride = stride / sizeof(T);
+  uint32_t in_stride = stride / uint32_t(sizeof(T));
   const T* in_data = static_cast<const T*>(mem);
 
-  uint32_t out_stride = out_plane.stride / sizeof(T);
+  uint32_t out_stride = out_plane.stride / uint32_t(sizeof(T));
   T* out_data = static_cast<T*>(out_plane.mem);
 
   if (angle_degrees == 270) {
