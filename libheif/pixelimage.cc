@@ -116,6 +116,9 @@ std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace 
     case heif_colorspace_monochrome:
       return {heif_chroma_monochrome};
 
+    case heif_colorspace_nonvisual:
+      return {heif_chroma_undefined};
+
     default:
       return {};
   }
@@ -185,7 +188,7 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
   assert(width >= 0);
   assert(height >= 0);
   assert(bit_depth >= 1);
-  assert(bit_depth <= 32);
+  assert(bit_depth <= 128);
 
   // use 16 byte alignment (enough for 128 bit data-types). Every row is an integer number of data-elements.
   uint16_t alignment = 16; // must be power of two
@@ -196,8 +199,10 @@ bool HeifPixelImage::ImagePlane::alloc(int width, int height, heif_channel_datat
   m_mem_width = rounded_size(width);
   m_mem_height = rounded_size(height);
 
+  assert(num_interleaved_components > 0 && num_interleaved_components <= 255);
+
   m_bit_depth = static_cast<uint8_t>(bit_depth);
-  m_num_interleaved_components = num_interleaved_components;
+  m_num_interleaved_components = static_cast<uint8_t>(num_interleaved_components);
   m_datatype = datatype;
 
 
@@ -373,6 +378,28 @@ uint8_t HeifPixelImage::get_bits_per_pixel(enum heif_channel channel) const
 }
 
 
+heif_channel_datatype HeifPixelImage::get_datatype(enum heif_channel channel) const
+{
+  auto iter = m_planes.find(channel);
+  if (iter == m_planes.end()) {
+    return heif_channel_datatype_undefined;
+  }
+
+  return iter->second.m_datatype;
+}
+
+
+int HeifPixelImage::get_number_of_interleaved_components(heif_channel channel) const
+{
+  auto iter = m_planes.find(channel);
+  if (iter == m_planes.end()) {
+    return 0;
+  }
+
+  return iter->second.m_num_interleaved_components;
+}
+
+
 void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                                          heif_channel src_channel,
                                          heif_channel dst_channel)
@@ -542,7 +569,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
       plane.rotate_ccw<uint64_t>(angle_degrees, out_plane);
     }
     else if (plane.m_bit_depth <= 128) {
-      plane.rotate_ccw<complex64>(angle_degrees, out_plane);
+      plane.rotate_ccw<heif_complex64>(angle_degrees, out_plane);
     }
   }
   // --- pass the color profiles to the new image
@@ -560,10 +587,10 @@ void HeifPixelImage::ImagePlane::rotate_ccw(int angle_degrees,
   int w = m_width;
   int h = m_height;
 
-  uint32_t in_stride = stride;
+  uint32_t in_stride = stride / sizeof(T);
   const T* in_data = static_cast<const T*>(mem);
 
-  uint32_t out_stride = out_plane.stride;
+  uint32_t out_stride = out_plane.stride / sizeof(T);
   T* out_data = static_cast<T*>(out_plane.mem);
 
   if (angle_degrees == 270) {
@@ -596,12 +623,12 @@ void HeifPixelImage::ImagePlane::mirror_inplace(heif_transform_mirror_direction 
   if (direction == heif_transform_mirror_direction_horizontal) {
     for (int y = 0; y < h; y++) {
       for (int x = 0; x < w / 2; x++)
-        std::swap(data[y * stride + x], data[y * stride + w - 1 - x]);
+        std::swap(data[y * stride / sizeof(T) + x], data[y * stride / sizeof(T) + w - 1 - x]);
     }
   } else {
     for (int y = 0; y < h / 2; y++) {
       for (int x = 0; x < w; x++)
-        std::swap(data[y * stride + x], data[(h - 1 - y) * stride + x]);
+        std::swap(data[y * stride / sizeof(T) + x], data[(h - 1 - y) * stride / sizeof(T) + x]);
     }
   }
 }
@@ -611,12 +638,6 @@ Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
 {
   for (auto& plane_pair : m_planes) {
     ImagePlane& plane = plane_pair.second;
-
-    if (plane.m_bit_depth != 8) {
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unspecified,
-                   "Can currently only mirror images with 8 bits per pixel");
-    }
 
     if (plane.m_bit_depth <= 8) {
       plane.mirror_inplace<uint8_t>(direction);
@@ -631,7 +652,14 @@ Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
       plane.mirror_inplace<uint64_t>(direction);
     }
     else if (plane.m_bit_depth <= 128) {
-      plane.mirror_inplace<complex64>(direction);
+      plane.mirror_inplace<heif_complex64>(direction);
+    }
+    else {
+      std::stringstream sstr;
+      sstr << "Cannot mirror images with " << plane.m_bit_depth << " bits per pixel";
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   sstr.str());
     }
   }
 

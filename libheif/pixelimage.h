@@ -47,14 +47,6 @@ bool is_integer_multiple_of_chroma_size(int width,
 // Returns the list of valid heif_chroma values for a given colorspace.
 std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
 
-struct complex32 {
-  float real, imaginary;
-};
-
-struct complex64 {
-  double real, imaginary;
-};
-
 
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ErrorBuffer
@@ -97,6 +89,10 @@ public:
 
   uint8_t get_bits_per_pixel(enum heif_channel channel) const;
 
+  heif_channel_datatype get_datatype(enum heif_channel channel) const;
+
+  int get_number_of_interleaved_components(heif_channel channel) const;
+
   uint8_t* get_plane(enum heif_channel channel, int* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
 
   const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
@@ -110,7 +106,7 @@ public:
     }
 
     if (out_stride) {
-      *out_stride = iter->second.stride / sizeof(T);
+      *out_stride = static_cast<int>(iter->second.stride / sizeof(T));
     }
 
     //assert(sizeof(T) == iter->second.get_bytes_per_pixel());
