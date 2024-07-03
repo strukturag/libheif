@@ -177,9 +177,9 @@ struct heif_tai_timestamp_packet
   // version 1
 
   uint64_t tai_timestamp;
-  uint8_t synchronization_state;
-  uint8_t timestamp_generation_failure;
-  uint8_t timestamp_is_modified;
+  uint8_t synchronization_state;         // bool
+  uint8_t timestamp_generation_failure;  // bool
+  uint8_t timestamp_is_modified;         // bool
 };
 
 // Creates a new TAI timestamp property if one doesn't already exist for itemId.
