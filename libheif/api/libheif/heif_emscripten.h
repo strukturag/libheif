@@ -46,6 +46,25 @@ static emscripten::val heif_js_context_get_image_handle(
   return emscripten::val(handle);
 }
 
+static emscripten::val heif_js_context_get_primary_image_handle(
+    struct heif_context* context)
+{
+  emscripten::val result = emscripten::val::object();
+  if (!context) {
+    return result;
+  }
+  
+  heif_image_handle* handle;
+  struct heif_error err = heif_context_get_primary_image_handle(context, &handle);
+
+  if (err.code != heif_error_Ok) {
+    return emscripten::val(err);
+  }
+
+  return emscripten::val(handle);
+}
+
+
 static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     struct heif_context* context)
 {
@@ -284,6 +303,8 @@ EMSCRIPTEN_BINDINGS(libheif) {
     &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_context_get_image_handle",
     &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_primary_image_handle",
+    &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
     //emscripten::function("heif_js_decode_image",
     //&heif_js_decode_image, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_decode_image2",
