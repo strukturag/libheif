@@ -26,6 +26,8 @@ AOM_VERSION="${AOM_VERSION:-3.6.1}"
 STANDALONE="${STANDALONE:-0}"
 DEBUG="${DEBUG:-0}"
 USE_WASM="${USE_WASM:-1}"
+USE_TYPESCRIPT="${USE_TYPESCRIPT:-1}"
+USE_UNSAFE_EVAL="${USE_UNSAFE_EVAL:-1}"
 
 echo "Build using ${CORES} CPU cores"
 
@@ -110,7 +112,12 @@ EXPORTED_FUNCTIONS=$($EMSDK/upstream/bin/llvm-nm $LIBHEIFA --format=just-symbols
 
 echo "Running Emscripten..."
 
-BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM"
+BUILD_FLAGS="-lembind -o libheif.js --post-js ${SRCDIR}/post.js -sWASM=$USE_WASM -sDYNAMIC_EXECUTION=$USE_UNSAFE_EVAL"
+
+if [ "$USE_TYPESCRIPT" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS --emit-tsd libheif.d.ts"
+fi
+
 RELEASE_BUILD_FLAGS="-O3"
 
 if [ "$STANDALONE" = "1" ]; then
@@ -130,7 +137,6 @@ emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
     -sEXPORT_NAME="libheif" \
     -sWASM_ASYNC_COMPILATION=0 \
     -sALLOW_MEMORY_GROWTH \
-    --memory-init-file 0 \
     -std=c++11 \
     $LIBRARY_INCLUDE_FLAGS \
     $LIBRARY_LINKER_FLAGS \
