@@ -136,7 +136,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
 
 // ========================= Timestamps =========================
 LIBHEIF_API extern const uint64_t heif_tai_clock_info_unknown_time_uncertainty;
-LIBHEIF_API extern const int64_t  heif_tai_clock_info_unknown_correction_offset;
+LIBHEIF_API extern const int32_t heif_tai_clock_info_unknown_drift_rate;
 LIBHEIF_API extern const uint64_t heif_unknown_tai_timestamp;
 
 
@@ -147,12 +147,12 @@ struct heif_tai_clock_info
   // version 1
 
   uint64_t time_uncertainty;
-  int64_t correction_offset;
-  float clock_drift_rate;
-  uint8_t clock_source;
+  uint32_t clock_resolution;
+  int32_t clock_drift_rate;
+  uint8_t clock_type;
 };
 
-int heif_is_tai_clock_info_drift_rate_undefined(float drift_rate);
+int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
 
 
 // Creates a new clock info property if it doesn't already exist.
@@ -170,20 +170,30 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
                                                heif_tai_clock_info* out_clock);
 
+struct heif_tai_timestamp_packet
+{
+  uint8_t version;
+
+  // version 1
+
+  uint64_t tai_timestamp;
+  uint8_t synchronization_state;
+  uint8_t timestamp_generation_failure;
+  uint8_t timestamp_is_modified;
+};
+
 // Creates a new TAI timestamp property if one doesn't already exist for itemId.
 // Creates a new clock info property if one doesn't already exist for itemId.
 LIBHEIF_API
 struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  uint64_t tai_timestamp,
-                                                  uint8_t status_bits,
+                                                  heif_tai_timestamp_packet* timestamp,
                                                   heif_property_id* out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  uint64_t* out_tai_timestamp,
-                                                  uint8_t* out_status_bits);
+                                                  heif_tai_timestamp_packet* out_timestamp);
 
 
 #ifdef __cplusplus

@@ -146,6 +146,8 @@ public:
 
   uint32_t read32();
 
+  int32_t read32s();
+
   uint64_t read64();
 
   int64_t read64signed();

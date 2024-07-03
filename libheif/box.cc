@@ -3115,7 +3115,7 @@ std::string Box_taic::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "time_uncertainty: " << m_time_uncertainty << "\n";
-  sstr << indent << "correction_offset: " << m_correction_offset << "\n";
+  sstr << indent << "clock_resolution: " << m_clock_resolution << "\n";
   sstr << indent << "clock_drift_rate: ";
   if (heif_is_tai_clock_info_drift_rate_undefined(m_clock_drift_rate)) {
     sstr << "undefined\n";
@@ -3124,16 +3124,16 @@ std::string Box_taic::dump(Indent& indent) const {
     sstr << m_clock_drift_rate << "\n";
   }
 
-  sstr << indent << "clock_source: " << (int)m_clock_source << "\n";
+  sstr << indent << "clock_type: " << m_clock_type << "\n";
   return sstr.str();
 }
 
 Error Box_taic::write(StreamWriter& writer) const {
   size_t box_start = reserve_box_header_space(writer);
   writer.write64(m_time_uncertainty);
-  writer.write64(m_correction_offset);
-  writer.write_float32(m_clock_drift_rate);
-  writer.write8(m_clock_source);
+  writer.write32(m_clock_resolution);
+  writer.write32(m_clock_drift_rate);
+  writer.write8(m_clock_type);
 
   prepend_header(writer, box_start);
 
@@ -3144,26 +3144,33 @@ Error Box_taic::parse(BitstreamRange& range) {
   parse_full_box_header(range);
 
   m_time_uncertainty = range.read64();
-  m_correction_offset = range.read64signed();
+  m_clock_resolution = range.read32();
 
-  m_clock_drift_rate = range.read_float32();
-  m_clock_source = range.read8();
+  m_clock_drift_rate = range.read32s();
+  m_clock_type = range.read8();
   return range.get_error();
 }
 
 std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "TAI_timestamp: " << m_TAI_timestamp << "\n";
-  sstr << indent << "status_bits: " << (int)m_status_bits << "\n";
+  sstr << indent << "tai_timestamp: " << m_tai_timestamp << "\n";
+  sstr << indent << "synchronization_state: " << m_synchronization_state << "\n";
+  sstr << indent << "timestamp_generation_failure: " << m_timestamp_generation_failure << "\n";
+  sstr << indent << "timestamp_is_modified: " << m_timestamp_is_modified << "\n";
   return sstr.str();
 }
 
 Error Box_itai::write(StreamWriter& writer) const {
   size_t box_start = reserve_box_header_space(writer);
-  writer.write64(m_TAI_timestamp);
-  writer.write8(m_status_bits);
+  writer.write64(m_tai_timestamp);
 
+  uint8_t status_bits = 0;
+  status_bits |= (m_synchronization_state << 7);
+  status_bits |= (m_timestamp_generation_failure << 6);
+  status_bits |= (m_timestamp_is_modified << 5);
+
+  writer.write8(status_bits);
   prepend_header(writer, box_start);
   return Error::Ok;
 }
@@ -3171,10 +3178,13 @@ Error Box_itai::write(StreamWriter& writer) const {
 Error Box_itai::parse(BitstreamRange& range) {
   parse_full_box_header(range);
 
-  uint64_t high = range.read32();
-  uint64_t low = range.read32();
-  m_TAI_timestamp = (high << 32) | low;
+  m_tai_timestamp = range.read64();
 
-  m_status_bits = range.read8();
+  uint8_t status_bits = range.read8();
+
+  m_synchronization_state = (status_bits & 0x07);
+  m_timestamp_generation_failure = (status_bits & 0x06);
+  m_timestamp_is_modified = (status_bits & 0x5);
+
   return range.get_error();
 }

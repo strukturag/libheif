@@ -302,16 +302,16 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 
 
 const uint64_t heif_tai_clock_info_unknown_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
-const int64_t  heif_tai_clock_info_unknown_correction_offset = 0x7FFFFFFFFFFFFFFF;
 const uint64_t heif_unknown_tai_timestamp = 0xFFFFFFFFFFFFFFFF;
+const int32_t heif_tai_clock_info_unknown_drift_rate = 0x7FFFFFFF;
 
 
-int heif_is_tai_clock_info_drift_rate_undefined(float drift_rate)
+int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
 {
-  float undef_clock_drift = std::numeric_limits<float>::quiet_NaN();
-  return memcmp(reinterpret_cast<const void*>(&undef_clock_drift),
-                reinterpret_cast<const void*>(&drift_rate),
-                sizeof(float)) == 0;
+  if (drift_rate == heif_tai_clock_info_unknown_drift_rate) {
+    return 1;
+  }
+  return 0;
 }
 
 
@@ -320,7 +320,7 @@ struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                const heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId)
 {
-  if (!ctx) {
+  if (!ctx || !clock) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
   }
 
@@ -337,9 +337,9 @@ struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
   }
 
   taic->set_time_uncertainty(clock->time_uncertainty);
-  taic->set_correction_offset(clock->correction_offset);
+  taic->set_clock_resolution(clock->clock_resolution);
   taic->set_clock_drift_rate(clock->clock_drift_rate);
-  taic->set_clock_source(clock->clock_source);
+  taic->set_clock_type(clock->clock_type);
 
   bool essential = false;
   heif_property_id id = ctx->context->add_property(itemId, taic, essential);
@@ -376,10 +376,11 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
   }
 
   if (out_clock->version >= 1) {
+    out_clock->version = 1;
     out_clock->time_uncertainty = taic->get_time_uncertainty();
-    out_clock->correction_offset = taic->get_correction_offset();
+    out_clock->clock_resolution = taic->get_clock_resolution();
     out_clock->clock_drift_rate = taic->get_clock_drift_rate();
-    out_clock->clock_source = taic->get_clock_source();
+    out_clock->clock_type = taic->get_clock_type();
   }
 
   return heif_error_success;
@@ -388,8 +389,7 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
 struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  uint64_t tai_timestamp,
-                                                  uint8_t status_bits,
+                                                  heif_tai_timestamp_packet* timestamp,
                                                   heif_property_id* out_propertyId)
 {
   if (!ctx) {
@@ -408,9 +408,11 @@ struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
     itai = std::make_shared<Box_itai>();
   }
 
-  itai->set_TAI_timestamp(tai_timestamp);
-  itai->set_status_bits(status_bits);
-
+  // Set timestamp values
+  itai->set_tai_timestamp(timestamp->tai_timestamp);
+  itai->set_synchronization_state(timestamp->synchronization_state);
+  itai->set_timestamp_generation_failure(timestamp->timestamp_generation_failure);
+  itai->set_timestamp_is_modified(timestamp->timestamp_is_modified);
   heif_property_id id = ctx->context->add_property(itemId, itai, false);
   
   // Create new taic if one doesn't exist for the itemId.
@@ -431,8 +433,7 @@ struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
 
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  uint64_t* out_tai_timestamp,
-                                                  uint8_t* out_status_bits)
+                                                  heif_tai_timestamp_packet* out_timestamp)
 {
   if (!ctx) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "NULL passed"};
@@ -447,16 +448,16 @@ struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx
   //Check if itai exists for itemId
   auto itai = file->get_property<Box_itai>(itemId);
   if (!itai) {
-    out_tai_timestamp = nullptr;
-    out_status_bits = nullptr;
+    out_timestamp = nullptr;
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "Timestamp property not found for itemId"};
   }
 
-  if (out_tai_timestamp) {
-    *out_tai_timestamp = itai->get_TAI_timestamp();
-  }
-  if (out_status_bits) {
-    *out_status_bits = itai->get_status_bits();
+  if (out_timestamp) {
+    out_timestamp->version = 1;
+    out_timestamp->tai_timestamp = itai->get_tai_timestamp();
+    out_timestamp->synchronization_state = itai->get_synchronization_state();
+    out_timestamp->timestamp_generation_failure = itai->get_timestamp_generation_failure();
+    out_timestamp->timestamp_is_modified = itai->get_timestamp_is_modified();
   }
 
   return heif_error_success;

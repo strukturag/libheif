@@ -1085,12 +1085,12 @@ public:
   void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
   
   /**
-   * correction_offset.
+   * clock_resolution.
    * 
-   * The difference in nanoseconds between the clock’s reported
-   * timestamp and true time value of the measurement event. 
+   * Specifies the resolution of the receptor clock in nanoseconds.
+   * For example, a microsecond clock has a clock_resolution of 1000.
    */
-  void set_correction_offset(int64_t correction_offset) { m_correction_offset = correction_offset; }
+  void set_clock_resolution(uint32_t clock_resolution) { m_clock_resolution = clock_resolution; }
   
   /**
    * clock_drift_rate.
@@ -1098,33 +1098,33 @@ public:
    * The difference between the synchronized and unsynchronized
    * time, over a period of one second. 
    */
-  void set_clock_drift_rate(float clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  void set_clock_drift_rate(int32_t clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
   
   /**
-   * clock_source.
+   * clock_type.
    * 
    * 0 = Clock type is unkown
    * 1 = The clock does not synchronize to an atomic source of absolute TAI time
    * 2 = The clock can synchronize to an atomic source of absolute TAI time
    */
-  void set_clock_source(uint8_t clock_source) { m_clock_source = clock_source; }
+  void set_clock_type(uint8_t clock_type) { m_clock_type = clock_type; }
 
   uint64_t get_time_uncertainty() const { return m_time_uncertainty; }
   
-  int64_t get_correction_offset() const { return m_correction_offset; }
+  uint32_t get_clock_resolution() const { return m_clock_resolution; }
   
-  float get_clock_drift_rate() const { return m_clock_drift_rate; }
+  int32_t get_clock_drift_rate() const { return m_clock_drift_rate; }
   
-  uint8_t get_clock_source() const { return m_clock_source; }
+  uint8_t get_clock_type() const { return m_clock_type; }
 
 protected:
   Error parse(BitstreamRange& range) override;
 
 private:
   uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
-  int64_t m_correction_offset = heif_tai_clock_info_unknown_correction_offset;
-  float m_clock_drift_rate = std::numeric_limits<float>::quiet_NaN();
-  uint8_t m_clock_source = 0;
+  uint32_t m_clock_resolution = 0;
+  int32_t m_clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
+  uint8_t m_clock_type = 0;
 };
 
 
@@ -1141,32 +1141,41 @@ public:
   Error write(StreamWriter& writer) const override;
 
   /**
-   * timestamp.
-   * 
    * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
    */
-  void set_TAI_timestamp(uint64_t timestamp) { m_TAI_timestamp = timestamp; }
+  void set_tai_timestamp(uint64_t timestamp) { m_tai_timestamp = timestamp; }
 
   /**
-   * status_bits.
-   * 
-   * Bit 0: Synchronization Status (0=unsynchronized, 1=synchronized)
-   * Bit 1: Timestamp validity (0=invalid, 1=valid)
-   * Bits 2-7: Reserved
+  * synchronization_state (0=unsynchronized, 1=synchronized)
+  */
+  void set_synchronization_state(bool state) { m_synchronization_state = state; }
+
+  /**
+  * timestamp_generation_failure (0=generated, 1=failed)
+  */
+  void set_timestamp_generation_failure(bool failure) { m_timestamp_generation_failure = failure; }
+
+  /**
+   * timestamp_is_modified (0=original 1=modified)
    */
-  void set_status_bits(uint8_t status_bits) { m_status_bits = status_bits; }
+  void set_timestamp_is_modified(bool is_modified) { m_timestamp_is_modified = is_modified; }
 
-  uint64_t get_TAI_timestamp() const { return m_TAI_timestamp; }
+  uint64_t get_tai_timestamp() const { return m_tai_timestamp; }
 
-  uint8_t get_status_bits() const { return m_status_bits; }
+  bool get_synchronization_state() const { return m_synchronization_state; }
+
+  bool get_timestamp_generation_failure() const { return m_timestamp_generation_failure; }
+
+  bool get_timestamp_is_modified() const { return m_timestamp_is_modified; }
 
 protected:
   Error parse(BitstreamRange& range) override;
 
 private:
-  // Initialized to "unknown" 
-  uint64_t m_TAI_timestamp = 0xFFFFFFFFFFFFFFFF;
-  uint8_t m_status_bits = 0;
+  uint64_t m_tai_timestamp;
+  bool m_synchronization_state;
+  bool m_timestamp_generation_failure;
+  bool m_timestamp_is_modified;
 };
 
 #endif
