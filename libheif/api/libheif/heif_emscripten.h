@@ -24,6 +24,11 @@ static struct heif_error _heif_context_read_from_memory(
   return heif_context_read_from_memory(context, data.data(), data.size(), nullptr);
 }
 
+static heif_filetype_result heif_js_check_filetype(const std::string& data) 
+{
+  return heif_check_filetype((const uint8_t*) data.data(), data.size());
+}
+
 static emscripten::val heif_js_context_get_image_handle(
     struct heif_context* context, heif_item_id id)
 {
@@ -40,6 +45,25 @@ static emscripten::val heif_js_context_get_image_handle(
 
   return emscripten::val(handle);
 }
+
+static emscripten::val heif_js_context_get_primary_image_handle(
+    struct heif_context* context)
+{
+  emscripten::val result = emscripten::val::object();
+  if (!context) {
+    return result;
+  }
+  
+  heif_image_handle* handle;
+  struct heif_error err = heif_context_get_primary_image_handle(context, &handle);
+
+  if (err.code != heif_error_Ok) {
+    return emscripten::val(err);
+  }
+
+  return emscripten::val(handle);
+}
+
 
 static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     struct heif_context* context)
@@ -272,11 +296,15 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_context_free);
     emscripten::function("heif_context_read_from_memory",
     &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_check_filetype",
+    &heif_js_check_filetype, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_top_level_images);
     emscripten::function("heif_js_context_get_list_of_top_level_image_IDs",
     &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_context_get_image_handle",
     &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_primary_image_handle",
+    &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
     //emscripten::function("heif_js_decode_image",
     //&heif_js_decode_image, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_decode_image2",
@@ -419,6 +447,11 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_channel_B", heif_channel_B)
     .value("heif_channel_Alpha", heif_channel_Alpha)
     .value("heif_channel_interleaved", heif_channel_interleaved);
+    emscripten::enum_<heif_filetype_result>("heif_filetype_result")
+    .value("heif_filetype_no", heif_filetype_no)
+    .value("heif_filetype_yes_supported", heif_filetype_yes_supported)
+    .value("heif_filetype_yes_unsupported", heif_filetype_yes_unsupported)
+    .value("heif_filetype_maybe", heif_filetype_maybe);
 
     emscripten::class_<heif_context>("heif_context");
     emscripten::class_<heif_image_handle>("heif_image_handle");
