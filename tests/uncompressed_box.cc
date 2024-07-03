@@ -25,10 +25,10 @@
 */
 
 #include "catch.hpp"
-#include "libheif/box.h"
+#include "box.h"
 #include "libheif/heif.h"
-#include "libheif/uncompressed.h"
-#include "libheif/uncompressed_box.h"
+#include "codecs/uncompressed.h"
+#include "codecs/uncompressed_box.h"
 #include <cstdint>
 #include <iostream>
 

@@ -18,10 +18,10 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/box.h"
-#include "libheif/error.h"
+#include "box.h"
+#include "error.h"
 #include "libheif/heif.h"
-#include "libheif/region.h"
+#include "region.h"
 #include <cstdint>
 #include <cassert>
 #include <cstring>
@@ -38,20 +38,22 @@
 #include "context.h"
 #include "file.h"
 #include "pixelimage.h"
-#include "api_structs.h"
+#include "libheif/api_structs.h"
 #include "security_limits.h"
-#include "hevc.h"
-#include "avif.h"
-#include "jpeg.h"
-#include "plugin_registry.h"
-#include "libheif/color-conversion/colorconversion.h"
-#include "mask_image.h"
 #include "metadata_compression.h"
-#include "jpeg2000.h"
+#include "color-conversion/colorconversion.h"
+#include "plugin_registry.h"
+#include "codecs/hevc.h"
+#include "codecs/vvc.h"
+#include "codecs/avif.h"
+#include "codecs/jpeg.h"
+#include "codecs/mask_image.h"
+#include "codecs/jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "codecs/uncompressed_image.h"
 #endif
+
 
 heif_encoder::heif_encoder(const struct heif_encoder_plugin* _plugin)
     : plugin(_plugin)
@@ -573,8 +575,6 @@ Error HeifContext::interpret_heif_file()
 
 
   // --- read through properties for each image and extract image resolutions
-  // Note: this has to be executed before assigning the auxiliary images below because we will only
-  // merge the alpha image with the main image when their resolutions are the same.
 
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
@@ -610,29 +610,60 @@ Error HeifContext::interpret_heif_file()
         image->set_resolution(width, height);
         ispe_read = true;
       }
+    }
 
-      if (ispe_read) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
-        if (clap) {
-          image->set_resolution(clap->get_width_rounded(),
-                                clap->get_height_rounded());
-        }
+    if (!ispe_read) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_ispe_property,
+                   "Image has no 'ispe' property");
+    }
 
-        auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
-        if (irot) {
-          if (irot->get_rotation() == 90 ||
-              irot->get_rotation() == 270) {
-            // swap width and height
-            image->set_resolution(image->get_height(),
-                                  image->get_width());
-          }
-        }
-      }
-
+    for (const auto& prop : properties) {
       auto colr = std::dynamic_pointer_cast<Box_colr>(prop);
       if (colr) {
         auto profile = colr->get_color_profile();
         image->set_color_profile(profile);
+        continue;
+      }
+
+      auto cmin = std::dynamic_pointer_cast<Box_cmin>(prop);
+      if (cmin) {
+        image->set_intrinsic_matrix(cmin->get_intrinsic_matrix());
+      }
+
+      auto cmex = std::dynamic_pointer_cast<Box_cmex>(prop);
+      if (cmex) {
+        image->set_extrinsic_matrix(cmex->get_extrinsic_matrix());
+      }
+    }
+
+
+    for (const auto& prop : properties) {
+      auto clap = std::dynamic_pointer_cast<Box_clap>(prop);
+      if (clap) {
+        image->set_resolution(clap->get_width_rounded(),
+                              clap->get_height_rounded());
+
+        if (image->has_intrinsic_matrix()) {
+          image->get_intrinsic_matrix().apply_clap(clap.get(), image->get_width(), image->get_height());
+        }
+      }
+
+      auto imir = std::dynamic_pointer_cast<Box_imir>(prop);
+      if (imir) {
+        image->get_intrinsic_matrix().apply_imir(imir.get(), image->get_width(), image->get_height());
+      }
+
+      auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
+      if (irot) {
+        if (irot->get_rotation() == 90 ||
+            irot->get_rotation() == 270) {
+          // swap width and height
+          image->set_resolution(image->get_height(),
+                                image->get_width());
+        }
+
+        // TODO: apply irot to camera extrinsic matrix
       }
     }
   }
@@ -656,34 +687,29 @@ Error HeifContext::interpret_heif_file()
           // --- this is a thumbnail image, attach to the main image
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many thumbnail references");
+          for (heif_item_id ref: refs) {
+            image->set_is_thumbnail();
+
+            auto master_iter = m_all_images.find(ref);
+            if (master_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references a non-existing image");
+            }
+
+            if (master_iter->second->is_thumbnail()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Thumbnail references another thumbnail");
+            }
+
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Recursive thumbnail image detected");
+            }
+            master_iter->second->add_thumbnail(image);
           }
-
-          image->set_is_thumbnail_of(refs[0]);
-
-          auto master_iter = m_all_images.find(refs[0]);
-          if (master_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references a non-existing image");
-          }
-
-          if (master_iter->second->is_thumbnail()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Thumbnail references another thumbnail");
-          }
-
-          if (image.get() == master_iter->second.get()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Recursive thumbnail image detected");
-          }
-          master_iter->second->add_thumbnail(image);
-
           remove_top_level_image(image);
         }
         else if (type == fourcc("auxl")) {
@@ -714,12 +740,6 @@ Error HeifContext::interpret_heif_file()
           }
 
           std::vector<heif_item_id> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Too many auxiliary image references");
-          }
-
 
           // alpha channel
 
@@ -727,26 +747,28 @@ Error HeifContext::interpret_heif_file()
               auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:1" ||  // HEIF (h265)
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha") { // MIAF
 
-            auto master_iter = m_all_images.find(refs[0]);
-            if (master_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Non-existing alpha image referenced");
-            }
+            for (heif_item_id ref: refs) {
+              auto master_iter = m_all_images.find(ref);
+              if (master_iter == m_all_images.end()) {
 
-            auto master_img = master_iter->second;
+                if (!m_heif_file->has_item_with_id(ref)) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Nonexisting_item_referenced,
+                               "Non-existing alpha image referenced");
+                }
 
-            if (image.get() == master_img.get()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Recursive alpha image detected");
-            }
+                continue;
+              }
 
+              auto master_img = master_iter->second;
 
-            if (image->get_width() == master_img->get_width() &&
-                image->get_height() == master_img->get_height()) {
+              if (image.get() == master_img.get()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Recursive alpha image detected");
+              }
 
-              image->set_is_alpha_channel_of(refs[0], true);
+              image->set_is_alpha_channel();
               master_img->set_alpha_channel(image);
             }
           }
@@ -756,30 +778,37 @@ Error HeifContext::interpret_heif_file()
 
           if (auxC_property->get_aux_type() == "urn:mpeg:hevc:2015:auxid:2" || // HEIF
               auxC_property->get_aux_type() == "urn:mpeg:mpegB:cicp:systems:auxiliary:depth") { // AVIF
-            image->set_is_depth_channel_of(refs[0]);
+            image->set_is_depth_channel();
 
-            auto master_iter = m_all_images.find(refs[0]);
-            if (master_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Non-existing depth image referenced");
-            }
-            if (image.get() == master_iter->second.get()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Recursive depth image detected");
-            }
-            master_iter->second->set_depth_channel(image);
+            for (heif_item_id ref: refs) {
+              auto master_iter = m_all_images.find(ref);
+              if (master_iter == m_all_images.end()) {
 
-            auto subtypes = auxC_property->get_subtypes();
+                if (!m_heif_file->has_item_with_id(ref)) {
+                  return Error(heif_error_Invalid_input,
+                               heif_suberror_Nonexisting_item_referenced,
+                               "Non-existing depth image referenced");
+                }
 
-            std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-            err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+                continue;
+              }
+              if (image.get() == master_iter->second.get()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Recursive depth image detected");
+              }
+              master_iter->second->set_depth_channel(image);
 
-            for (auto& msg : sei_messages) {
-              auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
-              if (depth_msg) {
-                image->set_depth_representation_info(*depth_msg);
+              auto subtypes = auxC_property->get_subtypes();
+
+              std::vector<std::shared_ptr<SEIMessage>> sei_messages;
+              err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+
+              for (auto& msg : sei_messages) {
+                auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
+                if (depth_msg) {
+                  image->set_depth_representation_info(*depth_msg);
+                }
               }
             }
           }
@@ -787,23 +816,30 @@ Error HeifContext::interpret_heif_file()
 
           // --- generic aux image
 
-          image->set_is_aux_image_of(refs[0], auxC_property->get_aux_type());
+          image->set_is_aux_image(auxC_property->get_aux_type());
 
-          auto master_iter = m_all_images.find(refs[0]);
-          if (master_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Non-existing aux image referenced");
+          for (heif_item_id ref: refs) {
+            auto master_iter = m_all_images.find(ref);
+            if (master_iter == m_all_images.end()) {
+
+              if (!m_heif_file->has_item_with_id(ref)) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Nonexisting_item_referenced,
+                             "Non-existing aux image referenced");
+              }
+
+              continue;
+            }
+            if (image.get() == master_iter->second.get()) {
+              return Error(heif_error_Invalid_input,
+                          heif_suberror_Nonexisting_item_referenced,
+                          "Recursive aux image detected");
+            }
+
+            master_iter->second->add_aux_image(image);
+
+            remove_top_level_image(image);
           }
-          if (image.get() == master_iter->second.get()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Recursive aux image detected");
-          }
-
-          master_iter->second->add_aux_image(image);
-
-          remove_top_level_image(image);
         }
         else {
           // 'image' is a normal image, keep it as a top-level image
@@ -828,6 +864,17 @@ Error HeifContext::interpret_heif_file()
         return Error(heif_error_Invalid_input,
                      heif_suberror_No_hvcC_box,
                      "No hvcC property in hvc1 type image");
+      }
+    }
+    if (infe->get_item_type() == "vvc1") {
+
+      auto ipma = m_heif_file->get_ipma_box();
+      auto ipco = m_heif_file->get_ipco_box();
+
+      if (!ipco->get_property_for_item_ID(image->get_id(), ipma, fourcc("vvcC"))) {
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_No_vvcC_box,
+                     "No vvcC property in vvc1 type image");
       }
     }
   }
@@ -915,21 +962,21 @@ Error HeifContext::interpret_heif_file()
       for (const auto& ref : references) {
         if (ref.header.get_short_type() == fourcc("cdsc")) {
           std::vector<uint32_t> refs = ref.to_item_ID;
-          if (refs.size() != 1) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Unspecified,
-                         "Metadata not correctly assigned to image");
-          }
 
-          uint32_t exif_image_id = refs[0];
-          auto img_iter = m_all_images.find(exif_image_id);
-          if (img_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "Metadata assigned to non-existing image");
-          }
+          for(uint32_t ref: refs) {
+            uint32_t exif_image_id = ref;
+            auto img_iter = m_all_images.find(exif_image_id);
+            if (img_iter == m_all_images.end()) {
+              if (!m_heif_file->has_item_with_id(exif_image_id)) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Nonexisting_item_referenced,
+                             "Metadata assigned to non-existing image");
+              }
 
-          img_iter->second->add_metadata(metadata);
+              continue;
+            }
+            img_iter->second->add_metadata(metadata);
+          }
         }
         else if (ref.header.get_short_type() == fourcc("prem")) {
           uint32_t color_image_id = ref.from_item_ID;
@@ -964,20 +1011,17 @@ Error HeifContext::interpret_heif_file()
         for (const auto& ref : references) {
           if (ref.header.get_short_type() == fourcc("cdsc")) {
             std::vector<uint32_t> refs = ref.to_item_ID;
-            if (refs.size() != 1) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Unspecified,
-                           "Region item not correctly assigned to image");
+            for (uint32_t ref: refs) {
+              uint32_t image_id = ref;
+              auto img_iter = m_all_images.find(image_id);
+              if (img_iter == m_all_images.end()) {
+                return Error(heif_error_Invalid_input,
+                            heif_suberror_Nonexisting_item_referenced,
+                            "Region item assigned to non-existing image");
+              }
+              img_iter->second->add_region_item_id(id);
+              m_region_items.push_back(region_item);
             }
-            uint32_t image_id = refs[0];
-            auto img_iter = m_all_images.find(image_id);
-            if (img_iter == m_all_images.end()) {
-              return Error(heif_error_Invalid_input,
-                           heif_suberror_Nonexisting_item_referenced,
-                           "Region item assigned to non-existing image");
-            }
-            img_iter->second->add_region_item_id(id);
-            m_region_items.push_back(region_item);
           }
 
           /* When the geometry 'mask' of a region is represented by a mask stored in
@@ -1207,6 +1251,9 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
   if (auto hvcC = m_heif_context->m_heif_file->get_property<Box_hvcC>(id)) {
     *out_chroma = (heif_chroma)(hvcC->get_configuration().chroma_format);
   }
+  else if (auto vvcC = m_heif_context->m_heif_file->get_property<Box_vvcC>(id)) {
+    *out_chroma = (heif_chroma)(vvcC->get_configuration().chroma_format_idc);
+  }
   else if (auto av1C = m_heif_context->m_heif_file->get_property<Box_av1C>(id)) {
     *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
   }
@@ -1309,6 +1356,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   // --- decode image, depending on its type
 
   if (image_type == "hvc1" ||
+      image_type == "vvc1" ||
       image_type == "av01" ||
       image_type == "j2k1" ||
       image_type == "jpeg" ||
@@ -1317,6 +1365,9 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     heif_compression_format compression = heif_compression_undefined;
     if (image_type == "hvc1") {
       compression = heif_compression_HEVC;
+    }
+    else if (image_type == "vvc1") {
+      compression = heif_compression_VVC;
     }
     else if (image_type == "av01") {
       compression = heif_compression_AV1;
@@ -1599,6 +1650,19 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
                        heif_suberror_Unsupported_color_conversion);
       }
 
+
+      // TODO: we should include a decoding option to control whether libheif should automatically scale the alpha channel, and if so, which scaling filter (enum: Off, NN, Bilinear, ...).
+      //       It might also be that a specific output format implies that alpha is scaled (RGBA32). That would favor an enum for the scaling filter option + a bool to switch auto-filtering on.
+      //       But we can only do this when libheif itself doesn't assume anymore that the alpha channel has the same resolution.
+
+      if ((alpha_image->get_width() != img->get_width()) || (alpha_image->get_height() != img->get_height())) {
+        std::shared_ptr<HeifPixelImage> scaled_alpha;
+        err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height());
+        if (err) {
+          return err;
+        }
+        alpha = std::move(scaled_alpha);
+      }
       img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
 
       if (imginfo->is_premultiplied_alpha()) {
@@ -2156,7 +2220,7 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
 {
-  m_heif_context->m_heif_file->add_hvcC_property(m_id);
+  auto hvcC = std::make_shared<Box_hvcC>();
 
 
   // --- parse the h265 stream and set hvcC headers and compressed image data
@@ -2219,8 +2283,7 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
           case 0x20:
           case 0x21:
           case 0x22:
-            m_heif_context->m_heif_file->append_hvcC_nal_data(m_id, nal_data);
-            /*hvcC->append_nal_data(nal_data);*/
+            hvcC->append_nal_data(nal_data);
             break;
 
           default: {
@@ -2246,6 +2309,8 @@ void HeifContext::Image::set_preencoded_hevc_image(const std::vector<uint8_t>& d
       break;
     }
   }
+
+  m_heif_context->m_heif_file->add_property(m_id, hvcC, true);
 }
 
 
@@ -2265,6 +2330,15 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_hevc(pixel_image,
                                    encoder,
                                    options,
+                                   input_class,
+                                   out_image);
+    }
+      break;
+
+    case heif_compression_VVC: {
+      error = encode_image_as_vvc(pixel_image,
+                                   encoder,
+                                   options,
                                    heif_image_input_class_normal,
                                    out_image);
     }
@@ -2274,16 +2348,17 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_av1(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
+
     case heif_compression_JPEG2000:
     case heif_compression_HTJ2K: {
       error = encode_image_as_jpeg2000(pixel_image,
                                        encoder,
                                        options,
-                                       heif_image_input_class_normal,
+                                       input_class,
                                        out_image);
       }
       break;
@@ -2292,7 +2367,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_jpeg(pixel_image,
                                    encoder,
                                    options,
-                                   heif_image_input_class_normal,
+                                   input_class,
                                    out_image);
     }
       break;
@@ -2301,7 +2376,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_uncompressed(pixel_image,
                                            encoder,
                                            options,
-                                           heif_image_input_class_normal,
+                                           input_class,
                                            out_image);
     }
       break;
@@ -2310,7 +2385,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
       error = encode_image_as_mask(pixel_image,
                                   encoder,
                                   options,
-                                  heif_image_input_class_normal,
+                                  input_class,
                                   out_image);
     }
       break;
@@ -2324,6 +2399,59 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
   return error;
 }
+
+Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
+                               uint16_t rows,
+                               uint16_t columns,
+                               struct heif_encoder* encoder,
+                               const struct heif_encoding_options& options,
+                               std::shared_ptr<Image>& out_grid_image)
+{
+  // Create ImageGrid
+  ImageGrid grid;
+  grid.set_num_tiles(columns, rows);
+  int tile_width = tiles[0]->get_width(heif_channel_interleaved);
+  int tile_height = tiles[0]->get_height(heif_channel_interleaved);
+  grid.set_output_size(tile_width * columns, tile_height * rows);
+  std::vector<uint8_t> grid_data = grid.write();
+
+  // Encode Tiles
+  Error error;
+  std::vector<heif_item_id> tile_ids;
+  for (int i=0; i<rows*columns; i++) {
+    std::shared_ptr<Image> out_tile;
+    error = encode_image(tiles[i],
+                         encoder,
+                         options,
+                         heif_image_input_class_normal,
+                         out_tile);
+    heif_item_id tile_id = out_tile->get_id();
+    m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
+    tile_ids.push_back(out_tile->get_id());
+  }
+
+  // Create Grid Item
+  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  out_grid_image = std::make_shared<Image>(this, grid_id);
+  m_all_images.insert(std::make_pair(grid_id, out_grid_image));
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
+
+  // Connect tiles to grid
+  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
+
+  // Add ISPE property
+  int image_width = tile_width * columns;
+  int image_height = tile_height * rows;
+  m_heif_file->add_ispe_property(grid_id, image_width, image_height);
+
+  // Set Brands
+  m_heif_file->set_brand(encoder->plugin->compression_format,
+                         out_grid_image->is_miaf_compatible());
+
+  return error;
+}
+
 
 /*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
@@ -2376,7 +2504,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto pasp = std::make_shared<Box_pasp>();
     src_image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(pasp);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(pasp);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2387,7 +2515,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto clli = std::make_shared<Box_clli>();
     clli->clli = src_image->get_clli();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(clli);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(clli);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 
@@ -2398,7 +2526,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     auto mdcv = std::make_shared<Box_mdcv>();
     mdcv->mdcv = src_image->get_mdcv();
 
-    int index = m_heif_file->get_ipco_box()->append_child_box(mdcv);
+    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(mdcv);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
 }
@@ -2510,8 +2638,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
   out_image->set_size(input_width, input_height);
 
 
-  m_heif_file->add_hvcC_property(image_id);
-
+  auto hvcC = std::make_shared<Box_hvcC>();
 
   heif_image c_api_image;
   c_api_image.image = src_image;
@@ -2544,14 +2671,241 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
-      m_heif_file->set_hvcC_configuration(image_id, config);
+      hvcC->set_configuration(config);
     }
 
     switch (data[0] >> 1) {
       case 0x20:
       case 0x21:
       case 0x22:
-        m_heif_file->append_hvcC_nal_data(image_id, data, size);
+        hvcC->append_nal_data(data, size);
+        break;
+
+      default:
+        m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
+    }
+  }
+
+  if (!encoded_width || !encoded_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
+
+  m_heif_file->add_property(image_id, hvcC, true);
+
+  if (encoder->plugin->plugin_api_version >= 3 &&
+      encoder->plugin->query_encoded_size != nullptr) {
+    uint32_t check_encoded_width = input_width, check_encoded_height = input_height;
+
+    encoder->plugin->query_encoded_size(encoder->encoder,
+                                        input_width, input_height,
+                                        &check_encoded_width,
+                                        &check_encoded_height);
+
+    assert((int)check_encoded_width == encoded_width);
+    assert((int)check_encoded_height == encoded_height);
+  }
+
+
+  // Note: 'ispe' must be before the transformation properties
+  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
+
+  // if image size was rounded up to even size, add a 'clap' box to crop the
+  // padding border away
+
+  //uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
+  //uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
+
+  if (input_width != encoded_width ||
+      input_height != encoded_height) {
+    m_heif_file->add_clap_property(image_id,
+                                   input_width,
+                                   input_height,
+                                   encoded_width,
+                                   encoded_height);
+
+    // MIAF 7.3.6.7
+    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
+    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
+
+    if (!is_integer_multiple_of_chroma_size(input_width,
+                                            input_height,
+                                            src_image->get_chroma_format())) {
+      out_image->mark_not_miaf_compatible();
+    }
+  }
+
+  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
+
+  // --- choose which color profile to put into 'colr' box
+
+  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+    auto icc_profile = src_image->get_color_profile_icc();
+    if (icc_profile) {
+      m_heif_file->set_color_profile(image_id, icc_profile);
+    }
+
+    // save nclx profile
+
+    bool save_nclx_profile = (options.output_nclx_profile != nullptr);
+
+    // if there is an ICC profile, only save NCLX when we chose to save both profiles
+    if (icc_profile && !(options.version >= 3 &&
+                         options.save_two_colr_boxes_when_ICC_and_nclx_available)) {
+      save_nclx_profile = false;
+    }
+
+    // we might have turned off nclx completely because macOS/iOS cannot read it
+    if (options.version >= 4 && options.macOS_compatibility_workaround_no_nclx_profile) {
+      save_nclx_profile = false;
+    }
+
+    if (save_nclx_profile) {
+      m_heif_file->set_color_profile(image_id, target_nclx_profile);
+    }
+  }
+
+
+  write_image_metadata(src_image, image_id);
+
+  m_top_level_images.push_back(out_image);
+  m_all_images[image_id] = out_image;
+
+
+
+  // --- If there is an alpha channel, add it as an additional image.
+  //     Save alpha after the color image because we need to know the final reference to the color image.
+
+  if (options.save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
+
+    // --- generate alpha image
+    // TODO: can we directly code a monochrome image instead of the dummy color channels?
+
+    std::shared_ptr<HeifPixelImage> alpha_image;
+    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
+
+
+    // --- encode the alpha image
+
+    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+
+    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+                                       heif_image_input_class_alpha,
+                                       heif_alpha_image);
+    if (error) {
+      return error;
+    }
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
+
+    if (src_image->is_premultiplied_alpha()) {
+      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
+    }
+
+    // TODO: MIAF says that the *:hevc:* urn is deprecated and we should use "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"
+    // Is this compatible to other decoders?
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
+  }
+
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options& options,
+                                        enum heif_image_input_class input_class,
+                                        std::shared_ptr<Image>& out_image)
+{
+  heif_item_id image_id = m_heif_file->add_new_image("vvc1");
+  out_image = std::make_shared<Image>(this, image_id);
+
+
+  // --- check whether we have to convert the image color space
+
+  heif_colorspace colorspace = image->get_colorspace();
+  heif_chroma chroma = image->get_chroma_format();
+
+  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
+
+  if (encoder->plugin->plugin_api_version >= 2) {
+    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
+  }
+  else {
+    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
+  }
+
+  std::shared_ptr<HeifPixelImage> src_image;
+  if (colorspace != image->get_colorspace() ||
+      chroma != image->get_chroma_format() ||
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
+    // @TODO: use color profile when converting
+    int output_bpp = 0; // same as input
+    src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
+                                   output_bpp, options.color_conversion_options);
+    if (!src_image) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
+  }
+  else {
+    src_image = image;
+  }
+
+
+  int input_width = src_image->get_width(heif_channel_Y);
+  int input_height = src_image->get_height(heif_channel_Y);
+
+  out_image->set_size(input_width, input_height);
+
+
+  m_heif_file->add_vvcC_property(image_id);
+
+
+  heif_image c_api_image;
+  c_api_image.image = src_image;
+
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
+
+  int encoded_width = 0;
+  int encoded_height = 0;
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
+
+    if (data == NULL) {
+      break;
+    }
+
+
+    const uint8_t NAL_SPS = 15;
+
+    uint8_t nal_type = 0;
+    if (size>=2) {
+      nal_type = (data[1] >> 3) & 0x1F;
+    }
+
+    if (nal_type == NAL_SPS) {
+      Box_vvcC::configuration config;
+
+      parse_sps_for_vvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
+
+      m_heif_file->set_vvcC_configuration(image_id, config);
+    }
+
+    switch (data[0] >> 1) {
+      case 14: // VPS
+      case 15: // SPS
+      case 16: // PPS
+        m_heif_file->append_vvcC_nal_data(image_id, data, size);
         break;
 
       default:
@@ -2660,7 +3014,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
     std::shared_ptr<HeifContext::Image> heif_alpha_image;
 
-    Error error = encode_image_as_hevc(alpha_image, encoder, options,
+    Error error = encode_image_as_vvc(alpha_image, encoder, options,
                                        heif_image_input_class_alpha,
                                        heif_alpha_image);
     if (error) {
@@ -2809,9 +3163,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     m_heif_file->append_iloc_data(image_id, vec);
   }
 
-  m_heif_file->add_av1C_property(image_id);
-  m_heif_file->set_av1C_configuration(image_id, config);
-
+  m_heif_file->add_av1C_property(image_id, config);
 
   uint32_t input_width, input_height;
   input_width = src_image->get_width();
@@ -3136,7 +3488,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
       jpgC->set_data(jpgC_data);
 
       auto ipma_box = m_heif_file->get_ipma_box();
-      int index = m_heif_file->get_ipco_box()->append_child_box(jpgC);
+      int index = m_heif_file->get_ipco_box()->find_or_append_child_box(jpgC);
       ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
       std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());

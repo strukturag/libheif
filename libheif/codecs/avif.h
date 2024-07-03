@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "heif.h"
+#include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
 

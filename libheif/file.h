@@ -21,10 +21,11 @@
 #ifndef LIBHEIF_FILE_H
 #define LIBHEIF_FILE_H
 
-#include "avif.h"
 #include "box.h"
-#include "hevc.h"
 #include "nclx.h"
+#include "codecs/avif.h"
+#include "codecs/hevc.h"
+#include "codecs/vvc.h"
 
 #include <map>
 #include <memory>
@@ -75,6 +76,8 @@ public:
 
   bool image_exists(heif_item_id ID) const;
 
+  bool has_item_with_id(heif_item_id ID) const;
+
   std::string get_item_type(heif_item_id ID) const;
 
   std::string get_content_type(heif_item_id ID) const;
@@ -83,17 +86,13 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
+  Error get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const;
+
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
-  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID)
-  {
-    auto iter = m_infe_boxes.find(imageID);
-    if (iter == m_infe_boxes.end()) {
-      return nullptr;
-    }
+  std::shared_ptr<const Box_infe> get_infe_box(heif_item_id imageID) const;
 
-    return iter->second;
-  }
+  std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID);
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
@@ -146,6 +145,17 @@ public:
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
+
+  void add_av1C_property(heif_item_id id, const Box_av1C::configuration& config);
+
+  void add_vvcC_property(heif_item_id id);
+
+  Error append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
+
+  Error append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
+
+  Error set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config);
+
   void add_hvcC_property(heif_item_id id);
 
   Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
@@ -153,8 +163,6 @@ public:
   Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
 
   Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
-
-  void add_av1C_property(heif_item_id id);
 
   Error set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config);
 
@@ -176,9 +184,13 @@ public:
 
   Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
 
+  Result<heif_item_id> add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size);
+
   Result<heif_item_id> add_infe_uri(const char* item_uri_type, const uint8_t* data, size_t size);
 
   Error set_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, heif_metadata_compression compression);
+
+  Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
 
@@ -237,8 +249,6 @@ private:
   Error check_for_ref_cycle_recursion(heif_item_id ID,
                                       const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
-
-  std::shared_ptr<Box_infe> get_infe(heif_item_id ID) const;
 
   int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
 };

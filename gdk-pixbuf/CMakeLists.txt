@@ -10,7 +10,7 @@ if(UNIX OR MINGW)
 
     add_library(pixbufloader-heif MODULE pixbufloader-heif.c)
 
-    target_include_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_INCLUDE_DIRS} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
+    target_include_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_INCLUDE_DIRS} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif/api)
 
     target_link_directories(pixbufloader-heif PRIVATE ${GDKPIXBUF2_LIBRARY_DIRS})
 

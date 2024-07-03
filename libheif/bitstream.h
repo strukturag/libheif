@@ -144,13 +144,15 @@ public:
 
   uint16_t read16();
 
+  int16_t read16s();
+
   uint32_t read32();
 
   int32_t read32s();
 
   uint64_t read64();
 
-  int64_t read64signed();
+  int64_t read64s();
 
   float read_float32();
 
@@ -289,7 +291,11 @@ public:
 
   void write16(uint16_t);
 
+  void write16s(int16_t);
+
   void write32(uint32_t);
+
+  void write32s(int32_t);
 
   void write64(uint64_t);
 

@@ -1,57 +1,66 @@
 include(CMakePackageConfigHelpers)
 
-configure_file(heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
+configure_file(api/libheif/heif_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_headers
-        heif.h
-        heif_cxx.h
-        heif_plugin.h
-        heif_properties.h
-        heif_regions.h
-        heif_items.h
+        api/libheif/heif.h
+        api/libheif/heif_cxx.h
+        api/libheif/heif_plugin.h
+        api/libheif/heif_properties.h
+        api/libheif/heif_regions.h
+        api/libheif/heif_items.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
 set(libheif_sources
         bitstream.cc
-        box.cc
-        error.cc
-        heif.cc
-        context.cc
-        file.cc
-        pixelimage.cc
-        hevc.cc
-        avif.cc
-        plugin_registry.cc
-        heif_plugin.cc
-        nclx.cc
         bitstream.h
+        box.cc
         box.h
+        error.cc
         error.h
-        api_structs.h
+        context.cc
         context.h
+        file.cc
         file.h
+        pixelimage.cc
         pixelimage.h
-        hevc.h
-        avif.h
+        plugin_registry.cc
+        nclx.cc
+        nclx.h
         plugin_registry.h
         security_limits.h
-        init.cc init.h
-        nclx.h
+        init.cc
+        init.h
         logging.h
-        mask_image.cc
-        mask_image.h
+        logging.cc
         metadata_compression.cc
         metadata_compression.h
         common_utils.cc
         common_utils.h
         region.cc
         region.h
-        heif_regions.h
-        heif_regions.cc
-        heif_properties.h
-        heif_properties.cc
-        heif_items.h
-        heif_items.cc
+        api/libheif/api_structs.h
+        api/libheif/heif.cc
+        api/libheif/heif_regions.cc
+        api/libheif/heif_plugin.cc
+        api/libheif/heif_properties.cc
+        api/libheif/heif_items.cc
+        api/libheif/heif_experimental.h
+        api/libheif/heif_experimental.cc
+        codecs/hevc.cc
+        codecs/hevc.h
+        codecs/avif.cc
+        codecs/avif.h
+        codecs/jpeg.h
+        codecs/jpeg.cc
+        codecs/jpeg2000.h
+        codecs/jpeg2000.cc
+        codecs/vvc.h
+        codecs/vvc.cc
+        codecs/avc.h
+        codecs/avc.cc
+        codecs/mask_image.cc
+        codecs/mask_image.h
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc
@@ -70,14 +79,6 @@ set(libheif_sources
         color-conversion/alpha.h
         color-conversion/chroma_sampling.cc
         color-conversion/chroma_sampling.h
-        jpeg.h
-        jpeg.cc
-        jpeg2000.h
-        jpeg2000.cc
-        vvc.h
-        vvc.cc
-        avc.h
-        avc.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})
@@ -91,7 +92,7 @@ if (ENABLE_PLUGIN_LOADING)
 endif ()
 
 # Needed to find libheif/heif_version.h while compiling the library
-target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR})
+target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api)
 
 # Propagate include/libheif to consume the headers from other projects
 target_include_directories(heif
@@ -151,10 +152,10 @@ endif ()
 if (WITH_UNCOMPRESSED_CODEC)
     target_compile_definitions(heif PUBLIC WITH_UNCOMPRESSED_CODEC=1)
     target_sources(heif PRIVATE
-            uncompressed_box.h
-            uncompressed_box.cc
-            uncompressed_image.h
-            uncompressed_image.cc)
+            codecs/uncompressed_box.h
+            codecs/uncompressed_box.cc
+            codecs/uncompressed_image.h
+            codecs/uncompressed_image.cc)
 endif ()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
@@ -171,3 +172,14 @@ install(EXPORT ${PROJECT_NAME}-config DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION
         "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+
+
+# --- on Windows, copy the DLL into the executable directory for easier development
+
+if (WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(TARGET heif POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:heif>
+            $<TARGET_FILE_DIR:heif>/../examples
+    )
+endif ()

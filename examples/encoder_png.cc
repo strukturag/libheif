@@ -30,7 +30,7 @@
 #include <vector>
 
 #include "encoder_png.h"
-#include "libheif/exif.h"
+#include "exif.h"
 
 PngEncoder::PngEncoder() = default;
 

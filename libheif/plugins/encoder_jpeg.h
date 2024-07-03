@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_ENCODER_JPEG_H
 #define LIBHEIF_ENCODER_JPEG_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 const struct heif_encoder_plugin* get_encoder_plugin_jpeg();
 

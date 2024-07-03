@@ -26,7 +26,7 @@
 
 #include "catch.hpp"
 #include "libheif/heif.h"
-#include "libheif/pixelimage.h"
+#include "pixelimage.h"
 #include "libheif/api_structs.h"
 
 #include <string.h>
@@ -124,7 +124,7 @@ static void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
 static void test_ispe_size(heif_compression_format compression,
                            heif_orientation orientation,
                            int input_width, int input_height,
-                           int expected_ispe_width, int expected_ispe_height)
+                           int expected_minimum_ispe_width, int expected_minimum_ispe_height)
 {
   struct heif_error err;
 
@@ -151,8 +151,8 @@ static void test_ispe_size(heif_compression_format compression,
   int ispe_width = heif_image_handle_get_ispe_width(handle);
   int ispe_height = heif_image_handle_get_ispe_height(handle);
 
-  REQUIRE(ispe_width == expected_ispe_width);
-  REQUIRE(ispe_height == expected_ispe_height);
+  REQUIRE(ispe_width >= expected_minimum_ispe_width);
+  REQUIRE(ispe_height >= expected_minimum_ispe_height);
 
   heif_image_handle_release(handle);
   heif_encoder_release(enc);

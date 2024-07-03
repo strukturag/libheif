@@ -7,10 +7,60 @@
   },
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Default Config",
-      "description": "Default building parameters",
+      "name": "develop",
+      "displayName": "development",
+      "description": "Enable all experimental features. Do not use plugins, compile everything built-in.",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SHARED_LIBS": "ON",
+        "BUILD_TESTING" : "ON",
+
+        "ENABLE_PLUGIN_LOADING" : "OFF",
+        "WITH_AOM_DECODER" : "ON",
+        "WITH_AOM_DECODER_PLUGIN" : "OFF",
+        "WITH_AOM_ENCODER" : "ON",
+        "WITH_AOM_ENCODER_PLUGIN" : "OFF",
+        "WITH_DAV1D" : "ON",
+        "WITH_DAV1D_PLUGIN" : "OFF",
+        "WITH_LIBDE265" : "ON",
+        "WITH_LIBDE265_PLUGIN" : "OFF",
+        "WITH_RAV1E" : "ON",
+        "WITH_RAV1E_PLUGIN" : "OFF",
+        "WITH_SvtEnc" : "ON",
+        "WITH_SvtEnc_PLUGIN" : "OFF",
+        "WITH_X265" : "ON",
+        "WITH_X265_PLUGIN" : "OFF",
+        "WITH_JPEG_DECODER" : "ON",
+        "WITH_JPEG_DECODER_PLUGIN" : "OFF",
+        "WITH_JPEG_ENCODER" : "ON",
+        "WITH_JPEG_ENCODER_PLUGIN" : "OFF",
+        "WITH_UNCOMPRESSED_CODEC" : "ON",
+        "WITH_KVAZAAR" : "ON",
+        "WITH_KVAZAAR_PLUGIN" : "OFF",
+        "WITH_OpenJPEG_DECODER" : "ON",
+        "WITH_OpenJPEG_DECODER_PLUGIN" : "OFF",
+        "WITH_OpenJPEG_ENCODER" : "ON",
+        "WITH_OpenJPEG_ENCODER_PLUGIN" : "OFF",
+        "WITH_FFMPEG_DECODER" : "ON",
+        "WITH_FFMPEG_DECODER_PLUGIN" : "OFF",
+
+        "WITH_REDUCED_VISIBILITY" : "OFF",
+        "WITH_DEFLATE_HEADER_COMPRESSION" : "ON",
+        "WITH_LIBSHARPYUV" : "ON",
+        "WITH_EXAMPLES": "ON",
+        "WITH_FUZZERS": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Standard release build",
+      "description": "Recommended parameters for a release build.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "ON",
+        "BUILD_TESTING" : "OFF",
+
+        "ENABLE_PLUGIN_LOADING" : "ON",
         "WITH_AOM_DECODER" : "ON",
         "WITH_AOM_DECODER_PLUGIN" : "ON",
         "WITH_AOM_ENCODER" : "ON",
@@ -30,57 +80,16 @@
         "WITH_JPEG_ENCODER" : "ON",
         "WITH_JPEG_ENCODER_PLUGIN" : "ON",
         "WITH_UNCOMPRESSED_CODEC" : "ON",
-	"WITH_KVAZAAR" : "ON",
-	"WITH_KVAZAAR_PLUGIN" : "ON",
-	"WITH_OpenJPEG_DECODER" : "ON",
-	"WITH_OpenJPEG_DECODER_PLUGIN" : "ON",
-	"WITH_OpenJPEG_ENCODER" : "ON",
-	"WITH_OpenJPEG_ENCODER_PLUGIN" : "ON",
-	"WITH_FFMPEG_DECODER" : "ON",
-	"WITH_FFMPEG_DECODER_PLUGIN" : "ON"
-      }
-    },
-    {
-      "name": "develop",
-      "inherits": "default",
-      "displayName": "development",
-      "description": "Enable all experimental features. Do not use plugins, compile everything built-in.",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SHARED_LIBS": "ON",
-        "BUILD_TESTING" : "ON",
-        "ENABLE_PLUGIN_LOADING" : "OFF",
-        "WITH_AOM_DECODER" : "ON",
-        "WITH_AOM_ENCODER" : "ON",
-        "WITH_DAV1D" : "ON",
-        "WITH_LIBDE265" : "ON",
-        "WITH_RAV1E" : "ON",
-        "WITH_SvtEnc" : "ON",
-        "WITH_X265" : "ON",
-        "WITH_JPEG_DECODER" : "ON",
-        "WITH_JPEG_ENCODER" : "ON",
-        "WITH_UNCOMPRESSED_CODEC" : "ON",
         "WITH_KVAZAAR" : "ON",
+        "WITH_KVAZAAR_PLUGIN" : "ON",
         "WITH_OpenJPEG_DECODER" : "ON",
+        "WITH_OpenJPEG_DECODER_PLUGIN" : "ON",
         "WITH_OpenJPEG_ENCODER" : "ON",
+        "WITH_OpenJPEG_ENCODER_PLUGIN" : "ON",
         "WITH_OPENJPH_ENCODER" : "ON",
         "WITH_FFMPEG_DECODER" : "ON",
-        "WITH_REDUCED_VISIBILITY" : "OFF",
-        "WITH_DEFLATE_HEADER_COMPRESSION" : "ON",
-        "WITH_LIBSHARPYUV" : "ON",
-        "WITH_EXAMPLES": "ON",
-        "WITH_FUZZERS": "OFF"
-      }
-    },
-    {
-      "name": "release",
-      "inherits": "default",
-      "displayName": "Standard release build",
-      "description": "Recommended parameters for a release build.",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_SHARED_LIBS": "ON",
-        "BUILD_TESTING" : "OFF",
+        "WITH_FFMPEG_DECODER_PLUGIN" : "ON",
+
         "WITH_REDUCED_VISIBILITY" : "ON",
         "WITH_DEFLATE_HEADER_COMPRESSION" : "ON",
         "WITH_LIBSHARPYUV" : "ON",
@@ -90,42 +99,51 @@
     },
     {
       "name": "release-noplugins",
-      "inherits": "release",
       "displayName": "Release build without plugins",
       "description": "Release without plugins with minimal configuration for HEIC and AVIF.",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "ON",
+        "BUILD_TESTING" : "OFF",
+
         "ENABLE_PLUGIN_LOADING" : "OFF",
-        "WITH_LIBDE265" : "ON",
-        "WITH_X265" : "ON",
         "WITH_AOM_DECODER" : "ON",
         "WITH_AOM_ENCODER" : "ON",
         "WITH_DAV1D" : "OFF",
+        "WITH_LIBDE265" : "ON",
         "WITH_RAV1E" : "OFF",
         "WITH_SvtEnc" : "OFF",
+        "WITH_X265" : "ON",
         "WITH_JPEG_DECODER" : "OFF",
         "WITH_JPEG_ENCODER" : "OFF",
         "WITH_UNCOMPRESSED_CODEC" : "OFF",
-	"WITH_KVAZAAR" : "OFF",
-	"WITH_OpenJPEG_DECODER" : "OFF",
-	"WITH_OpenJPEG_ENCODER" : "OFF",
-	"WITH_FFMPEG_DECODER" : "OFF"
+        "WITH_KVAZAAR" : "OFF",
+        "WITH_OpenJPEG_DECODER" : "OFF",
+        "WITH_OpenJPEG_ENCODER" : "OFF",
+        "WITH_FFMPEG_DECODER" : "OFF",
+
+        "WITH_REDUCED_VISIBILITY" : "ON",
+        "WITH_DEFLATE_HEADER_COMPRESSION" : "OFF",
+        "WITH_LIBSHARPYUV" : "ON",
+        "WITH_EXAMPLES": "ON",
+        "WITH_FUZZERS": "OFF"
       }
     },
     {
       "name": "testing",
-      "inherits": "default",
       "displayName": "Tests",
       "description": "For running the tests",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ENABLE_PLUGIN_LOADING" : "OFF",
         "BUILD_TESTING" : "ON",
-        "WITH_REDUCED_VISIBILITY" : "OFF"
+        "WITH_REDUCED_VISIBILITY" : "OFF",
+        "WITH_UNCOMPRESSED_CODEC" : "ON"
       }
     },
     {
       "name": "fuzzing",
-      "inherits": "default",
+      "inherits": "release",
       "displayName": "Fuzzing",
       "description": "For running the fuzzers",
       "cacheVariables": {
@@ -135,8 +153,6 @@
         "WITH_FUZZERS" : "ON",
         "WITH_EXAMPLES" : "OFF",
         "ENABLE_PLUGIN_LOADING" : "OFF",
-        "WITH_DEFLATE_HEADER_COMPRESSION" : "ON",
-        "WITH_LIBSHARPYUV" : "ON",
         "WITH_REDUCED_VISIBILITY" : "OFF"
       }
     }

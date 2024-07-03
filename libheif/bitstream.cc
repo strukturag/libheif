@@ -200,6 +200,19 @@ uint16_t BitstreamRange::read16()
 }
 
 
+int16_t BitstreamRange::read16s()
+{
+  uint16_t v = read16();
+
+  if (v & 0x8000) {
+    return -static_cast<int16_t>((~v) & 0x7fff) -1;
+  }
+  else {
+    return static_cast<int16_t>(v);
+  }
+}
+
+
 uint32_t BitstreamRange::read32()
 {
   if (!prepare_read(4)) {
@@ -263,10 +276,16 @@ uint64_t BitstreamRange::read64()
 }
 
 
-int64_t BitstreamRange::read64signed()
+int64_t BitstreamRange::read64s()
 {
-  uint64_t val = read64();
-  return reinterpret_cast<int64_t&>(val);
+  uint64_t v = read64();
+
+  if (v & 0x8000000000000000) {
+    return -static_cast<int64_t >((~v) & 0x7fffffffffffffff) -1;
+  }
+  else {
+    return static_cast<int64_t >(v);
+  }
 }
 
 
@@ -575,6 +594,20 @@ void StreamWriter::write16(uint16_t v)
 }
 
 
+void StreamWriter::write16s(int16_t v16s)
+{
+  uint16_t v;
+  if (v16s >= 0) {
+    v = static_cast<uint16_t>(v16s);
+  }
+  else {
+    v = ~static_cast<uint16_t>((-v16s-1));
+  }
+
+  write16(v);
+}
+
+
 void StreamWriter::write32(uint32_t v)
 {
   size_t required_size = m_position + 4;
@@ -587,6 +620,20 @@ void StreamWriter::write32(uint32_t v)
   m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
   m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
+}
+
+
+void StreamWriter::write32s(int32_t v32s)
+{
+  uint32_t v;
+  if (v32s >= 0) {
+    v = static_cast<uint32_t>(v32s);
+  }
+  else {
+    v = ~static_cast<uint32_t>((-v32s-1));
+  }
+
+  write32(v);
 }
 
 

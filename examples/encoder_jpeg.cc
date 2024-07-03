@@ -32,7 +32,7 @@
 #include <limits>
 
 #include "encoder_jpeg.h"
-#include "libheif/exif.h"
+#include "exif.h"
 
 #define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
 #define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"

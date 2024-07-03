@@ -32,8 +32,7 @@
 #include <ostream>
 #include <sstream>
 
-
-#include "heif.h"
+#include "libheif/heif.h"
 
 
 static constexpr char kSuccess[] = "Success";

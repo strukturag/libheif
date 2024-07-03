@@ -33,7 +33,7 @@
 #include <cassert>
 #include <algorithm>
 #include "decoder_jpeg.h"
-#include "libheif/exif.h"
+#include "exif.h"
 
 extern "C" {
 // Prevent duplicate definition for libjpeg-turbo v2.0

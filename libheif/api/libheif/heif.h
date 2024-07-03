@@ -133,7 +133,7 @@ enum heif_error_code
   heif_error_Color_profile_does_not_exist = 10,
 
   // Error loading a dynamic plugin
-  heif_error_Plugin_loading_error = 11,
+  heif_error_Plugin_loading_error = 11
 };
 
 
@@ -229,8 +229,17 @@ enum heif_suberror_code
   // Invalid specification of region item
   heif_suberror_Invalid_region_data = 136,
 
+  // Image has no ispe property
+  heif_suberror_No_ispe_property = 137,
+
+  heif_suberror_Camera_intrinsic_matrix_undefined = 138,
+
+  heif_suberror_Camera_extrinsic_matrix_undefined = 139,
+
   // Invalid JPEG 2000 codestream - usually a missing marker
   heif_suberror_Invalid_J2K_codestream = 140,
+
+  heif_suberror_No_vvcC_box = 141,
 
 
   // --- Memory_allocation_error ---
@@ -574,6 +583,18 @@ enum heif_filetype_result
 // input data should be at least 12 bytes
 LIBHEIF_API
 enum heif_filetype_result heif_check_filetype(const uint8_t* data, int len);
+
+/**
+ * Check the filetype box content for a supported file type.
+ *
+ * <p>The data is assumed to start from the start of the `ftyp` box.
+ *
+ * <p>This function checks the compatible brands.
+ * 
+ * @returns heif_error_ok if a supported brand is found, or other error if not.
+ */
+LIBHEIF_API
+struct heif_error heif_has_compatible_filetype(const uint8_t* data, int len);
 
 LIBHEIF_API
 int heif_check_jpeg_filetype(const uint8_t* data, int len);
@@ -1379,6 +1400,44 @@ struct heif_error heif_image_get_nclx_color_profile(const struct heif_image* ima
                                                     struct heif_color_profile_nclx** out_data);
 
 
+// ------------------------- intrinsic and extrinsic matrices -------------------------
+
+struct heif_camera_intrinsic_matrix
+{
+  double focal_length_x;
+  double focal_length_y;
+  double principal_point_x;
+  double principal_point_y;
+  double skew;
+};
+
+
+LIBHEIF_API
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix);
+
+
+struct heif_camera_extrinsic_matrix;
+
+LIBHEIF_API
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix);
+
+LIBHEIF_API
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix*);
+
+LIBHEIF_API
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix*,
+                                                                   double* out_matrix_row_major);
+
+
+
 // ========================= heif_image =========================
 
 // An heif_image contains a decoded pixel image in various colorspaces, chroma formats,
@@ -2031,6 +2090,11 @@ struct heif_encoding_options
   // version 6 options
 
   struct heif_color_conversion_options color_conversion_options;
+
+  // version 7 options
+
+  // Set this to true to use compressed form of uncC where possible
+  uint8_t prefer_uncC_short_form;
 };
 
 LIBHEIF_API
@@ -2051,6 +2115,27 @@ struct heif_error heif_context_encode_image(struct heif_context*,
                                             struct heif_encoder* encoder,
                                             const struct heif_encoding_options* options,
                                             struct heif_image_handle** out_image_handle);
+
+/**
+ * @brief Encodes an array of images into a grid.
+ * 
+ * @param ctx The file context
+ * @param tiles User allocated array of images that will form the grid.
+ * @param rows The number of rows in the grid.
+ * @param columns The number of columns in the grid.
+ * @param encoder Defines the encoder to use. See heif_context_get_encoder_for_format()
+ * @param input_options Optional, may be nullptr.
+ * @param out_image_handle Returns a handle to the grid. The caller is responsible for freeing it.
+ * @return Returns an error if ctx, tiles, or encoder is nullptr. If rows or columns is 0. 
+ */
+LIBHEIF_API
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** tiles,
+                                           uint16_t rows,
+                                           uint16_t columns,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
@@ -2076,7 +2161,8 @@ enum heif_metadata_compression
 {
   heif_metadata_compression_off,
   heif_metadata_compression_auto,
-  heif_metadata_compression_deflate
+  heif_metadata_compression_deflate,
+  heif_metadata_compression_unknown
 };
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.

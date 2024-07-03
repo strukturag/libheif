@@ -30,7 +30,7 @@
 #include <iostream>
 #include <memory>
 #include "decoder_png.h"
-#include "libheif/exif.h"
+#include "exif.h"
 
 extern "C" {
 #include <png.h>
@@ -419,6 +419,7 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   } // for
 
   delete[] row_pointers;
+  fclose(fh);
 
   input_image.image = std::shared_ptr<heif_image>(image,
                                                   [](heif_image* img) { heif_image_release(img); });

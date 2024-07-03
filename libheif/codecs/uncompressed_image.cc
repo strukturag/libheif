@@ -27,15 +27,30 @@
 #include <cassert>
 #include <utility>
 
-#include "libheif/common_utils.h"
-#include "libheif/error.h"
+#include "common_utils.h"
+#include "error.h"
 #include "libheif/heif.h"
 #include "uncompressed.h"
 #include "uncompressed_box.h"
 #include "uncompressed_image.h"
 
+static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<Box_uncC> &uncC)
+{
+  return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
+}
+
 static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
 {
+    if (isKnownUncompressedFrameConfigurationBoxProfile(uncC))
+    {
+      return Error::Ok;
+    }
+    if (!cmpd) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Missing required cmpd box (no match in uncC box) for uncompressed codec");
+    }
+
   for (Box_uncC::Component component : uncC->get_components()) {
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
@@ -228,6 +243,12 @@ static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::
   *out_chroma = heif_chroma_undefined;
   *out_colourspace = heif_colorspace_undefined;
 
+  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
+    *out_chroma = heif_chroma_444;
+    *out_colourspace = heif_colorspace_RGB;
+    return Error::Ok;
+  }
+
   // each 1-bit represents an existing component in the image
   uint16_t componentSet = 0;
 
@@ -339,9 +360,56 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   }
 }
 
-static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd> &cmpd, const Box_uncC::Component component, heif_channel *channel) {
+static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd> &cmpd, const std::shared_ptr<Box_uncC> &uncC, Box_uncC::Component component, heif_channel *channel)
+{
   uint16_t component_index = component.component_index;
+  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
+    if (uncC->get_profile() == fourcc("rgb3")) {
+      switch (component_index) {
+      case 0:
+        *channel = heif_channel_R;
+        return true;
+      case 1:
+        *channel = heif_channel_G;
+        return true;
+      case 2:
+        *channel = heif_channel_B;
+        return true;
+      }
+    } else if (uncC->get_profile() == fourcc("rgba")) {
+      switch (component_index) {
+      case 0:
+        *channel = heif_channel_Alpha;
+        return true;
+      case 1:
+        *channel = heif_channel_R;
+        return true;
+      case 2:
+        *channel = heif_channel_G;
+        return true;
+        case 3:
+        *channel = heif_channel_B;
+        return true;
+      }
+    } else if (uncC->get_profile() == fourcc("abgr")) {
+      switch (component_index) {
+      case 0:
+        *channel = heif_channel_Alpha;
+        return true;
+      case 1:
+        *channel = heif_channel_B;
+        return true;
+      case 2:
+        *channel = heif_channel_G;
+        return true;
+        case 3:
+        *channel = heif_channel_R;
+        return true;
+      }
+    }
+  }
   uint16_t component_type = cmpd->get_components()[component_index].component_type;
+
   switch (component_type) {
   case component_type_monochrome:
     *channel = heif_channel_Y;
@@ -375,8 +443,8 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd
   }
 }
 
-class UncompressedBitReader : public BitReader
-{
+  class UncompressedBitReader : public BitReader
+  {
   public:
     UncompressedBitReader(const std::vector<uint8_t>& data) : BitReader(data.data(), (int)data.size())
     {}
@@ -468,7 +536,7 @@ protected:
       return dst_row_number * dst_plane_stride;
     }
 
-    heif_channel channel;
+    heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane;
     uint8_t* other_chroma_dst_plane;
     int dst_plane_stride;
@@ -519,7 +587,7 @@ protected:
   private:
     ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage> &img) {
       ChannelListEntry entry;
-      entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, component, &(entry.channel));
+      entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, m_uncC, component, &(entry.channel));
       entry.dst_plane = img->get_plane(entry.channel, &(entry.dst_plane_stride));
       entry.tile_width = m_tile_width;
       entry.tile_height = m_tile_height;
@@ -840,14 +908,21 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
 
 
   // if we miss a required box, show error
-
-  if (!found_ispe || !cmpd || !uncC) {
-    printf("failed to get required boxes\n");
+  if (!found_ispe) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
-                 "Missing required box for uncompressed codec");
+                 "Missing required ispe box for uncompressed codec");
   }
-
+  if (!uncC) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Missing required uncC box for uncompressed codec");
+  }
+  if (!cmpd && (uncC->get_version() !=1)) {
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 "Missing required cmpd or uncC version 1 box for uncompressed codec");
+}
 
   // check if we support the type of image
 
@@ -871,7 +946,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const std::shared_ptr<co
 
   for (Box_uncC::Component component : uncC->get_components()) {
     heif_channel channel;
-    if (map_uncompressed_component_to_channel(cmpd, component, &channel)) {
+    if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
       if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
         img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth);
       } else {
@@ -911,13 +986,13 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     cmpd->add_component(cbComponent);
     Box_cmpd::Component crComponent = {component_type_Cr};
     cmpd->add_component(crComponent);
-    u_int8_t bpp_y = image->get_bits_per_pixel(heif_channel_Y);
+    uint8_t bpp_y = image->get_bits_per_pixel(heif_channel_Y);
     Box_uncC::Component component0 = {0, bpp_y, component_format_unsigned, 0};
     uncC->add_component(component0);
-    u_int8_t bpp_cb = image->get_bits_per_pixel(heif_channel_Cb);
+    uint8_t bpp_cb = image->get_bits_per_pixel(heif_channel_Cb);
     Box_uncC::Component component1 = {1, bpp_cb, component_format_unsigned, 0};
     uncC->add_component(component1);
-    u_int8_t bpp_cr = image->get_bits_per_pixel(heif_channel_Cr);
+    uint8_t bpp_cr = image->get_bits_per_pixel(heif_channel_Cr);
     Box_uncC::Component component2 = {2, bpp_cr, component_format_unsigned, 0};
     uncC->add_component(component2);
     if (image->get_chroma_format() == heif_chroma_444)
@@ -1089,22 +1164,48 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
 }
 
 
+static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+{
+  uncC->set_version(0);
+  if (image->get_colorspace() != heif_colorspace_RGB) {
+    return;
+  }
+  if (!((image->get_chroma_format() == heif_chroma_interleaved_RGB) || (image->get_chroma_format() == heif_chroma_interleaved_RGBA))) {
+    return;
+  }
+  if (image->get_bits_per_pixel(heif_channel_interleaved) != 8) {
+    return;
+  }
+  if (image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
+    uncC->set_profile(fourcc_to_uint32("rgba"));
+  } else {
+    uncC->set_profile(fourcc_to_uint32("rgb3"));
+  }
+  uncC->set_version(1);
+}
+
 Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
                                                         const std::shared_ptr<HeifPixelImage>& src_image,
                                                         void* encoder_struct,
                                                         const struct heif_encoding_options& options,
                                                         std::shared_ptr<HeifContext::Image>& out_image)
 {
-  std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
-  if (error)
-  {
-    return error;
+  if (options.prefer_uncC_short_form) {
+    maybe_make_minimised_uncC(uncC, src_image);
   }
-  heif_file->add_property(out_image->get_id(), cmpd, true);
-  heif_file->add_property(out_image->get_id(), uncC, true);
+  if (uncC->get_version() == 1) {
+    heif_file->add_property(out_image->get_id(), uncC, true);
+  } else {
+    std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
+    if (error) {
+      return error;
+    }
+    heif_file->add_property(out_image->get_id(), cmpd, true);
+    heif_file->add_property(out_image->get_id(), uncC, true);
+  }
   std::vector<uint8_t> data;
   if (src_image->get_colorspace() == heif_colorspace_YCbCr)
   {

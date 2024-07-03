@@ -22,7 +22,7 @@
 #ifndef LIBHEIF_IMAGE_H
 #define LIBHEIF_IMAGE_H
 
-#include "heif.h"
+//#include "heif.h"
 #include "error.h"
 #include "nclx.h"
 

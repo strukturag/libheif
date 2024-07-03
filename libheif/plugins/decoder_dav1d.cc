@@ -20,8 +20,8 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "libheif/security_limits.h"
-#include "libheif/common_utils.h"
+#include "security_limits.h"
+#include "common_utils.h"
 #include "decoder_dav1d.h"
 #include <memory>
 #include <cstring>

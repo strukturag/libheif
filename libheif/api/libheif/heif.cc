@@ -18,9 +18,9 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libheif/heif_plugin.h"
-#include "libheif/region.h"
-#include "libheif/common_utils.h"
+#include "heif_plugin.h"
+#include "region.h"
+#include "common_utils.h"
 #include <cstdint>
 #include "heif.h"
 #include "file.h"
@@ -46,6 +46,7 @@
 #include <utility>
 #include <vector>
 #include <cstring>
+#include <array>
 
 #ifdef _WIN32
 // for _write
@@ -145,18 +146,58 @@ heif_filetype_result heif_check_filetype(const uint8_t* data, int len)
 }
 
 
+heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
+{
+  // Get compatible brands first, because that does validity checks
+  heif_brand2* compatible_brands = nullptr;
+  int nBrands = 0;
+  struct heif_error err = heif_list_compatible_brands(data, len, &compatible_brands, &nBrands);
+  if (err.code) {
+    return err;
+  }
+
+  heif_brand2 main_brand = heif_read_main_brand(data, len);
+
+  std::set<heif_brand2> supported_brands{
+      heif_brand2_avif,
+      heif_brand2_heic,
+      heif_brand2_heix,
+      heif_brand2_j2ki,
+      heif_brand2_jpeg,
+      heif_brand2_miaf,
+      heif_brand2_mif1,
+      heif_brand2_mif2
+  };
+
+  auto it = supported_brands.find(main_brand);
+  if (it != supported_brands.end()) {
+    heif_free_list_of_compatible_brands(compatible_brands);
+    return heif_error_ok;
+  }
+
+  for (int i = 0; i < nBrands; i++) {
+    heif_brand2 compatible_brand = compatible_brands[i];
+    it = supported_brands.find(compatible_brand);
+    if (it != supported_brands.end()) {
+      heif_free_list_of_compatible_brands(compatible_brands);
+      return heif_error_ok;
+    }
+  }
+  heif_free_list_of_compatible_brands(compatible_brands);
+  return {heif_error_Invalid_input, heif_suberror_Unsupported_image_type, "No supported brands found."};;
+}
+
+
 int heif_check_jpeg_filetype(const uint8_t* data, int len)
 {
-  if (len < 12 || data == nullptr) {
+  if (len < 4 || data == nullptr) {
     return -1;
   }
 
-  static uint8_t jpeg_signature[12] = {
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10,
-      0x4A, 0x46, 0x49, 0x46, 0x00, 0x01
-  };
-
-  return strncmp((const char*) data, (const char*) jpeg_signature, 12) == 0;
+  return (data[0] == 0xFF &&
+	  data[1] == 0xD8 &&
+	  data[2] == 0xFF &&
+	  (data[3] & 0xF0) == 0xE0);
 }
 
 
@@ -318,14 +359,15 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
 
   auto ftyp = std::dynamic_pointer_cast<Box_ftyp>(box);
   if (!ftyp) {
-    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is no ftyp box"};
+    return {heif_error_Invalid_input, heif_suberror_No_ftyp_box, "input is not a ftyp box"};
   }
 
   auto brands = ftyp->list_brands();
-  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * brands.size());
-  *out_size = (int) brands.size();
+  size_t nBrands = brands.size();
+  *out_brands = (heif_brand2*) malloc(sizeof(heif_brand2) * nBrands);
+  *out_size = (int)nBrands;
 
-  for (int i = 0; i < (int) brands.size(); i++) {
+  for (size_t i = 0; i < nBrands; i++) {
     (*out_brands)[i] = brands[i];
   }
 
@@ -1854,6 +1896,97 @@ void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile)
   color_profile_nclx::free_nclx_color_profile(nclx_profile);
 }
 
+int heif_image_handle_has_camera_intrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_intrinsic_matrix();
+}
+
+struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_intrinsic_matrix* out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_intrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_intrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  auto m = handle->image->get_intrinsic_matrix();
+  out_matrix->focal_length_x = m.focal_length_x;
+  out_matrix->focal_length_y = m.focal_length_y;
+  out_matrix->principal_point_x = m.principal_point_x;
+  out_matrix->principal_point_y = m.principal_point_y;
+  out_matrix->skew = m.skew;
+
+  return heif_error_success;
+}
+
+int heif_image_handle_has_camera_extrinsic_matrix(const struct heif_image_handle* handle)
+{
+  if (!handle) {
+    return false;
+  }
+
+  return handle->image->has_extrinsic_matrix();
+}
+
+struct heif_camera_extrinsic_matrix
+{
+  Box_cmex::ExtrinsicMatrix matrix;
+};
+
+struct heif_error heif_image_handle_get_camera_extrinsic_matrix(const struct heif_image_handle* handle,
+                                                                struct heif_camera_extrinsic_matrix** out_matrix)
+{
+  if (handle == nullptr || out_matrix == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  if (!handle->image->has_extrinsic_matrix()) {
+    Error err(heif_error_Usage_error,
+              heif_suberror_Camera_extrinsic_matrix_undefined);
+    return err.error_struct(handle->image.get());
+  }
+
+  *out_matrix = new heif_camera_extrinsic_matrix;
+  (*out_matrix)->matrix = handle->image->get_extrinsic_matrix();
+
+  return heif_error_success;
+}
+
+void heif_camera_extrinsic_matrix_release(struct heif_camera_extrinsic_matrix* matrix)
+{
+  delete matrix;
+}
+
+struct heif_error heif_camera_extrinsic_matrix_get_rotation_matrix(const struct heif_camera_extrinsic_matrix* matrix,
+                                                      double* out_matrix_row_major)
+{
+  if (matrix == nullptr || out_matrix_row_major == nullptr) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Null_pointer_argument};
+  }
+
+  auto m3x3 = matrix->matrix.calculate_rotation_matrix();
+
+  for (int i=0;i<9;i++) {
+    out_matrix_row_major[i] = m3x3[i];
+  }
+
+  return heif_error_success;
+}
+
+
+
 // DEPRECATED
 struct heif_error heif_register_decoder(heif_context* heif, const heif_decoder_plugin* decoder_plugin)
 {
@@ -2602,7 +2735,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 
 static void set_default_options(heif_encoding_options& options)
 {
-  options.version = 6;
+  options.version = 7;
 
   options.save_alpha_channel = true;
   options.macOS_compatibility_workaround = false;
@@ -2615,11 +2748,16 @@ static void set_default_options(heif_encoding_options& options)
   options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
+  options.prefer_uncC_short_form = true;
 }
 
 static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
 {
   switch (input_options.version) {
+    case 7:
+      options.prefer_uncC_short_form = input_options.prefer_uncC_short_form;
+      // fallthrough
     case 6:
       options.color_conversion_options = input_options.color_conversion_options;
       // fallthrough
@@ -2709,6 +2847,76 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;
     (*out_image_handle)->image = image;
+    (*out_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
+struct heif_error heif_context_encode_grid(struct heif_context* ctx,
+                                           struct heif_image** tiles,
+                                           uint16_t columns,
+                                           uint16_t rows,
+                                           struct heif_encoder* encoder,
+                                           const struct heif_encoding_options* input_options,
+                                           struct heif_image_handle** out_image_handle)
+{
+  if (!encoder || !tiles) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+  else if (rows == 0 || columns == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
+  }
+
+  // TODO: Don't repeat this code from heif_context_encode_image()
+  heif_encoding_options options;
+  heif_color_profile_nclx nclx;
+  set_default_options(options);
+  if (input_options) {
+    copy_options(options, *input_options);
+
+    if (options.output_nclx_profile == nullptr) {
+      auto input_nclx = tiles[0]->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options.output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
+  }
+
+  // Convert heif_images to a vector of HeifPixelImages
+  std::vector<std::shared_ptr<HeifPixelImage>> pixel_tiles;
+  for (int i=0; i<rows*columns; i++) {
+    pixel_tiles.push_back(tiles[i]->image);
+  }
+
+  // Encode Grid
+  Error error;
+  std::shared_ptr<HeifContext::Image> out_grid;
+  error = ctx->context->encode_grid(pixel_tiles,
+                                    rows, columns,
+                                    encoder,
+                                    options,
+                                    out_grid);
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  // Mark as primary image
+  if (ctx->context->is_primary_image_set() == false) {
+    ctx->context->set_primary_image(out_grid);
+  }
+
+  if (out_image_handle) {
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = out_grid;
     (*out_image_handle)->context = ctx->context;
   }
 

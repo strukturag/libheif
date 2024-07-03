@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_ENCODER_KVAZAAR_H
 #define LIBHEIF_ENCODER_KVAZAAR_H
 
-#include "libheif/common_utils.h"
+#include "common_utils.h"
 
 /* TODO: check whether this is also the case with kvazaar.
  *

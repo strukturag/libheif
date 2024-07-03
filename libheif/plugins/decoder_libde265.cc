@@ -281,7 +281,7 @@ static struct heif_error libde265_v1_push_data(void* decoder_raw, const void* da
       return err;
     }
 
-    uint32_t nal_size = (cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]);
+    uint32_t nal_size = static_cast<uint32_t>((cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]));
     ptr += 4;
 
     if (nal_size > size - ptr) {

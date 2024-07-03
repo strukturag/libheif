@@ -27,8 +27,8 @@
 
 #include <sharpyuv/sharpyuv.h>
 #include <sharpyuv/sharpyuv_csp.h>
-#include "libheif/nclx.h"
-#include "libheif/common_utils.h"
+#include "nclx.h"
+#include "common_utils.h"
 
 static inline bool PlatformIsBigEndian()
 {

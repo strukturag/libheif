@@ -20,8 +20,8 @@
 
 
 #include "colorconversion.h"
-#include "libheif/common_utils.h"
-#include "libheif/nclx.h"
+#include "common_utils.h"
+#include "nclx.h"
 #include <typeinfo>
 #include <algorithm>
 #include <cstring>

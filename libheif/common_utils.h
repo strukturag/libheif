@@ -22,7 +22,7 @@
 #define LIBHEIF_COMMON_UTILS_H
 
 #include <cinttypes>
-#include <libheif/heif.h>
+#include "libheif/heif.h"
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED
@@ -33,10 +33,10 @@
 
 constexpr inline uint32_t fourcc_to_uint32(const char* id)
 {
-  return ((((uint32_t) id[0]) << 24) |
-          (((uint32_t) id[1]) << 16) |
-          (((uint32_t) id[2]) << 8) |
-          (((uint32_t) id[3]) << 0));
+  return (((((uint32_t) id[0])&0xFF) << 24) |
+          ((((uint32_t) id[1])&0xFF) << 16) |
+          ((((uint32_t) id[2])&0xFF) << 8) |
+          ((((uint32_t) id[3])&0xFF) << 0));
 }
 
 

@@ -10,7 +10,7 @@
 : # If you're running this on Windows, be sure you've already run this (from your VC2019 install dir):
 : #     "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvars64.bat"
 
-git clone -b 1.0.0 --depth 1 https://code.videolan.org/videolan/dav1d.git
+git clone -b 1.4.3 --depth 1 https://code.videolan.org/videolan/dav1d.git
 
 cd dav1d
 
@@ -21,3 +21,9 @@ meson build --default-library=static --buildtype release --prefix "$(pwd)/dist" 
 ninja -C build
 ninja -C build install
 cd ..
+
+echo ""
+echo "----- NOTE ----"
+echo "Please add the path to the pkg-config file to your PKG_CONFIG_PATH. For"
+echo "example, on Linux x86_64, run:"
+echo "export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:$(pwd)/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig"

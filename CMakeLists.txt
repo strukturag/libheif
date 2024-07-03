@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.17.6)
+project(libheif LANGUAGES C CXX VERSION 1.18.0)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -97,8 +97,8 @@ macro(plugin_compilation_info optionVariableName detectionVariable displayName)
     endif ()
 
     string(LENGTH "${displayName}" len)
-    math(EXPR fill "29 - ${len}")
-    string(SUBSTRING "                                                " 0 ${fill} filler)
+    math(EXPR fill "32 - ${len}")
+    string(SUBSTRING "                                                   " 0 ${fill} filler)
     message("${displayName}${filler}: ${msg}")
     unset(msg)
 endmacro()
@@ -127,6 +127,30 @@ if (WITH_KVAZAAR)
     else ()
         add_definitions(-DHAVE_KVAZAAR_ENABLE_LOGGING=0)
     endif ()
+endif ()
+
+# uvg266
+
+plugin_option(UVG266 "uvg266 VVC encoder (experimental)" OFF OFF)
+if (WITH_UVG266)
+    find_package(UVG266)
+    if ("${HAVE_UVG266_ENABLE_LOGGING}")
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=1)
+    else ()
+        add_definitions(-DHAVE_UVG266_ENABLE_LOGGING=0)
+    endif ()
+endif ()
+
+# vvdec
+
+plugin_option(VVDEC "vvdec VVC decoder (experimental)" OFF OFF)
+if (WITH_VVDEC)
+    # TODO: how to do configure vvdec cleanly?
+    find_package(Threads REQUIRED)
+    find_package(vvdec 2.3.0)
+    if (vvdec_FOUND)
+        set(vvdec_LIBRARIES vvdec::vvdec)
+    endif()
 endif ()
 
 # dav1d
@@ -179,14 +203,14 @@ endif()
 plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
-    find_package(OpenJPEG)
+    find_package(OpenJPEG 2)
 endif()
 
 # ffmpeg
 
 plugin_option(FFMPEG_DECODER "FFMPEG HEVC decoder (HW accelerated)" OFF OFF)
 if (WITH_FFMPEG_DECODER)
-    find_package(FFMPEG COMPONENTS avcodec)
+    find_package(FFMPEG COMPONENTS avcodec avutil)
 endif ()
 
 # openjph
@@ -220,6 +244,8 @@ plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
+plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
+plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
 
 # --- show summary which formats are supported
 
@@ -275,6 +301,9 @@ endif()
 if (OPENJPH_FOUND AND WITH_OPENJPH_DECODER)
     set(SUPPORTS_J2K_HT_ENCODING TRUE)
 endif()
+if (UVG266_FOUND)
+    set(SUPPORTS_VVC_ENCODING TRUE)
+endif()
 
 if (WITH_UNCOMPRESSED_CODEC)
     set(SUPPORTS_UNCOMPRESSED_DECODING TRUE)
@@ -285,6 +314,7 @@ message("\n=== Supported formats ===")
 message("format        decoding   encoding")
 format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
 format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
+format_compilation_info("VVC"  FALSE SUPPORTS_VVC_ENCODING)
 format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
 format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
 format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)
@@ -324,6 +354,9 @@ if (LIBDE265_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_LIBDE2
 endif()
 if (X265_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_X265_PLUGIN))
     list(APPEND REQUIRES_PRIVATE "x265")
+endif()
+if (KVAZAAR_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_KVAZAAR_PLUGIN))
+    list(APPEND REQUIRES_PRIVATE "kvazaar")
 endif()
 if ((AOM_DECODER_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_AOM_DECODER_PLUGIN))
         OR (AOM_ENCODER_FOUND AND NOT (PLUGIN_LOADING_SUPPORTED_AND_ENABLED AND WITH_AOM_ENCODER_PLUGIN)))

@@ -19,12 +19,13 @@
  */
 
 #include "file.h"
-#include "libheif/box.h"
+#include "box.h"
 #include "libheif/heif.h"
 #include "libheif/heif_properties.h"
-#include "libheif/jpeg2000.h"
-#include "libheif/jpeg.h"
-#include "libheif/vvc.h"
+#include "metadata_compression.h"
+#include "codecs/jpeg2000.h"
+#include "codecs/jpeg.h"
+#include "codecs/vvc.h"
 
 #include <cstdint>
 #include <fstream>
@@ -44,11 +45,9 @@
 #include <windows.h>
 #endif
 
-#include "metadata_compression.h"
-#include "jpeg2000.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "uncompressed_image.h"
+#include "codecs/uncompressed_image.h"
 #endif
 
 // TODO: make this a decoder option
@@ -68,6 +67,28 @@ std::vector<heif_item_id> HeifFile::get_item_IDs() const
   }
 
   return IDs;
+}
+
+
+std::shared_ptr<const Box_infe> HeifFile::get_infe_box(heif_item_id ID) const
+{
+  auto iter = m_infe_boxes.find(ID);
+  if (iter == m_infe_boxes.end()) {
+    return nullptr;
+  }
+
+  return iter->second;
+}
+
+
+std::shared_ptr<Box_infe> HeifFile::get_infe_box(heif_item_id ID)
+{
+  auto iter = m_infe_boxes.find(ID);
+  if (iter == m_infe_boxes.end()) {
+    return nullptr;
+  }
+
+  return iter->second;
 }
 
 
@@ -435,22 +456,16 @@ bool HeifFile::image_exists(heif_item_id ID) const
 }
 
 
-std::shared_ptr<Box_infe> HeifFile::get_infe(heif_item_id ID) const
+bool HeifFile::has_item_with_id(heif_item_id ID) const
 {
-  // --- get the image from the list of all images
-
-  auto image_iter = m_infe_boxes.find(ID);
-  if (image_iter == m_infe_boxes.end()) {
-    return nullptr;
-  }
-
-  return image_iter->second;
+  auto infe_box = get_infe_box(ID);
+  return infe_box != nullptr;
 }
 
 
 std::string HeifFile::get_item_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -461,7 +476,7 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
 
 std::string HeifFile::get_content_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -471,7 +486,7 @@ std::string HeifFile::get_content_type(heif_item_id ID) const
 
 std::string HeifFile::get_item_uri_type(heif_item_id ID) const
 {
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return "";
   }
@@ -504,6 +519,15 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
   if (hvcC_box) {
     return (heif_chroma) (hvcC_box->get_configuration().chroma_format);
+  }
+
+
+  // VVC
+
+  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+  std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+  if (vvcC_box) {
+    return (heif_chroma) (vvcC_box->get_configuration().chroma_format_idc);
   }
 
 
@@ -551,6 +575,23 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
   }
 
 
+  // VVC
+
+  if (image_type == "vvc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+    if (vvcC_box) {
+      Box_vvcC::configuration config = vvcC_box->get_configuration();
+      if (config.bit_depth_present_flag) {
+        return config.bit_depth;
+      }
+      else {
+        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
+      }
+    }
+  }
+
+  
   // AV1
 
   if (image_type == "av01") {
@@ -570,21 +611,6 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     }
   }
 
-  // VVC
-
-  if (image_type == "vvc1") {
-    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
-    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
-    if (vvcC_box) {
-      Box_vvcC::configuration config = vvcC_box->get_configuration();
-      if (config.bit_depth_present_flag) {
-        return config.bit_depth;
-      }
-      else {
-        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
-      }
-    }
-  }
 
   // JPEG
 
@@ -627,6 +653,22 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
     std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
     if (hvcC_box) {
       return hvcC_box->get_configuration().bit_depth_chroma;
+    }
+  }
+
+  // VVC
+
+  if (image_type == "vvc1") {
+    auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
+    std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+    if (vvcC_box) {
+      Box_vvcC::configuration config = vvcC_box->get_configuration();
+      if (config.bit_depth_present_flag) {
+        return config.bit_depth;
+      }
+      else {
+        return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
+      }
     }
   }
 
@@ -709,7 +751,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                  heif_suberror_Nonexisting_item_referenced);
   }
 
-  auto infe_box = get_infe(ID);
+  auto infe_box = get_infe_box(ID);
   if (!infe_box) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Nonexisting_item_referenced);
@@ -771,6 +813,43 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
                    heif_suberror_No_hvcC_box);
     }
     else if (!hvcC_box->get_headers(data)) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_item_data);
+    }
+
+    error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+  }
+  else if (item_type == "vvc1") {
+    // --- --- --- VVC
+
+    // --- get properties for this image
+
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
+    if (err) {
+      return err;
+    }
+
+    // --- get codec configuration
+
+    std::shared_ptr<Box_vvcC> vvcC_box;
+    for (auto& prop : properties) {
+      if (prop->get_short_type() == fourcc("vvcC")) {
+        vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(prop);
+        if (vvcC_box) {
+          break;
+        }
+      }
+    }
+
+    if (!vvcC_box) {
+      // Should always have an vvcC box, because we are checking this in
+      // heif_context::interpret_heif_file()
+      assert(false);
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_No_vvcC_box);
+    }
+    else if (!vvcC_box->get_headers(data)) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_item_data);
     }
@@ -909,6 +988,102 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 }
 
 
+Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const
+{
+  Error error;
+
+  auto infe_box = get_infe_box(ID);
+  if (!infe_box) {
+    return {heif_error_Usage_error,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
+  std::string item_type = infe_box->get_item_type();
+  std::string content_type = infe_box->get_content_type();
+
+  // --- get item
+
+  auto items = m_iloc_box->get_items();
+  const Box_iloc::Item* item = nullptr;
+  for (const auto& i : items) {
+    if (i.item_ID == ID) {
+      item = &i;
+      break;
+    }
+  }
+  if (!item) {
+    std::stringstream sstr;
+    sstr << "Item with ID " << ID << " has no data";
+
+    return {heif_error_Invalid_input,
+            heif_suberror_No_item_data,
+            sstr.str()};
+  }
+
+  // --- non 'mime' data (uncompressed)
+
+  if (item_type != "mime") {
+    if (out_compression) {
+      *out_compression = heif_metadata_compression_off;
+    }
+
+    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+  }
+
+
+  // --- mime data
+
+  std::string encoding = infe_box->get_content_encoding();
+
+  heif_metadata_compression compression;
+
+  if (encoding.empty()) {
+    // shortcut for case of uncompressed mime data
+
+    if (out_compression) {
+      *out_compression = heif_metadata_compression_off;
+    }
+
+    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+  }
+  else if (encoding == "deflate") {
+    compression = heif_metadata_compression_deflate;
+  }
+  else {
+    compression = heif_metadata_compression_unknown;
+  }
+
+  // read compressed data
+
+  std::vector<uint8_t> compressed_data;
+  error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+  if (error) {
+    return error;
+  }
+
+  // return compressed data, if we do not want to have it uncompressed
+
+  const bool do_decode = (out_compression == nullptr);
+  if (!do_decode) {
+    *out_compression = compression;
+    *out_data = std::move(compressed_data);
+    return Error::Ok;
+  }
+
+  // decompress the data
+
+  switch (compression) {
+#if WITH_DEFLATE_HEADER_COMPRESSION
+    case heif_metadata_compression_deflate:
+      *out_data = inflate(compressed_data);
+      return Error::Ok;
+#endif
+    default:
+      return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
+  }
+}
+
+
 heif_item_id HeifFile::get_unused_item_id() const
 {
   for (heif_item_id id = 1;;
@@ -969,7 +1144,7 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
-  int index = m_ipco_box->append_child_box(ispe);
+  int index = m_ipco_box->find_or_append_child_box(ispe);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
@@ -980,7 +1155,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
   auto clap = std::make_shared<Box_clap>();
   clap->set(clap_width, clap_height, image_width, image_height);
 
-  int index = m_ipco_box->append_child_box(clap);
+  int index = m_ipco_box->find_or_append_child_box(clap);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
@@ -988,7 +1163,7 @@ void HeifFile::add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t 
 
 heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
-  int index = m_ipco_box->append_child_box(property);
+  int index = m_ipco_box->find_or_append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 
@@ -1042,7 +1217,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto irot = std::make_shared<Box_irot>();
     irot->set_rotation_ccw(rotation_ccw);
 
-    int index = m_ipco_box->append_child_box(irot);
+    int index = m_ipco_box->find_or_append_child_box(irot);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1051,7 +1226,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto imir = std::make_shared<Box_imir>();
     imir->set_mirror_direction(mirror);
 
-    int index = m_ipco_box->append_child_box(imir);
+    int index = m_ipco_box->find_or_append_child_box(imir);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1067,9 +1242,74 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
     pixi->add_channel_bits(c3);
   }
 
-  int index = m_ipco_box->append_child_box(pixi);
+  int index = m_ipco_box->find_or_append_child_box(pixi);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
+}
+
+
+void HeifFile::add_vvcC_property(heif_item_id id)
+{
+  auto vvcC = std::make_shared<Box_vvcC>();
+  int index = m_ipco_box->append_child_box(vvcC);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+}
+
+
+Error HeifFile::append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& nal_data)
+{
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->append_nal_data(nal_data);
+    return Error::Ok;
+  }
+  else {
+    // Should always have an vvcC box, because we are checking this in
+    // heif_context::interpret_heif_file()
+    assert(false);
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
+}
+
+
+Error HeifFile::set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config)
+{
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->set_configuration(config);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
+}
+
+
+Error HeifFile::append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size)
+{
+  std::vector<std::shared_ptr<Box>> properties;
+
+  auto vvcC = std::dynamic_pointer_cast<Box_vvcC>(m_ipco_box->get_property_for_item_ID(id,
+                                                                                       m_ipma_box,
+                                                                                       fourcc("vvcC")));
+
+  if (vvcC) {
+    vvcC->append_nal_data(data, size);
+    return Error::Ok;
+  }
+  else {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_No_vvcC_box);
+  }
 }
 
 
@@ -1138,35 +1378,19 @@ Error HeifFile::append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_
 }
 
 
-void HeifFile::add_av1C_property(heif_item_id id)
+void HeifFile::add_av1C_property(heif_item_id id, const Box_av1C::configuration& config)
 {
   auto av1C = std::make_shared<Box_av1C>();
-  int index = m_ipco_box->append_child_box(av1C);
+  av1C->set_configuration(config);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+  add_property(id, av1C, true);
 }
 
 
-Error HeifFile::set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config)
-{
-  auto av1C = std::dynamic_pointer_cast<Box_av1C>(m_ipco_box->get_property_for_item_ID(id,
-                                                                                       m_ipma_box,
-                                                                                       fourcc("av1C")));
-
-  if (av1C) {
-    av1C->set_configuration(config);
-    return Error::Ok;
-  }
-  else {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_av1C_box);
-  }
-}
-
-std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id) 
+std::shared_ptr<Box_j2kH> HeifFile::add_j2kH_property(heif_item_id id)
 {
   auto j2kH = std::make_shared<Box_j2kH>();
-  int index = m_ipco_box->append_child_box(j2kH);
+  int index = m_ipco_box->append_child_box(j2kH); // do not deduplicate because this can have a child box
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
@@ -1206,6 +1430,25 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
   result.value = metadata_id;
 
   set_item_data(infe_box, data, size, content_encoding);
+
+  return result;
+}
+
+
+Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_type, std::string content_encoding, const uint8_t* data, size_t size)
+{
+  Result<heif_item_id> result;
+
+  // create an infe box describing what kind of data we are storing (this also creates a new ID)
+
+  auto infe_box = add_new_infe_box("mime");
+  infe_box->set_hidden_item(true);
+  infe_box->set_content_type(content_type);
+
+  heif_item_id metadata_id = infe_box->get_item_ID();
+  result.value = metadata_id;
+
+  set_precompressed_item_data(infe_box, data, size, content_encoding);
 
   return result;
 }
@@ -1270,6 +1513,29 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
 }
 
 
+Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding)
+{
+  // only set metadata compression for MIME type data which has 'content_encoding' field
+  if (!content_encoding.empty() &&
+      item->get_item_type() != "mime") {
+    // TODO: error, compression not supported
+  }
+
+
+  std::vector<uint8_t> data_array;
+  data_array.resize(size);
+  memcpy(data_array.data(), data, size);
+
+  item->set_content_encoding(content_encoding);
+
+  // copy the data into the file, store the pointer to it in an iloc box entry
+
+  append_iloc_data(item->get_item_ID(), data_array);
+
+  return Error::Ok;
+}
+
+
 void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method)
 {
   m_iloc_box->append_data(id, nal_packets, construction_method);
@@ -1312,7 +1578,7 @@ void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
   auto auxC = std::make_shared<Box_auxC>();
   auxC->set_aux_type(type);
 
-  int index = m_ipco_box->append_child_box(auxC);
+  int index = m_ipco_box->find_or_append_child_box(auxC);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }
@@ -1322,7 +1588,7 @@ void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const co
   auto colr = std::make_shared<Box_colr>();
   colr->set_color_profile(profile);
 
-  int index = m_ipco_box->append_child_box(colr);
+  int index = m_ipco_box->find_or_append_child_box(colr);
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 

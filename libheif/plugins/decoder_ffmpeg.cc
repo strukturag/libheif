@@ -26,8 +26,6 @@
 #include "config.h"
 #endif
 
-#include <assert.h>
-#include <memory>
 #include <map>
 
 extern "C" 
@@ -177,12 +175,68 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
       NalUnit* nal_unit = new NalUnit();
       nal_unit->set_data(cdata + ptr, nal_size);
 
+      NalUnit* old_nal_unit = decoder->NalMap[nal_unit->unit_type()];
       decoder->NalMap[nal_unit->unit_type()] = nal_unit;
+      delete old_nal_unit;
 
       ptr += nal_size;
   }
 
   return heif_error_success;
+}
+
+static heif_chroma ffmpeg_get_chroma_format(enum AVPixelFormat pix_fmt) {
+    if (pix_fmt == AV_PIX_FMT_GRAY8)
+    {
+        return heif_chroma_monochrome;
+    }
+    else if ((pix_fmt == AV_PIX_FMT_YUV420P) || (pix_fmt == AV_PIX_FMT_YUVJ420P) ||
+        (pix_fmt == AV_PIX_FMT_YUV420P10LE))
+    {
+        return heif_chroma_420;
+    }
+    else if (pix_fmt == AV_PIX_FMT_YUV422P)
+    {
+        return heif_chroma_422;
+    }
+    else if (pix_fmt == AV_PIX_FMT_YUV444P)
+    {
+        return heif_chroma_444;
+    }
+    // Unsupported pix_fmt
+    return heif_chroma_undefined;
+}
+
+static int ffmpeg_get_chroma_width(const AVFrame* frame, heif_channel channel, heif_chroma chroma)
+{
+    if (channel == heif_channel_Y)
+    {
+        return frame->width;
+    }
+    else if (chroma == heif_chroma_420 || chroma == heif_chroma_422)
+    {
+        return (frame->width + 1) / 2;
+    }
+    else
+    {
+        return frame->width;
+    }
+}
+
+static int ffmpeg_get_chroma_height(const AVFrame* frame, heif_channel channel, heif_chroma chroma)
+{
+    if (channel == heif_channel_Y)
+    {
+        return frame->height;
+    }
+    else if (chroma == heif_chroma_420)
+    {
+        return (frame->height + 1) / 2;
+    }
+    else
+    {
+        return frame->height;
+    }
 }
 
 static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc_frame, AVPacket* hevc_pkt, struct heif_image** image)
@@ -207,14 +261,16 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
     }
 
 
-    if ((hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P) || (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUVJ420P) || //planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
-        (hevc_dec_ctx->pix_fmt == AV_PIX_FMT_YUV420P10LE))
+    heif_chroma chroma = ffmpeg_get_chroma_format(hevc_dec_ctx->pix_fmt);
+    if (chroma != heif_chroma_undefined)
     {
+        bool is_mono = (chroma == heif_chroma_monochrome);
+
         heif_error err;
         err = heif_image_create(hevc_frame->width,
             hevc_frame->height,
-            heif_colorspace_YCbCr,
-            heif_chroma_420,
+            is_mono ? heif_colorspace_monochrome : heif_colorspace_YCbCr,
+            chroma,
             image);
         if (err.code) {
             return err;
@@ -226,7 +282,7 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
             heif_channel_Cr
         };
 
-        int nPlanes = 3;
+        int nPlanes = is_mono ? 1 : 3;
 
         for (int channel = 0; channel < nPlanes; channel++) {
 
@@ -234,8 +290,8 @@ static struct heif_error hevc_decode(AVCodecContext* hevc_dec_ctx, AVFrame* hevc
             int stride = hevc_frame->linesize[channel];
             const uint8_t* data = hevc_frame->data[channel];
 
-            int w = (channel == 0) ? hevc_frame->width : hevc_frame->width >> 1;
-            int h = (channel == 0) ? hevc_frame->height : hevc_frame->height >> 1;
+            int w = ffmpeg_get_chroma_width(hevc_frame, channel2plane[channel], chroma);
+            int h = ffmpeg_get_chroma_height(hevc_frame, channel2plane[channel], chroma);
             if (w <= 0 || h <= 0) {
                 heif_image_release(*image);
                 err = { heif_error_Decoder_plugin_error,
@@ -332,7 +388,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   int hevc_AnnexB_StartCode_size = 4;
 
   size_t hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
-  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size);
+  uint8_t* hevc_data = (uint8_t*)malloc(hevc_data_size + AV_INPUT_BUFFER_PADDING_SIZE);
 
   //Copy hevc pps data
   uint8_t* hevc_data_ptr = hevc_data;

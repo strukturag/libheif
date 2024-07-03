@@ -25,6 +25,7 @@
 #include "error.h"
 #include <cstdint>
 #include <vector>
+#include <string>
 
 class Box_avcC : public Box {
 public:

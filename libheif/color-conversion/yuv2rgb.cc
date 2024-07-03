@@ -21,8 +21,8 @@
 #include <cmath>
 #include <cstring>
 #include "yuv2rgb.h"
-#include "libheif/nclx.h"
-#include "libheif/common_utils.h"
+#include "nclx.h"
+#include "common_utils.h"
 
 
 template<class Pixel>

@@ -405,7 +405,7 @@ public:
 
 private:
     const uint8_t ident;
-    uint16_t value;
+    uint16_t value = 0;
 };
 
 class JPEG2000_Extension_Capability_HT : public JPEG2000_Extension_Capability
@@ -438,7 +438,7 @@ private:
 struct JPEG2000MainHeader
 {
 public:
-    JPEG2000MainHeader() {}
+    JPEG2000MainHeader() = default;
 
     Error parseHeader(const HeifFile& file, const heif_item_id imageID);
 
@@ -499,7 +499,7 @@ private:
 
     uint16_t read16()
     {
-        uint16_t res = (headerData[cursor] << 8) | headerData[cursor + 1];
+        uint16_t res = (uint16_t)((headerData[cursor] << 8) | headerData[cursor + 1]);
         cursor += 2;
         return res;
     }

@@ -5,7 +5,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
             message("Compiling '" ${name} "' as dynamic plugin")
             add_library(heif-${name}
                     MODULE ${${optionName}_sources} ${${optionName}_extra_plugin_sources}
-                    ../heif_plugin.cc
+                    ../api/libheif/heif_plugin.cc
                     )
             if (NOT APPLE)
                 set_target_properties(heif-${name}
@@ -18,7 +18,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
                     LIBHEIF_EXPORTS
                     HAVE_VISIBILITY)
             target_compile_definitions(heif-${name} PRIVATE PLUGIN_${defineName}=1)
-            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR} ${${varName}_INCLUDE_DIRS})
+            target_include_directories(heif-${name} PRIVATE ${PROJECT_SOURCE_DIR} ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api ${${varName}_INCLUDE_DIRS})
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} heif)
 
             install(TARGETS heif-${name}
@@ -91,9 +91,18 @@ set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
 set(FFMPEG_DECODER_extra_plugin_sources ../error.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)
 
+
 set(OPENJPH_ENCODER_sources encoder_openjph.cc encoder_openjph.h)
 set(OPENJPH_ENCODER_extra_plugin_sources)
 plugin_compilation(jphenc OPENJPH OPENJPH_FOUND OPENJPH_ENCODER OPENJPH_ENCODER)
+
+set(UVG266_sources encoder_uvg266.cc encoder_uvg266.h)
+set(UVG266_extra_plugin_sources)
+plugin_compilation(uvg266 UVG266 UVG266_FOUND UVG266 UVG266)
+
+set(VVDEC_sources decoder_vvdec.cc decoder_vvdec.h)
+set(VVDEC_extra_plugin_sources)
+plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
 
 target_sources(heif PRIVATE
                encoder_mask.h

@@ -26,13 +26,14 @@ libheif has support for:
 * decoding of files while downloading (e.g. extract image size before file has been completely downloaded)
 
 Supported codecs:
-| Format       |  Decoders        |  Encoders           |
-|:-------------|:----------------:|:-------------------:|
-| HEIC         | libde265, ffmpeg | x265, kvazaar       |
-| AVIF         | AOM, dav1d       | AOM, rav1e, svt-av1 |
-| JPEG         | libjpeg(-turbo)  | libjpeg(-turbo)     |
-| JPEG2000     | OpenJPEG         | OpenJPEG            |
-| uncompressed | built-in         | built-in            |
+| Format       |  Decoders           |  Encoders             |
+|:-------------|:-------------------:|:---------------------:|
+| HEIC         | libde265, ffmpeg    | x265, kvazaar         |
+| AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1   |
+| VVC          | vvdec (experimental)| uvg266 (experimental) |
+| JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)       |
+| JPEG2000     | OpenJPEG            | OpenJPEG              |
+| uncompressed | built-in            | built-in              |
 
 ## API
 
@@ -137,7 +138,7 @@ There are CMake presets to cover the most frequent use cases.
 * `release-noplugins`: this is a smaller, self-contained build of libheif without using the plugin system.
   A single library is built with support for HEIC and AVIF.
 * `testing`: for building and executing the unit tests. Also the internal library symbols are exposed. Do not use for distribution.
-* `fuzzing`: similar to `testing`, this builds the fuzzers. The library should not distributed.
+* `fuzzing`: all codecs like in release build, but configured into a self-contained library with enabled fuzzers. The library should not distributed.
 
 You can optionally adapt these standard configurations to your needs.
 This can be done, for example, by calling `ccmake .` from within the `build` directory.
@@ -154,7 +155,7 @@ For each codec, there are two configuration variables:
 * `WITH_{codec}_PLUGIN`: when enabled, the codec is compiled as a separate plugin.
 
 In order to use dynamic plugins, also make sure that `ENABLE_PLUGIN_LOADING` is enabled.
-The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`
+The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODER`, `AOM_ENCODER`, `SvtEnc`, `DAV1D`, `FFMPEG_DECODER`, `JPEG_DECODER`, `JPEG_ENCODER`, `KVAZAAR`, `OpenJPEG_DECODER`, `OpenJPEG_ENCODER`, `OPENJPH_ENCODER`, `UVG266`, `VVDEC`.
 
 Further options are:
 
@@ -244,7 +245,7 @@ If you want to compile SVT-AV1 yourself,
   and compile it.
 
 When running `cmake` or `configure`, make sure that the environment variable
-`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/Release`.
+`PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
 
 You have to enable SVT-AV1 with CMake.
@@ -304,7 +305,7 @@ This is `libheif` running in JavaScript in your browser.
 ## Example programs
 
 Some example programs are provided in the `examples` directory.
-The program `heif-convert` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
+The program `heif-dec` converts all images stored in an HEIF/AVIF file to JPEG or PNG.
 `heif-enc` lets you convert JPEG files to HEIF/AVIF.
 The program `heif-info` is a simple, minimal decoder that dumps the file structure to the console.
 
@@ -312,7 +313,7 @@ For example convert `example.heic` to JPEGs and one of the JPEGs back to HEIF:
 
 ```sh
 cd examples/
-./heif-convert example.heic example.jpeg
+./heif-dec example.heic example.jpeg
 ./heif-enc example-1.jpeg -o example.heif
 ```
 
