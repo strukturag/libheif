@@ -3166,9 +3166,9 @@ Error Box_itai::write(StreamWriter& writer) const {
   writer.write64(m_tai_timestamp);
 
   uint8_t status_bits = 0;
-  status_bits |= (m_synchronization_state << 7);
-  status_bits |= (m_timestamp_generation_failure << 6);
-  status_bits |= (m_timestamp_is_modified << 5);
+  status_bits |= m_synchronization_state ? (1 << 7) : 0;
+  status_bits |= m_timestamp_generation_failure ? (1 << 6) : 0;
+  status_bits |= m_timestamp_is_modified ? (1 << 5) : 0;
 
   writer.write8(status_bits);
   prepend_header(writer, box_start);
@@ -3182,9 +3182,9 @@ Error Box_itai::parse(BitstreamRange& range) {
 
   uint8_t status_bits = range.read8();
 
-  m_synchronization_state = (status_bits & 0x07);
-  m_timestamp_generation_failure = (status_bits & 0x06);
-  m_timestamp_is_modified = (status_bits & 0x5);
+  m_synchronization_state = !!(status_bits & 0x80);
+  m_timestamp_generation_failure = !!(status_bits & 0x40);
+  m_timestamp_is_modified = !!(status_bits & 0x20);
 
   return range.get_error();
 }
