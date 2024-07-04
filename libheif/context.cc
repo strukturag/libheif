@@ -609,13 +609,6 @@ Error HeifContext::interpret_heif_file()
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
 
-
-        // --- check whether the image size is "too large"
-        err = check_resolution(width, height);
-        if (err) {
-          return err;
-        }
-
         image->set_resolution(width, height);
         ispe_read = true;
       }
@@ -1361,6 +1354,16 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
   Error error;
 
+
+  // --- check whether image size exceeds maximum (according to 'ispe')
+
+  auto ispe = m_heif_file->get_property<Box_ispe>(ID);
+  if (ispe) {
+    error = check_resolution(ispe->get_width(), ispe->get_height());
+    if (error) {
+      return error;
+    }
+  }
 
   // --- decode image, depending on its type
 
