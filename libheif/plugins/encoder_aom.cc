@@ -26,6 +26,7 @@
 #include <cassert>
 #include <vector>
 #include <string>
+#include <thread>
 #include <memory>
 #include "encoder_aom.h"
 
@@ -237,7 +238,12 @@ static void aom_init_parameters()
   p->version = 2;
   p->name = kParam_threads;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 4;
+  unsigned int threads = std::thread::hardware_concurrency();
+  if (threads == 0) {
+    // Could not autodetect, use previous default value.
+    threads = 4;
+  }
+  p->integer.default_value = threads;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
