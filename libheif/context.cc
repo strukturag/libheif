@@ -609,6 +609,17 @@ Error HeifContext::interpret_heif_file()
         uint32_t width = ispe->get_width();
         uint32_t height = ispe->get_height();
 
+        uint32_t max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
+        if (width >= max_width_height || height >= max_width_height) {
+          std::stringstream sstr;
+          sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+                << m_maximum_image_size_limit << "\n";
+
+          return Error(heif_error_Memory_allocation_error,
+                        heif_suberror_Security_limit_exceeded,
+                        sstr.str());
+        }
+
         image->set_resolution(width, height);
         ispe_read = true;
       }
