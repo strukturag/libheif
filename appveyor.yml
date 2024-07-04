@@ -14,10 +14,15 @@ environment:
   - arch: arm64
 
 install:
-  - vcpkg install libde265:%arch%-windows
-  - vcpkg install x265:%arch%-windows
+  - vcpkg install aom:%arch%-windows
   - vcpkg install dav1d:%arch%-windows
+  - vcpkg install ffmpeg[avcodec]:%arch%-windows
+  - vcpkg install libde265:%arch%-windows
+  - vcpkg install libjpeg-turbo:%arch%-windows
+  - vcpkg install libpng:%arch%-windows
   - vcpkg install tiff:%arch%-windows
+  - vcpkg install x265:%arch%-windows
+  - vcpkg install zlib:%arch%-windows
   - cd c:\tools\vcpkg
   - vcpkg integrate install
   - cd %APPVEYOR_BUILD_FOLDER%
@@ -25,7 +30,7 @@ install:
 before_build:
   - mkdir build
   - cd build
-  - cmake .. -A %arch% -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+  - cmake .. -A %arch% -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DWITH_DAV1D=ON -DWITH_AOM_DECODER=ON -DWITH_AOM_ENCODER=ON -DWITH_JPEG_DECODER=ON -DWITH_JPEG_ENCODER=ON -DWITH_UNCOMPRESSED_CODEC=ON -DWITH_DEFLATE_HEADER_COMPRESSION=ON -DWITH_FFMPEG_DECODER=ON
 
 build:
   verbosity: normal
