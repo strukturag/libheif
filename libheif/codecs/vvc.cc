@@ -366,7 +366,11 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
 
   int sps_conformance_window_flag = reader.get_bits(1);
   if (sps_conformance_window_flag) {
-    assert(false); // TODO
+    int left,right,top,bottom;
+    reader.get_uvlc(&left);
+    reader.get_uvlc(&right);
+    reader.get_uvlc(&top);
+    reader.get_uvlc(&bottom);
   }
 
   bool sps_subpic_info_present_flag = reader.get_bits(1);

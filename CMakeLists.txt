@@ -149,6 +149,18 @@ if (WITH_VVDEC)
     endif()
 endif ()
 
+# vvenc
+
+plugin_option(VVENC "vvenc VVC encoder (experimental)" OFF OFF)
+if (WITH_VVENC)
+    # TODO: how to do configure vvenc cleanly?
+    find_package(Threads REQUIRED)
+    find_package(vvenc 1.12.0)
+    if (vvenc_FOUND)
+        set(vvenc_LIBRARIES vvenc::vvenc)
+    endif()
+endif ()
+
 # dav1d
 
 plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
@@ -241,6 +253,7 @@ plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
+plugin_compilation_info(VVENC vvenc "vvenc VVC enc. (experimental)")
 plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
 
 # --- show summary which formats are supported
@@ -297,8 +310,11 @@ endif()
 if (OPENJPH_FOUND AND WITH_OPENJPH_DECODER)
     set(SUPPORTS_J2K_HT_ENCODING TRUE)
 endif()
-if (UVG266_FOUND)
+if (UVG266_FOUND OR vvenc_FOUND)
     set(SUPPORTS_VVC_ENCODING TRUE)
+endif()
+if (vvdec_FOUND AND WITH_VVDEC)
+    set(SUPPORTS_VVC_DECODING TRUE)
 endif()
 
 if (WITH_UNCOMPRESSED_CODEC)
@@ -310,7 +326,7 @@ message("\n=== Supported formats ===")
 message("format        decoding   encoding")
 format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
 format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
-format_compilation_info("VVC"  FALSE SUPPORTS_VVC_ENCODING)
+format_compilation_info("VVC"  SUPPORTS_VVC_DECODING SUPPORTS_VVC_ENCODING)
 format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
 format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
 format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)

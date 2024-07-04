@@ -104,6 +104,10 @@ set(VVDEC_sources decoder_vvdec.cc decoder_vvdec.h)
 set(VVDEC_extra_plugin_sources)
 plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
 
+set(VVENC_sources encoder_vvenc.cc encoder_vvenc.h)
+set(VVENC_extra_plugin_sources)
+plugin_compilation(vvenc vvenc vvenc_FOUND VVENC VVENC)
+
 target_sources(heif PRIVATE
                encoder_mask.h
                encoder_mask.cc)

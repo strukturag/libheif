@@ -28,6 +28,11 @@
 
 #include <vvdec/vvdec.h>
 
+#if 0
+#include <iostream>
+#include <logging.h>
+#endif
+
 
 struct vvdec_decoder
 {
@@ -305,6 +310,12 @@ struct heif_error vvdec_decode_image(void* decoder_raw, struct heif_image** out_
     for (int y = 0; y < h; y++) {
       memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
     }
+
+#if 0
+      std::cout << "DATA " << c << " " << w << " " << h << " bpp:" << bpp << "\n";
+      std::cout << write_raw_data_as_hex(dst_mem, w*h, {}, {});
+      std::cout << "---\n";
+#endif
   }
 
   *out_img = heif_img;
