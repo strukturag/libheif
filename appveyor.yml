@@ -17,6 +17,7 @@ install:
   - vcpkg install libde265:%arch%-windows
   - vcpkg install x265:%arch%-windows
   - vcpkg install dav1d:%arch%-windows
+  - vcpkg install tiff:%arch%-windows
   - cd c:\tools\vcpkg
   - vcpkg integrate install
   - cd %APPVEYOR_BUILD_FOLDER%
