@@ -241,7 +241,7 @@ static void aom_init_parameters()
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 1;
-  p->integer.maximum = 16;
+  p->integer.maximum = 64;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
