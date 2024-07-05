@@ -27,6 +27,7 @@
 #include <cassert>
 
 #include "libheif/heif.h"
+#include "security_limits.h"
 #include "uncompressed.h"
 #include "uncompressed_box.h"
 
@@ -260,9 +261,19 @@ Error Box_uncC::parse(BitstreamRange& range)
 
     m_tile_align_size = range.read32();
 
-    m_num_tile_cols = range.read32() + 1;
+    uint32_t num_tile_cols_minus_one = range.read32();
+    uint32_t num_tile_rows_minus_one = range.read32();
+    if ((num_tile_cols_minus_one >= UINT32_MAX) || (num_tile_rows_minus_one >= UINT32_MAX)) {
+      std::stringstream sstr;
+      sstr << "Tiling size " << ((uint64_t)num_tile_cols_minus_one + 1) << " x " << ((uint64_t)num_tile_rows_minus_one + 1) << " exceeds the maximum allowed size "
+           << UINT32_MAX << " x " << UINT32_MAX;
+      return Error(heif_error_Memory_allocation_error,
+                   heif_suberror_Security_limit_exceeded,
+                   sstr.str());
+    }
+    m_num_tile_cols = num_tile_cols_minus_one + 1;
 
-    m_num_tile_rows = range.read32() + 1;
+    m_num_tile_rows = num_tile_rows_minus_one + 1;
   }
   return range.get_error();
 }
