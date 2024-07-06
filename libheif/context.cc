@@ -470,6 +470,12 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
                   sstr.str());
   }
 
+  if (width==0 || height==0) {
+    return Error(heif_error_Memory_allocation_error,
+                 heif_suberror_Invalid_image_size,
+                 "zero width or height");
+  }
+
   return Error::Ok;
 }
 
