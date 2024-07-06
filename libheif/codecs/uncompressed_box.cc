@@ -412,6 +412,8 @@ Error Box_icbr::parse(BitstreamRange& range)
     } else if (get_version() == 0) {
       byteRange.range_offset = range.read32();
       byteRange.range_size = range.read32();
+    } else {
+      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icbr version");
     }
     m_ranges.push_back(byteRange);
   }
