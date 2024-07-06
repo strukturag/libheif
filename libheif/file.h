@@ -85,9 +85,9 @@ public:
 
   std::string get_item_uri_type(heif_item_id ID) const;
 
-  Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t> *out_data) const;
+  Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
-  Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression *out_compression) const;
+  Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 

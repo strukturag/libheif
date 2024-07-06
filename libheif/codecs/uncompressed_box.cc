@@ -323,7 +323,6 @@ std::string Box_uncC::dump(Indent& indent) const
   return sstr.str();
 }
 
-
 Error Box_uncC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);

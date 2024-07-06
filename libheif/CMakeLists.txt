@@ -143,7 +143,7 @@ endif ()
 if (WITH_DEFLATE_HEADER_COMPRESSION)
     target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
 endif ()
- 
+
 if (HAVE_BROTLI)
     target_compile_definitions(heif PUBLIC HAVE_BROTLI=1)
     target_include_directories(heif PRIVATE ${BROTLI_INCLUDE_DIRS})

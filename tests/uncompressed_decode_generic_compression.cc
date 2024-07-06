@@ -166,7 +166,7 @@ void check_image_content(struct heif_context *&context) {
     REQUIRE(((int)(img_plane[stride * row + 96])) == 200);
     REQUIRE(((int)(img_plane[stride * row + 127])) == 200);
   }
- 
+
   img_plane = heif_image_get_plane_readonly(img, heif_channel_B, &stride);
   REQUIRE(stride == 128);
   for (int row = 0; row < 24; row++) {

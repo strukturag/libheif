@@ -934,10 +934,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
                  heif_suberror_Unsupported_data_version,
                  "Missing required uncC box for uncompressed codec");
   }
-  if (!cmpd) {
-    printf("No cmpd\n");
-  }
-  // printf("uncC version: %d\n", uncC->get_version());
   if (!cmpd && (uncC->get_version() !=1)) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
@@ -977,9 +973,9 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
 
   AbstractDecoder *decoder = makeDecoder(width, height, cmpd, uncC);
   if (decoder != nullptr) {
-      Error result = decoder->decode(source_data, img);
-      delete decoder;
-      return result;
+    Error result = decoder->decode(source_data, img);
+    delete decoder;
+    return result;
   } else {
     printf("bad interleave mode - we should have detected this earlier: %d\n", uncC->get_interleave_type());
     std::stringstream sstr;

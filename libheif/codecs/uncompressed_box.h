@@ -76,8 +76,7 @@ protected:
 class Box_uncC : public FullBox
 {
 public:
-  Box_uncC()
-  {
+  Box_uncC() {
     set_short_type(fourcc("uncC"));
   }
 
@@ -239,7 +238,7 @@ public:
   uint32_t get_compression_type() const { return compression_type; }
   bool get_must_decompress_individual_entities() const { return must_decompress_individual_entities; }
   uint8_t get_compressed_range_type() const { return compressed_range_type; }
-  
+
   Error write(StreamWriter& writer) const override;
 
 protected:
@@ -252,7 +251,7 @@ protected:
 
 /**
  * Item compressed byte range info (icbr).
- * 
+ *
  * This is from ISO/IEC 23001-17 Amd 2.
  */
 class Box_icbr : public FullBox

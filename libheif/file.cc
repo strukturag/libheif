@@ -30,7 +30,6 @@
 
 #include <cstdint>
 #include <fstream>
-#include <iostream>
 #include <limits>
 #include <sstream>
 #include <utility>
@@ -51,7 +50,6 @@
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_image.h"
 #endif
-#include <iomanip>
 
 // TODO: make this a decoder option
 #define STRICT_PARSING false
