@@ -927,9 +927,25 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
                  sstr.str());
 #endif
   } else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
+#if WITH_ZLIB_COMPRESSION
     return inflate_zlib(compressed_data, data);
+#else
+    std::stringstream sstr;
+    sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
   } else if (cmpC_box->get_compression_type() == fourcc("defl")) {
+#if WITH_ZLIB_COMPRESSION
     return inflate_deflate(compressed_data, data);
+#else
+    std::stringstream sstr;
+    sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
   } else {
     std::stringstream sstr;
     sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << std::endl;
