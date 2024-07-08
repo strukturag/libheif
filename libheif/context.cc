@@ -326,9 +326,9 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
     std::stringstream sstr;
     sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
 
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 sstr.str());
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            sstr.str()};
   }
 
   int field_len = ((m_flags & 1) ? 4 : 2);
@@ -345,6 +345,12 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 
   m_width = readvec(data, ptr, field_len);
   m_height = readvec(data, ptr, field_len);
+
+  if (m_width==0 || m_height==0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_overlay_data,
+            "Overlay image with zero width or height."};
+  }
 
   m_offsets.resize(num_images);
 
