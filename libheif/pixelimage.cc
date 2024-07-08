@@ -831,9 +831,9 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx, 
 
     // verify that the destination points are within the bounds of the image's dimensions
     if (out_x0 < 0 ||
-        out_x0 > out_w ||
+        out_x0 >= out_w ||
         out_y0 < 0 ||
-        out_y0 > out_h) {
+        out_y0 >= out_h) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_Invalid_overlay_data,
                    "Overlay image has invalid offsets");
@@ -841,9 +841,9 @@ Error HeifPixelImage::overlay(std::shared_ptr<HeifPixelImage>& overlay, int dx, 
 
     // verify that the source points are within the bounds of the image's dimensions
     if (in_x0 < 0 ||
-        in_x0 > in_w ||
+        in_x0 >= in_w ||
         in_y0 < 0 ||
-        in_y0 > in_h) {
+        in_y0 >= in_h) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_Invalid_overlay_data,
                    "Overlay image has invalid offsets");
