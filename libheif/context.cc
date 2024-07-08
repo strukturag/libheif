@@ -1914,6 +1914,10 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
       const std::shared_ptr<Image> tileImg = iter->second;
       int src_width = tileImg->get_width();
       int src_height = tileImg->get_height();
+      err = check_resolution(src_width, src_height);
+      if (err) {
+        return err;
+      }
 
 #if ENABLE_PARALLEL_TILE_DECODING
       if (m_max_decoding_threads > 0)
