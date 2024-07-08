@@ -1878,7 +1878,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
     img->add_plane(heif_channel_B, w, h, bpp);
   }
 
-  int y0 = 0;
+  uint32_t y0 = 0;
   int reference_idx = 0;
 
 #if ENABLE_PARALLEL_TILE_DECODING
@@ -1886,7 +1886,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   struct tile_data
   {
     heif_item_id tileID;
-    int x_origin, y_origin;
+    uint32_t x_origin, y_origin;
   };
 
   std::deque<tile_data> tiles;
@@ -1896,27 +1896,47 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   std::deque<std::future<Error> > errs;
 #endif
 
-  for (int y = 0; y < grid.get_rows(); y++) {
-    int x0 = 0;
-    int tile_height = 0;
+  uint32_t tile_width=0;
+  uint32_t tile_height=0;
 
-    for (int x = 0; x < grid.get_columns(); x++) {
+  for (uint32_t y = 0; y < grid.get_rows(); y++) {
+    uint32_t x0 = 0;
+
+    for (uint32_t x = 0; x < grid.get_columns(); x++) {
 
       heif_item_id tileID = image_references[reference_idx];
 
       auto iter = m_all_images.find(tileID);
       if (iter == m_all_images.end()) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Missing_grid_images,
-                     "Nonexistent grid image referenced");
+        return {heif_error_Invalid_input,
+                heif_suberror_Missing_grid_images,
+                "Nonexistent grid image referenced"};
       }
 
       const std::shared_ptr<Image> tileImg = iter->second;
-      int src_width = tileImg->get_width();
-      int src_height = tileImg->get_height();
+      uint32_t src_width = tileImg->get_width();
+      uint32_t src_height = tileImg->get_height();
       err = check_resolution(src_width, src_height);
       if (err) {
         return err;
+      }
+
+      if (src_width < grid.get_width() / grid.get_columns() ||
+          src_height < grid.get_height() / grid.get_rows()) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Invalid_grid_data,
+                "Grid tiles do not cover whole image"};
+      }
+
+      if (x==0 && y==0) {
+        // remember size of first tile and compare all other tiles against this
+        tile_width = src_width;
+        tile_height = src_height;
+      }
+      else if (src_width != tile_width || src_height != tile_height) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Invalid_grid_data,
+                "Grid tiles have different sizes"};
       }
 
 #if ENABLE_PARALLEL_TILE_DECODING
@@ -1927,14 +1947,13 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
         if (1)
 #endif
       {
-        Error err = decode_and_paste_tile_image(tileID, img, x0, y0, options);
+        err = decode_and_paste_tile_image(tileID, img, x0, y0, options);
         if (err) {
           return err;
         }
       }
 
       x0 += src_width;
-      tile_height = src_height; // TODO: check that all tiles have the same height
 
       reference_idx++;
     }
@@ -1990,7 +2009,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
 Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
                                                const std::shared_ptr<HeifPixelImage>& img,
-                                               int x0, int y0,
+                                               uint32_t x0, uint32_t y0,
                                                const heif_decoding_options& options) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
@@ -2000,16 +2019,14 @@ Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
     return err;
   }
 
-  const int w = img->get_width();
-  const int h = img->get_height();
+  const uint32_t w = img->get_width();
+  const uint32_t h = img->get_height();
 
 
   // --- copy tile into output image
 
-  int src_width = tile_img->get_width();
-  int src_height = tile_img->get_height();
-  assert(src_width >= 0);
-  assert(src_height >= 0);
+  uint32_t src_width = tile_img->get_width();
+  uint32_t src_height = tile_img->get_height();
 
   heif_chroma chroma = img->get_chroma_format();
 
