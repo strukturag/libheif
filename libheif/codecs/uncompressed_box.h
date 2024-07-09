@@ -220,4 +220,69 @@ protected:
   uint32_t m_num_tile_rows = 1;
 };
 
+/**
+ * Generic compression box (cmpC).
+ *
+ * This is from ISO/IEC 23001-17 Amd 2.
+ */
+class Box_cmpC : public FullBox
+{
+public:
+  Box_cmpC()
+  {
+    set_short_type(fourcc("cmpC"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  uint32_t get_compression_type() const { return compression_type; }
+  bool get_must_decompress_individual_entities() const { return must_decompress_individual_entities; }
+  uint8_t get_compressed_range_type() const { return compressed_range_type; }
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  uint32_t compression_type;
+  bool must_decompress_individual_entities;
+  uint8_t compressed_range_type;
+};
+
+/**
+ * Item compressed byte range info (icbr).
+ *
+ * This is from ISO/IEC 23001-17 Amd 2.
+ */
+class Box_icbr : public FullBox
+{
+public:
+  Box_icbr()
+  {
+    set_short_type(fourcc("icbr"));
+  }
+
+  struct ByteRange
+  {
+    uint64_t range_offset;
+    uint64_t range_size;
+  };
+
+  const std::vector<ByteRange>& get_ranges() const { return m_ranges; }
+
+  void add_component(const ByteRange& range)
+  {
+    m_ranges.push_back(range);
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  std::vector<ByteRange> m_ranges;
+};
+
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H

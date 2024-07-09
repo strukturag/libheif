@@ -159,8 +159,8 @@ The placeholder `{codec}` can have these values: `LIBDE265`, `X265`, `AOM_DECODE
 
 Further options are:
 
-* `WITH_UNCOMPRESSED_CODEC`: enable support for uncompressed images according to ISO/IEC 23001-17:2023. This is *experimental*
-   and not available as a dynamic plugin.
+* `WITH_UNCOMPRESSED_CODEC`: enable support for uncompressed images according to ISO/IEC 23001-17:2024. This is *experimental*
+   and not available as a dynamic plugin. When enabled, it adds a dependency to `zlib`, and optionally will use `brotli`.
 * `WITH_DEFLATE_HEADER_COMPRESSION`: enables support for compressed metadata. When enabled, it adds a dependency to `zlib`.
    Note that header compression is not widely supported yet.
 * `WITH_LIBSHARPYUV`: enables high-quality YCbCr/RGB color space conversion algorithms (requires `libsharpyuv`,
@@ -170,7 +170,7 @@ Further options are:
 * `PLUGIN_DIRECTORY`: the directory where libheif will search for dynamic plugins when the environment
   variable `LIBHEIF_PLUGIN_PATH` is not set.
 * `WITH_REDUCED_VISIBILITY`: only export those symbols into the library that are public API.
-  Has to be turned off for running the tests.
+  Has to be turned off for running some tests.
 
 ### macOS
 

@@ -26,6 +26,7 @@
 #include "codecs/avif.h"
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
+#include "codecs/uncompressed_box.h"
 
 #include <map>
 #include <memory>
@@ -86,7 +87,7 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
-  Error get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const;
+  Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
 
@@ -251,6 +252,20 @@ private:
                                       std::unordered_set<heif_item_id>& parent_items) const;
 
   int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
+
+  const Error get_compressed_image_data_hvc1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
+
+  const Error get_compressed_image_data_vvc(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
+
+  const Error get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
+
+  const Error do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const;
+
+  const Error get_compressed_image_data_av1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
+
+  const Error get_compressed_image_data_jpeg2000(heif_item_id ID, const Box_iloc::Item *item, std::vector<uint8_t> *data) const;
+
+  const Error get_compressed_image_data_jpeg(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
 };
 
 #endif

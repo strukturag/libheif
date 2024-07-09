@@ -29,6 +29,7 @@
 
 #include "common_utils.h"
 #include "context.h"
+#include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
 #include "uncompressed.h"
@@ -861,9 +862,9 @@ static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::
 Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* context,
                                                         heif_item_id ID,
                                                         std::shared_ptr<HeifPixelImage>& img,
-                                                        const std::vector<uint8_t>& uncompressed_data)
+                                                        const std::vector<uint8_t>& source_data)
 {
-  if (uncompressed_data.empty()) {
+  if (source_data.empty()) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Uncompressed image data is empty"};
@@ -883,6 +884,9 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   bool found_ispe = false;
   std::shared_ptr<Box_cmpd> cmpd;
   std::shared_ptr<Box_uncC> uncC;
+  std::shared_ptr<Box_cmpC> cmpC;
+  std::shared_ptr<Box_icbr> icbr;
+
   for (const auto& prop : item_properties) {
     auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
     if (ispe) {
@@ -905,6 +909,17 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     if (maybe_uncC) {
       uncC = maybe_uncC;
     }
+
+    auto maybe_cmpC = std::dynamic_pointer_cast<Box_cmpC>(prop);
+    if (maybe_cmpC) {
+      cmpC = maybe_cmpC;
+    }
+
+    auto maybe_icbr = std::dynamic_pointer_cast<Box_icbr>(prop);
+    if (maybe_icbr) {
+      icbr = maybe_icbr;
+    }
+
   }
 
 
@@ -958,7 +973,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
 
   AbstractDecoder *decoder = makeDecoder(width, height, cmpd, uncC);
   if (decoder != nullptr) {
-    Error result = decoder->decode(uncompressed_data, img);
+    Error result = decoder->decode(source_data, img);
     delete decoder;
     return result;
   } else {

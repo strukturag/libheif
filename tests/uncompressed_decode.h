@@ -46,6 +46,16 @@
   "uncompressed_pix_R8G8B8_bsz0_psz10_tiled.heif", \
   "uncompressed_pix_R8G8B8_bsz0_psz5_tiled.heif"
 
+#if HAVE_BROTLI
+  #define BROTLI_FILES "rgb_generic_compressed_brotli.heif",
+#else
+  #define BROTLI_FILES
+#endif
+
+#define FILES_GENERIC_COMPRESSED \
+  "rgb_generic_compressed_defl.heif", BROTLI_FILES \
+  "rgb_generic_compressed_tile_deflate.heif", "rgb_generic_compressed_zlib.heif", \
+  "rgb_generic_compressed_zlib_rows.heif", "rgb_generic_compressed_zlib_tiled.heif"
 
 #define FILES_16BIT_RGB \
   "uncompressed_comp_B16R16G16.heif", "uncompressed_comp_B16R16G16_tiled.heif", \

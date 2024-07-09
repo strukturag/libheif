@@ -241,6 +241,11 @@ enum heif_suberror_code
 
   heif_suberror_No_vvcC_box = 141,
 
+  // icbr is only needed in some situations, this error is for those cases
+  heif_suberror_No_icbr_box = 142,
+
+  // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
+  heif_suberror_Decompression_invalid_data = 150,
 
   // --- Memory_allocation_error ---
 
@@ -249,6 +254,9 @@ enum heif_suberror_code
   // security limits further.
   heif_suberror_Security_limit_exceeded = 1000,
 
+  // There was an error from the underlying compression / decompression library.
+  // One possibility is lack of resources (e.g. memory).
+  heif_suberror_Compression_initialisation_error = 1001,
 
   // --- Usage_error ---
 
@@ -297,6 +305,8 @@ enum heif_suberror_code
 
   heif_suberror_Unsupported_header_compression_method = 3005,
 
+  // Generically compressed data used an unsupported compression method
+  heif_suberror_Unsupported_generic_compression_method = 3006,
 
   // --- Encoder_plugin_error ---
 

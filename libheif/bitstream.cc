@@ -235,6 +235,31 @@ uint32_t BitstreamRange::read32()
                      (buf[3]));
 }
 
+uint64_t BitstreamRange::read64()
+{
+  if (!prepare_read(8)) {
+    return 0;
+  }
+
+  uint8_t buf[8];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 8);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+  return (uint64_t) (((uint64_t)buf[0] << 56) |
+                     ((uint64_t)buf[1] << 48) |
+                     ((uint64_t)buf[2] << 40) |
+                     ((uint64_t)buf[3] << 32) |
+                     (buf[4] << 24) |
+                     (buf[5] << 16) |
+                     (buf[6] << 8) |
+                     (buf[7]));
+}
 
 int32_t BitstreamRange::read32s()
 {

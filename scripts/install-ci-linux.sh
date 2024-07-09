@@ -111,6 +111,13 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
+if [ ! -z "$WITH_UNCOMPRESSED_CODEC" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        libbrotli-dev \
+        zlib-dev \
+        "
+fi
+
 if [ "$MINGW" == "32" ]; then
     sudo dpkg --add-architecture i386
     # https://github.com/actions/runner-images/issues/4589
