@@ -2169,10 +2169,12 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
 
 enum heif_metadata_compression
 {
-  heif_metadata_compression_off,
-  heif_metadata_compression_auto,
-  heif_metadata_compression_deflate,
-  heif_metadata_compression_unknown
+  heif_metadata_compression_off = 0,
+  heif_metadata_compression_auto = 1,
+  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_zlib = 4,    // do not use for header data
+  heif_metadata_compression_brotli = 5
 };
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.

@@ -134,14 +134,10 @@ else ()
     message("Not compiling 'libsharpyuv'")
 endif ()
 
-if (WITH_DEFLATE_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
+if (WITH_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
     find_package(ZLIB REQUIRED)
     target_link_libraries(heif PRIVATE ZLIB::ZLIB)
     target_compile_definitions(heif PRIVATE HAVE_ZLIB=1)
-endif ()
-
-if (WITH_DEFLATE_HEADER_COMPRESSION)
-    target_compile_definitions(heif PRIVATE WITH_DEFLATE_HEADER_COMPRESSION=1)
 endif ()
 
 if (HAVE_BROTLI)

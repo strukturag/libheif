@@ -185,7 +185,9 @@ void show_help(const char* argv0)
             << "  --full_range_flag         nclx profile: full range flag, default: 1\n"
             << "  --enable-two-colr-boxes   will write both an ICC and an nclx color profile if both are present\n"
             << "  --premultiplied-alpha     input image has premultiplied alpha\n"
+#if WITH_HEADER_COMPRESSION
             << "  --enable-metadata-compression   enable XMP metadata compression (experimental)\n"
+#endif
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"

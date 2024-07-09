@@ -814,7 +814,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     if (item_type == "mime") {
       std::string encoding = infe_box->get_content_encoding();
       if (encoding == "compress_zlib") {
-#if WITH_DEFLATE_HEADER_COMPRESSION
+#if HAVE_ZLIB
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
         error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
@@ -822,6 +822,42 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
           return error;
         }
         error = decompress_zlib(compressed_data, data);
+        if (error) {
+          return error;
+        }
+#else
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_header_compression_method,
+                     encoding);
+#endif
+      }
+      else if (encoding == "deflate") {
+#if HAVE_ZLIB
+        read_uncompressed = false;
+        std::vector<uint8_t> compressed_data;
+        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        if (error) {
+          return error;
+        }
+        error = decompress_deflate(compressed_data, data);
+        if (error) {
+          return error;
+        }
+#else
+        return Error(heif_error_Unsupported_feature,
+                     heif_suberror_Unsupported_header_compression_method,
+                     encoding);
+#endif
+      }
+      else if (encoding == "br") {
+#if HAVE_BROTLI
+        read_uncompressed = false;
+        std::vector<uint8_t> compressed_data;
+        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        if (error) {
+          return error;
+        }
+        error = decompress_brotli(compressed_data, data);
         if (error) {
           return error;
         }
@@ -1206,7 +1242,13 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
     return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
   }
   else if (encoding == "compress_zlib") {
+    compression = heif_metadata_compression_zlib;
+  }
+  else if (encoding == "deflate") {
     compression = heif_metadata_compression_deflate;
+  }
+  else if (encoding == "br") {
+    compression = heif_metadata_compression_brotli;
   }
   else {
     compression = heif_metadata_compression_unknown;
@@ -1232,9 +1274,15 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   // decompress the data
 
   switch (compression) {
-#if WITH_DEFLATE_HEADER_COMPRESSION
-    case heif_metadata_compression_deflate:
+#if HAVE_ZLIB
+    case heif_metadata_compression_zlib:
       return decompress_zlib(compressed_data, out_data);
+    case heif_metadata_compression_deflate:
+      return decompress_deflate(compressed_data, out_data);
+#endif
+#if HAVE_BROTLI
+    case heif_metadata_compression_brotli:
+      return decompress_brotli(compressed_data, out_data);
 #endif
     default:
       return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
@@ -1647,8 +1695,8 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
 
 
   std::vector<uint8_t> data_array;
-  if (compression == heif_metadata_compression_deflate) {
-#if WITH_DEFLATE_HEADER_COMPRESSION
+  if (compression == heif_metadata_compression_zlib) {
+#if HAVE_ZLIB
     data_array = compress_zlib((const uint8_t*) data, size);
     item->set_content_encoding("compress_zlib");
 #else
@@ -1656,6 +1704,16 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
                  heif_suberror_Unsupported_header_compression_method);
 #endif
   }
+  else if (compression == heif_metadata_compression_deflate) {
+#if HAVE_ZLIB
+    data_array = compress_deflate((const uint8_t*) data, size);
+    item->set_content_encoding("compress_zlib");
+#else
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_header_compression_method);
+#endif
+  }
+  // TODO: brotli
   else {
     // uncompressed data, plain copy
 

@@ -55,6 +55,10 @@ target_link_libraries(heif-enc PRIVATE heif)
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
+if (WITH_HEADER_COMPRESSION)
+    target_compile_definitions(heif-enc PRIVATE WITH_HEADER_COMPRESSION=1)
+endif ()
+
 
 add_executable(heif-test ${getopt_sources}
         heif_test.cc

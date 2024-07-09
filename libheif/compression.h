@@ -29,15 +29,17 @@
 #if HAVE_ZLIB
 std::vector<uint8_t> compress_zlib(const uint8_t* input, size_t size);
 
-Error decompress_zlib(const std::vector<uint8_t>&compressed_input, std::vector<uint8_t> *output);
+std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
 
-Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output);
+Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
+
+Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
 #endif
 
 #if HAVE_BROTLI
 
-Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output);
+Error decompress_brotli(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
 #endif
 

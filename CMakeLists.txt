@@ -395,7 +395,7 @@ endif()
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
-if (WITH_DEFLATE_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
+if (WITH_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
     list(APPEND REQUIRES_PRIVATE "zlib")
 endif()
 if (WITH_UNCOMPRESSED_CODEC)
@@ -430,7 +430,7 @@ option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
-option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
+option(WITH_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
 

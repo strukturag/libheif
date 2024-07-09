@@ -161,7 +161,7 @@ Further options are:
 
 * `WITH_UNCOMPRESSED_CODEC`: enable support for uncompressed images according to ISO/IEC 23001-17:2024. This is *experimental*
    and not available as a dynamic plugin. When enabled, it adds a dependency to `zlib`, and optionally will use `brotli`.
-* `WITH_DEFLATE_HEADER_COMPRESSION`: enables support for compressed metadata. When enabled, it adds a dependency to `zlib`.
+* `WITH_HEADER_COMPRESSION`: enables support for compressed metadata. When enabled, it adds a dependency to `zlib`.
    Note that header compression is not widely supported yet.
 * `WITH_LIBSHARPYUV`: enables high-quality YCbCr/RGB color space conversion algorithms (requires `libsharpyuv`,
    e.g. from the `third-party` directory).
