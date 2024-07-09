@@ -713,9 +713,9 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
                    "Can currently only fill images with 8 bits per pixel");
     }
 
-    int h = plane.m_height;
+    size_t h = plane.m_height;
 
-    int stride = plane.stride;
+    size_t stride = plane.stride;
     uint8_t* data = plane.mem;
 
     uint16_t val16;
@@ -741,7 +741,22 @@ Error HeifPixelImage::fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_
 
     auto val8 = static_cast<uint8_t>(val16 >> 8U);
 
-    memset(data, val8, stride * h);
+
+    // memset() even when h * stride > sizeof(size_t)
+
+    if (std::numeric_limits<size_t>::max() / stride > h) {
+      // can fill in one step
+      memset(data, val8, stride * h);
+    }
+    else {
+      // fill line by line
+      auto* p = data;
+
+      for (size_t y=0;y<h;y++) {
+        memset(p, val8, stride);
+        p += stride;
+      }
+    }
   }
 
   return Error::Ok;
