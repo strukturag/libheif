@@ -137,7 +137,7 @@ endif ()
 if (WITH_DEFLATE_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
     find_package(ZLIB REQUIRED)
     target_link_libraries(heif PRIVATE ZLIB::ZLIB)
-    target_compile_definitions(heif PRIVATE WITH_ZLIB_COMPRESSION=1)
+    target_compile_definitions(heif PRIVATE HAVE_ZLIB=1)
 endif ()
 
 if (WITH_DEFLATE_HEADER_COMPRESSION)

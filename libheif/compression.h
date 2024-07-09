@@ -26,7 +26,7 @@
 
 #include <error.h>
 
-#if WITH_ZLIB_COMPRESSION
+#if HAVE_ZLIB
 std::vector<uint8_t> deflate(const uint8_t* input, size_t size);
 
 Error inflate_zlib(const std::vector<uint8_t>&compressed_input, std::vector<uint8_t> *output);

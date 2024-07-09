@@ -22,7 +22,7 @@
 #include "compression.h"
 
 
-#if WITH_ZLIB_COMPRESSION
+#if HAVE_ZLIB
 
 #include <zlib.h>
 #include <cstring>
