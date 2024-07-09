@@ -257,9 +257,11 @@ private:
 
   const Error get_compressed_image_data_vvc(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
 
+#if WITH_UNCOMPRESSED_CODEC
   const Error get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
 
   const Error do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const;
+#endif
 
   const Error get_compressed_image_data_av1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
 

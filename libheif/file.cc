@@ -876,6 +876,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
 }
 
+#if WITH_UNCOMPRESSED_CODEC
 // generic compression and uncompressed, per 23001-17
 const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
 {
@@ -988,6 +989,7 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
                  sstr.str());
   }
 }
+#endif
 
 const Error HeifFile::get_compressed_image_data_hvc1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
 {
@@ -1030,6 +1032,7 @@ const Error HeifFile::get_compressed_image_data_hvc1(heif_item_id ID, std::vecto
 
   return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
 }
+
 
 const Error HeifFile::get_compressed_image_data_vvc(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
 {
