@@ -27,18 +27,68 @@
 #include <error.h>
 
 #if HAVE_ZLIB
+/**
+ * Compress data using zlib method.
+ * 
+ * This is the RFC 1950 format.
+ * 
+ * @param input pointer to the data to be compressed
+ * @param size the length of the input array in bytes
+ * @return the corresponding compressed data
+ */
 std::vector<uint8_t> compress_zlib(const uint8_t* input, size_t size);
 
+/**
+ * Compress data using deflate method.
+ * 
+ * This is the RFC 1951 format.
+ * 
+ * @param input pointer to the data to be compressed
+ * @param size the length of the input array in bytes
+ * @return the corresponding compressed data
+ */
 std::vector<uint8_t> compress_deflate(const uint8_t* input, size_t size);
 
+/**
+ * Decompress zlib compressed data.
+ *
+ * This is assumed to be in RFC 1950 format, which is the normal zlib format.
+ *
+ * @param compressed_input the compressed data to be decompressed
+ * @param output pointer to the resulting vector of decompressed data
+ * @return success (Ok) or an error on failure (usually corrupt data)
+ * 
+ * @sa decompress_deflate
+ * @sa compress_zlib
+ */
 Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
+/**
+ * Decompress "deflate" compressed data.
+ *
+ * This is assumed to be in RFC 1951 format, which is the deflate format.
+ *
+ * @param compressed_input the compressed data to be decompressed
+ * @param output pointer to the resulting vector of decompressed data
+ * @return success (Ok) or an error on failure (usually corrupt data)
+ * 
+ * @sa decompress_zlib
+ * @sa compress_deflate
+ */
 Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
 #endif
 
 #if HAVE_BROTLI
-
+/**
+ * Decompress Brotli compressed data.
+ *
+ * Brotli is described at https://brotli.org/
+ *
+ * @param compressed_input the compressed data to be decompressed
+ * @param output pointer to the resulting vector of decompressed data
+ * @return success (Ok) or an error on failure (usually corrupt data)
+ */
 Error decompress_brotli(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
 #endif
