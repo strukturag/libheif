@@ -427,6 +427,12 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
   // Read this and the NAL size directly on the array data.
 
   BitReader reader(data.data(), (int) data.size());
+  if (reader.get_bits_remaining() < 32) {
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            "HEVC SEI NAL too short"};
+  }
+
   uint32_t len = (uint32_t) reader.get_bits(32);
 
   if (len > data.size() - 4) {
@@ -435,7 +441,14 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 
   while (reader.get_current_byte_index() < (int) len) {
     int currPos = reader.get_current_byte_index();
+
     BitReader sei_reader(data.data() + currPos, (int) data.size() - currPos);
+
+    if (sei_reader.get_bits_remaining() < 32+8) {
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              "HEVC SEI NAL too short"};
+    }
 
     uint32_t nal_size = (uint32_t) sei_reader.get_bits(32);
     (void) nal_size;
@@ -447,6 +460,12 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
 
     if (nal_type == 39 ||
         nal_type == 40) {
+
+      if (sei_reader.get_bits_remaining() < 16) {
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                "HEVC SEI NAL too short"};
+      }
 
       // TODO: loading of multi-byte sei headers
       uint8_t payload_id = (uint8_t) (sei_reader.get_bits(8));
