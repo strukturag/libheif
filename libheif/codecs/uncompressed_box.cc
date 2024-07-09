@@ -366,6 +366,11 @@ Error Box_uncC::write(StreamWriter& writer) const
 Error Box_cmpC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("cmpC");
+  }
+
   compression_type = range.read32();
   uint8_t v = range.read8();
   must_decompress_individual_entities = ((v & 0x80) == 0x80);
@@ -402,6 +407,11 @@ Error Box_cmpC::write(StreamWriter& writer) const
 Error Box_icbr::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if ((get_version() != 0) && (get_version() != 1)) {
+    return unsupported_version_error("icbr");
+  }
+
   uint32_t num_ranges = range.read32();
   for (uint32_t r = 0; r < num_ranges; r++) {
     struct ByteRange byteRange;
