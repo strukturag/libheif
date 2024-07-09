@@ -813,7 +813,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     bool read_uncompressed = true;
     if (item_type == "mime") {
       std::string encoding = infe_box->get_content_encoding();
-      if (encoding == "deflate") {
+      if (encoding == "compress_zlib") {
 #if WITH_DEFLATE_HEADER_COMPRESSION
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
@@ -821,7 +821,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
         if (error) {
           return error;
         }
-        error = inflate_zlib(compressed_data, data);
+        error = decompress_zlib(compressed_data, data);
         if (error) {
           return error;
         }
@@ -916,7 +916,7 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
 {
   if (cmpC_box->get_compression_type() == fourcc("brot")) {
 #if HAVE_BROTLI
-    return inflate_brotli(compressed_data, data);
+    return decompress_brotli(compressed_data, data);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
@@ -926,7 +926,7 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
 #endif
   } else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
 #if HAVE_ZLIB
-    return inflate_zlib(compressed_data, data);
+    return decompress_zlib(compressed_data, data);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
@@ -936,7 +936,7 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
 #endif
   } else if (cmpC_box->get_compression_type() == fourcc("defl")) {
 #if HAVE_ZLIB
-    return inflate_deflate(compressed_data, data);
+    return decompress_deflate(compressed_data, data);
 #else
     std::stringstream sstr;
     sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
@@ -1205,7 +1205,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 
     return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
   }
-  else if (encoding == "deflate") {
+  else if (encoding == "compress_zlib") {
     compression = heif_metadata_compression_deflate;
   }
   else {
@@ -1234,7 +1234,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   switch (compression) {
 #if WITH_DEFLATE_HEADER_COMPRESSION
     case heif_metadata_compression_deflate:
-      return inflate_zlib(compressed_data, out_data);
+      return decompress_zlib(compressed_data, out_data);
 #endif
     default:
       return {heif_error_Unsupported_filetype, heif_suberror_Unsupported_header_compression_method};
@@ -1649,8 +1649,8 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
   std::vector<uint8_t> data_array;
   if (compression == heif_metadata_compression_deflate) {
 #if WITH_DEFLATE_HEADER_COMPRESSION
-    data_array = deflate((const uint8_t*) data, size);
-    item->set_content_encoding("deflate");
+    data_array = compress_zlib((const uint8_t*) data, size);
+    item->set_content_encoding("compress_zlib");
 #else
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_header_compression_method);

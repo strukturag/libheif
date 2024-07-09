@@ -31,7 +31,7 @@ const size_t BUF_SIZE = (1 << 18);
 
 #include "error.h"
 
-Error inflate_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output)
+Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output)
 {
     BrotliDecoderResult result = BROTLI_DECODER_RESULT_ERROR;
     std::vector<uint8_t> buffer(BUF_SIZE, 0);

@@ -28,7 +28,7 @@
 #include <cstring>
 #include <iostream>
 
-std::vector<uint8_t> deflate(const uint8_t* input, size_t size)
+std::vector<uint8_t> compress_zlib(const uint8_t* input, size_t size)
 {
   std::vector<uint8_t> output;
 
@@ -135,12 +135,12 @@ Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, s
   return Error::Ok;
 }
 
-Error inflate_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+Error decompress_zlib(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
 {
   return do_inflate(compressed_input, 15, output);
 }
 
-Error inflate_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
+Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t> *output)
 {
   return do_inflate(compressed_input, -15, output);
 }

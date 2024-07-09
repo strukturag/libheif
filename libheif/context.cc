@@ -3812,8 +3812,8 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_ima
   std::vector<uint8_t> data_array;
   if (compression == heif_metadata_compression_deflate) {
 #if WITH_DEFLATE_HEADER_COMPRESSION
-    data_array = deflate((const uint8_t*) data, size);
-    metadata_infe_box->set_content_encoding("deflate");
+    data_array = compress_zlib((const uint8_t*) data, size);
+    metadata_infe_box->set_content_encoding("compress_zlib");
 #else
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_header_compression_method);
