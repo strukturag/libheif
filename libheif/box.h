@@ -261,6 +261,7 @@ protected:
 
   Error write_header(StreamWriter&, size_t total_size, bool data64bit = false) const override;
 
+  Error unsupported_version_error(const char* box) const;
 
 private:
   uint8_t m_version = 0;

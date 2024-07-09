@@ -1049,6 +1049,10 @@ Error Box_meta::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  if (get_version() != 0) {
+    return unsupported_version_error("meta");
+  }
+
   /*
   uint64_t boxSizeLimit;
   if (get_box_size() == BoxHeader::size_until_end_of_file) {
@@ -1073,9 +1077,24 @@ std::string Box_meta::dump(Indent& indent) const
 }
 
 
+Error FullBox::unsupported_version_error(const char* box) const
+{
+  std::stringstream sstr;
+  sstr << box << " box data version " << ((int) m_version) << " is not implemented yet";
+
+  return {heif_error_Unsupported_feature,
+          heif_suberror_Unsupported_data_version,
+          sstr.str()};
+}
+
+
 Error Box_hdlr::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("hdlr");
+  }
 
   m_pre_defined = range.read32();
   m_handler_type = range.read32();
@@ -1124,6 +1143,11 @@ Error Box_hdlr::write(StreamWriter& writer) const
 Error Box_pitm::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 1) {
+    return unsupported_version_error("pitm");
+  }
+
 
   if (get_version() == 0) {
     m_item_ID = range.read16();
@@ -1178,6 +1202,10 @@ Error Box_pitm::write(StreamWriter& writer) const
 Error Box_iloc::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 2) {
+    return unsupported_version_error("iloc");
+  }
 
   const int version = get_version();
 
@@ -1708,6 +1736,11 @@ Error Box_infe::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  // only versions 2,3 are required by HEIF
+  if (get_version() > 3) {
+    return unsupported_version_error("infe");
+  }
+
   if (get_version() <= 1) {
     m_item_ID = range.read16();
     m_item_protection_index = range.read16();
@@ -1855,6 +1888,10 @@ Error Box_iinf::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  if (get_version() > 1) {
+    return unsupported_version_error("iinf");
+  }
+
   int nEntries_size = (get_version() > 0) ? 4 : 2;
 
   uint32_t item_count;
@@ -1965,6 +2002,10 @@ std::string Box_ipco::dump(Indent& indent) const
 Error Box_pixi::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("pixi");
+  }
 
   StreamReader::grow_status status;
   uint8_t num_channels = range.read8();
@@ -2273,6 +2314,10 @@ Error Box_ispe::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  if (get_version() != 0) {
+    return unsupported_version_error("ispe");
+  }
+
   m_image_width = range.read32();
   m_image_height = range.read32();
 
@@ -2320,6 +2365,12 @@ bool Box_ispe::operator==(const Box& other) const
 Error Box_ipma::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  // TODO: is there any specification of allowed values for the ipma version in the HEIF standards?
+
+  if (get_version() > 1) {
+    return unsupported_version_error("ipma");
+  }
 
   uint32_t entry_cnt = range.read32();
   for (uint32_t i = 0; i < entry_cnt && !range.error() && !range.eof(); i++) {
@@ -2502,6 +2553,10 @@ void Box_ipma::insert_entries_from_other_ipma_box(const Box_ipma& b)
 Error Box_auxC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() != 0) {
+    return unsupported_version_error("auxC");
+  }
 
   m_aux_type = range.read_string();
 
@@ -2789,6 +2844,10 @@ void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
 Error Box_iref::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 1) {
+    return unsupported_version_error("iref");
+  }
 
   while (!range.eof()) {
     Reference ref;
@@ -3198,6 +3257,10 @@ Error Box_dref::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  if (get_version() != 0) {
+    return unsupported_version_error("dref");
+  }
+
   uint32_t nEntities = range.read32();
 
   /*
@@ -3241,6 +3304,10 @@ Error Box_url::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
+  if (get_version() > 0) {
+    return unsupported_version_error("url");
+  }
+
   m_location = range.read_string();
 
   return range.get_error();
@@ -3262,6 +3329,11 @@ std::string Box_url::dump(Indent& indent) const
 Error Box_udes::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("udes");
+  }
+
   m_lang = range.read_string();
   m_name = range.read_string();
   m_description = range.read_string();
@@ -3346,6 +3418,10 @@ std::string Box_cmin::dump(Indent& indent) const
 Error Box_cmin::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("cmin");
+  }
 
   m_denominatorShift = (get_flags() & 0x1F00) >> 8;
   uint32_t denominator = (1U << m_denominatorShift);
@@ -3529,6 +3605,10 @@ std::array<double,9> Box_cmex::ExtrinsicMatrix::calculate_rotation_matrix() cons
 Error Box_cmex::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("cmex");
+  }
 
   m_matrix = ExtrinsicMatrix{};
 

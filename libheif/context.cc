@@ -178,7 +178,13 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   }
 
   uint8_t version = data[0];
-  (void) version; // version is unused
+  if (version != 0) {
+    std::stringstream sstr;
+    sstr << "Grid image version " << ((int)version) << " is not supported";
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            sstr.str()};
+  }
 
   uint8_t flags = data[1];
   int field_size = ((flags & 1) ? 32 : 16);
@@ -312,7 +318,7 @@ private:
 Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 {
   Error eofError(heif_error_Invalid_input,
-                 heif_suberror_Invalid_grid_data,
+                 heif_suberror_Invalid_overlay_data,
                  "Overlay image data incomplete");
 
   if (data.size() < 2 + 4 * 2) {
@@ -320,8 +326,6 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
   }
 
   m_version = data[0];
-  m_flags = data[1];
-
   if (m_version != 0) {
     std::stringstream sstr;
     sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
@@ -330,6 +334,8 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
             heif_suberror_Unsupported_data_version,
             sstr.str()};
   }
+
+  m_flags = data[1];
 
   int field_len = ((m_flags & 1) ? 4 : 2);
   int ptr = 2;
