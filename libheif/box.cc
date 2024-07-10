@@ -414,12 +414,15 @@ Error Box::parse(BitstreamRange& range)
   }
   else {
     uint64_t content_size = get_box_size() - get_header_size();
-    if (range.prepare_read(content_size)) {
-      if (content_size > MAX_BOX_SIZE) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Invalid_box_size);
-      }
 
+    assert(MAX_BOX_SIZE <= SIZE_MAX);
+
+    if (content_size > MAX_BOX_SIZE) {
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_Invalid_box_size);
+    }
+
+    if (range.prepare_read(static_cast<size_t>(content_size))) {
       range.get_istream()->seek_cur(get_box_size() - get_header_size());
     }
   }
@@ -691,49 +694,57 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
-  if (hdr.has_fixed_box_size() && hdr.get_box_size() < hdr.get_header_size()) {
-    std::stringstream sstr;
-    sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
-         << hdr.get_header_size() << " bytes)";
-
-    // Sanity check.
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_box_size,
-                 sstr.str());
-  }
-
-
   if (range.get_nesting_level() > MAX_BOX_NESTING_LEVEL) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
                  "Security limit for maximum nesting of boxes has been exceeded");
   }
 
-
   if (hdr.has_fixed_box_size()) {
-    auto status = range.wait_for_available_bytes(hdr.get_box_size() - hdr.get_header_size());
+    // Sanity checks
+    if (hdr.get_box_size() < hdr.get_header_size()) {
+      std::stringstream sstr;
+      sstr << "Box size (" << hdr.get_box_size() << " bytes) smaller than header size ("
+           << hdr.get_header_size() << " bytes)";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_box_size,
+              sstr.str()};
+    }
+
+    // this is >= 0 because of above condition
+    auto nBytes = static_cast<uint64_t>(hdr.get_box_size() - hdr.get_header_size());
+    if (nBytes > SIZE_MAX) {
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Invalid_box_size,
+              "Box size too large"};
+    }
+
+    // Security check: make sure that box size does not exceed int64 size.
+
+    if (hdr.get_box_size() > (uint64_t) std::numeric_limits<int64_t>::max()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_box_size};
+    }
+
+    // --- wait for data to arrive
+
+    auto status = range.wait_for_available_bytes(static_cast<size_t>(nBytes));
     if (status != StreamReader::size_reached) {
       // TODO: return recoverable error at timeout
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_End_of_data);
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data};
     }
   }
 
-  // Security check: make sure that box size does not exceed int64 size.
-
-  if (hdr.get_box_size() > (uint64_t) std::numeric_limits<int64_t>::max()) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_box_size);
-  }
-
-  int64_t box_size = static_cast<int64_t>(hdr.get_box_size());
+  auto box_size = static_cast<int64_t>(hdr.get_box_size());
   int64_t box_size_without_header = hdr.has_fixed_box_size() ? (box_size - hdr.get_header_size()) : (int64_t)range.get_remaining_bytes();
 
   // Box size may not be larger than remaining bytes in parent box.
 
   if ((int64_t)range.get_remaining_bytes() < box_size_without_header) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_box_size);
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_box_size};
   }
 
 
@@ -928,13 +939,21 @@ Error Box_other::parse(BitstreamRange& range)
   if (has_fixed_box_size()) {
     size_t len;
     if (get_box_size() >= get_header_size()) {
-      len = get_box_size() - get_header_size();
+      auto len64 = get_box_size() - get_header_size();
+      if (len64 > MAX_BOX_SIZE) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Security_limit_exceeded,
+                "Box size too large"};
+      }
+
+      len = static_cast<size_t>(len64);
+
       m_data.resize(len);
       range.read(m_data.data(), len);
     }
     else {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_box_size);
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_box_size};
     }
   }
   else {
@@ -971,7 +990,8 @@ std::string Box_other::dump(Indent& indent) const
 
   size_t len = 0;
   if (get_box_size() >= get_header_size()) {
-    len = get_box_size() - get_header_size();
+    // We can cast because if it does not fit, it would fail during parsing.
+    len = static_cast<size_t>(get_box_size() - get_header_size());
   }
   else {
     sstr << indent << "invalid box size " << get_box_size() << " (smaller than header)\n";

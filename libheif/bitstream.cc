@@ -72,7 +72,7 @@ StreamReader_memory::StreamReader_memory(const uint8_t* data, size_t size, bool 
 {
   if (copy) {
     m_owned_data = new uint8_t[m_length];
-    memcpy(m_owned_data, data, m_length);
+    memcpy(m_owned_data, data, size);
 
     m_data = m_owned_data;
   }
