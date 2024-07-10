@@ -424,6 +424,9 @@ Error Box_icbr::parse(BitstreamRange& range)
     } else {
       return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icbr version");
     }
+    if (range.get_error() != Error::Ok) {
+      return range.get_error();
+    }
     m_ranges.push_back(byteRange);
   }
   return range.get_error();
