@@ -1908,7 +1908,8 @@ Error Box_iinf::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  if (get_version() > 1) {
+  // TODO: there are several images in circulation that have an iinf version=2. We should not enforce this with a hard error.
+  if (false && get_version() > 1) {
     return unsupported_version_error("iinf");
   }
 
@@ -3285,8 +3286,8 @@ std::string Box_ster::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   sstr << indent << "group id: " << group_id << "\n"
-       << indent << "left image ID " << entity_ids[0] << "\n"
-       << indent << "right image ID " << entity_ids[1] << "\n";
+       << indent << "left image ID: " << entity_ids[0] << "\n"
+       << indent << "right image ID: " << entity_ids[1] << "\n";
 
   return sstr.str();
 }
