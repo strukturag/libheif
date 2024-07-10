@@ -255,10 +255,10 @@ uint64_t BitstreamRange::read64()
                      ((uint64_t)buf[1] << 48) |
                      ((uint64_t)buf[2] << 40) |
                      ((uint64_t)buf[3] << 32) |
-                     (buf[4] << 24) |
-                     (buf[5] << 16) |
-                     (buf[6] << 8) |
-                     (buf[7]));
+                     ((uint64_t)buf[4] << 24) |
+                     ((uint64_t)buf[5] << 16) |
+                     ((uint64_t)buf[6] << 8) |
+                     ((uint64_t)buf[7]));
 }
 
 int32_t BitstreamRange::read32s()
