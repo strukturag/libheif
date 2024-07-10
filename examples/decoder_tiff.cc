@@ -38,7 +38,7 @@ extern "C" {
 
 #include "decoder_tiff.h"
 
-static bool seekTIFF(TIFF* tif, off_t offset, int whence) {
+static bool seekTIFF(TIFF* tif, toff_t offset, int whence) {
   TIFFSeekProc seekProc = TIFFGetSeekProc(tif);
   if (!seekProc) {
     return false;
