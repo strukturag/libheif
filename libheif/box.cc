@@ -543,6 +543,15 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_grpl>();
       break;
 
+    case fourcc("pymd"):
+      box = std::make_shared<Box_pymd>();
+      break;
+
+    case fourcc("altr"):
+    case fourcc("ster"):
+      box = std::make_shared<Box_EntityToGroup>();
+      break;
+
     case fourcc("dinf"):
       box = std::make_shared<Box_dinf>();
       break;
@@ -3191,34 +3200,7 @@ Error Box_grpl::parse(BitstreamRange& range)
 {
   //parse_full_box_header(range);
 
-  //return read_children(range);
-
-  while (!range.eof()) {
-    EntityGroup group;
-    Error err = group.header.parse_header(range);
-    if (err != Error::Ok) {
-      return err;
-    }
-
-    err = group.header.parse_full_box_header(range);
-    if (err != Error::Ok) {
-      return err;
-    }
-
-    group.group_id = range.read32();
-    uint32_t nEntities = range.read32();
-    for (uint32_t i = 0; i < nEntities; i++) {
-      if (range.eof()) {
-        break;
-      }
-
-      group.entity_ids.push_back(range.read32());
-    }
-
-    m_entity_groups.push_back(group);
-  }
-
-  return range.get_error();
+  return read_children(range); // should we pass the parsing context 'grpl' or are the box types unique?
 }
 
 
@@ -3226,21 +3208,99 @@ std::string Box_grpl::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
+  sstr << dump_children(indent);
+  return sstr.str();
+}
 
-  for (const auto& group : m_entity_groups) {
-    sstr << indent << "group type: " << group.header.get_type_string() << "\n"
-         << indent << "| group id: " << group.group_id << "\n"
-         << indent << "| entity IDs: ";
 
-    for (uint32_t id : group.entity_ids) {
-      sstr << id << " ";
+Error Box_EntityToGroup::parse(BitstreamRange& range)
+{
+  Error err = parse_full_box_header(range);
+  if (err != Error::Ok) {
+    return err;
+  }
+
+  group_id = range.read32();
+  uint32_t nEntities = range.read32();
+  for (uint32_t i = 0; i < nEntities; i++) {
+    if (range.eof()) {
+      break;
     }
 
-    sstr << "\n";
+    entity_ids.push_back(range.read32());
+  }
+
+  return Error::Ok;
+}
+
+std::string Box_EntityToGroup::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "group id: " << group_id << "\n"
+       << indent << "entity IDs: ";
+
+  bool first = true;
+  for (uint32_t id : entity_ids) {
+    if (first) {
+      first = false;
+    }
+    else {
+      sstr << ' ';
+    }
+
+    sstr << id;
+  }
+
+  sstr << "\n";
+
+  return sstr.str();
+}
+
+
+
+Error Box_pymd::parse(BitstreamRange& range)
+{
+  Error err = Box_EntityToGroup::parse(range);
+  if (err) {
+    return err;
+  }
+
+  tile_size_x = range.read16();
+  tile_size_y = range.read16();
+
+  for (size_t i = 0; i < entity_ids.size(); i++) {
+    LayerInfo layer{};
+    layer.layer_binning = range.read16();
+    layer.tiles_in_layer_row_minus1 = range.read16();
+    layer.tiles_in_layer_column_minus1 = range.read16();
+
+    m_layer_infos.push_back(layer);
+  }
+
+  return Error::Ok;
+}
+
+std::string Box_pymd::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box_EntityToGroup::dump(indent);
+
+  sstr << indent << "tile size: " << tile_size_x << "x" << tile_size_y << "\n";
+
+  int layerNr = 0;
+  for (const auto& layer : m_layer_infos) {
+    sstr << indent << "layer " << layerNr << ":\n"
+         << indent << "| binning: " << layer.layer_binning << "\n"
+         << indent << "| tiles: " << (layer.tiles_in_layer_row_minus1 + 1) << "x" << (layer.tiles_in_layer_column_minus1 + 1) << "\n";
+
+    layerNr++;
   }
 
   return sstr.str();
 }
+
 
 
 Error Box_dinf::parse(BitstreamRange& range)

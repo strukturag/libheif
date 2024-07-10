@@ -868,17 +868,43 @@ public:
 
 protected:
   Error parse(BitstreamRange& range) override;
+};
 
-  struct EntityGroup
-  {
-    FullBox header;
-    uint32_t group_id;
 
-    std::vector<heif_item_id> entity_ids;
+class Box_EntityToGroup : public FullBox
+{
+public:
+  std::string dump(Indent&) const override;
+
+protected:
+  uint32_t group_id;
+  std::vector<heif_item_id> entity_ids;
+
+  Error parse(BitstreamRange& range) override;
+};
+
+
+class Box_pymd : public Box_EntityToGroup
+{
+public:
+  std::string dump(Indent&) const override;
+
+protected:
+  uint16_t tile_size_x;
+  uint16_t tile_size_y;
+
+  struct LayerInfo {
+    uint16_t layer_binning;
+    uint16_t tiles_in_layer_row_minus1;
+    uint16_t tiles_in_layer_column_minus1;
   };
 
-  std::vector<EntityGroup> m_entity_groups;
+  std::vector<LayerInfo> m_layer_infos;
+
+  Error parse(BitstreamRange& range) override;
 };
+
+
 
 
 class Box_dinf : public Box
