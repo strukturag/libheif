@@ -488,8 +488,8 @@ enum heif_channel
   heif_channel_B = 5,
   heif_channel_Alpha = 6,
   heif_channel_interleaved = 10,
-  heif_channel_other_first = 128,
-  heif_channel_other_last = 255
+  heif_channel_other_first = 1024,
+  heif_channel_other_last = 4095
 };
 
 enum heif_channel_datatype
