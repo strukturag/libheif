@@ -631,17 +631,17 @@ int main(int argc, char** argv)
 
             heif_image_handle_release_auxiliary_type(aux_handle, &auxTypeC);
 
+            if (option_no_colons) {
+              std::replace(auxType.begin(), auxType.end(), ':', '_');
+            }
+
             std::ostringstream s;
             s << numbered_output_filename_stem;
             s << "-" + auxType + ".";
             s << output_filename_suffix;
 
             std::string auxFilename = s.str();
-
-            if (option_no_colons) {
-              std::replace(auxFilename.begin(), auxFilename.end(), ':', '_');
-            }
-
+            
             written = encoder->Encode(aux_handle, aux_image, auxFilename);
             if (!written) {
               fprintf(stderr, "could not write auxiliary image\n");
