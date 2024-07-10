@@ -288,8 +288,8 @@ std::string Box_uncC::dump(Indent& indent) const
   sstr << indent << "profile: " << m_profile;
   if (m_profile != 0) {
     sstr << " (" << to_fourcc(m_profile) << ")";
-    sstr << "\n";
   }
+  sstr << "\n";
   if (get_version() == 0) {
     for (const auto& component : m_components) {
       sstr << indent << "component_index: " << component.component_index << "\n";
