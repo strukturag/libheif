@@ -884,6 +884,20 @@ protected:
 };
 
 
+class Box_ster : public Box_EntityToGroup
+{
+public:
+  std::string dump(Indent&) const override;
+
+  heif_item_id get_left_image() const { return entity_ids[0]; }
+  heif_item_id get_right_image() const { return entity_ids[1]; }
+
+protected:
+
+  Error parse(BitstreamRange& range) override;
+};
+
+
 class Box_pymd : public Box_EntityToGroup
 {
 public:

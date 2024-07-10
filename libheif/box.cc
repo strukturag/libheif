@@ -548,8 +548,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       break;
 
     case fourcc("altr"):
-    case fourcc("ster"):
       box = std::make_shared<Box_EntityToGroup>();
+      break;
+
+    case fourcc("ster"):
+      box = std::make_shared<Box_ster>();
       break;
 
     case fourcc("dinf"):
@@ -3254,6 +3257,36 @@ std::string Box_EntityToGroup::dump(Indent& indent) const
   }
 
   sstr << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_ster::parse(BitstreamRange& range)
+{
+  Error err = Box_EntityToGroup::parse(range);
+  if (err) {
+    return err;
+  }
+
+  if (entity_ids.size() != 2) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_box_size,
+            "'ster' entity group does not exists of exactly two images"};
+  }
+
+  return Error::Ok;
+}
+
+
+std::string Box_ster::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "group id: " << group_id << "\n"
+       << indent << "left image ID " << entity_ids[0] << "\n"
+       << indent << "right image ID " << entity_ids[1] << "\n";
 
   return sstr.str();
 }
