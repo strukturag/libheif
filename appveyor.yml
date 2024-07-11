@@ -29,6 +29,7 @@ before_build:
   - cmake .. -A %arch% -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DWITH_DAV1D=ON -DWITH_AOM_DECODER=ON -DWITH_AOM_ENCODER=ON -DWITH_JPEG_DECODER=ON -DWITH_JPEG_ENCODER=ON -DWITH_UNCOMPRESSED_CODEC=ON -DWITH_HEADER_COMPRESSION=ON -DWITH_FFMPEG_DECODER=ON
 
 build:
+  parallel: true
   verbosity: normal
 
 artifacts:
