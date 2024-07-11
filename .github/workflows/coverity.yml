@@ -3,6 +3,8 @@ name: coverity
 on:
   push:
     branches: [ coverity ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   scan:
@@ -10,8 +12,10 @@ jobs:
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
       WITH_AOM: 1
+      WITH_DAV1D: 1
       WITH_GRAPHICS: 1
       WITH_LIBDE265: 1
+      WITH_RAV1E: 1
       WITH_X265: 1
     steps:
     - uses: actions/checkout@v4
@@ -21,7 +25,7 @@ jobs:
       with:
         path: |
           coverity_tool.tar.gz
-        key: ${{ runner.os }}
+        key: coverity_tool-${{ runner.os }}
 
     - name: Download Coverity build tool
       run: |
@@ -39,10 +43,13 @@ jobs:
 
     - name: Build with Coverity build tool
       run: |
-        export PATH=`pwd`/coverity_tool/bin:$PATH
-        cov-build --dir cov-int make
+        export PATH=$(pwd)/coverity_tool/bin:$PATH
+        export PKG_CONFIG_PATH="$(pwd)/libde265/dist/lib/pkgconfig/:$(pwd)/third-party/rav1e/dist/lib/pkgconfig/:$(pwd)/third-party/dav1d/dist/lib/x86_64-linux-gnu/pkgconfig/"
+        cmake --preset=develop .
+        cov-build --dir cov-int make -j$(nproc)
 
     - name: Submit build result to Coverity Scan
+      if: github.ref == 'refs/heads/coverity'
       run: |
         tar czvf libheif.tar.gz cov-int
         curl --form token=$TOKEN \
