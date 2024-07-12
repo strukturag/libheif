@@ -157,6 +157,14 @@ protected:
 };
 
 
+enum class BoxStorageMode {
+  Undefined,
+  Memory,
+  Parsed,
+  File
+};
+
+
 class Box : public BoxHeader
 {
 public:
@@ -208,11 +216,24 @@ public:
 
   static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
 
+  BoxStorageMode get_box_storage_mode() const { return m_storage_mode; }
+
+  void set_output_position(uint64_t pos) { m_output_position = pos; }
 
 protected:
   virtual Error parse(BitstreamRange& range);
 
   std::vector<std::shared_ptr<Box>> m_children;
+
+  BoxStorageMode m_storage_mode = BoxStorageMode::Undefined;
+
+  const static uint64_t INVALID_POSITION = 0xFFFFFFFFFFFFFFFF;
+
+  uint64_t m_input_position = INVALID_POSITION;
+  uint64_t m_output_position = INVALID_POSITION;
+  std::vector<uint8_t> m_box_data; // including header
+
+  std::string m_debug_box_type;
 
   const static int READ_CHILDREN_ALL = -1;
 

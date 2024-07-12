@@ -154,6 +154,16 @@ BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
 }
 
 
+BitstreamRange::BitstreamRange(std::shared_ptr<StreamReader> istr,
+                               size_t start,
+                               size_t end) // one past end
+  : m_istr(std::move(istr)), m_parent_range(nullptr), m_remaining(end)
+{
+  bool success = m_istr->seek(start);
+  assert(success);
+}
+
+
 StreamReader::grow_status BitstreamRange::wait_until_range_is_available()
 {
   return m_istr->wait_for_file_size(m_istr->get_position() + m_remaining);

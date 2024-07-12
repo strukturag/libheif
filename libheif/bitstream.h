@@ -60,6 +60,10 @@ public:
   {
     return seek(get_position() + position_offset);
   }
+
+  virtual uint64_t request_range(uint64_t start, uint64_t size) {
+    return std::numeric_limits<uint64_t>::max()-1; // -1 because we use the maximum as an indication for 'invalid'
+  }
 };
 
 
@@ -135,6 +139,10 @@ public:
                  size_t length,
                  BitstreamRange* parent = nullptr);
 
+  BitstreamRange(std::shared_ptr<StreamReader> istr,
+                 size_t start,
+                 size_t end); // one past end
+
   // This function tries to make sure that the full data of this range is
   // available. You should call this before starting reading the range.
   // If you don't, you have to make sure that you do not read past the available data.
@@ -169,6 +177,19 @@ public:
     if (m_parent_range) {
       m_parent_range->skip_to_end_of_file();
     }
+  }
+
+  void skip(uint64_t n)
+  {
+    uint64_t actual_skip = std::min(n, m_remaining);
+
+    if (m_parent_range) {
+      // also advance position in parent range
+      m_parent_range->skip_without_advancing_file_pos(actual_skip);
+    }
+
+    m_istr->seek_cur(actual_skip);
+    m_remaining -= actual_skip;
   }
 
   void skip_to_end_of_box()

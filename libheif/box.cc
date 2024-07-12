@@ -694,6 +694,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
+  box->m_debug_box_type = hdr.get_type_string(); // only for debugging
+
+
   if (range.get_nesting_level() > MAX_BOX_NESTING_LEVEL) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
