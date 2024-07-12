@@ -422,10 +422,11 @@ private:
 class Box_iloc : public FullBox
 {
 public:
-  Box_iloc()
-  {
-    set_short_type(fourcc("iloc"));
-  }
+  Box_iloc();
+
+  ~Box_iloc();
+
+  void set_use_tmp_file(bool flag);
 
   std::string dump(Indent&) const override;
 
@@ -494,6 +495,10 @@ private:
   void patch_iloc_header(StreamWriter& writer) const;
 
   int m_idat_offset = 0; // only for writing: offset of next data array
+
+  bool m_use_tmpfile = false;
+  int m_tmpfile_fd = 0;
+  char m_tmp_filename[20];
 };
 
 

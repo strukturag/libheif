@@ -32,7 +32,7 @@ class FileLayout
 public:
   enum class WriteMode {
     Streaming, // 'mdat' data will be written to output immediately
-    Floating,  // 'mdat' data will be help in memory until written
+    Floating,  // 'mdat' data will be held in memory until written
     TmpFile    // 'mdat' data will be written to temporary file and copied into final file
   };
 
@@ -60,13 +60,6 @@ private:
   const static uint64_t INVALID_FILE_SIZE = 0xFFFFFFFFFFFFFFFF;
 
   uint64_t m_file_size = INVALID_FILE_SIZE;
-
-  /*
-  struct Range {
-    bool floating = false;
-    std::shared_ptr<Box> box;
-  };
-*/
 
   // the first one is always 'ftyp'
   std::vector<std::shared_ptr<Box>> m_boxes; // TODO: do we need this ?

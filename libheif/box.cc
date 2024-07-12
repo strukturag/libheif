@@ -47,6 +47,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#include <unistd.h> // TODO: Windows
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -1365,6 +1366,32 @@ Error Box_iloc::parse(BitstreamRange& range)
 }
 
 
+Box_iloc::Box_iloc()
+{
+  set_short_type(fourcc("iloc"));
+
+  set_use_tmp_file(true);
+}
+
+
+Box_iloc::~Box_iloc()
+{
+  if (m_use_tmpfile) {
+    unlink(m_tmp_filename);
+  }
+}
+
+
+void Box_iloc::set_use_tmp_file(bool flag)
+{
+  m_use_tmpfile = flag;
+  if (flag) {
+    strcpy(m_tmp_filename, "/tmp/libheif-XXXXXX");
+    m_tmpfile_fd = mkstemp(m_tmp_filename);
+  }
+}
+
+
 std::string Box_iloc::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -1517,7 +1544,14 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   }
 
   Extent extent;
-  extent.data = data;
+  extent.length = data.size();
+
+  if (m_use_tmpfile) {
+    ::write(m_tmpfile_fd, data.data(), data.size());
+  }
+  else {
+    extent.data = data;
+  }
 
   if (construction_method == 1) {
     extent.offset = m_idat_offset;
@@ -1693,15 +1727,26 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
   writer.write32((uint32_t) (sum_mdat_size + 8));
   writer.write32(fourcc("mdat"));
 
+  if (m_use_tmpfile) {
+    ::lseek(m_tmpfile_fd, 0, SEEK_SET);
+  }
+
   for (auto& item : m_items) {
     if (item.construction_method == 0) {
       item.base_offset = writer.get_position();
 
       for (auto& extent : item.extents) {
         extent.offset = writer.get_position() - item.base_offset;
-        extent.length = extent.data.size();
+        //extent.length = extent.data.size();
 
-        writer.write(extent.data);
+        if (m_use_tmpfile) {
+          std::vector<uint8_t> data(extent.length);
+          ::read(m_tmpfile_fd, data.data(), extent.length);
+          writer.write(data);
+        }
+        else {
+          writer.write(extent.data);
+        }
       }
     }
   }
