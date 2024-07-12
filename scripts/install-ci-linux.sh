@@ -199,7 +199,7 @@ if [ "$WITH_DAV1D" = "1" ]; then
 
     export PATH="$PATH:$HOME/.local/bin"
     cd third-party
-    sh dav1d.cmd # dav1d does not support this option anymore: -Denable_avx512=false
+    sh -e dav1d.cmd # dav1d does not support this option anymore: -Denable_avx512=false
     cd ..
 fi
 
@@ -208,6 +208,6 @@ if [ "$WITH_RAV1E" = "1" ]; then
 
     export PATH="$PATH:$HOME/.cargo/bin"
     cd third-party
-    sh rav1e.cmd
+    sh -e rav1e.cmd
     cd ..
 fi
