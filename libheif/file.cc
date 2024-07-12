@@ -55,7 +55,10 @@
 #define STRICT_PARSING false
 
 
-HeifFile::HeifFile() = default;
+HeifFile::HeifFile()
+{
+  m_file_layout = std::make_shared<FileLayout>();
+}
 
 HeifFile::~HeifFile() = default;
 
@@ -123,17 +126,20 @@ Error HeifFile::read(const std::shared_ptr<StreamReader>& reader)
 {
   m_input_stream = reader;
 
-  uint64_t maxSize = std::numeric_limits<int64_t>::max();
-  BitstreamRange range(m_input_stream, maxSize);
+  Error err;
+  err = m_file_layout->read(reader);
+  if (err) {
+    return err;
+  }
 
-  Error error = parse_heif_file(range);
+  Error error = parse_heif_file();
   return error;
 }
 
 
 void HeifFile::new_empty_file()
 {
-  m_input_stream.reset();
+  //m_input_stream.reset();
   m_top_level_boxes.clear();
 
   m_ftyp_box = std::make_shared<Box_ftyp>();
@@ -268,10 +274,11 @@ std::string HeifFile::debug_dump_boxes() const
 }
 
 
-Error HeifFile::parse_heif_file(BitstreamRange& range)
+Error HeifFile::parse_heif_file()
 {
   // --- read all top-level boxes
 
+#if 0
   for (;;) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
@@ -304,7 +311,14 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
       m_ftyp_box = std::dynamic_pointer_cast<Box_ftyp>(box);
     }
   }
+#endif
 
+  m_ftyp_box = m_file_layout->get_ftyp_box();
+  m_meta_box = m_file_layout->get_meta_box();
+
+  m_top_level_boxes.push_back(m_ftyp_box);
+  m_top_level_boxes.push_back(m_meta_box);
+  // TODO: we are missing 'mdat' top level boxes
 
 
   // --- check whether this is a HEIF file and its structural format

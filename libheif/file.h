@@ -27,6 +27,7 @@
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
 #include "codecs/uncompressed_box.h"
+#include "file_layout.h"
 
 #include <map>
 #include <memory>
@@ -218,6 +219,8 @@ private:
   mutable std::mutex m_read_mutex;
 #endif
 
+  std::shared_ptr<FileLayout> m_file_layout;
+
   std::shared_ptr<StreamReader> m_input_stream;
 
   std::vector<std::shared_ptr<Box> > m_top_level_boxes;
@@ -242,7 +245,7 @@ private:
   //std::vector<heif_item_id> m_valid_image_IDs;
 
 
-  Error parse_heif_file(BitstreamRange& bitstream);
+  Error parse_heif_file();
 
   Error check_for_ref_cycle(heif_item_id ID,
                             const std::shared_ptr<Box_iref>& iref_box) const;

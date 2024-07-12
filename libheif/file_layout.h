@@ -50,7 +50,9 @@ public:
 
   // --- access to boxes
 
-  std::shared_ptr<Box_ftyp> get_ftyp_box();
+  std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
+
+  std::shared_ptr<Box_meta> get_meta_box() { return m_meta_box; }
 
 private:
   WriteMode m_writeMode;
