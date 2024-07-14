@@ -2476,6 +2476,48 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
 }
 
 
+Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
+                               uint32_t output_width,
+                               uint32_t output_height,
+                               uint16_t tile_rows,
+                               uint16_t tile_columns,
+                               std::shared_ptr<Image>& out_grid_image)
+{
+#if 1
+  for (heif_item_id tile_id : tile_ids) {
+    m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
+  }
+#endif
+
+
+  // Create ImageGrid
+
+  ImageGrid grid;
+  grid.set_num_tiles(tile_columns, tile_rows);
+  grid.set_output_size(output_width, output_height);
+  std::vector<uint8_t> grid_data = grid.write();
+
+  // Create Grid Item
+
+  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  out_grid_image = std::make_shared<Image>(this, grid_id);
+  m_all_images.insert(std::make_pair(grid_id, out_grid_image));
+  const int construction_method = 0; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
+
+  // Connect tiles to grid
+  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
+
+  // Add ISPE property
+  m_heif_file->add_ispe_property(grid_id, output_width, output_height);
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
+
 /*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
 {

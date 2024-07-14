@@ -480,6 +480,13 @@ public:
                     const struct heif_encoding_options& options,
                     std::shared_ptr<Image>& out_image);
 
+  Error add_grid_item(const std::vector<heif_item_id>& tile_ids,
+                      uint32_t output_width,
+                      uint32_t output_height,
+                      uint16_t tile_rows,
+                      uint16_t tile_columns,
+                      std::shared_ptr<Image>& out_grid_image);
+
   Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,

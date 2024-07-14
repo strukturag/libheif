@@ -2165,6 +2165,15 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
                                            struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
+struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
+                                           uint32_t image_width,
+                                           uint32_t image_height,
+                                           uint32_t tile_columns,
+                                           uint32_t tile_rows,
+                                           const heif_item_id* image_ids,
+                                           struct heif_image_handle** out_grid_image_handle);
+
+LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);
 
