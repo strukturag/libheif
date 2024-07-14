@@ -130,6 +130,9 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
       BitstreamRange meta_box_range(m_stream_reader, meta_box_start, end_of_meta_box);
       std::shared_ptr<Box> meta_box;
       err = Box::read(meta_box_range, &meta_box);
+      if (err) {
+        return err;
+      }
 
       m_boxes.push_back(meta_box);
       m_meta_box = std::dynamic_pointer_cast<Box_meta>(meta_box);
