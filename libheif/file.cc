@@ -1309,25 +1309,17 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 
 heif_item_id HeifFile::get_unused_item_id() const
 {
-  for (heif_item_id id = 1;;
-       id++) {
+  heif_item_id max_id = 0;
 
-    bool id_exists = false;
+  // TODO: replace with better algorithm and data-structure
 
-    for (const auto& infe : m_infe_boxes) {
-      if (infe.second->get_item_ID() == id) {
-        id_exists = true;
-        break;
-      }
-    }
-
-    if (!id_exists) {
-      return id;
-    }
+  for (const auto& infe : m_infe_boxes) {
+    max_id = std::max(max_id, infe.second->get_item_ID());
   }
 
-  assert(false); // should never be reached
-  return 0;
+  assert(max_id != 0xFFFFFFFF);
+
+  return max_id + 1;
 }
 
 
