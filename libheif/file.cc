@@ -778,7 +778,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   // --- get coded image data pointers
 
-  auto items = m_iloc_box->get_items();
+  const auto& items = m_iloc_box->get_items();
   const Box_iloc::Item* item = nullptr;
   for (const auto& i : items) {
     if (i.item_ID == ID) {
