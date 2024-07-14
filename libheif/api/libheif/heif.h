@@ -1099,6 +1099,23 @@ LIBHEIF_API
 struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle);
 
 
+struct heif_image_tiling
+{
+  uint32_t num_columns;
+  uint32_t num_rows;
+  uint32_t tile_width;
+  uint32_t tile_height;
+};
+
+// If the image is not tiled, all entries of he returned struct will be zero.
+// TODO: how do we handle width/height when there are image rotations?
+LIBHEIF_API
+struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle);
+
+LIBHEIF_API
+heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
+
+
 // ------------------------- depth images -------------------------
 
 LIBHEIF_API

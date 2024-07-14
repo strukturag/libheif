@@ -124,51 +124,6 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 }
 
 
-class ImageGrid
-{
-public:
-  Error parse(const std::vector<uint8_t>& data);
-
-  std::vector<uint8_t> write() const;
-
-  std::string dump() const;
-
-  uint32_t get_width() const { return m_output_width; }
-
-  uint32_t get_height() const { return m_output_height; }
-
-  uint16_t get_rows() const
-  {
-    assert(m_rows <= 256);
-    return m_rows;
-  }
-
-  uint16_t get_columns() const
-  {
-    assert(m_columns <= 256);
-    return m_columns;
-  }
-
-  void set_num_tiles(uint16_t columns, uint16_t rows)
-  {
-    m_rows = rows;
-    m_columns = columns;
-  }
-
-  void set_output_size(uint32_t width, uint32_t height)
-  {
-    m_output_width = width;
-    m_output_height = height;
-  }
-
-private:
-  uint16_t m_rows = 0;
-  uint16_t m_columns = 0;
-  uint32_t m_output_width = 0;
-  uint32_t m_output_height = 0;
-};
-
-
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
 {
   if (data.size() < 8) {
@@ -597,6 +552,13 @@ Error HeifContext::interpret_heif_file()
         }
 
         m_top_level_images.push_back(image);
+      }
+
+      if (infe_box->get_item_type() == "grid") {
+        Error err = image->read_grid_spec();
+        if (err) {
+          return err;
+        }
       }
     }
   }
@@ -1515,13 +1477,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
   }
   else if (image_type == "grid") {
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      return error;
-    }
-
-    error = decode_full_grid_image(ID, img, data, options);
+    error = decode_full_grid_image(ID, img, options);
     if (error) {
       return error;
     }
@@ -1747,14 +1703,19 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 }
 
 
-// This function only works with RGB images.
-Error HeifContext::decode_full_grid_image(heif_item_id ID,
-                                          std::shared_ptr<HeifPixelImage>& img,
-                                          const std::vector<uint8_t>& grid_data,
-                                          const heif_decoding_options& options) const
+Error HeifContext::Image::read_grid_spec()
 {
-  ImageGrid grid;
-  Error err = grid.parse(grid_data);
+  m_is_grid = true;
+
+  auto heif_file = m_heif_context->get_heif_file();
+
+  std::vector<uint8_t> grid_data;
+  Error err= heif_file->get_compressed_image_data(m_id, &grid_data);
+  if (err) {
+    return err;
+  }
+
+  err = m_grid_spec.parse(grid_data);
   if (err) {
     return err;
   }
@@ -1762,29 +1723,44 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   //std::cout << grid.dump();
 
 
-  auto iref_box = m_heif_file->get_iref_box();
+  auto iref_box = heif_file->get_iref_box();
 
   if (!iref_box) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_iref_box,
-                 "No iref box available, but needed for grid image");
+    return {heif_error_Invalid_input,
+            heif_suberror_No_iref_box,
+            "No iref box available, but needed for grid image"};
   }
 
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
+  m_grid_tile_ids = iref_box->get_references(m_id, fourcc("dimg"));
 
-  if ((int) image_references.size() != grid.get_rows() * grid.get_columns()) {
+  if ((int) m_grid_tile_ids.size() != m_grid_spec.get_rows() * m_grid_spec.get_columns()) {
     std::stringstream sstr;
-    sstr << "Tiled image with " << grid.get_rows() << "x" << grid.get_columns() << "="
-         << (grid.get_rows() * grid.get_columns()) << " tiles, but only "
-         << image_references.size() << " tile images in file";
+    sstr << "Tiled image with " << m_grid_spec.get_rows() << "x" << m_grid_spec.get_columns() << "="
+         << (m_grid_spec.get_rows() * m_grid_spec.get_columns()) << " tiles, but only "
+         << m_grid_tile_ids.size() << " tile images in file";
 
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Missing_grid_images,
-                 sstr.str());
+    return {heif_error_Invalid_input,
+            heif_suberror_Missing_grid_images,
+            sstr.str()};
   }
 
+  return Error::Ok;
+}
+
+
+// This function only works with RGB images.
+Error HeifContext::decode_full_grid_image(heif_item_id ID,
+                                          std::shared_ptr<HeifPixelImage>& img,
+                                          const heif_decoding_options& options) const
+{
+  auto image = m_all_images.find(ID)->second;
+  assert(image->is_grid());
+
+  const ImageGrid& grid = image->get_grid_spec();
 
   // --- check that all image IDs are valid images
+
+  const std::vector<heif_item_id>& image_references = image->get_grid_tiles();
 
   for (heif_item_id tile_id : image_references) {
     if (!is_image(tile_id)) {
@@ -1821,7 +1797,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   // --- generate image of full output size
 
-  err = check_resolution(w, h);
+  Error err = check_resolution(w, h);
   if (err) {
     return err;
   }
@@ -3409,6 +3385,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   out_image = std::make_shared<Image>(this, image_id);
   m_top_level_images.push_back(out_image);
+
   m_all_images[image_id] = out_image;
 
   // --- check whether we have to convert the image color space

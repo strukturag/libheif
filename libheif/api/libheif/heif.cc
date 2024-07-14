@@ -853,6 +853,49 @@ struct heif_context* heif_image_handle_get_context(const struct heif_image_handl
 }
 
 
+struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle)
+{
+  struct heif_image_tiling tiling{};
+  if (!handle) {
+    return tiling;
+  }
+
+  if (!handle->image->is_grid()) {
+    return tiling;
+  }
+
+  const ImageGrid& gridspec = handle->image->get_grid_spec();
+  tiling.num_columns = gridspec.get_columns();
+  tiling.num_rows = gridspec.get_rows();
+
+  heif_item_id tile0_id = handle->image->get_grid_tiles()[0];
+  auto tile0 = handle->context->get_image(tile0_id);
+  tiling.tile_width = tile0->get_width();
+  tiling.tile_height = tile0->get_height();
+
+  return tiling;
+}
+
+
+heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y)
+{
+  if (!handle) {
+    return 0;
+  }
+
+  if (!handle->image->is_grid()) {
+    return 0;
+  }
+
+  const ImageGrid& gridspec = handle->image->get_grid_spec();
+  if (tile_x >= gridspec.get_columns() || tile_y >= gridspec.get_rows()) {
+    return 0;
+  }
+
+  return handle->image->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+}
+
+
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
                                                                       enum heif_chroma* out_chroma)
