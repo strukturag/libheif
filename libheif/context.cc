@@ -2483,6 +2483,12 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
                                uint16_t tile_columns,
                                std::shared_ptr<Image>& out_grid_image)
 {
+  if (tile_ids.size() > 0xFFFF) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Too many tiles (maximum: 65535)"};
+  }
+
 #if 1
   for (heif_item_id tile_id : tile_ids) {
     m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
