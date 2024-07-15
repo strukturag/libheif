@@ -1550,7 +1550,7 @@ Error Box_iloc::append_data(heif_item_id item_ID,
     ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
     if (cnt < 0) {
       std::stringstream sstr;
-      sstr << "Could not write to tmp file: error " << cnt;
+      sstr << "Could not write to tmp file: error " << errno;
       return {heif_error_Encoding_error,
               heif_suberror_Unspecified,
               sstr.str()};
@@ -1769,7 +1769,19 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 
         if (m_use_tmpfile) {
           std::vector<uint8_t> data(extent.length);
-          ::read(m_tmpfile_fd, data.data(), extent.length);
+          ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
+          if (cnt<0) {
+            std::stringstream sstr;
+            sstr << "Cannot read tmp data file, error " << errno;
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    sstr.str()};
+          }
+          else if ((uint64_t)cnt != extent.length) {
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    "Tmp data could not be read completely"};
+          }
           writer.write(data);
         }
         else {
