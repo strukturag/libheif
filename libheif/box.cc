@@ -1547,7 +1547,19 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   extent.length = data.size();
 
   if (m_use_tmpfile) {
-    ::write(m_tmpfile_fd, data.data(), data.size());
+    ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
+    if (cnt < 0) {
+      std::stringstream sstr;
+      sstr << "Could not write to tmp file: error " << cnt;
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              sstr.str()};
+    }
+    else if ((size_t)cnt != data.size()) {
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              "Could not write to tmp file (storage full?)"};
+    }
   }
   else {
     extent.data = data;
