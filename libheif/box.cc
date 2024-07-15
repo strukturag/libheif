@@ -1591,14 +1591,12 @@ void Box_iloc::derive_box_version()
     }
 
     // base offset size
-    /*
     if (item.base_offset > 0xFFFFFFFF) {
-      m_base_offset_size = 8;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)8);
     }
     else if (item.base_offset > 0) {
-      m_base_offset_size = 4;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)4);
     }
-    */
 
     /*
     for (const auto& extent : item.extents) {
@@ -1634,7 +1632,7 @@ void Box_iloc::derive_box_version()
 
   m_offset_size = 4;
   m_length_size = 4;
-  m_base_offset_size = 4; // TODO: or could be 8 if we write >4GB files
+  //m_base_offset_size = 4; // set above
   m_index_size = 0;
 
   set_version((uint8_t) min_version);
@@ -1712,20 +1710,24 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
   for (const auto& item : m_items) {
     if (item.construction_method == 0) {
       for (const auto& extent : item.extents) {
-        sum_mdat_size += extent.data.size();
+        sum_mdat_size += extent.length;
       }
     }
   }
 
-  if (sum_mdat_size > 0xFFFFFFFF) {
-    // TODO: box size > 4 GB
-  }
-
-
   // --- write mdat box
 
-  writer.write32((uint32_t) (sum_mdat_size + 8));
-  writer.write32(fourcc("mdat"));
+  if (sum_mdat_size <= 0xFFFFFFFF) {
+    writer.write32((uint32_t) (sum_mdat_size + 8));
+    writer.write32(fourcc("mdat"));
+  }
+  else {
+    // box size > 4 GB
+
+    writer.write32(1);
+    writer.write32(fourcc("mdat"));
+    writer.write64(sum_mdat_size+8+8);
+  }
 
   if (m_use_tmpfile) {
     ::lseek(m_tmpfile_fd, 0, SEEK_SET);
@@ -3169,6 +3171,8 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   ref.header.set_short_type(type);
   ref.from_item_ID = from_id;
   ref.to_item_ID = to_ids;
+
+  assert(to_ids.size() <= 0xFFFF);
 
   m_references.push_back(ref);
 }
