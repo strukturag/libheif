@@ -52,6 +52,8 @@ extern "C" {
 //  1.14           3            5             1             1            1            1
 //  1.15           4            5             1             1            1            1
 //  1.16           5            6             1             1            1            1
+//  1.18           5            7             1             1            1            1
+//  1.19           5            7             2             1            1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -916,10 +918,24 @@ struct heif_reading_options;
 
 enum heif_reader_grow_status
 {
-  heif_reader_grow_status_size_reached,   // requested size has been reached, we can read until this point
-  heif_reader_grow_status_timeout,        // size has not been reached yet, but it may still grow further
-  heif_reader_grow_status_size_beyond_eof // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_size_reached,    // requested size has been reached, we can read until this point
+  heif_reader_grow_status_timeout,         // size has not been reached yet, but it may still grow further
+  heif_reader_grow_status_size_beyond_eof, // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_error            // an error has occurred
 };
+
+struct heif_reader_range_request_result
+{
+  enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
+
+  // for status == 'heif_reader_grow_status_size_beyond_eof'
+  int64_t range_end;            // if not the whole file range could be read, this is the end position
+
+  // for status == 'heif_reader_grow_status_error'
+  int reader_error_code;        // a reader specific error code (0 for success)
+  const char* reader_error_msg; // string memory will be released by libheif with 'free()' (may be NULL)
+};
+
 
 struct heif_reader
 {
@@ -929,7 +945,7 @@ struct heif_reader
   // --- version 1 functions ---
   int64_t (* get_position)(void* userdata);
 
-  // The functions read(), and seek() return heif_error_ok on success.
+  // The functions read(), and seek() return 0 on success.
   // Generally, libheif will make sure that we do not read past the file size.
   int (* read)(void* data,
                size_t size,
@@ -947,6 +963,29 @@ struct heif_reader
   // detection whether the target_size is above the (fixed) file length
   // (in this case, return 'size_beyond_eof').
   enum heif_reader_grow_status (* wait_for_file_size)(int64_t target_size, void* userdata);
+
+  // --- version 2 functions ---
+
+  // These two functions are for applications that want to stream HEIF files on demand.
+  // For example, a large HEIF file that is served over HTTPS and we only want to download
+  // it partially to decode individual tiles.
+  // If you do not have this use case, you do not have to implement these functions and
+  // you can set them to NULL. For simple linear loading, you may use the 'wait_for_file_size'
+  // function above instead.
+
+  // If this function is defined, libheif will request a file range before accessing it.
+  // `end_pos` is one byte after the last position to be read.
+  // You should return
+  // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
+  // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
+  //   (the valid part of the range has been read).
+  struct heif_reader_range_request_result (*request_file_range)(int64_t start_pos, int64_t end_pos);
+
+  // If libheif does not need access to a file range anymore, it may call this function to
+  // give a hint to the reader that it may release the range from a cache.
+  // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
+  // need to implement this function.
+  void (*release_file_range)(int64_t start_pos, int64_t end_pos);
 };
 
 
