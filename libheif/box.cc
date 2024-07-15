@@ -1579,6 +1579,8 @@ void Box_iloc::derive_box_version()
   m_base_offset_size = 0;
   m_index_size = 0;
 
+  uint64_t total_data_size = 0;
+
   for (const auto& item : m_items) {
     // check item_ID size
     if (item.item_ID > 0xFFFF) {
@@ -1590,6 +1592,9 @@ void Box_iloc::derive_box_version()
       min_version = std::max(min_version, 1);
     }
 
+    total_data_size += item.extents[0].length;
+
+    /* cannot compute this here because values are not set yet
     // base offset size
     if (item.base_offset > 0xFFFFFFFF) {
       m_base_offset_size = std::max(m_base_offset_size, (uint8_t)8);
@@ -1597,6 +1602,7 @@ void Box_iloc::derive_box_version()
     else if (item.base_offset > 0) {
       m_base_offset_size = std::max(m_base_offset_size, (uint8_t)4);
     }
+*/
 
     /*
     for (const auto& extent : item.extents) {
@@ -1628,6 +1634,14 @@ void Box_iloc::derive_box_version()
       }
     }
       */
+  }
+
+  uint64_t maximum_meta_box_size_guess = 0x10000000; // 256 MB
+  if (total_data_size + maximum_meta_box_size_guess > 0xFFFFFFFF) {
+    m_base_offset_size = 8;
+  }
+  else {
+    m_base_offset_size = 4;
   }
 
   m_offset_size = 4;
@@ -1790,7 +1804,12 @@ void Box_iloc::patch_iloc_header(StreamWriter& writer) const
     }
 
     writer.write16(item.data_reference_index);
-    writer.write(m_base_offset_size, item.base_offset);
+    if (m_base_offset_size > 0) {
+      writer.write(m_base_offset_size, item.base_offset);
+    }
+    else {
+      assert(item.base_offset == 0);
+    }
     writer.write16((uint16_t) item.extents.size());
 
     for (const auto& extent : item.extents) {
