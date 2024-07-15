@@ -32,6 +32,7 @@
 #include <string>
 
 #include "error.h"
+#include <algorithm>
 
 
 class StreamReader

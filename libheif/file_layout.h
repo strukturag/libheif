@@ -25,6 +25,7 @@
 #include "bitstream.h"
 #include "box.h"
 #include <memory>
+#include <vector>
 
 
 class FileLayout
