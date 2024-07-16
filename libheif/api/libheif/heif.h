@@ -979,13 +979,13 @@ struct heif_reader
   // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
   // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
   //   (the valid part of the range has been read).
-  struct heif_reader_range_request_result (*request_file_range)(int64_t start_pos, int64_t end_pos);
+  struct heif_reader_range_request_result (*request_file_range)(int64_t start_pos, int64_t end_pos, void* userdata);
 
   // If libheif does not need access to a file range anymore, it may call this function to
   // give a hint to the reader that it may release the range from a cache.
   // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
   // need to implement this function.
-  void (*release_file_range)(int64_t start_pos, int64_t end_pos);
+  void (*release_file_range)(int64_t start_pos, int64_t end_pos, void* userdata);
 };
 
 
