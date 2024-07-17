@@ -372,10 +372,10 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
 }
 
 
-struct heif_error heif_item_get_property_uuid(const struct heif_context* context,
-                                              heif_item_id itemId,
-                                              heif_property_id propertyId,
-                                              uint8_t* data_out)
+struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  uint8_t* data_out)
 {
   if (!context || !data_out) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
