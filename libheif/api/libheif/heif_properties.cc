@@ -364,9 +364,13 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
-  auto data = box_other->get_raw_data();
+  size_t size = 0;
+  if (box_other->get_short_type() == fourcc("uuid")) {
+    size += box_other->get_uuid_type().size();
+  }
+  size += box_other->get_raw_data().size();
 
-  *size_out = data.size();
+  *size_out = size;
 
   return heif_error_success;
 }
@@ -402,10 +406,16 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
+  uint8_t* out = data_out;
+  if (box_other->get_short_type() == fourcc("uuid")) {
+    std::vector<uint8_t> extended_type = box_other->get_uuid_type();
+    std::copy(extended_type.begin(), extended_type.end(), out);
+    out += extended_type.size();
+  }
+
   auto data = box_other->get_raw_data();
 
-
-  std::copy(data.begin(), data.end(), data_out);
+  std::copy(data.begin(), data.end(), out);
 
   return heif_error_success;
 }
