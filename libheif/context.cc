@@ -3874,3 +3874,44 @@ heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_
 
   return id;
 }
+
+
+Result<heif_item_id> HeifContext::add_pyramid_group(uint16_t tile_size_x, uint16_t tile_size_y,
+                                                    std::vector<heif_pyramid_layer_info> in_layers)
+{
+  auto pymd = std::make_shared<Box_pymd>();
+  std::vector<Box_pymd::LayerInfo> layers;
+  std::vector<heif_item_id> ids;
+
+  for (const auto& l : in_layers) {
+    if (l.tiles_in_layer_row==0 || l.tiles_in_layer_column==0 ||
+        l.tiles_in_layer_row - 1 > 0xFFFF || l.tiles_in_layer_column - 1 > 0xFFFF) {
+
+      return {Error(heif_error_Invalid_input,
+                    heif_suberror_Invalid_parameter_value,
+                    "Invalid number of tiles in layer.")};
+    }
+
+    Box_pymd::LayerInfo layer{};
+    layer.layer_binning = l.layer_binning;
+    layer.tiles_in_layer_row_minus1 = static_cast<uint16_t>(l.tiles_in_layer_row - 1);
+    layer.tiles_in_layer_column_minus1 = static_cast<uint16_t>(l.tiles_in_layer_column - 1);
+    layers.push_back(layer);
+    ids.push_back(l.layer_image_id);
+  }
+
+  heif_item_id group_id = m_heif_file->get_unused_item_id();
+
+  pymd->set_group_id(group_id);
+  pymd->set_layers(tile_size_x, tile_size_y, layers, ids);
+
+  m_heif_file->add_entity_group_box(pymd);
+
+  // add back-references to base image
+
+  for (size_t i = 0; i < ids.size() - 1; i++) {
+    m_heif_file->add_iref_reference(ids[i], fourcc("base"), {ids.back()});
+  }
+
+  return {group_id};
+}

@@ -3352,6 +3352,30 @@ Error Box_EntityToGroup::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_EntityToGroup::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  write_entity_group_ids(writer);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+void Box_EntityToGroup::write_entity_group_ids(StreamWriter& writer) const
+{
+  writer.write32(group_id);
+  writer.write32(entity_ids.size());
+
+  for (uint32_t id : entity_ids) {
+    writer.write32(id);
+  }
+}
+
+
 std::string Box_EntityToGroup::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3431,6 +3455,30 @@ Error Box_pymd::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_pymd::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  Box_EntityToGroup::write_entity_group_ids(writer);
+
+  writer.write16(tile_size_x);
+  writer.write16(tile_size_y);
+
+  for (size_t i = 0; i < entity_ids.size(); i++) {
+    const LayerInfo& layer = m_layer_infos[i];
+
+    writer.write16(layer.layer_binning);
+    writer.write16(layer.tiles_in_layer_row_minus1);
+    writer.write16(layer.tiles_in_layer_column_minus1);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_pymd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3449,7 +3497,6 @@ std::string Box_pymd::dump(Indent& indent) const
 
   return sstr.str();
 }
-
 
 
 Error Box_dinf::parse(BitstreamRange& range)

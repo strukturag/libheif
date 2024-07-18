@@ -1155,6 +1155,21 @@ LIBHEIF_API
 heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
 
 
+struct heif_pyramid_layer_info {
+  heif_item_id layer_image_id;
+  uint16_t layer_binning;
+  uint32_t tiles_in_layer_row;
+  uint32_t tiles_in_layer_column;
+};
+
+LIBHEIF_API
+struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
+                                                        uint32_t tile_width,
+                                                        uint32_t tile_height,
+                                                        uint32_t num_layers,
+                                                        const struct heif_pyramid_layer_info* layers,
+                                                        heif_item_id* out_group_id);
+
 // ------------------------- depth images -------------------------
 
 LIBHEIF_API

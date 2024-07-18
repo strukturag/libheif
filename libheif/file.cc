@@ -413,6 +413,7 @@ Error HeifFile::parse_heif_file()
                  heif_suberror_No_iinf_box);
   }
 
+  m_grpl_box = std::dynamic_pointer_cast<Box_grpl>(m_meta_box->get_child_box(fourcc("grpl")));
 
 
   // --- build list of images
@@ -1797,6 +1798,18 @@ void HeifFile::add_iref_reference(heif_item_id from, uint32_t type,
 
   m_iref_box->add_references(from, type, to);
 }
+
+
+void HeifFile::add_entity_group_box(const std::shared_ptr<Box>& entity_group_box)
+{
+  if (!m_grpl_box) {
+    m_grpl_box = std::make_shared<Box_grpl>();
+    m_meta_box->append_child_box(m_grpl_box);
+  }
+
+  m_grpl_box->append_child_box(entity_group_box);
+}
+
 
 void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
 {

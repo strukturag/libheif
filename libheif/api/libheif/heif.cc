@@ -896,6 +896,40 @@ heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle*
 }
 
 
+struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
+                                                        uint32_t tile_width,
+                                                        uint32_t tile_height,
+                                                        uint32_t num_layers,
+                                                        const heif_pyramid_layer_info* in_layers,
+                                                        heif_item_id* out_group_id)
+{
+  if (!in_layers) {
+    return error_null_parameter;
+  }
+
+  if (num_layers == 0) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Number of layers cannot be 0."};
+  }
+
+  std::vector<heif_pyramid_layer_info> layers(num_layers);
+  for (uint32_t i=0;i<num_layers;i++) {
+    layers[i] = in_layers[i];
+  }
+
+  Result<heif_item_id> result = ctx->context->add_pyramid_group(tile_width, tile_height, layers);
+
+  if (result) {
+    if (out_group_id) {
+      *out_group_id = result.value;
+    }
+    return heif_error_success;
+  }
+  else {
+    return result.error.error_struct(ctx->context.get());
+  }
+}
+
+
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
                                                                       enum heif_chroma* out_chroma)

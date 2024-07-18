@@ -203,6 +203,8 @@ public:
   void add_iref_reference(heif_item_id from, uint32_t type,
                           const std::vector<heif_item_id>& to);
 
+  void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
+
   void set_auxC_property(heif_item_id id, const std::string& type);
 
   void set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile>& profile);
@@ -236,6 +238,7 @@ private:
   std::shared_ptr<Box_iref> m_iref_box;
   std::shared_ptr<Box_pitm> m_pitm_box;
   std::shared_ptr<Box_iinf> m_iinf_box;
+  std::shared_ptr<Box_grpl> m_grpl_box;
 
   std::shared_ptr<Box_iprp> m_iprp_box;
 

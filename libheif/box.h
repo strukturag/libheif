@@ -890,6 +890,11 @@ protected:
 class Box_grpl : public Box
 {
 public:
+  Box_grpl()
+  {
+    set_short_type(fourcc("grpl"));
+  }
+
   std::string dump(Indent&) const override;
 
 protected:
@@ -902,17 +907,30 @@ class Box_EntityToGroup : public FullBox
 public:
   std::string dump(Indent&) const override;
 
+  Error write(StreamWriter& writer) const override;
+
+  void set_group_id(heif_item_id id) { group_id = id; }
+
+  void set_item_ids(const std::vector<heif_item_id>& ids) { entity_ids = ids; }
+
 protected:
   uint32_t group_id;
   std::vector<heif_item_id> entity_ids;
 
   Error parse(BitstreamRange& range) override;
+
+  void write_entity_group_ids(StreamWriter& writer) const;
 };
 
 
 class Box_ster : public Box_EntityToGroup
 {
 public:
+  Box_ster()
+  {
+    set_short_type(fourcc("ster"));
+  }
+
   std::string dump(Indent&) const override;
 
   heif_item_id get_left_image() const { return entity_ids[0]; }
@@ -927,17 +945,35 @@ protected:
 class Box_pymd : public Box_EntityToGroup
 {
 public:
+  Box_pymd()
+  {
+    set_short_type(fourcc("pymd"));
+  }
+
   std::string dump(Indent&) const override;
 
-protected:
-  uint16_t tile_size_x;
-  uint16_t tile_size_y;
+  Error write(StreamWriter& writer) const override;
 
   struct LayerInfo {
     uint16_t layer_binning;
     uint16_t tiles_in_layer_row_minus1;
     uint16_t tiles_in_layer_column_minus1;
   };
+
+  void set_layers(uint16_t _tile_size_x,
+                  uint16_t _tile_size_y,
+                  const std::vector<LayerInfo>& layers,
+                  const std::vector<heif_item_id>& layer_item_ids) // low to high resolution
+  {
+    set_item_ids(layer_item_ids);
+    m_layer_infos = layers;
+    tile_size_x = _tile_size_x;
+    tile_size_y = _tile_size_y;
+  }
+
+protected:
+  uint16_t tile_size_x;
+  uint16_t tile_size_y;
 
   std::vector<LayerInfo> m_layer_infos;
 
