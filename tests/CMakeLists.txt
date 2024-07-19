@@ -33,6 +33,7 @@ endif()
 # --- tests that only access the public API
 
 add_libheif_test(encode)
+add_libheif_test(extended_type)
 add_libheif_test(region)
 
 if (WITH_OPENJPH_ENCODER)
