@@ -972,8 +972,8 @@ public:
   }
 
 protected:
-  uint16_t tile_size_x;
-  uint16_t tile_size_y;
+  uint16_t tile_size_x = 0;
+  uint16_t tile_size_y = 0;
 
   std::vector<LayerInfo> m_layer_infos;
 
