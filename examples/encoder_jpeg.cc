@@ -1,5 +1,5 @@
 /*
-  libheif example application "convert".
+  libheif example application.
 
   MIT License
 
