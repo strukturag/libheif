@@ -181,10 +181,10 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
  * @return heif_error_success or an error indicating the failure
  */
 LIBHEIF_API
-struct heif_error heif_item_get_property_extended_type(const struct heif_context* context,
-                                                       heif_item_id itemId,
-                                                       heif_property_id propertyId,
-                                                       uint8_t* extended_type);
+struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
+                                                   heif_item_id itemId,
+                                                   heif_property_id propertyId,
+                                                   uint8_t* extended_type);
 #ifdef __cplusplus
 }
 #endif

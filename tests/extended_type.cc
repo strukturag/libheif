@@ -64,7 +64,7 @@ TEST_CASE("make extended type") {
   REQUIRE(err.code == heif_error_Ok);
 
   uint8_t extended_type[16];
-  err = heif_item_get_property_extended_type(ctx, itemId, propertyId, &extended_type[0]);
+  err = heif_item_get_property_uuid_type(ctx, itemId, propertyId, &extended_type[0]);
   REQUIRE(err.code == heif_error_Ok);
   for (int i = 0; i < 16; i++) {
     REQUIRE(extended_type[i] == uuid[i]);
