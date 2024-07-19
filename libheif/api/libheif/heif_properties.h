@@ -167,6 +167,24 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
                                                   heif_property_id propertyId,
                                                   uint8_t* out_data);
 
+/**
+ * Get the extended type for an extended "uuid" box.
+ *
+ * This provides the UUID for the extended box.
+ *
+ * This method should only be called on properties of type `heif_item_property_type_uuid`.
+ *
+ * @param context the heif_context containing the HEIF file
+ * @param itemId the image item id to which this property belongs.
+ * @param propertyID the property index (1-based) to get the extended type for
+ * @param extended_type output of the call, must be a pointer to at least 16-bytes.
+ * @return heif_error_success or an error indicating the failure
+ */
+LIBHEIF_API
+struct heif_error heif_item_get_property_extended_type(const struct heif_context* context,
+                                                       heif_item_id itemId,
+                                                       heif_property_id propertyId,
+                                                       uint8_t* extended_type);
 #ifdef __cplusplus
 }
 #endif
