@@ -1151,6 +1151,7 @@ struct heif_image_tiling
 LIBHEIF_API
 struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle);
 
+// TODO: we may also need the valid area of the tile because it may be partly cut off at the image border
 LIBHEIF_API
 heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
 
