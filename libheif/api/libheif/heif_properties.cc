@@ -415,7 +415,7 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
 struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
-                                                   uint8_t* extended_type)
+                                                   uint8_t extended_type[16])
 {
   if (!context || !extended_type) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
