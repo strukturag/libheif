@@ -58,6 +58,10 @@
 
 #endif
 
+#if HAVE_LIBTIFF
+#include "encoder_tiff.h"
+#endif
+
 #include "encoder_y4m.h"
 #include "common.h"
 
@@ -74,7 +78,7 @@ static void show_help(const char* argv0)
                "Usage: " << argv0 << " [options]  <input-image> [output-image]\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: jpg, jpeg, png, y4m. If no output filename is specified, 'jpg' is used.\n"
+               "These suffixes are recognized: jpg, jpeg, png, tif, tiff, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
@@ -360,6 +364,15 @@ int main(int argc, char** argv)
       fprintf(stderr, "PNG support has not been compiled in.\n");
       return 1;
 #endif  // HAVE_LIBPNG
+    }
+
+    if (suffix_lowercase == "tif" || suffix_lowercase == "tiff") {
+#if HAVE_LIBTIFF
+      encoder.reset(new TiffEncoder());
+#else
+      fprintf(stderr, "TIFF support has not been compiled in.\n");
+      return 1;
+#endif  // HAVE_LIBTIFF
     }
 
     if (suffix_lowercase == "y4m") {

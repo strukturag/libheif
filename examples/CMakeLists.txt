@@ -129,8 +129,11 @@ endif ()
 
 find_package(TIFF)
 if (TIFF_FOUND)
+    target_link_libraries(heif-dec PRIVATE TIFF::TIFF)
     target_link_libraries(heif-enc PRIVATE TIFF::TIFF)
+    target_sources(heif-dec PRIVATE encoder_tiff.cc encoder_tiff.h)
     target_sources(heif-enc PRIVATE decoder_tiff.cc decoder_tiff.h)
+    target_compile_definitions(heif-dec PUBLIC HAVE_LIBTIFF=1)
     target_compile_definitions(heif-enc PUBLIC HAVE_LIBTIFF=1)
 endif ()
 
