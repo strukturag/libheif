@@ -15,7 +15,7 @@ For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 libheif has support for:
 
-* HEIC, AVIF, JPEG-in-HEIF, JPEG2000, uncompressed (ISO/IEC 23001-17:2023)
+* HEIC, AVIF, VVC, JPEG-in-HEIF, JPEG2000, uncompressed (ISO/IEC 23001-17:2023)
 * alpha channels, depth maps, thumbnails, auxiliary images
 * multiple images in a file
 * HDR images, correct color transform according to embedded color profiles
@@ -30,7 +30,7 @@ Supported codecs:
 |:-------------|:-------------------:|:----------------------------:|
 | HEIC         | libde265, ffmpeg    | x265, kvazaar                |
 | AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1          |
-| VVC          | vvdec (experimental)| vvenc, uvg266 (experimental) |
+| VVC          | vvdec               | vvenc, uvg266                |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
 | uncompressed | built-in            | built-in                     |
