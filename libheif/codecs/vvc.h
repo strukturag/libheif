@@ -51,7 +51,7 @@ public:
 
   struct configuration
   {
-    uint8_t LengthSizeMinusOne = 3;  // 0,1,3
+    uint8_t LengthSizeMinusOne = 3;  // 0,1,3   default: 4 bytes for NAL unit lengths
     bool ptl_present_flag = true;
 
     // only of PTL present
@@ -97,14 +97,11 @@ private:
       bool m_array_completeness;
       uint8_t m_NAL_unit_type;
 
-      std::vector<std::vector<uint8_t> > m_nal_units; // only one NAL for DCI and OPI
+      std::vector<std::vector<uint8_t> > m_nal_units; // only one NAL item for DCI and OPI
     };
 
   configuration m_configuration;
-  //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
-
   std::vector<NalArray> m_nal_array;
-  //std::vector<uint8_t> m_config_NALs;
 };
 
 
