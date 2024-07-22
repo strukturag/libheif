@@ -125,7 +125,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
 
     NalArray array;
 
-    array.m_array_completeness = (byte >> 6) & 1;
+    array.m_array_completeness = (byte >> 7) & 1;
     array.m_NAL_unit_type = (byte & 0x3F);
 
     int nUnits = range.read16();
@@ -156,11 +156,45 @@ Error Box_vvcC::parse(BitstreamRange& range)
 }
 
 
+bool Box_vvcC::get_headers(std::vector<uint8_t>* dest) const
+{
+  for (const auto& nal_array : m_nal_array) {
+    for (const auto& nal : nal_array.m_nal_units) {
+      assert(nal.size() <= 0xFFFF);
+      auto size = static_cast<uint16_t>(nal.size());
+
+      dest->push_back(0);
+      dest->push_back(0);
+      dest->push_back(static_cast<uint8_t>(size >> 8));
+      dest->push_back(static_cast<uint8_t>(size & 0xFF));
+
+      dest->insert(dest->end(), nal.begin(), nal.end());
+    }
+  }
+
+  return true;
+}
+
+
 void Box_vvcC::append_nal_data(const std::vector<uint8_t>& nal)
 {
+  assert(nal.size()>=2);
+  uint8_t nal_type = (nal[1] >> 3) & 0x1F;
+
+  // insert into existing array if it exists
+
+  for (auto& nalarray : m_nal_array) {
+    if (nalarray.m_NAL_unit_type == nal_type) {
+      nalarray.m_nal_units.push_back(nal);
+      return;
+    }
+  }
+
+  // generate new NAL array
+
   NalArray array;
   array.m_array_completeness = true;
-  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
+  array.m_NAL_unit_type = uint8_t((nal[1] >> 3) & 0x1F);
   array.m_nal_units.push_back(nal);
 
   m_nal_array.push_back(array);
@@ -290,6 +324,22 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
 static const char* vvc_chroma_names[4] = {"mono", "4:2:0", "4:2:2", "4:4:4"};
 
+const char* NAL_name(uint8_t nal_type)
+{
+  switch (nal_type) {
+    case 12: return "OPI";
+    case 13: return "DCI";
+    case 14: return "VPS";
+    case 15: return "SPS";
+    case 16: return "PPS";
+    case 17: return "PREFIX_APS";
+    case 18: return "SUFFIX_APS";
+    case 19: return "PH";
+    default: return "?";
+  }
+}
+
+
 std::string Box_vvcC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -318,22 +368,23 @@ std::string Box_vvcC::dump(Indent& indent) const
 
   sstr << indent << "num of arrays: " << m_nal_array.size() << "\n";
 
-  sstr << indent << "config NALs:";
+  sstr << indent << "config NALs:\n";
   for (const auto& nal_array : m_nal_array) {
     indent++;
+    sstr << indent << "NAL type: " << ((int)nal_array.m_NAL_unit_type) << " (" << NAL_name(nal_array.m_NAL_unit_type) << ")\n";
     sstr << indent << "array completeness: " << ((int)nal_array.m_array_completeness) << "\n";
-    sstr << std::hex << std::setw(2) << std::setfill('0') << nal_array.m_NAL_unit_type << "\n";
 
     for (const auto& nal : nal_array.m_nal_units) {
+      indent++;
       std::string ind = indent.get_string();
       sstr << write_raw_data_as_hex(nal.data(), nal.size(), ind, ind);
+      indent--;
     }
+    indent--;
   }
-  sstr << std::dec << std::setw(0) << "\n";
 
   return sstr.str();
 }
-
 
 static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
 {

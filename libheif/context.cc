@@ -2948,7 +2948,7 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
       m_heif_file->set_vvcC_configuration(image_id, config);
     }
 
-    switch (data[0] >> 1) {
+    switch (nal_type) {
       case 14: // VPS
       case 15: // SPS
       case 16: // PPS

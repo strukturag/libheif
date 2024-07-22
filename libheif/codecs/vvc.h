@@ -69,15 +69,7 @@ public:
 
   std::string dump(Indent&) const override;
 
-  bool get_headers(std::vector<uint8_t>* dest) const
-  {
-    // TODO
-
-#if 0
-    *dest = m_config_NALs;
-#endif
-    return true;
-  }
+  bool get_headers(std::vector<uint8_t>* dest) const;
 
   void set_configuration(const configuration& config) { m_configuration = config; }
 
