@@ -27,30 +27,96 @@
 
 Error Box_vvcC::parse(BitstreamRange& range)
 {
-  //parse_full_box_header(range);
+  parse_full_box_header(range);
 
   uint8_t byte;
 
   auto& c = m_configuration; // abbreviation
 
-  c.configurationVersion = range.read8();
-  c.avgFrameRate_times_256 = range.read16();
-
-  //printf("version: %d\n", c.configurationVersion);
-
   byte = range.read8();
-  c.constantFrameRate = (byte & 0xc0) >> 6;
-  c.numTemporalLayers = (byte & 0x38) >> 3;
-  c.lengthSize = uint8_t(((byte & 0x06) >> 1) + 1);
-  c.ptl_present_flag = (byte & 0x01);
-  // assert(c.ptl_present_flag == false); // TODO   (removed the assert since it will trigger the fuzzers)
 
-  byte = range.read8();
-  c.chroma_format_present_flag = (byte & 0x80);
-  c.chroma_format_idc = (byte & 0x60) >> 5;
+  c.LengthSizeMinusOne = (byte >> 1) & 3;
+  c.ptl_present_flag = !!(byte & 1);
 
-  c.bit_depth_present_flag = (byte & 0x10);
-  c.bit_depth = uint8_t(((byte & 0x0e) >> 1) + 8);
+  if (c.ptl_present_flag) {
+    uint16_t word = range.read16();
+    c.ols_idx = (word >> 7) & 0x1FF;
+    c.num_sublayers = (word >> 4) & 0x07;
+    c.constant_frame_rate = (word >> 2) & 0x03;
+    c.chroma_format_idc = word & 0x03;
+
+    byte = range.read8();
+    c.bit_depth_minus8 = (byte >> 5) & 0x07;
+
+    // VvcPTLRecord
+
+    auto& ptl = c.native_ptl; // abbreviation
+
+    byte = range.read8();
+    ptl.num_bytes_constraint_info = byte & 0x3f;
+
+    if (ptl.num_bytes_constraint_info == 0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_parameter_value,
+              "vvcC with num_bytes_constraint_info==0 is not allowed."};
+    }
+
+    byte = range.read8();
+    ptl.general_profile_idc = (byte >> 1) & 0x7f;
+    ptl.general_tier_flag = (byte & 1);
+
+    ptl.general_level_idc = range.read8();
+
+    for (int i = 0; i < ptl.num_bytes_constraint_info; i++) {
+      byte = range.read8();
+      if (i == 0) {
+        ptl.ptl_frame_only_constraint_flag = (byte >> 7) & 1;
+        ptl.ptl_multi_layer_enabled_flag = (byte >> 6) & 1;
+        byte &= 0x3f;
+      }
+
+      ptl.general_constraint_info.push_back(byte);
+    }
+
+    if (c.num_sublayers > 1) {
+      ptl.ptl_sublayer_level_present_flag.resize(c.num_sublayers - 1);
+
+      byte = range.read8();
+      uint8_t mask = 0x80;
+
+      for (int i = c.num_sublayers - 2; i >= 0; i--) {
+        ptl.ptl_sublayer_level_present_flag[i] = !!(byte & mask);
+        mask >>= 1;
+      }
+    }
+
+    ptl.sublayer_level_idc.resize(c.num_sublayers);
+    ptl.sublayer_level_idc[c.num_sublayers-1] = ptl.general_level_idc;
+
+    for (int i = c.num_sublayers - 2; i >= 0; i--) {
+      if (ptl.ptl_sublayer_level_present_flag[i]) {
+        ptl.sublayer_level_idc[i] = range.read8();
+      }
+      else {
+        ptl.sublayer_level_idc[i] = ptl.sublayer_level_idc[i+1];
+      }
+    }
+
+    uint8_t ptl_num_sub_profiles = range.read8();
+    for (int j=0; j < ptl_num_sub_profiles; j++) {
+      ptl.general_sub_profile_idc.push_back(range.read32());
+    }
+
+
+    // remaining fields
+
+    c.max_picture_width = range.read16();
+    c.max_picture_height = range.read16();
+    c.avg_frame_rate = range.read16();
+  }
+
+
+  // read NAL arrays
 
   int nArrays = range.read8();
 
@@ -59,7 +125,7 @@ Error Box_vvcC::parse(BitstreamRange& range)
 
     NalArray array;
 
-    array.m_array_completeness = (byte >> 6) & 1;
+    array.m_array_completeness = (byte >> 7) & 1;
     array.m_NAL_unit_type = (byte & 0x3F);
 
     int nUnits = range.read16();
@@ -86,24 +152,49 @@ Error Box_vvcC::parse(BitstreamRange& range)
     m_nal_array.push_back(std::move(array));
   }
 
-#if 0
-  const int64_t configOBUs_bytes = range.get_remaining_bytes();
-  m_config_OBUs.resize(configOBUs_bytes);
-
-  if (!range.read(m_config_OBUs.data(), configOBUs_bytes)) {
-    // error
-  }
-#endif
-
   return range.get_error();
+}
+
+
+bool Box_vvcC::get_headers(std::vector<uint8_t>* dest) const
+{
+  for (const auto& nal_array : m_nal_array) {
+    for (const auto& nal : nal_array.m_nal_units) {
+      assert(nal.size() <= 0xFFFF);
+      auto size = static_cast<uint16_t>(nal.size());
+
+      dest->push_back(0);
+      dest->push_back(0);
+      dest->push_back(static_cast<uint8_t>(size >> 8));
+      dest->push_back(static_cast<uint8_t>(size & 0xFF));
+
+      dest->insert(dest->end(), nal.begin(), nal.end());
+    }
+  }
+
+  return true;
 }
 
 
 void Box_vvcC::append_nal_data(const std::vector<uint8_t>& nal)
 {
+  assert(nal.size()>=2);
+  uint8_t nal_type = (nal[1] >> 3) & 0x1F;
+
+  // insert into existing array if it exists
+
+  for (auto& nalarray : m_nal_array) {
+    if (nalarray.m_NAL_unit_type == nal_type) {
+      nalarray.m_nal_units.push_back(nal);
+      return;
+    }
+  }
+
+  // generate new NAL array
+
   NalArray array;
-  array.m_array_completeness = 0;
-  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
+  array.m_array_completeness = true;
+  array.m_NAL_unit_type = uint8_t((nal[1] >> 3) & 0x1F);
   array.m_nal_units.push_back(nal);
 
   m_nal_array.push_back(array);
@@ -116,12 +207,7 @@ void Box_vvcC::append_nal_data(const uint8_t* data, size_t size)
   nal.resize(size);
   memcpy(nal.data(), data, size);
 
-  NalArray array;
-  array.m_array_completeness = 0;
-  array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
-  array.m_nal_units.push_back(std::move(nal));
-
-  m_nal_array.push_back(array);
+  append_nal_data(nal);
 }
 
 
@@ -131,44 +217,78 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
   const auto& c = m_configuration;
 
-  writer.write8(c.configurationVersion);
-  writer.write16(c.avgFrameRate_times_256);
+  uint8_t byte;
 
-  assert(c.lengthSize == 1 || c.lengthSize == 2 || c.lengthSize == 4);
-
-  uint8_t v = (uint8_t) ((c.constantFrameRate << 6) |
-                         (c.numTemporalLayers << 3) |
-                         ((c.lengthSize - 1) << 1) |
-                         (c.ptl_present_flag ? 1 : 0));
-  writer.write8(v);
+  byte = uint8_t(0xF8 | (c.LengthSizeMinusOne<<1) | (c.ptl_present_flag ? 1 : 0));
+  writer.write8(byte);
 
   if (c.ptl_present_flag) {
-    assert(false); // TODO
-    //VvcPTLRecord(numTemporalLayers) track_ptl;
-    //unsigned int(16) output_layer_set_idx;
+    assert(c.ols_idx <= 0x1FF);
+    assert(c.num_sublayers <= 7);
+    assert(c.constant_frame_rate <= 3);
+    assert(c.chroma_format_idc <= 3);
+    assert(c.bit_depth_minus8 <= 7);
+
+    auto word = uint16_t((c.ols_idx << 7) | (c.num_sublayers << 4) | (c.constant_frame_rate << 2) | (c.chroma_format_idc));
+    writer.write16(word);
+
+    writer.write8(uint8_t((c.bit_depth_minus8<<5) | 0x1F));
+
+    const auto& ptl = c.native_ptl;
+
+    assert(ptl.general_profile_idc <= 0x7F);
+
+    writer.write8(ptl.num_bytes_constraint_info & 0x3f);
+    writer.write8(static_cast<uint8_t>((ptl.general_profile_idc<<1) | ptl.general_tier_flag));
+    writer.write8(ptl.general_level_idc);
+
+    for (int i=0;i<ptl.num_bytes_constraint_info;i++) {
+      if (i==0) {
+        assert(ptl.ptl_frame_only_constraint_flag <= 1);
+        assert(ptl.ptl_multi_layer_enabled_flag <= 1);
+        assert(ptl.general_constraint_info[0] <= 0x3F);
+        byte = static_cast<uint8_t>((ptl.ptl_frame_only_constraint_flag << 7) | (ptl.ptl_multi_layer_enabled_flag << 6) | ptl.general_constraint_info[0]);
+      }
+      else {
+        byte = ptl.general_constraint_info[i];
+      }
+
+      writer.write8(byte);
+    }
+
+    byte = 0;
+    if (c.num_sublayers > 1) {
+      uint8_t mask=0x80;
+
+      for (int i = c.num_sublayers - 2; i >= 0; i--) {
+        if (ptl.ptl_sublayer_level_present_flag[i]) {
+          byte |= mask;
+        }
+        mask >>= 1;
+      }
+    }
+    writer.write8(byte);
+
+    for (int i=c.num_sublayers-2; i >= 0; i--) {
+      if (ptl.ptl_sublayer_level_present_flag[i]) {
+        writer.write8(ptl.sublayer_level_idc[i]);
+      }
+    }
+
+    assert(ptl.general_sub_profile_idc.size() <= 0xFF);
+    byte = static_cast<uint8_t>(ptl.general_sub_profile_idc.size());
+    writer.write8(byte);
+
+    for (int j=0; j < byte; j++) {
+      writer.write32(ptl.general_sub_profile_idc[j]);
+    }
+
+    writer.write16(c.max_picture_width);
+    writer.write16(c.max_picture_height);
+    writer.write16(c.avg_frame_rate);
   }
 
-  v = 0;
-  if (c.chroma_format_present_flag) {
-    v |= 0x80 | (c.chroma_format_idc << 5);
-  }
-  else {
-    v |= 0x60;
-  }
-
-  if (c.bit_depth_present_flag) {
-    v |= (uint8_t)(0x10 | ((c.bit_depth - 8) << 1));
-  }
-  else {
-    v |= 0x0e;
-  }
-
-  v |= 0x01; // reserved
-  writer.write8(v);
-
-  if (m_nal_array.size() >= 256) {
-    // TODO: error
-  }
+  // --- write configuration NALs
 
   if (m_nal_array.size() > 255) {
     return {heif_error_Encoding_error, heif_suberror_Unspecified, "Too many VVC NAL arrays."};
@@ -204,52 +324,67 @@ Error Box_vvcC::write(StreamWriter& writer) const
 
 static const char* vvc_chroma_names[4] = {"mono", "4:2:0", "4:2:2", "4:4:4"};
 
+const char* NAL_name(uint8_t nal_type)
+{
+  switch (nal_type) {
+    case 12: return "OPI";
+    case 13: return "DCI";
+    case 14: return "VPS";
+    case 15: return "SPS";
+    case 16: return "PPS";
+    case 17: return "PREFIX_APS";
+    case 18: return "SUFFIX_APS";
+    case 19: return "PH";
+    default: return "?";
+  }
+}
+
+
 std::string Box_vvcC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+  sstr << FullBox::dump(indent);
 
   const auto& c = m_configuration; // abbreviation
 
-  sstr << indent << "version: " << ((int) c.configurationVersion) << "\n"
-       << indent << "frame-rate: " << (c.avgFrameRate_times_256 / 256.0f) << "\n"
-       << indent << "constant frame rate: " << (c.constantFrameRate == 1 ? "constant" : (c.constantFrameRate == 2 ? "multi-layer" : "unknown")) << "\n"
-       << indent << "num temporal layers: " << ((int) c.numTemporalLayers) << "\n"
-       << indent << "length size: " << ((int) c.lengthSize) << "\n"
-       << indent << "chroma-format: ";
-  if (c.chroma_format_present_flag) {
-    sstr << vvc_chroma_names[c.chroma_format_idc] << "\n";
-  }
-  else {
-    sstr << "---\n";
+  sstr << indent << "NAL length size: " << ((int) c.LengthSizeMinusOne + 1) << "\n";
+  if (c.ptl_present_flag) {
+    const auto& ptl = c.native_ptl;
+    sstr << indent << "ols-index: " << c.ols_idx << "\n"
+         << indent << "num sublayers: " << ((int) c.num_sublayers) << "\n"
+         << indent << "constant frame rate: " << (c.constant_frame_rate == 1 ? "constant" : (c.constant_frame_rate == 2 ? "multi-layer" : "unknown")) << "\n"
+         << indent << "chroma-format: " << vvc_chroma_names[c.chroma_format_idc] << "\n"
+         << indent << "bit-depth: " << ((int) c.bit_depth_minus8 + 8) << "\n"
+         << indent << "max picture width:  " << c.max_picture_width << "\n"
+         << indent << "max picture height: " << c.max_picture_height << "\n";
+
+    sstr << indent << "general profile: " << ((int)ptl.general_profile_idc) << "\n"
+         << indent << "tier flag: " << ((int)ptl.general_tier_flag) << "\n"
+         << indent << "general level:" << ((int)ptl.general_level_idc) << "\n"
+         << indent << "ptl frame only constraint flag: " << ((int)ptl.ptl_frame_only_constraint_flag) << "\n"
+         << indent << "ptl multi layer enabled flag: " << ((int)ptl.ptl_multi_layer_enabled_flag) << "\n";
   }
 
-  sstr << indent << "bit-depth: ";
-  if (c.bit_depth_present_flag) {
-    sstr << ((int) c.bit_depth) << "\n";
-  }
-  else {
-    sstr << "---\n";
-  }
 
   sstr << indent << "num of arrays: " << m_nal_array.size() << "\n";
 
-  sstr << indent << "config NALs:";
-  for (size_t i = 0; i < m_nal_array.size(); i++) {
+  sstr << indent << "config NALs:\n";
+  for (const auto& nal_array : m_nal_array) {
     indent++;
-    sstr << indent << "array completeness: " << ((int)m_nal_array[i].m_array_completeness) << "\n";
-    sstr << std::hex << std::setw(2) << std::setfill('0') << m_nal_array[i].m_NAL_unit_type << "\n";
+    sstr << indent << "NAL type: " << ((int)nal_array.m_NAL_unit_type) << " (" << NAL_name(nal_array.m_NAL_unit_type) << ")\n";
+    sstr << indent << "array completeness: " << ((int)nal_array.m_array_completeness) << "\n";
 
-    for (const auto& nal : m_nal_array[i].m_nal_units) {
+    for (const auto& nal : nal_array.m_nal_units) {
+      indent++;
       std::string ind = indent.get_string();
       sstr << write_raw_data_as_hex(nal.data(), nal.size(), ind, ind);
+      indent--;
     }
+    indent--;
   }
-  sstr << std::dec << std::setw(0) << "\n";
 
   return sstr.str();
 }
-
 
 static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size_t size)
 {
@@ -296,23 +431,25 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
   // skip VPS ID
   reader.skip_bits(4);
 
-  config->numTemporalLayers = (uint8_t)(reader.get_bits(3) + 1);
-  config->chroma_format_idc = (uint8_t)(reader.get_bits(2));
-  config->chroma_format_present_flag = true;
+  config->ols_idx = 0;
+  config->num_sublayers = reader.get_bits8(3) + 1;
+  config->chroma_format_idc = reader.get_bits8(2);
   reader.skip_bits(2);
 
   bool sps_ptl_dpb_hrd_params_present_flag = reader.get_bits(1);
   if (sps_ptl_dpb_hrd_params_present_flag) {
     // profile_tier_level( 1, sps_max_sublayers_minus1 )
 
+    auto& ptl = config->native_ptl;
+
     if (true /*profileTierPresentFlag*/) {
-      //general_profile_idc
-          //general_tier_flag
-          reader.skip_bits(8);
+      ptl.general_profile_idc = reader.get_bits8(7);
+      ptl.general_tier_flag = reader.get_bits8(1);
     }
-    reader.skip_bits(8); // general_level_idc
-    reader.skip_bits(1); //ptl_frame_only_constraint_flag
-    reader.skip_bits(1); //ptl_multilayer_enabled_flag
+    ptl.general_level_idc = reader.get_bits8(8);
+    ptl.ptl_frame_only_constraint_flag = reader.get_bits8(1);
+    ptl.ptl_multi_layer_enabled_flag = reader.get_bits8(1);
+
     if (true /* profileTierPresentFlag*/ ) {
       // general_constraints_info()
 
@@ -320,28 +457,34 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
       if (gci_present_flag) {
         assert(false);
       }
+      else {
+        ptl.num_bytes_constraint_info = 1;
+        ptl.general_constraint_info.push_back(0);
+      }
 
       reader.skip_to_byte_boundary();
     }
 
-    std::vector<bool> ptl_sublayer_level_present_flag(config->numTemporalLayers);
-    for (int i = config->numTemporalLayers-2; i >= 0; i--) {
-      ptl_sublayer_level_present_flag[i] = reader.get_bits(1);
+    ptl.ptl_sublayer_level_present_flag.resize(config->num_sublayers);
+    for (int i = config->num_sublayers-2; i >= 0; i--) {
+      ptl.ptl_sublayer_level_present_flag[i] = reader.get_bits(1);
     }
 
     reader.skip_to_byte_boundary();
 
-    for (int i = config->numTemporalLayers-2; i >= 0; i--) {
-      if (ptl_sublayer_level_present_flag[i]) {
-        reader.skip_bits(8); // sublayer_level_idc[i]
+    ptl.sublayer_level_idc.resize(config->num_sublayers);
+    for (int i = config->num_sublayers-2; i >= 0; i--) {
+      if (ptl.ptl_sublayer_level_present_flag[i]) {
+        ptl.sublayer_level_idc[i] = reader.get_bits8(8);
       }
     }
 
     if (true /*profileTierPresentFlag*/) {
       int ptl_num_sub_profiles = reader.get_bits(8);
+      ptl.general_sub_profile_idc.resize(ptl_num_sub_profiles);
+
       for (int i = 0; i < ptl_num_sub_profiles; i++) {
-        uint32_t idc = reader.get_bits(32); //general_sub_profile_idc[i]
-        (void) idc;
+        ptl.general_sub_profile_idc[i] = reader.get_bits(32);
       }
     }
   }
@@ -363,6 +506,16 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
 
   *width = sps_pic_width_max_in_luma_samples;
   *height = sps_pic_height_max_in_luma_samples;
+
+  if (sps_pic_width_max_in_luma_samples > 0xFFFF ||
+      sps_pic_height_max_in_luma_samples > 0xFFFF) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Invalid_parameter_value,
+            "SPS max picture width or height exceeds maximum (65535)"};
+  }
+
+  config->max_picture_width = static_cast<uint16_t>(sps_pic_width_max_in_luma_samples);
+  config->max_picture_height = static_cast<uint16_t>(sps_pic_height_max_in_luma_samples);
 
   int sps_conformance_window_flag = reader.get_bits(1);
   if (sps_conformance_window_flag) {
@@ -386,8 +539,9 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
     return {heif_error_Encoding_error, heif_suberror_Unspecified, "VCC bit depth out of range."};
   }
 
-  config->bit_depth = (uint8_t)(bitDepth_minus8 + 8);
-  config->bit_depth_present_flag = true;
+  config->bit_depth_minus8 = static_cast<uint8_t>(bitDepth_minus8);
+
+  config->constant_frame_rate = 1; // is constant (TODO: where do we get this from)
 
   return Error::Ok;
 }
