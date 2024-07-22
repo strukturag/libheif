@@ -91,14 +91,16 @@ Error Box_vvcC::parse(BitstreamRange& range)
     }
 
     ptl.sublayer_level_idc.resize(c.num_sublayers);
-    ptl.sublayer_level_idc[c.num_sublayers-1] = ptl.general_level_idc;
+    if (c.num_sublayers > 0) {
+      ptl.sublayer_level_idc[c.num_sublayers - 1] = ptl.general_level_idc;
 
-    for (int i = c.num_sublayers - 2; i >= 0; i--) {
-      if (ptl.ptl_sublayer_level_present_flag[i]) {
-        ptl.sublayer_level_idc[i] = range.read8();
-      }
-      else {
-        ptl.sublayer_level_idc[i] = ptl.sublayer_level_idc[i+1];
+      for (int i = c.num_sublayers - 2; i >= 0; i--) {
+        if (ptl.ptl_sublayer_level_present_flag[i]) {
+          ptl.sublayer_level_idc[i] = range.read8();
+        }
+        else {
+          ptl.sublayer_level_idc[i] = ptl.sublayer_level_idc[i + 1];
+        }
       }
     }
 
