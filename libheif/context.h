@@ -102,6 +102,59 @@ private:
 
 
 
+class ImageOverlay
+{
+public:
+  Error parse(size_t num_images, const std::vector<uint8_t>& data);
+
+  std::vector<uint8_t> write() const;
+
+  std::string dump() const;
+
+  void get_background_color(uint16_t col[4]) const;
+
+  uint32_t get_canvas_width() const { return m_width; }
+
+  uint32_t get_canvas_height() const { return m_height; }
+
+  size_t get_num_offsets() const { return m_offsets.size(); }
+
+  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
+
+  void set_background_color(const uint16_t rgba_color[4]) {
+    for (int i=0;i<4;i++) {
+      m_background_color[i] = rgba_color[i];
+    }
+  }
+
+  void set_canvas_size(uint32_t width, uint32_t height) { m_width = width; m_height = height; }
+
+  void add_image_on_top(heif_item_id image_id, int32_t offset_x, int32_t offset_y) {
+    m_offsets.emplace_back(ImageWithOffset{image_id, offset_x, offset_y});
+  }
+
+  struct ImageWithOffset
+  {
+    heif_item_id image_id;
+    int32_t x, y;
+  };
+
+  const std::vector<ImageWithOffset>& get_overlay_stack() const { return m_offsets; }
+
+private:
+  uint8_t m_version = 0;
+  uint8_t m_flags = 0;
+  uint16_t m_background_color[4] { 0,0,0,0 };
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
+
+  std::vector<ImageWithOffset> m_offsets;
+};
+
+
+
+
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -486,6 +539,9 @@ public:
                       uint16_t tile_rows,
                       uint16_t tile_columns,
                       std::shared_ptr<Image>& out_grid_image);
+
+  Error add_iovl_item(const ImageOverlay& overlayspec,
+                      std::shared_ptr<Image>& out_iovl_image);
 
   Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,

@@ -2228,6 +2228,18 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                                            const heif_item_id* image_ids,
                                            struct heif_image_handle** out_grid_image_handle);
 
+// offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
+// If background_rgba is NULL, the background is transparent.
+LIBHEIF_API
+struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
+                                                 uint32_t image_width,
+                                                 uint32_t image_height,
+                                                 uint16_t nImages,
+                                                 const heif_item_id* image_ids,
+                                                 int32_t* offsets,
+                                                 const uint16_t background_rgba[4],
+                                                 struct heif_image_handle** out_iovl_image_handle);
+
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);

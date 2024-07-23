@@ -123,6 +123,24 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
   return val;
 }
 
+static void writevec(uint8_t* data, size_t& idx, uint32_t value, int len)
+{
+  for (int i=0;i<len;i++) {
+    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
+  }
+
+  idx += len;
+}
+
+static void writevec(uint8_t* data, size_t& idx, int32_t value, int len)
+{
+  for (int i=0;i<len;i++) {
+    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
+  }
+
+  idx += len;
+}
+
 
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
 {
@@ -237,39 +255,6 @@ std::string ImageGrid::dump() const
 }
 
 
-class ImageOverlay
-{
-public:
-  Error parse(size_t num_images, const std::vector<uint8_t>& data);
-
-  std::string dump() const;
-
-  void get_background_color(uint16_t col[4]) const;
-
-  uint32_t get_canvas_width() const { return m_width; }
-
-  uint32_t get_canvas_height() const { return m_height; }
-
-  size_t get_num_offsets() const { return m_offsets.size(); }
-
-  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
-
-private:
-  uint8_t m_version;
-  uint8_t m_flags;
-  uint16_t m_background_color[4];
-  uint32_t m_width;
-  uint32_t m_height;
-
-  struct Offset
-  {
-    int32_t x, y;
-  };
-
-  std::vector<Offset> m_offsets;
-};
-
-
 Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 {
   Error eofError(heif_error_Invalid_input,
@@ -324,6 +309,44 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 }
 
 
+std::vector<uint8_t> ImageOverlay::write() const
+{
+  assert(m_version==0);
+
+  bool longFields = (m_width > 0xFFFF) || (m_height > 0xFFFF);
+  for (const auto& img : m_offsets) {
+    if (img.x > 0x7FFF || img.y > 0x7FFF || img.x < -32768 || img.y < -32768) {
+      longFields = true;
+      break;
+    }
+  }
+
+  std::vector<uint8_t> data;
+
+  data.resize(2 + 4 * 2 + (longFields ? 4 : 2) * (2 + m_offsets.size() * 2));
+
+  size_t idx=0;
+  data[idx++] = m_version;
+  data[idx++] = (longFields ? 1 : 0); // flags
+
+  for (uint16_t color : m_background_color) {
+    writevec(data.data(), idx, color, 2);
+  }
+
+  writevec(data.data(), idx, m_width, longFields ? 4 : 2);
+  writevec(data.data(), idx, m_height, longFields ? 4 : 2);
+
+  for (const auto& img : m_offsets) {
+    writevec(data.data(), idx, img.x, longFields ? 4 : 2);
+    writevec(data.data(), idx, img.y, longFields ? 4 : 2);
+  }
+
+  assert(idx == data.size());
+
+  return data;
+}
+
+
 std::string ImageOverlay::dump() const
 {
   std::stringstream sstr;
@@ -337,7 +360,7 @@ std::string ImageOverlay::dump() const
        << "canvas size: " << m_width << "x" << m_height << "\n"
        << "offsets: ";
 
-  for (const Offset& offset : m_offsets) {
+  for (const ImageWithOffset& offset : m_offsets) {
     sstr << offset.x << ";" << offset.y << " ";
   }
   sstr << "\n";
@@ -2524,6 +2547,53 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   // Add PIXI property (copy from first tile)
   auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
   m_heif_file->add_property(grid_id, pixi, true);
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
+                                 std::shared_ptr<Image>& out_iovl_image)
+{
+  if (overlayspec.get_num_offsets() > 0xFFFF) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Too many overlay images (maximum: 65535)"};
+  }
+
+  std::vector<heif_item_id> ref_ids;
+
+  for (const auto& overlay : overlayspec.get_overlay_stack()) {
+    m_heif_file->get_infe_box(overlay.image_id)->set_hidden_item(true); // only show the full overlay
+    ref_ids.push_back(overlay.image_id);
+  }
+
+
+  // Create ImageOverlay
+
+  std::vector<uint8_t> iovl_data = overlayspec.write();
+
+  // Create IOVL Item
+
+  heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
+  out_iovl_image = std::make_shared<Image>(this, iovl_id);
+  m_all_images.insert(std::make_pair(iovl_id, out_iovl_image));
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(iovl_id, iovl_data, construction_method);
+
+  // Connect images to overlay
+  m_heif_file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
+
+  // Add ISPE property
+  m_heif_file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height());
+
+  // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
+  auto pixi = m_heif_file->get_property<Box_pixi>(ref_ids[0]);
+  m_heif_file->add_property(iovl_id, pixi, true);
 
   // Set Brands
   //m_heif_file->set_brand(encoder->plugin->compression_format,

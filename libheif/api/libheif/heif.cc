@@ -3041,6 +3041,59 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
 }
 
 
+struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
+                                                 uint32_t image_width,
+                                                 uint32_t image_height,
+                                                 uint16_t nImages,
+                                                 const heif_item_id* image_ids,
+                                                 int32_t* offsets,
+                                                 const uint16_t background_rgba[4],
+                                                 struct heif_image_handle** out_iovl_image_handle)
+{
+  if (!image_ids) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
+  }
+  else if (nImages == 0) {
+    return Error(heif_error_Usage_error,
+                 heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
+  }
+
+
+  std::vector<heif_item_id> refs;
+  refs.insert(refs.end(), image_ids, image_ids + nImages);
+
+  ImageOverlay overlay;
+  overlay.set_canvas_size(image_width, image_height);
+
+  if (background_rgba) {
+    overlay.set_background_color(background_rgba);
+  }
+
+  for (uint16_t i=0;i<nImages;i++) {
+    overlay.add_image_on_top(image_ids[i],
+                             offsets ? offsets[2 * i] : 0,
+                             offsets ? offsets[2 * i + 1] : 0);
+  }
+
+  std::shared_ptr<HeifContext::Image> iovlimage;
+  Error error = ctx->context->add_iovl_item(overlay, iovlimage);
+
+  if (error != Error::Ok) {
+    return error.error_struct(ctx->context.get());
+  }
+
+  if (out_iovl_image_handle) {
+    *out_iovl_image_handle = new heif_image_handle;
+    (*out_iovl_image_handle)->image = iovlimage;
+    (*out_iovl_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+}
+
+
+
 struct heif_error heif_context_assign_thumbnail(struct heif_context* ctx,
                                                 const struct heif_image_handle* master_image,
                                                 const struct heif_image_handle* thumbnail_image)
