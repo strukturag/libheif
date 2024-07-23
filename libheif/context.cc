@@ -2468,6 +2468,10 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   int image_height = tile_height * rows;
   m_heif_file->add_ispe_property(grid_id, image_width, image_height);
 
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
+  m_heif_file->add_property(grid_id, pixi, true);
+
   // Set Brands
   m_heif_file->set_brand(encoder->plugin->compression_format,
                          out_grid_image->is_miaf_compatible());
@@ -2516,6 +2520,10 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
 
   // Add ISPE property
   m_heif_file->add_ispe_property(grid_id, output_width, output_height);
+
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
+  m_heif_file->add_property(grid_id, pixi, true);
 
   // Set Brands
   //m_heif_file->set_brand(encoder->plugin->compression_format,
