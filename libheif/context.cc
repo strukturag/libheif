@@ -2512,7 +2512,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   heif_item_id grid_id = m_heif_file->add_new_image("grid");
   out_grid_image = std::make_shared<Image>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
-  const int construction_method = 0; // 0=mdat 1=idat
+  const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
 
   // Connect tiles to grid

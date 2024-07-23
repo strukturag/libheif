@@ -1546,7 +1546,7 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   Extent extent;
   extent.length = data.size();
 
-  if (m_use_tmpfile) {
+  if (m_use_tmpfile && construction_method==0) {
     ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
     if (cnt < 0) {
       std::stringstream sstr;
