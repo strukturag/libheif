@@ -240,7 +240,7 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
 }
 
 
-static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace)
+Error UncompressedImageCodec::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace)
 {
   *out_chroma = heif_chroma_undefined;
   *out_colourspace = heif_colorspace_undefined;
@@ -360,6 +360,52 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
   }
   if (luma_bits > 0) {
     return luma_bits;
+  }
+  else if (alternate_channel_bits > 0) {
+    return alternate_channel_bits;
+  }
+  else {
+    return 8;
+  }
+}
+
+int UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
+{
+  auto ipco = heif_file.get_ipco_box();
+  auto ipma = heif_file.get_ipma_box();
+
+  auto box1 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("uncC"));
+  std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
+  auto box2 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("cmpd"));
+  std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
+  if (!uncC_box || !cmpd_box) {
+    return -1;
+  }
+
+  int chroma_bits = 0;
+  int alternate_channel_bits = 0;
+  for (Box_uncC::Component component : uncC_box->get_components()) {
+    uint16_t component_index = component.component_index;
+    if (component_index >= cmpd_box->get_components().size()) {
+      return -1;
+    }
+    auto component_type = cmpd_box->get_components()[component_index].component_type;
+    switch (component_type) {
+      case component_type_monochrome:
+      case component_type_red:
+      case component_type_green:
+      case component_type_blue:
+        alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
+        break;
+      case component_type_Cb:
+      case component_type_Cr:
+        chroma_bits = std::max(chroma_bits, (int)component.component_bit_depth);
+        break;
+        // TODO: there are other things we'll need to handle eventually, like palette.
+    }
+  }
+  if (chroma_bits > 0) {
+    return chroma_bits;
   }
   else if (alternate_channel_bits > 0) {
     return alternate_channel_bits;

@@ -709,6 +709,15 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
     return header.get_precision(1);
   }
 
+#if WITH_UNCOMPRESSED_CODEC
+  // Uncompressed
+
+  if (image_type == "unci") {
+    int bpp = UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(*this, imageID);
+    return bpp;
+  }
+#endif
+
   return -1;
 }
 
