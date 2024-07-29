@@ -1296,6 +1296,7 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     }
     *out_chroma = jpeg2000Header.get_chroma_format();
   }
+#if WITH_UNCOMPRESSED_CODEC
   else if (auto uncC = m_heif_context->m_heif_file->get_property<Box_uncC>(id)) {
     if (uncC->get_version() == 1) {
       // This is the shortform case, no cmpd box, and always some kind of RGB
@@ -1310,7 +1311,7 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
       UncompressedImageCodec::get_heif_chroma_uncompressed(uncC, cmpd, out_chroma, out_colorspace);
     }
   }
-
+#endif
 
   return err;
 }
