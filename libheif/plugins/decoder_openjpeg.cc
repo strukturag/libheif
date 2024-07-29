@@ -256,8 +256,8 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
-  std::shared_ptr<opj_codec_t> l_codec(opj_create_decompress(OPJ_CODEC_J2K),
-                                       opj_destroy_codec);
+  std::unique_ptr<opj_codec_t, void (*)(opj_codec_t*)> l_codec(opj_create_decompress(OPJ_CODEC_J2K),
+                                                               opj_destroy_codec);
 
   // Initialize Decoder
   opj_set_default_decoder_parameters(&decompression_parameters);
@@ -271,8 +271,8 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   // Create Input Stream
 
   OPJ_BOOL is_read_stream = true;
-  std::shared_ptr<opj_stream_t> stream(opj_stream_create_default_memory_stream(decoder, is_read_stream),
-                                       opj_stream_destroy);
+  std::unique_ptr<opj_stream_t, void (*)(opj_stream_t*)> stream(opj_stream_create_default_memory_stream(decoder, is_read_stream),
+                                                                opj_stream_destroy);
 
 
   // Read Codestream Header
@@ -283,7 +283,7 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
     return err;
   }
 
-  std::shared_ptr<opj_image_t> image(image_ptr, opj_image_destroy);
+  std::unique_ptr<opj_image_t, void (*)(opj_image_t*)> image(image_ptr, opj_image_destroy);
 
   if (image->numcomps != 3 && image->numcomps != 1) {
     //TODO - Handle other numbers of components
