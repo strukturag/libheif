@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <cassert>
+#include <memory>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;
 
@@ -251,16 +252,16 @@ opj_stream_t* opj_stream_create_default_memory_stream(openjpeg_decoder* p_decode
 
 struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
-  struct openjpeg_decoder* decoder = (struct openjpeg_decoder*) decoder_raw;
+  auto* decoder = (struct openjpeg_decoder*) decoder_raw;
 
   OPJ_BOOL success;
   opj_dparameters_t decompression_parameters;
-  opj_codec_t* l_codec;
+  std::shared_ptr<opj_codec_t> l_codec(opj_create_decompress(OPJ_CODEC_J2K),
+                                       opj_destroy_codec);
 
   // Initialize Decoder
   opj_set_default_decoder_parameters(&decompression_parameters);
-  l_codec = opj_create_decompress(OPJ_CODEC_J2K);
-  success = opj_setup_decoder(l_codec, &decompression_parameters);
+  success = opj_setup_decoder(l_codec.get(), &decompression_parameters);
   if (!success) {
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_setup_decoder()"};
     return err;
@@ -270,17 +271,21 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
   // Create Input Stream
 
   OPJ_BOOL is_read_stream = true;
-  opj_stream_t* stream = opj_stream_create_default_memory_stream(decoder, is_read_stream);
+  std::shared_ptr<opj_stream_t> stream(opj_stream_create_default_memory_stream(decoder, is_read_stream),
+                                       opj_stream_destroy);
 
 
   // Read Codestream Header
-  opj_image_t* image = NULL;
-  success = opj_read_header(stream, l_codec, &image);
+  opj_image_t* image_ptr = nullptr;
+  success = opj_read_header(stream.get(), l_codec.get(), &image_ptr);
   if (!success) {
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_read_header()"};
     return err;
   }
-  else if (image->numcomps != 3 && image->numcomps != 1) {
+
+  std::shared_ptr<opj_image_t> image(image_ptr, opj_image_destroy);
+
+  if (image->numcomps != 3 && image->numcomps != 1) {
     //TODO - Handle other numbers of components
     struct heif_error err = {heif_error_Unsupported_feature, heif_suberror_Unsupported_data_version, "Number of components must be 3 or 1"};
     return err;
@@ -296,22 +301,18 @@ struct heif_error openjpeg_decode_image(void* decoder_raw, struct heif_image** o
 
 
   /* Get the decoded image */
-  success = opj_decode(l_codec, stream, image);
+  success = opj_decode(l_codec.get(), stream.get(), image.get());
   if (!success) {
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_decode()"};
     return err;
   }
 
 
-  success = opj_end_decompress(l_codec, stream);
+  success = opj_end_decompress(l_codec.get(), stream.get());
   if (!success) {
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "opj_end_decompress()"};
     return err;
   }
-
-
-  /* Close the byte stream */
-  opj_stream_destroy(stream);
 
 
   heif_colorspace colorspace = heif_colorspace_YCbCr;
