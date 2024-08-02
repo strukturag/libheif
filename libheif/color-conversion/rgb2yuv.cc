@@ -102,7 +102,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int subV = chroma_v_subsampling(chroma);
 
   int bpp = input->get_bits_per_pixel(heif_channel_R);
-  if ((bpp != 8) != hdr) {
+  if (bpp < 8 || (bpp != 8) != hdr) {
     return nullptr;
   }
 
