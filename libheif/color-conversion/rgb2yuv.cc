@@ -35,7 +35,12 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
 {
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
+    return {};
+  }
+
+  // TODO: add support for <8 bpp
+  if (input_state.bits_per_pixel < 8) {
     return {};
   }
 
@@ -102,7 +107,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   int subV = chroma_v_subsampling(chroma);
 
   int bpp = input->get_bits_per_pixel(heif_channel_R);
-  if (bpp < 8 || (bpp != 8) != hdr) {
+  if (bpp < 8 || (bpp > 8) != hdr) {
     return nullptr;
   }
 
@@ -296,7 +301,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
         input_state.chroma == heif_chroma_interleaved_RRGGBB_LE ||
         input_state.chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
         input_state.chroma == heif_chroma_interleaved_RRGGBBAA_LE) ||
-      input_state.bits_per_pixel == 8) {
+      input_state.bits_per_pixel <= 8) {
     return {};
   }
 

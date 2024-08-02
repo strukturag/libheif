@@ -31,7 +31,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
        input_state.chroma != heif_chroma_420 &&
        input_state.chroma != heif_chroma_422 &&
        input_state.chroma != heif_chroma_444) ||
-      input_state.bits_per_pixel != 8) {
+      input_state.bits_per_pixel != 8) { // TODO: support for <8 bpp
     return {};
   }
 
@@ -95,6 +95,7 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {
           int in = p_in[y * stride_in + x];
+          // TODO: support for <8 bpp may need more than two copies of the input bit pattern
           p_out[y * stride_out + x] = (uint16_t) ((in << shift1) | (in >> shift2));
         }
     }
@@ -125,7 +126,7 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
 
   ColorState output_state;
 
-  // --- decrease bit depth
+  // --- output bit depth = 8
 
   output_state = input_state;
   output_state.bits_per_pixel = 8;
