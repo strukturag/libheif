@@ -44,7 +44,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
     return {};
   }
 
@@ -95,16 +95,16 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   if (!hdr) {
-    if (bpp_y != 8 ||
-        bpp_cb != 8 ||
-        bpp_cr != 8) {
+    if (bpp_y > 8 ||
+        bpp_cb > 8 ||
+        bpp_cr > 8) {
       return nullptr;
     }
   }
   else {
-    if (bpp_y == 8 ||
-        bpp_cb == 8 ||
-        bpp_cr == 8) {
+    if (bpp_y <= 8 ||
+        bpp_cb <= 8 ||
+        bpp_cr <= 8) {
       return nullptr;
     }
   }
@@ -262,7 +262,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
     return {};
   }
 
@@ -313,16 +313,16 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   if (!hdr) {
-    if (bpp_y != 8 ||
-        bpp_cb != 8 ||
-        bpp_cr != 8) {
+    if (bpp_y > 8 ||
+        bpp_cb > 8 ||
+        bpp_cr > 8) {
       return nullptr;
     }
   }
   else {
-    if (bpp_y == 8 ||
-        bpp_cb == 8 ||
-        bpp_cr == 8) {
+    if (bpp_y <= 8 ||
+        bpp_cb <= 8 ||
+        bpp_cr <= 8) {
       return nullptr;
     }
   }
@@ -460,7 +460,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
     return {};
   }
 
@@ -507,16 +507,16 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
   if (!hdr) {
-    if (bpp_y != 8 ||
-        bpp_cb != 8 ||
-        bpp_cr != 8) {
+    if (bpp_y > 8 ||
+        bpp_cb > 8 ||
+        bpp_cr > 8) {
       return nullptr;
     }
   }
   else {
-    if (bpp_y == 8 ||
-        bpp_cb == 8 ||
-        bpp_cr == 8) {
+    if (bpp_y <= 8 ||
+        bpp_cb <= 8 ||
+        bpp_cr <= 8) {
       return nullptr;
     }
   }
@@ -737,7 +737,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
     return {};
   }
 
@@ -784,16 +784,16 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
   if (!hdr) {
-    if (bpp_y != 8 ||
-        bpp_cb != 8 ||
-        bpp_cr != 8) {
+    if (bpp_y > 8 ||
+        bpp_cb > 8 ||
+        bpp_cr > 8) {
       return nullptr;
     }
   }
   else {
-    if (bpp_y == 8 ||
-        bpp_cb == 8 ||
-        bpp_cr == 8) {
+    if (bpp_y <= 8 ||
+        bpp_cb <= 8 ||
+        bpp_cr <= 8) {
       return nullptr;
     }
   }
