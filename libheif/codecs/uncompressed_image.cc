@@ -57,7 +57,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
     if ((component_type > 7) && (component_type != component_type_padded)) {
-      printf("unsupported component type: %d\n", component_type);
       std::stringstream sstr;
       sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -65,7 +64,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                    sstr.str());
     }
     if ((component.component_bit_depth > 8) && (component.component_bit_depth != 16)) {
-      printf("unsupported component bit depth for index: %d, value: %d\n", component_index, component.component_bit_depth);
       std::stringstream sstr;
       sstr << "Uncompressed image with component_bit_depth " << ((int) component.component_bit_depth) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -73,7 +71,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                    sstr.str());
     }
     if (component.component_format != component_format_unsigned) {
-      printf("unsupported component format\n");
       std::stringstream sstr;
       sstr << "Uncompressed image with component_format " << ((int) component.component_format) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -81,7 +78,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                    sstr.str());
     }
     if (component.component_align_size > 2) {
-      printf("unsupported component_align_size\n");
       std::stringstream sstr;
       sstr << "Uncompressed image with component_align_size " << ((int) component.component_align_size) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -93,7 +89,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
       && (uncC->get_sampling_type() != sampling_mode_422)
       && (uncC->get_sampling_type() != sampling_mode_420)
    ) {
-    printf("bad sampling: %d\n", uncC->get_sampling_type());
     std::stringstream sstr;
     sstr << "Uncompressed sampling_type of " << ((int) uncC->get_sampling_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
@@ -106,7 +101,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
       && (uncC->get_interleave_type() != interleave_mode_row)
       && (uncC->get_interleave_type() != interleave_mode_tile_component)
     ) {
-    printf("bad interleave: %d\n", uncC->get_interleave_type());
     std::stringstream sstr;
     sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
@@ -198,7 +192,6 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
   // TODO: throw error if mixed and Cb and Cr are not adjacent.
 
   if (uncC->get_block_size() != 0) {
-    printf("unsupported block size\n");
     std::stringstream sstr;
     sstr << "Uncompressed block_size of " << ((int) uncC->get_block_size()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
@@ -206,25 +199,21 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                  sstr.str());
   }
   if (uncC->is_components_little_endian()) {
-    printf("unsupported components LE\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Uncompressed components_little_endian == 1 is not implemented yet");
   }
   if (uncC->is_block_pad_lsb()) {
-    printf("unsupported block pad LSB\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Uncompressed block_pad_lsb == 1 is not implemented yet");
   }
   if (uncC->is_block_little_endian()) {
-    printf("unsupported block LE\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Uncompressed block_little_endian == 1 is not implemented yet");
   }
   if (uncC->is_block_reversed()) {
-    printf("unsupported block reversed\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Uncompressed block_reversed == 1 is not implemented yet");
@@ -300,13 +289,11 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(std::shared_ptr<Box_u
   // TODO: more combinations
 
   if (*out_chroma == heif_chroma_undefined) {
-    printf("unknown chroma\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Could not determine chroma");
   }
   else if (*out_colourspace == heif_colorspace_undefined) {
-    printf("unknown colourspace\n");
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Could not determine colourspace");
@@ -493,7 +480,6 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd
   case component_type_padded:
     return false;
   default:
-    printf("unmapped component_type: %d\n", component_type);
     return false;
   }
 }
@@ -921,7 +907,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   std::vector<std::shared_ptr<Box>> item_properties;
   Error error = context->get_heif_file()->get_properties(ID, item_properties);
   if (error) {
-    printf("failed to get properties\n");
     return error;
   }
 
@@ -990,7 +975,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
 
   error = uncompressed_image_type_is_supported(uncC, cmpd);
   if (error) {
-    printf("unsupported image type\n");
     return error;
   }
 
@@ -999,7 +983,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   heif_colorspace colourspace;
   error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
   if (error) {
-    printf("failed to get chroma uncompressed\n");
     return error;
   }
   img->create(width, height,
@@ -1023,7 +1006,6 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     delete decoder;
     return result;
   } else {
-    printf("bad interleave mode - we should have detected this earlier: %d\n", uncC->get_interleave_type());
     std::stringstream sstr;
     sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
