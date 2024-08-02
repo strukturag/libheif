@@ -38,6 +38,7 @@ jobs:
       if: ${{ env.WITH_RAV1E == '1' }}
       with:
         shared-key: "rust"
+        cache-directories: "third-party/rav1e/dist"
 
     - name: Install dependencies
       run: |
