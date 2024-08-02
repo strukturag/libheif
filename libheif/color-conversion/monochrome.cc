@@ -83,7 +83,7 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
   }
 
 
-  if (input_bpp == 8) {
+  if (input_bpp <= 8) {
     uint8_t* out_cb, * out_cr, * out_y;
     int out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
 
@@ -96,8 +96,10 @@ Op_mono_to_YCbCr420::convert_colorspace(const std::shared_ptr<const HeifPixelIma
     out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
     out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
 
-    memset(out_cb, 128, out_cb_stride * chroma_height);
-    memset(out_cr, 128, out_cr_stride * chroma_height);
+    auto chroma_value = static_cast<uint8_t>(1 << (input_bpp - 1));
+
+    memset(out_cb, chroma_value, out_cb_stride * chroma_height);
+    memset(out_cr, chroma_value, out_cr_stride * chroma_height);
 
     for (int y = 0; y < height; y++) {
       memcpy(out_y + y * out_y_stride,

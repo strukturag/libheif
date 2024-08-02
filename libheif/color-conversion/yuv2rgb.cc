@@ -55,7 +55,12 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
 
   bool hdr = !std::is_same<Pixel, uint8_t>::value;
 
-  if ((input_state.bits_per_pixel != 8) != hdr) {
+  if ((input_state.bits_per_pixel > 8) != hdr) {
+    return {};
+  }
+
+  // TODO: add support for <8 bpp
+  if (input_state.bits_per_pixel < 8) {
     return {};
   }
 
@@ -511,7 +516,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_YCbCr ||
       input_state.chroma != heif_chroma_420 ||
-      input_state.bits_per_pixel == 8) {
+      input_state.bits_per_pixel <= 8) {
     return {};
   }
 
