@@ -28,4 +28,6 @@ int read_exif_orientation_tag(const uint8_t* exif, uint32_t size);
 
 void modify_exif_orientation_tag_if_it_exists(uint8_t* exifData, uint32_t size, uint16_t orientation);
 
+void overwrite_exif_image_size_if_it_exists(uint8_t* exif, uint32_t size, uint32_t width, uint32_t height);
+
 #endif //LIBHEIF_EXIF_H

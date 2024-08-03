@@ -124,6 +124,7 @@ bool PngEncoder::Encode(const struct heif_image_handle* handle,
 
         // libheif by default normalizes the image orientation, so that we have to set the EXIF Orientation to "Horizontal (normal)"
         modify_exif_orientation_tag_if_it_exists(ptr, (int)size, 1);
+        overwrite_exif_image_size_if_it_exists(ptr, (int)size, width, height);
 
         png_set_eXIf_1(png_ptr, info_ptr, (png_uint_32)size, ptr);
       }
