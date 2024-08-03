@@ -99,13 +99,15 @@ static uint32_t find_exif_tag(const uint8_t* exif, uint32_t size, uint16_t query
 
   uint16_t cnt = read16(exif, size, offset, littleEndian);
 
-  // Does the IFD table fit into our memory range? We need this to prevent an underflow in the following statement.
-  if (2U + cnt * 12U > size) {
+  // Does the IFD table fit into our memory range? We need this check to prevent an underflow in the following statement.
+  uint32_t IFD_table_size = 2U + cnt * 12U;
+  if (IFD_table_size > size) {
     return 0;
   }
 
   // end of IFD table would exceed the end of the EXIF data
-  if (size - 2U - cnt * 12U > offset) {
+  // offset + IFD_table_size > size ?
+  if (size - IFD_table_size < offset) {
     return 0;
   }
 
