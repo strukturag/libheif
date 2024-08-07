@@ -1,5 +1,5 @@
 /*
-  libheif example application "convert".
+  libheif example application.
 
   MIT License
 
@@ -58,6 +58,10 @@
 
 #endif
 
+#if HAVE_LIBTIFF
+#include "encoder_tiff.h"
+#endif
+
 #include "encoder_y4m.h"
 #include "common.h"
 
@@ -74,7 +78,7 @@ static void show_help(const char* argv0)
                "Usage: " << argv0 << " [options]  <input-image> [output-image]\n"
                "\n"
                "The program determines the output file format from the output filename suffix.\n"
-               "These suffixes are recognized: jpg, jpeg, png, y4m. If no output filename is specified, 'jpg' is used.\n"
+               "These suffixes are recognized: jpg, jpeg, png, tif, tiff, y4m. If no output filename is specified, 'jpg' is used.\n"
                "\n"
                "Options:\n"
                "  -h, --help                     show help\n"
@@ -362,6 +366,15 @@ int main(int argc, char** argv)
 #endif  // HAVE_LIBPNG
     }
 
+    if (suffix_lowercase == "tif" || suffix_lowercase == "tiff") {
+#if HAVE_LIBTIFF
+      encoder.reset(new TiffEncoder());
+#else
+      fprintf(stderr, "TIFF support has not been compiled in.\n");
+      return 1;
+#endif  // HAVE_LIBTIFF
+    }
+
     if (suffix_lowercase == "y4m") {
       encoder.reset(new Y4MEncoder());
     }
@@ -384,6 +397,10 @@ int main(int argc, char** argv)
   // TODO: check, whether reading from named pipes works at all.
 
   std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
+  if (istr.fail()) {
+    fprintf(stderr, "Input file does not exist.\n");
+    return 10;
+  }
   std::array<uint8_t,4> length{};
   istr.read((char*) length.data(), length.size());
   uint32_t box_size = (length[0] << 24) + (length[1] << 16) + (length[2] << 8) + (length[3]);

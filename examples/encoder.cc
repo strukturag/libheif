@@ -1,6 +1,6 @@
 /*
-  libheif example application "convert".
-  This file is part of convert, an example application using libheif.
+  libheif example application.
+  This file is part of heif-dec, an example application using libheif.
 
   MIT License
 

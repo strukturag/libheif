@@ -241,7 +241,7 @@ protected:
 
   Error write_children(StreamWriter& writer) const;
 
-  std::string dump_children(Indent&) const;
+  std::string dump_children(Indent&, bool with_index = false) const;
 
 
   // --- writing

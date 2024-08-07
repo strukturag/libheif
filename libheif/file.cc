@@ -598,8 +598,8 @@ int HeifFile::get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) c
     std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
     if (vvcC_box) {
       Box_vvcC::configuration config = vvcC_box->get_configuration();
-      if (config.bit_depth_present_flag) {
-        return config.bit_depth;
+      if (config.ptl_present_flag) {
+        return config.bit_depth_minus8 + 8;
       }
       else {
         return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
@@ -679,8 +679,8 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
     std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
     if (vvcC_box) {
       Box_vvcC::configuration config = vvcC_box->get_configuration();
-      if (config.bit_depth_present_flag) {
-        return config.bit_depth;
+      if (config.ptl_present_flag) {
+        return config.bit_depth_minus8 + 8;
       }
       else {
         return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
@@ -723,6 +723,15 @@ int HeifFile::get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID)
     }
     return header.get_precision(1);
   }
+
+#if WITH_UNCOMPRESSED_CODEC
+  // Uncompressed
+
+  if (image_type == "unci") {
+    int bpp = UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(*this, imageID);
+    return bpp;
+  }
+#endif
 
   return -1;
 }

@@ -34,15 +34,16 @@ endif()
 # --- tests that only access the public API
 
 add_libheif_test(encode)
+add_libheif_test(extended_type)
 add_libheif_test(region)
 
-if (WITH_OPENJPH_ENCODER)
+if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_ENCODING)
     add_libheif_test(encode_htj2k)
 else()
     message(INFO "Disabling HT-JPEG 2000 encoder tests because no HT-JPEG 2000 codec is enabled")
 endif()
 
-if (WITH_OpenJPEG_ENCODER)
+if (WITH_OpenJPEG_ENCODER AND SUPPORTS_J2K_ENCODING)
     add_libheif_test(encode_jpeg2000)
 else()
     message(INFO "Disabling JPEG 2000 encoder tests because no JPEG 2000 codec is enabled")

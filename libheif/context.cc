@@ -1281,6 +1281,22 @@ Error HeifContext::Image::get_preferred_decoding_colorspace(heif_colorspace* out
     }
     *out_chroma = jpeg2000Header.get_chroma_format();
   }
+#if WITH_UNCOMPRESSED_CODEC
+  else if (auto uncC = m_heif_context->m_heif_file->get_property<Box_uncC>(id)) {
+    if (uncC->get_version() == 1) {
+      // This is the shortform case, no cmpd box, and always some kind of RGB
+      *out_colorspace = heif_colorspace_RGB;
+      if (uncC->get_profile() == fourcc("rgb3")) {
+        *out_chroma = heif_chroma_interleaved_RGB;
+      } else if ((uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))) {
+        *out_chroma = heif_chroma_interleaved_RGBA;
+      }
+    }
+    if (auto cmpd = m_heif_context->m_heif_file->get_property<Box_cmpd>(id)) {
+      UncompressedImageCodec::get_heif_chroma_uncompressed(uncC, cmpd, out_chroma, out_colorspace);
+    }
+  }
+#endif
 
   return err;
 }
@@ -3050,7 +3066,7 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
       m_heif_file->set_vvcC_configuration(image_id, config);
     }
 
-    switch (data[0] >> 1) {
+    switch (nal_type) {
       case 14: // VPS
       case 15: // SPS
       case 16: // PPS

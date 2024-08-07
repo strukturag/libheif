@@ -413,6 +413,14 @@ int BitReader::get_bits(int n)
   return (int) val;
 }
 
+
+uint8_t BitReader::get_bits8(int n)
+{
+  assert(n>0 && n <= 8);
+  return static_cast<uint8_t>(get_bits(n));
+}
+
+
 int BitReader::get_bits_fast(int n)
 {
   assert(nextbits_cnt >= n);

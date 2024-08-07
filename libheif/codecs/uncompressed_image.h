@@ -37,6 +37,7 @@ class UncompressedImageCodec
 {
 public:
   static int get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID);
+  static int get_chroma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID);
 
   static Error decode_uncompressed_image(const HeifContext* context,
                                          heif_item_id ID,
@@ -48,6 +49,12 @@ public:
                                          void* encoder_struct,
                                          const struct heif_encoding_options& options,
                                          std::shared_ptr<HeifContext::Image>& out_image);
+
+  static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC,
+                                            std::shared_ptr<Box_cmpd>& cmpd,
+                                            heif_chroma* out_chroma,
+                                            heif_colorspace* out_colourspace);
+
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_IMAGE_H

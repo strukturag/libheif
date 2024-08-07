@@ -204,6 +204,12 @@ int main(int argc, char** argv)
         heif_free_list_of_compatible_brands(brands);
       }
     }
+    else {
+      if (errno == ENOENT) {
+        std::cerr << "Input file does not exist.\n";
+        exit(10);
+      }
+    }
   }
 
   // ==============================================================================

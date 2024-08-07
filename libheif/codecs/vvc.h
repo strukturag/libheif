@@ -26,7 +26,7 @@
 #include <vector>
 
 
-class Box_vvcC : public Box
+class Box_vvcC : public FullBox
 {
 public:
   Box_vvcC()
@@ -34,37 +34,42 @@ public:
     set_short_type(fourcc("vvcC"));
   }
 
+  struct VvcPTLRecord {
+    uint8_t num_bytes_constraint_info; // 6 bits
+    uint8_t general_profile_idc; // 7 bits
+    uint8_t general_tier_flag; // 1 bit
+    uint8_t general_level_idc; // 8 bits
+    uint8_t ptl_frame_only_constraint_flag; // 1 bit
+    uint8_t ptl_multi_layer_enabled_flag; // 1 bit
+    std::vector<uint8_t> general_constraint_info;
+
+    std::vector<bool> ptl_sublayer_level_present_flag; // TODO: should we save this here or can we simply derive it on the fly?
+
+    std::vector<uint8_t> sublayer_level_idc;
+    std::vector<uint32_t> general_sub_profile_idc;
+  };
+
   struct configuration
   {
-    uint8_t configurationVersion = 1;
-    uint16_t avgFrameRate_times_256 = 0;
-    uint8_t constantFrameRate = 1; // 2 bits
-    uint8_t numTemporalLayers = 1; // 3 bits
-    uint8_t lengthSize = 1;        // 2 bits
-    bool ptl_present_flag = false;
-    //if (ptl_present_flag) {
-    //  VvcPTLRecord(numTemporalLayers) track_ptl;
-    //  uint16_t output_layer_set_idx;
-    //}
-    bool chroma_format_present_flag = false;
-    uint8_t chroma_format_idc;
+    uint8_t LengthSizeMinusOne = 3;  // 0,1,3   default: 4 bytes for NAL unit lengths
+    bool ptl_present_flag = true;
 
-    bool bit_depth_present_flag = false;
-    uint8_t bit_depth;
+    // only of PTL present
+    uint16_t ols_idx; // 9 bits
+    uint8_t num_sublayers; // 3 bits
+    uint8_t constant_frame_rate; // 2 bits
+    uint8_t chroma_format_idc; // 2 bits
+    uint8_t bit_depth_minus8; // 3 bits
+    struct VvcPTLRecord native_ptl;
+    uint16_t max_picture_width;
+    uint16_t max_picture_height;
+    uint16_t avg_frame_rate;
   };
 
 
   std::string dump(Indent&) const override;
 
-  bool get_headers(std::vector<uint8_t>* dest) const
-  {
-    // TODO
-
-#if 0
-    *dest = m_config_NALs;
-#endif
-    return true;
-  }
+  bool get_headers(std::vector<uint8_t>* dest) const;
 
   void set_configuration(const configuration& config) { m_configuration = config; }
 
@@ -84,14 +89,11 @@ private:
       bool m_array_completeness;
       uint8_t m_NAL_unit_type;
 
-      std::vector<std::vector<uint8_t> > m_nal_units;
+      std::vector<std::vector<uint8_t> > m_nal_units; // only one NAL item for DCI and OPI
     };
 
   configuration m_configuration;
-  //uint8_t m_length_size = 4; // default: 4 bytes for NAL unit lengths
-
   std::vector<NalArray> m_nal_array;
-  //std::vector<uint8_t> m_config_NALs;
 };
 
 

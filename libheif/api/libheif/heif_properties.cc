@@ -334,6 +334,28 @@ struct heif_error heif_item_add_raw_property(const struct heif_context* context,
   return heif_error_success;
 }
 
+static struct heif_error find_property(const struct heif_context* context,
+                                heif_item_id itemId,
+                                heif_property_id propertyId,
+                                std::shared_ptr<Box_other> *box_other)
+{
+  auto file = context->context->get_heif_file();
+
+  std::vector<std::shared_ptr<Box>> properties;
+  Error err = file->get_properties(itemId, properties);
+  if (err) {
+    return err.error_struct(context->context.get());
+  }
+
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
+  }
+
+  auto box = properties[propertyId - 1];
+  *box_other = std::dynamic_pointer_cast<Box_other>(box);
+  return heif_error_success;
+}
+
 
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
                                                   heif_item_id itemId,
@@ -343,16 +365,13 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
   if (!context || !size_out) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
   }
-
-  auto file = context->context->get_heif_file();
-
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = file->get_properties(itemId, properties);
-  if (err) {
-    return err.error_struct(context->context.get());
+  std::shared_ptr<Box_other> box_other;
+  struct heif_error err = find_property(context, itemId, propertyId, &box_other);
+  if (err.code) {
+    return err;
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
   }
 
@@ -372,30 +391,20 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
 }
 
 
-struct heif_error heif_item_get_property_uuid(const struct heif_context* context,
-                                              heif_item_id itemId,
-                                              heif_property_id propertyId,
-                                              uint8_t* data_out)
+struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
+                                                  heif_item_id itemId,
+                                                  heif_property_id propertyId,
+                                                  uint8_t* data_out)
 {
   if (!context || !data_out) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
   }
 
-  auto file = context->context->get_heif_file();
-
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = file->get_properties(itemId, properties);
-  if (err) {
-    return err.error_struct(context->context.get());
+  std::shared_ptr<Box_other> box_other;
+  struct heif_error err = find_property(context, itemId, propertyId, &box_other);
+  if (err.code) {
+    return err;
   }
-
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
-  }
-
-
-  auto box = properties[propertyId - 1];
-  auto box_other = std::dynamic_pointer_cast<Box_other>(box);
 
   // TODO: every Box (not just Box_other) should have a get_raw_data() method.
   if (box_other == nullptr) {
@@ -406,6 +415,32 @@ struct heif_error heif_item_get_property_uuid(const struct heif_context* context
 
 
   std::copy(data.begin(), data.end(), data_out);
+
+  return heif_error_success;
+}
+
+struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
+                                                   heif_item_id itemId,
+                                                   heif_property_id propertyId,
+                                                   uint8_t extended_type[16])
+{
+  if (!context || !extended_type) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
+  }
+
+  std::shared_ptr<Box_other> box_other;
+  struct heif_error err = find_property(context, itemId, propertyId, &box_other);
+  if (err.code) {
+    return err;
+  }
+
+  if (box_other == nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
+  }
+
+  auto uuid = box_other->get_uuid_type();
+
+  std::copy(uuid.begin(), uuid.end(), extended_type);
 
   return heif_error_success;
 }

@@ -39,11 +39,12 @@ Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vecto
     const std::uint8_t *next_in = reinterpret_cast<const std::uint8_t *>(compressed_input.data());
     size_t available_out = buffer.size();
     std::uint8_t *next_output = buffer.data();
-    BrotliDecoderState *state = BrotliDecoderCreateInstance(0, 0, 0);
+
+    std::unique_ptr<BrotliDecoderState, void(*)(BrotliDecoderState*)> state(BrotliDecoderCreateInstance(0, 0, 0), BrotliDecoderDestroyInstance);
 
     while (true)
     {
-        result = BrotliDecoderDecompressStream(state, &available_in, &next_in, &available_out, &next_output, 0);
+        result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_output, 0);
 
         if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT)
         {
@@ -64,20 +65,20 @@ Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vecto
         }
         else if (result == BROTLI_DECODER_RESULT_ERROR)
         {
-            const char* errorMessage = BrotliDecoderErrorString(BrotliDecoderGetErrorCode(state));
+            const char* errorMessage = BrotliDecoderErrorString(BrotliDecoderGetErrorCode(state.get()));
             std::stringstream sstr;
             sstr << "Error performing brotli inflate - " << errorMessage << "\n";
             return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
         }
         else
         {
-            const char* errorMessage = BrotliDecoderErrorString(BrotliDecoderGetErrorCode(state));
+            const char* errorMessage = BrotliDecoderErrorString(BrotliDecoderGetErrorCode(state.get()));
             std::stringstream sstr;
             sstr << "Unknown error performing brotli inflate - " << errorMessage << "\n";
             return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
         }
     }
-    BrotliDecoderDestroyInstance(state);
+
     return Error::Ok;
 }
 

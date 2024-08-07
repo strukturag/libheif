@@ -905,11 +905,12 @@ Error Box::write_children(StreamWriter& writer) const
 }
 
 
-std::string Box::dump_children(Indent& indent) const
+std::string Box::dump_children(Indent& indent, bool with_index) const
 {
   std::ostringstream sstr;
 
   bool first = true;
+  int idx=1;
 
   indent++;
   for (const auto& childBox : m_children) {
@@ -918,6 +919,11 @@ std::string Box::dump_children(Indent& indent) const
     }
     else {
       sstr << indent << "\n";
+    }
+
+    if (with_index) {
+      sstr << indent << "index: " << idx << "\n";
+      idx++;
     }
 
     sstr << childBox->dump(indent);
@@ -2127,7 +2133,7 @@ std::string Box_ipco::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
 
-  sstr << dump_children(indent);
+  sstr << dump_children(indent, true);
 
   return sstr.str();
 }

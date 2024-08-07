@@ -34,7 +34,7 @@ install(FILES heif-dec.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 # create symbolic link from the old name `heif-convert` to `heif-dec`
 if(NOT WIN32)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink heif-dec${CMAKE_EXECUTABLE_SUFFIX} \$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
 else()
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
 endif()
@@ -129,8 +129,11 @@ endif ()
 
 find_package(TIFF)
 if (TIFF_FOUND)
+    target_link_libraries(heif-dec PRIVATE TIFF::TIFF)
     target_link_libraries(heif-enc PRIVATE TIFF::TIFF)
+    target_sources(heif-dec PRIVATE encoder_tiff.cc encoder_tiff.h)
     target_sources(heif-enc PRIVATE decoder_tiff.cc decoder_tiff.h)
+    target_compile_definitions(heif-dec PUBLIC HAVE_LIBTIFF=1)
     target_compile_definitions(heif-enc PUBLIC HAVE_LIBTIFF=1)
 endif ()
 

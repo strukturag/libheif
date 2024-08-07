@@ -264,6 +264,8 @@ public:
 
   int get_bits(int n);
 
+  uint8_t get_bits8(int n);
+
   int get_bits_fast(int n);
 
   int peek_bits(int n);
