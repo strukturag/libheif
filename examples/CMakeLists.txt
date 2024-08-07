@@ -34,7 +34,7 @@ install(FILES heif-dec.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 # create symbolic link from the old name `heif-convert` to `heif-dec`
 if(NOT WIN32)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink heif-dec${CMAKE_EXECUTABLE_SUFFIX} \$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
 else()
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-dec${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/heif-convert${CMAKE_EXECUTABLE_SUFFIX})")
 endif()
