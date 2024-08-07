@@ -896,6 +896,99 @@ heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle*
 }
 
 
+struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* handle,
+                                                  uint32_t* tile_width, uint32_t* tile_height)
+{
+  if (!handle) {
+    return error_null_parameter;
+  }
+
+
+  // --- 'grid' image
+
+  if (handle->image->is_grid()) {
+    heif_item_id first_tile_id = handle->image->get_grid_tiles()[0];
+    auto tile = handle->context->get_image(first_tile_id);
+
+    if (tile_width) {
+      *tile_width = tile->get_width();
+    }
+
+    if (tile_height) {
+      *tile_height = tile->get_height();
+    }
+
+    return heif_error_success;
+  }
+
+
+  // return whole image size (the image is the only tile)
+
+  if (tile_width) {
+    *tile_width = handle->image->get_width();
+  }
+
+  if (tile_height) {
+    *tile_height = handle->image->get_height();
+  }
+
+  return heif_error_success;
+}
+
+
+// TODO: move this into the Context. But first, we also have to move heif_decode_image() into Context.
+struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* handle,
+                                                      struct heif_image** out_img,
+                                                      enum heif_colorspace colorspace,
+                                                      enum heif_chroma chroma,
+                                                      const struct heif_decoding_options* options,
+                                                      uint64_t x0, uint64_t y0, uint64_t z0)
+{
+  if (!handle) {
+    return error_null_parameter;
+  }
+
+  if (handle->image->is_grid()) {
+    if (z0 != 0) {
+      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "z0 must be 0 for 2D images"};
+    }
+
+    heif_item_id first_tile_id = handle->image->get_grid_tiles()[0];
+    auto tile = handle->context->get_image(first_tile_id);
+
+    const ImageGrid& gridspec = handle->image->get_grid_spec();
+    uint32_t tile_x = x0 / tile->get_width();
+    uint32_t tile_y = y0 / tile->get_height();
+
+    heif_item_id tile_id = handle->image->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+    heif_image_handle* tile_handle;
+    heif_context* ctx = heif_image_handle_get_context(handle);
+    heif_error err = heif_context_get_image_handle(ctx, tile_id, &tile_handle);
+    if (err.code) {
+      heif_image_handle_release(tile_handle);
+      heif_context_free(ctx);
+      err.message = nullptr; // have to delete the text pointer because the text may be deleted with the context (TODO)
+      return err;
+    }
+
+    heif_context_free(ctx);
+    err = heif_decode_image(tile_handle, out_img, colorspace, chroma, options);
+    if (err.code) {
+      err.message = nullptr; // have to delete the text pointer because the text may be deleted with the context (TODO)
+      return err;
+    }
+
+    heif_image_handle_release(tile_handle);
+
+    return heif_error_success;
+  }
+
+  // --- fallback: decode the whole image
+
+  return heif_decode_image(handle, out_img, colorspace, chroma, options);
+}
+
+
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
                                                         uint32_t tile_width,
                                                         uint32_t tile_height,

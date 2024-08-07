@@ -21,6 +21,11 @@
 #ifndef LIBHEIF_HEIF_H
 #define LIBHEIF_HEIF_H
 
+#include <sys/time.h>
+
+inline long timediff(const struct timeval tv_start, const struct timeval tv_end)
+{ return ((tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec)/1); }
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1156,6 +1161,21 @@ LIBHEIF_API
 heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
 
 
+struct heif_decoding_options;
+
+LIBHEIF_API
+struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
+                                         struct heif_image** out_img,
+                                         enum heif_colorspace colorspace,
+                                         enum heif_chroma chroma,
+                                         const struct heif_decoding_options* options,
+                                         uint64_t x0, uint64_t y0, uint64_t z0);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* in_handle,
+                                                  uint32_t* tile_width, uint32_t* tile_height);
+
+
 struct heif_pyramid_layer_info {
   heif_item_id layer_image_id;
   uint16_t layer_binning;
@@ -2227,6 +2247,41 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                                            uint32_t tile_rows,
                                            const heif_item_id* image_ids,
                                            struct heif_image_handle** out_grid_image_handle);
+
+struct heif_tild_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint64_t image_width;
+  uint64_t image_height;
+  uint64_t image_depth;  // 3D volume stack depth, set to 1 for 2D images
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  uint32_t compression_type_fourcc;
+
+  uint8_t offset_field_length; // one of: 32, 40, 48, 64
+  uint8_t size_field_length;   // 24 or 32
+
+  // boolean flags
+  uint8_t tiles_are_sequential;
+  uint8_t with_tile_sizes;
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
+                                              const struct heif_tild_image_parameters* parameters,
+                                              const struct heif_encoding_options* options, // TODO: do we need this?
+                                              struct heif_image_handle** out_grid_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
+                                                   const struct heif_image* image,
+                                                   struct heif_encoder* encoder);
+
 
 // offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
 // If background_rgba is NULL, the background is transparent.
