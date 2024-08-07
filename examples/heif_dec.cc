@@ -384,6 +384,10 @@ int main(int argc, char** argv)
   // TODO: check, whether reading from named pipes works at all.
 
   std::ifstream istr(input_filename.c_str(), std::ios_base::binary);
+  if (istr.fail()) {
+    fprintf(stderr, "Input file does not exist.\n");
+    return 10;
+  }
   std::array<uint8_t,4> length{};
   istr.read((char*) length.data(), length.size());
   uint32_t box_size = (length[0] << 24) + (length[1] << 16) + (length[2] << 8) + (length[3]);
