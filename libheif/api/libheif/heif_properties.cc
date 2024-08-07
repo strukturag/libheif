@@ -371,13 +371,6 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
     return err;
   }
 
-  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
-  }
-
-  auto box = properties[propertyId - 1];
-  auto box_other = std::dynamic_pointer_cast<Box_other>(box);
-
   // TODO: every Box (not just Box_other) should have a get_raw_data() method.
   if (box_other == nullptr) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
