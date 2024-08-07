@@ -107,6 +107,12 @@ inline std::ostream& operator<<(std::ostream& ostr, const Error& err)
 template <typename T> class Result
 {
 public:
+  Result() = default;
+
+  Result(const T& v) : value(v), error(Error::Ok) {}
+
+  Result(const Error& e) : error(e) {}
+
   operator bool() const { return error.error_code == heif_error_Ok; }
 
   T value;

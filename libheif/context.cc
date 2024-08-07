@@ -123,50 +123,23 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
   return val;
 }
 
-
-class ImageGrid
+static void writevec(uint8_t* data, size_t& idx, uint32_t value, int len)
 {
-public:
-  Error parse(const std::vector<uint8_t>& data);
-
-  std::vector<uint8_t> write() const;
-
-  std::string dump() const;
-
-  uint32_t get_width() const { return m_output_width; }
-
-  uint32_t get_height() const { return m_output_height; }
-
-  uint16_t get_rows() const
-  {
-    assert(m_rows <= 256);
-    return m_rows;
+  for (int i=0;i<len;i++) {
+    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
   }
 
-  uint16_t get_columns() const
-  {
-    assert(m_columns <= 256);
-    return m_columns;
+  idx += len;
+}
+
+static void writevec(uint8_t* data, size_t& idx, int32_t value, int len)
+{
+  for (int i=0;i<len;i++) {
+    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
   }
 
-  void set_num_tiles(uint16_t columns, uint16_t rows)
-  {
-    m_rows = rows;
-    m_columns = columns;
-  }
-
-  void set_output_size(uint32_t width, uint32_t height)
-  {
-    m_output_width = width;
-    m_output_height = height;
-  }
-
-private:
-  uint16_t m_rows = 0;
-  uint16_t m_columns = 0;
-  uint32_t m_output_width = 0;
-  uint32_t m_output_height = 0;
-};
+  idx += len;
+}
 
 
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
@@ -282,39 +255,6 @@ std::string ImageGrid::dump() const
 }
 
 
-class ImageOverlay
-{
-public:
-  Error parse(size_t num_images, const std::vector<uint8_t>& data);
-
-  std::string dump() const;
-
-  void get_background_color(uint16_t col[4]) const;
-
-  uint32_t get_canvas_width() const { return m_width; }
-
-  uint32_t get_canvas_height() const { return m_height; }
-
-  size_t get_num_offsets() const { return m_offsets.size(); }
-
-  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
-
-private:
-  uint8_t m_version;
-  uint8_t m_flags;
-  uint16_t m_background_color[4];
-  uint32_t m_width;
-  uint32_t m_height;
-
-  struct Offset
-  {
-    int32_t x, y;
-  };
-
-  std::vector<Offset> m_offsets;
-};
-
-
 Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 {
   Error eofError(heif_error_Invalid_input,
@@ -369,6 +309,44 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 }
 
 
+std::vector<uint8_t> ImageOverlay::write() const
+{
+  assert(m_version==0);
+
+  bool longFields = (m_width > 0xFFFF) || (m_height > 0xFFFF);
+  for (const auto& img : m_offsets) {
+    if (img.x > 0x7FFF || img.y > 0x7FFF || img.x < -32768 || img.y < -32768) {
+      longFields = true;
+      break;
+    }
+  }
+
+  std::vector<uint8_t> data;
+
+  data.resize(2 + 4 * 2 + (longFields ? 4 : 2) * (2 + m_offsets.size() * 2));
+
+  size_t idx=0;
+  data[idx++] = m_version;
+  data[idx++] = (longFields ? 1 : 0); // flags
+
+  for (uint16_t color : m_background_color) {
+    writevec(data.data(), idx, color, 2);
+  }
+
+  writevec(data.data(), idx, m_width, longFields ? 4 : 2);
+  writevec(data.data(), idx, m_height, longFields ? 4 : 2);
+
+  for (const auto& img : m_offsets) {
+    writevec(data.data(), idx, img.x, longFields ? 4 : 2);
+    writevec(data.data(), idx, img.y, longFields ? 4 : 2);
+  }
+
+  assert(idx == data.size());
+
+  return data;
+}
+
+
 std::string ImageOverlay::dump() const
 {
   std::stringstream sstr;
@@ -382,7 +360,7 @@ std::string ImageOverlay::dump() const
        << "canvas size: " << m_width << "x" << m_height << "\n"
        << "offsets: ";
 
-  for (const Offset& offset : m_offsets) {
+  for (const ImageWithOffset& offset : m_offsets) {
     sstr << offset.x << ";" << offset.y << " ";
   }
   sstr << "\n";
@@ -597,6 +575,13 @@ Error HeifContext::interpret_heif_file()
         }
 
         m_top_level_images.push_back(image);
+      }
+
+      if (infe_box->get_item_type() == "grid") {
+        Error err = image->read_grid_spec();
+        if (err) {
+          return err;
+        }
       }
     }
   }
@@ -1531,13 +1516,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     }
   }
   else if (image_type == "grid") {
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      return error;
-    }
-
-    error = decode_full_grid_image(ID, img, data, options);
+    error = decode_full_grid_image(ID, img, options);
     if (error) {
       return error;
     }
@@ -1763,14 +1742,19 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 }
 
 
-// This function only works with RGB images.
-Error HeifContext::decode_full_grid_image(heif_item_id ID,
-                                          std::shared_ptr<HeifPixelImage>& img,
-                                          const std::vector<uint8_t>& grid_data,
-                                          const heif_decoding_options& options) const
+Error HeifContext::Image::read_grid_spec()
 {
-  ImageGrid grid;
-  Error err = grid.parse(grid_data);
+  m_is_grid = true;
+
+  auto heif_file = m_heif_context->get_heif_file();
+
+  std::vector<uint8_t> grid_data;
+  Error err= heif_file->get_compressed_image_data(m_id, &grid_data);
+  if (err) {
+    return err;
+  }
+
+  err = m_grid_spec.parse(grid_data);
   if (err) {
     return err;
   }
@@ -1778,29 +1762,44 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
   //std::cout << grid.dump();
 
 
-  auto iref_box = m_heif_file->get_iref_box();
+  auto iref_box = heif_file->get_iref_box();
 
   if (!iref_box) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_iref_box,
-                 "No iref box available, but needed for grid image");
+    return {heif_error_Invalid_input,
+            heif_suberror_No_iref_box,
+            "No iref box available, but needed for grid image"};
   }
 
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
+  m_grid_tile_ids = iref_box->get_references(m_id, fourcc("dimg"));
 
-  if ((int) image_references.size() != grid.get_rows() * grid.get_columns()) {
+  if ((int) m_grid_tile_ids.size() != m_grid_spec.get_rows() * m_grid_spec.get_columns()) {
     std::stringstream sstr;
-    sstr << "Tiled image with " << grid.get_rows() << "x" << grid.get_columns() << "="
-         << (grid.get_rows() * grid.get_columns()) << " tiles, but only "
-         << image_references.size() << " tile images in file";
+    sstr << "Tiled image with " << m_grid_spec.get_rows() << "x" << m_grid_spec.get_columns() << "="
+         << (m_grid_spec.get_rows() * m_grid_spec.get_columns()) << " tiles, but only "
+         << m_grid_tile_ids.size() << " tile images in file";
 
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Missing_grid_images,
-                 sstr.str());
+    return {heif_error_Invalid_input,
+            heif_suberror_Missing_grid_images,
+            sstr.str()};
   }
 
+  return Error::Ok;
+}
+
+
+// This function only works with RGB images.
+Error HeifContext::decode_full_grid_image(heif_item_id ID,
+                                          std::shared_ptr<HeifPixelImage>& img,
+                                          const heif_decoding_options& options) const
+{
+  auto image = m_all_images.find(ID)->second;
+  assert(image->is_grid());
+
+  const ImageGrid& grid = image->get_grid_spec();
 
   // --- check that all image IDs are valid images
+
+  const std::vector<heif_item_id>& image_references = image->get_grid_tiles();
 
   for (heif_item_id tile_id : image_references) {
     if (!is_image(tile_id)) {
@@ -1837,7 +1836,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
 
   // --- generate image of full output size
 
-  err = check_resolution(w, h);
+  Error err = check_resolution(w, h);
   if (err) {
     return err;
   }
@@ -2508,6 +2507,10 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   int image_height = tile_height * rows;
   m_heif_file->add_ispe_property(grid_id, image_width, image_height);
 
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
+  m_heif_file->add_property(grid_id, pixi, true);
+
   // Set Brands
   m_heif_file->set_brand(encoder->plugin->compression_format,
                          out_grid_image->is_miaf_compatible());
@@ -2515,6 +2518,105 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   return error;
 }
 
+
+Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
+                               uint32_t output_width,
+                               uint32_t output_height,
+                               uint16_t tile_rows,
+                               uint16_t tile_columns,
+                               std::shared_ptr<Image>& out_grid_image)
+{
+  if (tile_ids.size() > 0xFFFF) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Too many tiles (maximum: 65535)"};
+  }
+
+#if 1
+  for (heif_item_id tile_id : tile_ids) {
+    m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
+  }
+#endif
+
+
+  // Create ImageGrid
+
+  ImageGrid grid;
+  grid.set_num_tiles(tile_columns, tile_rows);
+  grid.set_output_size(output_width, output_height);
+  std::vector<uint8_t> grid_data = grid.write();
+
+  // Create Grid Item
+
+  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  out_grid_image = std::make_shared<Image>(this, grid_id);
+  m_all_images.insert(std::make_pair(grid_id, out_grid_image));
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
+
+  // Connect tiles to grid
+  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
+
+  // Add ISPE property
+  m_heif_file->add_ispe_property(grid_id, output_width, output_height);
+
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
+  m_heif_file->add_property(grid_id, pixi, true);
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
+                                 std::shared_ptr<Image>& out_iovl_image)
+{
+  if (overlayspec.get_num_offsets() > 0xFFFF) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Too many overlay images (maximum: 65535)"};
+  }
+
+  std::vector<heif_item_id> ref_ids;
+
+  for (const auto& overlay : overlayspec.get_overlay_stack()) {
+    m_heif_file->get_infe_box(overlay.image_id)->set_hidden_item(true); // only show the full overlay
+    ref_ids.push_back(overlay.image_id);
+  }
+
+
+  // Create ImageOverlay
+
+  std::vector<uint8_t> iovl_data = overlayspec.write();
+
+  // Create IOVL Item
+
+  heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
+  out_iovl_image = std::make_shared<Image>(this, iovl_id);
+  m_all_images.insert(std::make_pair(iovl_id, out_iovl_image));
+  const int construction_method = 1; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(iovl_id, iovl_data, construction_method);
+
+  // Connect images to overlay
+  m_heif_file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
+
+  // Add ISPE property
+  m_heif_file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height());
+
+  // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
+  auto pixi = m_heif_file->get_property<Box_pixi>(ref_ids[0]);
+  m_heif_file->add_property(iovl_id, pixi, true);
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
 
 /*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
@@ -3425,6 +3527,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
   out_image = std::make_shared<Image>(this, image_id);
   m_top_level_images.push_back(out_image);
+
   m_all_images[image_id] = out_image;
 
   // --- check whether we have to convert the image color space
@@ -3864,4 +3967,45 @@ heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_
   heif_property_id id = m_heif_file->add_property(targetItem, property, essential);
 
   return id;
+}
+
+
+Result<heif_item_id> HeifContext::add_pyramid_group(uint16_t tile_size_x, uint16_t tile_size_y,
+                                                    std::vector<heif_pyramid_layer_info> in_layers)
+{
+  auto pymd = std::make_shared<Box_pymd>();
+  std::vector<Box_pymd::LayerInfo> layers;
+  std::vector<heif_item_id> ids;
+
+  for (const auto& l : in_layers) {
+    if (l.tiles_in_layer_row==0 || l.tiles_in_layer_column==0 ||
+        l.tiles_in_layer_row - 1 > 0xFFFF || l.tiles_in_layer_column - 1 > 0xFFFF) {
+
+      return {Error(heif_error_Invalid_input,
+                    heif_suberror_Invalid_parameter_value,
+                    "Invalid number of tiles in layer.")};
+    }
+
+    Box_pymd::LayerInfo layer{};
+    layer.layer_binning = l.layer_binning;
+    layer.tiles_in_layer_row_minus1 = static_cast<uint16_t>(l.tiles_in_layer_row - 1);
+    layer.tiles_in_layer_column_minus1 = static_cast<uint16_t>(l.tiles_in_layer_column - 1);
+    layers.push_back(layer);
+    ids.push_back(l.layer_image_id);
+  }
+
+  heif_item_id group_id = m_heif_file->get_unused_item_id();
+
+  pymd->set_group_id(group_id);
+  pymd->set_layers(tile_size_x, tile_size_y, layers, ids);
+
+  m_heif_file->add_entity_group_box(pymd);
+
+  // add back-references to base image
+
+  for (size_t i = 0; i < ids.size() - 1; i++) {
+    m_heif_file->add_iref_reference(ids[i], fourcc("base"), {ids.back()});
+  }
+
+  return {group_id};
 }

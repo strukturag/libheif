@@ -47,6 +47,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#include <unistd.h> // TODO: Windows
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -693,6 +694,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
   }
 
   box->set_short_header(hdr);
+
+  box->m_debug_box_type = hdr.get_type_string(); // only for debugging
+
 
   if (range.get_nesting_level() > MAX_BOX_NESTING_LEVEL) {
     return Error(heif_error_Memory_allocation_error,
@@ -1368,6 +1372,32 @@ Error Box_iloc::parse(BitstreamRange& range)
 }
 
 
+Box_iloc::Box_iloc()
+{
+  set_short_type(fourcc("iloc"));
+
+  set_use_tmp_file(true);
+}
+
+
+Box_iloc::~Box_iloc()
+{
+  if (m_use_tmpfile) {
+    unlink(m_tmp_filename);
+  }
+}
+
+
+void Box_iloc::set_use_tmp_file(bool flag)
+{
+  m_use_tmpfile = flag;
+  if (flag) {
+    strcpy(m_tmp_filename, "/tmp/libheif-XXXXXX");
+    m_tmpfile_fd = mkstemp(m_tmp_filename);
+  }
+}
+
+
 std::string Box_iloc::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -1520,7 +1550,26 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   }
 
   Extent extent;
-  extent.data = data;
+  extent.length = data.size();
+
+  if (m_use_tmpfile && construction_method==0) {
+    ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
+    if (cnt < 0) {
+      std::stringstream sstr;
+      sstr << "Could not write to tmp file: error " << errno;
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              sstr.str()};
+    }
+    else if ((size_t)cnt != data.size()) {
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              "Could not write to tmp file (storage full?)"};
+    }
+  }
+  else {
+    extent.data = data;
+  }
 
   if (construction_method == 1) {
     extent.offset = m_idat_offset;
@@ -1548,6 +1597,8 @@ void Box_iloc::derive_box_version()
   m_base_offset_size = 0;
   m_index_size = 0;
 
+  uint64_t total_data_size = 0;
+
   for (const auto& item : m_items) {
     // check item_ID size
     if (item.item_ID > 0xFFFF) {
@@ -1559,15 +1610,17 @@ void Box_iloc::derive_box_version()
       min_version = std::max(min_version, 1);
     }
 
+    total_data_size += item.extents[0].length;
+
+    /* cannot compute this here because values are not set yet
     // base offset size
-    /*
     if (item.base_offset > 0xFFFFFFFF) {
-      m_base_offset_size = 8;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)8);
     }
     else if (item.base_offset > 0) {
-      m_base_offset_size = 4;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)4);
     }
-    */
+*/
 
     /*
     for (const auto& extent : item.extents) {
@@ -1601,9 +1654,17 @@ void Box_iloc::derive_box_version()
       */
   }
 
+  uint64_t maximum_meta_box_size_guess = 0x10000000; // 256 MB
+  if (total_data_size + maximum_meta_box_size_guess > 0xFFFFFFFF) {
+    m_base_offset_size = 8;
+  }
+  else {
+    m_base_offset_size = 4;
+  }
+
   m_offset_size = 4;
   m_length_size = 4;
-  m_base_offset_size = 4; // TODO: or could be 8 if we write >4GB files
+  //m_base_offset_size = 4; // set above
   m_index_size = 0;
 
   set_version((uint8_t) min_version);
@@ -1681,20 +1742,28 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
   for (const auto& item : m_items) {
     if (item.construction_method == 0) {
       for (const auto& extent : item.extents) {
-        sum_mdat_size += extent.data.size();
+        sum_mdat_size += extent.length;
       }
     }
   }
 
-  if (sum_mdat_size > 0xFFFFFFFF) {
-    // TODO: box size > 4 GB
-  }
-
-
   // --- write mdat box
 
-  writer.write32((uint32_t) (sum_mdat_size + 8));
-  writer.write32(fourcc("mdat"));
+  if (sum_mdat_size <= 0xFFFFFFFF) {
+    writer.write32((uint32_t) (sum_mdat_size + 8));
+    writer.write32(fourcc("mdat"));
+  }
+  else {
+    // box size > 4 GB
+
+    writer.write32(1);
+    writer.write32(fourcc("mdat"));
+    writer.write64(sum_mdat_size+8+8);
+  }
+
+  if (m_use_tmpfile) {
+    ::lseek(m_tmpfile_fd, 0, SEEK_SET);
+  }
 
   for (auto& item : m_items) {
     if (item.construction_method == 0) {
@@ -1702,9 +1771,28 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 
       for (auto& extent : item.extents) {
         extent.offset = writer.get_position() - item.base_offset;
-        extent.length = extent.data.size();
+        //extent.length = extent.data.size();
 
-        writer.write(extent.data);
+        if (m_use_tmpfile) {
+          std::vector<uint8_t> data(extent.length);
+          ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
+          if (cnt<0) {
+            std::stringstream sstr;
+            sstr << "Cannot read tmp data file, error " << errno;
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    sstr.str()};
+          }
+          else if ((uint64_t)cnt != extent.length) {
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    "Tmp data could not be read completely"};
+          }
+          writer.write(data);
+        }
+        else {
+          writer.write(extent.data);
+        }
       }
     }
   }
@@ -1746,7 +1834,12 @@ void Box_iloc::patch_iloc_header(StreamWriter& writer) const
     }
 
     writer.write16(item.data_reference_index);
-    writer.write(m_base_offset_size, item.base_offset);
+    if (m_base_offset_size > 0) {
+      writer.write(m_base_offset_size, item.base_offset);
+    }
+    else {
+      assert(item.base_offset == 0);
+    }
     writer.write16((uint16_t) item.extents.size());
 
     for (const auto& extent : item.extents) {
@@ -3128,6 +3221,8 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   ref.from_item_ID = from_id;
   ref.to_item_ID = to_ids;
 
+  assert(to_ids.size() <= 0xFFFF);
+
   m_references.push_back(ref);
 }
 
@@ -3263,6 +3358,30 @@ Error Box_EntityToGroup::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_EntityToGroup::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  write_entity_group_ids(writer);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+void Box_EntityToGroup::write_entity_group_ids(StreamWriter& writer) const
+{
+  writer.write32(group_id);
+  writer.write32(entity_ids.size());
+
+  for (uint32_t id : entity_ids) {
+    writer.write32(id);
+  }
+}
+
+
 std::string Box_EntityToGroup::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3342,6 +3461,30 @@ Error Box_pymd::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_pymd::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  Box_EntityToGroup::write_entity_group_ids(writer);
+
+  writer.write16(tile_size_x);
+  writer.write16(tile_size_y);
+
+  for (size_t i = 0; i < entity_ids.size(); i++) {
+    const LayerInfo& layer = m_layer_infos[i];
+
+    writer.write16(layer.layer_binning);
+    writer.write16(layer.tiles_in_layer_row_minus1);
+    writer.write16(layer.tiles_in_layer_column_minus1);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_pymd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3360,7 +3503,6 @@ std::string Box_pymd::dump(Indent& indent) const
 
   return sstr.str();
 }
-
 
 
 Error Box_dinf::parse(BitstreamRange& range)

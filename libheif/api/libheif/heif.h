@@ -21,6 +21,11 @@
 #ifndef LIBHEIF_HEIF_H
 #define LIBHEIF_HEIF_H
 
+#include <sys/time.h>
+
+inline long timediff(const struct timeval tv_start, const struct timeval tv_end)
+{ return ((tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec)/1); }
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,6 +57,8 @@ extern "C" {
 //  1.14           3            5             1             1            1            1
 //  1.15           4            5             1             1            1            1
 //  1.16           5            6             1             1            1            1
+//  1.18           5            7             1             1            1            1
+//  1.19           5            7             2             1            1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -916,10 +923,24 @@ struct heif_reading_options;
 
 enum heif_reader_grow_status
 {
-  heif_reader_grow_status_size_reached,   // requested size has been reached, we can read until this point
-  heif_reader_grow_status_timeout,        // size has not been reached yet, but it may still grow further
-  heif_reader_grow_status_size_beyond_eof // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_size_reached,    // requested size has been reached, we can read until this point
+  heif_reader_grow_status_timeout,         // size has not been reached yet, but it may still grow further
+  heif_reader_grow_status_size_beyond_eof, // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_error            // an error has occurred
 };
+
+struct heif_reader_range_request_result
+{
+  enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
+
+  // for status == 'heif_reader_grow_status_size_beyond_eof'
+  int64_t range_end;            // if not the whole file range could be read, this is the end position
+
+  // for status == 'heif_reader_grow_status_error'
+  int reader_error_code;        // a reader specific error code (0 for success)
+  const char* reader_error_msg; // string memory will be released by libheif with 'free()' (may be NULL)
+};
+
 
 struct heif_reader
 {
@@ -929,7 +950,7 @@ struct heif_reader
   // --- version 1 functions ---
   int64_t (* get_position)(void* userdata);
 
-  // The functions read(), and seek() return heif_error_ok on success.
+  // The functions read(), and seek() return 0 on success.
   // Generally, libheif will make sure that we do not read past the file size.
   int (* read)(void* data,
                size_t size,
@@ -947,6 +968,29 @@ struct heif_reader
   // detection whether the target_size is above the (fixed) file length
   // (in this case, return 'size_beyond_eof').
   enum heif_reader_grow_status (* wait_for_file_size)(int64_t target_size, void* userdata);
+
+  // --- version 2 functions ---
+
+  // These two functions are for applications that want to stream HEIF files on demand.
+  // For example, a large HEIF file that is served over HTTPS and we only want to download
+  // it partially to decode individual tiles.
+  // If you do not have this use case, you do not have to implement these functions and
+  // you can set them to NULL. For simple linear loading, you may use the 'wait_for_file_size'
+  // function above instead.
+
+  // If this function is defined, libheif will request a file range before accessing it.
+  // `end_pos` is one byte after the last position to be read.
+  // You should return
+  // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
+  // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
+  //   (the valid part of the range has been read).
+  struct heif_reader_range_request_result (*request_file_range)(int64_t start_pos, int64_t end_pos, void* userdata);
+
+  // If libheif does not need access to a file range anymore, it may call this function to
+  // give a hint to the reader that it may release the range from a cache.
+  // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
+  // need to implement this function.
+  void (*release_file_range)(int64_t start_pos, int64_t end_pos, void* userdata);
 };
 
 
@@ -1098,6 +1142,54 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
 LIBHEIF_API
 struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle);
 
+
+struct heif_image_tiling
+{
+  uint32_t num_columns;
+  uint32_t num_rows;
+  uint32_t tile_width;
+  uint32_t tile_height;
+};
+
+// If the image is not tiled, all entries of he returned struct will be zero.
+// TODO: how do we handle width/height when there are image rotations?
+LIBHEIF_API
+struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle);
+
+// TODO: we may also need the valid area of the tile because it may be partly cut off at the image border
+LIBHEIF_API
+heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
+
+
+struct heif_decoding_options;
+
+LIBHEIF_API
+struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
+                                         struct heif_image** out_img,
+                                         enum heif_colorspace colorspace,
+                                         enum heif_chroma chroma,
+                                         const struct heif_decoding_options* options,
+                                         uint64_t x0, uint64_t y0, uint64_t z0);
+
+LIBHEIF_API
+struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* in_handle,
+                                                  uint32_t* tile_width, uint32_t* tile_height);
+
+
+struct heif_pyramid_layer_info {
+  heif_item_id layer_image_id;
+  uint16_t layer_binning;
+  uint32_t tiles_in_layer_row;
+  uint32_t tiles_in_layer_column;
+};
+
+LIBHEIF_API
+struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
+                                                        uint32_t tile_width,
+                                                        uint32_t tile_height,
+                                                        uint32_t num_layers,
+                                                        const struct heif_pyramid_layer_info* layers,
+                                                        heif_item_id* out_group_id);
 
 // ------------------------- depth images -------------------------
 
@@ -2146,6 +2238,62 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
                                            struct heif_encoder* encoder,
                                            const struct heif_encoding_options* input_options,
                                            struct heif_image_handle** out_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
+                                           uint32_t image_width,
+                                           uint32_t image_height,
+                                           uint32_t tile_columns,
+                                           uint32_t tile_rows,
+                                           const heif_item_id* image_ids,
+                                           struct heif_image_handle** out_grid_image_handle);
+
+struct heif_tild_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint64_t image_width;
+  uint64_t image_height;
+  uint64_t image_depth;  // 3D volume stack depth, set to 1 for 2D images
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  uint32_t compression_type_fourcc;
+
+  uint8_t offset_field_length; // one of: 32, 40, 48, 64
+  uint8_t size_field_length;   // 24 or 32
+
+  // boolean flags
+  uint8_t tiles_are_sequential;
+  uint8_t with_tile_sizes;
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
+                                              const struct heif_tild_image_parameters* parameters,
+                                              const struct heif_encoding_options* options, // TODO: do we need this?
+                                              struct heif_image_handle** out_grid_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
+                                                   const struct heif_image* image,
+                                                   struct heif_encoder* encoder);
+
+
+// offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
+// If background_rgba is NULL, the background is transparent.
+LIBHEIF_API
+struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
+                                                 uint32_t image_width,
+                                                 uint32_t image_height,
+                                                 uint16_t nImages,
+                                                 const heif_item_id* image_ids,
+                                                 int32_t* offsets,
+                                                 const uint16_t background_rgba[4],
+                                                 struct heif_image_handle** out_iovl_image_handle);
 
 LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,

@@ -27,6 +27,7 @@
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
 #include "codecs/uncompressed_box.h"
+#include "file_layout.h"
 
 #include <map>
 #include <memory>
@@ -202,6 +203,8 @@ public:
   void add_iref_reference(heif_item_id from, uint32_t type,
                           const std::vector<heif_item_id>& to);
 
+  void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
+
   void set_auxC_property(heif_item_id id, const std::string& type);
 
   void set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile>& profile);
@@ -218,6 +221,8 @@ private:
   mutable std::mutex m_read_mutex;
 #endif
 
+  std::shared_ptr<FileLayout> m_file_layout;
+
   std::shared_ptr<StreamReader> m_input_stream;
 
   std::vector<std::shared_ptr<Box> > m_top_level_boxes;
@@ -233,6 +238,7 @@ private:
   std::shared_ptr<Box_iref> m_iref_box;
   std::shared_ptr<Box_pitm> m_pitm_box;
   std::shared_ptr<Box_iinf> m_iinf_box;
+  std::shared_ptr<Box_grpl> m_grpl_box;
 
   std::shared_ptr<Box_iprp> m_iprp_box;
 
@@ -242,7 +248,7 @@ private:
   //std::vector<heif_item_id> m_valid_image_IDs;
 
 
-  Error parse_heif_file(BitstreamRange& bitstream);
+  Error parse_heif_file();
 
   Error check_for_ref_cycle(heif_item_id ID,
                             const std::shared_ptr<Box_iref>& iref_box) const;

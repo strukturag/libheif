@@ -224,14 +224,14 @@ int main(int argc, char** argv)
   struct heif_error err;
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
-  if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
-    return 0;
-  }
-
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
+  }
+
+  if (dump_boxes) {
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+    return 0;
   }
 
 
@@ -259,6 +259,10 @@ int main(int argc, char** argv)
 
     printf("image: %dx%d (id=%d)%s\n", width, height, IDs[i], primary ? ", primary" : "");
 
+    heif_image_tiling tiling = heif_image_handle_get_image_tiling(handle);
+    if (tiling.num_columns > 0) {
+      printf("  tiles: %dx%d, tile size: %dx%d\n", tiling.num_columns, tiling.num_rows, tiling.tile_width, tiling.tile_height);
+    }
 
     heif_colorspace colorspace;
     heif_chroma chroma;

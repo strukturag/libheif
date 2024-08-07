@@ -55,7 +55,10 @@
 #define STRICT_PARSING false
 
 
-HeifFile::HeifFile() = default;
+HeifFile::HeifFile()
+{
+  m_file_layout = std::make_shared<FileLayout>();
+}
 
 HeifFile::~HeifFile() = default;
 
@@ -123,17 +126,20 @@ Error HeifFile::read(const std::shared_ptr<StreamReader>& reader)
 {
   m_input_stream = reader;
 
-  uint64_t maxSize = std::numeric_limits<int64_t>::max();
-  BitstreamRange range(m_input_stream, maxSize);
+  Error err;
+  err = m_file_layout->read(reader);
+  if (err) {
+    return err;
+  }
 
-  Error error = parse_heif_file(range);
+  Error error = parse_heif_file();
   return error;
 }
 
 
 void HeifFile::new_empty_file()
 {
-  m_input_stream.reset();
+  //m_input_stream.reset();
   m_top_level_boxes.clear();
 
   m_ftyp_box = std::make_shared<Box_ftyp>();
@@ -268,10 +274,11 @@ std::string HeifFile::debug_dump_boxes() const
 }
 
 
-Error HeifFile::parse_heif_file(BitstreamRange& range)
+Error HeifFile::parse_heif_file()
 {
   // --- read all top-level boxes
 
+#if 0
   for (;;) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
@@ -304,7 +311,14 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
       m_ftyp_box = std::dynamic_pointer_cast<Box_ftyp>(box);
     }
   }
+#endif
 
+  m_ftyp_box = m_file_layout->get_ftyp_box();
+  m_meta_box = m_file_layout->get_meta_box();
+
+  m_top_level_boxes.push_back(m_ftyp_box);
+  m_top_level_boxes.push_back(m_meta_box);
+  // TODO: we are missing 'mdat' top level boxes
 
 
   // --- check whether this is a HEIF file and its structural format
@@ -399,6 +413,7 @@ Error HeifFile::parse_heif_file(BitstreamRange& range)
                  heif_suberror_No_iinf_box);
   }
 
+  m_grpl_box = std::dynamic_pointer_cast<Box_grpl>(m_meta_box->get_child_box(fourcc("grpl")));
 
 
   // --- build list of images
@@ -773,7 +788,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   // --- get coded image data pointers
 
-  auto items = m_iloc_box->get_items();
+  const auto& items = m_iloc_box->get_items();
   const Box_iloc::Item* item = nullptr;
   for (const auto& i : items) {
     if (i.item_ID == ID) {
@@ -1304,25 +1319,17 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 
 heif_item_id HeifFile::get_unused_item_id() const
 {
-  for (heif_item_id id = 1;;
-       id++) {
+  heif_item_id max_id = 0;
 
-    bool id_exists = false;
+  // TODO: replace with better algorithm and data-structure
 
-    for (const auto& infe : m_infe_boxes) {
-      if (infe.second->get_item_ID() == id) {
-        id_exists = true;
-        break;
-      }
-    }
-
-    if (!id_exists) {
-      return id;
-    }
+  for (const auto& infe : m_infe_boxes) {
+    max_id = std::max(max_id, infe.second->get_item_ID());
   }
 
-  assert(false); // should never be reached
-  return 0;
+  assert(max_id != 0xFFFFFFFF);
+
+  return max_id + 1;
 }
 
 
@@ -1800,6 +1807,18 @@ void HeifFile::add_iref_reference(heif_item_id from, uint32_t type,
 
   m_iref_box->add_references(from, type, to);
 }
+
+
+void HeifFile::add_entity_group_box(const std::shared_ptr<Box>& entity_group_box)
+{
+  if (!m_grpl_box) {
+    m_grpl_box = std::make_shared<Box_grpl>();
+    m_meta_box->append_child_box(m_grpl_box);
+  }
+
+  m_grpl_box->append_child_box(entity_group_box);
+}
+
 
 void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
 {

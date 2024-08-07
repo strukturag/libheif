@@ -58,6 +58,104 @@ public:
 };
 
 
+class ImageGrid
+{
+public:
+  Error parse(const std::vector<uint8_t>& data);
+
+  std::vector<uint8_t> write() const;
+
+  std::string dump() const;
+
+  uint32_t get_width() const { return m_output_width; }
+
+  uint32_t get_height() const { return m_output_height; }
+
+  uint16_t get_rows() const
+  {
+    return m_rows;
+  }
+
+  uint16_t get_columns() const
+  {
+    return m_columns;
+  }
+
+  void set_num_tiles(uint16_t columns, uint16_t rows)
+  {
+    m_rows = rows;
+    m_columns = columns;
+  }
+
+  void set_output_size(uint32_t width, uint32_t height)
+  {
+    m_output_width = width;
+    m_output_height = height;
+  }
+
+private:
+  uint16_t m_rows = 0;
+  uint16_t m_columns = 0;
+  uint32_t m_output_width = 0;
+  uint32_t m_output_height = 0;
+};
+
+
+
+class ImageOverlay
+{
+public:
+  Error parse(size_t num_images, const std::vector<uint8_t>& data);
+
+  std::vector<uint8_t> write() const;
+
+  std::string dump() const;
+
+  void get_background_color(uint16_t col[4]) const;
+
+  uint32_t get_canvas_width() const { return m_width; }
+
+  uint32_t get_canvas_height() const { return m_height; }
+
+  size_t get_num_offsets() const { return m_offsets.size(); }
+
+  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
+
+  void set_background_color(const uint16_t rgba_color[4]) {
+    for (int i=0;i<4;i++) {
+      m_background_color[i] = rgba_color[i];
+    }
+  }
+
+  void set_canvas_size(uint32_t width, uint32_t height) { m_width = width; m_height = height; }
+
+  void add_image_on_top(heif_item_id image_id, int32_t offset_x, int32_t offset_y) {
+    m_offsets.emplace_back(ImageWithOffset{image_id, offset_x, offset_y});
+  }
+
+  struct ImageWithOffset
+  {
+    heif_item_id image_id;
+    int32_t x, y;
+  };
+
+  const std::vector<ImageWithOffset>& get_overlay_stack() const { return m_offsets; }
+
+private:
+  uint8_t m_version = 0;
+  uint8_t m_flags = 0;
+  uint16_t m_background_color[4] { 0,0,0,0 };
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
+
+  std::vector<ImageWithOffset> m_offsets;
+};
+
+
+
+
+
+
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
 // The class also handles automatic color-space conversion.
@@ -305,6 +403,14 @@ public:
 
     const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
 
+    Error read_grid_spec();
+
+    bool is_grid() const { return m_is_grid; }
+
+    const ImageGrid& get_grid_spec() const { return m_grid_spec; }
+
+    const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
+
   private:
     HeifContext* m_heif_context;
 
@@ -344,6 +450,10 @@ public:
 
     bool m_has_extrinsic_matrix = false;
     Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
+
+    bool m_is_grid = false;
+    ImageGrid m_grid_spec;
+    std::vector<heif_item_id> m_grid_tile_ids;
   };
 
   Error check_resolution(uint32_t width, uint32_t height) const;
@@ -423,6 +533,16 @@ public:
                     const struct heif_encoding_options& options,
                     std::shared_ptr<Image>& out_image);
 
+  Error add_grid_item(const std::vector<heif_item_id>& tile_ids,
+                      uint32_t output_width,
+                      uint32_t output_height,
+                      uint16_t tile_rows,
+                      uint16_t tile_columns,
+                      std::shared_ptr<Image>& out_grid_image);
+
+  Error add_iovl_item(const ImageOverlay& overlayspec,
+                      std::shared_ptr<Image>& out_iovl_image);
+
   Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
@@ -493,6 +613,9 @@ public:
 
   heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);
 
+  Result<heif_item_id> add_pyramid_group(uint16_t tile_size_x, uint16_t tile_size_y,
+                                         std::vector<heif_pyramid_layer_info> layers);
+
   // --- region items
 
   void add_region_item(std::shared_ptr<RegionItem> region_item)
@@ -540,7 +663,6 @@ private:
 
   Error decode_full_grid_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img,
-                               const std::vector<uint8_t>& grid_data,
                                const heif_decoding_options& options) const;
 
   Error decode_and_paste_tile_image(heif_item_id tileID,

@@ -22,6 +22,8 @@ set(libheif_sources
         context.h
         file.cc
         file.h
+        file_layout.h
+        file_layout.cc
         pixelimage.cc
         pixelimage.h
         plugin_registry.cc
