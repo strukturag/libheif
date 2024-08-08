@@ -152,7 +152,42 @@ private:
 };
 
 
+#define TILD_OFFSET_NOT_AVAILABLE 0
+#define TILD_OFFSET_SEE_LOWER_RESOLUTION_LAYER 1
+#define TILD_OFFSET_NOT_LOADED 10
 
+class TildHeader
+{
+public:
+  void set_parameters(const heif_tild_image_parameters& params);
+
+  Error parse(size_t num_images, const std::vector<uint8_t>& data);
+
+  std::vector<uint8_t> write() const;
+
+  std::string dump() const;
+
+  uint32_t number_of_tiles() const;
+
+private:
+  /*
+   * Flags:
+   * bit 0   - dimensions 64 bit
+   * bit 1-2 - number of bits for offsets
+   * bit 3   - with tile sizes
+   * bit 4   - number of bits for size
+   * bit 5   - sequential ordering hint
+   * bit 6   - multidimensional (> 2D)
+   */
+  heif_tild_image_parameters m_parameters;
+
+  struct TileOffset {
+    uint64_t offset = TILD_OFFSET_NOT_LOADED;
+    uint32_t size = 0;
+  };
+
+  std::vector<TileOffset> m_offsets;
+};
 
 
 
@@ -542,6 +577,12 @@ public:
 
   Error add_iovl_item(const ImageOverlay& overlayspec,
                       std::shared_ptr<Image>& out_iovl_image);
+
+  Result<std::shared_ptr<Image>> add_tild_item(const heif_tild_image_parameters* parameters);
+
+  Error add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
+                            const std::shared_ptr<HeifPixelImage>& image,
+                            struct heif_encoder* encoder);
 
   Error encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,

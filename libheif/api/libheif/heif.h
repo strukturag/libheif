@@ -2260,10 +2260,11 @@ struct heif_tild_image_parameters {
   uint32_t tile_width;
   uint32_t tile_height;
 
-  uint32_t compression_type_fourcc;
+  uint32_t compression_type_fourcc;  // TODO: can this be set automatically ?
 
-  uint8_t offset_field_length; // one of: 32, 40, 48, 64
-  uint8_t size_field_length;   // 24 or 32
+  uint8_t offset_field_length;  // one of: 32, 40, 48, 64
+  uint8_t size_field_length;    // 24 or 32
+  uint8_t number_of_dimensions; // 2 for normal images, 3 for volumetric, ...
 
   // boolean flags
   uint8_t tiles_are_sequential;
@@ -2275,10 +2276,12 @@ LIBHEIF_API
 struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
                                               const struct heif_tild_image_parameters* parameters,
                                               const struct heif_encoding_options* options, // TODO: do we need this?
-                                              struct heif_image_handle** out_grid_image_handle);
+                                              struct heif_image_handle** out_tild_image_handle);
 
 LIBHEIF_API
 struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
+                                                   struct heif_image_handle* tild_image,
+                                                   uint32_t tile_x, uint32_t tile_y,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder);
 

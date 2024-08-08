@@ -123,16 +123,8 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
   return val;
 }
 
-static void writevec(uint8_t* data, size_t& idx, uint32_t value, int len)
-{
-  for (int i=0;i<len;i++) {
-    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
-  }
 
-  idx += len;
-}
-
-static void writevec(uint8_t* data, size_t& idx, int32_t value, int len)
+template<typename I> void writevec(uint8_t* data, size_t& idx, I value, int len)
 {
   for (int i=0;i<len;i++) {
     data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
@@ -384,6 +376,190 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
 
   *x = m_offsets[image_index].x;
   *y = m_offsets[image_index].y;
+}
+
+
+
+void TildHeader::set_parameters(const heif_tild_image_parameters& params)
+{
+  m_parameters = params;
+
+  m_offsets.resize(number_of_tiles());
+
+  for (auto& tile : m_offsets) {
+    tile.offset = TILD_OFFSET_NOT_AVAILABLE;
+  }
+}
+
+
+Error TildHeader::parse(size_t num_images, const std::vector<uint8_t>& data)
+{
+  Error eofError(heif_error_Invalid_input,
+                 heif_suberror_Invalid_overlay_data,
+                 "Tild header data incomplete");
+
+  if (data.size() < 2 + 4 * 2) {
+    return eofError;
+  }
+#if 0
+  m_version = data[0];
+  if (m_version != 0) {
+    std::stringstream sstr;
+    sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
+
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            sstr.str()};
+  }
+
+  m_flags = data[1];
+
+  int field_len = ((m_flags & 1) ? 4 : 2);
+  int ptr = 2;
+
+  if (ptr + 4 * 2 + 2 * field_len + num_images * 2 * field_len > data.size()) {
+    return eofError;
+  }
+
+  for (int i = 0; i < 4; i++) {
+    uint16_t color = static_cast<uint16_t>(readvec(data, ptr, 2));
+    m_background_color[i] = color;
+  }
+
+  m_width = readvec(data, ptr, field_len);
+  m_height = readvec(data, ptr, field_len);
+
+  if (m_width==0 || m_height==0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_overlay_data,
+            "Overlay image with zero width or height."};
+  }
+
+  m_offsets.resize(num_images);
+
+  for (size_t i = 0; i < num_images; i++) {
+    m_offsets[i].x = readvec_signed(data, ptr, field_len);
+    m_offsets[i].y = readvec_signed(data, ptr, field_len);
+  }
+#endif
+
+  return Error::Ok;
+}
+
+
+uint32_t TildHeader::number_of_tiles() const
+{
+  int nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
+  int nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
+  int nTiles = nTiles_h * nTiles_v;
+
+  return nTiles;
+}
+
+
+std::vector<uint8_t> TildHeader::write() const
+{
+  assert(m_parameters.version == 1);
+
+  uint8_t flags = 0;
+  bool dimensions_are_64bit = false;
+
+  if (m_parameters.image_width > 0xFFFF || m_parameters.image_height > 0xFFFF) {
+    flags |= 0x01;
+    dimensions_are_64bit = true;
+  }
+
+  switch (m_parameters.offset_field_length) {
+    case 32:
+      flags |= 0;
+      break;
+    case 40:
+      flags |= 0x02;
+      break;
+    case 48:
+      flags |= 0x04;
+      break;
+    case 64:
+      flags |= 0x06;
+      break;
+    default:
+      assert(false);
+  }
+
+  if (m_parameters.with_tile_sizes) {
+    flags |= 0x08;
+
+    if (m_parameters.size_field_length == 64) {
+      flags |= 0x10;
+    }
+  }
+
+  if (m_parameters.tiles_are_sequential) {
+    flags |= 0x20;
+  }
+
+  if (m_parameters.number_of_dimensions > 2) {
+    flags |= 0x40;
+  }
+
+  uint32_t nTiles = number_of_tiles();
+
+  std::vector<uint8_t> data;
+  uint32_t size = (2 +  // version, flags
+                   (dimensions_are_64bit ? 8 : 4) * 2 + // image size
+                   2 * 4 + // tile size
+                   4 + // compression type
+                   nTiles * (m_parameters.offset_field_length / 8)); // offsets
+
+  if (m_parameters.with_tile_sizes) {
+    size += nTiles * (m_parameters.size_field_length / 8);
+  }
+
+  data.resize(size);
+  size_t idx=0;
+  data[idx++] = 1; // version
+  data[idx++] = flags;
+
+  writevec(data.data(), idx, m_parameters.image_width, dimensions_are_64bit ? 8 : 4);
+  writevec(data.data(), idx, m_parameters.image_height, dimensions_are_64bit ? 8 : 4);
+
+  writevec(data.data(), idx, m_parameters.tile_width, 4);
+  writevec(data.data(), idx, m_parameters.tile_height, 4);
+
+  writevec(data.data(), idx, m_parameters.compression_type_fourcc, 4);
+
+  for (const auto& offset : m_offsets) {
+    writevec(data.data(), idx, offset.offset, m_parameters.offset_field_length / 8);
+
+    if (m_parameters.with_tile_sizes) {
+      writevec(data.data(), idx, offset.size, m_parameters.size_field_length / 8);
+    }
+  }
+
+  printf("idx %zu   size %zu\n",idx,data.size());
+
+  assert(idx == data.size());
+
+  return data;
+}
+
+
+std::string TildHeader::dump() const
+{
+  std::stringstream sstr;
+
+  sstr << "version: " << ((int) m_parameters.version) << "\n"
+       << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
+       << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
+       << "offsets: ";
+
+  // TODO
+
+  for (const auto& offset : m_offsets) {
+    sstr << offset.offset << ", size: " << offset.size << "\n";
+  }
+
+  return sstr.str();
 }
 
 
@@ -2617,6 +2793,52 @@ Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
 
   return Error::Ok;
 }
+
+
+Result<std::shared_ptr<HeifContext::Image>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
+{
+  // Create header
+
+  TildHeader tild_header;
+  tild_header.set_parameters(*parameters);
+
+  std::vector<uint8_t> header_data = tild_header.write();
+
+  // Create 'tild' Item
+
+  heif_item_id tild_id = m_heif_file->add_new_image("tild");
+  auto tild_image = std::make_shared<Image>(this, tild_id);
+  m_all_images.insert(std::make_pair(tild_id, tild_image));
+
+  const int construction_method = 0; // 0=mdat 1=idat
+  m_heif_file->append_iloc_data(tild_id, header_data, construction_method);
+
+  // Add ISPE property
+  m_heif_file->add_ispe_property(tild_id, parameters->image_width, parameters->image_height);
+
+#if 0
+  // TODO
+
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
+  m_heif_file->add_property(grid_id, pixi, true);
+#endif
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return {tild_image};
+}
+
+
+Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
+                                       const std::shared_ptr<HeifPixelImage>& image,
+                                       struct heif_encoder* encoder)
+{
+  return Error::Ok;
+}
+
 
 /*
 static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
