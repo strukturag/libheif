@@ -220,6 +220,8 @@ public:
 
   void set_output_position(uint64_t pos) { m_output_position = pos; }
 
+  virtual bool is_essential() const { return false; } // only used for properties
+
 protected:
   virtual Error parse(BitstreamRange& range);
 
@@ -463,6 +465,11 @@ public:
                     const std::vector<uint8_t>& data,
                     uint8_t construction_method = 0);
 
+  Error replace_data(heif_item_id item_ID,
+                     uint64_t offset,
+                     const std::vector<uint8_t>& data,
+                     uint8_t construction_method);
+
   // append bitstream data that already has been written (before iloc box)
   // Error write_mdat_before_iloc(heif_image_id item_ID,
   //                              std::vector<uint8_t>& data)
@@ -651,6 +658,8 @@ public:
   Error write(StreamWriter& writer) const override;
 
   bool operator==(const Box& other) const override;
+
+  bool is_essential() const override { return true; }
 
 protected:
   Error parse(BitstreamRange& range) override;

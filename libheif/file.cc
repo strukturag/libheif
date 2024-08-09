@@ -1777,6 +1777,12 @@ void HeifFile::append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal
 }
 
 
+void HeifFile::replace_iloc_data(heif_item_id id, uint64_t offset, const std::vector<uint8_t>& data, uint8_t construction_method)
+{
+  m_iloc_box->replace_data(id, offset, data, construction_method);
+}
+
+
 void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size)
 {
   std::vector<uint8_t> nal;

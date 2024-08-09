@@ -198,6 +198,8 @@ public:
 
   void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 
+  void replace_iloc_data(heif_item_id id, uint64_t offset, const std::vector<uint8_t>& data, uint8_t construction_method = 0);
+
   void set_primary_item_id(heif_item_id id);
 
   void add_iref_reference(heif_item_id from, uint32_t type,

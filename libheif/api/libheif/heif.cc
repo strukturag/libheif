@@ -3202,9 +3202,6 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
     *out_grid_image_handle = new heif_image_handle;
     (*out_grid_image_handle)->image = gridImageResult.value;
     (*out_grid_image_handle)->context = ctx->context;
-
-    printf("heif_context_add_tild_image : handle: %p\n", *out_grid_image_handle);
-    printf("heif_context_add_tild_image : HeifContext::Image : %p\n", gridImageResult.value.get());
   }
 
   return heif_error_success;
@@ -3217,8 +3214,6 @@ struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder)
 {
-  printf("heif_context_add_tild_image_tile : handle %p\n", tild_image);
-  printf("heif_context_add_tild_image_tile : HeifContext::Image : %p\n", tild_image->image.get());
   Error err = ctx->context->add_tild_image_tile(tild_image->image->get_id(), tile_x, tile_y, image->image, encoder);
   return err.error_struct(ctx->context.get());
 }

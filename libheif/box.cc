@@ -1376,7 +1376,7 @@ Box_iloc::Box_iloc()
 {
   set_short_type(fourcc("iloc"));
 
-  set_use_tmp_file(true);
+  set_use_tmp_file(false);
 }
 
 
@@ -1579,6 +1579,31 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   }
 
   m_items[idx].extents.push_back(std::move(extent));
+
+  return Error::Ok;
+}
+
+
+Error Box_iloc::replace_data(heif_item_id item_ID,
+                             uint64_t offset,
+                             const std::vector<uint8_t>& data,
+                             uint8_t construction_method)
+{
+  assert(construction_method == 0); // TODO
+  assert(offset == 0); // TODO
+
+  // check whether this item ID already exists
+
+  size_t idx;
+  for (idx = 0; idx < m_items.size(); idx++) {
+    if (m_items[idx].item_ID == item_ID) {
+      break;
+    }
+  }
+
+  assert(idx != m_items.size());
+  assert(m_items[idx].extents[0].data.size() <= data.size()); // TODO
+  memcpy(m_items[idx].extents[0].data.data(), data.data(), data.size());
 
   return Error::Ok;
 }

@@ -163,11 +163,21 @@ public:
 
   Error parse(size_t num_images, const std::vector<uint8_t>& data);
 
-  std::vector<uint8_t> write() const;
+  std::vector<uint8_t> write();
 
   std::string dump() const;
 
   uint32_t number_of_tiles() const;
+
+  uint32_t nTiles_h() const;
+
+  void set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size);
+
+  size_t get_header_size() const;
+
+  uint64_t get_tile_offset(uint32_t idx) { return m_offsets[idx].offset; }
+
+  uint32_t get_tile_size(uint32_t idx) { return m_offsets[idx].size; }
 
 private:
   /*
@@ -187,6 +197,8 @@ private:
   };
 
   std::vector<TileOffset> m_offsets;
+
+  size_t m_header_size = 0;
 };
 
 
@@ -269,6 +281,7 @@ public:
       m_height = h;
     }
 
+    void process_before_write();
 
     // -- thumbnails
 
@@ -446,6 +459,17 @@ public:
 
     const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
 
+
+    // --- tild
+
+    void set_tild_header(const TildHeader& header) { m_tild_header = header; m_is_tild = true; }
+
+    TildHeader& get_tild_header() { return m_tild_header; }
+
+    uint64_t get_next_tild_position() { return m_next_tild_position; }
+
+    void set_next_tild_position(uint64_t pos) { m_next_tild_position = pos; }
+
   private:
     HeifContext* m_heif_context;
 
@@ -489,6 +513,10 @@ public:
     bool m_is_grid = false;
     ImageGrid m_grid_spec;
     std::vector<heif_item_id> m_grid_tile_ids;
+
+    bool m_is_tild = false;
+    TildHeader m_tild_header;
+    uint64_t m_next_tild_position = 0;
   };
 
   Error check_resolution(uint32_t width, uint32_t height) const;
@@ -607,6 +635,16 @@ public:
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
                              std::shared_ptr<Image>& out_image);
+
+  struct CodedImageData {
+    std::vector<std::shared_ptr<Box>> properties;
+    std::vector<uint8_t> bitstream;
+  };
+
+  Result<CodedImageData> encode_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
+                             struct heif_encoder* encoder,
+                             const struct heif_encoding_options& options,
+                             enum heif_image_input_class input_class);
 
   Error encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
                                  struct heif_encoder* encoder,
