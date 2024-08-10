@@ -48,7 +48,7 @@ public:
                                          const std::shared_ptr<HeifPixelImage>& src_image,
                                          void* encoder_struct,
                                          const struct heif_encoding_options& options,
-                                         std::shared_ptr<Image>& out_image);
+                                         std::shared_ptr<ImageItem>& out_image);
 
   static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC,
                                             std::shared_ptr<Box_cmpd>& cmpd,

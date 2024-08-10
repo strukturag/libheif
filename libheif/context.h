@@ -46,7 +46,7 @@ class HeifPixelImage;
 
 class StreamWriter;
 
-class Image;
+class ImageItem;
 class ImageOverlay;
 
 
@@ -80,16 +80,16 @@ public:
 
   std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
-  std::vector<std::shared_ptr<Image>> get_top_level_images() { return m_top_level_images; }
+  std::vector<std::shared_ptr<ImageItem>> get_top_level_images() { return m_top_level_images; }
 
-  std::shared_ptr<Image> get_top_level_image(heif_item_id id);
+  std::shared_ptr<ImageItem> get_top_level_image(heif_item_id id);
 
-  std::shared_ptr<const Image> get_top_level_image(heif_item_id id) const
+  std::shared_ptr<const ImageItem> get_top_level_image(heif_item_id id) const
   {
     return const_cast<HeifContext*>(this)->get_top_level_image(id);
   }
 
-  std::shared_ptr<Image> get_image(heif_item_id id)
+  std::shared_ptr<ImageItem> get_image(heif_item_id id)
   {
     auto iter = m_all_images.find(id);
     if (iter == m_all_images.end()) {
@@ -100,12 +100,12 @@ public:
     }
   }
 
-  std::shared_ptr<const Image> get_image(heif_item_id id) const
+  std::shared_ptr<const ImageItem> get_image(heif_item_id id) const
   {
     return const_cast<HeifContext*>(this)->get_image(id);
   }
 
-  std::shared_ptr<Image> get_primary_image() { return m_primary_image; }
+  std::shared_ptr<ImageItem> get_primary_image() { return m_primary_image; }
 
   bool is_image(heif_item_id ID) const;
 
@@ -135,26 +135,26 @@ public:
                      struct heif_encoder* encoder,
                      const struct heif_encoding_options& options,
                      enum heif_image_input_class input_class,
-                     std::shared_ptr<Image>& out_image);
+                     std::shared_ptr<ImageItem>& out_image);
 
   Error encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
                     uint16_t rows,
                     uint16_t columns,
                     struct heif_encoder* encoder,
                     const struct heif_encoding_options& options,
-                    std::shared_ptr<Image>& out_image);
+                    std::shared_ptr<ImageItem>& out_image);
 
   Error add_grid_item(const std::vector<heif_item_id>& tile_ids,
                       uint32_t output_width,
                       uint32_t output_height,
                       uint16_t tile_rows,
                       uint16_t tile_columns,
-                      std::shared_ptr<Image>& out_grid_image);
+                      std::shared_ptr<ImageItem>& out_grid_image);
 
   Error add_iovl_item(const ImageOverlay& overlayspec,
-                      std::shared_ptr<Image>& out_iovl_image);
+                      std::shared_ptr<ImageItem>& out_iovl_image);
 
-  Result<std::shared_ptr<Image>> add_tild_item(const heif_tild_image_parameters* parameters);
+  Result<std::shared_ptr<ImageItem>> add_tild_item(const heif_tild_image_parameters* parameters);
 
   Error add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
                             const std::shared_ptr<HeifPixelImage>& image,
@@ -164,25 +164,25 @@ public:
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
-                             std::shared_ptr<Image>& out_image);
+                             std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
-                             std::shared_ptr<Image>& out_image);
+                             std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& image,
                             struct heif_encoder* encoder,
                             const struct heif_encoding_options& options,
                             enum heif_image_input_class input_class,
-                            std::shared_ptr<Image>& out_image);
+                            std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
-                             std::shared_ptr<Image>& out_image);
+                             std::shared_ptr<ImageItem>& out_image);
 
   struct CodedImageData {
     std::vector<std::shared_ptr<Box>> properties;
@@ -198,43 +198,43 @@ public:
                                  struct heif_encoder* encoder,
                                  const struct heif_encoding_options& options,
                                  enum heif_image_input_class input_class,
-                                 std::shared_ptr<Image>& out_image);
+                                 std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                      struct heif_encoder* encoder,
                                      const struct heif_encoding_options& options,
                                      enum heif_image_input_class input_class,
-                                     std::shared_ptr<Image>& out_image);
+                                     std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& src_image,
                              struct heif_encoder* encoder,
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
-                             std::shared_ptr<Image>& out_image);
+                             std::shared_ptr<ImageItem>& out_image);
 
   // write PIXI, CLLI, MDVC
   void write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id);
 
-  void set_primary_image(const std::shared_ptr<Image>& image);
+  void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
   Error set_primary_item(heif_item_id id);
 
   bool is_primary_image_set() const { return m_primary_image != nullptr; }
 
-  Error assign_thumbnail(const std::shared_ptr<Image>& master_image,
-                         const std::shared_ptr<Image>& thumbnail_image);
+  Error assign_thumbnail(const std::shared_ptr<ImageItem>& master_image,
+                         const std::shared_ptr<ImageItem>& thumbnail_image);
 
   Error encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
                          struct heif_encoder* encoder,
                          const struct heif_encoding_options& options,
                          int bbox_size,
-                         std::shared_ptr<Image>& out_image_handle);
+                         std::shared_ptr<ImageItem>& out_image_handle);
 
-  Error add_exif_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size);
+  Error add_exif_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size);
 
-  Error add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size, heif_metadata_compression compression);
+  Error add_XMP_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size, heif_metadata_compression compression);
 
-  Error add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
+  Error add_generic_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
                              const char* item_type, const char* content_type, const char* item_uri_type,
                              heif_metadata_compression compression, heif_item_id* out_item_id);
 
@@ -269,13 +269,13 @@ public:
   Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
 private:
-  std::map<heif_item_id, std::shared_ptr<Image>> m_all_images;
+  std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;
 
   // We store this in a vector because we need stable indices for the C API.
   // TODO: stable indices are obsolet now...
-  std::vector<std::shared_ptr<Image>> m_top_level_images;
+  std::vector<std::shared_ptr<ImageItem>> m_top_level_images;
 
-  std::shared_ptr<Image> m_primary_image; // shortcut to primary image
+  std::shared_ptr<ImageItem> m_primary_image; // shortcut to primary image
 
   std::shared_ptr<HeifFile> m_heif_file;
 
@@ -288,7 +288,7 @@ private:
 
   Error interpret_heif_file();
 
-  void remove_top_level_image(const std::shared_ptr<Image>& image);
+  void remove_top_level_image(const std::shared_ptr<ImageItem>& image);
 
   Error decode_full_grid_image(heif_item_id ID,
                                std::shared_ptr<HeifPixelImage>& img,

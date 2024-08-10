@@ -100,7 +100,7 @@ HeifContext::~HeifContext()
 {
   // Break circular references between Images (when a faulty input image has circular image references)
   for (auto& it : m_all_images) {
-    std::shared_ptr<Image> image = it.second;
+    std::shared_ptr<ImageItem> image = it.second;
     image->clear();
   }
 }
@@ -172,7 +172,7 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
 }
 
 
-std::shared_ptr<Image> HeifContext::get_top_level_image(heif_item_id id)
+std::shared_ptr<ImageItem> HeifContext::get_top_level_image(heif_item_id id)
 {
   for (auto& img : m_top_level_images) {
     if (img->get_id() == id) {
@@ -253,9 +253,9 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
 }
 
 
-void HeifContext::remove_top_level_image(const std::shared_ptr<Image>& image)
+void HeifContext::remove_top_level_image(const std::shared_ptr<ImageItem>& image)
 {
-  std::vector<std::shared_ptr<Image>> new_list;
+  std::vector<std::shared_ptr<ImageItem>> new_list;
 
   for (const auto& img : m_top_level_images) {
     if (img != image) {
@@ -286,7 +286,7 @@ Error HeifContext::interpret_heif_file()
     }
 
     if (item_type_is_image(infe_box->get_item_type(), infe_box->get_content_type())) {
-      auto image = std::make_shared<Image>(this, id);
+      auto image = std::make_shared<ImageItem>(this, id);
       m_all_images.insert(std::make_pair(id, image));
 
       if (!infe_box->is_hidden_item()) {
@@ -867,7 +867,7 @@ bool HeifContext::has_alpha(heif_item_id ID) const
         return false;
       }
 
-      const std::shared_ptr<Image> tileImg = iter->second;
+      const std::shared_ptr<ImageItem> tileImg = iter->second;
 
       has_alpha |= tileImg->get_alpha_channel() != nullptr;
     }
@@ -958,7 +958,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
-  std::shared_ptr<Image> imginfo;
+  std::shared_ptr<ImageItem> imginfo;
   if (m_all_images.find(ID) != m_all_images.end()) {
     imginfo = m_all_images.find(ID)->second;
   }
@@ -1241,7 +1241,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
   if (m_all_images.find(ID) != m_all_images.end()) {
     const auto imginfo = m_all_images.find(ID)->second;
 
-    std::shared_ptr<Image> alpha_image = imginfo->get_alpha_channel();
+    std::shared_ptr<ImageItem> alpha_image = imginfo->get_alpha_channel();
     if (alpha_image) {
       std::shared_ptr<HeifPixelImage> alpha;
       Error err = decode_image_planar(alpha_image->get_id(), alpha,
@@ -1427,7 +1427,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                    "Nonexistent grid image referenced");
     }
 
-    const std::shared_ptr<Image> tileImg = iter->second;
+    const std::shared_ptr<ImageItem> tileImg = iter->second;
     bpp = tileImg->get_luma_bits_per_pixel();
   }
 
@@ -1481,7 +1481,7 @@ Error HeifContext::decode_full_grid_image(heif_item_id ID,
                 "Nonexistent grid image referenced"};
       }
 
-      const std::shared_ptr<Image> tileImg = iter->second;
+      const std::shared_ptr<ImageItem> tileImg = iter->second;
       uint32_t src_width = tileImg->get_width();
       uint32_t src_height = tileImg->get_height();
       err = check_resolution(src_width, src_height);
@@ -1825,7 +1825,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class,
-                                std::shared_ptr<Image>& out_image)
+                                std::shared_ptr<ImageItem>& out_image)
 {
   Error error;
 
@@ -1912,7 +1912,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
                                uint16_t columns,
                                struct heif_encoder* encoder,
                                const struct heif_encoding_options& options,
-                               std::shared_ptr<Image>& out_grid_image)
+                               std::shared_ptr<ImageItem>& out_grid_image)
 {
   // Create ImageGrid
   ImageGrid grid;
@@ -1926,7 +1926,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   Error error;
   std::vector<heif_item_id> tile_ids;
   for (int i=0; i<rows*columns; i++) {
-    std::shared_ptr<Image> out_tile;
+    std::shared_ptr<ImageItem> out_tile;
     error = encode_image(tiles[i],
                          encoder,
                          options,
@@ -1939,7 +1939,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
 
   // Create Grid Item
   heif_item_id grid_id = m_heif_file->add_new_image("grid");
-  out_grid_image = std::make_shared<Image>(this, grid_id);
+  out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
@@ -1969,7 +1969,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
                                uint32_t output_height,
                                uint16_t tile_rows,
                                uint16_t tile_columns,
-                               std::shared_ptr<Image>& out_grid_image)
+                               std::shared_ptr<ImageItem>& out_grid_image)
 {
   if (tile_ids.size() > 0xFFFF) {
     return {heif_error_Usage_error,
@@ -1994,7 +1994,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   // Create Grid Item
 
   heif_item_id grid_id = m_heif_file->add_new_image("grid");
-  out_grid_image = std::make_shared<Image>(this, grid_id);
+  out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
@@ -2018,7 +2018,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
 
 
 Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
-                                 std::shared_ptr<Image>& out_iovl_image)
+                                 std::shared_ptr<ImageItem>& out_iovl_image)
 {
   if (overlayspec.get_num_offsets() > 0xFFFF) {
     return {heif_error_Usage_error,
@@ -2041,7 +2041,7 @@ Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
   // Create IOVL Item
 
   heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
-  out_iovl_image = std::make_shared<Image>(this, iovl_id);
+  out_iovl_image = std::make_shared<ImageItem>(this, iovl_id);
   m_all_images.insert(std::make_pair(iovl_id, out_iovl_image));
   const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(iovl_id, iovl_data, construction_method);
@@ -2064,7 +2064,7 @@ Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
 }
 
 
-Result<std::shared_ptr<Image>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
 {
   // Create header
 
@@ -2076,7 +2076,7 @@ Result<std::shared_ptr<Image>> HeifContext::add_tild_item(const heif_tild_image_
   // Create 'tild' Item
 
   heif_item_id tild_id = m_heif_file->add_new_image("tild");
-  auto tild_image = std::make_shared<Image>(this, tild_id);
+  auto tild_image = std::make_shared<ImageItem>(this, tild_id);
   m_all_images.insert(std::make_pair(tild_id, tild_image));
 
   const int construction_method = 0; // 0=mdat 1=idat
@@ -2310,10 +2310,10 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class,
-                                        std::shared_ptr<Image>& out_image)
+                                        std::shared_ptr<ImageItem>& out_image)
 {
   heif_item_id image_id = m_heif_file->add_new_image("hvc1");
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
 
 
   // --- check whether we have to convert the image color space
@@ -2502,7 +2502,7 @@ Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& i
 
     // --- encode the alpha image
 
-    std::shared_ptr<Image> heif_alpha_image;
+    std::shared_ptr<ImageItem> heif_alpha_image;
 
     Error error = encode_image_as_hevc(alpha_image, encoder, options,
                                        heif_image_input_class_alpha,
@@ -2531,10 +2531,10 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class,
-                                        std::shared_ptr<Image>& out_image)
+                                        std::shared_ptr<ImageItem>& out_image)
 {
   heif_item_id image_id = m_heif_file->add_new_image("vvc1");
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
 
 
   // --- check whether we have to convert the image color space
@@ -2727,7 +2727,7 @@ Error HeifContext::encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& im
 
     // --- encode the alpha image
 
-    std::shared_ptr<Image> heif_alpha_image;
+    std::shared_ptr<ImageItem> heif_alpha_image;
 
     Error error = encode_image_as_vvc(alpha_image, encoder, options,
                                        heif_image_input_class_alpha,
@@ -2756,11 +2756,11 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
                                        struct heif_encoder* encoder,
                                        const struct heif_encoding_options& options,
                                        enum heif_image_input_class input_class,
-                                       std::shared_ptr<Image>& out_image)
+                                       std::shared_ptr<ImageItem>& out_image)
 {
   heif_item_id image_id = m_heif_file->add_new_image("av01");
 
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
   m_top_level_images.push_back(out_image);
   m_all_images[image_id] = out_image;
 
@@ -2824,7 +2824,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
 
     // --- encode the alpha image
 
-    std::shared_ptr<Image> heif_alpha_image;
+    std::shared_ptr<ImageItem> heif_alpha_image;
 
 
     Error error = encode_image_as_av1(alpha_image, encoder, options,
@@ -2928,11 +2928,11 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
                                             struct heif_encoder* encoder,
                                             const struct heif_encoding_options& options,
                                             enum heif_image_input_class input_class,
-                                            std::shared_ptr<Image>& out_image) {
+                                            std::shared_ptr<ImageItem>& out_image) {
 
   heif_item_id image_id = m_heif_file->add_new_image("j2k1");
 
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
   m_top_level_images.push_back(out_image);
 
 
@@ -2988,7 +2988,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
 
     // --- encode the alpha image
 
-    std::shared_ptr<Image> heif_alpha_image;
+    std::shared_ptr<ImageItem> heif_alpha_image;
 
 
     Error error = encode_image_as_jpeg2000(alpha_image, encoder, options,
@@ -3147,7 +3147,7 @@ Result<HeifContext::CodedImageData> HeifContext::encode_as_jpeg(const std::share
 
     // --- encode the alpha image
 
-    std::shared_ptr<HeifContext::Image> heif_alpha_image;
+    std::shared_ptr<HeifContext::ImageItem> heif_alpha_image;
 
 
     Error error = encode_image_as_jpeg(alpha_image, encoder, options,
@@ -3284,11 +3284,11 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class,
-                                        std::shared_ptr<Image>& out_image)
+                                        std::shared_ptr<ImageItem>& out_image)
 {
   heif_item_id image_id = m_heif_file->add_new_image("jpeg");
 
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
   m_top_level_images.push_back(out_image);
 
   m_all_images[image_id] = out_image;
@@ -3362,7 +3362,7 @@ Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& i
 
     // --- encode the alpha image
 
-    std::shared_ptr<Image> heif_alpha_image;
+    std::shared_ptr<ImageItem> heif_alpha_image;
 
 
     Error error = encode_image_as_jpeg(alpha_image, encoder, options,
@@ -3477,11 +3477,11 @@ Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelI
                                                 struct heif_encoder* encoder,
                                                 const struct heif_encoding_options& options,
                                                 enum heif_image_input_class input_class,
-                                                std::shared_ptr<Image>& out_image)
+                                                std::shared_ptr<ImageItem>& out_image)
 {
 #if WITH_UNCOMPRESSED_CODEC
   heif_item_id image_id = m_heif_file->add_new_image("unci");
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
 
   Error err = UncompressedImageCodec::encode_uncompressed_image(m_heif_file,
                                                                 src_image,
@@ -3502,10 +3502,10 @@ Error HeifContext::encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& s
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class,
-                                        std::shared_ptr<Image>& out_image)
+                                        std::shared_ptr<ImageItem>& out_image)
 {
   heif_item_id image_id = m_heif_file->add_new_hidden_image("mski");
-  out_image = std::make_shared<Image>(this, image_id);
+  out_image = std::make_shared<ImageItem>(this, image_id);
   Error err = MaskImageCodec::encode_mask_image(m_heif_file,
                                                 src_image,
                                                 encoder->encoder,
@@ -3518,7 +3518,7 @@ Error HeifContext::encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& s
 }
 
 
-void HeifContext::set_primary_image(const std::shared_ptr<Image>& image)
+void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
 {
   // update heif context
 
@@ -3551,8 +3551,8 @@ Error HeifContext::set_primary_item(heif_item_id id)
 }
 
 
-Error HeifContext::assign_thumbnail(const std::shared_ptr<Image>& master_image,
-                                    const std::shared_ptr<Image>& thumbnail_image)
+Error HeifContext::assign_thumbnail(const std::shared_ptr<ImageItem>& master_image,
+                                    const std::shared_ptr<ImageItem>& thumbnail_image)
 {
   m_heif_file->add_iref_reference(thumbnail_image->get_id(),
                                   fourcc("thmb"), {master_image->get_id()});
@@ -3565,7 +3565,7 @@ Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image
                                     struct heif_encoder* encoder,
                                     const struct heif_encoding_options& options,
                                     int bbox_size,
-                                    std::shared_ptr<Image>& out_thumbnail_handle)
+                                    std::shared_ptr<ImageItem>& out_thumbnail_handle)
 {
   Error error;
 
@@ -3614,7 +3614,7 @@ Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image
 }
 
 
-Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size)
+Error HeifContext::add_exif_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size)
 {
   // find location of TIFF header
   uint32_t offset = 0;
@@ -3647,14 +3647,14 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<Image>& master_image,
 }
 
 
-Error HeifContext::add_XMP_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
+Error HeifContext::add_XMP_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
   return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression, nullptr);
 }
 
 
-Error HeifContext::add_generic_metadata(const std::shared_ptr<Image>& master_image, const void* data, int size,
+Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
                                         const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
                                         heif_item_id* out_item_id)
 {

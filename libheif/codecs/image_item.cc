@@ -73,14 +73,14 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 }
 
 
-Image::Image(HeifContext* context, heif_item_id id)
+ImageItem::ImageItem(HeifContext* context, heif_item_id id)
     : m_heif_context(context),
       m_id(id)
 {
   memset(&m_depth_representation_info, 0, sizeof(m_depth_representation_info));
 }
 
-Image::~Image() = default;
+ImageItem::~ImageItem() = default;
 
 bool HeifContext::is_image(heif_item_id ID) const
 {
@@ -93,7 +93,7 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
-Error Image::check_resolution(uint32_t w, uint32_t h) const
+Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
 {
   return m_heif_context->check_resolution(w, h);
 }
@@ -549,7 +549,7 @@ std::string TildHeader::dump() const
 }
 
 
-uint32_t Image::get_ispe_width() const
+uint32_t ImageItem::get_ispe_width() const
 {
   auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
   if (!ispe) {
@@ -561,7 +561,7 @@ uint32_t Image::get_ispe_width() const
 }
 
 
-uint32_t Image::get_ispe_height() const
+uint32_t ImageItem::get_ispe_height() const
 {
   auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
   if (!ispe) {
@@ -573,7 +573,7 @@ uint32_t Image::get_ispe_height() const
 }
 
 
-Error Image::get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+Error ImageItem::get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   heif_item_id id;
   Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
@@ -638,7 +638,7 @@ Error Image::get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, 
 }
 
 
-int Image::get_luma_bits_per_pixel() const
+int ImageItem::get_luma_bits_per_pixel() const
 {
   heif_item_id id;
   Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
@@ -651,7 +651,7 @@ int Image::get_luma_bits_per_pixel() const
 }
 
 
-int Image::get_chroma_bits_per_pixel() const
+int ImageItem::get_chroma_bits_per_pixel() const
 {
   heif_item_id id;
   Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
@@ -664,7 +664,7 @@ int Image::get_chroma_bits_per_pixel() const
 }
 
 
-void Image::process_before_write()
+void ImageItem::process_before_write()
 {
   if (m_is_tild) {
     // overwrite offsets
@@ -677,7 +677,7 @@ void Image::process_before_write()
 }
 
 
-Error Image::read_grid_spec()
+Error ImageItem::read_grid_spec()
 {
   m_is_grid = true;
 
@@ -722,7 +722,7 @@ Error Image::read_grid_spec()
 }
 
 
-void Image::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
+void ImageItem::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
 {
   auto hvcC = std::make_shared<Box_hvcC>();
 

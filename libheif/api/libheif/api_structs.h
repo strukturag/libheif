@@ -29,7 +29,7 @@
 
 struct heif_image_handle
 {
-  std::shared_ptr<Image> image;
+  std::shared_ptr<ImageItem> image;
 
   // store reference to keep the context alive while we are using the handle (issue #147)
   std::shared_ptr<HeifContext> context;

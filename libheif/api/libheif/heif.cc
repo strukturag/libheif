@@ -545,7 +545,7 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
     return err.error_struct(ctx->context.get());
   }
 
-  std::shared_ptr<Image> primary_image = ctx->context->get_primary_image();
+  std::shared_ptr<ImageItem> primary_image = ctx->context->get_primary_image();
 
   // It is a requirement of an HEIF file there is always a primary image.
   // If there is none, an error is generated when loading the file.
@@ -570,7 +570,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
-  std::shared_ptr<Image> primary = ctx->context->get_primary_image();
+  std::shared_ptr<ImageItem> primary = ctx->context->get_primary_image();
   if (!primary) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_or_invalid_primary_item).error_struct(ctx->context.get());
@@ -584,7 +584,7 @@ struct heif_error heif_context_get_primary_image_ID(struct heif_context* ctx, he
 
 int heif_context_is_top_level_image_ID(struct heif_context* ctx, heif_item_id id)
 {
-  const std::vector<std::shared_ptr<Image>> images = ctx->context->get_top_level_images();
+  const std::vector<std::shared_ptr<ImageItem>> images = ctx->context->get_top_level_images();
 
   for (const auto& img : images) {
     if (img->get_id() == id) {
@@ -613,7 +613,7 @@ int heif_context_get_list_of_top_level_image_IDs(struct heif_context* ctx,
 
   // fill in ID values into output array
 
-  const std::vector<std::shared_ptr<Image>> imgs = ctx->context->get_top_level_images();
+  const std::vector<std::shared_ptr<ImageItem>> imgs = ctx->context->get_top_level_images();
   int n = (int) std::min(count, (int) imgs.size());
   for (int i = 0; i < n; i++) {
     ID_array[i] = imgs[i]->get_id();
@@ -1084,7 +1084,7 @@ int heif_image_handle_get_depth_image_representation_info(const struct heif_imag
                                                           heif_item_id depth_image_id,
                                                           const struct heif_depth_representation_info** out)
 {
-  std::shared_ptr<Image> depth_image;
+  std::shared_ptr<ImageItem> depth_image;
 
   if (out) {
     if (handle->image->is_depth_channel()) {
@@ -3018,7 +3018,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     }
   }
 
-  std::shared_ptr<Image> image;
+  std::shared_ptr<ImageItem> image;
   Error error;
 
 
@@ -3092,7 +3092,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
 
   // Encode Grid
   Error error;
-  std::shared_ptr<Image> out_grid;
+  std::shared_ptr<ImageItem> out_grid;
   error = ctx->context->encode_grid(pixel_tiles,
                                     rows, columns,
                                     encoder,
@@ -3145,7 +3145,7 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
     tiles[i] = image_ids[i];
   }
 
-  std::shared_ptr<Image> gridimage;
+  std::shared_ptr<ImageItem> gridimage;
   Error error = ctx->context->add_grid_item(tiles, image_width, image_height,
                                             static_cast<uint16_t>(tile_rows),
                                             static_cast<uint16_t>(tile_columns),
@@ -3200,7 +3200,7 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
                              offsets ? offsets[2 * i + 1] : 0);
   }
 
-  std::shared_ptr<Image> iovlimage;
+  std::shared_ptr<ImageItem> iovlimage;
   Error error = ctx->context->add_iovl_item(overlay, iovlimage);
 
   if (error != Error::Ok) {
@@ -3222,7 +3222,7 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
                                               const struct heif_encoding_options* options, // TODO: do we need this?
                                               struct heif_image_handle** out_grid_image_handle)
 {
-  Result<std::shared_ptr<Image>> gridImageResult;
+  Result<std::shared_ptr<ImageItem>> gridImageResult;
   gridImageResult = ctx->context->add_tild_item(parameters);
 
   if (gridImageResult.error != Error::Ok) {
@@ -3268,7 +3268,7 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_image_handle)
 {
-  std::shared_ptr<Image> thumbnail_image;
+  std::shared_ptr<ImageItem> thumbnail_image;
 
   heif_encoding_options options;
   set_default_options(options);

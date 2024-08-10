@@ -191,12 +191,12 @@ private:
 
 
 
-class Image : public ErrorBuffer
+class ImageItem : public ErrorBuffer
 {
 public:
-  Image(HeifContext* file, heif_item_id id);
+  ImageItem(HeifContext* file, heif_item_id id);
 
-  ~Image();
+  ~ImageItem();
 
   void clear()
   {
@@ -252,11 +252,11 @@ public:
     m_is_thumbnail = true;
   }
 
-  void add_thumbnail(const std::shared_ptr<Image>& img) { m_thumbnails.push_back(img); }
+  void add_thumbnail(const std::shared_ptr<ImageItem>& img) { m_thumbnails.push_back(img); }
 
   bool is_thumbnail() const { return m_is_thumbnail; }
 
-  const std::vector<std::shared_ptr<Image>>& get_thumbnails() const { return m_thumbnails; }
+  const std::vector<std::shared_ptr<ImageItem>>& get_thumbnails() const { return m_thumbnails; }
 
 
   // --- alpha channel
@@ -266,11 +266,11 @@ public:
     m_is_alpha_channel = true;
   }
 
-  void set_alpha_channel(std::shared_ptr<Image> img) { m_alpha_channel = std::move(img); }
+  void set_alpha_channel(std::shared_ptr<ImageItem> img) { m_alpha_channel = std::move(img); }
 
   bool is_alpha_channel() const { return m_is_alpha_channel; }
 
-  const std::shared_ptr<Image>& get_alpha_channel() const { return m_alpha_channel; }
+  const std::shared_ptr<ImageItem>& get_alpha_channel() const { return m_alpha_channel; }
 
   void set_is_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
 
@@ -284,11 +284,11 @@ public:
     m_is_depth_channel = true;
   }
 
-  void set_depth_channel(std::shared_ptr<Image> img) { m_depth_channel = std::move(img); }
+  void set_depth_channel(std::shared_ptr<ImageItem> img) { m_depth_channel = std::move(img); }
 
   bool is_depth_channel() const { return m_is_depth_channel; }
 
-  const std::shared_ptr<Image>& get_depth_channel() const { return m_depth_channel; }
+  const std::shared_ptr<ImageItem>& get_depth_channel() const { return m_depth_channel; }
 
 
   void set_depth_representation_info(struct heif_depth_representation_info& info)
@@ -316,19 +316,19 @@ public:
     m_aux_image_type = aux_type;
   }
 
-  void add_aux_image(std::shared_ptr<Image> img) { m_aux_images.push_back(std::move(img)); }
+  void add_aux_image(std::shared_ptr<ImageItem> img) { m_aux_images.push_back(std::move(img)); }
 
   bool is_aux_image() const { return m_is_aux_image; }
 
   const std::string& get_aux_type() const { return m_aux_image_type; }
 
-  std::vector<std::shared_ptr<Image>> get_aux_images(int aux_image_filter = 0) const
+  std::vector<std::shared_ptr<ImageItem>> get_aux_images(int aux_image_filter = 0) const
   {
     if (aux_image_filter == 0) {
       return m_aux_images;
     }
     else {
-      std::vector<std::shared_ptr<Image>> auxImgs;
+      std::vector<std::shared_ptr<ImageItem>> auxImgs;
       for (const auto& aux : m_aux_images) {
         if ((aux_image_filter & LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA) && aux->is_alpha_channel()) {
           continue;
@@ -441,21 +441,21 @@ private:
 
   bool m_is_thumbnail = false;
 
-  std::vector<std::shared_ptr<Image>> m_thumbnails;
+  std::vector<std::shared_ptr<ImageItem>> m_thumbnails;
 
   bool m_is_alpha_channel = false;
   bool m_premultiplied_alpha = false;
-  std::shared_ptr<Image> m_alpha_channel;
+  std::shared_ptr<ImageItem> m_alpha_channel;
 
   bool m_is_depth_channel = false;
-  std::shared_ptr<Image> m_depth_channel;
+  std::shared_ptr<ImageItem> m_depth_channel;
 
   bool m_has_depth_representation_info = false;
   struct heif_depth_representation_info m_depth_representation_info;
 
   bool m_is_aux_image = false;
   std::string m_aux_image_type;
-  std::vector<std::shared_ptr<Image>> m_aux_images;
+  std::vector<std::shared_ptr<ImageItem>> m_aux_images;
 
   std::vector<std::shared_ptr<ImageMetadata>> m_metadata;
 
