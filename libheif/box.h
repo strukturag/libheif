@@ -426,7 +426,7 @@ class Box_iloc : public FullBox
 public:
   Box_iloc();
 
-  ~Box_iloc();
+  ~Box_iloc() override;
 
   void set_use_tmp_file(bool flag);
 

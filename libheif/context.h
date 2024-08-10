@@ -259,13 +259,14 @@ public:
 
     //void set_id(heif_item_id id) { m_id=id; }  (already set in constructor)
 
-    int get_width() const { return m_width; }
+    // 32bit limitation from `ispe`
+    uint32_t get_width() const { return m_width; }
 
-    int get_height() const { return m_height; }
+    uint32_t get_height() const { return m_height; }
 
-    int get_ispe_width() const;
+    uint32_t get_ispe_width() const;
 
-    int get_ispe_height() const;
+    uint32_t get_ispe_height() const;
 
     int get_luma_bits_per_pixel() const;
 

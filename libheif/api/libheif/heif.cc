@@ -953,12 +953,16 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "z0 must be 0 for 2D images"};
     }
 
+    if (x0 > 0xFFFFFFFF || y0 > 0xFFFFFFFF) {
+      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "x0/y0 currently must be 32 bit"};
+    }
+
     heif_item_id first_tile_id = handle->image->get_grid_tiles()[0];
     auto tile = handle->context->get_image(first_tile_id);
 
     const ImageGrid& gridspec = handle->image->get_grid_spec();
-    uint32_t tile_x = x0 / tile->get_width();
-    uint32_t tile_y = y0 / tile->get_height();
+    uint32_t tile_x = static_cast<uint32_t>(x0) / tile->get_width();
+    uint32_t tile_y = static_cast<uint32_t>(y0) / tile->get_height();
 
     heif_item_id tile_id = handle->image->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
     heif_image_handle* tile_handle;
@@ -974,6 +978,7 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
     heif_context_free(ctx);
     err = heif_decode_image(tile_handle, out_img, colorspace, chroma, options);
     if (err.code) {
+      heif_image_handle_release(tile_handle);
       err.message = nullptr; // have to delete the text pointer because the text may be deleted with the context (TODO)
       return err;
     }

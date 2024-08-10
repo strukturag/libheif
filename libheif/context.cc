@@ -1416,7 +1416,7 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 }
 
 
-int HeifContext::Image::get_ispe_width() const
+uint32_t HeifContext::Image::get_ispe_width() const
 {
   auto ispe = m_heif_context->m_heif_file->get_property<Box_ispe>(m_id);
   if (!ispe) {
@@ -1428,7 +1428,7 @@ int HeifContext::Image::get_ispe_width() const
 }
 
 
-int HeifContext::Image::get_ispe_height() const
+uint32_t HeifContext::Image::get_ispe_height() const
 {
   auto ispe = m_heif_context->m_heif_file->get_property<Box_ispe>(m_id);
   if (!ispe) {
@@ -2854,8 +2854,16 @@ Result<std::shared_ptr<HeifContext::Image>> HeifContext::add_tild_item(const hei
   const int construction_method = 0; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(tild_id, header_data, construction_method);
 
+
+  if (parameters->image_width > 0xFFFFFFFF || parameters->image_height > 0xFFFFFFFF) {
+    return {Error(heif_error_Usage_error, heif_suberror_Invalid_image_size,
+                  "'ispe' only supports image size up to 4294967295 pixels per dimension")};
+  }
+
   // Add ISPE property
-  m_heif_file->add_ispe_property(tild_id, parameters->image_width, parameters->image_height);
+  m_heif_file->add_ispe_property(tild_id,
+                                 static_cast<uint32_t>(parameters->image_width),
+                                 static_cast<uint32_t>(parameters->image_height));
 
 #if 0
   // TODO
