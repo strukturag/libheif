@@ -2903,7 +2903,11 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
   auto& header = tildImg->get_tild_header();
 
   uint64_t offset = tildImg->get_next_tild_position();
-  header.set_tild_tile_range(tile_x, tile_y, offset, encodeResult.value.bitstream.size());
+  size_t dataSize = encodeResult.value.bitstream.size();
+  if (dataSize > 0xFFFFFFFF) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "Compressed tile size exceeds maximum tile size."};
+  }
+  header.set_tild_tile_range(tile_x, tile_y, offset, static_cast<uint32_t>(dataSize));
   tildImg->set_next_tild_position(offset + encodeResult.value.bitstream.size());
 
   std::vector<std::shared_ptr<Box>> existing_properties;

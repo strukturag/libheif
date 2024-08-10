@@ -3398,8 +3398,10 @@ Error Box_EntityToGroup::write(StreamWriter& writer) const
 
 void Box_EntityToGroup::write_entity_group_ids(StreamWriter& writer) const
 {
+  assert(entity_ids.size() <= 0xFFFFFFFF);
+
   writer.write32(group_id);
-  writer.write32(entity_ids.size());
+  writer.write32(static_cast<uint32_t>(entity_ids.size()));
 
   for (uint32_t id : entity_ids) {
     writer.write32(id);

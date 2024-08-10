@@ -1458,7 +1458,7 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image* img)
 
 static int uint32_to_int(uint32_t v)
 {
-  if (v==0 || v>std::numeric_limits<int>::max()) {
+  if (v == 0 || v > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
     return -1;
   }
   else {
