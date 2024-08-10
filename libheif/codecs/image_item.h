@@ -24,10 +24,13 @@
 #include <libheif/heif.h>
 #include <error.h>
 #include <nclx.h>
+#include <string>
+#include <vector>
+#include <memory>
+#include <utility>
 
 
 class HeifContext;
-
 
 class ImageMetadata
 {
