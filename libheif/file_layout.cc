@@ -102,6 +102,12 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
       m_max_length = stream->request_range(next_box_start, MAXIMUM_BOX_HEADER_SIZE);
     }
 
+    if (next_box_header_end > m_max_length) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Insufficient input data"};
+    }
+
     BitstreamRange box_range(m_stream_reader, next_box_start, m_max_length);
     BoxHeader box_header;
     err = box_header.parse_header(box_range);
