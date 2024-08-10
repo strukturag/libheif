@@ -27,6 +27,10 @@ FileLayout::FileLayout()
   auto ftyp = std::make_shared<Box_ftyp>();
   ftyp->set_output_position(0);
   m_boxes.push_back(ftyp);
+
+  // TODO: these variables are not used yet
+  (void)m_writeMode;
+  (void)m_file_size;
 }
 
 

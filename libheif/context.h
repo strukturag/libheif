@@ -167,9 +167,9 @@ public:
 
   std::string dump() const;
 
-  uint32_t number_of_tiles() const;
+  uint64_t number_of_tiles() const;
 
-  uint32_t nTiles_h() const;
+  uint64_t nTiles_h() const;
 
   void set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size);
 

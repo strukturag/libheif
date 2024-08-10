@@ -447,17 +447,17 @@ Error TildHeader::parse(size_t num_images, const std::vector<uint8_t>& data)
 }
 
 
-uint32_t TildHeader::number_of_tiles() const
+uint64_t TildHeader::number_of_tiles() const
 {
-  int nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
-  int nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
-  int nTiles = nTiles_h * nTiles_v;
+  uint64_t nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
+  uint64_t nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
+  uint64_t nTiles = nTiles_h * nTiles_v;
 
   return nTiles;
 }
 
 
-uint32_t TildHeader::nTiles_h() const
+uint64_t TildHeader::nTiles_h() const
 {
   return (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
 }
@@ -472,7 +472,7 @@ size_t TildHeader::get_header_size() const
 
 void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
 {
-  int idx = tile_y * nTiles_h() + tile_x;
+  uint64_t idx = tile_y * nTiles_h() + tile_x;
   m_offsets[idx].offset = offset;
   m_offsets[idx].size = size;
 }
@@ -523,10 +523,10 @@ std::vector<uint8_t> TildHeader::write()
     flags |= 0x40;
   }
 
-  uint32_t nTiles = number_of_tiles();
+  uint64_t nTiles = number_of_tiles();
 
   std::vector<uint8_t> data;
-  uint32_t size = (2 +  // version, flags
+  uint64_t size = (2 +  // version, flags
                    (dimensions_are_64bit ? 8 : 4) * 2 + // image size
                    2 * 4 + // tile size
                    4 + // compression type
