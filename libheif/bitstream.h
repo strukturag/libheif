@@ -102,6 +102,10 @@ public:
 
   bool seek(int64_t position) override;
 
+  uint64_t request_range(uint64_t start, uint64_t size) override {
+    return m_length;
+  }
+
 private:
   const uint8_t* m_data;
   int64_t m_length;
