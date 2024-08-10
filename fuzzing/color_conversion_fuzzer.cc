@@ -114,8 +114,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
   auto reader = std::make_shared<StreamReader_memory>(data, size, false);
   BitstreamRange range(reader, size);
 
-  int width;
-  int height;
+  uint32_t width;
+  uint32_t height;
   int bit_depth;
   bool alpha;
   uint8_t in_chroma;

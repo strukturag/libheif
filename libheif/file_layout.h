@@ -56,7 +56,7 @@ public:
   std::shared_ptr<Box_meta> get_meta_box() { return m_meta_box; }
 
 private:
-  WriteMode m_writeMode;
+  WriteMode m_writeMode = WriteMode::Floating;
 
   const static uint64_t INVALID_FILE_SIZE = 0xFFFFFFFFFFFFFFFF;
 

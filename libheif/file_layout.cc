@@ -22,7 +22,6 @@
 
 
 FileLayout::FileLayout()
-    : m_writeMode(WriteMode::Floating)
 {
   auto ftyp = std::make_shared<Box_ftyp>();
   ftyp->set_output_position(0);

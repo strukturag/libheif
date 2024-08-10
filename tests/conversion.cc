@@ -76,7 +76,7 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
   uint32_t height = std::min(image.get_height(channel), max_rows);
   int stride;
   const T* p = (T*)image.get_plane(channel, &stride);
-  stride /= sizeof(T);
+  stride /= (int)sizeof(T);
   int bpp = image.get_bits_per_pixel(channel);
   int digits = (int)std::ceil(std::log10(1 << bpp)) + 1;
 
@@ -93,7 +93,7 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
     os << std::left << std::setw(digits) << std::to_string(y) << "|";
     for (uint32_t x = 0; x < width; ++x) {
       if (is_interleaved) os << "(";
-      for (uint32_t k = 0; k < num_interleaved; ++k) {
+      for (int k = 0; k < num_interleaved; ++k) {
         int v = SwapBytesIfNeeded(p[y * stride + x * num_interleaved + k], chroma);
         os << std::left << std::setw(digits) << std::to_string(v);
       }
@@ -126,8 +126,8 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   int compressed_stride;
   const T* orig_p = (T*)original.get_plane(channel, &orig_stride);
   const T* compressed_p = (T*)compressed.get_plane(channel, &compressed_stride);
-  orig_stride /= sizeof(T);
-  compressed_stride /= sizeof(T);
+  orig_stride /= (int)sizeof(T);
+  compressed_stride /= (int)sizeof(T);
   double mse = 0.0;
 
   int num_interleaved = num_interleaved_pixels_per_plane(chroma);
