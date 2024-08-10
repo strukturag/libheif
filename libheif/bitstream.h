@@ -182,7 +182,7 @@ public:
 
   void skip(uint64_t n)
   {
-    uint64_t actual_skip = std::min(n, m_remaining);
+    uint64_t actual_skip = std::min(n, static_cast<uint64_t>(m_remaining));
 
     if (m_parent_range) {
       // also advance position in parent range
