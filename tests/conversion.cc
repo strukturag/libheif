@@ -70,10 +70,10 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
   heif_chroma chroma = image.get_chroma_format();
   int num_interleaved = num_interleaved_pixels_per_plane(chroma);
   bool is_interleaved = num_interleaved > 1;
-  int max_cols = is_interleaved ? 3 : 10;
-  int max_rows = 10;
-  int width = std::min(image.get_width(channel), max_cols);
-  int height = std::min(image.get_height(channel), max_rows);
+  uint32_t max_cols = is_interleaved ? 3 : 10;
+  uint32_t max_rows = 10;
+  uint32_t width = std::min(image.get_width(channel), max_cols);
+  uint32_t height = std::min(image.get_height(channel), max_rows);
   int stride;
   const T* p = (T*)image.get_plane(channel, &stride);
   stride /= sizeof(T);
@@ -85,15 +85,15 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
      << " bpp=" << bpp << "\n";
   os << std::string(digits, ' ');
   int header_width = digits * num_interleaved - 1 + (is_interleaved ? 3 : 0);
-  for (int x = 0; x < width; ++x) {
+  for (uint32_t x = 0; x < width; ++x) {
     os << "|" << std::left << std::setw(header_width) << std::to_string(x);
   }
   os << "\n";
-  for (int y = 0; y < height; ++y) {
+  for (uint32_t y = 0; y < height; ++y) {
     os << std::left << std::setw(digits) << std::to_string(y) << "|";
-    for (int x = 0; x < width; ++x) {
+    for (uint32_t x = 0; x < width; ++x) {
       if (is_interleaved) os << "(";
-      for (int k = 0; k < num_interleaved; ++k) {
+      for (uint32_t k = 0; k < num_interleaved; ++k) {
         int v = SwapBytesIfNeeded(p[y * stride + x * num_interleaved + k], chroma);
         os << std::left << std::setw(digits) << std::to_string(v);
       }
@@ -118,8 +118,8 @@ std::string PrintChannel(const HeifPixelImage& image, heif_channel channel) {
 template <typename T>
 double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
                heif_channel channel, bool expect_alpha_max) {
-  int w = original.get_width(channel);
-  int h = original.get_height(channel);
+  uint32_t w = original.get_width(channel);
+  uint32_t h = original.get_height(channel);
   heif_chroma chroma = original.get_chroma_format();
 
   int orig_stride;
@@ -133,8 +133,8 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   int num_interleaved = num_interleaved_pixels_per_plane(chroma);
   int alpha_max = (1 << original.get_bits_per_pixel(channel)) - 1;
   CAPTURE(expect_alpha_max);
-  for (int y = 0; y < h; y++) {
-    for (int x = 0; x < w * num_interleaved; x++) {
+  for (uint32_t y = 0; y < h; y++) {
+    for (uint32_t x = 0; x < w * num_interleaved; x++) {
       int orig_v = SwapBytesIfNeeded(orig_p[y * orig_stride + x], chroma);
       if (expect_alpha_max && (channel == heif_channel_Alpha ||
                                ((num_interleaved == 4) && x % 4 == 3))) {
@@ -691,7 +691,7 @@ TEST_CASE("RGB 5-6-5 to RGB")
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         dst[y * dst_stride + x] = v;
-        v += 1;
+        v++;
       }
     }
   }

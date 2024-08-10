@@ -127,7 +127,7 @@ static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
 template<typename I> void writevec(uint8_t* data, size_t& idx, I value, int len)
 {
   for (int i=0;i<len;i++) {
-    data[idx + i] = (value >> (len-1-i)*8) & 0xFF;
+    data[idx + i] = static_cast<uint8_t>((value >> (len-1-i)*8) & 0xFF);
   }
 
   idx += len;
