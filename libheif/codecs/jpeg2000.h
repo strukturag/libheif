@@ -333,7 +333,7 @@ public:
                                      const std::shared_ptr<HeifPixelImage>& src_image,
                                      void* encoder_struct,
                                      const struct heif_encoding_options& options,
-                                     std::shared_ptr<HeifContext::Image>& out_image);
+                                     std::shared_ptr<Image>& out_image);
 };
 
 struct JPEG2000_SIZ_segment

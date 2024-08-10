@@ -62,8 +62,10 @@ set(libheif_sources
         codecs/vvc.cc
         codecs/avc.h
         codecs/avc.cc
-        codecs/mask_image.cc
         codecs/mask_image.h
+        codecs/mask_image.cc
+        codecs/image_item.h
+        codecs/image_item.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc

@@ -18,7 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
@@ -35,6 +34,7 @@
 #include "uncompressed.h"
 #include "uncompressed_box.h"
 #include "uncompressed_image.h"
+#include <codecs/image_item.h>
 
 static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<Box_uncC> &uncC)
 {
@@ -1232,7 +1232,7 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
                                                         const std::shared_ptr<HeifPixelImage>& src_image,
                                                         void* encoder_struct,
                                                         const struct heif_encoding_options& options,
-                                                        std::shared_ptr<HeifContext::Image>& out_image)
+                                                        std::shared_ptr<Image>& out_image)
 {
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
   if (options.prefer_uncC_short_form) {

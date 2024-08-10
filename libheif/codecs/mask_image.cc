@@ -30,6 +30,7 @@
 #include "libheif/heif.h"
 #include "logging.h"
 #include "mask_image.h"
+#include <codecs/image_item.h>
 
 Error Box_mskC::parse(BitstreamRange& range)
 {
@@ -128,7 +129,7 @@ Error MaskImageCodec::encode_mask_image(const std::shared_ptr<HeifFile>& heif_fi
                                         const std::shared_ptr<HeifPixelImage>& src_image,
                                         void* encoder_struct,
                                         const struct heif_encoding_options& options,
-                                        std::shared_ptr<HeifContext::Image>& out_image)
+                                        std::shared_ptr<Image>& out_image)
 {
   if (src_image->get_colorspace() != heif_colorspace_monochrome)
   {
