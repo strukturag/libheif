@@ -283,22 +283,22 @@ bool HeifPixelImage::has_alpha() const
 }
 
 
-int HeifPixelImage::get_width(enum heif_channel channel) const
+uint32_t HeifPixelImage::get_width(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
   if (iter == m_planes.end()) {
-    return -1;
+    return 0;
   }
 
   return iter->second.m_width;
 }
 
 
-int HeifPixelImage::get_height(enum heif_channel channel) const
+uint32_t HeifPixelImage::get_height(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
   if (iter == m_planes.end()) {
-    return -1;
+    return 0;
   }
 
   return iter->second.m_height;

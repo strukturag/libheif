@@ -488,8 +488,8 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
 {
   // --- check that input image is valid
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   // alpha image should have full image resolution
 

@@ -995,8 +995,8 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
 
 
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
-                                                        uint32_t tile_width,
-                                                        uint32_t tile_height,
+                                                        uint16_t tile_width,
+                                                        uint16_t tile_height,
                                                         uint32_t num_layers,
                                                         const heif_pyramid_layer_info* in_layers,
                                                         heif_item_id* out_group_id)
@@ -1456,15 +1456,26 @@ enum heif_chroma heif_image_get_chroma_format(const struct heif_image* img)
 }
 
 
+static int uint32_to_int(uint32_t v)
+{
+  if (v==0 || v>std::numeric_limits<int>::max()) {
+    return -1;
+  }
+  else {
+    return static_cast<int>(v);
+  }
+}
+
+
 int heif_image_get_width(const struct heif_image* img, enum heif_channel channel)
 {
-  return img->image->get_width(channel);
+  return uint32_to_int(img->image->get_width(channel));
 }
 
 
 int heif_image_get_height(const struct heif_image* img, enum heif_channel channel)
 {
-  return img->image->get_height(channel);
+  return uint32_to_int(img->image->get_height(channel));
 }
 
 
@@ -1472,14 +1483,14 @@ int heif_image_get_primary_width(const struct heif_image* img)
 {
   if (img->image->get_colorspace() == heif_colorspace_RGB) {
     if (img->image->get_chroma_format() == heif_chroma_444) {
-      return img->image->get_width(heif_channel_G);
+      return uint32_to_int(img->image->get_width(heif_channel_G));
     }
     else {
-      return img->image->get_width(heif_channel_interleaved);
+      return uint32_to_int(img->image->get_width(heif_channel_interleaved));
     }
   }
   else {
-    return img->image->get_width(heif_channel_Y);
+    return uint32_to_int(img->image->get_width(heif_channel_Y));
   }
 }
 
@@ -1488,14 +1499,14 @@ int heif_image_get_primary_height(const struct heif_image* img)
 {
   if (img->image->get_colorspace() == heif_colorspace_RGB) {
     if (img->image->get_chroma_format() == heif_chroma_444) {
-      return img->image->get_height(heif_channel_G);
+      return uint32_to_int(img->image->get_height(heif_channel_G));
     }
     else {
-      return img->image->get_height(heif_channel_interleaved);
+      return uint32_to_int(img->image->get_height(heif_channel_interleaved));
     }
   }
   else {
-    return img->image->get_height(heif_channel_Y);
+    return uint32_to_int(img->image->get_height(heif_channel_Y));
   }
 }
 
@@ -1505,10 +1516,17 @@ heif_error heif_image_crop(struct heif_image* img,
 {
   std::shared_ptr<HeifPixelImage> out_img;
 
-  int w = img->image->get_width();
-  int h = img->image->get_height();
+  uint32_t w = img->image->get_width();
+  uint32_t h = img->image->get_height();
 
-  Error err = img->image->crop(left, w - 1 - right, top, h - 1 - bottom, out_img);
+  if (w==0 || w>0x7FFFFFFF ||
+      h==0 || h>0x7FFFFFFF) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Invalid_image_size,
+                      "Image size exceeds maximum supported size"};
+  }
+
+  Error err = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, out_img);
   if (err) {
     return err.error_struct(img->image.get());
   }
@@ -3115,6 +3133,11 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
     return Error(heif_error_Usage_error,
                  heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
   }
+  else if (tile_rows > 0xFFFF || tile_columns > 0xFFFF) {
+    return heif_error{heif_error_Usage_error,
+                      heif_suberror_Invalid_image_size,
+                      "Number of tile rows/columns may not exceed 65535"};
+  }
 
 
   std::vector<heif_item_id> tiles(tile_rows * tile_columns);
@@ -3123,7 +3146,10 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
   }
 
   std::shared_ptr<HeifContext::Image> gridimage;
-  Error error = ctx->context->add_grid_item(tiles, image_width, image_height, tile_rows, tile_columns, gridimage);
+  Error error = ctx->context->add_grid_item(tiles, image_width, image_height,
+                                            static_cast<uint16_t>(tile_rows),
+                                            static_cast<uint16_t>(tile_columns),
+                                            gridimage);
 
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());

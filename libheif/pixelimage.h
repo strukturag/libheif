@@ -67,13 +67,13 @@ public:
 
   void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
 
-  int get_width() const { return m_width; }
+  uint32_t get_width() const { return m_width; }
 
-  int get_height() const { return m_height; }
+  uint32_t get_height() const { return m_height; }
 
-  int get_width(enum heif_channel channel) const;
+  uint32_t get_width(enum heif_channel channel) const;
 
-  int get_height(enum heif_channel channel) const;
+  uint32_t get_height(enum heif_channel channel) const;
 
   heif_chroma get_chroma_format() const { return m_chroma; }
 
@@ -189,8 +189,8 @@ private:
     uint32_t stride = 0; // bytes per line
   };
 
-  int m_width = 0;
-  int m_height = 0;
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
   bool m_premultiplied_alpha = false;

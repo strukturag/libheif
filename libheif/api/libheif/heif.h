@@ -1185,8 +1185,8 @@ struct heif_pyramid_layer_info {
 
 LIBHEIF_API
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
-                                                        uint32_t tile_width,
-                                                        uint32_t tile_height,
+                                                        uint16_t tile_width,
+                                                        uint16_t tile_height,
                                                         uint32_t num_layers,
                                                         const struct heif_pyramid_layer_info* layers,
                                                         heif_item_id* out_group_id);
