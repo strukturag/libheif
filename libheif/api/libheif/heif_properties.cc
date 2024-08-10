@@ -334,10 +334,12 @@ struct heif_error heif_item_add_raw_property(const struct heif_context* context,
   return heif_error_success;
 }
 
-static struct heif_error find_property(const struct heif_context* context,
+
+template<typename T>
+struct heif_error find_property(const struct heif_context* context,
                                 heif_item_id itemId,
                                 heif_property_id propertyId,
-                                std::shared_ptr<Box_other> *box_other)
+                                std::shared_ptr<T>* box_casted)
 {
   auto file = context->context->get_heif_file();
 
@@ -352,7 +354,7 @@ static struct heif_error find_property(const struct heif_context* context,
   }
 
   auto box = properties[propertyId - 1];
-  *box_other = std::dynamic_pointer_cast<Box_other>(box);
+  *box_casted = std::dynamic_pointer_cast<T>(box);
   return heif_error_success;
 }
 
@@ -366,7 +368,7 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL argument passed in"};
   }
   std::shared_ptr<Box_other> box_other;
-  struct heif_error err = find_property(context, itemId, propertyId, &box_other);
+  struct heif_error err = find_property<Box_other>(context, itemId, propertyId, &box_other);
   if (err.code) {
     return err;
   }
@@ -394,7 +396,7 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
   }
 
   std::shared_ptr<Box_other> box_other;
-  struct heif_error err = find_property(context, itemId, propertyId, &box_other);
+  struct heif_error err = find_property<Box_other>(context, itemId, propertyId, &box_other);
   if (err.code) {
     return err;
   }
