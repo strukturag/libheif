@@ -412,6 +412,33 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
   }
 }
 
+
+void HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& src_image)
+{
+  int width = src_image->get_width();
+  int height = src_image->get_height();
+
+  add_plane(heif_channel_Y, width, height, src_image->get_bits_per_pixel(heif_channel_interleaved));
+
+  uint8_t* dst;
+  int dst_stride = 0;
+
+  const uint8_t* src;
+  int src_stride = 0;
+
+  src = src_image->get_plane(heif_channel_interleaved, &src_stride);
+  dst = get_plane(heif_channel_Y, &dst_stride);
+
+  //int bpl = width * (src_image->get_storage_bits_per_pixel(src_channel) / 8);
+
+  for (int y = 0; y < height; y++) {
+    for (int x=0;x<width;x++) {
+      dst[y * dst_stride + x] = src[y * src_stride + 4 * x + 3];
+    }
+  }
+}
+
+
 void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp)
 {
   add_plane(dst_channel, width, height, bpp);

@@ -28,9 +28,12 @@
 #include <vector>
 #include <memory>
 #include <utility>
-
+#include <libheif/heif_plugin.h>
 
 class HeifContext;
+
+class HeifPixelImage;
+
 
 class ImageMetadata
 {
@@ -194,9 +197,17 @@ private:
 class ImageItem : public ErrorBuffer
 {
 public:
+  ImageItem(HeifContext* file);
+
   ImageItem(HeifContext* file, heif_item_id id);
 
-  ~ImageItem();
+  virtual ~ImageItem() = default;
+
+  static std::shared_ptr<ImageItem> alloc_for_infe_box(HeifContext*, const std::shared_ptr<Box_infe>&);
+
+  virtual const char* get_infe_type() const { return "????"; } // TODO = 0;
+
+  virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 
   void clear()
   {
@@ -214,11 +225,13 @@ public:
     m_height = h;
   }
 
-  void set_primary(bool flag = true) { m_is_primary = flag; }
-
   heif_item_id get_id() const { return m_id; }
 
-  //void set_id(heif_item_id id) { m_id=id; }  (already set in constructor)
+  void set_id(heif_item_id id) { m_id = id; }
+
+  void set_primary(bool flag = true) { m_is_primary = flag; }
+
+  bool is_primary() const { return m_is_primary; }
 
   // 32bit limitation from `ispe`
   uint32_t get_width() const { return m_width; }
@@ -233,15 +246,13 @@ public:
 
   int get_chroma_bits_per_pixel() const;
 
-  Error get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
-
-  bool is_primary() const { return m_is_primary; }
-
   void set_size(int w, int h)
   {
     m_width = w;
     m_height = h;
   }
+
+  Error get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
 
   void process_before_write();
 
@@ -366,6 +377,30 @@ public:
 
   // === writing ===
 
+  struct CodedImageData {
+    std::vector<std::shared_ptr<Box>> properties;
+    std::vector<uint8_t> bitstream;
+
+    std::shared_ptr<HeifPixelImage> encoded_image; // input to the encoder, colorspace may be converted
+  };
+
+  static Result<CodedImageData> encode_image(const std::shared_ptr<HeifPixelImage>& image,
+                                              struct heif_encoder* encoder,
+                                              const struct heif_encoding_options& options,
+                                              enum heif_image_input_class input_class);
+
+  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options& options,
+                                        enum heif_image_input_class input_class) { return {}; }
+
+  static Result<std::shared_ptr<ImageItem>> encode_to_item(HeifContext* ctx,
+                                                           const std::shared_ptr<HeifPixelImage>& image,
+                                                           struct heif_encoder* encoder,
+                                                           const struct heif_encoding_options& options,
+                                                           enum heif_image_input_class input_class);
+
+
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
   const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
@@ -479,6 +514,20 @@ private:
   bool m_is_tild = false;
   TildHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
+
+protected:
+  // --- encoding utility functions
+
+  static Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
+                                                                                 struct heif_encoder* encoder,
+                                                                                 const struct heif_encoding_options& options,
+                                                                                 const heif_color_profile_nclx* target_heif_nclx);
+
+  static void add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class,
+                                const heif_color_profile_nclx* target_heif_nclx,
+                                ImageItem::CodedImageData& inout_codedImage);
 };
 
 

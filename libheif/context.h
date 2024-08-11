@@ -51,6 +51,12 @@ class ImageOverlay;
 
 
 
+// TODO: move to image_item codecs
+bool nclx_profile_matches_spec(heif_colorspace colorspace,
+                               std::shared_ptr<const color_profile_nclx> image_nclx,
+                               const struct heif_color_profile_nclx* spec_nclx);
+
+
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
 // The class also handles automatic color-space conversion.
@@ -183,16 +189,6 @@ public:
                              const struct heif_encoding_options& options,
                              enum heif_image_input_class input_class,
                              std::shared_ptr<ImageItem>& out_image);
-
-  struct CodedImageData {
-    std::vector<std::shared_ptr<Box>> properties;
-    std::vector<uint8_t> bitstream;
-  };
-
-  Result<CodedImageData> encode_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
-                             struct heif_encoder* encoder,
-                             const struct heif_encoding_options& options,
-                             enum heif_image_input_class input_class);
 
   Error encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
                                  struct heif_encoder* encoder,

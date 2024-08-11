@@ -93,6 +93,8 @@ public:
                            heif_channel src_channel,
                            heif_channel dst_channel);
 
+  void extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage);
+
   void fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
 
   void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
