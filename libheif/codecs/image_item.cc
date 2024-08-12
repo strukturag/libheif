@@ -578,7 +578,7 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_AVIF>(ctx, id);
   }
   else if (item_type == "vvc1") {
-    assert(false); // TODO
+    return std::make_shared<ImageItem_VVC>(ctx, id);
   }
   else if (item_type == "j2k1") {
     assert(false); // TODO
@@ -615,6 +615,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
       return std::make_shared<ImageItem_HEVC>(ctx);
     case heif_compression_AV1:
       return std::make_shared<ImageItem_AVIF>(ctx);
+    case heif_compression_VVC:
+      return std::make_shared<ImageItem_VVC>(ctx);
     default:
       assert(false);
       return nullptr;
@@ -635,7 +637,6 @@ Result<ImageItem::CodedImageData> ImageItem::encode_to_bistream_and_boxes(const 
   }
 
   CodedImageData& codedImage = encodeResult.value;
-
 
   // === generate properties
 
@@ -763,6 +764,10 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   // compress image and assign data to item
 
   Result<CodedImageData> codingResult = encode_to_bistream_and_boxes(image, encoder, options, input_class);
+  if (codingResult.error) {
+    return codingResult.error;
+  }
+
   CodedImageData& codedImage = codingResult.value;
 
   auto infe_box = ctx->get_heif_file()->add_new_infe_box(get_infe_type());

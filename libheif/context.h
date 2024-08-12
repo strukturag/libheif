@@ -166,12 +166,6 @@ public:
                             const std::shared_ptr<HeifPixelImage>& image,
                             struct heif_encoder* encoder);
 
-  Error encode_image_as_vvc(const std::shared_ptr<HeifPixelImage>& image,
-                             struct heif_encoder* encoder,
-                             const struct heif_encoding_options& options,
-                             enum heif_image_input_class input_class,
-                             std::shared_ptr<ImageItem>& out_image);
-
   Error encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
                                  struct heif_encoder* encoder,
                                  const struct heif_encoding_options& options,

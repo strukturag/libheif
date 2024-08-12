@@ -24,6 +24,7 @@
 #include "box.h"
 #include <string>
 #include <vector>
+#include <codecs/image_item.h>
 
 
 class Box_vvcC : public FullBox
@@ -33,6 +34,8 @@ public:
   {
     set_short_type(fourcc("vvcC"));
   }
+
+  bool is_essential() const override { return true; }
 
   struct VvcPTLRecord {
     uint8_t num_bytes_constraint_info; // 6 bits
@@ -101,5 +104,24 @@ Error parse_sps_for_vvcC_configuration(const uint8_t* sps, size_t size,
                                        Box_vvcC::configuration* inout_config,
                                        int* width, int* height);
 
+class ImageItem_VVC : public ImageItem
+{
+public:
+  ImageItem_VVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_VVC(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "vvc1"; }
+
+  const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
+};
 
 #endif // LIBHEIF_VVC_H
