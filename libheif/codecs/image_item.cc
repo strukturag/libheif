@@ -599,6 +599,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
           item_type == "j2k1" ||
           item_type == "mski");
 #endif
+
+  return nullptr;
 }
 
 

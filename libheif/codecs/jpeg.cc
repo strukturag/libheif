@@ -23,8 +23,8 @@
 #include "security_limits.h"
 #include <pixelimage.h>
 #include <libheif/api_structs.h>
-#include <color-conversion/colorconversion.h>
 #include <cstring>
+//#include <utility>
 
 
 static uint8_t JPEG_SOS = 0xDA;
@@ -149,7 +149,7 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
       ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 
       std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());
-      vec = std::move(image_data);
+      vec = std::mo ve(image_data);
     }
   }
 #endif
