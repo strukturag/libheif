@@ -30,7 +30,7 @@
 #include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
-
+#include <codecs/image_item.h>
 
 
 class Box_av1C : public Box
@@ -151,5 +151,25 @@ Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::
 
 bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, const uint8_t* data, int dataSize);
 
+
+class ImageItem_AVIF : public ImageItem
+{
+public:
+  ImageItem_AVIF(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "av01"; }
+
+  const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
+};
 
 #endif

@@ -25,6 +25,8 @@
 #include <cstring>
 #include <codecs/jpeg.h>
 #include <codecs/jpeg2000.h>
+#include <codecs/avif.h>
+#include <codecs/hevc.h>
 #include <codecs/uncompressed_image.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
@@ -573,7 +575,7 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_HEVC>(ctx, id);
   }
   else if (item_type == "av01") {
-    assert(false); // TODO
+    return std::make_shared<ImageItem_AVIF>(ctx, id);
   }
   else if (item_type == "vvc1") {
     assert(false); // TODO
@@ -611,6 +613,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
       return std::make_shared<ImageItem_JPEG>(ctx);
     case heif_compression_HEVC:
       return std::make_shared<ImageItem_HEVC>(ctx);
+    case heif_compression_AV1:
+      return std::make_shared<ImageItem_AVIF>(ctx);
     default:
       assert(false);
       return nullptr;
@@ -779,12 +783,16 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   // MIAF 7.3.6.7
   // This is according to MIAF without Amd2. With Amd2, the restriction has been lifted and the image is MIAF compatible.
+  // However, since AVIF is based on MIAF, the whole image would be invalid in that case.
+
   // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
 
-  if (!is_integer_multiple_of_chroma_size(image->get_width(),
-                                          image->get_height(),
-                                          image->get_chroma_format())) {
-    mark_not_miaf_compatible();
+  if (encoder->plugin->compression_format != heif_compression_AV1) {
+    if (!is_integer_multiple_of_chroma_size(image->get_width(),
+                                            image->get_height(),
+                                            image->get_chroma_format())) {
+      mark_not_miaf_compatible();
+    }
   }
 
   // TODO: move this into encode_to_bistream_and_boxes()
