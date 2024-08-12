@@ -51,12 +51,6 @@ class ImageOverlay;
 
 
 
-// TODO: move to image_item codecs
-bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                               std::shared_ptr<const color_profile_nclx> image_nclx,
-                               const struct heif_color_profile_nclx* spec_nclx);
-
-
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
 // The class also handles automatic color-space conversion.
@@ -165,12 +159,6 @@ public:
   Error add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
                             const std::shared_ptr<HeifPixelImage>& image,
                             struct heif_encoder* encoder);
-
-  Error encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage>& image,
-                                 struct heif_encoder* encoder,
-                                 const struct heif_encoding_options& options,
-                                 enum heif_image_input_class input_class,
-                                 std::shared_ptr<ImageItem>& out_image);
 
   Error encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& src_image,
                              struct heif_encoder* encoder,

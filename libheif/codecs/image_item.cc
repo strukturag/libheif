@@ -584,7 +584,7 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_uncompressed>(ctx, id);
   }
   else if (item_type == "j2k1") {
-    assert(false); // TODO
+    return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
   else {
     return nullptr;
@@ -595,7 +595,6 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
           item_type == "tild" ||
           item_type == "iden" ||
           item_type == "iovl" ||
-          item_type == "j2k1" ||
           item_type == "mski");
 #endif
 
@@ -616,6 +615,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
       return std::make_shared<ImageItem_VVC>(ctx);
     case heif_compression_uncompressed:
       return std::make_shared<ImageItem_uncompressed>(ctx);
+    case heif_compression_JPEG2000:
+    case heif_compression_HTJ2K:
+      return std::make_shared<ImageItem_JPEG2000>(ctx);
     default:
       assert(false);
       return nullptr;
@@ -1098,6 +1100,44 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
 
   return target_nclx_profile;
 }
+
+
+static bool nclx_profile_matches_spec(heif_colorspace colorspace,
+                               std::shared_ptr<const color_profile_nclx> image_nclx,
+                               const struct heif_color_profile_nclx* spec_nclx)
+{
+  if (colorspace != heif_colorspace_YCbCr) {
+    return true;
+  }
+
+  // No target specification -> always matches
+  if (!spec_nclx) {
+    return true;
+  }
+
+  if (!image_nclx) {
+    // if no input nclx is specified, compare against default one
+    image_nclx = std::make_shared<color_profile_nclx>();
+  }
+
+  if (image_nclx->get_full_range_flag() != ( spec_nclx->full_range_flag == 0 ? false : true ) ) {
+    return false;
+  }
+
+  if (image_nclx->get_matrix_coefficients() != spec_nclx->matrix_coefficients) {
+    return false;
+  }
+
+  // TODO: are the colour primaries relevant for matrix-coefficients != 12,13 ?
+  //       If not, we should skip this test for anything else than matrix-coefficients != 12,13.
+  if (image_nclx->get_colour_primaries() != spec_nclx->color_primaries) {
+    return false;
+  }
+
+  return true;
+}
+
+
 
 
 

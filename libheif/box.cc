@@ -850,6 +850,13 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
     if (!box1 || !box2) {
         return false;
     }
+
+    // This was introduced because of j2kH having child boxes.
+    // TODO: we might also deduplicate them by comparing all child boxes.
+    if (box1->has_child_boxes() || box2->has_child_boxes()) {
+      return false;
+    }
+
     return *box1 == *box2;
 }
 

@@ -515,4 +515,20 @@ private:
     size_t cursor;
 };
 
+
+class ImageItem_JPEG2000 : public ImageItem
+{
+public:
+  ImageItem_JPEG2000(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_JPEG2000(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "j2k1"; }
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
+};
+
 #endif // LIBHEIF_JPEG2000_H

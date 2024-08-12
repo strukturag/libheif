@@ -212,6 +212,8 @@ public:
     return (int) m_children.size() - 1;
   }
 
+  bool has_child_boxes() const { return !m_children.empty(); }
+
   virtual bool operator==(const Box& other) const;
 
   static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
