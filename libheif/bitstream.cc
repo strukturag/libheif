@@ -216,7 +216,8 @@ int16_t BitstreamRange::read16s()
   uint16_t v = read16();
 
   if (v & 0x8000) {
-    return -static_cast<int16_t>((~v) & 0x7fff) -1;
+    auto val = static_cast<int16_t>((~v) & 0x7fff);
+    return static_cast<int16_t>(-val - 1);
   }
   else {
     return static_cast<int16_t>(v);
@@ -587,7 +588,8 @@ void StreamWriter::write16s(int16_t v16s)
     v = static_cast<uint16_t>(v16s);
   }
   else {
-    v = ~static_cast<uint16_t>((-v16s-1));
+    auto val = static_cast<uint16_t>((-v16s-1));
+    v = static_cast<uint16_t>(~val);
   }
 
   write16(v);

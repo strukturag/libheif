@@ -194,7 +194,7 @@ public:
       m_parent_range->skip_without_advancing_file_pos(actual_skip);
     }
 
-    assert(actual_skip <= std::numeric_limits<int64_t>::max());
+    assert(actual_skip <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
 
     m_istr->seek_cur(static_cast<int64_t>(actual_skip));
     m_remaining -= actual_skip;
