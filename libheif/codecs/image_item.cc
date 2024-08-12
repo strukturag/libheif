@@ -27,11 +27,12 @@
 #include <codecs/jpeg2000.h>
 #include <codecs/avif.h>
 #include <codecs/hevc.h>
-#include <codecs/uncompressed_image.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
-#include <context.h>
 
+#if WITH_UNCOMPRESSED_CODEC
+#include <codecs/uncompressed_image.h>
+#endif
 
 
 template<typename I> void writevec(uint8_t* data, size_t& idx, I value, int len)
@@ -580,9 +581,11 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "vvc1") {
     return std::make_shared<ImageItem_VVC>(ctx, id);
   }
+#if WITH_UNCOMPRESSED_CODEC
   else if (item_type == "unci") {
     return std::make_shared<ImageItem_uncompressed>(ctx, id);
   }
+#endif
   else if (item_type == "j2k1") {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
@@ -613,8 +616,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
       return std::make_shared<ImageItem_AVIF>(ctx);
     case heif_compression_VVC:
       return std::make_shared<ImageItem_VVC>(ctx);
+#if WITH_UNCOMPRESSED_CODEC
     case heif_compression_uncompressed:
       return std::make_shared<ImageItem_uncompressed>(ctx);
+#endif
     case heif_compression_JPEG2000:
     case heif_compression_HTJ2K:
       return std::make_shared<ImageItem_JPEG2000>(ctx);
