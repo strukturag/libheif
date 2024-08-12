@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <codecs/image_item.h>
+#include <memory>
 
 
 class Box_vvcC : public FullBox

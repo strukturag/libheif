@@ -30,6 +30,7 @@
 #include <limits>
 #include <istream>
 #include <string>
+#include <cassert>
 
 #include "error.h"
 #include <algorithm>
@@ -186,14 +187,16 @@ public:
 
   void skip(uint64_t n)
   {
-    uint64_t actual_skip = std::min(n, static_cast<uint64_t>(m_remaining));
+    size_t actual_skip = std::min(static_cast<size_t>(n), m_remaining);
 
     if (m_parent_range) {
       // also advance position in parent range
       m_parent_range->skip_without_advancing_file_pos(actual_skip);
     }
 
-    m_istr->seek_cur(actual_skip);
+    assert(actual_skip <= std::numeric_limits<int64_t>::max());
+
+    m_istr->seek_cur(static_cast<int64_t>(actual_skip));
     m_remaining -= actual_skip;
   }
 

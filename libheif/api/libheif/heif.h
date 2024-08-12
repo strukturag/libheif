@@ -23,9 +23,6 @@
 
 #include <sys/time.h>
 
-inline long timediff(const struct timeval tv_start, const struct timeval tv_end)
-{ return ((tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec)/1); }
-
 #ifdef __cplusplus
 extern "C" {
 #endif
