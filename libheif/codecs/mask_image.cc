@@ -125,53 +125,50 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
   return Error::Ok;
 }
 
-Error MaskImageCodec::encode_mask_image(const std::shared_ptr<HeifFile>& heif_file,
-                                        const std::shared_ptr<HeifPixelImage>& src_image,
-                                        void* encoder_struct,
-                                        const struct heif_encoding_options& options,
-                                        std::shared_ptr<ImageItem>& out_image)
+
+Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                         struct heif_encoder* encoder,
+                                                         const struct heif_encoding_options& options,
+                                                         enum heif_image_input_class input_class)
 {
-  if (src_image->get_colorspace() != heif_colorspace_monochrome)
+  CodedImageData codedImageData;
+
+  if (image->get_colorspace() != heif_colorspace_monochrome)
   {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Unsupported colourspace for mask region");
   }
-  if (src_image->get_bits_per_pixel(heif_channel_Y) != 8)
+
+  if (image->get_bits_per_pixel(heif_channel_Y) != 8)
   {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Unsupported bit depth for mask region");
   }
+
   // TODO: we could add an option to lossless-compress this data
   std::vector<uint8_t> data;
   int src_stride;
-  uint8_t* src_data = src_image->get_plane(heif_channel_Y, &src_stride);
+  uint8_t* src_data = image->get_plane(heif_channel_Y, &src_stride);
 
-  int w = src_image->get_width();
-  int h = src_image->get_height();
+  uint32_t w = image->get_width();
+  uint32_t h = image->get_height();
 
   data.resize(w * h);
 
-  if (w == src_stride) {
-    memcpy(data.data(), src_data, w * h);
+  if (w == (uint32_t)src_stride) {
+    codedImageData.append(src_data, w*h);
   }
   else {
-    for (int y = 0; y < h; y++) {
-      memcpy(data.data() + y * w, src_data + y * src_stride, w);
+    for (uint32_t y = 0; y < h; y++) {
+      codedImageData.append(src_data + y * src_stride, w);
     }
   }
 
-  heif_file->append_iloc_data(out_image->get_id(), data, 0);
-
   std::shared_ptr<Box_mskC> mskC = std::make_shared<Box_mskC>();
-  mskC->set_bits_per_pixel(src_image->get_bits_per_pixel(heif_channel_Y));
-  heif_file->add_property(out_image->get_id(), mskC, true);
+  mskC->set_bits_per_pixel(image->get_bits_per_pixel(heif_channel_Y));
+  codedImageData.properties.push_back(mskC);
 
-  // We need to ensure ispe is essential for the mask case
-  std::shared_ptr<Box_ispe> ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(src_image->get_width(), src_image->get_height());
-  heif_file->add_property(out_image->get_id(), ispe, true);
-
-  return Error::Ok;
+  return codedImageData;
 }

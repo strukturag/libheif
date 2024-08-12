@@ -19,6 +19,7 @@
  */
 
 #include "image_item.h"
+#include "mask_image.h"
 #include <context.h>
 #include <file.h>
 #include <cassert>
@@ -589,6 +590,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "j2k1") {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
+  else if (item_type == "mski") {
+    return std::make_shared<ImageItem_mask>(ctx, id);
+  }
   else {
     return nullptr;
   }
@@ -623,6 +627,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
     case heif_compression_JPEG2000:
     case heif_compression_HTJ2K:
       return std::make_shared<ImageItem_JPEG2000>(ctx);
+    case heif_compression_mask:
+      return std::make_shared<ImageItem_mask>(ctx);
     default:
       assert(false);
       return nullptr;

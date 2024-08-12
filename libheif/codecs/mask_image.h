@@ -76,11 +76,27 @@ public:
                                   heif_item_id ID,
                                   std::shared_ptr<HeifPixelImage>& img,
                                   const std::vector<uint8_t>& data);
-  static Error encode_mask_image(const std::shared_ptr<HeifFile>& heif_file,
-                                 const std::shared_ptr<HeifPixelImage>& src_image,
-                                 void* encoder_struct,
-                                 const struct heif_encoding_options& options,
-                                 std::shared_ptr<ImageItem>& out_image);
+};
+
+
+
+class ImageItem_mask : public ImageItem
+{
+public:
+  ImageItem_mask(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_mask(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "mski"; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+
+  bool is_ispe_essential() const override { return true; }
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
 };
 
 #endif //LIBHEIF_MASK_IMAGE_H

@@ -2273,26 +2273,6 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
 }
 
 
-Error HeifContext::encode_image_as_mask(const std::shared_ptr<HeifPixelImage>& src_image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class,
-                                        std::shared_ptr<ImageItem>& out_image)
-{
-  heif_item_id image_id = m_heif_file->add_new_hidden_image("mski");
-  out_image = std::make_shared<ImageItem>(this, image_id);
-  Error err = MaskImageCodec::encode_mask_image(m_heif_file,
-                                                src_image,
-                                                encoder->encoder,
-                                                options,
-                                                out_image);
-  m_top_level_images.push_back(out_image);
-  m_all_images[image_id] = out_image;
-  write_image_metadata(src_image, image_id);
-  return Error::Ok;
-}
-
-
 void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
 {
   // update heif context
