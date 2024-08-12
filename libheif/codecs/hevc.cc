@@ -678,6 +678,9 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
       hvcC->set_configuration(config);
+
+      codedImage.encoded_image_width = encoded_width;
+      codedImage.encoded_image_height = encoded_height;
     }
 
     switch (data[0] >> 1) {

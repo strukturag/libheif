@@ -393,6 +393,10 @@ public:
     std::vector<std::shared_ptr<Box>> properties;
     std::vector<uint8_t> bitstream;
 
+    // If 0, the encoded size is equal to the input size.
+    uint32_t encoded_image_width = 0;
+    uint32_t encoded_image_height = 0;
+
     void append(const uint8_t* data, size_t size);
 
     void append_with_4bytes_size(const uint8_t* data, size_t size);

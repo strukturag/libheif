@@ -658,18 +658,26 @@ Result<ImageItem::CodedImageData> ImageItem::encode_to_bistream_and_boxes(const 
   input_width = image->get_width();
   input_height = image->get_height();
 
-  // query the real size of the encoded image
+  // --- get the real size of the encoded image
 
-  uint32_t encoded_width = input_width;
-  uint32_t encoded_height = input_height;
+  // highest priority: codedImageData
+  uint32_t encoded_width = codedImage.encoded_image_width;
+  uint32_t encoded_height = codedImage.encoded_image_height;
 
-  if (encoder->plugin->plugin_api_version >= 3 &&
+  // second priority: query plugin API
+  if (encoded_width == 0 &&
+      encoder->plugin->plugin_api_version >= 3 &&
       encoder->plugin->query_encoded_size != nullptr) {
 
     encoder->plugin->query_encoded_size(encoder->encoder,
                                         input_width, input_height,
                                         &encoded_width,
                                         &encoded_height);
+  }
+  else if (encoded_width == 0) {
+    // fallback priority: use input size
+    encoded_width = input_width;
+    encoded_height = input_height;
   }
 
   auto ispe = std::make_shared<Box_ispe>();
