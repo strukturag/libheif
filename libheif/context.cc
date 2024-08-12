@@ -1843,34 +1843,6 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   // TODO: the hdlr box is not the right place for comments
   // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
 
-  switch (encoder->plugin->compression_format) {
-    case heif_compression_HEVC: {
-      error = encode_image_as_hevc(pixel_image,
-                                   encoder,
-                                   options,
-                                   input_class,
-                                   out_image);
-    }
-      break;
-
-    case heif_compression_VVC: {
-      error = encode_image_as_vvc(pixel_image,
-                                   encoder,
-                                   options,
-                                   heif_image_input_class_normal,
-                                   out_image);
-    }
-      break;
-
-    case heif_compression_AV1: {
-      error = encode_image_as_av1(pixel_image,
-                                  encoder,
-                                  options,
-                                  input_class,
-                                  out_image);
-    }
-      break;
-
     case heif_compression_JPEG2000:
     case heif_compression_HTJ2K: {
       error = encode_image_as_jpeg2000(pixel_image,
@@ -1879,24 +1851,6 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
                                        input_class,
                                        out_image);
       }
-      break;
-
-    case heif_compression_JPEG: {
-      error = encode_image_as_jpeg(pixel_image,
-                                   encoder,
-                                   options,
-                                   input_class,
-                                   out_image);
-    }
-      break;
-
-    case heif_compression_uncompressed: {
-      error = encode_image_as_uncompressed(pixel_image,
-                                           encoder,
-                                           options,
-                                           input_class,
-                                           out_image);
-    }
       break;
 
     case heif_compression_mask: {
@@ -1948,7 +1902,9 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
   // --- if there is an alpha channel, add it as an additional image
 
-  if (options.save_alpha_channel && colorConvertedImage->has_alpha()) {
+  if (options.save_alpha_channel &&
+      colorConvertedImage->has_alpha() &&
+      image_item->get_auxC_alpha_channel_type() != nullptr) { // does not need a separate alpha aux image
 
     // --- generate alpha image
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
@@ -2509,31 +2465,6 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   j2kH->append_child_box(cdef);
 
   write_image_metadata(src_image, image_id);
-
-  return Error::Ok;
-}
-
-
-Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                struct heif_encoder* encoder,
-                                                const struct heif_encoding_options& options,
-                                                enum heif_image_input_class input_class,
-                                                std::shared_ptr<ImageItem>& out_image)
-{
-#if WITH_UNCOMPRESSED_CODEC
-  heif_item_id image_id = m_heif_file->add_new_image("unci");
-  out_image = std::make_shared<ImageItem>(this, image_id);
-
-  Error err = UncompressedImageCodec::encode_uncompressed_image(m_heif_file,
-                                                                src_image,
-                                                                encoder->encoder,
-                                                                options,
-                                                                out_image);
-
-  m_top_level_images.push_back(out_image);
-  m_all_images[image_id] = out_image;
-#endif
-  //write_image_metadata(src_image, image_id);
 
   return Error::Ok;
 }

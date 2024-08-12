@@ -220,7 +220,9 @@ public:
 
   void set_output_position(uint64_t pos) { m_output_position = pos; }
 
-  virtual bool is_essential() const { return false; } // only used for properties
+  virtual bool is_essential() const { return m_is_essential; } // only used for properties
+
+  void set_is_essential(bool flag) { m_is_essential = flag; }
 
 protected:
   virtual Error parse(BitstreamRange& range);
@@ -236,6 +238,8 @@ protected:
   std::vector<uint8_t> m_box_data; // including header
 
   std::string m_debug_box_type;
+
+  bool m_is_essential = false;
 
   const static int READ_CHILDREN_ALL = -1;
 
@@ -660,7 +664,7 @@ public:
 
   bool operator==(const Box& other) const override;
 
-  bool is_essential() const override { return true; }
+  bool is_essential() const override { return false; }
 
 protected:
   Error parse(BitstreamRange& range) override;

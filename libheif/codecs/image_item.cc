@@ -580,6 +580,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "vvc1") {
     return std::make_shared<ImageItem_VVC>(ctx, id);
   }
+  else if (item_type == "unci") {
+    return std::make_shared<ImageItem_uncompressed>(ctx, id);
+  }
   else if (item_type == "j2k1") {
     assert(false); // TODO
   }
@@ -588,16 +591,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   }
 
 #if 0
-  return (item_type == "hvc1" ||
-          item_type == "grid" ||
+  return (item_type == "grid" ||
           item_type == "tild" ||
           item_type == "iden" ||
           item_type == "iovl" ||
-          item_type == "av01" ||
-          item_type == "unci" ||
-          item_type == "vvc1" ||
-          item_type == "jpeg" ||
-          (item_type == "mime" && content_type == "image/jpeg") ||
           item_type == "j2k1" ||
           item_type == "mski");
 #endif
@@ -617,6 +614,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
       return std::make_shared<ImageItem_AVIF>(ctx);
     case heif_compression_VVC:
       return std::make_shared<ImageItem_VVC>(ctx);
+    case heif_compression_uncompressed:
+      return std::make_shared<ImageItem_uncompressed>(ctx);
     default:
       assert(false);
       return nullptr;
@@ -668,6 +667,7 @@ Result<ImageItem::CodedImageData> ImageItem::encode_to_bistream_and_boxes(const 
 
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(encoded_width, encoded_height);
+  ispe->set_is_essential(is_ispe_essential());
   codedImage.properties.push_back(ispe);
 
 
@@ -792,7 +792,8 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
 
-  if (encoder->plugin->compression_format != heif_compression_AV1) {
+  if (encoder->plugin->compression_format != heif_compression_AV1 &&
+      image->get_colorspace() == heif_colorspace_YCbCr) {
     if (!is_integer_multiple_of_chroma_size(image->get_width(),
                                             image->get_height(),
                                             image->get_chroma_format())) {
@@ -1191,14 +1192,16 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
 }
 
 
-void ImageItem::CodedImageData::append(const uint8_t* data, uint32_t size)
+void ImageItem::CodedImageData::append(const uint8_t* data, size_t size)
 {
   bitstream.insert(bitstream.end(), data, data+size);
 }
 
 
-void ImageItem::CodedImageData::append_with_4bytes_size(const uint8_t* data, uint32_t size)
+void ImageItem::CodedImageData::append_with_4bytes_size(const uint8_t* data, size_t size)
 {
+  assert(size <= 0xFFFFFFFF);
+
   uint8_t size_field[4];
   size_field[0] = (uint8_t) ((size >> 24) & 0xFF);
   size_field[1] = (uint8_t) ((size >> 16) & 0xFF);

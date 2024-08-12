@@ -215,6 +215,8 @@ public:
 
   virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 
+  virtual bool is_ispe_essential() const { return false; }
+
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
@@ -386,20 +388,15 @@ public:
 
   // === writing ===
 
-  struct CodedImageData {
+  struct CodedImageData
+  {
     std::vector<std::shared_ptr<Box>> properties;
     std::vector<uint8_t> bitstream;
 
-    void append(const uint8_t* data, uint32_t size);
-    void append_with_4bytes_size(const uint8_t* data, uint32_t size);
-  };
+    void append(const uint8_t* data, size_t size);
 
-#if 0
-  static Result<CodedImageData> encode_image(const std::shared_ptr<HeifPixelImage>& image,
-                                              struct heif_encoder* encoder,
-                                              const struct heif_encoding_options& options,
-                                              enum heif_image_input_class input_class);
-#endif
+    void append_with_4bytes_size(const uint8_t* data, size_t size);
+  };
 
   Result<CodedImageData> encode_to_bistream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
                                                       struct heif_encoder* encoder,
