@@ -41,6 +41,8 @@ public:
     set_short_type(fourcc("av1C"));
   }
 
+  bool is_essential() const override { return true; }
+
   struct configuration
   {
     //unsigned int (1) marker = 1;

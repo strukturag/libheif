@@ -80,6 +80,8 @@ public:
     set_short_type(fourcc("uncC"));
   }
 
+  bool is_essential() const override { return true; }
+
   void derive_box_version() override {};
 
   std::string dump(Indent&) const override;

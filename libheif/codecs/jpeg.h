@@ -60,15 +60,13 @@ public:
 
   const char* get_infe_type() const override { return "jpeg"; }
 
+  const heif_color_profile_nclx* get_forced_output_nclx() const override;
+
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class) override;
-
-  static Result<CodedImageData> encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
-                                      struct heif_encoder* encoder,
-                                      const struct heif_encoding_options& options,
-                                      enum heif_image_input_class input_class);
 };
 
 #endif // LIBHEIF_JPEG_H

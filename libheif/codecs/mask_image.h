@@ -50,6 +50,8 @@ public:
     set_short_type(fourcc("mskC"));
   }
 
+  bool is_essential() const override { return true; }
+
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;

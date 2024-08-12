@@ -194,7 +194,7 @@ public:
 
   Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
 
-  void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
+  void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method);
 
   void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
 

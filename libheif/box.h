@@ -461,6 +461,7 @@ public:
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
 
   // append bitstream data that will be written later (after iloc box)
+  // TODO: use an enum for the construction method
   Error append_data(heif_item_id item_ID,
                     const std::vector<uint8_t>& data,
                     uint8_t construction_method = 0);
@@ -726,6 +727,8 @@ public:
 
   const std::vector<uint8_t>& get_subtypes() const { return m_aux_subtypes; }
 
+  bool is_essential() const override { return true; }
+
   std::string dump(Indent&) const override;
 
 protected:
@@ -746,6 +749,8 @@ public:
   {
     set_short_type(fourcc("irot"));
   }
+
+  bool is_essential() const override { return true; }
 
   std::string dump(Indent&) const override;
 
@@ -772,6 +777,8 @@ public:
     set_short_type(fourcc("imir"));
   }
 
+  bool is_essential() const override { return true; }
+
   heif_transform_mirror_direction get_mirror_direction() const { return m_axis; }
 
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
@@ -795,6 +802,8 @@ public:
   {
     set_short_type(fourcc("clap"));
   }
+
+  bool is_essential() const override { return true; }
 
   std::string dump(Indent&) const override;
 

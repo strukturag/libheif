@@ -205,9 +205,18 @@ public:
 
   static std::shared_ptr<ImageItem> alloc_for_infe_box(HeifContext*, const std::shared_ptr<Box_infe>&);
 
+  static std::shared_ptr<ImageItem> alloc_for_encoder(HeifContext*, struct heif_encoder* encoder);
+
+  Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
+                                                                          struct heif_encoder* encoder,
+                                                                          const struct heif_encoding_options& options);
+
   virtual const char* get_infe_type() const { return "????"; } // TODO = 0;
 
   virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
+
+  // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
+  virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
   void clear()
   {
@@ -246,7 +255,7 @@ public:
 
   int get_chroma_bits_per_pixel() const;
 
-  void set_size(int w, int h)
+  void set_size(uint32_t w, uint32_t h)
   {
     m_width = w;
     m_height = h;
@@ -381,25 +390,27 @@ public:
     std::vector<std::shared_ptr<Box>> properties;
     std::vector<uint8_t> bitstream;
 
-    std::shared_ptr<HeifPixelImage> encoded_image; // input to the encoder, colorspace may be converted
+    void append(const uint8_t* data, uint32_t size);
+    void append_with_4bytes_size(const uint8_t* data, uint32_t size);
   };
 
+#if 0
   static Result<CodedImageData> encode_image(const std::shared_ptr<HeifPixelImage>& image,
                                               struct heif_encoder* encoder,
                                               const struct heif_encoding_options& options,
                                               enum heif_image_input_class input_class);
+#endif
 
-  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class) { return {}; }
+  Result<CodedImageData> encode_to_bistream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+                                                      struct heif_encoder* encoder,
+                                                      const struct heif_encoding_options& options,
+                                                      enum heif_image_input_class input_class);
 
-  static Result<std::shared_ptr<ImageItem>> encode_to_item(HeifContext* ctx,
-                                                           const std::shared_ptr<HeifPixelImage>& image,
-                                                           struct heif_encoder* encoder,
-                                                           const struct heif_encoding_options& options,
-                                                           enum heif_image_input_class input_class);
-
+  Error encode_to_item(HeifContext* ctx,
+                       const std::shared_ptr<HeifPixelImage>& image,
+                       struct heif_encoder* encoder,
+                       const struct heif_encoding_options& options,
+                       enum heif_image_input_class input_class);
 
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
@@ -516,12 +527,13 @@ private:
   uint64_t m_next_tild_position = 0;
 
 protected:
+  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options& options,
+                                        enum heif_image_input_class input_class) { return {}; }
+
   // --- encoding utility functions
 
-  static Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
-                                                                                 struct heif_encoder* encoder,
-                                                                                 const struct heif_encoding_options& options,
-                                                                                 const heif_color_profile_nclx* target_heif_nclx);
 
   static void add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
                                 const struct heif_encoding_options& options,

@@ -39,8 +39,8 @@ bool is_chroma_with_alpha(heif_chroma chroma);
 
 int num_interleaved_pixels_per_plane(heif_chroma chroma);
 
-bool is_integer_multiple_of_chroma_size(int width,
-                                        int height,
+bool is_integer_multiple_of_chroma_size(uint32_t width,
+                                        uint32_t height,
                                         heif_chroma chroma);
 
 // Returns the list of valid heif_chroma values for a given colorspace.

@@ -27,6 +27,23 @@
 #include <cstring>
 
 
+static uint8_t JPEG_SOS = 0xDA;
+
+// returns 0 if the marker_type was not found
+size_t find_jpeg_marker_start(const std::vector<uint8_t>& data, uint8_t marker_type)
+{
+  for (size_t i = 0; i < data.size() - 1; i++) {
+    if (data[i]==0xFF && data[i+1]==marker_type) {
+      return i;
+    }
+  }
+
+  return 0;
+}
+
+
+
+
 std::string Box_jpgC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -67,51 +84,31 @@ Error Box_jpgC::parse(BitstreamRange& range)
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
+const heif_color_profile_nclx* ImageItem_JPEG::get_forced_output_nclx() const
 {
-  return encode_image_as_jpeg(image, encoder, options, input_class);
-}
-
-
-Result<ImageItem::CodedImageData> ImageItem_JPEG::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
-                                                                       struct heif_encoder* encoder,
-                                                                       const struct heif_encoding_options& options,
-                                                                       enum heif_image_input_class input_class)
-{
-  CodedImageData codedImage;
-
-  // --- check whether we have to convert the image color space
-
   // JPEG always uses CCIR-601
 
-  heif_color_profile_nclx target_heif_nclx;
+  static heif_color_profile_nclx target_heif_nclx;
+  target_heif_nclx.version = 1;
   target_heif_nclx.matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
   target_heif_nclx.color_primaries = heif_color_primaries_ITU_R_BT_601_6;
   target_heif_nclx.transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_601_6;
   target_heif_nclx.full_range_flag = true;
 
-  printf("e_j 1\n");
+  return &target_heif_nclx;
+}
 
-  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = convert_colorspace_for_encoding(image, encoder, options, &target_heif_nclx);
-  if (srcImageResult.error) {
-    printf("err1 %s\n", srcImageResult.error.message.c_str());
-    return srcImageResult.error;
-  }
 
-  std::shared_ptr<HeifPixelImage> src_image = srcImageResult.value;
-  printf("p: %p\n", src_image.get());
-  codedImage.encoded_image = src_image;
-
-  // --- choose which color profile to put into 'colr' box
-
-  add_color_profile(image, options, input_class, &target_heif_nclx, codedImage);
+Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                         struct heif_encoder* encoder,
+                                                         const struct heif_encoding_options& options,
+                                                         enum heif_image_input_class input_class)
+{
+  CodedImageData codedImage;
 
 
   heif_image c_api_image;
-  c_api_image.image = src_image;
+  c_api_image.image = image;
 
   struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
   if (err.code) {
@@ -156,41 +153,13 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode_image_as_jpeg(const std
     }
   }
 #endif
+  (void)JPEG_SOS;
 
   codedImage.bitstream = vec;
 
 #if 0
   // TODO: extract 'jpgC' header data
 #endif
-
-  uint32_t input_width, input_height;
-  input_width = src_image->get_width();
-  input_height = src_image->get_height();
-
-  // Note: 'ispe' must be before the transformation properties
-
-  auto ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(input_width, input_height);
-  codedImage.properties.push_back(ispe);
-
-  uint32_t encoded_width = input_width, encoded_height = input_height;
-
-  if (encoder->plugin->plugin_api_version >= 3 &&
-      encoder->plugin->query_encoded_size != nullptr) {
-
-    encoder->plugin->query_encoded_size(encoder->encoder,
-                                        input_width, input_height,
-                                        &encoded_width,
-                                        &encoded_height);
-  }
-
-  if (input_width != encoded_width ||
-      input_height != encoded_height) {
-
-    auto clap = std::make_shared<Box_clap>();
-    clap->set(input_width, input_height, encoded_width, encoded_height);
-    codedImage.properties.push_back(clap);
-  }
 
   return {codedImage};
 }

@@ -312,6 +312,8 @@ class Box_j2kH : public Box
 public:
     Box_j2kH() { set_short_type(fourcc("j2kH")); }
 
+    bool is_essential() const override { return true; }
+
     std::string dump(Indent &) const override;
 
     // Default write behaviour for a container is to write children

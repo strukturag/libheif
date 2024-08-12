@@ -31,6 +31,8 @@ class Box_avcC : public Box {
 public:
   Box_avcC() { set_short_type(fourcc("avcC")); }
 
+  bool is_essential() const override { return true; }
+
   struct configuration {
     uint8_t configuration_version;
     uint8_t AVCProfileIndication; // profile_idc

@@ -216,7 +216,7 @@ void HeifContext::write(StreamWriter& writer)
     Error err = region->encode(data_array);
     // TODO: err
 
-    m_heif_file->append_iloc_data(region->item_id, data_array);
+    m_heif_file->append_iloc_data(region->item_id, data_array, 0);
   }
 
   // --- post-process images
@@ -1829,12 +1829,17 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 
 Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
                                 struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
+                                const struct heif_encoding_options& in_options,
                                 enum heif_image_input_class input_class,
                                 std::shared_ptr<ImageItem>& out_image)
 {
   Error error;
 
+
+  std::shared_ptr<ImageItem> image_item = ImageItem::alloc_for_encoder(this, encoder);
+
+
+#if 0
   // TODO: the hdlr box is not the right place for comments
   // m_heif_file->set_hdlr_library_info(encoder->plugin->get_plugin_name());
 
@@ -1906,19 +1911,50 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
     default:
       return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
   }
+#endif
+
+
+  // --- check whether we have to convert the image color space
+
+  // The reason for doing the color conversion here is that the input might be an RGBA image and the color conversion
+  // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
+
+  heif_encoding_options options = in_options;
+
+  if (const auto* nclx = image_item->get_forced_output_nclx()) {
+    options.output_nclx_profile = nclx;
+  }
+
+  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = image_item->convert_colorspace_for_encoding(pixel_image,
+                                                                                                       encoder,
+                                                                                                       options);
+  if (srcImageResult.error) {
+    return srcImageResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
+
+
+  Error err = image_item->encode_to_item(this,
+                                         colorConvertedImage,
+                                         encoder, options, input_class);
+  if (err) {
+    return err;
+  }
+
+  out_image = image_item;
+
 
 
   // --- if there is an alpha channel, add it as an additional image
 
-  printf("a %d\n", options.save_alpha_channel);
-  if (options.save_alpha_channel && pixel_image->has_alpha()) {
-    printf("b\n");
+  if (options.save_alpha_channel && colorConvertedImage->has_alpha()) {
 
     // --- generate alpha image
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
 
     std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(pixel_image);
+    alpha_image = create_alpha_image_from_image_alpha_channel(colorConvertedImage);
 
 
     // --- encode the alpha image
@@ -2156,8 +2192,10 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
                                        const std::shared_ptr<HeifPixelImage>& image,
                                        struct heif_encoder* encoder)
 {
+  auto item = ImageItem::alloc_for_encoder(this, encoder);
+
   heif_encoding_options* options = heif_encoding_options_alloc();
-  Result<ImageItem::CodedImageData> encodeResult = ImageItem::encode_image(image, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
+  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bistream_and_boxes(image, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
   heif_encoding_options_free(options);
 
   if (encodeResult.error) {
@@ -2221,8 +2259,9 @@ static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uin
 }
 */
 
-void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, int image_id)
+void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, heif_item_id image_id)
 {
+#if 0
   auto colorspace = src_image->get_colorspace();
   auto chroma = src_image->get_chroma_format();
 
@@ -2284,6 +2323,7 @@ void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image
     int index = m_heif_file->get_ipco_box()->find_or_append_child_box(mdcv);
     m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
+#endif
 }
 
 
@@ -2343,227 +2383,6 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
   target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
 
   return target_nclx_profile;
-}
-
-
-Error HeifContext::encode_image_as_hevc(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class,
-                                        std::shared_ptr<ImageItem>& out_image)
-{
-  heif_item_id image_id = m_heif_file->add_new_image("hvc1");
-  out_image = std::make_shared<ImageItem>(this, image_id);
-
-
-  // --- check whether we have to convert the image color space
-
-  heif_colorspace colorspace = image->get_colorspace();
-  heif_chroma chroma = image->get_chroma_format();
-
-  auto target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
-
-  if (encoder->plugin->plugin_api_version >= 2) {
-    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
-  }
-  else {
-    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
-  }
-
-  std::shared_ptr<HeifPixelImage> src_image;
-  if (colorspace != image->get_colorspace() ||
-      chroma != image->get_chroma_format() ||
-      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
-    // @TODO: use color profile when converting
-    int output_bpp = 0; // same as input
-    src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                   output_bpp, options.color_conversion_options);
-    if (!src_image) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
-    }
-  }
-  else {
-    src_image = image;
-  }
-
-
-  int input_width = src_image->get_width(heif_channel_Y);
-  int input_height = src_image->get_height(heif_channel_Y);
-
-  out_image->set_size(input_width, input_height);
-
-
-  auto hvcC = std::make_shared<Box_hvcC>();
-
-  heif_image c_api_image;
-  c_api_image.image = src_image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
-  }
-
-  int encoded_width = 0;
-  int encoded_height = 0;
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
-
-    if (data == NULL) {
-      break;
-    }
-
-
-    const uint8_t NAL_SPS = 33;
-
-    if ((data[0] >> 1) == NAL_SPS) {
-      Box_hvcC::configuration config;
-
-      parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
-
-      hvcC->set_configuration(config);
-    }
-
-    switch (data[0] >> 1) {
-      case 0x20:
-      case 0x21:
-      case 0x22:
-        hvcC->append_nal_data(data, size);
-        break;
-
-      default:
-        m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
-    }
-  }
-
-  if (!encoded_width || !encoded_height) {
-    return Error(heif_error_Encoder_plugin_error,
-                 heif_suberror_Invalid_image_size);
-  }
-
-  m_heif_file->add_property(image_id, hvcC, true);
-
-  if (encoder->plugin->plugin_api_version >= 3 &&
-      encoder->plugin->query_encoded_size != nullptr) {
-    uint32_t check_encoded_width = input_width, check_encoded_height = input_height;
-
-    encoder->plugin->query_encoded_size(encoder->encoder,
-                                        input_width, input_height,
-                                        &check_encoded_width,
-                                        &check_encoded_height);
-
-    assert((int)check_encoded_width == encoded_width);
-    assert((int)check_encoded_height == encoded_height);
-  }
-
-
-  // Note: 'ispe' must be before the transformation properties
-  m_heif_file->add_ispe_property(image_id, encoded_width, encoded_height);
-
-  // if image size was rounded up to even size, add a 'clap' box to crop the
-  // padding border away
-
-  //uint32_t rotated_width = get_rotated_width(options.image_orientation, out_image->get_width(), out_image->get_height());
-  //uint32_t rotated_height = get_rotated_height(options.image_orientation, out_image->get_width(), out_image->get_height());
-
-  if (input_width != encoded_width ||
-      input_height != encoded_height) {
-    m_heif_file->add_clap_property(image_id,
-                                   input_width,
-                                   input_height,
-                                   encoded_width,
-                                   encoded_height);
-
-    // MIAF 7.3.6.7
-    // This is according to MIAF without Amd2. With Amd2, the restriction has been liften and the image is MIAF compatible.
-    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
-
-    if (!is_integer_multiple_of_chroma_size(input_width,
-                                            input_height,
-                                            src_image->get_chroma_format())) {
-      out_image->mark_not_miaf_compatible();
-    }
-  }
-
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
-  // --- choose which color profile to put into 'colr' box
-
-  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
-    auto icc_profile = src_image->get_color_profile_icc();
-    if (icc_profile) {
-      m_heif_file->set_color_profile(image_id, icc_profile);
-    }
-
-    // save nclx profile
-
-    bool save_nclx_profile = (options.output_nclx_profile != nullptr);
-
-    // if there is an ICC profile, only save NCLX when we chose to save both profiles
-    if (icc_profile && !(options.version >= 3 &&
-                         options.save_two_colr_boxes_when_ICC_and_nclx_available)) {
-      save_nclx_profile = false;
-    }
-
-    // we might have turned off nclx completely because macOS/iOS cannot read it
-    if (options.version >= 4 && options.macOS_compatibility_workaround_no_nclx_profile) {
-      save_nclx_profile = false;
-    }
-
-    if (save_nclx_profile) {
-      m_heif_file->set_color_profile(image_id, target_nclx_profile);
-    }
-  }
-
-
-  write_image_metadata(src_image, image_id);
-
-  m_top_level_images.push_back(out_image);
-  m_all_images[image_id] = out_image;
-
-
-
-  // --- If there is an alpha channel, add it as an additional image.
-  //     Save alpha after the color image because we need to know the final reference to the color image.
-
-  if (options.save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
-
-    // --- generate alpha image
-    // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-    std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
-
-
-    // --- encode the alpha image
-
-    std::shared_ptr<ImageItem> heif_alpha_image;
-
-    Error error = encode_image_as_hevc(alpha_image, encoder, options,
-                                       heif_image_input_class_alpha,
-                                       heif_alpha_image);
-    if (error) {
-      return error;
-    }
-
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
-
-    if (src_image->is_premultiplied_alpha()) {
-      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
-    }
-
-    // TODO: MIAF says that the *:hevc:* urn is deprecated and we should use "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"
-    // Is this compatible to other decoders?
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:hevc:2015:auxid:1");
-  }
-
-
-  return Error::Ok;
 }
 
 
@@ -2915,7 +2734,7 @@ Error HeifContext::encode_image_as_av1(const std::shared_ptr<HeifPixelImage>& im
     vec.resize(size);
     memcpy(vec.data(), data, size);
 
-    m_heif_file->append_iloc_data(image_id, vec);
+    m_heif_file->append_iloc_data(image_id, vec, 0);
   }
 
   m_heif_file->add_av1C_property(image_id, config);
@@ -3067,7 +2886,7 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
     vec.resize(size);
     memcpy(vec.data(), data, size);
 
-    m_heif_file->append_iloc_data(image_id, vec);
+    m_heif_file->append_iloc_data(image_id, vec, 0);
   }
 
 
@@ -3091,227 +2910,6 @@ Error HeifContext::encode_image_as_jpeg2000(const std::shared_ptr<HeifPixelImage
   return Error::Ok;
 }
 
-
-static uint8_t JPEG_SOS = 0xDA;
-
-// returns 0 if the marker_type was not found
-size_t find_jpeg_marker_start(const std::vector<uint8_t>& data, uint8_t marker_type)
-{
-  for (size_t i = 0; i < data.size() - 1; i++) {
-    if (data[i]==0xFF && data[i+1]==marker_type) {
-      return i;
-    }
-  }
-
-  return 0;
-}
-
-
-Error HeifContext::encode_image_as_jpeg(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class,
-                                        std::shared_ptr<ImageItem>& out_image)
-{
-  Result<std::shared_ptr<ImageItem>> encodedImageResult = ImageItem::encode_to_item(this, image, encoder, options, input_class);
-  if (encodedImageResult.error) {
-    return encodedImageResult.error;
-  }
-
-  out_image = encodedImageResult.value;
-
-  return Error::Ok;
-
-#if 0
-  heif_item_id image_id = m_heif_file->add_new_image("jpeg");
-
-  out_image = std::make_shared<ImageItem>(this, image_id);
-  m_top_level_images.push_back(out_image);
-
-  m_all_images[image_id] = out_image;
-
-  // --- check whether we have to convert the image color space
-
-  heif_colorspace colorspace = image->get_colorspace();
-  heif_chroma chroma = image->get_chroma_format();
-
-  // JPEG always uses CCIR-601
-
-  heif_color_profile_nclx target_heif_nclx;
-  target_heif_nclx.matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
-  target_heif_nclx.color_primaries = heif_color_primaries_ITU_R_BT_601_6;
-  target_heif_nclx.transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_601_6;
-  target_heif_nclx.full_range_flag = true;
-
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-  target_nclx_profile->set_from_heif_color_profile_nclx(&target_heif_nclx);
-
-  if (encoder->plugin->plugin_api_version >= 2) {
-    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
-  }
-  else {
-    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
-  }
-
-  std::shared_ptr<HeifPixelImage> src_image;
-  if (colorspace != image->get_colorspace() ||
-      chroma != image->get_chroma_format() ||
-      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), &target_heif_nclx)) {
-    // @TODO: use color profile when converting
-    int output_bpp = 0; // same as input
-    src_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                   output_bpp, options.color_conversion_options);
-    if (!src_image) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
-    }
-  }
-  else {
-    src_image = image;
-  }
-
-
-  // --- choose which color profile to put into 'colr' box
-
-  if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
-    auto icc_profile = src_image->get_color_profile_icc();
-    if (icc_profile) {
-      m_heif_file->set_color_profile(image_id, icc_profile);
-    }
-
-    if (// target_nclx_profile &&
-        (!icc_profile || (options.version >= 3 &&
-                          options.save_two_colr_boxes_when_ICC_and_nclx_available))) {
-      m_heif_file->set_color_profile(image_id, target_nclx_profile);
-    }
-  }
-
-
-  // --- if there is an alpha channel, add it as an additional image
-
-  if (options.save_alpha_channel && src_image->has_channel(heif_channel_Alpha)) {
-
-    // --- generate alpha image
-    // TODO: can we directly code a monochrome image instead of the dummy color channels?
-
-    std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(src_image);
-
-
-    // --- encode the alpha image
-
-    std::shared_ptr<ImageItem> heif_alpha_image;
-
-
-    Error error = encode_image_as_jpeg(alpha_image, encoder, options,
-                                       heif_image_input_class_alpha,
-                                       heif_alpha_image);
-    if (error) {
-      return error;
-    }
-
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {image_id});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
-
-    if (src_image->is_premultiplied_alpha()) {
-      m_heif_file->add_iref_reference(image_id, fourcc("prem"), {heif_alpha_image->get_id()});
-    }
-  }
-
-  heif_image c_api_image;
-  c_api_image.image = src_image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
-  }
-
-  std::vector<uint8_t> vec;
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-
-    if (data == nullptr) {
-      break;
-    }
-
-    size_t oldsize = vec.size();
-    vec.resize(oldsize + size);
-    memcpy(vec.data() + oldsize, data, size);
-  }
-
-  // Optional: split the JPEG data into a jpgC box and the actual image data.
-  // Currently disabled because not supported yet in other decoders.
-  if (false) {
-    size_t pos = find_jpeg_marker_start(vec, JPEG_SOS);
-    if (pos > 0) {
-      std::vector<uint8_t> jpgC_data(vec.begin(), vec.begin() + pos);
-      auto jpgC = std::make_shared<Box_jpgC>();
-      jpgC->set_data(jpgC_data);
-
-      auto ipma_box = m_heif_file->get_ipma_box();
-      int index = m_heif_file->get_ipco_box()->find_or_append_child_box(jpgC);
-      ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
-
-      std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());
-      vec = std::move(image_data);
-    }
-  }
-
-  m_heif_file->append_iloc_data(image_id, vec);
-
-#if 0
-  // TODO: extract 'jpgC' header data
-#endif
-
-  uint32_t input_width, input_height;
-  input_width = src_image->get_width();
-  input_height = src_image->get_height();
-
-  // Note: 'ispe' must be before the transformation properties
-  m_heif_file->add_ispe_property(image_id, input_width, input_height);
-
-  uint32_t encoded_width = input_width, encoded_height = input_height;
-
-  if (encoder->plugin->plugin_api_version >= 3 &&
-      encoder->plugin->query_encoded_size != nullptr) {
-
-    encoder->plugin->query_encoded_size(encoder->encoder,
-                                        input_width, input_height,
-                                        &encoded_width,
-                                        &encoded_height);
-  }
-
-  if (input_width != encoded_width ||
-      input_height != encoded_height) {
-    m_heif_file->add_clap_property(image_id, input_width, input_height,
-                                   encoded_width, encoded_height);
-
-    // MIAF 7.3.6.7
-    // This is according to MIAF without Amd2. With Amd2, the restriction has been lifted and the image is MIAF compatible.
-    // We might remove this code at a later point in time when MIAF Amd2 is in wide use.
-
-    if (!is_integer_multiple_of_chroma_size(input_width,
-                                            input_height,
-                                            src_image->get_chroma_format())) {
-      out_image->mark_not_miaf_compatible();
-    }
-  }
-
-
-  m_heif_file->add_orientation_properties(image_id, options.image_orientation);
-
-  write_image_metadata(src_image, image_id);
-
-  return Error::Ok;
-#endif
-
-  (void)JPEG_SOS;
-}
 
 Error HeifContext::encode_image_as_uncompressed(const std::shared_ptr<HeifPixelImage>& src_image,
                                                 struct heif_encoder* encoder,
@@ -3559,7 +3157,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 
   // copy the data into the file, store the pointer to it in an iloc box entry
 
-  m_heif_file->append_iloc_data(metadata_id, data_array);
+  m_heif_file->append_iloc_data(metadata_id, data_array, 0);
 
   return Error::Ok;
 }

@@ -1317,6 +1317,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
 }
 
 
+// TODO: we should use a acquire() / release() approach here so that we can get multiple IDs before actually creating infe boxes
 heif_item_id HeifFile::get_unused_item_id() const
 {
   heif_item_id max_id = 0;
@@ -1742,7 +1743,7 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
 
   // copy the data into the file, store the pointer to it in an iloc box entry
 
-  append_iloc_data(item->get_item_ID(), data_array);
+  append_iloc_data(item->get_item_ID(), data_array, 0);
 
   return Error::Ok;
 }
@@ -1765,7 +1766,7 @@ Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& ite
 
   // copy the data into the file, store the pointer to it in an iloc box entry
 
-  append_iloc_data(item->get_item_ID(), data_array);
+  append_iloc_data(item->get_item_ID(), data_array, 0);
 
   return Error::Ok;
 }
@@ -1795,7 +1796,7 @@ void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* 
 
   memcpy(nal.data() + 4, data, size);
 
-  append_iloc_data(id, nal);
+  append_iloc_data(id, nal, 0);
 }
 
 void HeifFile::set_primary_item_id(heif_item_id id)
