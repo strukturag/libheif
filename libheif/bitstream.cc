@@ -398,8 +398,10 @@ BitReader::BitReader(const uint8_t* buffer, int len)
   refill();
 }
 
-int BitReader::get_bits(int n)
+uint32_t BitReader::get_bits(int n)
 {
+  assert(n <= 32);
+
   if (nextbits_cnt < n) {
     refill();
   }
@@ -410,7 +412,7 @@ int BitReader::get_bits(int n)
   nextbits <<= n;
   nextbits_cnt -= n;
 
-  return (int) val;
+  return static_cast<uint32_t>(val);
 }
 
 
@@ -418,6 +420,13 @@ uint8_t BitReader::get_bits8(int n)
 {
   assert(n>0 && n <= 8);
   return static_cast<uint8_t>(get_bits(n));
+}
+
+
+uint32_t BitReader::get_bits32(int n)
+{
+  assert(n>0 && n <= 32);
+  return static_cast<uint32_t>(get_bits(n));
 }
 
 

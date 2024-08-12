@@ -266,9 +266,11 @@ class BitReader
 public:
   BitReader(const uint8_t* buffer, int len);
 
-  int get_bits(int n);
+  uint32_t get_bits(int n);
 
   uint8_t get_bits8(int n);
+
+  uint32_t get_bits32(int n);
 
   int get_bits_fast(int n);
 

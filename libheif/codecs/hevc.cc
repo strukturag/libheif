@@ -318,9 +318,9 @@ Error Box_hvcC::write(StreamWriter& writer) const
 
 static double read_depth_rep_info_element(BitReader& reader)
 {
-  int sign_flag = reader.get_bits(1);
+  uint8_t sign_flag = reader.get_bits8(1);
   int exponent = reader.get_bits(7);
-  int mantissa_len = reader.get_bits(5) + 1;
+  uint8_t mantissa_len = reader.get_bits8(5) + 1;
   if (mantissa_len < 1 || mantissa_len > 32) {
     // TODO err
   }
@@ -329,11 +329,12 @@ static double read_depth_rep_info_element(BitReader& reader)
     // TODO value unspecified
   }
 
-  int mantissa = reader.get_bits(mantissa_len);
+  uint32_t mantissa = reader.get_bits32(mantissa_len);
   double value;
 
   //printf("sign:%d exponent:%d mantissa_len:%d mantissa:%d\n",sign_flag,exponent,mantissa_len,mantissa);
 
+  // TODO: this seems to be wrong. 'exponent' is never negative. How to read it correctly?
   if (exponent > 0) {
     value = pow(2.0, exponent - 31) * (1.0 + mantissa / pow(2.0, mantissa_len));
   }
@@ -435,7 +436,7 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
             "HEVC SEI NAL too short"};
   }
 
-  uint32_t len = (uint32_t) reader.get_bits(32);
+  uint32_t len = reader.get_bits32(32);
 
   if (len > data.size() - 4) {
     // ERROR: read past end of data
@@ -452,10 +453,10 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
               "HEVC SEI NAL too short"};
     }
 
-    uint32_t nal_size = (uint32_t) sei_reader.get_bits(32);
+    uint32_t nal_size = sei_reader.get_bits32(32);
     (void) nal_size;
 
-    uint8_t nal_type = (uint8_t) (sei_reader.get_bits(8) >> 1);
+    uint8_t nal_type = sei_reader.get_bits8(8) >> 1;
     sei_reader.skip_bits(8);
 
     // SEI
@@ -470,19 +471,18 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
       }
 
       // TODO: loading of multi-byte sei headers
-      uint8_t payload_id = (uint8_t) (sei_reader.get_bits(8));
-      uint8_t payload_size = (uint8_t) (sei_reader.get_bits(8));
+      uint8_t payload_id = sei_reader.get_bits8(8);
+      uint8_t payload_size = sei_reader.get_bits8(8);
       (void) payload_size;
 
-      switch (payload_id) {
-        case 177: // depth_representation_info
-          Result<std::shared_ptr<SEIMessage>> seiResult = read_depth_representation_info(sei_reader);
-          if (seiResult.error) {
-            return seiResult.error;
-          }
+      if (payload_id == 177) {
+        // depth_representation_info
+        Result<std::shared_ptr<SEIMessage>> seiResult = read_depth_representation_info(sei_reader);
+        if (seiResult.error) {
+          return seiResult.error;
+        }
 
-          msgs.push_back(seiResult.value);
-          break;
+        msgs.push_back(seiResult.value);
       }
     }
 
@@ -536,22 +536,22 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   // skip VPS ID
   reader.skip_bits(4);
 
-  int nMaxSubLayersMinus1 = reader.get_bits(3);
+  uint8_t nMaxSubLayersMinus1 = reader.get_bits8(3);
 
-  config->temporal_id_nested = (uint8_t) reader.get_bits(1);
+  config->temporal_id_nested = reader.get_bits8(1);
 
   // --- profile_tier_level ---
 
-  config->general_profile_space = (uint8_t) reader.get_bits(2);
-  config->general_tier_flag = (uint8_t) reader.get_bits(1);
-  config->general_profile_idc = (uint8_t) reader.get_bits(5);
-  config->general_profile_compatibility_flags = reader.get_bits(32);
+  config->general_profile_space = reader.get_bits8(2);
+  config->general_tier_flag = reader.get_bits8(1);
+  config->general_profile_idc = reader.get_bits8(5);
+  config->general_profile_compatibility_flags = reader.get_bits32(32);
 
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
 
-  config->general_level_idc = (uint8_t) reader.get_bits(8);
+  config->general_level_idc = reader.get_bits8(8);
 
   std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
   std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
@@ -663,9 +663,9 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
     uint8_t* data;
     int size;
 
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, NULL);
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
 
-    if (data == NULL) {
+    if (data == nullptr) {
       break;
     }
 
