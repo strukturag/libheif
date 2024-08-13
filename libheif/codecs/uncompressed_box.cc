@@ -524,7 +524,9 @@ Error Box_icef::write(StreamWriter& writer) const
       unit_size_code = 4;
       break;
   }
-  uint8_t code_bits = (unit_offset_code << 5) | (unit_size_code << 2);
+  assert(unit_offset_code <= 0x07); // 3 bits
+  assert(unit_size_code <= 0x07); // 3 bits
+  auto code_bits = static_cast<uint8_t>((unit_offset_code << 5) | (unit_size_code << 2));
   writer.write8(code_bits);
   writer.write32((uint32_t)m_unit_infos.size());
   for (CompressedUnitInfo unit_info: m_unit_infos) {
