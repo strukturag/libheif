@@ -1032,7 +1032,7 @@ struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const stru
                                                                       enum heif_colorspace* out_colorspace,
                                                                       enum heif_chroma* out_chroma)
 {
-  Error err = image_handle->image->get_preferred_decoding_colorspace(out_colorspace, out_chroma);
+  Error err = image_handle->image->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
     return err.error_struct(image_handle->image.get());
   }

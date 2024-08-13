@@ -263,7 +263,7 @@ public:
     m_height = h;
   }
 
-  Error get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
+  Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
 
   void process_before_write();
 

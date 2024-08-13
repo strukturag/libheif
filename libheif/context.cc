@@ -819,6 +819,16 @@ bool HeifContext::has_alpha(heif_item_id ID) const
     return true;
   }
 
+  heif_colorspace colorspace;
+  heif_chroma chroma;
+  img->get_coded_image_colorspace(&colorspace, &chroma);
+
+  if (chroma == heif_chroma_interleaved_RGBA ||
+      chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
+      chroma == heif_chroma_interleaved_RRGGBBAA_LE) {
+    return true;
+  }
+
   // --- if the image is a 'grid', check if there is alpha in any of the tiles
 
   std::string image_type = m_heif_file->get_item_type(ID);

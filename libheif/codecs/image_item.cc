@@ -853,7 +853,7 @@ uint32_t ImageItem::get_ispe_height() const
 }
 
 
-Error ImageItem::get_preferred_decoding_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   heif_item_id id;
   Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
