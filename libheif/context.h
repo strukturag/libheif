@@ -63,6 +63,8 @@ public:
 
   void set_max_decoding_threads(int max_threads) { m_max_decoding_threads = max_threads; }
 
+  int get_max_decoding_threads() const { return m_max_decoding_threads; }
+
   // Sets the maximum size of both width and height of an image. The total limit
   // of the image size (width * height) will be "maximum_size * maximum_size".
   void set_maximum_image_size_limit(uint32_t maximum_size)
@@ -242,15 +244,6 @@ private:
   Error interpret_heif_file();
 
   void remove_top_level_image(const std::shared_ptr<ImageItem>& image);
-
-  Error decode_full_grid_image(heif_item_id ID,
-                               std::shared_ptr<HeifPixelImage>& img,
-                               const heif_decoding_options& options) const;
-
-  Error decode_and_paste_tile_image(heif_item_id tileID,
-                                    const std::shared_ptr<HeifPixelImage>& out_image,
-                                    uint32_t x0, uint32_t y0,
-                                    const heif_decoding_options& options) const;
 
   Error decode_derived_image(heif_item_id ID,
                              std::shared_ptr<HeifPixelImage>& img,

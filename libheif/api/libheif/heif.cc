@@ -31,6 +31,7 @@
 #include "error.h"
 #include "bitstream.h"
 #include "init.h"
+#include "codecs/grid.h"
 #include <set>
 #include <limits>
 
@@ -860,15 +861,16 @@ struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_im
     return tiling;
   }
 
-  if (!handle->image->is_grid()) {
+  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
+  if (!gridItem) {
     return tiling;
   }
 
-  const ImageGrid& gridspec = handle->image->get_grid_spec();
+  const ImageGrid& gridspec = gridItem->get_grid_spec();
   tiling.num_columns = gridspec.get_columns();
   tiling.num_rows = gridspec.get_rows();
 
-  heif_item_id tile0_id = handle->image->get_grid_tiles()[0];
+  heif_item_id tile0_id = gridItem->get_grid_tiles()[0];
   auto tile0 = handle->context->get_image(tile0_id);
   tiling.tile_width = tile0->get_width();
   tiling.tile_height = tile0->get_height();
@@ -883,16 +885,17 @@ heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle*
     return 0;
   }
 
-  if (!handle->image->is_grid()) {
+  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
+  if (!gridItem) {
     return 0;
   }
 
-  const ImageGrid& gridspec = handle->image->get_grid_spec();
+  const ImageGrid& gridspec = gridItem->get_grid_spec();
   if (tile_x >= gridspec.get_columns() || tile_y >= gridspec.get_rows()) {
     return 0;
   }
 
-  return handle->image->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+  return gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
 }
 
 
@@ -906,8 +909,9 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 
   // --- 'grid' image
 
-  if (handle->image->is_grid()) {
-    heif_item_id first_tile_id = handle->image->get_grid_tiles()[0];
+  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
+  if (gridItem) {
+    heif_item_id first_tile_id = gridItem->get_grid_tiles()[0];
     auto tile = handle->context->get_image(first_tile_id);
 
     if (tile_width) {
@@ -948,7 +952,8 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
     return error_null_parameter;
   }
 
-  if (handle->image->is_grid()) {
+  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
+  if (gridItem) {
     if (z0 != 0) {
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "z0 must be 0 for 2D images"};
     }
@@ -957,14 +962,14 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
       return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "x0/y0 currently must be 32 bit"};
     }
 
-    heif_item_id first_tile_id = handle->image->get_grid_tiles()[0];
+    heif_item_id first_tile_id = gridItem->get_grid_tiles()[0];
     auto tile = handle->context->get_image(first_tile_id);
 
-    const ImageGrid& gridspec = handle->image->get_grid_spec();
+    const ImageGrid& gridspec = gridItem->get_grid_spec();
     uint32_t tile_x = static_cast<uint32_t>(x0) / tile->get_width();
     uint32_t tile_y = static_cast<uint32_t>(y0) / tile->get_height();
 
-    heif_item_id tile_id = handle->image->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+    heif_item_id tile_id = gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
     heif_image_handle* tile_handle;
     heif_context* ctx = heif_image_handle_get_context(handle);
     heif_error err = heif_context_get_image_handle(ctx, tile_id, &tile_handle);

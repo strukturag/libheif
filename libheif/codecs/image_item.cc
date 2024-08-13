@@ -20,6 +20,7 @@
 
 #include "image_item.h"
 #include "mask_image.h"
+#include "grid.h"
 #include <context.h>
 #include <file.h>
 #include <cassert>
@@ -109,122 +110,21 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
+std::shared_ptr<HeifFile> ImageItem::get_file()
+{
+  return m_heif_context->get_heif_file();
+}
+
+
+std::shared_ptr<const HeifFile> ImageItem::get_file() const
+{
+  return m_heif_context->get_heif_file();
+}
+
+
 Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
 {
   return m_heif_context->check_resolution(w, h);
-}
-
-
-Error ImageGrid::parse(const std::vector<uint8_t>& data)
-{
-  if (data.size() < 8) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_grid_data,
-                 "Less than 8 bytes of data");
-  }
-
-  uint8_t version = data[0];
-  if (version != 0) {
-    std::stringstream sstr;
-    sstr << "Grid image version " << ((int) version) << " is not supported";
-    return {heif_error_Unsupported_feature,
-            heif_suberror_Unsupported_data_version,
-            sstr.str()};
-  }
-
-  uint8_t flags = data[1];
-  int field_size = ((flags & 1) ? 32 : 16);
-
-  m_rows = static_cast<uint16_t>(data[2] + 1);
-  m_columns = static_cast<uint16_t>(data[3] + 1);
-
-  if (field_size == 32) {
-    if (data.size() < 12) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_grid_data,
-                   "Grid image data incomplete");
-    }
-
-    m_output_width = ((data[4] << 24) |
-                      (data[5] << 16) |
-                      (data[6] << 8) |
-                      (data[7]));
-
-    m_output_height = ((data[8] << 24) |
-                       (data[9] << 16) |
-                       (data[10] << 8) |
-                       (data[11]));
-  }
-  else {
-    m_output_width = ((data[4] << 8) |
-                      (data[5]));
-
-    m_output_height = ((data[6] << 8) |
-                       (data[7]));
-  }
-
-  return Error::Ok;
-}
-
-
-std::vector<uint8_t> ImageGrid::write() const
-{
-  int field_size;
-
-  if (m_output_width > 0xFFFF ||
-      m_output_height > 0xFFFF) {
-    field_size = 32;
-  }
-  else {
-    field_size = 16;
-  }
-
-  std::vector<uint8_t> data(field_size == 16 ? 8 : 12);
-
-  data[0] = 0; // version
-
-  uint8_t flags = 0;
-  if (field_size == 32) {
-    flags |= 1;
-  }
-
-  data[1] = flags;
-  data[2] = (uint8_t) (m_rows - 1);
-  data[3] = (uint8_t) (m_columns - 1);
-
-  if (field_size == 32) {
-    data[4] = (uint8_t) ((m_output_width >> 24) & 0xFF);
-    data[5] = (uint8_t) ((m_output_width >> 16) & 0xFF);
-    data[6] = (uint8_t) ((m_output_width >> 8) & 0xFF);
-    data[7] = (uint8_t) ((m_output_width) & 0xFF);
-
-    data[8] = (uint8_t) ((m_output_height >> 24) & 0xFF);
-    data[9] = (uint8_t) ((m_output_height >> 16) & 0xFF);
-    data[10] = (uint8_t) ((m_output_height >> 8) & 0xFF);
-    data[11] = (uint8_t) ((m_output_height) & 0xFF);
-  }
-  else {
-    data[4] = (uint8_t) ((m_output_width >> 8) & 0xFF);
-    data[5] = (uint8_t) ((m_output_width) & 0xFF);
-
-    data[6] = (uint8_t) ((m_output_height >> 8) & 0xFF);
-    data[7] = (uint8_t) ((m_output_height) & 0xFF);
-  }
-
-  return data;
-}
-
-
-std::string ImageGrid::dump() const
-{
-  std::ostringstream sstr;
-
-  sstr << "rows: " << m_rows << "\n"
-       << "columns: " << m_columns << "\n"
-       << "output width: " << m_output_width << "\n"
-       << "output height: " << m_output_height << "\n";
-
-  return sstr.str();
 }
 
 
@@ -593,12 +493,14 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "mski") {
     return std::make_shared<ImageItem_mask>(ctx, id);
   }
+  else if (item_type == "grid") {
+    return std::make_shared<ImageItem_Grid>(ctx, id);
+  }
   else {
     return nullptr;
   }
 
 #if 0
-  return (item_type == "grid" ||
           item_type == "tild" ||
           item_type == "iden" ||
           item_type == "iovl" ||
@@ -958,51 +860,6 @@ void ImageItem::process_before_write()
 }
 
 
-Error ImageItem::read_grid_spec()
-{
-  m_is_grid = true;
-
-  auto heif_file = m_heif_context->get_heif_file();
-
-  std::vector<uint8_t> grid_data;
-  Error err = heif_file->get_compressed_image_data(m_id, &grid_data);
-  if (err) {
-    return err;
-  }
-
-  err = m_grid_spec.parse(grid_data);
-  if (err) {
-    return err;
-  }
-
-  //std::cout << grid.dump();
-
-
-  auto iref_box = heif_file->get_iref_box();
-
-  if (!iref_box) {
-    return {heif_error_Invalid_input,
-            heif_suberror_No_iref_box,
-            "No iref box available, but needed for grid image"};
-  }
-
-  m_grid_tile_ids = iref_box->get_references(m_id, fourcc("dimg"));
-
-  if ((int) m_grid_tile_ids.size() != m_grid_spec.get_rows() * m_grid_spec.get_columns()) {
-    std::stringstream sstr;
-    sstr << "Tiled image with " << m_grid_spec.get_rows() << "x" << m_grid_spec.get_columns() << "="
-         << (m_grid_spec.get_rows() * m_grid_spec.get_columns()) << " tiles, but only "
-         << m_grid_tile_ids.size() << " tile images in file";
-
-    return {heif_error_Invalid_input,
-            heif_suberror_Missing_grid_images,
-            sstr.str()};
-  }
-
-  return Error::Ok;
-}
-
-
 void ImageItem::set_preencoded_hevc_image(const std::vector<uint8_t>& data)
 {
   auto hvcC = std::make_shared<Box_hvcC>();
@@ -1330,7 +1187,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
                                        img->get_colorspace() :
                                        out_colorspace);
 
-#if 0
+#if 1  // TODO: disabling this will likely improve performance, but we have to implement "grid" and "iovl" for more input variants
+
   if (/*!alphaImage &&*/ target_colorspace == heif_colorspace_YCbCr) {
     target_colorspace = heif_colorspace_RGB;
   }

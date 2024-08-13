@@ -46,50 +46,6 @@ public:
 };
 
 
-class ImageGrid
-{
-public:
-  Error parse(const std::vector<uint8_t>& data);
-
-  std::vector<uint8_t> write() const;
-
-  std::string dump() const;
-
-  uint32_t get_width() const { return m_output_width; }
-
-  uint32_t get_height() const { return m_output_height; }
-
-  uint16_t get_rows() const
-  {
-    return m_rows;
-  }
-
-  uint16_t get_columns() const
-  {
-    return m_columns;
-  }
-
-  void set_num_tiles(uint16_t columns, uint16_t rows)
-  {
-    m_rows = rows;
-    m_columns = columns;
-  }
-
-  void set_output_size(uint32_t width, uint32_t height)
-  {
-    m_output_width = width;
-    m_output_height = height;
-  }
-
-private:
-  uint16_t m_rows = 0;
-  uint16_t m_columns = 0;
-  uint32_t m_output_width = 0;
-  uint32_t m_output_height = 0;
-};
-
-
-
 class ImageOverlay
 {
 public:
@@ -229,6 +185,14 @@ public:
     m_depth_channel.reset();
     m_aux_images.clear();
   }
+
+  HeifContext* get_context() { return m_heif_context; }
+
+  const HeifContext* get_context() const { return m_heif_context; }
+
+  std::shared_ptr<class HeifFile> get_file();
+
+  std::shared_ptr<const class HeifFile> get_file() const;
 
   Error check_resolution(uint32_t w, uint32_t h) const;
 
@@ -390,6 +354,8 @@ public:
 
   // === decoding ===
 
+  virtual Error on_load_file() { return Error::Ok; }
+
   Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_colorspace out_colorspace,
                                                        const struct heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
@@ -473,14 +439,6 @@ public:
 
   const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
 
-  Error read_grid_spec();
-
-  bool is_grid() const { return m_is_grid; }
-
-  const ImageGrid& get_grid_spec() const { return m_grid_spec; }
-
-  const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
-
 
   // --- tild
 
@@ -531,10 +489,6 @@ private:
 
   bool m_has_extrinsic_matrix = false;
   Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
-
-  bool m_is_grid = false;
-  ImageGrid m_grid_spec;
-  std::vector<heif_item_id> m_grid_tile_ids;
 
   bool m_is_tild = false;
   TildHeader m_tild_header;

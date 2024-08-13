@@ -50,6 +50,7 @@
 #include "codecs/jpeg.h"
 #include "codecs/mask_image.h"
 #include "codecs/jpeg2000.h"
+#include "codecs/grid.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_image.h"
@@ -301,12 +302,19 @@ Error HeifContext::interpret_heif_file()
         m_top_level_images.push_back(image);
       }
 
+      Error err = image->on_load_file();
+      if (err) {
+        return err;
+      }
+
+#if 0
       if (infe_box->get_item_type() == "grid") {
         Error err = image->read_grid_spec();
         if (err) {
           return err;
         }
       }
+#endif
     }
   }
 
@@ -996,6 +1004,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
 
   // ====================== OLD IMPLEMENTATION    (TODO: remove) ==================================
 
+#if 0
   Error error;
 
 
@@ -1078,342 +1087,7 @@ Error HeifContext::decode_image_planar(heif_item_id ID,
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_image_type);
   }
-
-
-  return Error::Ok;
-}
-
-
-// This function only works with RGB images.
-Error HeifContext::decode_full_grid_image(heif_item_id ID,
-                                          std::shared_ptr<HeifPixelImage>& img,
-                                          const heif_decoding_options& options) const
-{
-  auto image = m_all_images.find(ID)->second;
-  assert(image->is_grid());
-
-  const ImageGrid& grid = image->get_grid_spec();
-
-  // --- check that all image IDs are valid images
-
-  const std::vector<heif_item_id>& image_references = image->get_grid_tiles();
-
-  for (heif_item_id tile_id : image_references) {
-    if (!is_image(tile_id)) {
-      std::stringstream sstr;
-      sstr << "Tile image ID=" << tile_id << " is not a proper image.";
-
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Missing_grid_images,
-                   sstr.str());
-    }
-  }
-
-
-  auto ipma = m_heif_file->get_ipma_box();
-  auto ipco = m_heif_file->get_ipco_box();
-  auto pixi_box = ipco->get_property_for_item_ID(ID, ipma, fourcc("pixi"));
-  auto pixi = std::dynamic_pointer_cast<Box_pixi>(pixi_box);
-
-  const uint32_t w = grid.get_width();
-  const uint32_t h = grid.get_height();
-
-
-  // --- determine output image chroma size and make sure all tiles have same chroma
-
-  assert(!image_references.empty());
-
-  heif_chroma tile_chroma = heif_chroma_444;
-  /* TODO: in the future, we might support RGB and mono as intermediate formats
-  heif_chroma tile_chroma = m_heif_file->get_image_chroma_from_configuration(some_tile_id);
-  if (tile_chroma != heif_chroma_monochrome) {
-    tile_chroma = heif_chroma_RGB;
-  }
-  */
-
-  // --- generate image of full output size
-
-  Error err = check_resolution(w, h);
-  if (err) {
-    return err;
-  }
-
-  img = std::make_shared<HeifPixelImage>();
-  img->create(w, h,
-              heif_colorspace_RGB,
-              heif_chroma_444);
-
-  int bpp = 0;
-
-  if (pixi) {
-    if (pixi->get_num_channels() < 1) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_pixi_box,
-                   "No pixi information for luma channel.");
-    }
-
-    bpp = pixi->get_bits_per_channel(0);
-
-    if (tile_chroma != heif_chroma_monochrome) {
-
-      // there are broken files that save only a one-channel pixi for an RGB image (issue #283)
-      if (pixi->get_num_channels() == 3) {
-
-        int bpp_c1 = pixi->get_bits_per_channel(1);
-        int bpp_c2 = pixi->get_bits_per_channel(2);
-
-        if (bpp_c1 != bpp || bpp_c2 != bpp) {
-          // TODO: is this really an error? Does the pixi depths refer to RGB or YCbCr?
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Invalid_pixi_box,
-                       "Different number of bits per pixel in each channel.");
-        }
-      }
-    }
-  }
-  else {
-    // When there is no pixi-box, get the pixel-depth from one of the tile images
-
-    heif_item_id tileID = image_references[0];
-
-    auto iter = m_all_images.find(tileID);
-    if (iter == m_all_images.end()) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Missing_grid_images,
-                   "Nonexistent grid image referenced");
-    }
-
-    const std::shared_ptr<ImageItem> tileImg = iter->second;
-    bpp = tileImg->get_luma_bits_per_pixel();
-  }
-
-  if (bpp < 8 || bpp > 16) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Invalid_pixi_box,
-                 "Invalid bits per pixel in pixi box.");
-  }
-
-  if (tile_chroma == heif_chroma_monochrome) {
-    img->add_plane(heif_channel_Y, w, h, bpp);
-  }
-  else {
-    img->add_plane(heif_channel_R, w, h, bpp);
-    img->add_plane(heif_channel_G, w, h, bpp);
-    img->add_plane(heif_channel_B, w, h, bpp);
-  }
-
-  uint32_t y0 = 0;
-  int reference_idx = 0;
-
-#if ENABLE_PARALLEL_TILE_DECODING
-  // remember which tile to put where into the image
-  struct tile_data
-  {
-    heif_item_id tileID;
-    uint32_t x_origin, y_origin;
-  };
-
-  std::deque<tile_data> tiles;
-  if (m_max_decoding_threads > 0)
-    tiles.resize(grid.get_rows() * grid.get_columns());
-
-  std::deque<std::future<Error> > errs;
 #endif
-
-  uint32_t tile_width=0;
-  uint32_t tile_height=0;
-
-  for (uint32_t y = 0; y < grid.get_rows(); y++) {
-    uint32_t x0 = 0;
-
-    for (uint32_t x = 0; x < grid.get_columns(); x++) {
-
-      heif_item_id tileID = image_references[reference_idx];
-
-      auto iter = m_all_images.find(tileID);
-      if (iter == m_all_images.end()) {
-        return {heif_error_Invalid_input,
-                heif_suberror_Missing_grid_images,
-                "Nonexistent grid image referenced"};
-      }
-
-      const std::shared_ptr<ImageItem> tileImg = iter->second;
-      uint32_t src_width = tileImg->get_width();
-      uint32_t src_height = tileImg->get_height();
-      err = check_resolution(src_width, src_height);
-      if (err) {
-        return err;
-      }
-
-      if (src_width < grid.get_width() / grid.get_columns() ||
-          src_height < grid.get_height() / grid.get_rows()) {
-        return {heif_error_Invalid_input,
-                heif_suberror_Invalid_grid_data,
-                "Grid tiles do not cover whole image"};
-      }
-
-      if (x==0 && y==0) {
-        // remember size of first tile and compare all other tiles against this
-        tile_width = src_width;
-        tile_height = src_height;
-      }
-      else if (src_width != tile_width || src_height != tile_height) {
-        return {heif_error_Invalid_input,
-                heif_suberror_Invalid_grid_data,
-                "Grid tiles have different sizes"};
-      }
-
-#if ENABLE_PARALLEL_TILE_DECODING
-      if (m_max_decoding_threads > 0)
-        tiles[x + y * grid.get_columns()] = tile_data{tileID, x0, y0};
-      else
-#else
-        if (1)
-#endif
-      {
-        err = decode_and_paste_tile_image(tileID, img, x0, y0, options);
-        if (err) {
-          return err;
-        }
-      }
-
-      x0 += src_width;
-
-      reference_idx++;
-    }
-
-    y0 += tile_height;
-  }
-
-#if ENABLE_PARALLEL_TILE_DECODING
-  if (m_max_decoding_threads > 0) {
-    // Process all tiles in a set of background threads.
-    // Do not start more than the maximum number of threads.
-
-    while (tiles.empty() == false) {
-
-      // If maximum number of threads running, wait until first thread finishes
-
-      if (errs.size() >= (size_t) m_max_decoding_threads) {
-        Error e = errs.front().get();
-        if (e) {
-          return e;
-        }
-
-        errs.pop_front();
-      }
-
-
-      // Start a new decoding thread
-
-      tile_data data = tiles.front();
-      tiles.pop_front();
-
-      errs.push_back(std::async(std::launch::async,
-                                &HeifContext::decode_and_paste_tile_image, this,
-                                data.tileID, img, data.x_origin, data.y_origin, options));
-    }
-
-    // check for decoding errors in remaining tiles
-
-    while (errs.empty() == false) {
-      Error e = errs.front().get();
-      if (e) {
-        return e;
-      }
-
-      errs.pop_front();
-    }
-  }
-#endif
-
-  return Error::Ok;
-}
-
-
-Error HeifContext::decode_and_paste_tile_image(heif_item_id tileID,
-                                               const std::shared_ptr<HeifPixelImage>& img,
-                                               uint32_t x0, uint32_t y0,
-                                               const heif_decoding_options& options) const
-{
-  std::shared_ptr<HeifPixelImage> tile_img;
-
-  Error err = decode_image_planar(tileID, tile_img, img->get_colorspace(), options, false);
-  if (err != Error::Ok) {
-    return err;
-  }
-
-  const uint32_t w = img->get_width();
-  const uint32_t h = img->get_height();
-
-
-  // --- copy tile into output image
-
-  uint32_t src_width = tile_img->get_width();
-  uint32_t src_height = tile_img->get_height();
-
-  heif_chroma chroma = img->get_chroma_format();
-
-  if (chroma != tile_img->get_chroma_format()) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Wrong_tile_image_chroma_format,
-                 "Image tile has different chroma format than combined image");
-  }
-
-  // --- add alpha plane if we discovered a tile with alpha
-
-  if (tile_img->has_alpha() && !img->has_alpha()) {
-#if ENABLE_PARALLEL_TILE_DECODING
-    // The mutex should probably be a member of heif_context, but since this is so infrequently locked, it probably doesn't matter.
-    static std::mutex m;
-    std::lock_guard<std::mutex> lock(m);
-    if (!img->has_channel(heif_channel_Alpha))  // check again, after locking
-#endif
-    {
-      int alpha_bpp = tile_img->get_bits_per_pixel(heif_channel_Alpha);
-
-      assert(alpha_bpp <= 16);
-
-      uint16_t alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
-
-      img->fill_new_plane(heif_channel_Alpha, alpha_default_value, w, h, alpha_bpp);
-    }
-  }
-
-  std::set<enum heif_channel> channels = tile_img->get_channel_set();
-
-  for (heif_channel channel : channels) {
-
-    int tile_stride;
-    uint8_t* tile_data = tile_img->get_plane(channel, &tile_stride);
-
-    int out_stride;
-    uint8_t* out_data = img->get_plane(channel, &out_stride);
-
-    if (w <= x0 || h <= y0) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Invalid_grid_data);
-    }
-
-    if (img->get_bits_per_pixel(channel) != tile_img->get_bits_per_pixel(channel)) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_Wrong_tile_image_pixel_depth);
-    }
-
-    int copy_width = std::min(src_width, w - x0);
-    int copy_height = std::min(src_height, h - y0);
-
-    copy_width *= tile_img->get_storage_bits_per_pixel(heif_channel_R) / 8;
-
-    int xs = x0, ys = y0;
-    xs *= tile_img->get_storage_bits_per_pixel(heif_channel_R) / 8;
-
-    for (int py = 0; py < copy_height; py++) {
-      memcpy(out_data + xs + (ys + py) * out_stride,
-             tile_data + py * tile_stride,
-             copy_width);
-    }
-  }
 
   return Error::Ok;
 }

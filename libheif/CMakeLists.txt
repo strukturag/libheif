@@ -66,6 +66,8 @@ set(libheif_sources
         codecs/mask_image.cc
         codecs/image_item.h
         codecs/image_item.cc
+        codecs/grid.h
+        codecs/grid.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc
