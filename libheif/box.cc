@@ -631,8 +631,8 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_cmpC>();
       break;
 
-    case fourcc("icbr"):
-      box = std::make_shared<Box_icbr>();
+    case fourcc("icef"):
+      box = std::make_shared<Box_icef>();
       break;
 #endif
 

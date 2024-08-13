@@ -920,7 +920,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   std::shared_ptr<Box_cmpd> cmpd;
   std::shared_ptr<Box_uncC> uncC;
   std::shared_ptr<Box_cmpC> cmpC;
-  std::shared_ptr<Box_icbr> icbr;
+  std::shared_ptr<Box_icef> icef;
 
   for (const auto& prop : item_properties) {
     auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
@@ -950,9 +950,9 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
       cmpC = maybe_cmpC;
     }
 
-    auto maybe_icbr = std::dynamic_pointer_cast<Box_icbr>(prop);
-    if (maybe_icbr) {
-      icbr = maybe_icbr;
+    auto maybe_icef = std::dynamic_pointer_cast<Box_icef>(prop);
+    if (maybe_icef) {
+      icef= maybe_icef;
     }
 
   }

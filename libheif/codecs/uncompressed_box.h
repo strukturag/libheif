@@ -221,7 +221,7 @@ protected:
 };
 
 /**
- * Generic compression box (cmpC).
+ * Generic compression configuration box (cmpC).
  *
  * This is from ISO/IEC 23001-17 Amd 2.
  */
@@ -236,8 +236,7 @@ public:
   std::string dump(Indent&) const override;
 
   uint32_t get_compression_type() const { return compression_type; }
-  bool get_must_decompress_individual_entities() const { return must_decompress_individual_entities; }
-  uint8_t get_compressed_range_type() const { return compressed_range_type; }
+  uint8_t get_compressed_unit_type() const { return compressed_unit_type; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -245,34 +244,35 @@ protected:
   Error parse(BitstreamRange& range) override;
 
   uint32_t compression_type;
-  bool must_decompress_individual_entities;
-  uint8_t compressed_range_type;
+  uint8_t compressed_unit_type;
 };
 
 /**
- * Item compressed byte range info (icbr).
+ * Generically compressed units item info (icef).
  *
- * This is from ISO/IEC 23001-17 Amd 2.
+ * This describes the units of compressed data for an item.
+ *
+ * The box is from ISO/IEC 23001-17 Amd 2.
  */
-class Box_icbr : public FullBox
+class Box_icef : public FullBox
 {
 public:
-  Box_icbr()
+  Box_icef()
   {
-    set_short_type(fourcc("icbr"));
+    set_short_type(fourcc("icef"));
   }
 
-  struct ByteRange
+  struct CompressedUnitInfo
   {
-    uint64_t range_offset;
-    uint64_t range_size;
+    uint64_t unit_offset;
+    uint64_t unit_size;
   };
 
-  const std::vector<ByteRange>& get_ranges() const { return m_ranges; }
+  const std::vector<CompressedUnitInfo>& get_units() const { return m_unit_infos; }
 
-  void add_component(const ByteRange& range)
+  void add_component(const CompressedUnitInfo& unit_info)
   {
-    m_ranges.push_back(range);
+    m_unit_infos.push_back(unit_info);
   }
 
   std::string dump(Indent&) const override;
@@ -282,7 +282,7 @@ public:
 protected:
   Error parse(BitstreamRange& range) override;
 
-  std::vector<ByteRange> m_ranges;
+  std::vector<CompressedUnitInfo> m_unit_infos;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H

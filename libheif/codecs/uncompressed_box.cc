@@ -372,9 +372,7 @@ Error Box_cmpC::parse(BitstreamRange& range)
   }
 
   compression_type = range.read32();
-  uint8_t v = range.read8();
-  must_decompress_individual_entities = ((v & 0x80) == 0x80);
-  compressed_range_type = (v & 0x7f);
+  compressed_unit_type = range.read8();
   return range.get_error();
 }
 
@@ -384,8 +382,7 @@ std::string Box_cmpC::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "compression_type: " << to_fourcc(compression_type) << "\n";
-  sstr << indent << "must_decompress_individual_entities: " << must_decompress_individual_entities << "\n";
-  sstr << indent << "compressed_entity_type: " << (int)compressed_range_type << "\n";
+  sstr << indent << "compressed_entity_type: " << (int)compressed_unit_type << "\n";
   return sstr.str();
 }
 
@@ -394,9 +391,7 @@ Error Box_cmpC::write(StreamWriter& writer) const
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(compression_type);
-  uint8_t v = must_decompress_individual_entities ? 0x80 : 0x00;
-  v |= (compressed_range_type & 0x7F);
-  writer.write8(v);
+  writer.write8(compressed_unit_type);
 
   prepend_header(writer, box_start);
 
@@ -404,58 +399,156 @@ Error Box_cmpC::write(StreamWriter& writer) const
 }
 
 
-Error Box_icbr::parse(BitstreamRange& range)
+Error Box_icef::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
 
-  if ((get_version() != 0) && (get_version() != 1)) {
-    return unsupported_version_error("icbr");
+  if (get_version() != 0) {
+    return unsupported_version_error("icef");
   }
-
-  uint32_t num_ranges = range.read32();
-  for (uint32_t r = 0; r < num_ranges; r++) {
-    struct ByteRange byteRange;
-    if (get_version() == 1) {
-      byteRange.range_offset = range.read64();
-      byteRange.range_size = range.read64();
-    } else if (get_version() == 0) {
-      byteRange.range_offset = range.read32();
-      byteRange.range_size = range.read32();
+  uint8_t codes = range.read8();
+  uint8_t unit_offset_code = (codes & 0b11100000) >> 5;
+  uint8_t unit_size_code = (codes & 0b00011100) >> 2;
+  uint32_t num_compressed_units = range.read32();
+  uint64_t implied_offset = 0;
+  for (uint32_t r = 0; r < num_compressed_units; r++) {
+    struct CompressedUnitInfo unitInfo;
+    if (unit_offset_code == 0) {
+      unitInfo.unit_offset = implied_offset;
+    } else if (unit_offset_code == 1) {
+      unitInfo.unit_offset = range.read16();
+    } else if (unit_offset_code == 2) {
+      unitInfo.unit_offset = range.read24();
+    } else if (unit_offset_code == 3) {
+      unitInfo.unit_offset = range.read32();
+    } else if (unit_offset_code == 4) {
+      unitInfo.unit_offset = range.read64();
     } else {
-      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icbr version");
+      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit offset code");
     }
+    if (unit_size_code == 0) {
+      unitInfo.unit_size = range.read8();
+    } else if (unit_size_code == 1) {
+      unitInfo.unit_size = range.read16();
+    } else if (unit_size_code == 2) {
+      unitInfo.unit_size = range.read24();
+    } else if (unit_size_code == 3) {
+      unitInfo.unit_size = range.read32();
+    } else if (unit_size_code == 4) {
+      unitInfo.unit_size = range.read64();
+    } else {
+      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit size code");
+    }
+    implied_offset += unitInfo.unit_size;
     if (range.get_error() != Error::Ok) {
       return range.get_error();
     }
-    m_ranges.push_back(byteRange);
+    m_unit_infos.push_back(unitInfo);
   }
   return range.get_error();
 }
 
 
-std::string Box_icbr::dump(Indent& indent) const
+std::string Box_icef::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "num_ranges: " << m_ranges.size() << "\n";
-  for (ByteRange range: m_ranges) {
-    sstr << indent << "range_offset: " << range.range_offset << ", range_size: " << range.range_size << "\n";
+  sstr << indent << "num_compressed_units: " << m_unit_infos.size() << "\n";
+  for (CompressedUnitInfo unit_info: m_unit_infos) {
+    sstr << indent << "unit_offset: " << unit_info.unit_offset << ", unit_size: " << unit_info.unit_size << "\n";
   }
   return sstr.str();
 }
 
-Error Box_icbr::write(StreamWriter& writer) const
+Error Box_icef::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write32((uint32_t)m_ranges.size());
-  for (ByteRange range: m_ranges) {
-    if (get_version() == 1) {
-      writer.write64(range.range_offset);
-      writer.write64(range.range_size);
-    } else if (get_version() == 0) {
-      writer.write32((uint32_t)range.range_offset);
-      writer.write32((uint32_t)range.range_size);
+  int unit_offset_nbbits = 16;
+  int unit_size_nbbits = 8;
+  uint64_t implied_offset = 0;
+  bool can_use_implied_offsets = true;
+  for (CompressedUnitInfo unit_info: m_unit_infos) {
+    if (unit_info.unit_offset != implied_offset) {
+      can_use_implied_offsets = false;
+    }
+    implied_offset += unit_info.unit_size;
+    while (unit_info.unit_offset >= (1ULL << unit_offset_nbbits)) {
+      unit_offset_nbbits += 8;
+      if (unit_offset_nbbits > 32) {
+        unit_offset_nbbits = 64;
+        break;
+      }
+    }
+    while (unit_info.unit_size >= (1ULL << unit_size_nbbits)) {
+      unit_size_nbbits += 8;
+      if (unit_size_nbbits > 32) {
+        unit_size_nbbits = 64;
+        break;
+      }
+    }
+  }
+  uint8_t unit_offset_code;
+  switch (unit_offset_nbbits) {
+    case 16:
+      unit_offset_code = 1;
+      break;
+    case 24:
+      unit_offset_code = 2;
+      break;
+    case 32:
+      unit_offset_code = 3;
+      break;
+    default:
+      unit_offset_code = 4;
+      break;
+  }
+  if (can_use_implied_offsets) {
+    unit_offset_code = 0;
+  }
+  uint8_t unit_size_code = 0;
+  switch (unit_size_nbbits) {
+    case 8:
+      unit_size_code = 0;
+      break;
+    case 16:
+      unit_size_code = 1;
+      break;
+    case 24:
+      unit_size_code = 2;
+      break;
+    case 32:
+      unit_size_code = 3;
+      break;
+    default:
+      unit_size_code = 4;
+      break;
+  }
+  uint8_t code_bits = (unit_offset_code << 5) | (unit_size_code << 2);
+  writer.write8(code_bits);
+  writer.write32((uint32_t)m_unit_infos.size());
+  for (CompressedUnitInfo unit_info: m_unit_infos) {
+    if (unit_offset_code == 0) {
+      // nothing
+    } else if (unit_offset_code == 1) {
+      writer.write16((uint16_t)unit_info.unit_offset);
+    } else if (unit_offset_code == 2) {
+      writer.write24((uint32_t)unit_info.unit_offset);
+    } else if (unit_offset_code == 3) {
+      writer.write32((uint32_t)unit_info.unit_offset);
+    } else {
+      writer.write64(unit_info.unit_offset);
+    }
+    if (unit_size_code == 0) {
+      writer.write8((uint8_t)unit_info.unit_size);
+    } else if (unit_size_code == 1) {
+      writer.write16((uint16_t)unit_info.unit_size);
+    } else if (unit_size_code == 2) {
+      writer.write24((uint32_t)unit_info.unit_size);
+    } else if (unit_size_code == 3) {
+      writer.write32((uint32_t)unit_info.unit_size);
+    } else {
+      writer.write64(unit_info.unit_size);
     }
   }
   prepend_header(writer, box_start);
