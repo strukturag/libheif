@@ -374,8 +374,7 @@ TEST_CASE("cmpC_defl") {
     std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
     REQUIRE(cmpC != nullptr);
     REQUIRE(cmpC->get_compression_type() == fourcc("defl"));
-    REQUIRE(cmpC->get_must_decompress_individual_entities() == false);
-    REQUIRE(cmpC->get_compressed_range_type() == 0);
+    REQUIRE(cmpC->get_compressed_unit_type() == 0);
 
     StreamWriter writer;
     Error err = cmpC->write(writer);
@@ -385,7 +384,7 @@ TEST_CASE("cmpC_defl") {
 
     Indent indent;
     std::string dump_output = cmpC->dump(indent);
-    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: defl\nmust_decompress_individual_entities: 0\ncompressed_entity_type: 0\n");
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: defl\ncompressed_entity_type: 0\n");
 
 }
 
@@ -394,7 +393,7 @@ TEST_CASE("cmpC_zlib") {
     std::vector<uint8_t> byteArray{
       0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
       0x00, 0x00, 0x00, 0x00, 'z', 'l', 'i', 'b',
-      0x82
+      0x02
       };
 
     auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
@@ -411,8 +410,7 @@ TEST_CASE("cmpC_zlib") {
     std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
     REQUIRE(cmpC != nullptr);
     REQUIRE(cmpC->get_compression_type() == fourcc("zlib"));
-    REQUIRE(cmpC->get_must_decompress_individual_entities() == true);
-    REQUIRE(cmpC->get_compressed_range_type() == 2);
+    REQUIRE(cmpC->get_compressed_unit_type() == 2);
 
     StreamWriter writer;
     Error err = cmpC->write(writer);
@@ -422,7 +420,7 @@ TEST_CASE("cmpC_zlib") {
 
     Indent indent;
     std::string dump_output = cmpC->dump(indent);
-    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: zlib\nmust_decompress_individual_entities: 1\ncompressed_entity_type: 2\n");
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: zlib\ncompressed_entity_type: 2\n");
 
 }
 
@@ -430,7 +428,7 @@ TEST_CASE("cmpC_brot") {
     std::vector<uint8_t> byteArray{
       0x00, 0x00, 0x00, 0x11, 'c', 'm', 'p', 'C',
       0x00, 0x00, 0x00, 0x00, 'b', 'r', 'o', 't',
-      0x81
+      0x01
       };
 
     auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
@@ -447,8 +445,7 @@ TEST_CASE("cmpC_brot") {
     std::shared_ptr<Box_cmpC> cmpC = std::dynamic_pointer_cast<Box_cmpC>(box);
     REQUIRE(cmpC != nullptr);
     REQUIRE(cmpC->get_compression_type() == fourcc("brot"));
-    REQUIRE(cmpC->get_must_decompress_individual_entities() == true);
-    REQUIRE(cmpC->get_compressed_range_type() == 1);
+    REQUIRE(cmpC->get_compressed_unit_type() == 1);
 
     StreamWriter writer;
     Error err = cmpC->write(writer);
@@ -458,14 +455,19 @@ TEST_CASE("cmpC_brot") {
 
     Indent indent;
     std::string dump_output = cmpC->dump(indent);
-    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: brot\nmust_decompress_individual_entities: 1\ncompressed_entity_type: 1\n");
+    REQUIRE(dump_output == "Box: cmpC -----\nsize: 17   (header size: 12)\ncompression_type: brot\ncompressed_entity_type: 1\n");
 
   }
 
-TEST_CASE("icbr_empty") {
+
+TEST_CASE("icef_24_8_bit") {
     std::vector<uint8_t> byteArray{
-      0x00, 0x00, 0x00, 0x10, 'i', 'c', 'b', 'r',
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+      0x00, 0x00, 0x00, 0x19, 'i', 'c', 'e', 'f',
+      0x00, 0x00, 0x00, 0x00,
+      0b01000000,
+      0x00, 0x00, 0x00, 0x02,
+      0x00, 0x0a, 0x03, 0x03,
+      0x02, 0x03, 0x0a, 0x07
       };
 
     auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
@@ -477,29 +479,33 @@ TEST_CASE("icbr_empty") {
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
-    REQUIRE(box->get_short_type() == fourcc("icbr"));
-    REQUIRE(box->get_type_string() == "icbr");
-    std::shared_ptr<Box_icbr> icbr = std::dynamic_pointer_cast<Box_icbr>(box);
-    REQUIRE(icbr != nullptr);
-    REQUIRE(icbr->get_ranges().size() == 0);
+    REQUIRE(box->get_short_type() == fourcc("icef"));
+    REQUIRE(box->get_type_string() == "icef");
+    std::shared_ptr<Box_icef> icef = std::dynamic_pointer_cast<Box_icef>(box);
+    REQUIRE(icef != nullptr);
+    REQUIRE(icef->get_units().size() == 2);
+    REQUIRE(icef->get_version() == 0);
 
     StreamWriter writer;
-    Error err = icbr->write(writer);
+    Error err = icef->write(writer);
     REQUIRE(err.error_code == heif_error_Ok);
     const std::vector<uint8_t> written = writer.get_data();
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icbr->dump(indent);
-    REQUIRE(dump_output == "Box: icbr -----\nsize: 16   (header size: 12)\nnum_ranges: 0\n");
+    std::string dump_output = icef->dump(indent);
+    REQUIRE(dump_output == "Box: icef -----\nsize: 25   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 2563, unit_size: 3\nunit_offset: 131850, unit_size: 7\n");
 }
 
-TEST_CASE("icbr_version0") {
+
+TEST_CASE("icef_0_16_bit") {
     std::vector<uint8_t> byteArray{
-      0x00, 0x00, 0x00, 0x20, 'i', 'c', 'b', 'r',
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x0a, 0x03, 0x00, 0x01, 0x02, 0x03,
-      0x00, 0x02, 0x03, 0x0a, 0x00, 0x04, 0x05, 0x07
+      0x00, 0x00, 0x00, 0x15, 'i', 'c', 'e', 'f',
+      0x00, 0x00, 0x00, 0x00,
+      0b00000100,
+      0x00, 0x00, 0x00, 0x02,
+      0x40, 0x03,
+      0x0a, 0x07
       };
 
     auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
@@ -511,32 +517,37 @@ TEST_CASE("icbr_version0") {
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
-    REQUIRE(box->get_short_type() == fourcc("icbr"));
-    REQUIRE(box->get_type_string() == "icbr");
-    std::shared_ptr<Box_icbr> icbr = std::dynamic_pointer_cast<Box_icbr>(box);
-    REQUIRE(icbr != nullptr);
-    REQUIRE(icbr->get_ranges().size() == 2);
-    REQUIRE(icbr->get_version() == 0);
+    REQUIRE(box->get_short_type() == fourcc("icef"));
+    REQUIRE(box->get_type_string() == "icef");
+    std::shared_ptr<Box_icef> icef = std::dynamic_pointer_cast<Box_icef>(box);
+    REQUIRE(icef != nullptr);
+    REQUIRE(icef->get_units().size() == 2);
+    REQUIRE(icef->get_units()[0].unit_offset == 0);
+    REQUIRE(icef->get_units()[0].unit_size == 16387);
+    REQUIRE(icef->get_units()[1].unit_offset == 16387);
+    REQUIRE(icef->get_units()[1].unit_size == 2567);
+    REQUIRE(icef->get_version() == 0);
 
     StreamWriter writer;
-    Error err = icbr->write(writer);
+    Error err = icef->write(writer);
     REQUIRE(err.error_code == heif_error_Ok);
     const std::vector<uint8_t> written = writer.get_data();
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icbr->dump(indent);
-    REQUIRE(dump_output == "Box: icbr -----\nsize: 32   (header size: 12)\nnum_ranges: 2\nrange_offset: 2563, range_size: 66051\nrange_offset: 131850, range_size: 263431\n");
+    std::string dump_output = icef->dump(indent);
+    REQUIRE(dump_output == "Box: icef -----\nsize: 21   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 0, unit_size: 16387\nunit_offset: 16387, unit_size: 2567\n");
 }
 
-TEST_CASE("icbr_version1") {
+
+TEST_CASE("icef_32bit") {
     std::vector<uint8_t> byteArray{
-      0x00, 0x00, 0x00, 0x30, 'i', 'c', 'b', 'r',
-      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x03,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x0a,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x05, 0x07
+      0x00, 0x00, 0x00, 0x21, 'i', 'c', 'e', 'f',
+      0x00, 0x00, 0x00, 0x00,
+      0b01101100,
+      0x00, 0x00, 0x00, 0x02,
+      0x00, 0x00, 0x03, 0x04, 0x01, 0x01, 0x02, 0x03,
+      0x01, 0x02, 0x03, 0x0a, 0x00, 0x04, 0x05, 0x07
       };
 
     auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
@@ -548,20 +559,90 @@ TEST_CASE("icbr_version1") {
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
-    REQUIRE(box->get_short_type() == fourcc("icbr"));
-    REQUIRE(box->get_type_string() == "icbr");
-    std::shared_ptr<Box_icbr> icbr = std::dynamic_pointer_cast<Box_icbr>(box);
-    REQUIRE(icbr != nullptr);
-    REQUIRE(icbr->get_ranges().size() == 2);
-    REQUIRE(icbr->get_version() == 1);
+    REQUIRE(box->get_short_type() == fourcc("icef"));
+    REQUIRE(box->get_type_string() == "icef");
+    std::shared_ptr<Box_icef> icef = std::dynamic_pointer_cast<Box_icef>(box);
+    REQUIRE(icef != nullptr);
+    REQUIRE(icef->get_units().size() == 2);
+    REQUIRE(icef->get_units()[0].unit_offset == 772);
+    REQUIRE(icef->get_units()[0].unit_size == 16843267);
+    REQUIRE(icef->get_units()[1].unit_offset == 16909066);
+    REQUIRE(icef->get_units()[1].unit_size == 263431);
+    REQUIRE(icef->get_version() == 0);
 
     StreamWriter writer;
-    Error err = icbr->write(writer);
+    Error err = icef->write(writer);
     REQUIRE(err.error_code == heif_error_Ok);
     const std::vector<uint8_t> written = writer.get_data();
     REQUIRE(written == byteArray);
 
     Indent indent;
-    std::string dump_output = icbr->dump(indent);
-    REQUIRE(dump_output == "Box: icbr -----\nsize: 48   (header size: 12)\nnum_ranges: 2\nrange_offset: 2563, range_size: 66051\nrange_offset: 131850, range_size: 263431\n");
+    std::string dump_output = icef->dump(indent);
+    REQUIRE(dump_output == "Box: icef -----\nsize: 33   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 772, unit_size: 16843267\nunit_offset: 16909066, unit_size: 263431\n");
+}
+
+
+TEST_CASE("icef_uint64") {
+    std::vector<uint8_t> byteArray{
+      0x00, 0x00, 0x00, 0x31, 'i', 'c', 'e', 'f',
+      0x00, 0x00, 0x00, 0x00,
+      0b10010000,
+      0x00, 0x00, 0x00, 0x02,
+      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x0a, 0x03,
+      0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x02, 0x03,
+      0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x03, 0x0a,
+      0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x05, 0x07
+      };
+
+    auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                        byteArray.size(), false);
+
+    BitstreamRange range(reader, byteArray.size());
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    REQUIRE(error == Error::Ok);
+    REQUIRE(range.error() == 0);
+
+    REQUIRE(box->get_short_type() == fourcc("icef"));
+    REQUIRE(box->get_type_string() == "icef");
+    std::shared_ptr<Box_icef> icef = std::dynamic_pointer_cast<Box_icef>(box);
+    REQUIRE(icef != nullptr);
+    REQUIRE(icef->get_units().size() == 2);
+    REQUIRE(icef->get_units()[0].unit_offset == 4294969859L);
+    REQUIRE(icef->get_units()[0].unit_size ==  8590000643L);
+    REQUIRE(icef->get_units()[1].unit_offset == 8590066442L);
+    REQUIRE(icef->get_units()[1].unit_size ==  12885165319L);
+    REQUIRE(icef->get_version() == 0);
+
+    StreamWriter writer;
+    Error err = icef->write(writer);
+    REQUIRE(err.error_code == heif_error_Ok);
+    const std::vector<uint8_t> written = writer.get_data();
+    REQUIRE(written == byteArray);
+
+    Indent indent;
+    std::string dump_output = icef->dump(indent);
+    REQUIRE(dump_output == "Box: icef -----\nsize: 49   (header size: 12)\nnum_compressed_units: 2\nunit_offset: 4294969859, unit_size: 8590000643\nunit_offset: 8590066442, unit_size: 12885165319\n");
+}
+
+
+TEST_CASE("icef_bad_version") {
+    std::vector<uint8_t> byteArray{
+      0x00, 0x00, 0x00, 0x19, 'i', 'c', 'e', 'f',
+      0x01, 0x00, 0x00, 0x00,
+      0b01000000,
+      0x00, 0x00, 0x00, 0x02,
+      0x00, 0x0a, 0x03, 0x03,
+      0x02, 0x03, 0x0a, 0x07
+      };
+
+    auto reader = std::make_shared<StreamReader_memory>(byteArray.data(),
+                                                        byteArray.size(), false);
+
+    BitstreamRange range(reader, byteArray.size());
+    std::shared_ptr<Box> box;
+    Error error = Box::read(range, &box);
+    REQUIRE(error.error_code == heif_error_Unsupported_feature);
+    REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
+    REQUIRE(error.message == std::string("icef box data version 1 is not implemented yet"));
 }

@@ -146,6 +146,13 @@ public:
 
   int16_t read16s();
 
+  /**
+   * Read 24 bit unsigned integer from the bitstream.
+   *
+   * The data is assumed to be in big endian format and is returned as a 32 bit value.
+   */
+  uint32_t read24();
+
   uint32_t read32();
 
   int32_t read32s();
@@ -290,6 +297,8 @@ public:
   void write16(uint16_t);
 
   void write16s(int16_t);
+
+  void write24(uint32_t);
 
   void write32(uint32_t);
 
