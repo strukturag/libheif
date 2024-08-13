@@ -1330,7 +1330,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
                                        img->get_colorspace() :
                                        out_colorspace);
 
-#if 1
+#if 0
   if (/*!alphaImage &&*/ target_colorspace == heif_colorspace_YCbCr) {
     target_colorspace = heif_colorspace_RGB;
   }
