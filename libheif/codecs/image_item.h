@@ -220,6 +220,8 @@ public:
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
+  virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
+
   void clear()
   {
     m_thumbnails.clear();
@@ -386,7 +388,18 @@ public:
   bool is_miaf_compatible() const { return m_miaf_compatible; }
 
 
-  // === writing ===
+  // === decoding ===
+
+  Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_colorspace out_colorspace,
+                                                       const struct heif_decoding_options& options,
+                                                       bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
+
+  virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
+                                                                          bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
+
+  Error check_for_valid_image_size(uint32_t width, uint32_t height) const;
+
+  // === encoding ===
 
   struct CodedImageData
   {

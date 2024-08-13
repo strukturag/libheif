@@ -30,16 +30,18 @@
 #include <codecs/hevc.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
+#include <plugin_registry.h>
 
 #if WITH_UNCOMPRESSED_CODEC
 #include <codecs/uncompressed_image.h>
 #endif
 
 
-template<typename I> void writevec(uint8_t* data, size_t& idx, I value, int len)
+template<typename I>
+void writevec(uint8_t* data, size_t& idx, I value, int len)
 {
-  for (int i=0;i<len;i++) {
-    data[idx + i] = static_cast<uint8_t>((value >> (len-1-i)*8) & 0xFF);
+  for (int i = 0; i < len; i++) {
+    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
   }
 
   idx += len;
@@ -124,7 +126,7 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   uint8_t version = data[0];
   if (version != 0) {
     std::stringstream sstr;
-    sstr << "Grid image version " << ((int)version) << " is not supported";
+    sstr << "Grid image version " << ((int) version) << " is not supported";
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_data_version,
             sstr.str()};
@@ -263,7 +265,7 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
   m_width = readvec(data, ptr, field_len);
   m_height = readvec(data, ptr, field_len);
 
-  if (m_width==0 || m_height==0) {
+  if (m_width == 0 || m_height == 0) {
     return {heif_error_Invalid_input,
             heif_suberror_Invalid_overlay_data,
             "Overlay image with zero width or height."};
@@ -282,7 +284,7 @@ Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
 
 std::vector<uint8_t> ImageOverlay::write() const
 {
-  assert(m_version==0);
+  assert(m_version == 0);
 
   bool longFields = (m_width > 0xFFFF) || (m_height > 0xFFFF);
   for (const auto& img : m_offsets) {
@@ -296,7 +298,7 @@ std::vector<uint8_t> ImageOverlay::write() const
 
   data.resize(2 + 4 * 2 + (longFields ? 4 : 2) * (2 + m_offsets.size() * 2));
 
-  size_t idx=0;
+  size_t idx = 0;
   data[idx++] = m_version;
   data[idx++] = (longFields ? 1 : 0); // flags
 
@@ -356,7 +358,6 @@ void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
   *x = m_offsets[image_index].x;
   *y = m_offsets[image_index].y;
 }
-
 
 
 void TildHeader::set_parameters(const heif_tild_image_parameters& params)
@@ -516,7 +517,7 @@ std::vector<uint8_t> TildHeader::write()
   }
 
   data.resize(size);
-  size_t idx=0;
+  size_t idx = 0;
   data[idx++] = 1; // version
   data[idx++] = flags;
 
@@ -561,7 +562,6 @@ std::string TildHeader::dump() const
 
   return sstr.str();
 }
-
 
 
 std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const std::shared_ptr<Box_infe>& infe)
@@ -881,13 +881,13 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
   *out_chroma = heif_chroma_undefined;
 
   if (auto hvcC = m_heif_context->get_heif_file()->get_property<Box_hvcC>(id)) {
-    *out_chroma = (heif_chroma)(hvcC->get_configuration().chroma_format);
+    *out_chroma = (heif_chroma) (hvcC->get_configuration().chroma_format);
   }
   else if (auto vvcC = m_heif_context->get_heif_file()->get_property<Box_vvcC>(id)) {
-    *out_chroma = (heif_chroma)(vvcC->get_configuration().chroma_format_idc);
+    *out_chroma = (heif_chroma) (vvcC->get_configuration().chroma_format_idc);
   }
   else if (auto av1C = m_heif_context->get_heif_file()->get_property<Box_av1C>(id)) {
-    *out_chroma = (heif_chroma)(av1C->get_configuration().get_heif_chroma());
+    *out_chroma = (heif_chroma) (av1C->get_configuration().get_heif_chroma());
   }
   else if (auto j2kH = m_heif_context->get_heif_file()->get_property<Box_j2kH>(id)) {
     JPEG2000MainHeader jpeg2000Header;
@@ -904,7 +904,8 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
       *out_colorspace = heif_colorspace_RGB;
       if (uncC->get_profile() == fourcc("rgb3")) {
         *out_chroma = heif_chroma_interleaved_RGB;
-      } else if ((uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))) {
+      }
+      else if ((uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))) {
         *out_chroma = heif_chroma_interleaved_RGBA;
       }
     }
@@ -964,7 +965,7 @@ Error ImageItem::read_grid_spec()
   auto heif_file = m_heif_context->get_heif_file();
 
   std::vector<uint8_t> grid_data;
-  Error err= heif_file->get_compressed_image_data(m_id, &grid_data);
+  Error err = heif_file->get_compressed_image_data(m_id, &grid_data);
   if (err) {
     return err;
   }
@@ -1122,8 +1123,8 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
 
 
 static bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                               std::shared_ptr<const color_profile_nclx> image_nclx,
-                               const struct heif_color_profile_nclx* spec_nclx)
+                                      std::shared_ptr<const color_profile_nclx> image_nclx,
+                                      const struct heif_color_profile_nclx* spec_nclx)
 {
   if (colorspace != heif_colorspace_YCbCr) {
     return true;
@@ -1139,7 +1140,7 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
     image_nclx = std::make_shared<color_profile_nclx>();
   }
 
-  if (image_nclx->get_full_range_flag() != ( spec_nclx->full_range_flag == 0 ? false : true ) ) {
+  if (image_nclx->get_full_range_flag() != (spec_nclx->full_range_flag == 0 ? false : true)) {
     return false;
   }
 
@@ -1157,13 +1158,10 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
-
-
-
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                                    struct heif_encoder* encoder,
                                                                                    const struct heif_encoding_options& options)
-                                                                                   //const heif_color_profile_nclx* target_heif_nclx)
+//const heif_color_profile_nclx* target_heif_nclx)
 {
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
@@ -1196,7 +1194,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
     //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
 
     output_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                   output_bpp, options.color_conversion_options);
+                                      output_bpp, options.color_conversion_options);
     if (!output_image) {
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
@@ -1253,7 +1251,7 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
 
 void ImageItem::CodedImageData::append(const uint8_t* data, size_t size)
 {
-  bitstream.insert(bitstream.end(), data, data+size);
+  bitstream.insert(bitstream.end(), data, data + size);
 }
 
 
@@ -1269,4 +1267,339 @@ void ImageItem::CodedImageData::append_with_4bytes_size(const uint8_t* data, siz
 
   bitstream.insert(bitstream.end(), size_field, size_field + 4);
   bitstream.insert(bitstream.end(), data, data + size);
+}
+
+
+Error ImageItem::check_for_valid_image_size(uint32_t width, uint32_t height) const
+{
+  uint64_t maximum_image_size_limit = m_heif_context->get_maximum_image_size_limit();
+
+  // --- check whether the image size is "too large"
+
+  auto max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
+  if ((width > max_width_height || height > max_width_height) ||
+      (height != 0 && width > maximum_image_size_limit / height)) {
+    std::stringstream sstr;
+    sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+         << maximum_image_size_limit << "\n";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  if (width == 0 || height == 0) {
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Invalid_image_size,
+            "zero width or height"};
+  }
+
+  return Error::Ok;
+
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace out_colorspace,
+                                                                const struct heif_decoding_options& options,
+                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+{
+  // --- check whether image size (according to 'ispe') exceeds maximum
+
+  auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
+  if (ispe) {
+    Error err = check_for_valid_image_size(ispe->get_width(), ispe->get_height());
+    if (err) {
+      return err;
+    }
+  }
+
+
+  // --- decode image
+
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
+  if (decodingResult.error) {
+    return decodingResult.error;
+  }
+
+  auto img = decodingResult.value;
+
+
+  // --- convert color-space
+
+  heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
+                                       img->get_colorspace() :
+                                       out_colorspace);
+
+#if 1
+  if (/*!alphaImage &&*/ target_colorspace == heif_colorspace_YCbCr) {
+    target_colorspace = heif_colorspace_RGB;
+  }
+#endif
+
+  heif_chroma target_chroma = (target_colorspace == heif_colorspace_monochrome ?
+                               heif_chroma_monochrome : heif_chroma_444);
+
+  bool different_chroma = (target_chroma != img->get_chroma_format());
+  bool different_colorspace = (target_colorspace != img->get_colorspace());
+
+  if (different_chroma || different_colorspace) {
+    img = convert_colorspace(img, target_colorspace, target_chroma, nullptr, 0, options.color_conversion_options);
+    if (!img) {
+      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    }
+  }
+
+
+  std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
+
+
+  // --- apply image transformations
+
+  Error error;
+
+  // TODO: for tile decoding, we should require that all transformations are ignored or processed
+
+  if (options.ignore_transformations == false) {
+    std::vector<std::shared_ptr<Box>> properties;
+    auto ipco_box = file->get_ipco_box();
+    auto ipma_box = file->get_ipma_box();
+    error = ipco_box->get_properties_for_item_ID(m_id, ipma_box, properties);
+
+    for (const auto& property : properties) {
+      if (property->get_short_type() == fourcc("irot")) {
+        auto rot = std::dynamic_pointer_cast<Box_irot>(property);
+        std::shared_ptr<HeifPixelImage> rotated_img;
+        error = img->rotate_ccw(rot->get_rotation(), rotated_img);
+        if (error) {
+          return error;
+        }
+
+        img = rotated_img;
+      }
+
+
+      if (property->get_short_type() == fourcc("imir")) {
+        auto mirror = std::dynamic_pointer_cast<Box_imir>(property);
+        error = img->mirror_inplace(mirror->get_mirror_direction());
+        if (error) {
+          return error;
+        }
+      }
+
+
+      if (property->get_short_type() == fourcc("clap")) {
+        auto clap = std::dynamic_pointer_cast<Box_clap>(property);
+        std::shared_ptr<HeifPixelImage> clap_img;
+
+        int img_width = img->get_width();
+        int img_height = img->get_height();
+        assert(img_width >= 0);
+        assert(img_height >= 0);
+
+        int left = clap->left_rounded(img_width);
+        int right = clap->right_rounded(img_width);
+        int top = clap->top_rounded(img_height);
+        int bottom = clap->bottom_rounded(img_height);
+
+        if (left < 0) { left = 0; }
+        if (top < 0) { top = 0; }
+
+        if (right >= img_width) { right = img_width - 1; }
+        if (bottom >= img_height) { bottom = img_height - 1; }
+
+        if (left > right ||
+            top > bottom) {
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Invalid_clean_aperture);
+        }
+
+        std::shared_ptr<HeifPixelImage> cropped_img;
+        error = img->crop(left, right, top, bottom, cropped_img);
+        if (error) {
+          return error;
+        }
+
+        img = cropped_img;
+      }
+    }
+  }
+
+
+  // --- add alpha channel, if available
+
+  // TODO: this if statement is probably wrong. When we have a tiled image with alpha
+  // channel, then the alpha images should be associated with their respective tiles.
+  // However, the tile images are not part of the m_all_images list.
+  // Fix this, when we have a test image available.
+
+  std::shared_ptr<ImageItem> alpha_image = get_alpha_channel();
+  if (alpha_image) {
+    auto alphaDecodingResult = alpha_image->decode_image(heif_colorspace_monochrome, options, decode_tile_only, tile_x0, tile_y0);
+    if (alphaDecodingResult.error) {
+      return alphaDecodingResult.error;
+    }
+
+    std::shared_ptr<HeifPixelImage> alpha = alphaDecodingResult.value;
+
+    // TODO: check that sizes are the same and that we have an Y channel
+    // BUT: is there any indication in the standard that the alpha channel should have the same size?
+
+    heif_channel channel;
+    switch (alpha->get_colorspace()) {
+      case heif_colorspace_YCbCr:
+      case heif_colorspace_monochrome:
+        channel = heif_channel_Y;
+        break;
+      case heif_colorspace_RGB:
+        channel = heif_channel_R;
+        break;
+      case heif_colorspace_undefined:
+      default:
+        return Error(heif_error_Invalid_input,
+                     heif_suberror_Unsupported_color_conversion);
+    }
+
+
+    // TODO: we should include a decoding option to control whether libheif should automatically scale the alpha channel, and if so, which scaling filter (enum: Off, NN, Bilinear, ...).
+    //       It might also be that a specific output format implies that alpha is scaled (RGBA32). That would favor an enum for the scaling filter option + a bool to switch auto-filtering on.
+    //       But we can only do this when libheif itself doesn't assume anymore that the alpha channel has the same resolution.
+
+    if ((alpha_image->get_width() != img->get_width()) || (alpha_image->get_height() != img->get_height())) {
+      std::shared_ptr<HeifPixelImage> scaled_alpha;
+      Error err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height());
+      if (err) {
+        return err;
+      }
+      alpha = std::move(scaled_alpha);
+    }
+    img->transfer_plane_from_image_as(alpha, channel, heif_channel_Alpha);
+
+    if (is_premultiplied_alpha()) {
+      img->set_premultiplied_alpha(true);
+    }
+  }
+
+
+  // --- set color profile
+
+  // If there is an NCLX profile in the HEIF/AVIF metadata, use this for the color conversion.
+  // Otherwise, use the profile that is stored in the image stream itself and then set the
+  // (non-NCLX) profile later.
+  auto nclx = get_color_profile_nclx();
+  if (nclx) {
+    img->set_color_profile_nclx(nclx);
+  }
+
+  auto icc = get_color_profile_icc();
+  if (icc) {
+    img->set_color_profile_icc(icc);
+  }
+
+
+  // --- attach metadata to image
+
+  {
+    auto ipco_box = file->get_ipco_box();
+    auto ipma_box = file->get_ipma_box();
+
+    // CLLI
+
+    auto clli_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("clli"));
+    auto clli = std::dynamic_pointer_cast<Box_clli>(clli_box);
+
+    if (clli) {
+      img->set_clli(clli->clli);
+    }
+
+    // MDCV
+
+    auto mdcv_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("mdcv"));
+    auto mdcv = std::dynamic_pointer_cast<Box_mdcv>(mdcv_box);
+
+    if (mdcv) {
+      img->set_mdcv(mdcv->mdcv);
+    }
+
+    // PASP
+
+    auto pasp_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("pasp"));
+    auto pasp = std::dynamic_pointer_cast<Box_pasp>(pasp_box);
+
+    if (pasp) {
+      img->set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
+    }
+  }
+
+  return img;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
+                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+{
+  // --- find the decoder plugin with the correct compression format
+
+  heif_compression_format compression_format = get_compression_format();
+  if (compression_format == heif_compression_undefined) {
+    return Error{heif_error_Decoder_plugin_error, heif_suberror_Unsupported_codec, "Decoding not supported"};
+  }
+
+  const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression_format, options.decoder_id);
+  if (!decoder_plugin) {
+    return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
+  }
+
+
+  // --- get the compressed image data
+
+  std::vector<uint8_t> data;
+  Error error = m_heif_context->get_heif_file()->get_compressed_image_data(m_id, &data);
+  if (error) {
+    return error;
+  }
+
+
+  // --- decode image with the plugin
+
+  void* decoder;
+  struct heif_error err = decoder_plugin->new_decoder(&decoder);
+  if (err.code != heif_error_Ok) {
+    return Error(err.code, err.subcode, err.message);
+  }
+
+  if (decoder_plugin->plugin_api_version >= 2) {
+    if (decoder_plugin->set_strict_decoding) {
+      decoder_plugin->set_strict_decoding(decoder, options.strict_decoding);
+    }
+  }
+
+  err = decoder_plugin->push_data(decoder, data.data(), data.size());
+  if (err.code != heif_error_Ok) {
+    decoder_plugin->free_decoder(decoder);
+    return Error(err.code, err.subcode, err.message);
+  }
+
+  heif_image* decoded_img = nullptr;
+
+  err = decoder_plugin->decode_image(decoder, &decoded_img);
+  if (err.code != heif_error_Ok) {
+    decoder_plugin->free_decoder(decoder);
+    return Error(err.code, err.subcode, err.message);
+  }
+
+  if (!decoded_img) {
+    // TODO(farindk): The plugin should return an error in this case.
+    decoder_plugin->free_decoder(decoder);
+    return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
+  }
+
+  // -- cleanup
+
+  std::shared_ptr<HeifPixelImage> img = std::move(decoded_img->image);
+  heif_image_release(decoded_img);
+
+  decoder_plugin->free_decoder(decoder);
+
+
+  return img;
 }

@@ -65,9 +65,14 @@ public:
 
   // Sets the maximum size of both width and height of an image. The total limit
   // of the image size (width * height) will be "maximum_size * maximum_size".
-  void set_maximum_image_size_limit(int maximum_size)
+  void set_maximum_image_size_limit(uint32_t maximum_size)
   {
-    m_maximum_image_size_limit = int64_t(maximum_size) * maximum_size;
+    m_maximum_image_size_limit = uint64_t(maximum_size) * maximum_size;
+  }
+
+  uint64_t get_maximum_image_size_limit() const
+  {
+    return m_maximum_image_size_limit;
   }
 
   Error read(const std::shared_ptr<StreamReader>& reader);
