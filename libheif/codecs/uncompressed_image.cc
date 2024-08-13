@@ -1268,10 +1268,10 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
     {
       int src_stride;
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-      uint64_t out_size = src_image->get_height() * src_image->get_width();
+      uint64_t out_size = src_image->get_height(channel) * src_image->get_width(channel);
       data.resize(data.size() + out_size);
-      for (uint32_t y = 0; y < src_image->get_height(); y++) {
-        memcpy(data.data() + offset + y * src_image->get_width(), src_data + src_stride * y, src_image->get_width());
+      for (uint32_t y = 0; y < src_image->get_height(channel); y++) {
+        memcpy(data.data() + offset + y * src_image->get_width(channel), src_data + src_stride * y, src_image->get_width(channel));
       }
       offset += out_size;
     }
