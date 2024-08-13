@@ -50,6 +50,7 @@
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_image.h"
 #endif
+#include <iostream>
 
 // TODO: make this a decoder option
 #define STRICT_PARSING false
@@ -913,64 +914,48 @@ const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, st
   // --- get codec configuration
 
   std::shared_ptr<Box_cmpC> cmpC_box;
-  std::shared_ptr<Box_icbr> icbr_box;
+  std::shared_ptr<Box_icef> icef_box;
   for (auto& prop : properties) {
     if (prop->get_short_type() == fourcc("cmpC")) {
       cmpC_box = std::dynamic_pointer_cast<Box_cmpC>(prop);
     }
-    if (prop->get_short_type() == fourcc("icbr")) {
-      icbr_box = std::dynamic_pointer_cast<Box_icbr>(prop);
+    if (prop->get_short_type() == fourcc("icef")) {
+      icef_box = std::dynamic_pointer_cast<Box_icef>(prop);
     }
-    if (cmpC_box && icbr_box) {
+    if (cmpC_box && icef_box) {
       break;
     }
   }
   if (!cmpC_box) {
     // assume no generic compression
+    printf("!cmpC\n");
     return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
-  if (!cmpC_box->get_must_decompress_individual_entities()) {
-    std::vector<uint8_t> compressed_data;
-    m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
-    return do_decompress_data(cmpC_box, compressed_data, data);
-  } else {
-    if (!icbr_box) {
-      std::stringstream sstr;
-      sstr << "cannot decode unci item requiring entity decompression without icbr box" << std::endl;
-      return Error(heif_error_Invalid_input,
-                  heif_suberror_No_icbr_box,
-                  sstr.str());
-    }
-    if (item->construction_method == 0) {
-      for (Box_icbr::ByteRange range: icbr_box->get_ranges()) {
-        // TODO: check errors
-        bool success = m_input_stream->seek(range.range_offset);
-        if (!success) {
-          return Error{heif_error_Invalid_input, heif_suberror_End_of_data, "error while seeking to generically compressed data"};
-        }
-        std::vector<uint8_t> compressed_range_bytes(range.range_size);
-        success = m_input_stream->read((char*) compressed_range_bytes.data(), static_cast<size_t>(compressed_range_bytes.size()));
-        if (!success) {
-          return Error{heif_error_Invalid_input, heif_suberror_End_of_data, "error while reading generically compressed data"};
-        }
-        std::vector<uint8_t> uncompressed_range_data;
-        Error err = do_decompress_data(cmpC_box, compressed_range_bytes, &uncompressed_range_data);
-        if (err) {
-          return err;
-        }
-        data->insert(data->end(), uncompressed_range_data.data(), uncompressed_range_data.data() + uncompressed_range_data.size());
+  std::vector<uint8_t> compressed_bytes;
+  err = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_bytes);
+  if (err) {
+    return err;
+  }
+  if (icef_box) {
+    for (Box_icef::CompressedUnitInfo unit_info: icef_box->get_units()) {
+      auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
+      auto unit_end = unit_start + unit_info.unit_size;
+      std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
+      std::vector<uint8_t> uncompressed_unit_data;
+      err = do_decompress_data(cmpC_box, compressed_unit_data, &uncompressed_unit_data);
+      if (err) {
+        return err;
       }
-      return Error::Ok;
-    } else {
-      // TODO: implement...
-      std::stringstream sstr;
-      sstr << "cannot decode unci item from idat yet" << std::endl;
-      return Error(heif_error_Unsupported_feature,
-                  heif_suberror_Unsupported_data_version,
-                  sstr.str());
+      data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
+    }
+  } else {
+    // Decode as a single blob
+    err = do_decompress_data(cmpC_box, compressed_bytes, data);
+    if (err) {
+      return err;
     }
   }
-  return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
+  return Error::Ok;
 }
 
 const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const

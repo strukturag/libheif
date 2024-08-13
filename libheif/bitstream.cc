@@ -225,6 +225,27 @@ int16_t BitstreamRange::read16s()
 }
 
 
+uint32_t BitstreamRange::read24()
+{
+  if (!prepare_read(3)) {
+    return 0;
+  }
+
+  uint8_t buf[3];
+
+  auto istr = get_istream();
+  bool success = istr->read((char*) buf, 3);
+
+  if (!success) {
+    set_eof_while_reading();
+    return 0;
+  }
+
+  return (uint32_t) ((buf[0] << 16) |
+                     (buf[1] << 8) |
+                     (buf[2]));
+}
+
 uint32_t BitstreamRange::read32()
 {
   if (!prepare_read(4)) {
@@ -593,6 +614,20 @@ void StreamWriter::write16s(int16_t v16s)
   }
 
   write16(v);
+}
+
+
+void StreamWriter::write24(uint32_t v)
+{
+  size_t required_size = m_position + 3;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
+  m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
+  m_data[m_position++] = uint8_t(v & 0xFF);
 }
 
 
