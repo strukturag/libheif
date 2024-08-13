@@ -1267,11 +1267,13 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
       int src_stride;
+      uint32_t src_width = src_image->get_width(channel);
+      uint32_t src_height = src_image->get_height(channel);
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-      uint64_t out_size = src_image->get_height(channel) * src_image->get_width(channel);
+      uint64_t out_size = src_width* src_height;
       data.resize(data.size() + out_size);
-      for (uint32_t y = 0; y < src_image->get_height(channel); y++) {
-        memcpy(data.data() + offset + y * src_image->get_width(channel), src_data + src_stride * y, src_image->get_width(channel));
+      for (uint32_t y = 0; y < src_height; y++) {
+        memcpy(data.data() + offset + y * src_width, src_data + src_stride * y, src_width);
       }
       offset += out_size;
     }
