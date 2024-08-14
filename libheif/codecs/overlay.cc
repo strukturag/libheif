@@ -312,7 +312,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
 
   for (size_t i = 0; i < m_overlay_image_ids.size(); i++) {
     auto imgItem = get_context()->get_image(m_overlay_image_ids[i]);
-    assert(imgItem);
+    if (!imgItem) {
+      return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced, "'iovl' image references a non-existing item.");
+    }
 
     auto decodeResult = imgItem->decode_image(heif_colorspace_RGB, options, false, 0,0);
     if (decodeResult.error) {
@@ -334,8 +336,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
       if (err.error_code == heif_error_Invalid_input &&
           err.sub_error_code == heif_suberror_Overlay_image_outside_of_canvas) {
         // NOP, ignore this error
-
-        err = Error::Ok;
       }
       else {
         return err;
