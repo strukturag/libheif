@@ -1249,8 +1249,6 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     heif_chroma chroma,
                                     const struct heif_decoding_options* input_options)
 {
-  std::shared_ptr<HeifPixelImage> img;
-
   heif_item_id id = in_handle->image->get_id();
 
   heif_decoding_options dec_options;
@@ -1261,13 +1259,15 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
     copy_options(dec_options, *input_options);
   }
 
-  Error err = in_handle->context->decode_image_user(id, img,
-                                                    colorspace,
-                                                    chroma,
-                                                    dec_options);
-  if (err.error_code != heif_error_Ok) {
-    return err.error_struct(in_handle->image.get());
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
+                                                                                            colorspace,
+                                                                                            chroma,
+                                                                                            dec_options);
+  if (decodingResult.error.error_code != heif_error_Ok) {
+    return decodingResult.error.error_struct(in_handle->image.get());
   }
+
+  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
 
   *out_img = new heif_image();
   (*out_img)->image = std::move(img);

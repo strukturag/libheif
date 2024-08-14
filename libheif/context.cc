@@ -936,16 +936,31 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 }
 
 
-Error HeifContext::decode_image_user(heif_item_id ID,
-                                     std::shared_ptr<HeifPixelImage>& img,
-                                     heif_colorspace out_colorspace,
-                                     heif_chroma out_chroma,
-                                     const struct heif_decoding_options& options) const
+Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id ID,
+                                                                  heif_colorspace out_colorspace,
+                                                                  heif_chroma out_chroma,
+                                                                  const struct heif_decoding_options& options) const
 {
-  Error err = decode_image_planar(ID, img, out_colorspace, options, false);
-  if (err) {
-    return err;
+  std::string image_type = m_heif_file->get_item_type(ID);
+
+  std::shared_ptr<ImageItem> imginfo;
+  if (m_all_images.find(ID) != m_all_images.end()) {
+    imginfo = m_all_images.find(ID)->second;
   }
+
+  // Note: this may happen, for example when an 'iden' image references a non-existing image item.
+  if (imginfo == nullptr) {
+    return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
+  }
+
+
+  auto decodingResult = imginfo->decode_image(out_colorspace, options, false,0,0);
+  if (decodingResult.error) {
+    return decodingResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+
 
   // --- convert to output chroma format
 
@@ -969,165 +984,7 @@ Error HeifContext::decode_image_user(heif_item_id ID,
     }
   }
 
-  return Error::Ok;
-}
-
-
-Error HeifContext::decode_image_planar(heif_item_id ID,
-                                       std::shared_ptr<HeifPixelImage>& img,
-                                       heif_colorspace out_colorspace,
-                                       const struct heif_decoding_options& options, bool alphaImage) const
-{
-  std::string image_type = m_heif_file->get_item_type(ID);
-
-  std::shared_ptr<ImageItem> imginfo;
-  if (m_all_images.find(ID) != m_all_images.end()) {
-    imginfo = m_all_images.find(ID)->second;
-  }
-
-  // Note: this may happen, for example when an 'iden' image references a non-existing image item.
-  if (imginfo == nullptr) {
-    return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
-  }
-
-
-  auto decodingResult = imginfo->decode_image(out_colorspace, options, false,0,0);
-  if (decodingResult.error) {
-    return decodingResult.error;
-  }
-  else {
-    img = decodingResult.value;
-    return Error::Ok;
-  }
-
-
-  assert(false);
-
-  // ====================== OLD IMPLEMENTATION    (TODO: remove) ==================================
-
-#if 0
-  Error error;
-
-
-  // --- check whether image size (according to 'ispe') exceeds maximum
-
-  auto ispe = m_heif_file->get_property<Box_ispe>(ID);
-  if (ispe) {
-    error = check_resolution(ispe->get_width(), ispe->get_height());
-    if (error) {
-      return error;
-    }
-  }
-
-  // --- decode image, depending on its type
-
-  if (image_type == "hvc1" ||
-      image_type == "vvc1" ||
-      image_type == "av01" ||
-      image_type == "j2k1" ||
-      image_type == "jpeg" ||
-      (image_type == "mime" && m_heif_file->get_content_type(ID) == "image/jpeg")) {
-  }
-  else if (image_type == "grid") {
-    error = decode_full_grid_image(ID, img, options);
-    if (error) {
-      return error;
-    }
-  }
-  else if (image_type == "iden") {
-    error = decode_derived_image(ID, img, options);
-    if (error) {
-      return error;
-    }
-  }
-  else if (image_type == "iovl") {
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      return error;
-    }
-
-    error = decode_overlay_image(ID, img, data, options);
-    if (error) {
-      return error;
-    }
-#if WITH_UNCOMPRESSED_CODEC
-  }
-  else if (image_type == "unci") {
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      return error;
-    }
-    error = UncompressedImageCodec::decode_uncompressed_image(this,
-                                                              ID,
-                                                              img,
-                                                              data);
-    if (error) {
-      return error;
-    }
-#endif
-  }
-  else if (image_type == "mski") {
-    std::vector<uint8_t> data;
-    error = m_heif_file->get_compressed_image_data(ID, &data);
-    if (error) {
-      std::cout << "mski error 1" << std::endl;
-      return error;
-    }
-    error = MaskImageCodec::decode_mask_image(this,
-                                              ID,
-                                              img,
-                                              data);
-    if (error) {
-      return error;
-    }
-  }
-  else {
-    // Should not reach this, was already rejected by "get_image_data".
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_image_type);
-  }
-#endif
-
-  return Error::Ok;
-}
-
-
-Error HeifContext::decode_derived_image(heif_item_id ID,
-                                        std::shared_ptr<HeifPixelImage>& img,
-                                        const heif_decoding_options& options) const
-{
-  // find the ID of the image this image is derived from
-
-  auto iref_box = m_heif_file->get_iref_box();
-
-  if (!iref_box) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_iref_box,
-                 "No iref box available, but needed for iden image");
-  }
-
-  std::vector<heif_item_id> image_references = iref_box->get_references(ID, fourcc("dimg"));
-
-  if ((int) image_references.size() != 1) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "'iden' image with more than one reference image");
-  }
-
-
-  heif_item_id reference_image_id = image_references[0];
-
-  if (reference_image_id == ID) {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "'iden' image referring to itself");
-  }
-
-  Error error = decode_image_planar(reference_image_id, img,
-                                    heif_colorspace_RGB, options, false); // TODO: always RGB ?
-  return error;
+  return img;
 }
 
 

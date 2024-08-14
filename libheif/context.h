@@ -118,15 +118,10 @@ public:
 
   bool has_alpha(heif_item_id ID) const;
 
-  Error decode_image_user(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
-                          heif_colorspace out_colorspace,
-                          heif_chroma out_chroma,
-                          const struct heif_decoding_options& options) const;
-
-  Error decode_image_planar(heif_item_id ID, std::shared_ptr<HeifPixelImage>& img,
-                            heif_colorspace out_colorspace,
-                            const struct heif_decoding_options& options,
-                            bool alphaImage) const;
+  Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_item_id ID,
+                                                       heif_colorspace out_colorspace,
+                                                       heif_chroma out_chroma,
+                                                       const struct heif_decoding_options& options) const;
 
   std::string debug_dump_boxes() const;
 
@@ -244,15 +239,6 @@ private:
   Error interpret_heif_file();
 
   void remove_top_level_image(const std::shared_ptr<ImageItem>& image);
-
-  Error decode_derived_image(heif_item_id ID,
-                             std::shared_ptr<HeifPixelImage>& img,
-                             const heif_decoding_options& options) const;
-
-  Error decode_overlay_image(heif_item_id ID,
-                             std::shared_ptr<HeifPixelImage>& img,
-                             const std::vector<uint8_t>& overlay_data,
-                             const heif_decoding_options& options) const;
 };
 
 #endif
