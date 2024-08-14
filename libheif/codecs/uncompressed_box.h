@@ -283,6 +283,10 @@ protected:
   Error parse(BitstreamRange& range) override;
 
   std::vector<CompressedUnitInfo> m_unit_infos;
+
+private:
+  const uint8_t get_required_offset_code(uint64_t offset) const;
+  const uint8_t get_required_size_code(uint64_t size) const;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_BOX_H

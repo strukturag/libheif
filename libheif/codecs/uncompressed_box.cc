@@ -464,8 +464,8 @@ Error Box_icef::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  int unit_offset_nbbits = 16;
-  int unit_size_nbbits = 8;
+  uint8_t unit_offset_code = 1;
+  uint8_t unit_size_code = 0;
   uint64_t implied_offset = 0;
   bool can_use_implied_offsets = true;
   for (CompressedUnitInfo unit_info: m_unit_infos) {
@@ -473,56 +473,17 @@ Error Box_icef::write(StreamWriter& writer) const
       can_use_implied_offsets = false;
     }
     implied_offset += unit_info.unit_size;
-    while (unit_info.unit_offset >= (1ULL << unit_offset_nbbits)) {
-      unit_offset_nbbits += 8;
-      if (unit_offset_nbbits > 32) {
-        unit_offset_nbbits = 64;
-        break;
-      }
+    uint8_t required_offset_code = get_required_offset_code(unit_info.unit_offset);
+    if (required_offset_code > unit_offset_code) {
+      unit_offset_code = required_offset_code;
     }
-    while (unit_info.unit_size >= (1ULL << unit_size_nbbits)) {
-      unit_size_nbbits += 8;
-      if (unit_size_nbbits > 32) {
-        unit_size_nbbits = 64;
-        break;
-      }
+    uint8_t required_size_code = get_required_size_code(unit_info.unit_size);
+    if (required_size_code > unit_size_code) {
+      unit_size_code = required_size_code;
     }
-  }
-  uint8_t unit_offset_code;
-  switch (unit_offset_nbbits) {
-    case 16:
-      unit_offset_code = 1;
-      break;
-    case 24:
-      unit_offset_code = 2;
-      break;
-    case 32:
-      unit_offset_code = 3;
-      break;
-    default:
-      unit_offset_code = 4;
-      break;
   }
   if (can_use_implied_offsets) {
     unit_offset_code = 0;
-  }
-  uint8_t unit_size_code = 0;
-  switch (unit_size_nbbits) {
-    case 8:
-      unit_size_code = 0;
-      break;
-    case 16:
-      unit_size_code = 1;
-      break;
-    case 24:
-      unit_size_code = 2;
-      break;
-    case 32:
-      unit_size_code = 3;
-      break;
-    default:
-      unit_size_code = 4;
-      break;
   }
   uint8_t code_bits = (unit_offset_code << 5) | (unit_size_code << 2);
   writer.write8(code_bits);
@@ -554,4 +515,44 @@ Error Box_icef::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+static uint64_t MAX_OFFSET_UNIT_CODE_1 = std::numeric_limits<uint16_t>::max();
+static uint64_t MAX_OFFSET_UNIT_CODE_2 = (1ULL << 24) - 1;
+static uint64_t MAX_OFFSET_UNIT_CODE_3 = std::numeric_limits<uint32_t>::max();
+
+const uint8_t Box_icef::get_required_offset_code(uint64_t offset) const
+{
+  if (offset <= MAX_OFFSET_UNIT_CODE_1) {
+    return 1;
+  }
+  if (offset <= MAX_OFFSET_UNIT_CODE_2) {
+    return 2;
+  }
+  if (offset <= MAX_OFFSET_UNIT_CODE_3) {
+    return 3;
+  }
+  return 4;
+}
+
+static uint64_t MAX_SIZE_UNIT_CODE_0 = std::numeric_limits<uint8_t>::max();
+static uint64_t MAX_SIZE_UNIT_CODE_1 = std::numeric_limits<uint16_t>::max();
+static uint64_t MAX_SIZE_UNIT_CODE_2 = (1ULL << 24) - 1;
+static uint64_t MAX_SIZE_UNIT_CODE_3 = std::numeric_limits<uint32_t>::max();
+
+const uint8_t Box_icef::get_required_size_code(uint64_t size) const
+{
+  if (size <= MAX_SIZE_UNIT_CODE_0) {
+    return 0;
+  }
+  if (size <= MAX_SIZE_UNIT_CODE_1) {
+    return 1;
+  }
+  if (size <= MAX_SIZE_UNIT_CODE_2) {
+    return 2;
+  }
+  if (size <= MAX_SIZE_UNIT_CODE_3) {
+    return 3;
+  }
+  return 4;
 }
