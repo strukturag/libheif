@@ -118,6 +118,8 @@ public:
 
   const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
+  heif_compression_format get_compression_format() const override { return heif_compression_VVC; }
+
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,

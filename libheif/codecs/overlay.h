@@ -18,69 +18,76 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_IMAGEITEM_GRID_H
-#define LIBHEIF_IMAGEITEM_GRID_H
+#ifndef LIBHEIF_OVERLAY_H
+#define LIBHEIF_OVERLAY_H
 
 #include <codecs/image_item.h>
-#include <vector>
-#include <string>
-#include <memory>
 
 
-class ImageGrid
+class ImageOverlay
 {
 public:
-  Error parse(const std::vector<uint8_t>& data);
+  Error parse(size_t num_images, const std::vector<uint8_t>& data);
 
   std::vector<uint8_t> write() const;
 
   std::string dump() const;
 
-  uint32_t get_width() const { return m_output_width; }
+  void get_background_color(uint16_t col[4]) const;
 
-  uint32_t get_height() const { return m_output_height; }
+  uint32_t get_canvas_width() const { return m_width; }
 
-  uint16_t get_rows() const
+  uint32_t get_canvas_height() const { return m_height; }
+
+  size_t get_num_offsets() const { return m_offsets.size(); }
+
+  void get_offset(size_t image_index, int32_t* x, int32_t* y) const;
+
+  void set_background_color(const uint16_t rgba_color[4])
   {
-    return m_rows;
+    for (int i = 0; i < 4; i++) {
+      m_background_color[i] = rgba_color[i];
+    }
   }
 
-  uint16_t get_columns() const
+  void set_canvas_size(uint32_t width, uint32_t height)
   {
-    return m_columns;
+    m_width = width;
+    m_height = height;
   }
 
-  void set_num_tiles(uint16_t columns, uint16_t rows)
+  void add_image_on_top(heif_item_id image_id, int32_t offset_x, int32_t offset_y)
   {
-    m_rows = rows;
-    m_columns = columns;
+    m_offsets.emplace_back(ImageWithOffset{image_id, offset_x, offset_y});
   }
 
-  void set_output_size(uint32_t width, uint32_t height)
+  struct ImageWithOffset
   {
-    m_output_width = width;
-    m_output_height = height;
-  }
+    heif_item_id image_id;
+    int32_t x, y;
+  };
+
+  const std::vector<ImageWithOffset>& get_overlay_stack() const { return m_offsets; }
 
 private:
-  uint16_t m_rows = 0;
-  uint16_t m_columns = 0;
-  uint32_t m_output_width = 0;
-  uint32_t m_output_height = 0;
+  uint8_t m_version = 0;
+  uint8_t m_flags = 0;
+  uint16_t m_background_color[4]{0, 0, 0, 0};
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
+
+  std::vector<ImageWithOffset> m_offsets;
 };
 
 
-
-
-
-class ImageItem_Grid : public ImageItem
+class ImageItem_Overlay : public ImageItem
 {
 public:
-  ImageItem_Grid(HeifContext* ctx, heif_item_id id);
+  ImageItem_Overlay(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_Grid(HeifContext* ctx);
+  ImageItem_Overlay(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "grid"; }
+  const char* get_infe_type() const override { return "iovl"; }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
@@ -91,37 +98,43 @@ public:
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override {
+                                enum heif_image_input_class input_class) override
+  {
     return Error{heif_error_Unsupported_feature,
-                 heif_suberror_Unspecified, "Cannot encode image to 'grid'"};
+                 heif_suberror_Unspecified, "Cannot encode image to 'iovl'"};
   }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
 
-  // --- grid specific
+  // --- iovl specific
+#if 0
+  Error read_grid_spec();
 
   bool is_grid() const { return m_is_grid; }
 
   const ImageGrid& get_grid_spec() const { return m_grid_spec; }
 
   const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
+#endif
 
 private:
-  bool m_is_grid = false;
-  ImageGrid m_grid_spec;
-  std::vector<heif_item_id> m_grid_tile_ids;
+  ImageOverlay m_overlay_spec;
+  std::vector<heif_item_id> m_overlay_image_ids;
 
+  Error read_overlay_spec();
 
-  Error read_grid_spec();
-
+#if 0
   Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options) const;
 
   Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                     std::shared_ptr<HeifPixelImage> inout_image,
                                     const heif_decoding_options& options) const;
+#endif
+
+  Result<std::shared_ptr<HeifPixelImage>> decode_overlay_image(const heif_decoding_options& options) const;
 };
 
 
-#endif //LIBHEIF_GRID_H
+#endif //LIBHEIF_OVERLAY_H

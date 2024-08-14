@@ -20,69 +20,24 @@
 
 #include "image_item.h"
 #include "mask_image.h"
-#include "grid.h"
 #include <context.h>
 #include <file.h>
-#include <cassert>
-#include <cstring>
 #include <codecs/jpeg.h>
 #include <codecs/jpeg2000.h>
 #include <codecs/avif.h>
 #include <codecs/hevc.h>
+#include <codecs/grid.h>
+#include <codecs/overlay.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
 #include <plugin_registry.h>
+#include <limits>
+#include <cassert>
+#include <cstring>
 
 #if WITH_UNCOMPRESSED_CODEC
 #include <codecs/uncompressed_image.h>
 #endif
-
-
-template<typename I>
-void writevec(uint8_t* data, size_t& idx, I value, int len)
-{
-  for (int i = 0; i < len; i++) {
-    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
-  }
-
-  idx += len;
-}
-
-
-static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int len)
-{
-  const uint32_t high_bit = 0x80 << ((len - 1) * 8);
-
-  uint32_t val = 0;
-  while (len--) {
-    val <<= 8;
-    val |= data[ptr++];
-  }
-
-  bool negative = (val & high_bit) != 0;
-  val &= ~high_bit;
-
-  if (negative) {
-    return -(high_bit - val);
-  }
-  else {
-    return val;
-  }
-
-  return val;
-}
-
-
-static uint32_t readvec(const std::vector<uint8_t>& data, int& ptr, int len)
-{
-  uint32_t val = 0;
-  while (len--) {
-    val <<= 8;
-    val |= data[ptr++];
-  }
-
-  return val;
-}
 
 
 ImageItem::ImageItem(HeifContext* context)
@@ -125,138 +80,6 @@ std::shared_ptr<const HeifFile> ImageItem::get_file() const
 Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
 {
   return m_heif_context->check_resolution(w, h);
-}
-
-
-Error ImageOverlay::parse(size_t num_images, const std::vector<uint8_t>& data)
-{
-  Error eofError(heif_error_Invalid_input,
-                 heif_suberror_Invalid_overlay_data,
-                 "Overlay image data incomplete");
-
-  if (data.size() < 2 + 4 * 2) {
-    return eofError;
-  }
-
-  m_version = data[0];
-  if (m_version != 0) {
-    std::stringstream sstr;
-    sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
-
-    return {heif_error_Unsupported_feature,
-            heif_suberror_Unsupported_data_version,
-            sstr.str()};
-  }
-
-  m_flags = data[1];
-
-  int field_len = ((m_flags & 1) ? 4 : 2);
-  int ptr = 2;
-
-  if (ptr + 4 * 2 + 2 * field_len + num_images * 2 * field_len > data.size()) {
-    return eofError;
-  }
-
-  for (int i = 0; i < 4; i++) {
-    uint16_t color = static_cast<uint16_t>(readvec(data, ptr, 2));
-    m_background_color[i] = color;
-  }
-
-  m_width = readvec(data, ptr, field_len);
-  m_height = readvec(data, ptr, field_len);
-
-  if (m_width == 0 || m_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Invalid_overlay_data,
-            "Overlay image with zero width or height."};
-  }
-
-  m_offsets.resize(num_images);
-
-  for (size_t i = 0; i < num_images; i++) {
-    m_offsets[i].x = readvec_signed(data, ptr, field_len);
-    m_offsets[i].y = readvec_signed(data, ptr, field_len);
-  }
-
-  return Error::Ok;
-}
-
-
-std::vector<uint8_t> ImageOverlay::write() const
-{
-  assert(m_version == 0);
-
-  bool longFields = (m_width > 0xFFFF) || (m_height > 0xFFFF);
-  for (const auto& img : m_offsets) {
-    if (img.x > 0x7FFF || img.y > 0x7FFF || img.x < -32768 || img.y < -32768) {
-      longFields = true;
-      break;
-    }
-  }
-
-  std::vector<uint8_t> data;
-
-  data.resize(2 + 4 * 2 + (longFields ? 4 : 2) * (2 + m_offsets.size() * 2));
-
-  size_t idx = 0;
-  data[idx++] = m_version;
-  data[idx++] = (longFields ? 1 : 0); // flags
-
-  for (uint16_t color : m_background_color) {
-    writevec(data.data(), idx, color, 2);
-  }
-
-  writevec(data.data(), idx, m_width, longFields ? 4 : 2);
-  writevec(data.data(), idx, m_height, longFields ? 4 : 2);
-
-  for (const auto& img : m_offsets) {
-    writevec(data.data(), idx, img.x, longFields ? 4 : 2);
-    writevec(data.data(), idx, img.y, longFields ? 4 : 2);
-  }
-
-  assert(idx == data.size());
-
-  return data;
-}
-
-
-std::string ImageOverlay::dump() const
-{
-  std::stringstream sstr;
-
-  sstr << "version: " << ((int) m_version) << "\n"
-       << "flags: " << ((int) m_flags) << "\n"
-       << "background color: " << m_background_color[0]
-       << ";" << m_background_color[1]
-       << ";" << m_background_color[2]
-       << ";" << m_background_color[3] << "\n"
-       << "canvas size: " << m_width << "x" << m_height << "\n"
-       << "offsets: ";
-
-  for (const ImageWithOffset& offset : m_offsets) {
-    sstr << offset.x << ";" << offset.y << " ";
-  }
-  sstr << "\n";
-
-  return sstr.str();
-}
-
-
-void ImageOverlay::get_background_color(uint16_t col[4]) const
-{
-  for (int i = 0; i < 4; i++) {
-    col[i] = m_background_color[i];
-  }
-}
-
-
-void ImageOverlay::get_offset(size_t image_index, int32_t* x, int32_t* y) const
-{
-  assert(image_index < m_offsets.size());
-  assert(x && y);
-
-  *x = m_offsets[image_index].x;
-  *y = m_offsets[image_index].y;
 }
 
 
@@ -355,6 +178,17 @@ void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t 
   uint64_t idx = tile_y * nTiles_h() + tile_x;
   m_offsets[idx].offset = offset;
   m_offsets[idx].size = size;
+}
+
+
+template<typename I>
+void writevec(uint8_t* data, size_t& idx, I value, int len)
+{
+  for (int i = 0; i < len; i++) {
+    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
+  }
+
+  idx += len;
 }
 
 
@@ -496,6 +330,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "grid") {
     return std::make_shared<ImageItem_Grid>(ctx, id);
   }
+  else if (item_type == "iovl") {
+    return std::make_shared<ImageItem_Overlay>(ctx, id);
+  }
   else {
     return nullptr;
   }
@@ -503,8 +340,6 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
 #if 0
           item_type == "tild" ||
           item_type == "iden" ||
-          item_type == "iovl" ||
-          item_type == "mski");
 #endif
 
   return nullptr;

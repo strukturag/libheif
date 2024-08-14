@@ -61,6 +61,8 @@ public:
 
   const char* get_infe_type() const override { return "unci"; }
 
+  heif_compression_format get_compression_format() const override { return heif_compression_uncompressed; }
+
   // Instead of storing alpha in a separate unci, this is put into the main image item
   const char* get_auxC_alpha_channel_type() const override { return nullptr; }
 

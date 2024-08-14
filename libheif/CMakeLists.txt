@@ -68,6 +68,8 @@ set(libheif_sources
         codecs/image_item.cc
         codecs/grid.h
         codecs/grid.cc
+        codecs/overlay.h
+        codecs/overlay.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc

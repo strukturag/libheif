@@ -525,6 +525,8 @@ public:
 
   const char* get_infe_type() const override { return "j2k1"; }
 
+  heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,

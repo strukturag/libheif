@@ -32,6 +32,7 @@
 #include "bitstream.h"
 #include "init.h"
 #include "codecs/grid.h"
+#include "codecs/overlay.h"
 #include <set>
 #include <limits>
 

@@ -24,6 +24,8 @@
 #include <cstring>
 #include <deque>
 #include <future>
+#include <set>
+#include <algorithm>
 
 
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
