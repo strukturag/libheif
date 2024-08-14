@@ -473,7 +473,11 @@ Error Box_icef::write(StreamWriter& writer) const
     if (unit_info.unit_offset != implied_offset) {
       can_use_implied_offsets = false;
     }
-    implied_offset += unit_info.unit_size;
+    if (unit_info.unit_size > (std::numeric_limits<uint64_t>::max() - implied_offset)) {
+      can_use_implied_offsets = false;
+    } else {
+      implied_offset += unit_info.unit_size;
+    }
     uint8_t required_offset_code = get_required_offset_code(unit_info.unit_offset);
     if (required_offset_code > unit_offset_code) {
       unit_offset_code = required_offset_code;
