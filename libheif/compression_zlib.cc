@@ -120,6 +120,7 @@ Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, s
       // -> do nothing
     }
     else if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
+      inflateEnd(&strm);
       std::stringstream sstr;
       sstr << "Error performing zlib inflate: " << strm.msg << " (" << err << ")\n";
       return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
