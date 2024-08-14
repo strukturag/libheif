@@ -25,6 +25,7 @@
 #include <map>
 #include <iostream>
 #include <cassert>
+#include <limits>
 
 #include "libheif/heif.h"
 #include "security_limits.h"
