@@ -46,59 +46,6 @@ public:
 };
 
 
-#define TILD_OFFSET_NOT_AVAILABLE 0
-#define TILD_OFFSET_SEE_LOWER_RESOLUTION_LAYER 1
-#define TILD_OFFSET_NOT_LOADED 10
-
-class TildHeader
-{
-public:
-  void set_parameters(const heif_tild_image_parameters& params);
-
-  Error parse(size_t num_images, const std::vector<uint8_t>& data);
-
-  std::vector<uint8_t> write();
-
-  std::string dump() const;
-
-  uint64_t number_of_tiles() const;
-
-  uint64_t nTiles_h() const;
-
-  void set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size);
-
-  size_t get_header_size() const;
-
-  uint64_t get_tile_offset(uint32_t idx) { return m_offsets[idx].offset; }
-
-  uint32_t get_tile_size(uint32_t idx) { return m_offsets[idx].size; }
-
-private:
-  /*
-   * Flags:
-   * bit 0   - dimensions 64 bit
-   * bit 1-2 - number of bits for offsets
-   * bit 3   - with tile sizes
-   * bit 4   - number of bits for size
-   * bit 5   - sequential ordering hint
-   * bit 6   - multidimensional (> 2D)
-   */
-  heif_tild_image_parameters m_parameters;
-
-  struct TileOffset {
-    uint64_t offset = TILD_OFFSET_NOT_LOADED;
-    uint32_t size = 0;
-  };
-
-  std::vector<TileOffset> m_offsets;
-
-  size_t m_header_size = 0;
-};
-
-
-
-
-
 
 class ImageItem : public ErrorBuffer
 {
@@ -181,7 +128,7 @@ public:
 
   Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
 
-  void process_before_write();
+  virtual void process_before_write() { }
 
   // -- thumbnails
 
@@ -331,10 +278,10 @@ public:
     void append_with_4bytes_size(const uint8_t* data, size_t size);
   };
 
-  Result<CodedImageData> encode_to_bistream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                      struct heif_encoder* encoder,
-                                                      const struct heif_encoding_options& options,
-                                                      enum heif_image_input_class input_class);
+  Result<CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+                                                       struct heif_encoder* encoder,
+                                                       const struct heif_encoding_options& options,
+                                                       enum heif_image_input_class input_class);
 
   Error encode_to_item(HeifContext* ctx,
                        const std::shared_ptr<HeifPixelImage>& image,
@@ -390,16 +337,6 @@ public:
   const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
 
 
-  // --- tild
-
-  void set_tild_header(const TildHeader& header) { m_tild_header = header; m_is_tild = true; }
-
-  TildHeader& get_tild_header() { return m_tild_header; }
-
-  uint64_t get_next_tild_position() { return m_next_tild_position; }
-
-  void set_next_tild_position(uint64_t pos) { m_next_tild_position = pos; }
-
 private:
   HeifContext* m_heif_context;
 
@@ -439,10 +376,6 @@ private:
 
   bool m_has_extrinsic_matrix = false;
   Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
-
-  bool m_is_tild = false;
-  TildHeader m_tild_header;
-  uint64_t m_next_tild_position = 0;
 
 protected:
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,

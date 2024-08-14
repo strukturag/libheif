@@ -46,9 +46,11 @@ class HeifPixelImage;
 
 class StreamWriter;
 
-class ImageItem;
 class ImageOverlay;
 
+class ImageItem;
+class ImageItem_Overlay;
+class ImageItem_Tild;
 
 
 // This is a higher-level view than HeifFile.
@@ -94,6 +96,10 @@ public:
   std::shared_ptr<const ImageItem> get_top_level_image(heif_item_id id) const
   {
     return const_cast<HeifContext*>(this)->get_top_level_image(id);
+  }
+
+  void insert_new_image(heif_item_id id, std::shared_ptr<ImageItem> img) {
+    m_all_images.insert(std::make_pair(id, img));
   }
 
   std::shared_ptr<ImageItem> get_image(heif_item_id id)
@@ -153,10 +159,9 @@ public:
                       uint16_t tile_columns,
                       std::shared_ptr<ImageItem>& out_grid_image);
 
-  Error add_iovl_item(const ImageOverlay& overlayspec,
-                      std::shared_ptr<ImageItem>& out_iovl_image);
+  Result<std::shared_ptr<ImageItem_Overlay>> add_iovl_item(const ImageOverlay& overlayspec);
 
-  Result<std::shared_ptr<ImageItem>> add_tild_item(const heif_tild_image_parameters* parameters);
+  Result<std::shared_ptr<ImageItem_Tild>> add_tild_item(const heif_tild_image_parameters* parameters);
 
   Error add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
                             const std::shared_ptr<HeifPixelImage>& image,

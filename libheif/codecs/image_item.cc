@@ -29,6 +29,7 @@
 #include <codecs/grid.h>
 #include <codecs/overlay.h>
 #include <codecs/iden.h>
+#include <codecs/tild.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
 #include <plugin_registry.h>
@@ -84,221 +85,6 @@ Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
 }
 
 
-void TildHeader::set_parameters(const heif_tild_image_parameters& params)
-{
-  m_parameters = params;
-
-  m_offsets.resize(number_of_tiles());
-
-  for (auto& tile : m_offsets) {
-    tile.offset = TILD_OFFSET_NOT_AVAILABLE;
-  }
-}
-
-
-Error TildHeader::parse(size_t num_images, const std::vector<uint8_t>& data)
-{
-  Error eofError(heif_error_Invalid_input,
-                 heif_suberror_Invalid_overlay_data,
-                 "Tild header data incomplete");
-
-  if (data.size() < 2 + 4 * 2) {
-    return eofError;
-  }
-#if 0
-  m_version = data[0];
-  if (m_version != 0) {
-    std::stringstream sstr;
-    sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
-
-    return {heif_error_Unsupported_feature,
-            heif_suberror_Unsupported_data_version,
-            sstr.str()};
-  }
-
-  m_flags = data[1];
-
-  int field_len = ((m_flags & 1) ? 4 : 2);
-  int ptr = 2;
-
-  if (ptr + 4 * 2 + 2 * field_len + num_images * 2 * field_len > data.size()) {
-    return eofError;
-  }
-
-  for (int i = 0; i < 4; i++) {
-    uint16_t color = static_cast<uint16_t>(readvec(data, ptr, 2));
-    m_background_color[i] = color;
-  }
-
-  m_width = readvec(data, ptr, field_len);
-  m_height = readvec(data, ptr, field_len);
-
-  if (m_width==0 || m_height==0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Invalid_overlay_data,
-            "Overlay image with zero width or height."};
-  }
-
-  m_offsets.resize(num_images);
-
-  for (size_t i = 0; i < num_images; i++) {
-    m_offsets[i].x = readvec_signed(data, ptr, field_len);
-    m_offsets[i].y = readvec_signed(data, ptr, field_len);
-  }
-#endif
-
-  return Error::Ok;
-}
-
-
-uint64_t TildHeader::number_of_tiles() const
-{
-  uint64_t nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
-  uint64_t nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
-  uint64_t nTiles = nTiles_h * nTiles_v;
-
-  return nTiles;
-}
-
-
-uint64_t TildHeader::nTiles_h() const
-{
-  return (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
-}
-
-
-size_t TildHeader::get_header_size() const
-{
-  assert(m_header_size);
-  return m_header_size;
-}
-
-
-void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
-{
-  uint64_t idx = tile_y * nTiles_h() + tile_x;
-  m_offsets[idx].offset = offset;
-  m_offsets[idx].size = size;
-}
-
-
-template<typename I>
-void writevec(uint8_t* data, size_t& idx, I value, int len)
-{
-  for (int i = 0; i < len; i++) {
-    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
-  }
-
-  idx += len;
-}
-
-
-std::vector<uint8_t> TildHeader::write()
-{
-  assert(m_parameters.version == 1);
-
-  uint8_t flags = 0;
-  bool dimensions_are_64bit = false;
-
-  if (m_parameters.image_width > 0xFFFF || m_parameters.image_height > 0xFFFF) {
-    flags |= 0x01;
-    dimensions_are_64bit = true;
-  }
-
-  switch (m_parameters.offset_field_length) {
-    case 32:
-      flags |= 0;
-      break;
-    case 40:
-      flags |= 0x02;
-      break;
-    case 48:
-      flags |= 0x04;
-      break;
-    case 64:
-      flags |= 0x06;
-      break;
-    default:
-      assert(false);
-  }
-
-  if (m_parameters.with_tile_sizes) {
-    flags |= 0x08;
-
-    if (m_parameters.size_field_length == 64) {
-      flags |= 0x10;
-    }
-  }
-
-  if (m_parameters.tiles_are_sequential) {
-    flags |= 0x20;
-  }
-
-  if (m_parameters.number_of_dimensions > 2) {
-    flags |= 0x40;
-  }
-
-  uint64_t nTiles = number_of_tiles();
-
-  std::vector<uint8_t> data;
-  uint64_t size = (2 +  // version, flags
-                   (dimensions_are_64bit ? 8 : 4) * 2 + // image size
-                   2 * 4 + // tile size
-                   4 + // compression type
-                   nTiles * (m_parameters.offset_field_length / 8)); // offsets
-
-  if (m_parameters.with_tile_sizes) {
-    size += nTiles * (m_parameters.size_field_length / 8);
-  }
-
-  data.resize(size);
-  size_t idx = 0;
-  data[idx++] = 1; // version
-  data[idx++] = flags;
-
-  writevec(data.data(), idx, m_parameters.image_width, dimensions_are_64bit ? 8 : 4);
-  writevec(data.data(), idx, m_parameters.image_height, dimensions_are_64bit ? 8 : 4);
-
-  writevec(data.data(), idx, m_parameters.tile_width, 4);
-  writevec(data.data(), idx, m_parameters.tile_height, 4);
-
-  writevec(data.data(), idx, m_parameters.compression_type_fourcc, 4);
-
-  for (const auto& offset : m_offsets) {
-    writevec(data.data(), idx, offset.offset, m_parameters.offset_field_length / 8);
-
-    if (m_parameters.with_tile_sizes) {
-      writevec(data.data(), idx, offset.size, m_parameters.size_field_length / 8);
-    }
-  }
-
-  assert(idx == data.size());
-
-  m_header_size = data.size();
-
-  return data;
-}
-
-
-std::string TildHeader::dump() const
-{
-  std::stringstream sstr;
-
-  sstr << "version: " << ((int) m_parameters.version) << "\n"
-       << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
-       << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
-       << "offsets: ";
-
-  // TODO
-
-  for (const auto& offset : m_offsets) {
-    sstr << offset.offset << ", size: " << offset.size << "\n";
-  }
-
-  return sstr.str();
-}
-
-
 std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const std::shared_ptr<Box_infe>& infe)
 {
   std::string item_type = infe->get_item_type();
@@ -337,13 +123,12 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "iden") {
     return std::make_shared<ImageItem_iden>(ctx, id);
   }
+  else if (item_type == "tild") {
+    return std::make_shared<ImageItem_Tild>(ctx, id);
+  }
   else {
     return nullptr;
   }
-
-#if 0
-          item_type == "tild" ||
-#endif
 
   return nullptr;
 }
@@ -376,10 +161,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_encoder(HeifContext* ctx, struct
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem::encode_to_bistream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                                          struct heif_encoder* encoder,
-                                                                          const struct heif_encoding_options& options,
-                                                                          enum heif_image_input_class input_class)
+Result<ImageItem::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+                                                                           struct heif_encoder* encoder,
+                                                                           const struct heif_encoding_options& options,
+                                                                           enum heif_image_input_class input_class)
 {
   // === generate compressed image bitstream
 
@@ -524,7 +309,7 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   // compress image and assign data to item
 
-  Result<CodedImageData> codingResult = encode_to_bistream_and_boxes(image, encoder, options, input_class);
+  Result<CodedImageData> codingResult = encode_to_bitstream_and_boxes(image, encoder, options, input_class);
   if (codingResult.error) {
     return codingResult.error;
   }
@@ -682,19 +467,6 @@ int ImageItem::get_chroma_bits_per_pixel() const
 
   // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
   return m_heif_context->get_heif_file()->get_chroma_bits_per_pixel_from_configuration(id);
-}
-
-
-void ImageItem::process_before_write()
-{
-  if (m_is_tild) {
-    // overwrite offsets
-
-    const int construction_method = 0; // 0=mdat 1=idat
-
-    std::vector<uint8_t> header_data = m_tild_header.write();
-    m_heif_context->get_heif_file()->replace_iloc_data(m_id, 0, header_data, construction_method);
-  }
 }
 
 
@@ -856,8 +628,17 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                                    struct heif_encoder* encoder,
                                                                                    const struct heif_encoding_options& options)
-//const heif_color_profile_nclx* target_heif_nclx)
 {
+  const heif_color_profile_nclx* output_nclx_profile;
+
+  if (const auto* nclx = get_forced_output_nclx()) {
+    output_nclx_profile = nclx;
+  }
+  else {
+    output_nclx_profile = options.output_nclx_profile;
+  }
+
+
   heif_colorspace colorspace = image->get_colorspace();
   heif_chroma chroma = image->get_chroma_format();
 
@@ -871,9 +652,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
 
   // If output format forces an NCLX, use that. Otherwise use user selected NCLX.
 
-  //const heif_color_profile_nclx* target_heif_nclx = options.output_nclx_profile;
-
-  std::shared_ptr<color_profile_nclx> target_nclx_profile = compute_target_nclx_profile(image, options.output_nclx_profile);
+  std::shared_ptr<color_profile_nclx> target_nclx_profile = compute_target_nclx_profile(image, output_nclx_profile);
 
   // --- convert colorspace
 
@@ -881,7 +660,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
 
   if (colorspace != image->get_colorspace() ||
       chroma != image->get_chroma_format() ||
-      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), options.output_nclx_profile)) {
+      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), output_nclx_profile)) {
     // @TODO: use color profile when converting
     int output_bpp = 0; // same as input
 

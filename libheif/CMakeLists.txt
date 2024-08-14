@@ -72,6 +72,8 @@ set(libheif_sources
         codecs/overlay.cc
         codecs/iden.h
         codecs/iden.cc
+        codecs/tild.h
+        codecs/tild.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc

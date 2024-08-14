@@ -52,6 +52,7 @@
 #include "codecs/jpeg2000.h"
 #include "codecs/grid.h"
 #include "codecs/overlay.h"
+#include "codecs/tild.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_image.h"
@@ -1228,13 +1229,12 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
 }
 
 
-Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
-                                 std::shared_ptr<ImageItem>& out_iovl_image)
+Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const ImageOverlay& overlayspec)
 {
   if (overlayspec.get_num_offsets() > 0xFFFF) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "Too many overlay images (maximum: 65535)"};
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Too many overlay images (maximum: 65535)"};
   }
 
   std::vector<heif_item_id> ref_ids;
@@ -1252,8 +1252,8 @@ Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
   // Create IOVL Item
 
   heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
-  out_iovl_image = std::make_shared<ImageItem>(this, iovl_id);
-  m_all_images.insert(std::make_pair(iovl_id, out_iovl_image));
+  std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(this, iovl_id);
+  m_all_images.insert(std::make_pair(iovl_id, iovl_image));
   const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(iovl_id, iovl_data, construction_method);
 
@@ -1271,55 +1271,13 @@ Error HeifContext::add_iovl_item(const ImageOverlay& overlayspec,
   //m_heif_file->set_brand(encoder->plugin->compression_format,
   //                       out_grid_image->is_miaf_compatible());
 
-  return Error::Ok;
+  return iovl_image;
 }
 
 
-Result<std::shared_ptr<ImageItem>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tild>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
 {
-  // Create header
-
-  TildHeader tild_header;
-  tild_header.set_parameters(*parameters);
-
-  std::vector<uint8_t> header_data = tild_header.write();
-
-  // Create 'tild' Item
-
-  heif_item_id tild_id = m_heif_file->add_new_image("tild");
-  auto tild_image = std::make_shared<ImageItem>(this, tild_id);
-  m_all_images.insert(std::make_pair(tild_id, tild_image));
-
-  const int construction_method = 0; // 0=mdat 1=idat
-  m_heif_file->append_iloc_data(tild_id, header_data, construction_method);
-
-
-  if (parameters->image_width > 0xFFFFFFFF || parameters->image_height > 0xFFFFFFFF) {
-    return {Error(heif_error_Usage_error, heif_suberror_Invalid_image_size,
-                  "'ispe' only supports image size up to 4294967295 pixels per dimension")};
-  }
-
-  // Add ISPE property
-  m_heif_file->add_ispe_property(tild_id,
-                                 static_cast<uint32_t>(parameters->image_width),
-                                 static_cast<uint32_t>(parameters->image_height));
-
-#if 0
-  // TODO
-
-  // Add PIXI property (copy from first tile)
-  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
-  m_heif_file->add_property(grid_id, pixi, true);
-#endif
-
-  tild_image->set_tild_header(tild_header);
-  tild_image->set_next_tild_position(header_data.size());
-
-  // Set Brands
-  //m_heif_file->set_brand(encoder->plugin->compression_format,
-  //                       out_grid_image->is_miaf_compatible());
-
-  return {tild_image};
+  return ImageItem_Tild::add_new_tild_item(this, parameters);
 }
 
 
@@ -1330,7 +1288,15 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
   auto item = ImageItem::alloc_for_encoder(this, encoder);
 
   heif_encoding_options* options = heif_encoding_options_alloc();
-  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bistream_and_boxes(image, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
+
+  Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
+  if (colorConversionResult.error) {
+    return colorConversionResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = colorConversionResult.value;
+
+  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
   heif_encoding_options_free(options);
 
   if (encodeResult.error) {
@@ -1340,7 +1306,12 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
   const int construction_method = 0; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(tild_id, encodeResult.value.bitstream, construction_method);
 
-  auto tildImg = get_image(tild_id);
+  auto imgItem = get_image(tild_id);
+  auto tildImg = std::dynamic_pointer_cast<ImageItem_Tild>(imgItem);
+  if (!tildImg) {
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item ID for add_tild_image_tile() is no 'tild' image."};
+  }
+
   auto& header = tildImg->get_tild_header();
 
   uint64_t offset = tildImg->get_next_tild_position();

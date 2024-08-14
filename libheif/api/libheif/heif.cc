@@ -33,6 +33,7 @@
 #include "init.h"
 #include "codecs/grid.h"
 #include "codecs/overlay.h"
+#include "codecs/tild.h"
 #include <set>
 #include <limits>
 
@@ -3206,12 +3207,14 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
                              offsets ? offsets[2 * i + 1] : 0);
   }
 
-  std::shared_ptr<ImageItem> iovlimage;
-  Error error = ctx->context->add_iovl_item(overlay, iovlimage);
+  Result<std::shared_ptr<ImageItem_Overlay>> addImageResult = ctx->context->add_iovl_item(overlay);
 
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
+  if (addImageResult.error != Error::Ok) {
+    return addImageResult.error.error_struct(ctx->context.get());
   }
+
+  std::shared_ptr<ImageItem> iovlimage = addImageResult.value;
+
 
   if (out_iovl_image_handle) {
     *out_iovl_image_handle = new heif_image_handle;
@@ -3228,7 +3231,7 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
                                               const struct heif_encoding_options* options, // TODO: do we need this?
                                               struct heif_image_handle** out_grid_image_handle)
 {
-  Result<std::shared_ptr<ImageItem>> gridImageResult;
+  Result<std::shared_ptr<ImageItem_Tild>> gridImageResult;
   gridImageResult = ctx->context->add_tild_item(parameters);
 
   if (gridImageResult.error != Error::Ok) {

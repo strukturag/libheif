@@ -169,8 +169,6 @@ Error ImageItem_Grid::on_load_file()
 
 Error ImageItem_Grid::read_grid_spec()
 {
-  m_is_grid = true;
-
   auto heif_file = get_context()->get_heif_file();
 
   std::vector<uint8_t> grid_data;
