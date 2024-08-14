@@ -58,12 +58,7 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 
 bool HeifContext::is_image(heif_item_id ID) const
 {
-  for (const auto& img : m_all_images) {
-    if (img.first == ID)
-      return true;
-  }
-
-  return false;
+  return m_all_images.find(ID) != m_all_images.end();
 }
 
 
@@ -129,8 +124,6 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else {
     return nullptr;
   }
-
-  return nullptr;
 }
 
 
