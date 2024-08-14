@@ -98,6 +98,8 @@ public:
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
 
+  std::shared_ptr<const Box_iref> get_iref_box() const { return m_iref_box; }
+
   std::shared_ptr<Box_ipco> get_ipco_box() { return m_ipco_box; }
 
   std::shared_ptr<Box_ipco> get_ipco_box() const { return m_ipco_box; }

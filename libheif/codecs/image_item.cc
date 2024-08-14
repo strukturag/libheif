@@ -28,6 +28,7 @@
 #include <codecs/hevc.h>
 #include <codecs/grid.h>
 #include <codecs/overlay.h>
+#include <codecs/iden.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
 #include <plugin_registry.h>
@@ -333,13 +334,15 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == "iovl") {
     return std::make_shared<ImageItem_Overlay>(ctx, id);
   }
+  else if (item_type == "iden") {
+    return std::make_shared<ImageItem_iden>(ctx, id);
+  }
   else {
     return nullptr;
   }
 
 #if 0
           item_type == "tild" ||
-          item_type == "iden" ||
 #endif
 
   return nullptr;
