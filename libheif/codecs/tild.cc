@@ -23,6 +23,18 @@
 #include "file.h"
 
 
+static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
+{
+  uint64_t val = 0;
+  while (len--) {
+    val <<= 8;
+    val |= data[ptr++];
+  }
+
+  return val;
+}
+
+
 void TildHeader::set_parameters(const heif_tild_image_parameters& params)
 {
   m_parameters = params;
@@ -35,56 +47,97 @@ void TildHeader::set_parameters(const heif_tild_image_parameters& params)
 }
 
 
-Error TildHeader::parse(size_t num_images, const std::vector<uint8_t>& data)
+Error TildHeader::parse(const std::vector<uint8_t>& data)
 {
   Error eofError(heif_error_Invalid_input,
                  heif_suberror_Invalid_overlay_data,
                  "Tild header data incomplete");
 
-  if (data.size() < 2 + 4 * 2) {
+  if (data.size() < 2 + 1 + 2 * 4 + 2 * 4 + 4) {
     return eofError;
   }
-#if 0
-  m_version = data[0];
-  if (m_version != 0) {
+
+  size_t idx = 0;
+  version = data[idx++];
+  if (version != 1) {
     std::stringstream sstr;
-    sstr << "Overlay image data version " << ((int) m_version) << " is not implemented yet";
+    sstr << "Overlay image data version " << ((int) version) << " is not implemented yet";
 
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_data_version,
             sstr.str()};
   }
 
-  m_flags = data[1];
+  int flags = data[idx++];
 
-  int field_len = ((m_flags & 1) ? 4 : 2);
-  int ptr = 2;
+  switch (flags & 0x03) {
+    case 0:
+      m_parameters.offset_field_length = 32;
+      break;
+    case 1:
+      m_parameters.offset_field_length = 40;
+      break;
+    case 2:
+      m_parameters.offset_field_length = 48;
+      break;
+    case 3:
+      m_parameters.offset_field_length = 64;
+      break;
+  }
 
-  if (ptr + 4 * 2 + 2 * field_len + num_images * 2 * field_len > data.size()) {
+  m_parameters.with_tile_sizes = !!(flags & 0x04);
+  m_parameters.size_field_length = (flags & 0x08) ? 64 : 32;
+  m_parameters.tiles_are_sequential = !!(flags % 0x10);
+  bool dimensions_are_64bit = (flags & 0x20);
+
+  if (data.size() < idx + 2 * (dimensions_are_64bit ? 8 : 4)) {
     return eofError;
   }
 
-  for (int i = 0; i < 4; i++) {
-    uint16_t color = static_cast<uint16_t>(readvec(data, ptr, 2));
-    m_background_color[i] = color;
+  m_parameters.number_of_extra_dimensions = data[idx++];
+
+  if (data.size() < idx + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4) {
+    return eofError;
   }
 
-  m_width = readvec(data, ptr, field_len);
-  m_height = readvec(data, ptr, field_len);
+  m_parameters.image_width = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
+  m_parameters.image_height = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
 
-  if (m_width==0 || m_height==0) {
+  if (m_parameters.image_width == 0 || m_parameters.image_height == 0) {
     return {heif_error_Invalid_input,
             heif_suberror_Invalid_overlay_data,
-            "Overlay image with zero width or height."};
+            "'tild' image with zero width or height."};
   }
 
-  m_offsets.resize(num_images);
+  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+    uint64_t size = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
 
-  for (size_t i = 0; i < num_images; i++) {
-    m_offsets[i].x = readvec_signed(data, ptr, field_len);
-    m_offsets[i].y = readvec_signed(data, ptr, field_len);
+    if (size == 0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_overlay_data,
+              "'tild' extra dimension may not be zero."};
+    }
+
+    if (i < 8) {
+      m_parameters.extra_dimensions[i] = size;
+    }
+    else {
+      // TODO: error: too many dimensions (not supported)
+    }
   }
-#endif
+
+  m_parameters.tile_width = static_cast<uint32_t>(readvec(data, idx, 4));
+  m_parameters.tile_height = static_cast<uint32_t>(readvec(data, idx, 4));
+
+  m_parameters.compression_type_fourcc = static_cast<uint32_t>(readvec(data, idx, 4));
+
+  if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_overlay_data,
+            "Tile with zero width or height."};
+  }
+
+  m_offsets.resize(number_of_tiles());
 
   return Error::Ok;
 }
@@ -95,6 +148,15 @@ uint64_t TildHeader::number_of_tiles() const
   uint64_t nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
   uint64_t nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
   uint64_t nTiles = nTiles_h * nTiles_v;
+
+  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+    // We only support up to 8 extra dimensions
+    if (i == 8) {
+      break;
+    }
+
+    nTiles *= m_parameters.extra_dimensions[i];
+  }
 
   return nTiles;
 }
@@ -158,13 +220,14 @@ std::vector<uint8_t> TildHeader::write()
       flags |= 0x03;
       break;
     default:
-      assert(false);
+      assert(false); // TODO: return error
   }
 
   if (m_parameters.with_tile_sizes) {
     flags |= 0x04;
 
     if (m_parameters.size_field_length == 64) {
+      // TODO: check for valid values
       flags |= 0x08;
     }
   }
@@ -173,7 +236,7 @@ std::vector<uint8_t> TildHeader::write()
     flags |= 0x10;
   }
 
-  if (m_parameters.number_of_dimensions > 2) {
+  if (m_parameters.number_of_extra_dimensions > 0) {
     flags |= 0x20;
   }
 
@@ -192,7 +255,7 @@ std::vector<uint8_t> TildHeader::write()
 
   data.resize(size);
   size_t idx = 0;
-  data[idx++] = 1; // version
+  data[idx++] = version;
   data[idx++] = flags;
 
   writevec(data.data(), idx, m_parameters.image_width, dimensions_are_64bit ? 8 : 4);
@@ -252,12 +315,20 @@ ImageItem_Tild::ImageItem_Tild(HeifContext* ctx, heif_item_id id)
 
 Error ImageItem_Tild::on_load_file()
 {
-#if 0
-  Error err = read_grid_spec();
+  auto heif_file = get_context()->get_heif_file();
+
+  // TODO: do not get the whole data at once
+  std::vector<uint8_t> tild_header_data;
+  Error err = heif_file->get_compressed_image_data(get_id(), &tild_header_data);
   if (err) {
     return err;
   }
-#endif
+
+  err = m_tild_header.parse(tild_header_data);
+  if (err) {
+    return err;
+  }
+
   return Error::Ok;
 }
 

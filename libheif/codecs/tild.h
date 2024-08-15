@@ -37,7 +37,7 @@ class TildHeader
 public:
   void set_parameters(const heif_tild_image_parameters& params);
 
-  Error parse(size_t num_images, const std::vector<uint8_t>& data);
+  Error parse(const std::vector<uint8_t>& data);
 
   std::vector<uint8_t> write();
 
@@ -56,14 +56,15 @@ public:
   uint32_t get_tile_size(uint32_t idx) { return m_offsets[idx].size; }
 
 private:
+  uint8_t version = 1;
+
   /*
    * Flags:
    * bit 0-1 - number of bits for offsets (0: 32, 1: 40, 2: 48, 3: 64)
    * bit 2   - with tile sizes
    * bit 3   - number of bits for size (0: 32, 1: 64)
    * bit 4   - sequential ordering hint
-   * bit 5   - multidimensional (> 2D)
-   * bit 6   - use 64 bit dimensions (currently unused because ispe is limited to 32 bit)
+   * bit 5   - use 64 bit dimensions (currently unused because ispe is limited to 32 bit)
    */
   heif_tild_image_parameters m_parameters;
 
