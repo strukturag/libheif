@@ -86,7 +86,7 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
   }
 
   m_parameters.with_tile_sizes = !!(flags & 0x04);
-  m_parameters.size_field_length = (flags & 0x08) ? 64 : 32;
+  m_parameters.size_field_length = (flags & 0x08) ? 32 : 24;
   m_parameters.tiles_are_sequential = !!(flags % 0x10);
   bool dimensions_are_64bit = (flags & 0x20);
 
@@ -202,7 +202,7 @@ std::vector<uint8_t> TildHeader::write()
   bool dimensions_are_64bit = false;
 
   if (m_parameters.image_width > 0xFFFF || m_parameters.image_height > 0xFFFF) {
-    flags |= 0x40;
+    flags |= 0x20;
     dimensions_are_64bit = true;
   }
 
@@ -226,7 +226,7 @@ std::vector<uint8_t> TildHeader::write()
   if (m_parameters.with_tile_sizes) {
     flags |= 0x04;
 
-    if (m_parameters.size_field_length == 64) {
+    if (m_parameters.size_field_length == 32) {
       // TODO: check for valid values
       flags |= 0x08;
     }
@@ -236,30 +236,38 @@ std::vector<uint8_t> TildHeader::write()
     flags |= 0x10;
   }
 
-  if (m_parameters.number_of_extra_dimensions > 0) {
-    flags |= 0x20;
-  }
-
   uint64_t nTiles = number_of_tiles();
+
+  int offset_entry_size = m_parameters.offset_field_length / 8;
+  if (m_parameters.with_tile_sizes) {
+    offset_entry_size += m_parameters.size_field_length / 8;
+  }
 
   std::vector<uint8_t> data;
   uint64_t size = (2 +  // version, flags
-                   (dimensions_are_64bit ? 8 : 4) * 2 + // image size
+                   1 +  // number of extra dimensions
+                   (dimensions_are_64bit ? 8 : 4) * (2 + m_parameters.number_of_extra_dimensions) + // image size
                    2 * 4 + // tile size
                    4 + // compression type
-                   nTiles * (m_parameters.offset_field_length / 8)); // offsets
-
-  if (m_parameters.with_tile_sizes) {
-    size += nTiles * (m_parameters.size_field_length / 8);
-  }
+                   nTiles * offset_entry_size); // offsets
 
   data.resize(size);
   size_t idx = 0;
   data[idx++] = version;
   data[idx++] = flags;
 
+  if (m_parameters.number_of_extra_dimensions > 8) {
+    assert(false); // currently not supported
+  }
+
+  data[idx++] = m_parameters.number_of_extra_dimensions;
+
   writevec(data.data(), idx, m_parameters.image_width, dimensions_are_64bit ? 8 : 4);
   writevec(data.data(), idx, m_parameters.image_height, dimensions_are_64bit ? 8 : 4);
+
+  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+    writevec(data.data(), idx, m_parameters.extra_dimensions[i], dimensions_are_64bit ? 8 : 4);
+  }
 
   writevec(data.data(), idx, m_parameters.tile_width, 4);
   writevec(data.data(), idx, m_parameters.tile_height, 4);
