@@ -2471,9 +2471,9 @@ bool Box_ipco::is_property_essential_for_item(heif_item_id itemId,
 {
   // find property index
 
-  for (int i=0;i<(int)m_children.size();i++) {
+  for (int i = 0; i < (int) m_children.size(); i++) {
     if (m_children[i] == property) {
-      return ipma->is_property_essential_for_item(itemId, i);
+      return ipma->is_property_essential_for_item(itemId, i + 1);
     }
   }
 

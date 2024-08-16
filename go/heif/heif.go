@@ -339,6 +339,8 @@ const (
 
 	SuberrorUnsupportedGenericCompressionMethod = C.heif_suberror_Unsupported_generic_compression_method
 
+	SuberrorUnsupportedEssentialProperty = C.heif_suberror_Unsupported_essential_property
+
 	// The conversion of the source image to the requested chroma / colorspace is not supported.
 	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion
 

@@ -218,6 +218,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported header compression method";
     case heif_suberror_Unsupported_generic_compression_method:
       return "Unsupported generic compression method";
+    case heif_suberror_Unsupported_essential_property:
+      return "Unsupported essential item property";
 
       // --- Encoder_plugin_error --
 

@@ -389,6 +389,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Unsupported_image_type", heif_suberror_Unsupported_image_type)
     .value("heif_suberror_Unsupported_data_version", heif_suberror_Unsupported_data_version)
     .value("heif_suberror_Unsupported_generic_compression_method", heif_suberror_Unsupported_generic_compression_method)
+    .value("heif_suberror_Unsupported_essential_property", heif_suberror_Unsupported_essential_property)
     .value("heif_suberror_Unsupported_color_conversion", heif_suberror_Unsupported_color_conversion)
     .value("heif_suberror_Unsupported_item_construction_method", heif_suberror_Unsupported_item_construction_method)
     .value("heif_suberror_Unsupported_header_compression_method", heif_suberror_Unsupported_header_compression_method)

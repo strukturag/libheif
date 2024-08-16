@@ -312,6 +312,8 @@ enum heif_suberror_code
   // Generically compressed data used an unsupported compression method
   heif_suberror_Unsupported_generic_compression_method = 3006,
 
+  heif_suberror_Unsupported_essential_property = 3007,
+
   // --- Encoder_plugin_error ---
 
   heif_suberror_Unsupported_bit_depth = 4000,

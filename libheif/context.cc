@@ -327,7 +327,7 @@ Error HeifContext::interpret_heif_file()
   }
 
 
-  // --- read through properties for each image and extract image resolutions
+  // --- process image properties
 
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
@@ -338,6 +338,23 @@ Error HeifContext::interpret_heif_file()
     if (err) {
       return err;
     }
+
+
+    // --- are there any 'essential' properties that we did not parse?
+
+
+    for (const auto& prop : properties) {
+      if (std::dynamic_pointer_cast<Box_other>(prop) &&
+          get_heif_file()->get_ipco_box()->is_property_essential_for_item(pair.first, prop, get_heif_file()->get_ipma_box())) {
+
+        std::stringstream sstr;
+        sstr << "could not parse item property '" << prop->get_type_string() << "'";
+        return {heif_error_Unsupported_feature, heif_suberror_Unsupported_essential_property, sstr.str()};
+      }
+    }
+
+
+    // --- extract image resolution
 
     bool ispe_read = false;
     for (const auto& prop : properties) {
