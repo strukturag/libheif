@@ -60,9 +60,8 @@ private:
 
   /*
    * Flags:
-   * bit 0-1 - number of bits for offsets (0: 32, 1: 40, 2: 48, 3: 64)
-   * bit 2   - with tile sizes
-   * bit 3   - number of bits for size (0: 24, 1: 32)
+   * bit 0-1 - number of bits for offsets   (0: 32, 1: 40, 2: 48, 3: 64)
+   * bit 2-3 - number of bits for tile size (0:  0, 1: 24; 2: 32, 3: 64)
    * bit 4   - sequential ordering hint
    * bit 5   - use 64 bit dimensions (currently unused because ispe is limited to 32 bit)
    */

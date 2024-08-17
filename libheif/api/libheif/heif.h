@@ -2261,14 +2261,13 @@ struct heif_tild_image_parameters {
   uint32_t compression_type_fourcc;  // TODO: can this be set automatically ?
 
   uint8_t offset_field_length;   // one of: 32, 40, 48, 64
-  uint8_t size_field_length;     // 24 or 32
+  uint8_t size_field_length;     // one of:  0, 24, 32, 64
 
   uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
   uint64_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
 
   // boolean flags
-  uint8_t tiles_are_sequential;
-  uint8_t with_tile_sizes;
+  uint8_t tiles_are_sequential;  // TODO: can we derive this automatically
 };
 
 

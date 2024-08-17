@@ -61,7 +61,7 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
   version = data[idx++];
   if (version != 1) {
     std::stringstream sstr;
-    sstr << "Overlay image data version " << ((int) version) << " is not implemented yet";
+    sstr << "'tild' image version " << ((int) version) << " is not implemented yet";
 
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_data_version,
@@ -85,8 +85,21 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
       break;
   }
 
-  m_parameters.with_tile_sizes = !!(flags & 0x04);
-  m_parameters.size_field_length = (flags & 0x08) ? 32 : 24;
+  switch (flags & 0x0c) {
+    case 0x00:
+      m_parameters.size_field_length = 0;
+      break;
+    case 0x04:
+      m_parameters.size_field_length = 24;
+      break;
+    case 0x08:
+      m_parameters.size_field_length = 32;
+      break;
+    case 0xc0:
+      m_parameters.size_field_length = 64;
+      break;
+  }
+
   m_parameters.tiles_are_sequential = !!(flags % 0x10);
   bool dimensions_are_64bit = (flags & 0x20);
 
@@ -223,13 +236,21 @@ std::vector<uint8_t> TildHeader::write()
       assert(false); // TODO: return error
   }
 
-  if (m_parameters.with_tile_sizes) {
-    flags |= 0x04;
-
-    if (m_parameters.size_field_length == 32) {
-      // TODO: check for valid values
-      flags |= 0x08;
-    }
+  switch (m_parameters.size_field_length) {
+    case 0:
+      flags |= 0;
+      break;
+    case 24:
+      flags |= 0x40;
+      break;
+    case 32:
+      flags |= 0x80;
+      break;
+    case 64:
+      flags |= 0xc0;
+      break;
+    default:
+      assert(false); // TODO: return error
   }
 
   if (m_parameters.tiles_are_sequential) {
@@ -238,10 +259,7 @@ std::vector<uint8_t> TildHeader::write()
 
   uint64_t nTiles = number_of_tiles();
 
-  int offset_entry_size = m_parameters.offset_field_length / 8;
-  if (m_parameters.with_tile_sizes) {
-    offset_entry_size += m_parameters.size_field_length / 8;
-  }
+  int offset_entry_size = (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
 
   std::vector<uint8_t> data;
   uint64_t size = (2 +  // version, flags
@@ -277,7 +295,7 @@ std::vector<uint8_t> TildHeader::write()
   for (const auto& offset : m_offsets) {
     writevec(data.data(), idx, offset.offset, m_parameters.offset_field_length / 8);
 
-    if (m_parameters.with_tile_sizes) {
+    if (m_parameters.size_field_length != 0) {
       writevec(data.data(), idx, offset.size, m_parameters.size_field_length / 8);
     }
   }
