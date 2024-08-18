@@ -1044,7 +1044,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   Error error;
 
 
-  std::shared_ptr<ImageItem> image_item = ImageItem::alloc_for_encoder(this, encoder);
+  std::shared_ptr<ImageItem> image_item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
 
 #if 0
@@ -1303,7 +1303,7 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
                                        const std::shared_ptr<HeifPixelImage>& image,
                                        struct heif_encoder* encoder)
 {
-  auto item = ImageItem::alloc_for_encoder(this, encoder);
+  auto item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
   heif_encoding_options* options = heif_encoding_options_alloc();
 

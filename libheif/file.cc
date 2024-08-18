@@ -901,6 +901,30 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
 }
 
+
+Error HeifFile::append_data_from_file(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const
+{
+  const auto& items = m_iloc_box->get_items();
+  const Box_iloc::Item* item = nullptr;
+  for (const auto& i : items) {
+    if (i.item_ID == ID) {
+      item = &i;
+      break;
+    }
+  }
+  if (!item) {
+    std::stringstream sstr;
+    sstr << "Item with ID " << ID << " has no compressed data";
+
+    return {heif_error_Invalid_input,
+            heif_suberror_No_item_data,
+            sstr.str()};
+  }
+
+  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &out_data, offset, size);
+}
+
+
 #if WITH_UNCOMPRESSED_CODEC
 // generic compression and uncompressed, per 23001-17
 const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
@@ -928,7 +952,6 @@ const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, st
   }
   if (!cmpC_box) {
     // assume no generic compression
-    printf("!cmpC\n");
     return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
   std::vector<uint8_t> compressed_bytes;

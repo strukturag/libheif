@@ -25,7 +25,6 @@
 #include <deque>
 #include <future>
 #include <set>
-#include <algorithm>
 
 
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
@@ -50,8 +49,6 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
 
   m_rows = static_cast<uint16_t>(data[2] + 1);
   m_columns = static_cast<uint16_t>(data[3] + 1);
-
-  printf("rows:%d columns:%d\n", m_rows, m_columns);
 
   if (field_size == 32) {
     if (data.size() < 12) {

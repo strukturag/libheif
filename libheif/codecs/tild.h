@@ -55,9 +55,9 @@ public:
 
   size_t get_header_size() const;
 
-  uint64_t get_tile_offset(uint32_t idx) { return m_offsets[idx].offset; }
+  uint64_t get_tile_offset(uint32_t idx) const { return m_offsets[idx].offset; }
 
-  uint32_t get_tile_size(uint32_t idx) { return m_offsets[idx].size; }
+  uint32_t get_tile_size(uint32_t idx) const { return m_offsets[idx].size; }
 
 private:
   uint8_t version = 1;
@@ -76,6 +76,7 @@ private:
     uint32_t size = 0;
   };
 
+  uint64_t m_start_of_offset_table_in_file = 0;
   std::vector<TileOffset> m_offsets;
 
   size_t m_header_size = 0;
@@ -93,7 +94,7 @@ public:
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
-  // heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
+  heif_compression_format get_compression_format() const override;
 
   static Result<std::shared_ptr<ImageItem_Tild>> add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters);
 
@@ -130,13 +131,7 @@ private:
   TildHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
 
-  Error read_grid_spec();
-
-  Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options) const;
-
-  Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
-                                    std::shared_ptr<HeifPixelImage> inout_image,
-                                    const heif_decoding_options& options) const;
+  Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
 };
 
 

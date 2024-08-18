@@ -464,6 +464,13 @@ public:
                   const std::shared_ptr<class Box_idat>&,
                   std::vector<uint8_t>* dest) const;
 
+  // Note: size==std::numeric_limits<uint64_t>::max() reads the data until the end
+  Error read_data(const Item& item,
+                  const std::shared_ptr<StreamReader>& istr,
+                  const std::shared_ptr<class Box_idat>&,
+                  std::vector<uint8_t>* dest,
+                  uint64_t offset, uint64_t size) const;
+
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
 
   // append bitstream data that will be written later (after iloc box)

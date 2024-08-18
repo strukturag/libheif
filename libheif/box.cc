@@ -38,6 +38,8 @@
 #include <set>
 #include <cassert>
 #include <array>
+#include <mutex>
+
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_box.h"
@@ -1437,6 +1439,25 @@ Error Box_iloc::read_data(const Item& item,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
+  return read_data(item, istr, idat, dest, 0, std::numeric_limits<uint64_t>::max());
+}
+
+
+Error Box_iloc::read_data(const Item& item,
+                          const std::shared_ptr<StreamReader>& istr,
+                          const std::shared_ptr<Box_idat>& idat,
+                          std::vector<uint8_t>* dest,
+                          uint64_t offset, uint64_t size) const
+{
+#if ENABLE_MULTITHREADING_SUPPORT
+  std::mutex read_mutex;
+
+  std::lock_guard<std::mutex> lock(read_mutex);
+#endif
+
+  // TODO: bool limited_size = (size != std::numeric_limits<uint64_t>::max());  -> return error if set and size exceeds available data
+
+
   // TODO: this function should always append the data to the output vector as this is used when
   //       the image data is concatenated with data in a configuration box. However, it seems that
   //       this function clears the array in some cases. This should be corrected.
@@ -1453,9 +1474,9 @@ Error Box_iloc::read_data(const Item& item,
              << (old_size + extent.length) << " bytes, exceeding the security limit of "
              << MAX_MEMORY_BLOCK_SIZE << " bytes";
 
-        return Error(heif_error_Memory_allocation_error,
-                     heif_suberror_Security_limit_exceeded,
-                     sstr.str());
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Security_limit_exceeded,
+                sstr.str()};
       }
 
 
@@ -1464,9 +1485,9 @@ Error Box_iloc::read_data(const Item& item,
       if (extent.offset > MAX_FILE_POS ||
           item.base_offset > MAX_FILE_POS ||
           extent.length > MAX_FILE_POS) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Security_limit_exceeded,
-                     "iloc data pointers out of allowed range");
+        return {heif_error_Invalid_input,
+                heif_suberror_Security_limit_exceeded,
+                "iloc data pointers out of allowed range"};
       }
 
       StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
@@ -1480,35 +1501,53 @@ Error Box_iloc::read_data(const Item& item,
         sstr << "Extent in iloc box references data outside of file bounds "
              << "(points to file position " << extent.offset + item.base_offset << ")\n";
 
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_End_of_data,
-                     sstr.str());
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                sstr.str()};
       }
       else if (status == StreamReader::timeout) {
         // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_End_of_data);
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data};
+      }
+
+
+      // skip to reading offset
+
+      uint64_t skip_len = std::min(offset, extent.length);
+      offset -= skip_len;
+
+      uint64_t read_len = std::min(extent.length - skip_len, size);
+
+      if (offset > 0) {
+        continue;
+      }
+
+      if (read_len == 0) {
+        continue;
       }
 
       // --- move file pointer to start of data
 
-      bool success = istr->seek(extent.offset + item.base_offset);
+      bool success = istr->seek(extent.offset + item.base_offset + skip_len);
       assert(success);
       (void) success;
 
 
       // --- read data
 
-      dest->resize(static_cast<size_t>(old_size + extent.length));
-      success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(extent.length));
+      dest->resize(static_cast<size_t>(old_size + read_len));
+      success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(read_len));
       assert(success);
       (void) success;
+
+      size -= read_len;
     }
     else if (item.construction_method == 1) {
       if (!idat) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_No_idat_box,
-                     "idat box referenced in iref box is not present in file");
+        return {heif_error_Invalid_input,
+                heif_suberror_No_idat_box,
+                "idat box referenced in iref box is not present in file"};
       }
 
       idat->read_data(istr,
@@ -1519,9 +1558,9 @@ Error Box_iloc::read_data(const Item& item,
     else {
       std::stringstream sstr;
       sstr << "Item construction method " << (int) item.construction_method << " not implemented";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_item_construction_method,
-                   sstr.str());
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unsupported_item_construction_method,
+              sstr.str()};
     }
   }
 
@@ -1575,6 +1614,13 @@ Error Box_iloc::append_data(heif_item_id item_ID,
     }
   }
   else {
+    if (!m_items[idx].extents.empty()) {
+      Extent& e = m_items[idx].extents.back();
+      e.data.insert(e.data.end(), data.begin(), data.end());
+      e.length = e.data.size();
+      return Error::Ok;
+    }
+
     extent.data = data;
   }
 
@@ -1609,7 +1655,7 @@ Error Box_iloc::replace_data(heif_item_id item_ID,
   }
 
   assert(idx != m_items.size());
-  assert(m_items[idx].extents[0].data.size() <= data.size()); // TODO
+  assert(m_items[idx].extents[0].data.size() >= data.size()); // TODO
   memcpy(m_items[idx].extents[0].data.data(), data.data(), data.size());
 
   return Error::Ok;

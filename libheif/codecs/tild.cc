@@ -150,7 +150,24 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
             "Tile with zero width or height."};
   }
 
-  m_offsets.resize(number_of_tiles());
+  uint64_t nTiles = number_of_tiles();
+  m_offsets.resize(nTiles);
+
+
+  // --- load offsets (TODO: do this on-demand)
+
+  printf("offsetlen: %d  sizelen: %d\n", m_parameters.offset_field_length, m_parameters.size_field_length);
+
+  for (uint64_t i=0; i<nTiles; i++) {
+    m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length/8);
+
+    if (m_parameters.size_field_length) {
+      assert(m_parameters.size_field_length <= 32);
+      m_offsets[i].size = static_cast<uint32_t>(readvec(data, idx, m_parameters.size_field_length / 8));
+    }
+
+    printf("[%zu] : offset/size: %zu %d\n", i, m_offsets[i].offset, m_offsets[i].size);
+  }
 
   return Error::Ok;
 }
@@ -247,17 +264,19 @@ std::vector<uint8_t> TildHeader::write()
       flags |= 0;
       break;
     case 24:
-      flags |= 0x40;
+      flags |= 0x04;
       break;
     case 32:
-      flags |= 0x80;
+      flags |= 0x08;
       break;
     case 64:
-      flags |= 0xc0;
+      flags |= 0x0c;
       break;
     default:
       assert(false); // TODO: return error
   }
+
+  printf("> %d %d -> %d\n", m_parameters.offset_field_length, m_parameters.size_field_length, (int)flags);
 
   if (m_parameters.tiles_are_sequential) {
     flags |= 0x10;
@@ -342,6 +361,12 @@ ImageItem_Tild::ImageItem_Tild(HeifContext* ctx)
 ImageItem_Tild::ImageItem_Tild(HeifContext* ctx, heif_item_id id)
     : ImageItem(ctx, id)
 {
+}
+
+
+heif_compression_format ImageItem_Tild::get_compression_format() const
+{
+  return compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
 }
 
 
@@ -430,12 +455,36 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_compressed_image(
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
-    // TODO
-    return Error::Ok;
+    return decode_grid_tile(options, tile_x0, tile_y0);
   }
   else {
     return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "'tild' images can only be access per tile"};
   }
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+{
+  printf("decode_grid_tile %d:%d\n", tx,ty);
+
+  heif_compression_format format = compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
+
+  // --- get compressed data
+
+  std::vector<uint8_t> data = read_bitstream_configuration_data_override(get_id(), format);
+
+  // --- decode
+
+  uint32_t idx = (uint32_t)(ty * m_tild_header.nTiles_h() + tx);
+
+  uint64_t offset = m_tild_header.get_tile_offset(idx);
+  uint64_t size = m_tild_header.get_tile_size(idx);
+
+  printf("read tild image range: %zu, size: %zu\n", offset, size);
+  Error err = get_file()->append_data_from_file(get_id(), data, offset, size);
+  assert(!err.error_code);
+
+  return decode_from_compressed_data(get_compression_format(), options, data);
 }
 
 

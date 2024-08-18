@@ -58,7 +58,9 @@ public:
 
   static std::shared_ptr<ImageItem> alloc_for_infe_box(HeifContext*, const std::shared_ptr<Box_infe>&);
 
-  static std::shared_ptr<ImageItem> alloc_for_encoder(HeifContext*, struct heif_encoder* encoder);
+  static std::shared_ptr<ImageItem> alloc_for_compression_format(HeifContext*, heif_compression_format);
+
+  static heif_compression_format compression_format_from_fourcc_infe_type(uint32_t type);
 
   Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                           struct heif_encoder* encoder,
@@ -378,13 +380,20 @@ private:
   Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
 
 protected:
+  static Result<std::shared_ptr<HeifPixelImage>> decode_from_compressed_data(heif_compression_format compression_format,
+                                                                             const struct heif_decoding_options& options,
+                                                                             const std::vector<uint8_t>& data);
+
+  std::vector<uint8_t> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
+
+  virtual std::vector<uint8_t> read_bitstream_configuration_data(heif_item_id itemId) const { return {}; }
+
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class) { return {}; }
 
   // --- encoding utility functions
-
 
   static void add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
                                 const struct heif_encoding_options& options,
