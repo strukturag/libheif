@@ -21,6 +21,7 @@
 #include "tild.h"
 #include "context.h"
 #include "file.h"
+#include <algorithm>
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
@@ -156,8 +157,6 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
 
   // --- load offsets (TODO: do this on-demand)
 
-  printf("offsetlen: %d  sizelen: %d\n", m_parameters.offset_field_length, m_parameters.size_field_length);
-
   for (uint64_t i=0; i<nTiles; i++) {
     m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length/8);
 
@@ -166,7 +165,7 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
       m_offsets[i].size = static_cast<uint32_t>(readvec(data, idx, m_parameters.size_field_length / 8));
     }
 
-    printf("[%zu] : offset/size: %zu %d\n", i, m_offsets[i].offset, m_offsets[i].size);
+    // printf("[%zu] : offset/size: %zu %d\n", i, m_offsets[i].offset, m_offsets[i].size);
   }
 
   return Error::Ok;
@@ -465,8 +464,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_compressed_image(
 
 Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
 {
-  printf("decode_grid_tile %d:%d\n", tx,ty);
-
   heif_compression_format format = compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
 
   // --- get compressed data
@@ -480,7 +477,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const h
   uint64_t offset = m_tild_header.get_tile_offset(idx);
   uint64_t size = m_tild_header.get_tile_size(idx);
 
-  printf("read tild image range: %zu, size: %zu\n", offset, size);
   Error err = get_file()->append_data_from_file(get_id(), data, offset, size);
   assert(!err.error_code);
 

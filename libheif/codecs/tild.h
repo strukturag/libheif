@@ -76,7 +76,7 @@ private:
     uint32_t size = 0;
   };
 
-  uint64_t m_start_of_offset_table_in_file = 0;
+  // TODO uint64_t m_start_of_offset_table_in_file = 0;
   std::vector<TileOffset> m_offsets;
 
   size_t m_header_size = 0;
