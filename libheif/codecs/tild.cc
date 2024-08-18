@@ -468,7 +468,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const h
 
   // --- get compressed data
 
-  std::vector<uint8_t> data = read_bitstream_configuration_data_override(get_id(), format);
+  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(get_id(), format);
+  if (dataResult.error) {
+    return dataResult.error;
+  }
+
+  std::vector<uint8_t>& data = dataResult.value;
 
   // --- decode
 

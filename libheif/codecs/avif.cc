@@ -23,6 +23,7 @@
 #include "bitstream.h"
 #include "common_utils.h"
 #include "libheif/api_structs.h"
+#include "file.h"
 #include <iomanip>
 #include <limits>
 #include <string>
@@ -604,4 +605,48 @@ Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<H
   codedImage.properties.push_back(av1C);
 
   return codedImage;
+}
+
+
+Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err)
+  {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_av1C> av1C_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("av1C"))
+    {
+      av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop);
+      if (av1C_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!av1C_box)
+  {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_av1C_box);
+  }
+  else if (!av1C_box->get_headers(&data))
+  {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
+  }
+
+  return data;
 }

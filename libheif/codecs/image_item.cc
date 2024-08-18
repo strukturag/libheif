@@ -1026,12 +1026,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
 }
 
 
-std::vector<uint8_t> ImageItem::read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const
+Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const
 {
   auto item_codec = ImageItem::alloc_for_compression_format(const_cast<HeifContext*>(get_context()), format);
   assert(item_codec);
 
-  return read_bitstream_configuration_data(itemId);
+  return item_codec->read_bitstream_configuration_data(itemId);
 }
 
 

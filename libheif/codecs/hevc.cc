@@ -21,6 +21,7 @@
 #include "hevc.h"
 #include "bitstream.h"
 #include "error.h"
+#include "file.h"
 
 #include <cassert>
 #include <cmath>
@@ -720,4 +721,44 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
   }
 
   return codedImage;
+}
+
+Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err)
+  {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_hvcC> hvcC_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("hvcC"))
+    {
+      hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop);
+      if (hvcC_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!hvcC_box) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_hvcC_box};
+  }
+  else if (!hvcC_box->get_headers(&data)) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_item_data};
+  }
+
+  return data;
 }

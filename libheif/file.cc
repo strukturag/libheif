@@ -1023,6 +1023,8 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
 }
 #endif
 
+
+// TODO: replace with function in ImageItem
 const Error HeifFile::get_compressed_image_data_hvc1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
 {
   // --- get properties for this image
@@ -1108,6 +1110,7 @@ const Error HeifFile::get_compressed_image_data_vvc(heif_item_id ID, std::vector
   return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
 }
 
+// TODO: replace with function in ImageItem
 const Error HeifFile::get_compressed_image_data_av1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
 {
   // --- --- --- AV1

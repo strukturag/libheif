@@ -384,9 +384,9 @@ protected:
                                                                              const struct heif_decoding_options& options,
                                                                              const std::vector<uint8_t>& data);
 
-  std::vector<uint8_t> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
-  virtual std::vector<uint8_t> read_bitstream_configuration_data(heif_item_id itemId) const { return {}; }
+  virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const { return std::vector<uint8_t>{}; }
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,

@@ -137,6 +137,10 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
 
+protected:
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+
+public:
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
