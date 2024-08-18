@@ -127,7 +127,8 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_item_id ID,
                                                        heif_colorspace out_colorspace,
                                                        heif_chroma out_chroma,
-                                                       const struct heif_decoding_options& options) const;
+                                                       const struct heif_decoding_options& options,
+                                                       bool decode_only_tile, uint32_t tx, uint32_t ty) const;
 
   std::string debug_dump_boxes() const;
 

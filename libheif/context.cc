@@ -957,7 +957,8 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
 Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id ID,
                                                                   heif_colorspace out_colorspace,
                                                                   heif_chroma out_chroma,
-                                                                  const struct heif_decoding_options& options) const
+                                                                  const struct heif_decoding_options& options,
+                                                                  bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
   std::string image_type = m_heif_file->get_item_type(ID);
 
@@ -972,7 +973,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   }
 
 
-  auto decodingResult = imginfo->decode_image(out_colorspace, options, false,0,0);
+  auto decodingResult = imginfo->decode_image(out_colorspace, options, decode_only_tile, tx, ty);
   if (decodingResult.error) {
     return decodingResult.error;
   }

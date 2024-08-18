@@ -51,6 +51,8 @@ Error ImageGrid::parse(const std::vector<uint8_t>& data)
   m_rows = static_cast<uint16_t>(data[2] + 1);
   m_columns = static_cast<uint16_t>(data[3] + 1);
 
+  printf("rows:%d columns:%d\n", m_rows, m_columns);
+
   if (field_size == 32) {
     if (data.size() < 12) {
       return Error(heif_error_Invalid_input,
@@ -214,8 +216,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_compressed_image(
                                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
-    // TODO
-    return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "Tile access to grid images not implemented"};
+    return decode_grid_tile(options, tile_x0, tile_y0);
   }
   else {
     return decode_full_grid_image(options);
@@ -555,6 +556,19 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   }
 
   return Error::Ok;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+{
+  uint32_t idx = ty * m_grid_spec.get_columns() + tx;
+
+  assert(idx < m_grid_tile_ids.size());
+
+  heif_item_id tile_id = m_grid_tile_ids[idx];
+  std::shared_ptr<const ImageItem> tile_item = get_context()->get_image(tile_id);
+
+  return tile_item->decode_compressed_image(options, true, tx, ty);
 }
 
 

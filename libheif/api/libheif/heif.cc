@@ -938,65 +938,6 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 }
 
 
-// TODO: move this into the Context. But first, we also have to move heif_decode_image() into Context.
-struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* handle,
-                                                      struct heif_image** out_img,
-                                                      enum heif_colorspace colorspace,
-                                                      enum heif_chroma chroma,
-                                                      const struct heif_decoding_options* options,
-                                                      uint64_t x0, uint64_t y0, uint64_t z0)
-{
-  if (!handle) {
-    return error_null_parameter;
-  }
-
-  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
-  if (gridItem) {
-    if (z0 != 0) {
-      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "z0 must be 0 for 2D images"};
-    }
-
-    if (x0 > 0xFFFFFFFF || y0 > 0xFFFFFFFF) {
-      return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "x0/y0 currently must be 32 bit"};
-    }
-
-    heif_item_id first_tile_id = gridItem->get_grid_tiles()[0];
-    auto tile = handle->context->get_image(first_tile_id);
-
-    const ImageGrid& gridspec = gridItem->get_grid_spec();
-    uint32_t tile_x = static_cast<uint32_t>(x0) / tile->get_width();
-    uint32_t tile_y = static_cast<uint32_t>(y0) / tile->get_height();
-
-    heif_item_id tile_id = gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
-    heif_image_handle* tile_handle;
-    heif_context* ctx = heif_image_handle_get_context(handle);
-    heif_error err = heif_context_get_image_handle(ctx, tile_id, &tile_handle);
-    if (err.code) {
-      heif_image_handle_release(tile_handle);
-      heif_context_free(ctx);
-      err.message = nullptr; // have to delete the text pointer because the text may be deleted with the context (TODO)
-      return err;
-    }
-
-    heif_context_free(ctx);
-    err = heif_decode_image(tile_handle, out_img, colorspace, chroma, options);
-    if (err.code) {
-      heif_image_handle_release(tile_handle);
-      err.message = nullptr; // have to delete the text pointer because the text may be deleted with the context (TODO)
-      return err;
-    }
-
-    heif_image_handle_release(tile_handle);
-
-    return heif_error_success;
-  }
-
-  // --- fallback: decode the whole image
-
-  return heif_decode_image(handle, out_img, colorspace, chroma, options);
-}
-
-
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
                                                         uint16_t tile_width,
                                                         uint16_t tile_height,
@@ -1198,29 +1139,37 @@ void fill_default_decoding_options(heif_decoding_options& options)
 }
 
 
-static void copy_options(heif_decoding_options& options, const heif_decoding_options& input_options)
+// overwrite the (possibly lower version) input options over the default options
+static heif_decoding_options normalize_options(const heif_decoding_options* input_options)
 {
-  switch (input_options.version) {
-    case 5:
-      options.color_conversion_options = input_options.color_conversion_options;
-      // fallthrough
-    case 4:
-      options.decoder_id = input_options.decoder_id;
-      // fallthrough
-    case 3:
-      options.strict_decoding = input_options.strict_decoding;
-      // fallthrough
-    case 2:
-      options.convert_hdr_to_8bit = input_options.convert_hdr_to_8bit;
-      // fallthrough
-    case 1:
-      options.ignore_transformations = input_options.ignore_transformations;
+  heif_decoding_options options{};
+  fill_default_decoding_options(options);
 
-      options.start_progress = input_options.start_progress;
-      options.on_progress = input_options.on_progress;
-      options.end_progress = input_options.end_progress;
-      options.progress_user_data = input_options.progress_user_data;
+  if (input_options) {
+    switch (input_options->version) {
+      case 5:
+        options.color_conversion_options = input_options->color_conversion_options;
+        // fallthrough
+      case 4:
+        options.decoder_id = input_options->decoder_id;
+        // fallthrough
+      case 3:
+        options.strict_decoding = input_options->strict_decoding;
+        // fallthrough
+      case 2:
+        options.convert_hdr_to_8bit = input_options->convert_hdr_to_8bit;
+        // fallthrough
+      case 1:
+        options.ignore_transformations = input_options->ignore_transformations;
+
+        options.start_progress = input_options->start_progress;
+        options.on_progress = input_options->on_progress;
+        options.end_progress = input_options->end_progress;
+        options.progress_user_data = input_options->progress_user_data;
+    }
   }
+
+  return options;
 }
 
 
@@ -1248,18 +1197,47 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 {
   heif_item_id id = in_handle->image->get_id();
 
-  heif_decoding_options dec_options;
-  fill_default_decoding_options(dec_options);
-
-  if (input_options != nullptr) {
-    // overwrite the (possibly lower version) input options over the default options
-    copy_options(dec_options, *input_options);
-  }
+  heif_decoding_options dec_options = normalize_options(input_options);
 
   Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
                                                                                             colorspace,
                                                                                             chroma,
-                                                                                            dec_options);
+                                                                                            dec_options,
+                                                                                            false, 0,0);
+  if (decodingResult.error.error_code != heif_error_Ok) {
+    return decodingResult.error.error_struct(in_handle->image.get());
+  }
+
+  std::shared_ptr<HeifPixelImage> img = decodingResult.value;
+
+  *out_img = new heif_image();
+  (*out_img)->image = std::move(img);
+
+  return Error::Ok.error_struct(in_handle->image.get());
+}
+
+
+// TODO: move this into the Context. But first, we also have to move heif_decode_image() into Context.
+struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
+                                                      struct heif_image** out_img,
+                                                      enum heif_colorspace colorspace,
+                                                      enum heif_chroma chroma,
+                                                      const struct heif_decoding_options* input_options,
+                                                      uint64_t x0, uint64_t y0, uint64_t z0)
+{
+  if (!in_handle) {
+    return error_null_parameter;
+  }
+
+  heif_item_id id = in_handle->image->get_id();
+
+  heif_decoding_options dec_options = normalize_options(input_options);
+
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = in_handle->context->decode_image(id,
+                                                                                            colorspace,
+                                                                                            chroma,
+                                                                                            dec_options,
+                                                                                            true, x0,y0);
   if (decodingResult.error.error_code != heif_error_Ok) {
     return decodingResult.error.error_struct(in_handle->image.get());
   }

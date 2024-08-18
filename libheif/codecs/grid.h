@@ -117,6 +117,8 @@ private:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options) const;
 
+  Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
+
   Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                     std::shared_ptr<HeifPixelImage> inout_image,
                                     const heif_decoding_options& options) const;
