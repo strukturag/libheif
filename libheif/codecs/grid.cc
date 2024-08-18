@@ -558,3 +558,22 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 }
 
 
+heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
+{
+  heif_image_tiling tiling{};
+
+  const ImageGrid& gridspec = get_grid_spec();
+  tiling.num_columns = gridspec.get_columns();
+  tiling.num_rows = gridspec.get_rows();
+
+  heif_item_id tile0_id = get_grid_tiles()[0];
+  auto tile0 = get_context()->get_image(tile0_id);
+  tiling.tile_width = tile0->get_width();
+  tiling.tile_height = tile0->get_height();
+
+  tiling.image_width = gridspec.get_width();
+  tiling.image_height = gridspec.get_height();
+  tiling.number_of_extra_dimensions = 0;
+
+  return tiling;
+}

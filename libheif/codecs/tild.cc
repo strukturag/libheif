@@ -181,6 +181,12 @@ uint64_t TildHeader::nTiles_h() const
 }
 
 
+uint64_t TildHeader::nTiles_v() const
+{
+  return (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
+}
+
+
 size_t TildHeader::get_header_size() const
 {
   assert(m_header_size);
@@ -433,3 +439,22 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_compressed_image(
 }
 
 
+heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
+{
+  heif_image_tiling tiling{};
+
+  tiling.num_columns = m_tild_header.nTiles_h();
+  tiling.num_rows = m_tild_header.nTiles_v();
+
+  tiling.tile_width = m_tild_header.get_parameters().tile_width;
+  tiling.tile_height = m_tild_header.get_parameters().tile_height;
+
+  tiling.image_width = m_tild_header.get_parameters().image_width;
+  tiling.image_height = m_tild_header.get_parameters().image_height;
+  tiling.number_of_extra_dimensions = m_tild_header.get_parameters().number_of_extra_dimensions;
+  for (int i = 0; i < std::min(tiling.number_of_extra_dimensions, uint8_t(8)); i++) {
+    tiling.extra_dimensions[i] = m_tild_header.get_parameters().extra_dimensions[i];
+  }
+
+  return tiling;
+}

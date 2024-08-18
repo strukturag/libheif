@@ -106,6 +106,8 @@ public:
 
   const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
 
+  heif_image_tiling get_heif_image_tiling() const;
+
 private:
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;

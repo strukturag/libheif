@@ -37,6 +37,8 @@ class TildHeader
 public:
   void set_parameters(const heif_tild_image_parameters& params);
 
+  const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
+
   Error parse(const std::vector<uint8_t>& data);
 
   std::vector<uint8_t> write();
@@ -46,6 +48,8 @@ public:
   uint64_t number_of_tiles() const;
 
   uint64_t nTiles_h() const;
+
+  uint64_t nTiles_v() const;
 
   void set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size);
 
@@ -118,6 +122,8 @@ public:
   uint64_t get_next_tild_position() { return m_next_tild_position; }
 
   void set_next_tild_position(uint64_t pos) { m_next_tild_position = pos; }
+
+  heif_image_tiling get_heif_image_tiling() const;
 
 
 private:

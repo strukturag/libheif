@@ -864,18 +864,14 @@ struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_im
   }
 
   std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
-  if (!gridItem) {
-    return tiling;
+  if (gridItem) {
+    return gridItem->get_heif_image_tiling();
   }
 
-  const ImageGrid& gridspec = gridItem->get_grid_spec();
-  tiling.num_columns = gridspec.get_columns();
-  tiling.num_rows = gridspec.get_rows();
-
-  heif_item_id tile0_id = gridItem->get_grid_tiles()[0];
-  auto tile0 = handle->context->get_image(tile0_id);
-  tiling.tile_width = tile0->get_width();
-  tiling.tile_height = tile0->get_height();
+  std::shared_ptr<ImageItem_Tild> tildItem = std::dynamic_pointer_cast<ImageItem_Tild>(handle->image);
+  if (tildItem) {
+    return tildItem->get_heif_image_tiling();
+  }
 
   return tiling;
 }

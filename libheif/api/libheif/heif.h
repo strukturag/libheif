@@ -1144,10 +1144,15 @@ struct heif_context* heif_image_handle_get_context(const struct heif_image_handl
 
 struct heif_image_tiling
 {
-  uint32_t num_columns;
-  uint32_t num_rows;
+  uint64_t num_columns;
+  uint64_t num_rows;
   uint32_t tile_width;
   uint32_t tile_height;
+
+  uint64_t image_width;
+  uint64_t image_height;
+  uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
+  uint64_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
 };
 
 // If the image is not tiled, all entries of he returned struct will be zero.
