@@ -1223,7 +1223,7 @@ struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_ha
                                                       enum heif_colorspace colorspace,
                                                       enum heif_chroma chroma,
                                                       const struct heif_decoding_options* input_options,
-                                                      uint64_t x0, uint64_t y0, uint64_t z0)
+                                                      uint32_t x0, uint32_t y0)
 {
   if (!in_handle) {
     return error_null_parameter;
