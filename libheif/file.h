@@ -88,7 +88,7 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
-  Error append_data_from_file(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
+  Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
 
   Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
 

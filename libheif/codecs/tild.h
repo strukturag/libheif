@@ -39,7 +39,7 @@ public:
 
   const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
 
-  Error parse(const std::vector<uint8_t>& data);
+  Error parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id);
 
   std::vector<uint8_t> write();
 
@@ -79,7 +79,8 @@ private:
   // TODO uint64_t m_start_of_offset_table_in_file = 0;
   std::vector<TileOffset> m_offsets;
 
-  size_t m_header_size = 0;
+  size_t m_offset_table_start = 0; // start of offset table (= number of bytes in header)
+  size_t m_header_size = 0; // including offset table
 };
 
 

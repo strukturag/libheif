@@ -48,15 +48,28 @@ void TildHeader::set_parameters(const heif_tild_image_parameters& params)
 }
 
 
-Error TildHeader::parse(const std::vector<uint8_t>& data)
-{
-  Error eofError(heif_error_Invalid_input,
-                 heif_suberror_Invalid_overlay_data,
-                 "Tild header data incomplete");
 
+Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
+{
+  const Error eofError(heif_error_Invalid_input,
+                       heif_suberror_Invalid_overlay_data,
+                       "Tild header data incomplete");
+
+  std::vector<uint8_t> data;
+
+  Error err;
+  err = file->append_data_from_iloc(tild_id, data, 0, 3);
+  if (err) {
+    return err;
+  }
+
+  assert(data.size() == 3);
+
+#if 0
   if (data.size() < 2 + 1 + 2 * 4 + 2 * 4 + 4) {
     return eofError;
   }
+#endif
 
   size_t idx = 0;
   version = data[idx++];
@@ -104,15 +117,24 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
   m_parameters.tiles_are_sequential = !!(flags % 0x10);
   bool dimensions_are_64bit = (flags & 0x20);
 
+  m_parameters.number_of_extra_dimensions = data[idx++];
+
+  size_t size_of_header_without_offsets = 3 + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4;
+
+  err = file->append_data_from_iloc(tild_id, data, 3, size_of_header_without_offsets - 3);
+  if (err) {
+    return err;
+  }
+
+#if 0
   if (data.size() < idx + 2 * (dimensions_are_64bit ? 8 : 4)) {
     return eofError;
   }
 
-  m_parameters.number_of_extra_dimensions = data[idx++];
-
   if (data.size() < idx + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4) {
     return eofError;
   }
+#endif
 
   m_parameters.image_width = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
   m_parameters.image_height = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
@@ -156,6 +178,13 @@ Error TildHeader::parse(const std::vector<uint8_t>& data)
 
 
   // --- load offsets (TODO: do this on-demand)
+
+  size_t size_of_offset_table = nTiles * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+
+  err = file->append_data_from_iloc(tild_id, data, size_of_header_without_offsets, size_of_offset_table);
+  if (err) {
+    return err;
+  }
 
   for (uint64_t i=0; i<nTiles; i++) {
     m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length/8);
@@ -371,16 +400,10 @@ heif_compression_format ImageItem_Tild::get_compression_format() const
 
 Error ImageItem_Tild::on_load_file()
 {
+  Error err;
   auto heif_file = get_context()->get_heif_file();
 
-  // TODO: do not get the whole data at once
-  std::vector<uint8_t> tild_header_data;
-  Error err = heif_file->get_compressed_image_data(get_id(), &tild_header_data);
-  if (err) {
-    return err;
-  }
-
-  err = m_tild_header.parse(tild_header_data);
+  err = m_tild_header.parse(heif_file, get_id());
   if (err) {
     return err;
   }
@@ -482,7 +505,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const h
   uint64_t offset = m_tild_header.get_tile_offset(idx);
   uint64_t size = m_tild_header.get_tile_size(idx);
 
-  Error err = get_file()->append_data_from_file(get_id(), data, offset, size);
+  Error err = get_file()->append_data_from_iloc(get_id(), data, offset, size);
   assert(!err.error_code);
 
   return decode_from_compressed_data(get_compression_format(), options, data);

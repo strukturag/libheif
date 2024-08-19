@@ -902,7 +902,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 }
 
 
-Error HeifFile::append_data_from_file(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const
+Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const
 {
   const auto& items = m_iloc_box->get_items();
   const Box_iloc::Item* item = nullptr;
