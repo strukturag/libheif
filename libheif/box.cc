@@ -1455,7 +1455,7 @@ Error Box_iloc::read_data(const Item& item,
   std::lock_guard<std::mutex> lock(read_mutex);
 #endif
 
-  // TODO: bool limited_size = (size != std::numeric_limits<uint64_t>::max());  -> return error if set and size exceeds available data
+  bool limited_size = (size != std::numeric_limits<uint64_t>::max());
 
 
   // TODO: this function should always append the data to the output vector as this is used when
@@ -1464,21 +1464,6 @@ Error Box_iloc::read_data(const Item& item,
 
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
-
-      // --- security check that we do not allocate too much memory
-
-      size_t old_size = dest->size();
-      if (MAX_MEMORY_BLOCK_SIZE - old_size < extent.length) {
-        std::stringstream sstr;
-        sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
-             << (old_size + extent.length) << " bytes, exceeding the security limit of "
-             << MAX_MEMORY_BLOCK_SIZE << " bytes";
-
-        return {heif_error_Memory_allocation_error,
-                heif_suberror_Security_limit_exceeded,
-                sstr.str()};
-      }
-
 
       // --- make sure that all data is available
 
@@ -1527,6 +1512,22 @@ Error Box_iloc::read_data(const Item& item,
         continue;
       }
 
+      size_t old_size = dest->size();
+
+      // --- security check that we do not allocate too much memory
+
+      if (MAX_MEMORY_BLOCK_SIZE - old_size < read_len) {
+        std::stringstream sstr;
+        sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
+             << (old_size + extent.length) << " bytes, exceeding the security limit of "
+             << MAX_MEMORY_BLOCK_SIZE << " bytes";
+
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Security_limit_exceeded,
+                sstr.str()};
+      }
+
+
       // --- move file pointer to start of data
 
       bool success = istr->seek(extent.offset + item.base_offset + skip_len);
@@ -1554,6 +1555,8 @@ Error Box_iloc::read_data(const Item& item,
                       extent.offset + item.base_offset,
                       extent.length,
                       *dest);
+
+      size -= extent.length;
     }
     else {
       std::stringstream sstr;
@@ -1562,6 +1565,14 @@ Error Box_iloc::read_data(const Item& item,
               heif_suberror_Unsupported_item_construction_method,
               sstr.str()};
     }
+  }
+
+  // --- we could not read all data
+
+  if (limited_size && size > 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            "Not enough data present in 'iloc' to satisfy request."};
   }
 
   return Error::Ok;
