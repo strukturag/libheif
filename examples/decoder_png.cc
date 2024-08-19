@@ -331,6 +331,29 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
       }
     }
   }
+  else if (band == 2 && bit_depth==8) {
+    err = heif_image_create((int) width, (int) height,
+                            heif_colorspace_monochrome,
+                            heif_chroma_monochrome,
+                            &image);
+    (void) err;
+
+    heif_image_add_plane(image, heif_channel_Y, (int) width, (int) height, 8);
+    heif_image_add_plane(image, heif_channel_Alpha, (int) width, (int) height, 8);
+
+    int stride;
+    uint8_t* p = heif_image_get_plane(image, heif_channel_Y, &stride);
+
+    int strideA;
+    uint8_t* pA = heif_image_get_plane(image, heif_channel_Alpha, &strideA);
+
+    for (uint32_t y = 0; y < height; y++) {
+      for (uint32_t x = 0; x < width; x++) {
+        p[y * stride + x] = row_pointers[y][2 * x];
+        pA[y * strideA + x] = row_pointers[y][2 * x + 1];
+      }
+    }
+  }
   else if (bit_depth == 8) {
     err = heif_image_create((int) width, (int) height,
                             heif_colorspace_RGB,
