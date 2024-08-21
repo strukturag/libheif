@@ -50,7 +50,6 @@
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_image.h"
 #endif
-#include <iostream>
 
 // TODO: make this a decoder option
 #define STRICT_PARSING false
@@ -913,7 +912,6 @@ const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, st
   }
   if (!cmpC_box) {
     // assume no generic compression
-    printf("!cmpC\n");
     return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
   }
   std::vector<uint8_t> compressed_bytes;
