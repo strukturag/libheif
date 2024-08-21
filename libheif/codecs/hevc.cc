@@ -321,7 +321,7 @@ static double read_depth_rep_info_element(BitReader& reader)
 {
   uint8_t sign_flag = reader.get_bits8(1);
   int exponent = reader.get_bits(7);
-  uint8_t mantissa_len = reader.get_bits8(5) + 1;
+  auto mantissa_len = static_cast<uint8_t>(reader.get_bits8(5) + 1);
   if (mantissa_len < 1 || mantissa_len > 32) {
     // TODO err
   }
@@ -457,7 +457,7 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
     uint32_t nal_size = sei_reader.get_bits32(32);
     (void) nal_size;
 
-    uint8_t nal_type = sei_reader.get_bits8(8) >> 1;
+    auto nal_type = static_cast<uint8_t>(sei_reader.get_bits8(8) >> 1);
     sei_reader.skip_bits(8);
 
     // SEI
