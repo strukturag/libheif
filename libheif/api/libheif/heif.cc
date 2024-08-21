@@ -1619,7 +1619,7 @@ int heif_image_list_channels(struct heif_image* image,
     *p++ = c;
   }
 
-  assert(channels.size() < std::numeric_limits<int>::max());
+  assert(channels.size() < static_cast<size_t>(std::numeric_limits<int>::max()));
 
   return static_cast<int>(channels.size());
 }
