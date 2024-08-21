@@ -241,7 +241,7 @@ std::string HeifContext::debug_dump_boxes() const
   return m_heif_file->debug_dump_boxes();
 }
 
-#if 0
+
 static bool item_type_is_image(const std::string& item_type, const std::string& content_type)
 {
   return (item_type == "hvc1" ||
@@ -257,7 +257,7 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "j2k1" ||
           item_type == "mski");
 }
-#endif
+
 
 void HeifContext::remove_top_level_image(const std::shared_ptr<ImageItem>& image)
 {
@@ -692,12 +692,13 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
+    std::string content_type = m_heif_file->get_content_type(id);
+
     // 'rgan': skip region annotations, handled next
     // 'iden': iden images are no metadata
-    if (item_type == "rgan" || item_type == "iden") {
+    if (item_type_is_image(item_type, content_type) || item_type == "rgan") {
       continue;
     }
-    std::string content_type = m_heif_file->get_content_type(id);
 
     std::string item_uri_type = m_heif_file->get_item_uri_type(id);
 
@@ -764,68 +765,70 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     std::string item_type = m_heif_file->get_item_type(id);
-    if (item_type == "rgan") {
-      std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
-      region_item->item_id = id;
-      std::vector<uint8_t> region_data;
-      Error err = m_heif_file->get_compressed_image_data(id, &(region_data));
-      if (err) {
-        return err;
-      }
-      region_item->parse(region_data);
-      if (iref_box) {
-        std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
-        for (const auto& ref : references) {
-          if (ref.header.get_short_type() == fourcc("cdsc")) {
-            std::vector<uint32_t> refs = ref.to_item_ID;
-            for (uint32_t ref: refs) {
-              uint32_t image_id = ref;
-              auto img_iter = m_all_images.find(image_id);
-              if (img_iter == m_all_images.end()) {
-                return Error(heif_error_Invalid_input,
-                            heif_suberror_Nonexisting_item_referenced,
-                            "Region item assigned to non-existing image");
-              }
-              img_iter->second->add_region_item_id(id);
-              m_region_items.push_back(region_item);
+    if (item_type != "rgan") {
+      continue;
+    }
+
+    std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
+    region_item->item_id = id;
+    std::vector<uint8_t> region_data;
+    Error err = m_heif_file->get_compressed_image_data(id, &(region_data));
+    if (err) {
+      return err;
+    }
+    region_item->parse(region_data);
+    if (iref_box) {
+      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+      for (const auto& ref : references) {
+        if (ref.header.get_short_type() == fourcc("cdsc")) {
+          std::vector<uint32_t> refs = ref.to_item_ID;
+          for (uint32_t ref : refs) {
+            uint32_t image_id = ref;
+            auto img_iter = m_all_images.find(image_id);
+            if (img_iter == m_all_images.end()) {
+              return Error(heif_error_Invalid_input,
+                           heif_suberror_Nonexisting_item_referenced,
+                           "Region item assigned to non-existing image");
             }
+            img_iter->second->add_region_item_id(id);
+            m_region_items.push_back(region_item);
           }
+        }
 
-          /* When the geometry 'mask' of a region is represented by a mask stored in
-          * another image item the image item containing the mask shall be identified
-          * by an item reference of type 'mask' from the region item to the image item
-          * containing the mask. */
-          if (ref.header.get_short_type() == fourcc("mask")) {
-            std::vector<uint32_t> refs = ref.to_item_ID;
-            size_t mask_index = 0;
-            for (int j = 0; j < region_item->get_number_of_regions(); j++) {
-              if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
-                std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
+        /* When the geometry 'mask' of a region is represented by a mask stored in
+        * another image item the image item containing the mask shall be identified
+        * by an item reference of type 'mask' from the region item to the image item
+        * containing the mask. */
+        if (ref.header.get_short_type() == fourcc("mask")) {
+          std::vector<uint32_t> refs = ref.to_item_ID;
+          size_t mask_index = 0;
+          for (int j = 0; j < region_item->get_number_of_regions(); j++) {
+            if (region_item->get_regions()[j]->getRegionType() == heif_region_type_referenced_mask) {
+              std::shared_ptr<RegionGeometry_ReferencedMask> mask_geometry = std::dynamic_pointer_cast<RegionGeometry_ReferencedMask>(region_item->get_regions()[j]);
 
-                if (mask_index >= refs.size()) {
-                  return Error(heif_error_Invalid_input,
-                               heif_suberror_Unspecified,
-                               "Region mask reference with non-existing mask image reference");
-                }
-
-                uint32_t mask_image_id = refs[mask_index];
-                if (!is_image(mask_image_id)) {
-                  return Error(heif_error_Invalid_input,
-                               heif_suberror_Unspecified,
-                               "Region mask referenced item is not an image");
-                }
-
-                auto mask_image = m_all_images.find(mask_image_id)->second;
-                mask_geometry->referenced_item = mask_image_id;
-                if (mask_geometry->width == 0) {
-                  mask_geometry->width = mask_image->get_ispe_width();
-                }
-                if (mask_geometry->height == 0) {
-                  mask_geometry->height = mask_image->get_ispe_height();
-                }
-                mask_index += 1;
-                remove_top_level_image(mask_image);
+              if (mask_index >= refs.size()) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Unspecified,
+                             "Region mask reference with non-existing mask image reference");
               }
+
+              uint32_t mask_image_id = refs[mask_index];
+              if (!is_image(mask_image_id)) {
+                return Error(heif_error_Invalid_input,
+                             heif_suberror_Unspecified,
+                             "Region mask referenced item is not an image");
+              }
+
+              auto mask_image = m_all_images.find(mask_image_id)->second;
+              mask_geometry->referenced_item = mask_image_id;
+              if (mask_geometry->width == 0) {
+                mask_geometry->width = mask_image->get_ispe_width();
+              }
+              if (mask_geometry->height == 0) {
+                mask_geometry->height = mask_image->get_ispe_height();
+              }
+              mask_index += 1;
+              remove_top_level_image(mask_image);
             }
           }
         }

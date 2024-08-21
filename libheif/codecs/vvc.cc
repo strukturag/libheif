@@ -19,6 +19,7 @@
  */
 
 #include "vvc.h"
+#include "file.h"
 #include <cstring>
 #include <string>
 #include <cassert>
@@ -614,4 +615,49 @@ Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<He
   }
 
   return codedImage;
+}
+
+
+Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err)
+  {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_vvcC> vvcC_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("vvcC"))
+    {
+      vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(prop);
+      if (vvcC_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!vvcC_box)
+  {
+    assert(false);
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_vvcC_box);
+  }
+  else if (!vvcC_box->get_headers(&data))
+  {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
+  }
+
+  return data;
 }

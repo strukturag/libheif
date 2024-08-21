@@ -807,14 +807,14 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   if (item_type == "hvc1") {
     // --- --- --- HEVC
-    return get_compressed_image_data_hvc1(ID, data, item);
+    assert(false);
   }
   else if (item_type == "vvc1") {
     // --- --- --- VVC
-    return get_compressed_image_data_vvc(ID, data, item);
+    assert(false);
   }
   else if (item_type == "av01") {
-    return get_compressed_image_data_av1(ID, data, item);
+    assert(false);
   }
   else if (item_type == "jpeg" ||
            (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
@@ -1022,135 +1022,6 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
 }
 #endif
 
-
-// TODO: replace with function in ImageItem
-const Error HeifFile::get_compressed_image_data_hvc1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
-{
-  // --- get properties for this image
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_hvcC> hvcC_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("hvcC"))
-    {
-      hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop);
-      if (hvcC_box)
-      {
-        break;
-      }
-    }
-  }
-
-  if (!hvcC_box)
-  {
-    // Should always have an hvcC box, because we are checking this in
-    // heif_context::interpret_heif_file()
-    assert(false);
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_hvcC_box);
-  }
-  else if (!hvcC_box->get_headers(data))
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data);
-  }
-
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-}
-
-
-const Error HeifFile::get_compressed_image_data_vvc(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
-{
-
-  // --- get properties for this image
-
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_vvcC> vvcC_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("vvcC"))
-    {
-      vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(prop);
-      if (vvcC_box)
-      {
-        break;
-      }
-    }
-  }
-
-  if (!vvcC_box)
-  {
-    assert(false);
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_vvcC_box);
-  }
-  else if (!vvcC_box->get_headers(data))
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data);
-  }
-
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-}
-
-// TODO: replace with function in ImageItem
-const Error HeifFile::get_compressed_image_data_av1(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
-{
-  // --- --- --- AV1
-
-  // --- get properties for this image
-
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_av1C> av1C_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("av1C"))
-    {
-      av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop);
-      if (av1C_box)
-      {
-        break;
-      }
-    }
-  }
-
-  if (!av1C_box)
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_av1C_box);
-  }
-  else if (!av1C_box->get_headers(data))
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data);
-  }
-
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-}
 
 const Error HeifFile::get_compressed_image_data_jpeg2000(heif_item_id ID, const Box_iloc::Item *item, std::vector<uint8_t> *data) const
 {
