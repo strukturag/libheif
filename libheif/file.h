@@ -90,6 +90,10 @@ public:
 
   Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
 
+  Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data) const {
+    return append_data_from_iloc(ID, out_data, 0, std::numeric_limits<uint64_t>::max());
+  }
+
   Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }

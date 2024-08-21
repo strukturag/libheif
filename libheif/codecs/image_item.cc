@@ -1102,8 +1102,18 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
 
   // --- get the compressed image data
 
-  std::vector<uint8_t> data;
-  Error error = m_heif_context->get_heif_file()->get_compressed_image_data(m_id, &data);
+  // data from configuration blocks
+
+  Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data(get_id());
+  if (confData.error) {
+    return confData.error;
+  }
+
+  std::vector<uint8_t> data = confData.value;
+
+  // image data, usually from 'mdat'
+
+  Error error = m_heif_context->get_heif_file()->append_data_from_iloc(m_id, data);
   if (error) {
     return error;
   }
