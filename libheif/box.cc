@@ -1450,7 +1450,7 @@ Error Box_iloc::read_data(const Item& item,
                           uint64_t offset, uint64_t size) const
 {
 #if ENABLE_MULTITHREADING_SUPPORT
-  std::mutex read_mutex;
+  static std::mutex read_mutex;
 
   std::lock_guard<std::mutex> lock(read_mutex);
 #endif
