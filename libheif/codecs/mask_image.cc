@@ -172,3 +172,14 @@ Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<H
 
   return codedImageData;
 }
+
+
+int ImageItem_mask::get_luma_bits_per_pixel() const
+{
+  auto mskC = get_file()->get_property<Box_mskC>(get_id());
+  if (!mskC) {
+    return -1;
+  }
+
+  return mskC->get_bits_per_pixel();
+}

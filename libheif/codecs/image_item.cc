@@ -459,7 +459,7 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
   return err;
 }
 
-
+#if 0
 int ImageItem::get_luma_bits_per_pixel() const
 {
   heif_item_id id;
@@ -484,6 +484,7 @@ int ImageItem::get_chroma_bits_per_pixel() const
   // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
   return m_heif_context->get_heif_file()->get_chroma_bits_per_pixel_from_configuration(id);
 }
+#endif
 
 
 void ImageItem::set_preencoded_hevc_image(const std::vector<uint8_t>& data)

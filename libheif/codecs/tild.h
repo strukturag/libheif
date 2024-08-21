@@ -103,6 +103,10 @@ public:
 
   void process_before_write() override;
 
+  int get_luma_bits_per_pixel() const override { return -1; } // TODO (create dummy ImageItem, then call this function)
+
+  int get_chroma_bits_per_pixel() const override { return -1; } // TODO
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,

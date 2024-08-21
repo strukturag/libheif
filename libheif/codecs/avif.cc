@@ -650,3 +650,29 @@ Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(h
 
   return data;
 }
+
+
+int ImageItem_AVIF::get_luma_bits_per_pixel() const
+{
+  auto av1C_box = get_file()->get_property<Box_av1C>(get_id());
+  if (av1C_box) {
+    Box_av1C::configuration config = av1C_box->get_configuration();
+    if (!config.high_bitdepth) {
+      return 8;
+    }
+    else if (config.twelve_bit) {
+      return 12;
+    }
+    else {
+      return 10;
+    }
+  }
+
+  return -1;
+}
+
+
+int ImageItem_AVIF::get_chroma_bits_per_pixel() const
+{
+  return get_luma_bits_per_pixel();
+}

@@ -95,6 +95,10 @@ public:
 
   bool is_ispe_essential() const override { return true; }
 
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override { return 0; }
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,

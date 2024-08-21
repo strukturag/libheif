@@ -71,3 +71,29 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
 
   return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
 }
+
+
+int ImageItem_iden::get_luma_bits_per_pixel() const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return -1;
+  }
+
+  auto image = get_context()->get_image(child);
+  return image->get_luma_bits_per_pixel();
+}
+
+
+int ImageItem_iden::get_chroma_bits_per_pixel() const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return -1;
+  }
+
+  auto image = get_context()->get_image(child);
+  return image->get_chroma_bits_per_pixel();
+}

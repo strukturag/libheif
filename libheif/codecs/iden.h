@@ -42,6 +42,10 @@ public:
 
   //Error on_load_file() override;
 
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,

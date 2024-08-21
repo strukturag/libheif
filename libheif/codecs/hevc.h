@@ -137,6 +137,10 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
 
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
+
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
 

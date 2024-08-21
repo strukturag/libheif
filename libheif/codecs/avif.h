@@ -167,6 +167,10 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_AV1; }
 
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
+
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,

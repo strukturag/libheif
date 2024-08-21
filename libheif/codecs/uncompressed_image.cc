@@ -1380,3 +1380,17 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
 
   return codedImageData;
 }
+
+
+int ImageItem_uncompressed::get_luma_bits_per_pixel() const
+{
+  int bpp = UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(*get_file(), get_id());
+  return bpp;
+}
+
+
+int ImageItem_uncompressed::get_chroma_bits_per_pixel() const
+{
+  int bpp = UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(*get_file(), get_id());
+  return bpp;
+}

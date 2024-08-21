@@ -138,10 +138,6 @@ public:
 
   heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const;
 
-  int get_luma_bits_per_pixel_from_configuration(heif_item_id imageID) const;
-
-  int get_chroma_bits_per_pixel_from_configuration(heif_item_id imageID) const;
-
   std::string debug_dump_boxes() const;
 
 
@@ -156,33 +152,7 @@ public:
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
-
-  void add_av1C_property(heif_item_id id, const Box_av1C::configuration& config);
-
-  void add_vvcC_property(heif_item_id id);
-
-  Error append_vvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
-
-  Error append_vvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
-
-  Error set_vvcC_configuration(heif_item_id id, const Box_vvcC::configuration& config);
-
-  void add_hvcC_property(heif_item_id id);
-
-  Error append_hvcC_nal_data(heif_item_id id, const std::vector<uint8_t>& data);
-
-  Error append_hvcC_nal_data(heif_item_id id, const uint8_t* data, size_t size);
-
-  Error set_hvcC_configuration(heif_item_id id, const Box_hvcC::configuration& config);
-
-  Error set_av1C_configuration(heif_item_id id, const Box_av1C::configuration& config);
-
-  std::shared_ptr<Box_j2kH> add_j2kH_property(heif_item_id id);
-
   void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height);
-
-  void add_clap_property(heif_item_id id, uint32_t clap_width, uint32_t clap_height,
-                         uint32_t image_width, uint32_t image_height);
 
   // set irot/imir according to heif_orientation
   void add_orientation_properties(heif_item_id id, heif_orientation);

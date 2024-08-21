@@ -33,15 +33,13 @@ static uint8_t JPEG_SOS = 0xDA;
 size_t find_jpeg_marker_start(const std::vector<uint8_t>& data, uint8_t marker_type)
 {
   for (size_t i = 0; i < data.size() - 1; i++) {
-    if (data[i]==0xFF && data[i+1]==marker_type) {
+    if (data[i] == 0xFF && data[i + 1] == marker_type) {
       return i;
     }
   }
 
   return 0;
 }
-
-
 
 
 std::string Box_jpgC::dump(Indent& indent) const
@@ -153,7 +151,7 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
     }
   }
 #endif
-  (void)JPEG_SOS;
+  (void) JPEG_SOS;
 
   codedImage.bitstream = vec;
 
@@ -173,21 +171,17 @@ Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(h
   std::vector<std::shared_ptr<Box>> properties;
   auto ipma_box = get_file()->get_ipma_box();
   Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
-  if (err)
-  {
+  if (err) {
     return err;
   }
 
   // --- get codec configuration
 
   std::shared_ptr<Box_jpgC> jpgC_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("jpgC"))
-    {
+  for (auto& prop : properties) {
+    if (prop->get_short_type() == fourcc("jpgC")) {
       jpgC_box = std::dynamic_pointer_cast<Box_jpgC>(prop);
-      if (jpgC_box)
-      {
+      if (jpgC_box) {
         data = jpgC_box->get_data();
         break;
       }
@@ -195,4 +189,42 @@ Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(h
   }
 
   return data;
+}
+
+
+// This checks whether a start code FFCx with nibble 'x' is a SOF marker.
+// E.g. FFC0-FFC3 are, while FFC4 is not.
+static bool isSOF[16] = {true, true, true, true, false, true, true, true,
+                         false, true, true, true, false, true, true, true};
+
+int ImageItem_JPEG::get_luma_bits_per_pixel() const
+{
+  std::vector<uint8_t> data;
+
+  // image data, usually from 'mdat'
+
+  Error error = get_file()->append_data_from_iloc(get_id(), data);
+  if (error) {
+    return error;
+  }
+
+  for (size_t i = 0; i + 1 < data.size(); i++) {
+    if (data[i] == 0xFF && (data[i + 1] & 0xF0) == 0xC0 && isSOF[data[i + 1] & 0x0F]) {
+      i += 4;
+      if (i < data.size()) {
+        return data[i];
+      }
+      else {
+        return -1;
+      }
+    }
+  }
+
+  return -1;
+}
+
+
+int ImageItem_JPEG::get_chroma_bits_per_pixel() const
+{
+  return get_luma_bits_per_pixel();
 }

@@ -70,6 +70,10 @@ public:
 
   bool is_ispe_essential() const override { return true; }
 
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
+
   // Code from encode_uncompressed_image() has been moved to here.
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,

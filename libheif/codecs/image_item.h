@@ -118,9 +118,9 @@ public:
 
   uint32_t get_ispe_height() const;
 
-  int get_luma_bits_per_pixel() const;
+  virtual int get_luma_bits_per_pixel() const { return -1; }
 
-  int get_chroma_bits_per_pixel() const;
+  virtual int get_chroma_bits_per_pixel() const { return -1; }
 
   void set_size(uint32_t w, uint32_t h)
   {

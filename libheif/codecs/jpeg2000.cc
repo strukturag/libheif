@@ -565,3 +565,25 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
 
   return data;
 }
+
+
+int ImageItem_JPEG2000::get_luma_bits_per_pixel() const
+{
+  JPEG2000MainHeader header;
+  Error err = header.parseHeader(*get_file(), get_id());
+  if (err) {
+    return -1;
+  }
+  return header.get_precision(0);
+}
+
+
+int ImageItem_JPEG2000::get_chroma_bits_per_pixel() const
+{
+  JPEG2000MainHeader header;
+  Error err = header.parseHeader(*get_file(), get_id());
+  if (err) {
+    return -1;
+  }
+  return header.get_precision(1);
+}

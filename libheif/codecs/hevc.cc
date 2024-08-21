@@ -762,3 +762,25 @@ Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(h
 
   return data;
 }
+
+
+int ImageItem_HEVC::get_luma_bits_per_pixel() const
+{
+  auto hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_luma;
+  }
+
+  return -1;
+}
+
+
+int ImageItem_HEVC::get_chroma_bits_per_pixel() const
+{
+  auto hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
+  if (hvcC_box) {
+    return hvcC_box->get_configuration().bit_depth_chroma;
+  }
+
+  return -1;
+}

@@ -589,3 +589,29 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
 
   return tiling;
 }
+
+
+int ImageItem_Grid::get_luma_bits_per_pixel() const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return -1;
+  }
+
+  auto image = get_context()->get_image(child);
+  return image->get_luma_bits_per_pixel();
+}
+
+
+int ImageItem_Grid::get_chroma_bits_per_pixel() const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return -1;
+  }
+
+  auto image = get_context()->get_image(child);
+  return image->get_chroma_bits_per_pixel();
+}

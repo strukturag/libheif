@@ -661,3 +661,26 @@ Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(he
 
   return data;
 }
+
+
+int ImageItem_VVC::get_luma_bits_per_pixel() const
+{
+  auto vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
+  if (vvcC_box) {
+    const Box_vvcC::configuration& config = vvcC_box->get_configuration();
+    if (config.ptl_present_flag) {
+      return config.bit_depth_minus8 + 8;
+    }
+    else {
+      return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
+    }
+  }
+
+  return -1;
+}
+
+
+int ImageItem_VVC::get_chroma_bits_per_pixel() const
+{
+  return get_luma_bits_per_pixel();
+}
