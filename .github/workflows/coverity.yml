@@ -2,9 +2,7 @@ name: coverity
 
 on:
   push:
-    branches: [ coverity ]
-  pull_request:
-    branches: [ master ]
+    branches: [ master, coverity ]
 
 jobs:
   scan:
