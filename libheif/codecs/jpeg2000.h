@@ -312,6 +312,8 @@ class Box_j2kH : public Box
 public:
     Box_j2kH() { set_short_type(fourcc("j2kH")); }
 
+    bool is_essential() const override { return true; }
+
     std::string dump(Indent &) const override;
 
     // Default write behaviour for a container is to write children
@@ -333,7 +335,7 @@ public:
                                      const std::shared_ptr<HeifPixelImage>& src_image,
                                      void* encoder_struct,
                                      const struct heif_encoding_options& options,
-                                     std::shared_ptr<HeifContext::Image>& out_image);
+                                     std::shared_ptr<ImageItem>& out_image);
 };
 
 struct JPEG2000_SIZ_segment
@@ -511,6 +513,24 @@ private:
 
     std::vector<uint8_t> headerData;
     size_t cursor;
+};
+
+
+class ImageItem_JPEG2000 : public ImageItem
+{
+public:
+  ImageItem_JPEG2000(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_JPEG2000(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "j2k1"; }
+
+  heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
 };
 
 #endif // LIBHEIF_JPEG2000_H

@@ -80,8 +80,8 @@ int num_interleaved_pixels_per_plane(heif_chroma chroma)
 }
 
 
-bool is_integer_multiple_of_chroma_size(int width,
-                                        int height,
+bool is_integer_multiple_of_chroma_size(uint32_t width,
+                                        uint32_t height,
                                         heif_chroma chroma)
 {
   switch (chroma) {
@@ -307,22 +307,22 @@ bool HeifPixelImage::has_alpha() const
 }
 
 
-int HeifPixelImage::get_width(enum heif_channel channel) const
+uint32_t HeifPixelImage::get_width(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
   if (iter == m_planes.end()) {
-    return -1;
+    return 0;
   }
 
   return iter->second.m_width;
 }
 
 
-int HeifPixelImage::get_height(enum heif_channel channel) const
+uint32_t HeifPixelImage::get_height(enum heif_channel channel) const
 {
   auto iter = m_planes.find(channel);
   if (iter == m_planes.end()) {
-    return -1;
+    return 0;
   }
 
   return iter->second.m_height;
@@ -431,6 +431,33 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
     memcpy(dst + y * dst_stride, src + y * src_stride, bpl);
   }
 }
+
+
+void HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& src_image)
+{
+  int width = src_image->get_width();
+  int height = src_image->get_height();
+
+  add_plane(heif_channel_Y, width, height, src_image->get_bits_per_pixel(heif_channel_interleaved));
+
+  uint8_t* dst;
+  int dst_stride = 0;
+
+  const uint8_t* src;
+  int src_stride = 0;
+
+  src = src_image->get_plane(heif_channel_interleaved, &src_stride);
+  dst = get_plane(heif_channel_Y, &dst_stride);
+
+  //int bpl = width * (src_image->get_storage_bits_per_pixel(src_channel) / 8);
+
+  for (int y = 0; y < height; y++) {
+    for (int x=0;x<width;x++) {
+      dst[y * dst_stride + x] = src[y * src_stride + 4 * x + 3];
+    }
+  }
+}
+
 
 void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp)
 {

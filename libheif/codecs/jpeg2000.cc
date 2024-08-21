@@ -19,6 +19,7 @@
  */
 
 #include "jpeg2000.h"
+#include "libheif/api_structs.h"
 #include <cstdint>
 #include <iostream>
 #include <stdio.h>
@@ -480,4 +481,44 @@ heif_chroma JPEG2000MainHeader::get_chroma_format() const
   }
 
   return heif_chroma_undefined;
+}
+
+
+Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                             struct heif_encoder* encoder,
+                                                             const struct heif_encoding_options& options,
+                                                             enum heif_image_input_class input_class)
+{
+  CodedImageData codedImageData;
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+
+  // get compressed data
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+    if (data == nullptr) {
+      break;
+    }
+
+    codedImageData.append(data, size);
+  }
+
+  // add 'j2kH' property
+  auto j2kH = std::make_shared<Box_j2kH>();
+
+  // add 'cdef' to 'j2kH'
+  auto cdef = std::make_shared<Box_cdef>();
+  cdef->set_channels(image->get_colorspace());
+  j2kH->append_child_box(cdef);
+
+  codedImageData.properties.push_back(j2kH);
+
+  return codedImageData;
 }

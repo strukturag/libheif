@@ -27,6 +27,7 @@
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
 #include "codecs/uncompressed_box.h"
+#include "file_layout.h"
 
 #include <map>
 #include <memory>
@@ -87,6 +88,12 @@ public:
 
   Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
 
+  Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
+
+  Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data) const {
+    return append_data_from_iloc(ID, out_data, 0, std::numeric_limits<uint64_t>::max());
+  }
+
   Error get_item_data(heif_item_id ID, std::vector<uint8_t> *out_data, heif_metadata_compression* out_compression) const;
 
   std::shared_ptr<Box_ftyp> get_ftyp_box() { return m_ftyp_box; }
@@ -96,6 +103,8 @@ public:
   std::shared_ptr<Box_infe> get_infe_box(heif_item_id imageID);
 
   std::shared_ptr<Box_iref> get_iref_box() { return m_iref_box; }
+
+  std::shared_ptr<const Box_iref> get_iref_box() const { return m_iref_box; }
 
   std::shared_ptr<Box_ipco> get_ipco_box() { return m_ipco_box; }
 
@@ -193,14 +202,18 @@ public:
 
   Error set_precompressed_item_data(const std::shared_ptr<Box_infe>& item, const uint8_t* data, size_t size, std::string content_encoding);
 
-  void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method = 0);
+  void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method);
 
   void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
+
+  void replace_iloc_data(heif_item_id id, uint64_t offset, const std::vector<uint8_t>& data, uint8_t construction_method = 0);
 
   void set_primary_item_id(heif_item_id id);
 
   void add_iref_reference(heif_item_id from, uint32_t type,
                           const std::vector<heif_item_id>& to);
+
+  void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
 
   void set_auxC_property(heif_item_id id, const std::string& type);
 
@@ -218,6 +231,8 @@ private:
   mutable std::mutex m_read_mutex;
 #endif
 
+  std::shared_ptr<FileLayout> m_file_layout;
+
   std::shared_ptr<StreamReader> m_input_stream;
 
   std::vector<std::shared_ptr<Box> > m_top_level_boxes;
@@ -233,6 +248,7 @@ private:
   std::shared_ptr<Box_iref> m_iref_box;
   std::shared_ptr<Box_pitm> m_pitm_box;
   std::shared_ptr<Box_iinf> m_iinf_box;
+  std::shared_ptr<Box_grpl> m_grpl_box;
 
   std::shared_ptr<Box_iprp> m_iprp_box;
 
@@ -242,7 +258,7 @@ private:
   //std::vector<heif_item_id> m_valid_image_IDs;
 
 
-  Error parse_heif_file(BitstreamRange& bitstream);
+  Error parse_heif_file();
 
   Error check_for_ref_cycle(heif_item_id ID,
                             const std::shared_ptr<Box_iref>& iref_box) const;

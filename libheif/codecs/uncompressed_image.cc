@@ -18,7 +18,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
@@ -35,6 +34,7 @@
 #include "uncompressed.h"
 #include "uncompressed_box.h"
 #include "uncompressed_image.h"
+#include <codecs/image_item.h>
 
 static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<Box_uncC> &uncC)
 {
@@ -1232,18 +1232,21 @@ static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std
   uncC->set_version(1);
 }
 
-Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
-                                                        const std::shared_ptr<HeifPixelImage>& src_image,
-                                                        void* encoder_struct,
-                                                        const struct heif_encoding_options& options,
-                                                        std::shared_ptr<HeifContext::Image>& out_image)
+
+Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
+                                                                 struct heif_encoder* encoder,
+                                                                 const struct heif_encoding_options& options,
+                                                                 enum heif_image_input_class input_class)
 {
+  CodedImageData codedImageData;
+
+#if WITH_UNCOMPRESSED_CODEC
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
   if (options.prefer_uncC_short_form) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
   if (uncC->get_version() == 1) {
-    heif_file->add_property(out_image->get_id(), uncC, true);
+    codedImageData.properties.push_back(uncC);
   } else {
     std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
@@ -1251,25 +1254,31 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
     if (error) {
       return error;
     }
-    heif_file->add_property(out_image->get_id(), cmpd, true);
-    heif_file->add_property(out_image->get_id(), uncC, true);
+
+    codedImageData.properties.push_back(cmpd);
+    codedImageData.properties.push_back(uncC);
   }
+
   std::vector<uint8_t> data;
+
   if (src_image->get_colorspace() == heif_colorspace_YCbCr)
   {
     uint64_t offset = 0;
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
       int src_stride;
+      uint32_t src_width = src_image->get_width(channel);
+      uint32_t src_height = src_image->get_height(channel);
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-      uint64_t out_size = src_image->get_height(channel) * src_image->get_width(channel);
+      uint64_t out_size = src_width * src_height;
       data.resize(data.size() + out_size);
-      for (int y = 0; y < src_image->get_height(channel); y++) {
-        memcpy(data.data() + offset + y * src_image->get_width(channel), src_data + src_stride * y, src_image->get_width(channel));
+      for (uint32_t y = 0; y < src_height; y++) {
+        memcpy(data.data() + offset + y * src_width, src_data + src_stride * y, src_width);
       }
       offset += out_size;
     }
-    heif_file->append_iloc_data(out_image->get_id(), data, 0);
+
+    codedImageData.append(data.data(), data.size());
   }
   else if (src_image->get_colorspace() == heif_colorspace_RGB)
   {
@@ -1290,7 +1299,8 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
         memcpy(data.data() + offset, src_data, out_size);
         offset += out_size;
       }
-      heif_file->append_iloc_data(out_image->get_id(), data, 0);
+
+      codedImageData.append(data.data(), data.size());
     }
     else if ((src_image->get_chroma_format() == heif_chroma_interleaved_RGB) ||
              (src_image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
@@ -1323,10 +1333,11 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
       uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
       uint64_t out_size = src_image->get_height() * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
-      for (int y = 0; y < src_image->get_height(); y++) {
+      for (uint32_t y = 0; y < src_image->get_height(); y++) {
         memcpy(data.data() + y * src_image->get_width() * bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * bytes_per_pixel);
       }
-      heif_file->append_iloc_data(out_image->get_id(), data, 0);
+
+      codedImageData.append(data.data(), data.size());
     }
     else
     {
@@ -1356,18 +1367,16 @@ Error UncompressedImageCodec::encode_uncompressed_image(const std::shared_ptr<He
       memcpy(data.data() + offset, src_data, out_size);
       offset += out_size;
     }
-    heif_file->append_iloc_data(out_image->get_id(), data, 0);
+
+    codedImageData.append(data.data(), data.size());
   }
   else
   {
     return Error(heif_error_Unsupported_feature,
-              heif_suberror_Unsupported_data_version,
-              "Unsupported colourspace");
+                 heif_suberror_Unsupported_data_version,
+                 "Unsupported colourspace");
   }
-  // We need to ensure ispe is essential for the uncompressed case
-  std::shared_ptr<Box_ispe> ispe = std::make_shared<Box_ispe>();
-  ispe->set_size(src_image->get_width(), src_image->get_height());
-  heif_file->add_property(out_image->get_id(), ispe, true);
+#endif
 
-  return Error::Ok;
+  return codedImageData;
 }

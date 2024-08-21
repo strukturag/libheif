@@ -157,6 +157,14 @@ protected:
 };
 
 
+enum class BoxStorageMode {
+  Undefined,
+  Memory,
+  Parsed,
+  File
+};
+
+
 class Box : public BoxHeader
 {
 public:
@@ -204,15 +212,36 @@ public:
     return (int) m_children.size() - 1;
   }
 
+  bool has_child_boxes() const { return !m_children.empty(); }
+
   virtual bool operator==(const Box& other) const;
 
   static bool equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2);
 
+  BoxStorageMode get_box_storage_mode() const { return m_storage_mode; }
+
+  void set_output_position(uint64_t pos) { m_output_position = pos; }
+
+  virtual bool is_essential() const { return m_is_essential; } // only used for properties
+
+  void set_is_essential(bool flag) { m_is_essential = flag; }
 
 protected:
   virtual Error parse(BitstreamRange& range);
 
   std::vector<std::shared_ptr<Box>> m_children;
+
+  BoxStorageMode m_storage_mode = BoxStorageMode::Undefined;
+
+  const static uint64_t INVALID_POSITION = 0xFFFFFFFFFFFFFFFF;
+
+  uint64_t m_input_position = INVALID_POSITION;
+  uint64_t m_output_position = INVALID_POSITION;
+  std::vector<uint8_t> m_box_data; // including header
+
+  std::string m_debug_box_type;
+
+  bool m_is_essential = false;
 
   const static int READ_CHILDREN_ALL = -1;
 
@@ -401,10 +430,11 @@ private:
 class Box_iloc : public FullBox
 {
 public:
-  Box_iloc()
-  {
-    set_short_type(fourcc("iloc"));
-  }
+  Box_iloc();
+
+  ~Box_iloc() override;
+
+  void set_use_tmp_file(bool flag);
 
   std::string dump(Indent&) const override;
 
@@ -434,12 +464,25 @@ public:
                   const std::shared_ptr<class Box_idat>&,
                   std::vector<uint8_t>* dest) const;
 
+  // Note: size==std::numeric_limits<uint64_t>::max() reads the data until the end
+  Error read_data(const Item& item,
+                  const std::shared_ptr<StreamReader>& istr,
+                  const std::shared_ptr<class Box_idat>&,
+                  std::vector<uint8_t>* dest,
+                  uint64_t offset, uint64_t size) const;
+
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
 
   // append bitstream data that will be written later (after iloc box)
+  // TODO: use an enum for the construction method
   Error append_data(heif_item_id item_ID,
                     const std::vector<uint8_t>& data,
                     uint8_t construction_method = 0);
+
+  Error replace_data(heif_item_id item_ID,
+                     uint64_t offset,
+                     const std::vector<uint8_t>& data,
+                     uint8_t construction_method);
 
   // append bitstream data that already has been written (before iloc box)
   // Error write_mdat_before_iloc(heif_image_id item_ID,
@@ -473,6 +516,10 @@ private:
   void patch_iloc_header(StreamWriter& writer) const;
 
   int m_idat_offset = 0; // only for writing: offset of next data array
+
+  bool m_use_tmpfile = false;
+  int m_tmpfile_fd = 0;
+  char m_tmp_filename[20];
 };
 
 
@@ -626,6 +673,8 @@ public:
 
   bool operator==(const Box& other) const override;
 
+  bool is_essential() const override { return false; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
@@ -691,6 +740,8 @@ public:
 
   const std::vector<uint8_t>& get_subtypes() const { return m_aux_subtypes; }
 
+  bool is_essential() const override { return true; }
+
   std::string dump(Indent&) const override;
 
 protected:
@@ -711,6 +762,8 @@ public:
   {
     set_short_type(fourcc("irot"));
   }
+
+  bool is_essential() const override { return true; }
 
   std::string dump(Indent&) const override;
 
@@ -737,6 +790,8 @@ public:
     set_short_type(fourcc("imir"));
   }
 
+  bool is_essential() const override { return true; }
+
   heif_transform_mirror_direction get_mirror_direction() const { return m_axis; }
 
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
@@ -760,6 +815,8 @@ public:
   {
     set_short_type(fourcc("clap"));
   }
+
+  bool is_essential() const override { return true; }
 
   std::string dump(Indent&) const override;
 
@@ -864,6 +921,11 @@ protected:
 class Box_grpl : public Box
 {
 public:
+  Box_grpl()
+  {
+    set_short_type(fourcc("grpl"));
+  }
+
   std::string dump(Indent&) const override;
 
 protected:
@@ -876,17 +938,30 @@ class Box_EntityToGroup : public FullBox
 public:
   std::string dump(Indent&) const override;
 
+  Error write(StreamWriter& writer) const override;
+
+  void set_group_id(heif_item_id id) { group_id = id; }
+
+  void set_item_ids(const std::vector<heif_item_id>& ids) { entity_ids = ids; }
+
 protected:
   uint32_t group_id;
   std::vector<heif_item_id> entity_ids;
 
   Error parse(BitstreamRange& range) override;
+
+  void write_entity_group_ids(StreamWriter& writer) const;
 };
 
 
 class Box_ster : public Box_EntityToGroup
 {
 public:
+  Box_ster()
+  {
+    set_short_type(fourcc("ster"));
+  }
+
   std::string dump(Indent&) const override;
 
   heif_item_id get_left_image() const { return entity_ids[0]; }
@@ -901,17 +976,35 @@ protected:
 class Box_pymd : public Box_EntityToGroup
 {
 public:
+  Box_pymd()
+  {
+    set_short_type(fourcc("pymd"));
+  }
+
   std::string dump(Indent&) const override;
 
-protected:
-  uint16_t tile_size_x;
-  uint16_t tile_size_y;
+  Error write(StreamWriter& writer) const override;
 
   struct LayerInfo {
     uint16_t layer_binning;
     uint16_t tiles_in_layer_row_minus1;
     uint16_t tiles_in_layer_column_minus1;
   };
+
+  void set_layers(uint16_t _tile_size_x,
+                  uint16_t _tile_size_y,
+                  const std::vector<LayerInfo>& layers,
+                  const std::vector<heif_item_id>& layer_item_ids) // low to high resolution
+  {
+    set_item_ids(layer_item_ids);
+    m_layer_infos = layers;
+    tile_size_x = _tile_size_x;
+    tile_size_y = _tile_size_y;
+  }
+
+protected:
+  uint16_t tile_size_x = 0;
+  uint16_t tile_size_y = 0;
 
   std::vector<LayerInfo> m_layer_infos;
 

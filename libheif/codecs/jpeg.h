@@ -24,6 +24,9 @@
 #include "box.h"
 #include <string>
 #include <vector>
+#include <codecs/image_item.h>
+#include <memory>
+
 
 class Box_jpgC : public Box
 {
@@ -48,5 +51,25 @@ private:
   std::vector<uint8_t> m_data;
 };
 
+
+class ImageItem_JPEG : public ImageItem
+{
+public:
+  ImageItem_JPEG(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) { }
+
+  ImageItem_JPEG(HeifContext* ctx) : ImageItem(ctx) { }
+
+  const char* get_infe_type() const override { return "jpeg"; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override;
+
+  heif_compression_format get_compression_format() const override { return heif_compression_JPEG; }
+
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                        struct heif_encoder* encoder,
+                                        const struct heif_encoding_options& options,
+                                        enum heif_image_input_class input_class) override;
+};
 
 #endif // LIBHEIF_JPEG_H

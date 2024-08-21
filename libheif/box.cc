@@ -38,6 +38,8 @@
 #include <set>
 #include <cassert>
 #include <array>
+#include <mutex>
+
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "codecs/uncompressed_box.h"
@@ -47,6 +49,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#include <unistd.h> // TODO: Windows
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -694,6 +697,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
   box->set_short_header(hdr);
 
+  box->m_debug_box_type = hdr.get_type_string(); // only for debugging
+
+
   if (range.get_nesting_level() > MAX_BOX_NESTING_LEVEL) {
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -846,6 +852,13 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
     if (!box1 || !box2) {
         return false;
     }
+
+    // This was introduced because of j2kH having child boxes.
+    // TODO: we might also deduplicate them by comparing all child boxes.
+    if (box1->has_child_boxes() || box2->has_child_boxes()) {
+      return false;
+    }
+
     return *box1 == *box2;
 }
 
@@ -1368,6 +1381,32 @@ Error Box_iloc::parse(BitstreamRange& range)
 }
 
 
+Box_iloc::Box_iloc()
+{
+  set_short_type(fourcc("iloc"));
+
+  set_use_tmp_file(false);
+}
+
+
+Box_iloc::~Box_iloc()
+{
+  if (m_use_tmpfile) {
+    unlink(m_tmp_filename);
+  }
+}
+
+
+void Box_iloc::set_use_tmp_file(bool flag)
+{
+  m_use_tmpfile = flag;
+  if (flag) {
+    strcpy(m_tmp_filename, "/tmp/libheif-XXXXXX");
+    m_tmpfile_fd = mkstemp(m_tmp_filename);
+  }
+}
+
+
 std::string Box_iloc::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -1400,6 +1439,25 @@ Error Box_iloc::read_data(const Item& item,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
 {
+  return read_data(item, istr, idat, dest, 0, std::numeric_limits<uint64_t>::max());
+}
+
+
+Error Box_iloc::read_data(const Item& item,
+                          const std::shared_ptr<StreamReader>& istr,
+                          const std::shared_ptr<Box_idat>& idat,
+                          std::vector<uint8_t>* dest,
+                          uint64_t offset, uint64_t size) const
+{
+#if ENABLE_MULTITHREADING_SUPPORT
+  static std::mutex read_mutex;
+
+  std::lock_guard<std::mutex> lock(read_mutex);
+#endif
+
+  bool limited_size = (size != std::numeric_limits<uint64_t>::max());
+
+
   // TODO: this function should always append the data to the output vector as this is used when
   //       the image data is concatenated with data in a configuration box. However, it seems that
   //       this function clears the array in some cases. This should be corrected.
@@ -1407,29 +1465,14 @@ Error Box_iloc::read_data(const Item& item,
   for (const auto& extent : item.extents) {
     if (item.construction_method == 0) {
 
-      // --- security check that we do not allocate too much memory
-
-      size_t old_size = dest->size();
-      if (MAX_MEMORY_BLOCK_SIZE - old_size < extent.length) {
-        std::stringstream sstr;
-        sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
-             << (old_size + extent.length) << " bytes, exceeding the security limit of "
-             << MAX_MEMORY_BLOCK_SIZE << " bytes";
-
-        return Error(heif_error_Memory_allocation_error,
-                     heif_suberror_Security_limit_exceeded,
-                     sstr.str());
-      }
-
-
       // --- make sure that all data is available
 
       if (extent.offset > MAX_FILE_POS ||
           item.base_offset > MAX_FILE_POS ||
           extent.length > MAX_FILE_POS) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Security_limit_exceeded,
-                     "iloc data pointers out of allowed range");
+        return {heif_error_Invalid_input,
+                heif_suberror_Security_limit_exceeded,
+                "iloc data pointers out of allowed range"};
       }
 
       StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
@@ -1443,49 +1486,93 @@ Error Box_iloc::read_data(const Item& item,
         sstr << "Extent in iloc box references data outside of file bounds "
              << "(points to file position " << extent.offset + item.base_offset << ")\n";
 
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_End_of_data,
-                     sstr.str());
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                sstr.str()};
       }
       else if (status == StreamReader::timeout) {
         // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_End_of_data);
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data};
       }
+
+
+      // skip to reading offset
+
+      uint64_t skip_len = std::min(offset, extent.length);
+      offset -= skip_len;
+
+      uint64_t read_len = std::min(extent.length - skip_len, size);
+
+      if (offset > 0) {
+        continue;
+      }
+
+      if (read_len == 0) {
+        continue;
+      }
+
+      size_t old_size = dest->size();
+
+      // --- security check that we do not allocate too much memory
+
+      if (MAX_MEMORY_BLOCK_SIZE - old_size < read_len) {
+        std::stringstream sstr;
+        sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
+             << (old_size + extent.length) << " bytes, exceeding the security limit of "
+             << MAX_MEMORY_BLOCK_SIZE << " bytes";
+
+        return {heif_error_Memory_allocation_error,
+                heif_suberror_Security_limit_exceeded,
+                sstr.str()};
+      }
+
 
       // --- move file pointer to start of data
 
-      bool success = istr->seek(extent.offset + item.base_offset);
+      bool success = istr->seek(extent.offset + item.base_offset + skip_len);
       assert(success);
       (void) success;
 
 
       // --- read data
 
-      dest->resize(static_cast<size_t>(old_size + extent.length));
-      success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(extent.length));
+      dest->resize(static_cast<size_t>(old_size + read_len));
+      success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(read_len));
       assert(success);
       (void) success;
+
+      size -= read_len;
     }
     else if (item.construction_method == 1) {
       if (!idat) {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_No_idat_box,
-                     "idat box referenced in iref box is not present in file");
+        return {heif_error_Invalid_input,
+                heif_suberror_No_idat_box,
+                "idat box referenced in iref box is not present in file"};
       }
 
       idat->read_data(istr,
                       extent.offset + item.base_offset,
                       extent.length,
                       *dest);
+
+      size -= extent.length;
     }
     else {
       std::stringstream sstr;
       sstr << "Item construction method " << (int) item.construction_method << " not implemented";
-      return Error(heif_error_Unsupported_feature,
-                   heif_suberror_Unsupported_item_construction_method,
-                   sstr.str());
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unsupported_item_construction_method,
+              sstr.str()};
     }
+  }
+
+  // --- we could not read all data
+
+  if (limited_size && size > 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            "Not enough data present in 'iloc' to satisfy request."};
   }
 
   return Error::Ok;
@@ -1520,7 +1607,33 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   }
 
   Extent extent;
-  extent.data = data;
+  extent.length = data.size();
+
+  if (m_use_tmpfile && construction_method==0) {
+    ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
+    if (cnt < 0) {
+      std::stringstream sstr;
+      sstr << "Could not write to tmp file: error " << errno;
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              sstr.str()};
+    }
+    else if ((size_t)cnt != data.size()) {
+      return {heif_error_Encoding_error,
+              heif_suberror_Unspecified,
+              "Could not write to tmp file (storage full?)"};
+    }
+  }
+  else {
+    if (!m_items[idx].extents.empty()) {
+      Extent& e = m_items[idx].extents.back();
+      e.data.insert(e.data.end(), data.begin(), data.end());
+      e.length = e.data.size();
+      return Error::Ok;
+    }
+
+    extent.data = data;
+  }
 
   if (construction_method == 1) {
     extent.offset = m_idat_offset;
@@ -1530,6 +1643,31 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   }
 
   m_items[idx].extents.push_back(std::move(extent));
+
+  return Error::Ok;
+}
+
+
+Error Box_iloc::replace_data(heif_item_id item_ID,
+                             uint64_t offset,
+                             const std::vector<uint8_t>& data,
+                             uint8_t construction_method)
+{
+  assert(construction_method == 0); // TODO
+  assert(offset == 0); // TODO
+
+  // check whether this item ID already exists
+
+  size_t idx;
+  for (idx = 0; idx < m_items.size(); idx++) {
+    if (m_items[idx].item_ID == item_ID) {
+      break;
+    }
+  }
+
+  assert(idx != m_items.size());
+  assert(m_items[idx].extents[0].data.size() >= data.size()); // TODO
+  memcpy(m_items[idx].extents[0].data.data(), data.data(), data.size());
 
   return Error::Ok;
 }
@@ -1548,6 +1686,8 @@ void Box_iloc::derive_box_version()
   m_base_offset_size = 0;
   m_index_size = 0;
 
+  uint64_t total_data_size = 0;
+
   for (const auto& item : m_items) {
     // check item_ID size
     if (item.item_ID > 0xFFFF) {
@@ -1559,15 +1699,17 @@ void Box_iloc::derive_box_version()
       min_version = std::max(min_version, 1);
     }
 
+    total_data_size += item.extents[0].length;
+
+    /* cannot compute this here because values are not set yet
     // base offset size
-    /*
     if (item.base_offset > 0xFFFFFFFF) {
-      m_base_offset_size = 8;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)8);
     }
     else if (item.base_offset > 0) {
-      m_base_offset_size = 4;
+      m_base_offset_size = std::max(m_base_offset_size, (uint8_t)4);
     }
-    */
+*/
 
     /*
     for (const auto& extent : item.extents) {
@@ -1601,9 +1743,17 @@ void Box_iloc::derive_box_version()
       */
   }
 
+  uint64_t maximum_meta_box_size_guess = 0x10000000; // 256 MB
+  if (total_data_size + maximum_meta_box_size_guess > 0xFFFFFFFF) {
+    m_base_offset_size = 8;
+  }
+  else {
+    m_base_offset_size = 4;
+  }
+
   m_offset_size = 4;
   m_length_size = 4;
-  m_base_offset_size = 4; // TODO: or could be 8 if we write >4GB files
+  //m_base_offset_size = 4; // set above
   m_index_size = 0;
 
   set_version((uint8_t) min_version);
@@ -1681,20 +1831,28 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
   for (const auto& item : m_items) {
     if (item.construction_method == 0) {
       for (const auto& extent : item.extents) {
-        sum_mdat_size += extent.data.size();
+        sum_mdat_size += extent.length;
       }
     }
   }
 
-  if (sum_mdat_size > 0xFFFFFFFF) {
-    // TODO: box size > 4 GB
-  }
-
-
   // --- write mdat box
 
-  writer.write32((uint32_t) (sum_mdat_size + 8));
-  writer.write32(fourcc("mdat"));
+  if (sum_mdat_size <= 0xFFFFFFFF) {
+    writer.write32((uint32_t) (sum_mdat_size + 8));
+    writer.write32(fourcc("mdat"));
+  }
+  else {
+    // box size > 4 GB
+
+    writer.write32(1);
+    writer.write32(fourcc("mdat"));
+    writer.write64(sum_mdat_size+8+8);
+  }
+
+  if (m_use_tmpfile) {
+    ::lseek(m_tmpfile_fd, 0, SEEK_SET);
+  }
 
   for (auto& item : m_items) {
     if (item.construction_method == 0) {
@@ -1702,9 +1860,28 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 
       for (auto& extent : item.extents) {
         extent.offset = writer.get_position() - item.base_offset;
-        extent.length = extent.data.size();
+        //extent.length = extent.data.size();
 
-        writer.write(extent.data);
+        if (m_use_tmpfile) {
+          std::vector<uint8_t> data(extent.length);
+          ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
+          if (cnt<0) {
+            std::stringstream sstr;
+            sstr << "Cannot read tmp data file, error " << errno;
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    sstr.str()};
+          }
+          else if ((uint64_t)cnt != extent.length) {
+            return {heif_error_Encoding_error,
+                    heif_suberror_Unspecified,
+                    "Tmp data could not be read completely"};
+          }
+          writer.write(data);
+        }
+        else {
+          writer.write(extent.data);
+        }
       }
     }
   }
@@ -1746,7 +1923,12 @@ void Box_iloc::patch_iloc_header(StreamWriter& writer) const
     }
 
     writer.write16(item.data_reference_index);
-    writer.write(m_base_offset_size, item.base_offset);
+    if (m_base_offset_size > 0) {
+      writer.write(m_base_offset_size, item.base_offset);
+    }
+    else {
+      assert(item.base_offset == 0);
+    }
     writer.write16((uint16_t) item.extents.size());
 
     for (const auto& extent : item.extents) {
@@ -2346,9 +2528,9 @@ bool Box_ipco::is_property_essential_for_item(heif_item_id itemId,
 {
   // find property index
 
-  for (int i=0;i<(int)m_children.size();i++) {
+  for (int i = 0; i < (int) m_children.size(); i++) {
     if (m_children[i] == property) {
-      return ipma->is_property_essential_for_item(itemId, i);
+      return ipma->is_property_essential_for_item(itemId, i + 1);
     }
   }
 
@@ -3128,6 +3310,8 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   ref.from_item_ID = from_id;
   ref.to_item_ID = to_ids;
 
+  assert(to_ids.size() <= 0xFFFF);
+
   m_references.push_back(ref);
 }
 
@@ -3263,6 +3447,32 @@ Error Box_EntityToGroup::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_EntityToGroup::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  write_entity_group_ids(writer);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+void Box_EntityToGroup::write_entity_group_ids(StreamWriter& writer) const
+{
+  assert(entity_ids.size() <= 0xFFFFFFFF);
+
+  writer.write32(group_id);
+  writer.write32(static_cast<uint32_t>(entity_ids.size()));
+
+  for (uint32_t id : entity_ids) {
+    writer.write32(id);
+  }
+}
+
+
 std::string Box_EntityToGroup::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3342,6 +3552,30 @@ Error Box_pymd::parse(BitstreamRange& range)
   return Error::Ok;
 }
 
+
+Error Box_pymd::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  Box_EntityToGroup::write_entity_group_ids(writer);
+
+  writer.write16(tile_size_x);
+  writer.write16(tile_size_y);
+
+  for (size_t i = 0; i < entity_ids.size(); i++) {
+    const LayerInfo& layer = m_layer_infos[i];
+
+    writer.write16(layer.layer_binning);
+    writer.write16(layer.tiles_in_layer_row_minus1);
+    writer.write16(layer.tiles_in_layer_column_minus1);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 std::string Box_pymd::dump(Indent& indent) const
 {
   std::ostringstream sstr;
@@ -3360,7 +3594,6 @@ std::string Box_pymd::dump(Indent& indent) const
 
   return sstr.str();
 }
-
 
 
 Error Box_dinf::parse(BitstreamRange& range)

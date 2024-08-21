@@ -21,6 +21,7 @@
 #include "hevc.h"
 #include "bitstream.h"
 #include "error.h"
+#include "file.h"
 
 #include <cassert>
 #include <cmath>
@@ -28,6 +29,8 @@
 #include <iomanip>
 #include <string>
 #include <utility>
+#include <libheif/api_structs.h>
+
 
 Error Box_hvcC::parse(BitstreamRange& range)
 {
@@ -316,9 +319,9 @@ Error Box_hvcC::write(StreamWriter& writer) const
 
 static double read_depth_rep_info_element(BitReader& reader)
 {
-  int sign_flag = reader.get_bits(1);
+  uint8_t sign_flag = reader.get_bits8(1);
   int exponent = reader.get_bits(7);
-  int mantissa_len = reader.get_bits(5) + 1;
+  uint8_t mantissa_len = reader.get_bits8(5) + 1;
   if (mantissa_len < 1 || mantissa_len > 32) {
     // TODO err
   }
@@ -327,11 +330,12 @@ static double read_depth_rep_info_element(BitReader& reader)
     // TODO value unspecified
   }
 
-  int mantissa = reader.get_bits(mantissa_len);
+  uint32_t mantissa = reader.get_bits32(mantissa_len);
   double value;
 
   //printf("sign:%d exponent:%d mantissa_len:%d mantissa:%d\n",sign_flag,exponent,mantissa_len,mantissa);
 
+  // TODO: this seems to be wrong. 'exponent' is never negative. How to read it correctly?
   if (exponent > 0) {
     value = pow(2.0, exponent - 31) * (1.0 + mantissa / pow(2.0, mantissa_len));
   }
@@ -433,7 +437,7 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
             "HEVC SEI NAL too short"};
   }
 
-  uint32_t len = (uint32_t) reader.get_bits(32);
+  uint32_t len = reader.get_bits32(32);
 
   if (len > data.size() - 4) {
     // ERROR: read past end of data
@@ -450,10 +454,10 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
               "HEVC SEI NAL too short"};
     }
 
-    uint32_t nal_size = (uint32_t) sei_reader.get_bits(32);
+    uint32_t nal_size = sei_reader.get_bits32(32);
     (void) nal_size;
 
-    uint8_t nal_type = (uint8_t) (sei_reader.get_bits(8) >> 1);
+    uint8_t nal_type = sei_reader.get_bits8(8) >> 1;
     sei_reader.skip_bits(8);
 
     // SEI
@@ -468,19 +472,18 @@ Error decode_hevc_aux_sei_messages(const std::vector<uint8_t>& data,
       }
 
       // TODO: loading of multi-byte sei headers
-      uint8_t payload_id = (uint8_t) (sei_reader.get_bits(8));
-      uint8_t payload_size = (uint8_t) (sei_reader.get_bits(8));
+      uint8_t payload_id = sei_reader.get_bits8(8);
+      uint8_t payload_size = sei_reader.get_bits8(8);
       (void) payload_size;
 
-      switch (payload_id) {
-        case 177: // depth_representation_info
-          Result<std::shared_ptr<SEIMessage>> seiResult = read_depth_representation_info(sei_reader);
-          if (seiResult.error) {
-            return seiResult.error;
-          }
+      if (payload_id == 177) {
+        // depth_representation_info
+        Result<std::shared_ptr<SEIMessage>> seiResult = read_depth_representation_info(sei_reader);
+        if (seiResult.error) {
+          return seiResult.error;
+        }
 
-          msgs.push_back(seiResult.value);
-          break;
+        msgs.push_back(seiResult.value);
       }
     }
 
@@ -534,22 +537,22 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   // skip VPS ID
   reader.skip_bits(4);
 
-  int nMaxSubLayersMinus1 = reader.get_bits(3);
+  uint8_t nMaxSubLayersMinus1 = reader.get_bits8(3);
 
-  config->temporal_id_nested = (uint8_t) reader.get_bits(1);
+  config->temporal_id_nested = reader.get_bits8(1);
 
   // --- profile_tier_level ---
 
-  config->general_profile_space = (uint8_t) reader.get_bits(2);
-  config->general_tier_flag = (uint8_t) reader.get_bits(1);
-  config->general_profile_idc = (uint8_t) reader.get_bits(5);
-  config->general_profile_compatibility_flags = reader.get_bits(32);
+  config->general_profile_space = reader.get_bits8(2);
+  config->general_tier_flag = reader.get_bits8(1);
+  config->general_profile_idc = reader.get_bits8(5);
+  config->general_profile_compatibility_flags = reader.get_bits32(32);
 
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
   reader.skip_bits(16); // skip reserved bits
 
-  config->general_level_idc = (uint8_t) reader.get_bits(8);
+  config->general_level_idc = reader.get_bits8(8);
 
   std::vector<bool> layer_profile_present(nMaxSubLayersMinus1);
   std::vector<bool> layer_level_present(nMaxSubLayersMinus1);
@@ -632,4 +635,130 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   config->num_temporal_layers = 1; // makes no sense for HEIF
 
   return Error::Ok;
+}
+
+
+Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                         struct heif_encoder* encoder,
+                                                         const struct heif_encoding_options& options,
+                                                         enum heif_image_input_class input_class)
+{
+  CodedImageData codedImage;
+
+  auto hvcC = std::make_shared<Box_hvcC>();
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
+
+  int encoded_width = 0;
+  int encoded_height = 0;
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+    if (data == nullptr) {
+      break;
+    }
+
+
+    const uint8_t NAL_SPS = 33;
+
+    if ((data[0] >> 1) == NAL_SPS) {
+      Box_hvcC::configuration config;
+
+      parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
+
+      hvcC->set_configuration(config);
+
+      codedImage.encoded_image_width = encoded_width;
+      codedImage.encoded_image_height = encoded_height;
+    }
+
+    switch (data[0] >> 1) {
+      case 0x20:
+      case 0x21:
+      case 0x22:
+        hvcC->append_nal_data(data, size);
+        break;
+
+      default:
+        codedImage.append_with_4bytes_size(data, size);
+        // m_heif_file->append_iloc_data_with_4byte_size(image_id, data, size);
+    }
+  }
+
+  if (!encoded_width || !encoded_height) {
+    return Error(heif_error_Encoder_plugin_error,
+                 heif_suberror_Invalid_image_size);
+  }
+
+  codedImage.properties.push_back(hvcC);
+
+
+  // Make sure that the encoder plugin works correctly and the encoded image has the correct size.
+
+  if (encoder->plugin->plugin_api_version >= 3 &&
+      encoder->plugin->query_encoded_size != nullptr) {
+    uint32_t check_encoded_width = image->get_width(), check_encoded_height = image->get_height();
+
+    encoder->plugin->query_encoded_size(encoder->encoder,
+                                        image->get_width(), image->get_height(),
+                                        &check_encoded_width,
+                                        &check_encoded_height);
+
+    assert((int)check_encoded_width == encoded_width);
+    assert((int)check_encoded_height == encoded_height);
+  }
+
+  return codedImage;
+}
+
+Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err)
+  {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_hvcC> hvcC_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("hvcC"))
+    {
+      hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(prop);
+      if (hvcC_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!hvcC_box) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_hvcC_box};
+  }
+  else if (!hvcC_box->get_headers(&data)) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_item_data};
+  }
+
+  return data;
 }

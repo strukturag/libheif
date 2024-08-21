@@ -22,9 +22,12 @@
 #include "avif.h"
 #include "bitstream.h"
 #include "common_utils.h"
+#include "libheif/api_structs.h"
+#include "file.h"
 #include <iomanip>
 #include <limits>
 #include <string>
+#include <cstring>
 
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
@@ -555,4 +558,95 @@ bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, co
   reader.skip_bits(1); // separate_uv_delta
 
   return true;
+}
+
+
+Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                         struct heif_encoder* encoder,
+                                                         const struct heif_encoding_options& options,
+                                                         enum heif_image_input_class input_class)
+{
+  CodedImageData codedImage;
+
+  Box_av1C::configuration config;
+
+  // Fill preliminary av1C in case we cannot parse the sequence_header() correctly in the code below.
+  // TODO: maybe we can remove this later.
+  fill_av1C_configuration(&config, image);
+
+  heif_image c_api_image;
+  c_api_image.image = image;
+
+  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
+  if (err.code) {
+    return Error(err.code,
+                 err.subcode,
+                 err.message);
+  }
+
+  for (;;) {
+    uint8_t* data;
+    int size;
+
+    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
+
+    bool found_config = fill_av1C_configuration_from_stream(&config, data, size);
+    (void) found_config;
+
+    if (data == nullptr) {
+      break;
+    }
+
+    codedImage.append(data, size);
+  }
+
+  auto av1C = std::make_shared<Box_av1C>();
+  av1C->set_configuration(config);
+  codedImage.properties.push_back(av1C);
+
+  return codedImage;
+}
+
+
+Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err)
+  {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_av1C> av1C_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("av1C"))
+    {
+      av1C_box = std::dynamic_pointer_cast<Box_av1C>(prop);
+      if (av1C_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!av1C_box)
+  {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_av1C_box);
+  }
+  else if (!av1C_box->get_headers(&data))
+  {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data);
+  }
+
+  return data;
 }

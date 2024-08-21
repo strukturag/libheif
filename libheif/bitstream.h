@@ -30,8 +30,10 @@
 #include <limits>
 #include <istream>
 #include <string>
+#include <cassert>
 
 #include "error.h"
+#include <algorithm>
 
 
 class StreamReader
@@ -59,6 +61,10 @@ public:
   bool seek_cur(int64_t position_offset)
   {
     return seek(get_position() + position_offset);
+  }
+
+  virtual uint64_t request_range(uint64_t start, uint64_t size) {
+    return std::numeric_limits<uint64_t>::max()-1; // -1 because we use the maximum as an indication for 'invalid'
   }
 };
 
@@ -97,6 +103,10 @@ public:
 
   bool seek(int64_t position) override;
 
+  uint64_t request_range(uint64_t start, uint64_t size) override {
+    return m_length;
+  }
+
 private:
   const uint8_t* m_data;
   int64_t m_length;
@@ -134,6 +144,10 @@ public:
   BitstreamRange(std::shared_ptr<StreamReader> istr,
                  size_t length,
                  BitstreamRange* parent = nullptr);
+
+  BitstreamRange(std::shared_ptr<StreamReader> istr,
+                 size_t start,
+                 size_t end); // one past end
 
   // This function tries to make sure that the full data of this range is
   // available. You should call this before starting reading the range.
@@ -176,6 +190,21 @@ public:
     if (m_parent_range) {
       m_parent_range->skip_to_end_of_file();
     }
+  }
+
+  void skip(uint64_t n)
+  {
+    size_t actual_skip = std::min(static_cast<size_t>(n), m_remaining);
+
+    if (m_parent_range) {
+      // also advance position in parent range
+      m_parent_range->skip_without_advancing_file_pos(actual_skip);
+    }
+
+    assert(actual_skip <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
+
+    m_istr->seek_cur(static_cast<int64_t>(actual_skip));
+    m_remaining -= actual_skip;
   }
 
   void skip_to_end_of_box()
@@ -247,9 +276,11 @@ class BitReader
 public:
   BitReader(const uint8_t* buffer, int len);
 
-  int get_bits(int n);
+  uint32_t get_bits(int n);
 
   uint8_t get_bits8(int n);
+
+  uint32_t get_bits32(int n);
 
   int get_bits_fast(int n);
 

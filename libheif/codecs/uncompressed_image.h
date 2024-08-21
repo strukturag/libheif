@@ -44,17 +44,38 @@ public:
                                          std::shared_ptr<HeifPixelImage>& img,
                                          const std::vector<uint8_t>& uncompressed_data);
 
-  static Error encode_uncompressed_image(const std::shared_ptr<HeifFile>& heif_file,
-                                         const std::shared_ptr<HeifPixelImage>& src_image,
-                                         void* encoder_struct,
-                                         const struct heif_encoding_options& options,
-                                         std::shared_ptr<HeifContext::Image>& out_image);
-
   static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC,
                                             std::shared_ptr<Box_cmpd>& cmpd,
                                             heif_chroma* out_chroma,
                                             heif_colorspace* out_colourspace);
 
+};
+
+
+class ImageItem_uncompressed : public ImageItem
+{
+public:
+  ImageItem_uncompressed(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_uncompressed(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "unci"; }
+
+  heif_compression_format get_compression_format() const override { return heif_compression_uncompressed; }
+
+  // Instead of storing alpha in a separate unci, this is put into the main image item
+  const char* get_auxC_alpha_channel_type() const override { return nullptr; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+
+  bool is_ispe_essential() const override { return true; }
+
+  // Code from encode_uncompressed_image() has been moved to here.
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_IMAGE_H

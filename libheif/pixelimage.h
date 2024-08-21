@@ -40,8 +40,8 @@ bool is_chroma_with_alpha(heif_chroma chroma);
 
 int num_interleaved_pixels_per_plane(heif_chroma chroma);
 
-bool is_integer_multiple_of_chroma_size(int width,
-                                        int height,
+bool is_integer_multiple_of_chroma_size(uint32_t width,
+                                        uint32_t height,
                                         heif_chroma chroma);
 
 // Returns the list of valid heif_chroma values for a given colorspace.
@@ -71,13 +71,13 @@ public:
 
   void set_premultiplied_alpha(bool flag) { m_premultiplied_alpha = flag; }
 
-  int get_width() const { return m_width; }
+  uint32_t get_width() const { return m_width; }
 
-  int get_height() const { return m_height; }
+  uint32_t get_height() const { return m_height; }
 
-  int get_width(enum heif_channel channel) const;
+  uint32_t get_width(enum heif_channel channel) const;
 
-  int get_height(enum heif_channel channel) const;
+  uint32_t get_height(enum heif_channel channel) const;
 
   heif_chroma get_chroma_format() const { return m_chroma; }
 
@@ -126,6 +126,8 @@ public:
   void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
                            heif_channel src_channel,
                            heif_channel dst_channel);
+
+  void extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage);
 
   void fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
 
@@ -234,8 +236,8 @@ private:
     void crop(int left, int right, int top, int bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
-  int m_width = 0;
-  int m_height = 0;
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
   heif_colorspace m_colorspace = heif_colorspace_undefined;
   heif_chroma m_chroma = heif_chroma_undefined;
   bool m_premultiplied_alpha = false;

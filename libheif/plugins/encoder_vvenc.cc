@@ -33,6 +33,8 @@ extern "C" {
 }
 
 
+// TODO: it seems that the encoder does not support monochrome input. This affects also images with alpha channels.
+
 static const char* kError_unspecified_error = "Unspecified encoder error";
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by vvenc";
 static const char* kError_unsupported_chroma = "Unsupported chroma type";
