@@ -440,6 +440,9 @@ Error Box_icef::parse(BitstreamRange& range)
     } else {
       return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit size code");
     }
+    if (unitInfo.unit_size >= UINT64_MAX - implied_offset) {
+      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "cumulative offsets too large for 64 bit file size"};
+    }
     implied_offset += unitInfo.unit_size;
     if (range.get_error() != Error::Ok) {
       return range.get_error();
