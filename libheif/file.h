@@ -35,6 +35,7 @@
 #include <map>
 #include <vector>
 #include <unordered_set>
+#include <limits>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 
