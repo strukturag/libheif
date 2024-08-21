@@ -522,3 +522,46 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_p
 
   return codedImageData;
 }
+
+
+Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_data(heif_item_id itemId) const
+{
+  std::vector<uint8_t> data;
+
+  // --- get properties for this image
+
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipma_box = get_file()->get_ipma_box();
+  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
+  if (err) {
+    return err;
+  }
+
+  // --- get codec configuration
+
+  std::shared_ptr<Box_j2kH> j2kH_box;
+  for (auto &prop : properties)
+  {
+    if (prop->get_short_type() == fourcc("j2kH"))
+    {
+      j2kH_box = std::dynamic_pointer_cast<Box_j2kH>(prop);
+      if (j2kH_box)
+      {
+        break;
+      }
+    }
+  }
+
+  if (!j2kH_box)
+  {
+    // TODO - Correctly Find the j2kH box
+    //  return Error(heif_error_Invalid_input,
+    //               heif_suberror_Unspecified);
+  }
+  // else if (!j2kH_box->get_headers(data)) {
+  //   return Error(heif_error_Invalid_input,
+  //                heif_suberror_No_item_data);
+  // }
+
+  return data;
+}

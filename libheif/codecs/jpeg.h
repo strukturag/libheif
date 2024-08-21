@@ -70,6 +70,9 @@ public:
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class) override;
+
+protected:
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
 };
 
 #endif // LIBHEIF_JPEG_H

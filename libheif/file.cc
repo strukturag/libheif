@@ -818,10 +818,10 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   }
   else if (item_type == "jpeg" ||
            (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
-    return get_compressed_image_data_jpeg(ID, data, item);
+    assert(false);
   }
   else if (item_type == "j2k1") {
-      return get_compressed_image_data_jpeg2000(ID, item, data);
+    assert(false);
   }
 #if WITH_UNCOMPRESSED_CODEC
   else if (item_type == "unci") {
@@ -1021,74 +1021,6 @@ const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, st
   }
 }
 #endif
-
-
-const Error HeifFile::get_compressed_image_data_jpeg2000(heif_item_id ID, const Box_iloc::Item *item, std::vector<uint8_t> *data) const
-{
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_j2kH> j2kH_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("j2kH"))
-    {
-      j2kH_box = std::dynamic_pointer_cast<Box_j2kH>(prop);
-      if (j2kH_box)
-      {
-        break;
-      }
-    }
-  }
-
-  if (!j2kH_box)
-  {
-    // TODO - Correctly Find the j2kH box
-    //  return Error(heif_error_Invalid_input,
-    //               heif_suberror_Unspecified);
-  }
-  // else if (!j2kH_box->get_headers(data)) {
-  //   return Error(heif_error_Invalid_input,
-  //                heif_suberror_No_item_data);
-  // }
-
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-}
-
-const Error HeifFile::get_compressed_image_data_jpeg(heif_item_id ID, std::vector<uint8_t> * data, const Box_iloc::Item *item) const
-{
-  // --- check if 'jpgC' is present
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_jpgC> jpgC_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("jpgC"))
-    {
-      jpgC_box = std::dynamic_pointer_cast<Box_jpgC>(prop);
-      if (jpgC_box)
-      {
-        *data = jpgC_box->get_data();
-        break;
-      }
-    }
-  }
-
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-}
 
 
 Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const

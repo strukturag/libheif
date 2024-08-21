@@ -275,10 +275,6 @@ private:
 
   const Error do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const;
 #endif
-
-  const Error get_compressed_image_data_jpeg2000(heif_item_id ID, const Box_iloc::Item *item, std::vector<uint8_t> *data) const;
-
-  const Error get_compressed_image_data_jpeg(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
 };
 
 #endif
