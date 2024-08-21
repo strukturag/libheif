@@ -239,6 +239,11 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   if (input_has_alpha) {
     in_a = (uint16_t*) input->get_plane(heif_channel_Alpha, &in_a_stride);
     assert(in_a != nullptr);
+
+    // should never happen, but makes clang-tidy happy
+    if (in_a == nullptr) {
+      return nullptr;
+    }
   }
 
   in_r_stride /= 2;
