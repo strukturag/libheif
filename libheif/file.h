@@ -46,9 +46,8 @@
 
 class HeifPixelImage;
 
-class HeifImage;
-
 class Box_j2kH;
+
 
 class HeifFile
 {
@@ -136,7 +135,7 @@ public:
     return nullptr;
   }
 
-  heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const;
+  heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const; // TODO: move to ImageItem
 
   std::string debug_dump_boxes() const;
 
@@ -146,9 +145,6 @@ public:
   heif_item_id get_unused_item_id() const;
 
   heif_item_id add_new_image(const char* item_type);
-
-  heif_item_id add_new_hidden_image(const char* item_type);
-
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
@@ -175,8 +171,6 @@ public:
 
   void append_iloc_data(heif_item_id id, const std::vector<uint8_t>& nal_packets, uint8_t construction_method);
 
-  void append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size);
-
   void replace_iloc_data(heif_item_id id, uint64_t offset, const std::vector<uint8_t>& data, uint8_t construction_method = 0);
 
   void set_primary_item_id(heif_item_id id);
@@ -187,11 +181,6 @@ public:
   void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
 
   void set_auxC_property(heif_item_id id, const std::string& type);
-
-  void set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile>& profile);
-
-  // TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
-  void set_hdlr_library_info(const std::string& encoder_plugin_version);
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
   static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);
@@ -225,10 +214,6 @@ private:
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
 
-  // list of image items (does not include hidden images or Exif data)
-  //std::vector<heif_item_id> m_valid_image_IDs;
-
-
   Error parse_heif_file();
 
   Error check_for_ref_cycle(heif_item_id ID,
@@ -237,8 +222,6 @@ private:
   Error check_for_ref_cycle_recursion(heif_item_id ID,
                                       const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
-
-  int jpeg_get_bits_per_pixel(heif_item_id imageID) const;
 
 #if WITH_UNCOMPRESSED_CODEC
   const Error get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;

@@ -91,13 +91,6 @@ public:
 
   std::vector<std::shared_ptr<ImageItem>> get_top_level_images() { return m_top_level_images; }
 
-  std::shared_ptr<ImageItem> get_top_level_image(heif_item_id id);
-
-  std::shared_ptr<const ImageItem> get_top_level_image(heif_item_id id) const
-  {
-    return const_cast<HeifContext*>(this)->get_top_level_image(id);
-  }
-
   void insert_new_image(heif_item_id id, std::shared_ptr<ImageItem> img) {
     m_all_images.insert(std::make_pair(id, img));
   }
@@ -168,12 +161,7 @@ public:
                             const std::shared_ptr<HeifPixelImage>& image,
                             struct heif_encoder* encoder);
 
-  // write PIXI, CLLI, MDVC
-  void write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, heif_item_id image_id);
-
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
-
-  Error set_primary_item(heif_item_id id);
 
   bool is_primary_image_set() const { return m_primary_image != nullptr; }
 

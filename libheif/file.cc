@@ -965,14 +965,6 @@ heif_item_id HeifFile::add_new_image(const char* item_type)
 }
 
 
-heif_item_id HeifFile::add_new_hidden_image(const char* item_type)
-{
-  auto box = add_new_infe_box(item_type);
-  box->set_hidden_item(true);
-  return box->get_item_ID();
-}
-
-
 std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
 {
   heif_item_id id = get_unused_item_id();
@@ -1248,21 +1240,6 @@ void HeifFile::replace_iloc_data(heif_item_id id, uint64_t offset, const std::ve
 }
 
 
-void HeifFile::append_iloc_data_with_4byte_size(heif_item_id id, const uint8_t* data, size_t size)
-{
-  std::vector<uint8_t> nal;
-  nal.resize(size + 4);
-
-  nal[0] = (uint8_t) ((size >> 24) & 0xFF);
-  nal[1] = (uint8_t) ((size >> 16) & 0xFF);
-  nal[2] = (uint8_t) ((size >> 8) & 0xFF);
-  nal[3] = (uint8_t) ((size >> 0) & 0xFF);
-
-  memcpy(nal.data() + 4, data, size);
-
-  append_iloc_data(id, nal, 0);
-}
-
 void HeifFile::set_primary_item_id(heif_item_id id)
 {
   m_pitm_box->set_item_ID(id);
@@ -1299,24 +1276,6 @@ void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
   int index = m_ipco_box->find_or_append_child_box(auxC);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
-}
-
-void HeifFile::set_color_profile(heif_item_id id, const std::shared_ptr<const color_profile>& profile)
-{
-  auto colr = std::make_shared<Box_colr>();
-  colr->set_color_profile(profile);
-
-  int index = m_ipco_box->find_or_append_child_box(colr);
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
-}
-
-
-// TODO: the hdlr box is probably not the right place for this. Into which box should we write comments?
-void HeifFile::set_hdlr_library_info(const std::string& encoder_plugin_version)
-{
-  std::stringstream sstr;
-  sstr << "libheif (" << LIBHEIF_VERSION << ") / " << encoder_plugin_version;
-  m_hdlr_box->set_name(sstr.str());
 }
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)

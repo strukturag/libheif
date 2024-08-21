@@ -178,18 +178,6 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
 }
 
 
-std::shared_ptr<ImageItem> HeifContext::get_top_level_image(heif_item_id id)
-{
-  for (auto& img : m_top_level_images) {
-    if (img->get_id() == id) {
-      return img;
-    }
-  }
-
-  return nullptr;
-}
-
-
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
   std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
@@ -1373,87 +1361,6 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
 }
 
 
-/*
-static uint32_t get_rotated_width(heif_orientation orientation, uint32_t w, uint32_t h)
-{
-  return ((int)orientation) > 4 ? h : w;
-}
-
-
-static uint32_t get_rotated_height(heif_orientation orientation, uint32_t w, uint32_t h)
-{
-  return ((int)orientation) > 4 ? w : h;
-}
-*/
-
-void HeifContext::write_image_metadata(std::shared_ptr<HeifPixelImage> src_image, heif_item_id image_id)
-{
-#if 0
-  auto colorspace = src_image->get_colorspace();
-  auto chroma = src_image->get_chroma_format();
-
-
-  // --- write PIXI property
-
-  if (colorspace == heif_colorspace_monochrome) {
-    m_heif_file->add_pixi_property(image_id,
-                                   src_image->get_bits_per_pixel(heif_channel_Y), 0, 0);
-  }
-  else if (colorspace == heif_colorspace_YCbCr) {
-    m_heif_file->add_pixi_property(image_id,
-                                   src_image->get_bits_per_pixel(heif_channel_Y),
-                                   src_image->get_bits_per_pixel(heif_channel_Cb),
-                                   src_image->get_bits_per_pixel(heif_channel_Cr));
-  }
-  else if (colorspace == heif_colorspace_RGB) {
-    if (chroma == heif_chroma_444) {
-      m_heif_file->add_pixi_property(image_id,
-                                     src_image->get_bits_per_pixel(heif_channel_R),
-                                     src_image->get_bits_per_pixel(heif_channel_G),
-                                     src_image->get_bits_per_pixel(heif_channel_B));
-    }
-    else if (chroma == heif_chroma_interleaved_RGB ||
-             chroma == heif_chroma_interleaved_RGBA) {
-      m_heif_file->add_pixi_property(image_id, 8, 8, 8);
-    }
-  }
-
-
-  // --- write PASP property
-
-  if (src_image->has_nonsquare_pixel_ratio()) {
-    auto pasp = std::make_shared<Box_pasp>();
-    src_image->get_pixel_ratio(&pasp->hSpacing, &pasp->vSpacing);
-
-    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(pasp);
-    m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
-  }
-
-
-  // --- write CLLI property
-
-  if (src_image->has_clli()) {
-    auto clli = std::make_shared<Box_clli>();
-    clli->clli = src_image->get_clli();
-
-    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(clli);
-    m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
-  }
-
-
-  // --- write MDCV property
-
-  if (src_image->has_mdcv()) {
-    auto mdcv = std::make_shared<Box_mdcv>();
-    mdcv->mdcv = src_image->get_mdcv();
-
-    int index = m_heif_file->get_ipco_box()->find_or_append_child_box(mdcv);
-    m_heif_file->get_ipma_box()->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
-  }
-#endif
-}
-
-
 void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
 {
   // update heif context
@@ -1469,21 +1376,6 @@ void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
   // update pitm box in HeifFile
 
   m_heif_file->set_primary_item_id(image->get_id());
-}
-
-
-Error HeifContext::set_primary_item(heif_item_id id)
-{
-  auto iter = m_all_images.find(id);
-  if (iter == m_all_images.end()) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_No_or_invalid_primary_item,
-                 "Cannot set primary item as the ID does not exist.");
-  }
-
-  set_primary_image(iter->second);
-
-  return Error::Ok;
 }
 
 
