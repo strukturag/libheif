@@ -1087,6 +1087,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
   out_image = image_item;
 
+  insert_new_image(image_item->get_id(), image_item);
 
 
   // --- if there is an alpha channel, add it as an additional image
