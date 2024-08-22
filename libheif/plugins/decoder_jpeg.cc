@@ -1,5 +1,5 @@
 /*
- * AVIF codec.
+ * JPEG codec.
  * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
