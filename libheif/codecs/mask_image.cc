@@ -126,6 +126,33 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
 }
 
 
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_mask::decode_compressed_image(const struct heif_decoding_options& options,
+                                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+{
+  std::shared_ptr<HeifPixelImage> img;
+
+  std::vector<uint8_t> data;
+
+  // image data, usually from 'mdat'
+
+  Error error = get_file()->append_data_from_iloc(get_id(), data);
+  if (error) {
+    return error;
+  }
+
+  Error err = MaskImageCodec::decode_mask_image(get_context(),
+                                                get_id(),
+                                                img,
+                                                data);
+  if (err) {
+    return err;
+  }
+  else {
+    return img;
+  }
+}
+
+
 Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                          struct heif_encoder* encoder,
                                                          const struct heif_encoding_options& options,
