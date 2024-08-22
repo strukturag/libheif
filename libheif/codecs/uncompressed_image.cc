@@ -1233,6 +1233,33 @@ static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std
 }
 
 
+Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compressed_image(const struct heif_decoding_options& options,
+                                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+{
+  std::shared_ptr<HeifPixelImage> img;
+
+  std::vector<uint8_t> data;
+
+  // image data, usually from 'mdat'
+
+  Error error = get_file()->get_compressed_image_data(get_id(), &data);
+  if (error) {
+    return error;
+  }
+
+  Error err = UncompressedImageCodec::decode_uncompressed_image(get_context(),
+                                                                get_id(),
+                                                                img,
+                                                                data);
+  if (err) {
+    return err;
+  }
+  else {
+    return img;
+  }
+}
+
+
 Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
                                                                  struct heif_encoder* encoder,
                                                                  const struct heif_encoding_options& options,
