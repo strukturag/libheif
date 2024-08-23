@@ -36,7 +36,15 @@
 
 heif_chroma chroma_from_subsampling(int h, int v);
 
-bool is_chroma_with_alpha(heif_chroma chroma);
+uint32_t chroma_width(uint32_t w, heif_chroma chroma);
+
+uint32_t chroma_height(uint32_t h, heif_chroma chroma);
+
+uint32_t channel_width(uint32_t w, heif_chroma chroma, heif_channel channel);
+
+uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel);
+
+bool is_interleaved_with_alpha(heif_chroma chroma);
 
 int num_interleaved_pixels_per_plane(heif_chroma chroma);
 

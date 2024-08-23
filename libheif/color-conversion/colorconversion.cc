@@ -515,7 +515,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
-  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_chroma_with_alpha(input->get_chroma_format());
+  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_interleaved_with_alpha(input->get_chroma_format());
   if (input->get_color_profile_nclx()) {
     input_state.nclx_profile = *input->get_color_profile_nclx();
   }
@@ -552,7 +552,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   // For planar formats, we include an alpha plane when included in the input.
 
   if (num_interleaved_pixels_per_plane(target_chroma) > 1) {
-    output_state.has_alpha = is_chroma_with_alpha(target_chroma);
+    output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {
     output_state.has_alpha = input_state.has_alpha;

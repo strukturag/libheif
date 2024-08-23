@@ -47,7 +47,7 @@ heif_chroma chroma_from_subsampling(int h, int v)
 }
 
 
-static uint32_t chroma_width(uint32_t w, heif_chroma chroma)
+uint32_t chroma_width(uint32_t w, heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_420:
@@ -58,7 +58,7 @@ static uint32_t chroma_width(uint32_t w, heif_chroma chroma)
   }
 }
 
-static uint32_t chroma_height(uint32_t h, heif_chroma chroma)
+uint32_t chroma_height(uint32_t h, heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_420:
@@ -68,7 +68,7 @@ static uint32_t chroma_height(uint32_t h, heif_chroma chroma)
   }
 }
 
-static uint32_t channel_width(uint32_t w, heif_chroma chroma, heif_channel channel)
+uint32_t channel_width(uint32_t w, heif_chroma chroma, heif_channel channel)
 {
   if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
     return chroma_width(w, chroma);
@@ -78,7 +78,7 @@ static uint32_t channel_width(uint32_t w, heif_chroma chroma, heif_channel chann
   }
 }
 
-static uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
+uint32_t channel_height(uint32_t h, heif_chroma chroma, heif_channel channel)
 {
   if (channel == heif_channel_Cb || channel == heif_channel_Cr) {
     return chroma_height(h, chroma);
@@ -555,7 +555,7 @@ void HeifPixelImage::transfer_plane_from_image_as(const std::shared_ptr<HeifPixe
 }
 
 
-bool is_chroma_with_alpha(heif_chroma chroma)
+bool is_interleaved_with_alpha(heif_chroma chroma)
 {
   switch (chroma) {
     case heif_chroma_undefined:
