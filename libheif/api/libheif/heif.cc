@@ -1584,6 +1584,7 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
   uint32_t stride;
   const auto* p = image->image->get_plane(channel, &stride);
 
+  // TODO: use C++20 std::cmp_greater()
   if (stride > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
     return nullptr;
   }
@@ -1609,6 +1610,7 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
   uint32_t stride;
   uint8_t* p = image->image->get_plane(channel, &stride);
 
+  // TODO: use C++20 std::cmp_greater()
   if (stride > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
     return nullptr;
   }
