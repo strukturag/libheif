@@ -57,7 +57,9 @@ TEST_CASE( "uint32_t" )
   // --- rotate data
 
   std::shared_ptr<HeifPixelImage> rot;
-  Error err = image.rotate_ccw(90, rot);
+  auto rotationResult = image.rotate_ccw(90);
+  REQUIRE(rotationResult.error.error_code == heif_error_Ok);
+  rot = rotationResult.value;
 
   data = rot->get_channel<uint32_t>(heif_channel_other_first, &stride);
 
@@ -91,8 +93,9 @@ TEST_CASE( "uint32_t" )
   // --- crop
 
   std::shared_ptr<HeifPixelImage> crop;
-  err = image.crop(1,2,1,1, crop);
-  REQUIRE(!err);
+  auto cropResult = image.crop(1,2,1,1);
+  REQUIRE(cropResult.error.error_code == heif_error_Ok);
+  crop = cropResult.value;
 
   REQUIRE(crop->get_width(heif_channel_other_first) == 2);
   REQUIRE(crop->get_height(heif_channel_other_first) == 1);
@@ -102,8 +105,9 @@ TEST_CASE( "uint32_t" )
   REQUIRE(data[0*stride + 0] == 0);
   REQUIRE(data[0*stride + 1] == 2000);
 
-  err = image.crop(0,1,0,1, crop);
-  REQUIRE(!err);
+  cropResult = image.crop(0,1,0,1);
+  REQUIRE(cropResult.error.error_code == heif_error_Ok);
+  crop = cropResult.value;
 
   REQUIRE(crop->get_width(heif_channel_other_first) == 2);
   REQUIRE(crop->get_height(heif_channel_other_first) == 2);

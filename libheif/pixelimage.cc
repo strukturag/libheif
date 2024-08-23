@@ -728,7 +728,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
 
-  return Error::Ok;
+  return out_img;
 }
 
 template<typename T>
