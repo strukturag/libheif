@@ -964,7 +964,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   }
 
 
-  auto decodingResult = imginfo->decode_image(out_colorspace, options, decode_only_tile, tx, ty);
+  auto decodingResult = imginfo->decode_image(options, decode_only_tile, tx, ty);
   if (decodingResult.error) {
     return decodingResult.error;
   }

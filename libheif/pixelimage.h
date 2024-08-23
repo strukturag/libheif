@@ -58,6 +58,8 @@ public:
 
   void create(int width, int height, heif_colorspace colorspace, heif_chroma chroma);
 
+  void create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h);
+
   bool add_plane(heif_channel channel, int width, int height, int bit_depth);
 
   bool add_channel(heif_channel channel, int width, int height, heif_channel_datatype datatype, int bit_depth);
@@ -129,11 +131,15 @@ public:
 
   void extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage);
 
+  void fill_plane(heif_channel dst_channel, uint16_t value);
+
   void fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
 
   void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                     heif_channel src_channel,
                                     heif_channel dst_channel);
+
+  Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
 
   Error rotate_ccw(int angle_degrees,
                    std::shared_ptr<HeifPixelImage>& out_img);

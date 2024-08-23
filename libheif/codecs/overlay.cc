@@ -316,16 +316,22 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
       return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced, "'iovl' image references a non-existing item.");
     }
 
-    auto decodeResult = imgItem->decode_image(heif_colorspace_RGB, options, false, 0,0);
+    auto decodeResult = imgItem->decode_image(options, false, 0,0);
     if (decodeResult.error) {
       return decodeResult.error;
     }
 
     std::shared_ptr<HeifPixelImage> overlay_img = decodeResult.value;
 
-    overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options);
-    if (!overlay_img) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+
+    // process overlay in RGB space
+
+    if (overlay_img->get_colorspace() != heif_colorspace_RGB ||
+        overlay_img->get_chroma_format() != heif_chroma_444) {
+      overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options);
+      if (!overlay_img) {
+        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+      }
     }
 
     int32_t dx, dy;

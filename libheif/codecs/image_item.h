@@ -255,8 +255,7 @@ public:
 
   virtual Error on_load_file() { return Error::Ok; }
 
-  Result<std::shared_ptr<HeifPixelImage>> decode_image(heif_colorspace out_colorspace,
-                                                       const struct heif_decoding_options& options,
+  Result<std::shared_ptr<HeifPixelImage>> decode_image(const struct heif_decoding_options& options,
                                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,

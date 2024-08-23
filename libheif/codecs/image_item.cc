@@ -795,8 +795,7 @@ Error ImageItem::check_for_valid_image_size(uint32_t width, uint32_t height) con
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace out_colorspace,
-                                                                const struct heif_decoding_options& options,
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   // --- check whether image size (according to 'ispe') exceeds maximum
@@ -819,34 +818,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
   }
 
   auto img = decodingResult.value;
-
-
-  // --- convert color-space
-
-  heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
-                                       img->get_colorspace() :
-                                       out_colorspace);
-
-#if 1  // TODO: disabling this will likely improve performance, but we have to implement "grid" and "iovl" for more input variants
-
-  if (/*!alphaImage &&*/ target_colorspace == heif_colorspace_YCbCr) {
-    target_colorspace = heif_colorspace_RGB;
-  }
-#endif
-
-  heif_chroma target_chroma = (target_colorspace == heif_colorspace_monochrome ?
-                               heif_chroma_monochrome : heif_chroma_444);
-
-  bool different_chroma = (target_chroma != img->get_chroma_format());
-  bool different_colorspace = (target_colorspace != img->get_colorspace());
-
-  if (different_chroma || different_colorspace) {
-    img = convert_colorspace(img, target_colorspace, target_chroma, nullptr, 0, options.color_conversion_options);
-    if (!img) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
-    }
-  }
-
 
   std::shared_ptr<HeifFile> file = m_heif_context->get_heif_file();
 
@@ -932,7 +903,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
 
   std::shared_ptr<ImageItem> alpha_image = get_alpha_channel();
   if (alpha_image) {
-    auto alphaDecodingResult = alpha_image->decode_image(heif_colorspace_monochrome, options, decode_tile_only, tile_x0, tile_y0);
+    auto alphaDecodingResult = alpha_image->decode_image(options, decode_tile_only, tile_x0, tile_y0);
     if (alphaDecodingResult.error) {
       return alphaDecodingResult.error;
     }
@@ -941,6 +912,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(heif_colorspace 
 
     // TODO: check that sizes are the same and that we have an Y channel
     // BUT: is there any indication in the standard that the alpha channel should have the same size?
+
+    // TODO: convert in case alpha is decoded as RGB interleaved
 
     heif_channel channel;
     switch (alpha->get_colorspace()) {
