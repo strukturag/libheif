@@ -26,6 +26,7 @@
 #include <cstring>
 #include <utility>
 #include <limits>
+#include <algorithm>
 
 
 heif_chroma chroma_from_subsampling(int h, int v)
