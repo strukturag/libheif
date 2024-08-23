@@ -427,10 +427,10 @@ std::string ColorConversionPipeline::debug_dump_pipeline() const
 }
 
 
-std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std::shared_ptr<const HeifPixelImage>& input)
+std::shared_ptr<HeifPixelImage> ColorConversionPipeline::convert_image(const std::shared_ptr<HeifPixelImage>& input)
 {
-  std::shared_ptr<const HeifPixelImage> in = input;
-  std::shared_ptr<HeifPixelImage> out;
+  std::shared_ptr<HeifPixelImage> in = input;
+  std::shared_ptr<HeifPixelImage> out = in;
 
   for (const auto& step : m_conversion_steps) {
 

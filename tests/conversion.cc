@@ -283,8 +283,8 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   int height = 8;
   REQUIRE(MakeTestImage(input_state, width, height, in_image.get()));
 
-  std::shared_ptr<HeifPixelImage> out_image =
-      pipeline.convert_image(in_image);
+  std::shared_ptr<HeifPixelImage> out_image;
+  out_image = pipeline.convert_image(in_image);
 
   REQUIRE(out_image != nullptr);
   CHECK(out_image->get_colorspace() == target_state.colorspace);

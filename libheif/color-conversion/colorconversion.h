@@ -102,7 +102,7 @@ public:
                           const ColorState& target_state,
                           const heif_color_conversion_options& options);
 
-  std::shared_ptr<HeifPixelImage> convert_image(const std::shared_ptr<const HeifPixelImage>& input);
+  std::shared_ptr<HeifPixelImage> convert_image(const std::shared_ptr<HeifPixelImage>& input);
 
   std::string debug_dump_pipeline() const;
 
