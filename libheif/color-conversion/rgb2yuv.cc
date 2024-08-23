@@ -648,10 +648,10 @@ Op_RGB24_32_to_YCbCr::convert_colorspace(const std::shared_ptr<const HeifPixelIm
   else if (chromaSubH == 2 && chromaSubV == 2) {
     // chroma 4:2:0
 
-    for (uint32_t y = 0; y < (height & ~1); y += 2) {
+    for (uint32_t y = 0; y < (height & ~1U); y += 2) {
       const uint8_t* p = &in_p[y * in_stride];
 
-      for (uint32_t x = 0; x < (width & ~1); x += 2) {
+      for (uint32_t x = 0; x < (width & ~1U); x += 2) {
         uint8_t r = uint8_t((p[0] + p[bytes_per_pixel + 0] + p[in_stride + 0] + p[bytes_per_pixel + in_stride + 0]) / 4);
         uint8_t g = uint8_t((p[1] + p[bytes_per_pixel + 1] + p[in_stride + 1] + p[bytes_per_pixel + in_stride + 1]) / 4);
         uint8_t b = uint8_t((p[2] + p[bytes_per_pixel + 2] + p[in_stride + 2] + p[bytes_per_pixel + in_stride + 2]) / 4);
