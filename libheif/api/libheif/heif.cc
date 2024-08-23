@@ -1173,6 +1173,20 @@ static heif_decoding_options normalize_options(const heif_decoding_options* inpu
 }
 
 
+void heif_color_conversion_options_set_default(struct heif_color_conversion_options* options)
+{
+  options->version = 1;
+#if HAVE_LIBSHARPYUV
+  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_sharp_yuv;
+#else
+  options->preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
+#endif
+
+  options->preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
+  options->only_use_preferred_chroma_algorithm = true;
+}
+
+
 heif_decoding_options* heif_decoding_options_alloc()
 {
   auto options = new heif_decoding_options;
@@ -1495,8 +1509,6 @@ int heif_image_get_primary_height(const struct heif_image* img)
 heif_error heif_image_crop(struct heif_image* img,
                            int left, int right, int top, int bottom)
 {
-  std::shared_ptr<HeifPixelImage> out_img;
-
   uint32_t w = img->image->get_width();
   uint32_t h = img->image->get_height();
 
@@ -1507,12 +1519,12 @@ heif_error heif_image_crop(struct heif_image* img,
                       "Image size exceeds maximum supported size"};
   }
 
-  Error err = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, out_img);
-  if (err) {
-    return err.error_struct(img->image.get());
+  auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom);
+  if (cropResult.error) {
+    return cropResult.error.error_struct(img->image.get());
   }
 
-  img->image = out_img;
+  img->image = cropResult.value;
 
   return heif_error_success;
 }

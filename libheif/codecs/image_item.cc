@@ -837,22 +837,22 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     for (const auto& property : properties) {
       if (property->get_short_type() == fourcc("irot")) {
         auto rot = std::dynamic_pointer_cast<Box_irot>(property);
-        std::shared_ptr<HeifPixelImage> rotated_img;
-        error = img->rotate_ccw(rot->get_rotation(), rotated_img);
-        if (error) {
+        auto rotateResult = img->rotate_ccw(rot->get_rotation());
+        if (rotateResult.error) {
           return error;
         }
 
-        img = rotated_img;
+        img = rotateResult.value;
       }
 
 
       if (property->get_short_type() == fourcc("imir")) {
         auto mirror = std::dynamic_pointer_cast<Box_imir>(property);
-        error = img->mirror_inplace(mirror->get_mirror_direction());
-        if (error) {
+        auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction());
+        if (mirrorResult.error) {
           return error;
         }
+        img = mirrorResult.value;
       }
 
 
@@ -860,8 +860,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
         auto clap = std::dynamic_pointer_cast<Box_clap>(property);
         std::shared_ptr<HeifPixelImage> clap_img;
 
-        int img_width = img->get_width();
-        int img_height = img->get_height();
+        uint32_t img_width = img->get_width();
+        uint32_t img_height = img->get_height();
         assert(img_width >= 0);
         assert(img_height >= 0);
 
@@ -873,8 +873,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
         if (left < 0) { left = 0; }
         if (top < 0) { top = 0; }
 
-        if (right >= img_width) { right = img_width - 1; }
-        if (bottom >= img_height) { bottom = img_height - 1; }
+        if ((uint32_t)right >= img_width) { right = img_width - 1; }
+        if ((uint32_t)bottom >= img_height) { bottom = img_height - 1; }
 
         if (left > right ||
             top > bottom) {
@@ -882,13 +882,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
                        heif_suberror_Invalid_clean_aperture);
         }
 
-        std::shared_ptr<HeifPixelImage> cropped_img;
-        error = img->crop(left, right, top, bottom, cropped_img);
+        auto cropResult = img->crop(left, right, top, bottom);
         if (error) {
           return error;
         }
 
-        img = cropped_img;
+        img = cropResult.value;
       }
     }
   }

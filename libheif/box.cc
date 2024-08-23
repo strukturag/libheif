@@ -3011,35 +3011,35 @@ double Box_clap::top(int image_height) const
 }
 
 
-int Box_clap::left_rounded(int image_width) const
+int Box_clap::left_rounded(uint32_t image_width) const
 {
   // pcX = horizOff + (width  - 1)/2
   // pcX ± (cleanApertureWidth - 1)/2
 
   // left = horizOff + (width-1)/2 - (clapWidth-1)/2
 
-  Fraction pcX = m_horizontal_offset + Fraction(image_width - 1, 2);
+  Fraction pcX = m_horizontal_offset + Fraction(image_width - 1U, 2U);
   Fraction left = pcX - (m_clean_aperture_width - 1) / 2;
 
   return left.round_down();
 }
 
-int Box_clap::right_rounded(int image_width) const
+int Box_clap::right_rounded(uint32_t image_width) const
 {
   Fraction right = m_clean_aperture_width - 1 + left_rounded(image_width);
 
   return right.round();
 }
 
-int Box_clap::top_rounded(int image_height) const
+int Box_clap::top_rounded(uint32_t image_height) const
 {
-  Fraction pcY = m_vertical_offset + Fraction(image_height - 1, 2);
+  Fraction pcY = m_vertical_offset + Fraction(image_height - 1U, 2U);
   Fraction top = pcY - (m_clean_aperture_height - 1) / 2;
 
   return top.round();
 }
 
-int Box_clap::bottom_rounded(int image_height) const
+int Box_clap::bottom_rounded(uint32_t image_height) const
 {
   Fraction bottom = m_clean_aperture_height - 1 + top_rounded(image_height);
 

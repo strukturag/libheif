@@ -89,6 +89,10 @@ public:
 
   uint32_t get_height(enum heif_channel channel) const;
 
+  bool has_odd_width() const { return !!(m_width & 1); }
+
+  bool has_odd_height() const { return !!(m_height & 1); }
+
   heif_chroma get_chroma_format() const { return m_chroma; }
 
   heif_colorspace get_colorspace() const { return m_colorspace; }
@@ -149,13 +153,11 @@ public:
 
   Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
 
-  Error rotate_ccw(int angle_degrees,
-                   std::shared_ptr<HeifPixelImage>& out_img);
+  Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees);
 
-  Error mirror_inplace(heif_transform_mirror_direction);
+  Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction);
 
-  Error crop(int left, int right, int top, int bottom,
-             std::shared_ptr<HeifPixelImage>& out_img) const;
+  Result<std::shared_ptr<HeifPixelImage>> crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom) const;
 
   Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
 

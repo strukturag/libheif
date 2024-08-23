@@ -27,6 +27,7 @@
 #include <utility>
 #include <limits>
 #include <algorithm>
+#include <color-conversion/colorconversion.h>
 
 
 heif_chroma chroma_from_subsampling(int h, int v)
@@ -629,14 +630,45 @@ Error HeifPixelImage::copy_image_to(const std::shared_ptr<const HeifPixelImage>&
 }
 
 
-Error HeifPixelImage::rotate_ccw(int angle_degrees,
-                                 std::shared_ptr<HeifPixelImage> &out_img) {
+Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_degrees)
+{
+  // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before rotation
 
-  // --- create output image (or simply reuse existing image)
+  bool need_conversion = false;
+
+  if (get_chroma_format() == heif_chroma_422) {
+    if (angle_degrees == 90 || angle_degrees == 270) {
+      need_conversion = true;
+    }
+    else if (angle_degrees == 180 && has_odd_height()) {
+      need_conversion = true;
+    }
+  }
+  else if (get_chroma_format() == heif_chroma_420) {
+    if (angle_degrees == 90 && has_odd_width()) {
+      need_conversion = true;
+    }
+    else if (angle_degrees == 180 && (has_odd_width() || has_odd_height())) {
+      need_conversion = true;
+    }
+    else if (angle_degrees == 270 && has_odd_height()) {
+      need_conversion = true;
+    }
+  }
+
+  if (need_conversion) {
+    heif_color_conversion_options options{};
+    heif_color_conversion_options_set_default(&options);
+
+    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    return converted_image->rotate_ccw(angle_degrees);
+  }
+
+
+  // --- create output image
 
   if (angle_degrees == 0) {
-    out_img = shared_from_this();
-    return Error::Ok;
+    return shared_from_this();
   }
 
   uint32_t out_width = m_width;
@@ -646,7 +678,7 @@ Error HeifPixelImage::rotate_ccw(int angle_degrees,
     std::swap(out_width, out_height);
   }
 
-  out_img = std::make_shared<HeifPixelImage>();
+  std::shared_ptr<HeifPixelImage> out_img = std::make_shared<HeifPixelImage>();
   out_img->create(out_width, out_height, m_colorspace, m_chroma);
 
 
@@ -753,8 +785,32 @@ void HeifPixelImage::ImagePlane::mirror_inplace(heif_transform_mirror_direction 
 }
 
 
-Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
+Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
 {
+  // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before rotation
+
+  bool need_conversion = false;
+
+  if (get_chroma_format() == heif_chroma_422) {
+    if (direction == heif_transform_mirror_direction_horizontal && has_odd_width()) {
+      need_conversion = true;
+    }
+  }
+  else if (get_chroma_format() == heif_chroma_420) {
+    if (has_odd_width() || has_odd_height()) {
+      need_conversion = true;
+    }
+  }
+
+  if (need_conversion) {
+    heif_color_conversion_options options{};
+    heif_color_conversion_options_set_default(&options);
+
+    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    return converted_image->mirror_inplace(direction);
+  }
+
+
   for (auto& plane_pair : m_planes) {
     ImagePlane& plane = plane_pair.second;
 
@@ -776,13 +832,13 @@ Error HeifPixelImage::mirror_inplace(heif_transform_mirror_direction direction)
     else {
       std::stringstream sstr;
       sstr << "Cannot mirror images with " << plane.m_bit_depth << " bits per pixel";
-      return {heif_error_Unsupported_feature,
-              heif_suberror_Unspecified,
-              sstr.str()};
+      return Error{heif_error_Unsupported_feature,
+                   heif_suberror_Unspecified,
+                   sstr.str()};
     }
   }
 
-  return Error::Ok;
+  return shared_from_this();
 }
 
 
@@ -807,10 +863,31 @@ int HeifPixelImage::ImagePlane::get_bytes_per_pixel() const
 }
 
 
-Error HeifPixelImage::crop(int left, int right, int top, int bottom,
-                           std::shared_ptr<HeifPixelImage>& out_img) const
+Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom) const
 {
-  out_img = std::make_shared<HeifPixelImage>();
+  // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before rotation
+
+  bool need_conversion = false;
+
+  if (get_chroma_format() == heif_chroma_422 && (left & 1) == 1) {
+      need_conversion = true;
+  }
+  else if (get_chroma_format() == heif_chroma_420 &&
+           ((left & 1) == 1 || (top & 1) == 1)) {
+    need_conversion = true;
+  }
+
+  if (need_conversion) {
+    heif_color_conversion_options options{};
+    heif_color_conversion_options_set_default(&options);
+
+    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    return converted_image->crop(left, right, top, bottom);
+  }
+
+
+
+  auto out_img = std::make_shared<HeifPixelImage>();
   out_img->create(right - left + 1, bottom - top + 1, m_colorspace, m_chroma);
 
 
@@ -845,7 +922,7 @@ Error HeifPixelImage::crop(int left, int right, int top, int bottom,
   out_img->set_color_profile_nclx(get_color_profile_nclx());
   out_img->set_color_profile_icc(get_color_profile_icc());
 
-  return Error::Ok;
+  return out_img;
 }
 
 

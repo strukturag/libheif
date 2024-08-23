@@ -1609,6 +1609,9 @@ struct heif_color_conversion_options
   uint8_t only_use_preferred_chroma_algorithm;
 };
 
+LIBHEIF_API
+void heif_color_conversion_options_set_default(struct heif_color_conversion_options*);
+
 
 struct heif_decoding_options
 {

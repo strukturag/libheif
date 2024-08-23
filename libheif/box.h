@@ -820,10 +820,10 @@ public:
 
   std::string dump(Indent&) const override;
 
-  int left_rounded(int image_width) const;  // first column
-  int right_rounded(int image_width) const; // last column that is part of the cropped image
-  int top_rounded(int image_height) const;   // first row
-  int bottom_rounded(int image_height) const; // last row included in the cropped image
+  int left_rounded(uint32_t image_width) const;  // first column
+  int right_rounded(uint32_t image_width) const; // last column that is part of the cropped image
+  int top_rounded(uint32_t image_height) const;   // first row
+  int bottom_rounded(uint32_t image_height) const; // last row included in the cropped image
 
   double left(int image_width) const;
   double top(int image_height) const;
