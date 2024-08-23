@@ -269,10 +269,15 @@ Result<ImageItem::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const
       pixi->add_channel_bits(image->get_bits_per_pixel(heif_channel_B));
     }
     else if (chroma == heif_chroma_interleaved_RGB ||
-             chroma == heif_chroma_interleaved_RGBA) {
-      pixi->add_channel_bits(8);
-      pixi->add_channel_bits(8);
-      pixi->add_channel_bits(8);
+             chroma == heif_chroma_interleaved_RGBA ||
+             chroma == heif_chroma_interleaved_RRGGBB_LE ||
+             chroma == heif_chroma_interleaved_RRGGBB_BE ||
+             chroma == heif_chroma_interleaved_RRGGBBAA_LE ||
+             chroma == heif_chroma_interleaved_RRGGBBAA_BE) {
+      uint8_t bpp = image->get_bits_per_pixel(heif_channel_interleaved);
+      pixi->add_channel_bits(bpp);
+      pixi->add_channel_bits(bpp);
+      pixi->add_channel_bits(bpp);
     }
   }
   codedImage.properties.push_back(pixi);
@@ -317,8 +322,8 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class)
 {
-  uint32_t input_width = image->get_width(heif_channel_Y);
-  uint32_t input_height = image->get_height(heif_channel_Y);
+  uint32_t input_width = image->get_width();
+  uint32_t input_height = image->get_height();
 
   set_size(input_width, input_height);
 
