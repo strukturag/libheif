@@ -283,7 +283,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   std::vector<Node> processed_states;
   std::vector<Node> border_states;
-  border_states.push_back({-1, nullptr, input_state, 0});
+  border_states.emplace_back(-1, nullptr, input_state, 0);
 
   while (!border_states.empty()) {
     int minIdx = -1;
@@ -402,10 +402,10 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
           ColorStateWithCost s = out_state;
           s.speed_costs = s.speed_costs + processed_states.back().speed_costs;
 
-          border_states.push_back({(int) (processed_states.size() - 1),
-                                   op_ptr,
-                                   s.color_state,
-                                   s.speed_costs});
+          border_states.emplace_back((int) (processed_states.size() - 1),
+                                     op_ptr,
+                                     s.color_state,
+                                     s.speed_costs);
         }
       }
     }

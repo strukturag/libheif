@@ -62,10 +62,10 @@ uint8_t chroma_v_subsampling(heif_chroma c)
 }
 
 
-void get_subsampled_size(int width, int height,
-                               heif_channel channel,
-                               heif_chroma chroma,
-                               int* subsampled_width, int* subsampled_height)
+void get_subsampled_size(uint32_t width, uint32_t height,
+                         heif_channel channel,
+                         heif_chroma chroma,
+                         uint32_t* subsampled_width, uint32_t* subsampled_height)
 {
   if (channel == heif_channel_Cb ||
       channel == heif_channel_Cr) {

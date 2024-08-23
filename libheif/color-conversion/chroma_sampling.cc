@@ -119,15 +119,15 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   auto colorProfile = input->get_color_profile_nclx();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_420);
 
-  int cwidth = (width + 1) / 2;
-  int cheight = (height + 1) / 2;
+  uint32_t cwidth = (width + 1) / 2;
+  uint32_t cheight = (height + 1) / 2;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
       !outimg->add_plane(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
@@ -142,10 +142,10 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   const Pixel* in_y, * in_cb, * in_cr, * in_a;
-  int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   Pixel* out_y, * out_cb, * out_cr, * out_a;
-  int out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
+  uint32_t out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
 
   in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -178,7 +178,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   // --- fill right and bottom borders if the image size is odd
 
   if (height & 1) {
-    for (int x = 0; x < width - 1; x += 2) {
+    for (uint32_t x = 0; x < width - 1; x += 2) {
       out_cb[(cheight - 1) * out_cb_stride + x / 2] = (Pixel) ((in_cb[(height - 1) * in_cb_stride + x] +
                                                                 in_cb[(height - 1) * in_cb_stride + x + 1] + 1) / 2);
       out_cr[(cheight - 1) * out_cr_stride + x / 2] = (Pixel) ((in_cr[(height - 1) * in_cr_stride + x] +
@@ -187,7 +187,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   if (width & 1) {
-    for (int y = 0; y < height - 1; y += 2) {
+    for (uint32_t y = 0; y < height - 1; y += 2) {
       out_cb[(y / 2) * out_cb_stride + cwidth - 1] = (Pixel) ((in_cb[(y + 0) * in_cb_stride + width - 1] +
                                                                in_cb[(y + 1) * in_cb_stride + width - 1] + 1) / 2);
       out_cr[(y / 2) * out_cr_stride + cwidth - 1] = (Pixel) ((in_cr[(y + 0) * in_cr_stride + width - 1] +
@@ -203,7 +203,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   // --- averaging filter
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height - 1; y += 2) {
     for (x = 0; x < width - 1; x += 2) {
       Pixel cb00 = in_cb[y * in_cb_stride + x];
@@ -223,7 +223,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   // TODO: check whether we can use HeifPixelImage::transfer_plane_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    int copyWidth = (hdr ? width * 2 : width);
+    uint32_t copyWidth = (hdr ? width * 2 : width);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
@@ -337,15 +337,15 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   auto colorProfile = input->get_color_profile_nclx();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_422);
 
-  int cwidth = (width + 1) / 2;
-  int cheight = height;
+  uint32_t cwidth = (width + 1) / 2;
+  uint32_t cheight = height;
 
   if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
       !outimg->add_plane(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
@@ -360,10 +360,10 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   }
 
   const Pixel* in_y, * in_cb, * in_cr, * in_a;
-  int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   Pixel* out_y, * out_cb, * out_cr, * out_a;
-  int out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
+  uint32_t out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
 
   in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -396,7 +396,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   // --- fill right border if the image size is odd
 
   if (width & 1) {
-    for (int y = 0; y < height - 1; y++) {
+    for (uint32_t y = 0; y < height - 1; y++) {
       out_cb[y * out_cb_stride + cwidth - 1] = (Pixel) in_cb[y * in_cb_stride + width - 1];
       out_cr[y * out_cr_stride + cwidth - 1] = (Pixel) in_cr[y * in_cr_stride + width - 1];
     }
@@ -405,7 +405,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
 
   // --- averaging filter
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
     for (x = 0; x < width - 1; x += 2) {
       Pixel cb00 = in_cb[y * in_cb_stride + x];
@@ -421,7 +421,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   // TODO: check whether we can use HeifPixelImage::transfer_plane_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    int copyWidth = (hdr ? width * 2 : width);
+    uint32_t copyWidth = (hdr ? width * 2 : width);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
@@ -531,8 +531,8 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   auto colorProfile = input->get_color_profile_nclx();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -551,10 +551,10 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
   const Pixel* in_y, * in_cb, * in_cr, * in_a;
-  int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   Pixel* out_y, * out_cb, * out_cr, * out_a;
-  int out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
+  uint32_t out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
 
   in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -611,7 +611,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   out_cr[0] = in_cr[0];
 
   // top border
-  for (int cx = 0; cx < (width - 1) / 2; cx++) {
+  for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
     out_cb[0 * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[cx / 2] + 1 * in_cb[cx / 2 + 1] + 2) / 4);
     out_cb[0 * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[cx / 2] + 3 * in_cb[cx / 2 + 1] + 2) / 4);
     out_cr[0 * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[cx / 2] + 1 * in_cr[cx / 2 + 1] + 2) / 4);
@@ -625,7 +625,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
   // left border
-  for (int cy = 0; cy < (height - 1) / 2; cy++) {
+  for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
     out_cb[(2 * cy + 1) * out_cb_stride + 0] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
     out_cb[(2 * cy + 2) * out_cb_stride + 0] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride] + 2) / 4);
     out_cr[(2 * cy + 1) * out_cr_stride + 0] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride] + 2) / 4);
@@ -640,7 +640,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // right border
   if (width % 2 == 0) {
-    for (int cy = 0; cy < (height - 1) / 2; cy++) {
+    for (uint32_t cy = 0; cy < (height - 1) / 2; cy++) {
       out_cb[(2 * cy + 1) * out_cb_stride + width - 1] = (Pixel) ((3 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 1 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
       out_cb[(2 * cy + 2) * out_cb_stride + width - 1] = (Pixel) ((1 * in_cb[cy / 2 * in_cb_stride + width / 2 - 1] + 3 * in_cb[(cy / 2 + 1) * in_cb_stride + width / 2 - 1] + 2) / 4);
       out_cr[(2 * cy + 1) * out_cr_stride + width - 1] = (Pixel) ((3 * in_cr[cy / 2 * in_cr_stride + width / 2 - 1] + 1 * in_cr[(cy / 2 + 1) * in_cr_stride + width / 2 - 1] + 2) / 4);
@@ -650,7 +650,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // bottom border
   if (height % 2 == 0) {
-    for (int cx = 0; cx < (width - 1) / 2; cx++) {
+    for (uint32_t cx = 0; cx < (width - 1) / 2; cx++) {
       out_cb[(height - 1) * out_cb_stride + 2 * cx + 1] = (Pixel) ((3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
       out_cb[(height - 1) * out_cb_stride + 2 * cx + 2] = (Pixel) ((1 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2] + 3 * in_cb[(height / 2 - 1) * in_cb_stride + cx / 2 + 1] + 2) / 4);
       out_cr[(height - 1) * out_cr_stride + 2 * cx + 1] = (Pixel) ((3 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2] + 1 * in_cr[(height / 2 - 1) * in_cr_stride + cx / 2 + 1] + 2) / 4);
@@ -667,11 +667,11 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // --- bilinear filtering of inner part
 
-  int x, y;
+  uint32_t x, y;
   for (y = 1; y < height - 1; y += 2) {
     for (x = 1; x < width - 1; x += 2) {
-      int cx = x / 2;
-      int cy = y / 2;
+      uint32_t cx = x / 2;
+      uint32_t cy = y / 2;
 
       Pixel cb00 = in_cb[cy * in_cb_stride + cx];
       Pixel cr00 = in_cr[cy * in_cr_stride + cx];
@@ -697,7 +697,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // TODO: check whether we can use HeifPixelImage::transfer_plane_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    int copyWidth = (hdr ? width * 2 : width);
+    uint32_t copyWidth = (hdr ? width * 2 : width);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 
@@ -808,8 +808,8 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   auto colorProfile = input->get_color_profile_nclx();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -828,10 +828,10 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   }
 
   const Pixel* in_y, * in_cb, * in_cr, * in_a;
-  int in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
+  uint32_t in_y_stride = 0, in_cb_stride = 0, in_cr_stride = 0, in_a_stride = 0;
 
   Pixel* out_y, * out_cb, * out_cr, * out_a;
-  int out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
+  uint32_t out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
 
   in_y = (const Pixel*) input->get_plane(heif_channel_Y, &in_y_stride);
   in_cb = (const Pixel*) input->get_plane(heif_channel_Cb, &in_cb_stride);
@@ -883,14 +883,14 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // --- fill borders
 
   // left border
-  for (int cy = 0; cy < height; cy++) {
+  for (uint32_t cy = 0; cy < height; cy++) {
     out_cb[cy * out_cb_stride] = in_cb[cy * in_cb_stride];
     out_cr[cy * out_cr_stride] = in_cr[cy * in_cr_stride];
   }
 
   // right border
   if (width % 2 == 0) {
-    for (int cy = 0; cy < height; cy++) {
+    for (uint32_t cy = 0; cy < height; cy++) {
       out_cb[cy * out_cb_stride + width - 1] = in_cb[cy * in_cb_stride + width / 2 - 1];
       out_cr[cy * out_cr_stride + width - 1] = in_cr[cy * in_cr_stride + width / 2 - 1];
     }
@@ -899,7 +899,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   // --- bilinear filtering of inner part
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
     for (x = 1; x < width - 1; x += 2) {
       int cx = x / 2;
@@ -920,7 +920,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   // TODO: check whether we can use HeifPixelImage::transfer_plane_from_image_as() instead of copying Y and Alpha
 
   for (y = 0; y < height; y++) {
-    int copyWidth = (hdr ? width * 2 : width);
+    uint32_t copyWidth = (hdr ? width * 2 : width);
 
     memcpy(&out_y[y * out_y_stride], &in_y[y * in_y_stride], copyWidth);
 

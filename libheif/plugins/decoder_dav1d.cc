@@ -260,7 +260,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     const uint8_t* data = (uint8_t*) frame.data[c];
     int stride = (int) frame.stride[c > 0 ? 1 : 0];
 
-    int w, h;
+    uint32_t w, h;
     get_subsampled_size(frame.p.w, frame.p.h,
                         channel2plane[c], chroma, &w, &h);
 
@@ -275,7 +275,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
     int bytes_per_pixel = (bpp + 7) / 8;
 
-    for (int y = 0; y < h; y++) {
+    for (uint32_t y = 0; y < h; y++) {
       memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
     }
   }

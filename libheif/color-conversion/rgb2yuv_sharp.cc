@@ -129,8 +129,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const heif_color_conversion_options& options) const
 {
 #ifdef HAVE_LIBSHARPYUV
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -142,8 +142,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
 
   outimg->create(width, height, heif_colorspace_YCbCr, output_chroma);
 
-  int chroma_width = (width + chromaSubH - 1) / chromaSubH;
-  int chroma_height = (height + chromaSubV - 1) / chromaSubV;
+  uint32_t chroma_width = (width + chromaSubH - 1) / chromaSubH;
+  uint32_t chroma_height = (height + chromaSubV - 1) / chromaSubV;
 
   bool has_alpha =
       input->get_chroma_format() == heif_chroma_interleaved_RGBA ||
@@ -175,12 +175,12 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
       : 2;
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  int in_stride = 0;
-  int in_a_stride = 0;
+  uint32_t in_stride = 0;
+  uint32_t in_a_stride = 0;
   bool planar_input = input_chroma == heif_chroma_444;
   int input_bits = 0;
   if (planar_input) {
-    int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
+    uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0;
     in_r = input->get_plane(heif_channel_R, &in_r_stride);
     in_g = input->get_plane(heif_channel_G, &in_g_stride);
     in_b = input->get_plane(heif_channel_B, &in_b_stride);
@@ -211,7 +211,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     }
   }
 
-  int out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
+  uint32_t out_cb_stride = 0, out_cr_stride = 0, out_y_stride = 0;
   uint8_t* out_y = outimg->get_plane(heif_channel_Y, &out_y_stride);
   uint8_t* out_cb = outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   uint8_t* out_cr = outimg->get_plane(heif_channel_Cr, &out_cr_stride);
@@ -246,12 +246,12 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
               (planar_input && !PlatformIsBigEndian()))
              ? 1
              : 0;
-    int out_a_stride;
+    uint32_t out_a_stride;
 
     uint8_t* out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
     uint16_t alpha_max = static_cast<uint16_t>((1 << input_bits) - 1);
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
+    for (uint32_t y = 0; y < height; y++) {
+      for (uint32_t x = 0; x < width; x++) {
         const uint8_t* in = has_alpha ? &in_a[y * in_a_stride + x * rgb_step] : nullptr;
         uint16_t a = has_alpha
                      ? ((input_bits == 8)

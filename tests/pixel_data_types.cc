@@ -34,7 +34,7 @@ TEST_CASE( "uint32_t" )
   image.create(3,2, heif_colorspace_nonvisual, heif_chroma_undefined);
   image.add_channel(heif_channel_other_first, 3,2, heif_channel_datatype_unsigned_integer, 32);
 
-  int stride;
+  uint32_t stride;
   uint32_t* data = image.get_channel<uint32_t>(heif_channel_other_first, &stride);
 
   REQUIRE(stride >= 3);
@@ -124,7 +124,7 @@ TEST_CASE( "complex64_t" )
   image.create(3,2, heif_colorspace_nonvisual, heif_chroma_undefined);
   image.add_channel(heif_channel_other_first, 3,2, heif_channel_datatype_complex_number, 128);
 
-  int stride;
+  uint32_t stride;
   heif_complex64* data = image.get_channel<heif_complex64>(heif_channel_other_first, &stride);
 
   REQUIRE(stride >= 3);
@@ -155,7 +155,7 @@ TEST_CASE( "image datatype through public API" )
 
   heif_image_add_channel(image, heif_channel_other_first, 3,2, heif_channel_datatype_unsigned_integer, 32);
 
-  int stride;
+  uint32_t stride;
   uint32_t* data = heif_image_get_channel_uint32(image, heif_channel_other_first, &stride);
   REQUIRE(data != nullptr);
 

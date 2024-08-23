@@ -64,13 +64,13 @@ public:
 
   ~HeifPixelImage();
 
-  void create(int width, int height, heif_colorspace colorspace, heif_chroma chroma);
+  void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
 
   void create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h);
 
-  bool add_plane(heif_channel channel, int width, int height, int bit_depth);
+  bool add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth);
 
-  bool add_channel(heif_channel channel, int width, int height, heif_channel_datatype datatype, int bit_depth);
+  bool add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth);
 
   bool has_channel(heif_channel channel) const;
 
@@ -103,12 +103,12 @@ public:
 
   int get_number_of_interleaved_components(heif_channel channel) const;
 
-  uint8_t* get_plane(enum heif_channel channel, int* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
+  uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) { return get_channel<uint8_t>(channel, out_stride); }
 
-  const uint8_t* get_plane(enum heif_channel channel, int* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
+  const uint8_t* get_plane(enum heif_channel channel, uint32_t* out_stride) const { return get_channel<uint8_t>(channel, out_stride); }
 
   template <typename T>
-  T* get_channel(enum heif_channel channel, int* out_stride)
+  T* get_channel(enum heif_channel channel, uint32_t* out_stride)
   {
     auto iter = m_planes.find(channel);
     if (iter == m_planes.end()) {
@@ -128,7 +128,7 @@ public:
   }
 
   template <typename T>
-  const T* get_channel(enum heif_channel channel, int* out_stride) const
+  const T* get_channel(enum heif_channel channel, uint32_t* out_stride) const
   {
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
   }
@@ -161,7 +161,7 @@ public:
 
   Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy);
 
-  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, int width, int height) const;
+  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height) const;
 
   void set_color_profile_nclx(const std::shared_ptr<const color_profile_nclx>& profile) { m_color_profile_nclx = profile; }
 
@@ -173,7 +173,7 @@ public:
 
   void debug_dump() const;
 
-  bool extend_padding_to_size(int width, int height);
+  bool extend_padding_to_size(uint32_t width, uint32_t height);
 
   // --- pixel aspect ratio
 
@@ -222,19 +222,19 @@ public:
 private:
   struct ImagePlane
   {
-    bool alloc(int width, int height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
+    bool alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;
     uint8_t m_num_interleaved_components = 1;
 
     // the "visible" area of the plane
-    int m_width = 0;
-    int m_height = 0;
+    uint32_t m_width = 0;
+    uint32_t m_height = 0;
 
     // the allocated memory size
-    int m_mem_width = 0;
-    int m_mem_height = 0;
+    uint32_t m_mem_width = 0;
+    uint32_t m_mem_height = 0;
 
     void* mem = nullptr; // aligned memory start
     uint8_t* allocated_mem = nullptr; // unaligned memory we allocated
@@ -247,7 +247,7 @@ private:
     template<typename T>
     void rotate_ccw(int angle_degrees, ImagePlane& out_plane) const;
 
-    void crop(int left, int right, int top, int bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
+    void crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, int bytes_per_pixel, ImagePlane& out_plane) const;
   };
 
   uint32_t m_width = 0;

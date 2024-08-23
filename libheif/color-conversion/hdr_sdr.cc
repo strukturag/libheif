@@ -71,8 +71,8 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
                                heif_channel_B,
                                heif_channel_Alpha}) {
     if (input->has_channel(channel)) {
-      int width = input->get_width(channel);
-      int height = input->get_height(channel);
+      uint32_t width = input->get_width(channel);
+      uint32_t height = input->get_height(channel);
       if (!outimg->add_plane(channel, width, height, target_state.bits_per_pixel)) {
         return nullptr;
       }
@@ -84,16 +84,16 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       int shift2 = 2 * input_bits - output_bits;
 
       const uint8_t* p_in;
-      int stride_in;
+      uint32_t stride_in;
       p_in = input->get_plane(channel, &stride_in);
 
       uint16_t* p_out;
-      int stride_out;
+      uint32_t stride_out;
       p_out = (uint16_t*) outimg->get_plane(channel, &stride_out);
       stride_out /= 2;
 
-      for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++) {
+      for (uint32_t y = 0; y < height; y++)
+        for (uint32_t x = 0; x < width; x++) {
           int in = p_in[y * stride_in + x];
           // TODO: support for <8 bpp may need more than two copies of the input bit pattern
           p_out[y * stride_out + x] = (uint16_t) ((in << shift1) | (in >> shift2));
@@ -162,8 +162,8 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       int input_bits = input->get_bits_per_pixel(channel);
 
       if (input_bits > 8) {
-        int width = input->get_width(channel);
-        int height = input->get_height(channel);
+        uint32_t width = input->get_width(channel);
+        uint32_t height = input->get_height(channel);
         if (!outimg->add_plane(channel, width, height, 8)) {
           return nullptr;
         }
@@ -171,22 +171,22 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
         int shift = input_bits - 8;
 
         const uint16_t* p_in;
-        int stride_in;
+        uint32_t stride_in;
         p_in = (uint16_t*) input->get_plane(channel, &stride_in);
         stride_in /= 2;
 
         uint8_t* p_out;
-        int stride_out;
+        uint32_t stride_out;
         p_out = outimg->get_plane(channel, &stride_out);
 
-        for (int y = 0; y < height; y++)
-          for (int x = 0; x < width; x++) {
+        for (uint32_t y = 0; y < height; y++)
+          for (uint32_t x = 0; x < width; x++) {
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) (in >> shift); // TODO: I think no rounding here, but am not sure.
           }
       } else if (input_bits < 8) {
-        int width = input->get_width(channel);
-        int height = input->get_height(channel);
+        uint32_t width = input->get_width(channel);
+        uint32_t height = input->get_height(channel);
         if (!outimg->add_plane(channel, width, height, 8)) {
           return nullptr;
         }
@@ -203,7 +203,7 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
         //                   output
 
         assert(input_bits > 0 && input_bits < 8);
-        uint16_t bit = static_cast<uint16_t>(1 << (16 - input_bits));
+        auto bit = static_cast<uint16_t>(1 << (16 - input_bits));
         uint16_t mulFactor = bit;
 
         for (;;) {
@@ -215,14 +215,14 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
           mulFactor |= bit;
         }
 
-        int stride_in;
+        uint32_t stride_in;
         const uint8_t* p_in = input->get_plane(channel, &stride_in);
 
-        int stride_out;
+        uint32_t stride_out;
         uint8_t* p_out = outimg->get_plane(channel, &stride_out);
 
-        for (int y = 0; y < height; y++)
-          for (int x = 0; x < width; x++) {
+        for (uint32_t y = 0; y < height; y++)
+          for (uint32_t x = 0; x < width; x++) {
             int in = p_in[y * stride_in + x];
             p_out[y * stride_out + x] = (uint8_t) ((in * mulFactor) >> 8);
           }

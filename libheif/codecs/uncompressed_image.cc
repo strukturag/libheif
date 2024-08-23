@@ -584,8 +584,8 @@ protected:
     heif_channel channel = heif_channel_Y;
     uint8_t* dst_plane;
     uint8_t* other_chroma_dst_plane;
-    int dst_plane_stride;
-    int other_chroma_dst_plane_stride;
+    uint32_t dst_plane_stride;
+    uint32_t other_chroma_dst_plane_stride;
     uint32_t tile_width;
     uint32_t tile_height;
     uint32_t bytes_per_component_sample;
@@ -1293,7 +1293,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
     uint64_t offset = 0;
     for (heif_channel channel : {heif_channel_Y, heif_channel_Cb, heif_channel_Cr})
     {
-      int src_stride;
+      uint32_t src_stride;
       uint32_t src_width = src_image->get_width(channel);
       uint32_t src_height = src_image->get_height(channel);
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
@@ -1319,7 +1319,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
       }
       for (heif_channel channel : channels)
       {
-        int src_stride;
+        uint32_t src_stride;
         uint8_t* src_data = src_image->get_plane(channel, &src_stride);
         uint64_t out_size = src_image->get_height() * src_stride;
         data.resize(data.size() + out_size);
@@ -1356,7 +1356,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
           assert(false);
       }
 
-      int src_stride;
+      uint32_t src_stride;
       uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
       uint64_t out_size = src_image->get_height() * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
@@ -1387,7 +1387,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
     }
     for (heif_channel channel : channels)
     {
-      int src_stride;
+      uint32_t src_stride;
       uint8_t* src_data = src_image->get_plane(channel, &src_stride);
       uint64_t out_size = src_image->get_height() * src_stride;
       data.resize(data.size() + out_size);

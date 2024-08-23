@@ -1572,12 +1572,24 @@ const uint8_t* heif_image_get_plane_readonly(const struct heif_image* image,
                                              enum heif_channel channel,
                                              int* out_stride)
 {
+  if (!out_stride) {
+    return nullptr;
+  }
+
   if (!image || !image->image) {
     *out_stride = 0;
     return nullptr;
   }
 
-  return image->image->get_plane(channel, out_stride);
+  uint32_t stride;
+  const auto* p = image->image->get_plane(channel, &stride);
+
+  if (stride > std::numeric_limits<int>::max()) {
+    return nullptr;
+  }
+
+  *out_stride = static_cast<int>(stride);
+  return p;
 }
 
 
@@ -1585,12 +1597,24 @@ uint8_t* heif_image_get_plane(struct heif_image* image,
                               enum heif_channel channel,
                               int* out_stride)
 {
+  if (!out_stride) {
+    return nullptr;
+  }
+
   if (!image || !image->image) {
     *out_stride = 0;
     return nullptr;
   }
 
-  return image->image->get_plane(channel, out_stride);
+  uint32_t stride;
+  uint8_t* p = image->image->get_plane(channel, &stride);
+
+  if (stride > std::numeric_limits<int>::max()) {
+    return nullptr;
+  }
+
+  *out_stride = static_cast<int>(stride);
+  return p;
 }
 
 
@@ -1635,7 +1659,7 @@ void heif_channel_release_list(enum heif_channel** channels)
 #define heif_image_get_channel_X(name, type, datatype, bits) \
 const type* heif_image_get_channel_ ## name ## _readonly(const struct heif_image* image, \
                                                          enum heif_channel channel, \
-                                                         int* out_stride) \
+                                                         uint32_t* out_stride) \
 {                                                            \
   if (!image || !image->image) {                             \
     *out_stride = 0;                                         \
@@ -1653,7 +1677,7 @@ const type* heif_image_get_channel_ ## name ## _readonly(const struct heif_image
                                                              \
 type* heif_image_get_channel_ ## name (struct heif_image* image, \
                                        enum heif_channel channel, \
-                                       int* out_stride)      \
+                                       uint32_t* out_stride)      \
 {                                                            \
   if (!image || !image->image) {                             \
     *out_stride = 0;                                         \
