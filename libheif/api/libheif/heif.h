@@ -1234,7 +1234,10 @@ struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx
                                                         heif_item_id* out_group_id);
 
 LIBHEIF_API
-struct heif_pyramid_layer_info* heif_context_get_pymd_entity_group_info(struct heif_context*, heif_entity_group_id id, int* out_num_layers);
+struct heif_pyramid_layer_info* heif_context_get_pyramid_entity_group_info(struct heif_context*, heif_entity_group_id id, int* out_num_layers);
+
+LIBHEIF_API
+void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info*);
 
 // ------------------------- depth images -------------------------
 

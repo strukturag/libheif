@@ -1268,6 +1268,26 @@ void HeifFile::add_entity_group_box(const std::shared_ptr<Box>& entity_group_box
 }
 
 
+std::shared_ptr<Box_EntityToGroup> HeifFile::get_entity_group(heif_entity_group_id id)
+{
+  if (!m_grpl_box) {
+    return nullptr;
+  }
+
+  const auto& entityGroups = m_grpl_box->get_all_child_boxes();
+  for (auto& groupBase : entityGroups) {
+    auto group = std::dynamic_pointer_cast<Box_EntityToGroup>(groupBase);
+    assert(group);
+
+    if (group->get_group_id() == id) {
+      return group;
+    }
+  }
+
+  return nullptr;
+}
+
+
 void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
 {
   auto auxC = std::make_shared<Box_auxC>();

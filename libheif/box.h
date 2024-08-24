@@ -1006,6 +1006,8 @@ public:
     tile_size_y = _tile_size_y;
   }
 
+  const std::vector<LayerInfo>& get_layers() const { return m_layer_infos; }
+
 protected:
   uint16_t tile_size_x = 0;
   uint16_t tile_size_y = 0;

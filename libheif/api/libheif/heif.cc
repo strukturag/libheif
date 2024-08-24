@@ -1038,6 +1038,50 @@ struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx
 }
 
 
+struct heif_pyramid_layer_info* heif_context_get_pyramid_entity_group_info(struct heif_context* ctx, heif_entity_group_id id, int* out_num_layers)
+{
+  if (!out_num_layers) {
+    return nullptr;
+  }
+
+  std::shared_ptr<Box_EntityToGroup> groupBox = ctx->context->get_heif_file()->get_entity_group(id);
+  if (!groupBox) {
+    return nullptr;
+  }
+
+  const auto pymdBox = std::dynamic_pointer_cast<Box_pymd>(groupBox);
+  if (!pymdBox) {
+    return nullptr;
+  }
+
+  const std::vector<Box_pymd::LayerInfo> pymd_layers = pymdBox->get_layers();
+  if (pymd_layers.empty()) {
+    return nullptr;
+  }
+
+  auto items = pymdBox->get_item_ids();
+  assert(items.size() == pymd_layers.size());
+
+  auto* layerInfo = new heif_pyramid_layer_info[pymd_layers.size()];
+  for (size_t i=0; i<pymd_layers.size(); i++) {
+    layerInfo[i].layer_image_id = items[i];
+    layerInfo[i].layer_binning = pymd_layers[i].layer_binning;
+    layerInfo[i].tiles_in_layer_row = pymd_layers[i].tiles_in_layer_row_minus1 + 1;
+    layerInfo[i].tiles_in_layer_column = pymd_layers[i].tiles_in_layer_column_minus1 + 1;
+  }
+
+  *out_num_layers = static_cast<int>(pymd_layers.size());
+
+  return layerInfo;
+}
+
+
+void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info* infos)
+{
+  delete[] infos;
+}
+
+
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
                                                                       enum heif_chroma* out_chroma)
