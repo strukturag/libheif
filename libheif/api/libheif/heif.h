@@ -990,13 +990,18 @@ struct heif_reader
   // you can set them to NULL. For simple linear loading, you may use the 'wait_for_file_size'
   // function above instead.
 
-  // If this function is defined, libheif will request a file range before accessing it.
+  // If this function is defined, libheif will often request a file range before accessing it.
   // `end_pos` is one byte after the last position to be read.
   // You should return
   // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
   // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
   //   (the valid part of the range has been read).
   struct heif_reader_range_request_result (*request_file_range)(int64_t start_pos, int64_t end_pos, void* userdata);
+
+  // libheif might issue hints when it assumes that a file range might be needed in the future.
+  // This may happen, for example, when your are doing selective tile accesses and libheif proposes
+  // to preload offset pointer tables.
+  void (*hint_preload_range)(int64_t start_pos, int64_t end_pos, void* userdata);
 
   // If libheif does not need access to a file range anymore, it may call this function to
   // give a hint to the reader that it may release the range from a cache.
@@ -1193,6 +1198,26 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
                                                   uint32_t* tile_width, uint32_t* tile_height);
 
 
+// ------------------------- entity groups ------------------------
+
+typedef uint32_t heif_entity_group_id;
+
+struct heif_entity_group
+{
+  heif_entity_group_id entity_group_id;
+  uint32_t entity_group_type;
+  heif_item_id* entities;
+  uint32_t num_entities;
+};
+
+// Use 0 for `type_filter` or `item_filter` to disable the filter.
+LIBHEIF_API
+struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context*, uint32_t type_filter, uint32_t item_filter, int* out_num_groups);
+
+LIBHEIF_API
+void heif_entity_group_release(struct heif_entity_group*, int num_groups);
+
+
 struct heif_pyramid_layer_info {
   heif_item_id layer_image_id;
   uint16_t layer_binning;
@@ -1207,6 +1232,9 @@ struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx
                                                         uint32_t num_layers,
                                                         const struct heif_pyramid_layer_info* layers,
                                                         heif_item_id* out_group_id);
+
+LIBHEIF_API
+struct heif_pyramid_layer_info* heif_context_get_pymd_entity_group_info(struct heif_context*, heif_entity_group_id id, int* out_num_layers);
 
 // ------------------------- depth images -------------------------
 

@@ -62,6 +62,8 @@ public:
 
   Error read_from_memory(const void* data, size_t size, bool copy);
 
+  std::shared_ptr<StreamReader> get_reader() { return m_input_stream; }
+
   void new_empty_file();
 
   void set_brand(heif_compression_format format, bool miaf_compatible);
@@ -113,6 +115,8 @@ public:
   std::shared_ptr<Box_ipma> get_ipma_box() { return m_ipma_box; }
 
   std::shared_ptr<Box_ipma> get_ipma_box() const { return m_ipma_box; }
+
+  std::shared_ptr<Box_grpl> get_grpl_box() const { return m_grpl_box; }
 
   Error get_properties(heif_item_id imageID,
                        std::vector<std::shared_ptr<Box>>& properties) const;

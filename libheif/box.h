@@ -940,12 +940,16 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  void set_group_id(heif_item_id id) { group_id = id; }
+  void set_group_id(heif_entity_group_id id) { group_id = id; }
+
+  heif_entity_group_id get_group_id() const { return group_id; }
 
   void set_item_ids(const std::vector<heif_item_id>& ids) { entity_ids = ids; }
 
+  const std::vector<heif_item_id>& get_item_ids() const { return entity_ids; }
+
 protected:
-  uint32_t group_id;
+  heif_entity_group_id group_id = 0;
   std::vector<heif_item_id> entity_ids;
 
   Error parse(BitstreamRange& range) override;
