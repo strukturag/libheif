@@ -57,6 +57,11 @@ Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild
 
   std::vector<uint8_t> data;
 
+#if 0
+  const uint64_t APPROX_TILD_HEADER_SIZE = 1024;
+  uint64_t maxDataLen = file->request_iloc_data(tild_id, 0, APPROX_TILD_HEADER_SIZE);
+#endif
+
   Error err;
   err = file->append_data_from_iloc(tild_id, data, 0, 3);
   if (err) {
@@ -530,4 +535,11 @@ heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
   }
 
   return tiling;
+}
+
+
+void ImageItem_Tild::get_tile_size(uint32_t& w, uint32_t& h) const
+{
+  w = m_tild_header.get_parameters().tile_width;
+  h = m_tild_header.get_parameters().tile_height;
 }

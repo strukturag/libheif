@@ -474,6 +474,17 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
 }
 
 
+void ImageItem_Grid::get_tile_size(uint32_t& w, uint32_t& h) const
+{
+  heif_item_id first_tile_id = get_grid_tiles()[0];
+  auto tile = get_context()->get_image(first_tile_id);
+
+  w = tile->get_width();
+  h = tile->get_height();
+}
+
+
+
 int ImageItem_Grid::get_luma_bits_per_pixel() const
 {
   heif_item_id child;

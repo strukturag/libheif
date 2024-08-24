@@ -112,6 +112,8 @@ public:
 
   heif_image_tiling get_heif_image_tiling() const;
 
+  void get_tile_size(uint32_t& w, uint32_t& h) const;
+
 private:
   ImageGrid m_grid_spec;
   std::vector<heif_item_id> m_grid_tile_ids;

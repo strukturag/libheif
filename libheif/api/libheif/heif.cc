@@ -907,31 +907,27 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 
   // --- 'grid' image
 
-  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
-  if (gridItem) {
-    heif_item_id first_tile_id = gridItem->get_grid_tiles()[0];
-    auto tile = handle->context->get_image(first_tile_id);
+  uint32_t w,h;
 
-    if (tile_width) {
-      *tile_width = tile->get_width();
-    }
+  if (std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image)) {
+    gridItem->get_tile_size(w,h);
+  }
+  else if (std::shared_ptr<ImageItem_Tild> tildItem = std::dynamic_pointer_cast<ImageItem_Tild>(handle->image)) {
+    tildItem->get_tile_size(w,h);
+  }
+  else {
+    // return whole image size (the image is the only tile)
 
-    if (tile_height) {
-      *tile_height = tile->get_height();
-    }
-
-    return heif_error_success;
+    w = handle->image->get_width();
+    h = handle->image->get_height();
   }
 
-
-  // return whole image size (the image is the only tile)
-
   if (tile_width) {
-    *tile_width = handle->image->get_width();
+    *tile_width = w;
   }
 
   if (tile_height) {
-    *tile_height = handle->image->get_height();
+    *tile_height = h;
   }
 
   return heif_error_success;

@@ -125,12 +125,13 @@ public:
 
   TildHeader& get_tild_header() { return m_tild_header; }
 
-  uint64_t get_next_tild_position() { return m_next_tild_position; }
+  uint64_t get_next_tild_position() const { return m_next_tild_position; }
 
   void set_next_tild_position(uint64_t pos) { m_next_tild_position = pos; }
 
   heif_image_tiling get_heif_image_tiling() const;
 
+  void get_tile_size(uint32_t& w, uint32_t& h) const;
 
 private:
   TildHeader m_tild_header;
