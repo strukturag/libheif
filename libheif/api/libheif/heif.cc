@@ -986,6 +986,8 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
     groups[i].entities = (items.empty() ? nullptr : new heif_item_id[items.size()]);
     groups[i].num_entities = static_cast<uint32_t>(items.size());
 
+    assert((items.size()==0) == items.empty()); // avoid clang static analyzer false positive
+
     for (size_t k = 0; k < items.size(); k++) {
       groups[i].entities[k] = items[k];
     }
