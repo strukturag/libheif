@@ -764,8 +764,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- copy libheif image to aom image
 
-  aom_image_t input_image;
-
   aom_img_fmt_t img_format = AOM_IMG_FMT_NONE;
 
   int chroma_height = 0;
@@ -799,8 +797,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     img_format = (aom_img_fmt_t) (img_format | AOM_IMG_FMT_HIGHBITDEPTH);
   }
 
-  if (!aom_img_alloc(&input_image, img_format,
-                     source_width, source_height, 1)) {
+  std::unique_ptr<aom_image_t, void (*)(aom_image_t*)> input_image(aom_img_alloc(nullptr, img_format,
+                                                                                 source_width, source_height, 1),
+                                                                   aom_img_free);
+  if (!input_image) {
     err = {heif_error_Memory_allocation_error,
            heif_suberror_Unspecified,
            "Failed to allocate image"};
@@ -809,8 +809,8 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
 
   for (int plane = 0; plane < 3; plane++) {
-    unsigned char* buf = input_image.planes[plane];
-    const int stride = input_image.stride[plane];
+    unsigned char* buf = input_image->planes[plane];
+    const int stride = input_image->stride[plane];
 
     if (chroma == heif_chroma_monochrome && plane != 0) {
       if (bpp_y == 8) {
@@ -870,7 +870,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     err = {heif_error_Unsupported_feature,
            heif_suberror_Unsupported_codec,
            "Unsupported codec: AOMedia Project AV1 Encoder"};
-    aom_img_free(&input_image);
     return err;
   }
 
@@ -892,7 +891,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
            kError_codec_enc_config_default};
-    aom_img_free(&input_image);
     return err;
   }
 
@@ -968,7 +966,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    aom_img_free(&input_image);
     return err;
   }
 
@@ -1031,14 +1028,10 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   // --- encode frame
 
-  res = aom_codec_encode(&codec, &input_image,
+  res = aom_codec_encode(&codec, input_image.get(),
                          0, // only encoding a single frame
                          1,
                          0); // no flags
-
-  // Note: we are freeing the input image directly after use.
-  // This covers the usual success case and also all error cases that occur below.
-  aom_img_free(&input_image);
 
   if (res != AOM_CODEC_OK) {
     err = {
