@@ -22,6 +22,7 @@
 #include "context.h"
 #include "file.h"
 #include <algorithm>
+#include <security_limits.h>
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
@@ -52,7 +53,7 @@ void TildHeader::set_parameters(const heif_tild_image_parameters& params)
 Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
 {
   const Error eofError(heif_error_Invalid_input,
-                       heif_suberror_Invalid_overlay_data,
+                       heif_suberror_Unspecified,
                        "Tild header data incomplete");
 
   std::vector<uint8_t> data;
@@ -146,7 +147,7 @@ Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild
 
   if (m_parameters.image_width == 0 || m_parameters.image_height == 0) {
     return {heif_error_Invalid_input,
-            heif_suberror_Invalid_overlay_data,
+            heif_suberror_Unspecified,
             "'tild' image with zero width or height."};
   }
 
@@ -155,7 +156,7 @@ Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild
 
     if (size == 0) {
       return {heif_error_Invalid_input,
-              heif_suberror_Invalid_overlay_data,
+              heif_suberror_Unspecified,
               "'tild' extra dimension may not be zero."};
     }
 
@@ -174,11 +175,17 @@ Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild
 
   if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
     return {heif_error_Invalid_input,
-            heif_suberror_Invalid_overlay_data,
+            heif_suberror_Unspecified,
             "Tile with zero width or height."};
   }
 
   uint64_t nTiles = number_of_tiles();
+  if (nTiles > MAX_TILD_TILES) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "Number of tiles exceeds security limit."};
+  }
+
   m_offsets.resize(nTiles);
 
 

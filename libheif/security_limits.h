@@ -44,4 +44,6 @@ static const int MAX_FRACTION_VALUE = 0x10000;
 
 static const int MAX_IREF_REFERENCES = 10000;
 
+static const int MAX_TILD_TILES = 4100*4100;
+
 #endif  // LIBHEIF_SECURITY_LIMITS_H
