@@ -37,7 +37,7 @@ add_libheif_test(encode)
 add_libheif_test(extended_type)
 add_libheif_test(region)
 
-if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_ENCODING)
+if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_HT_ENCODING)
     add_libheif_test(encode_htj2k)
 else()
     message(INFO "Disabling HT-JPEG 2000 encoder tests because no HT-JPEG 2000 codec is enabled")
