@@ -63,9 +63,17 @@ public:
     return seek(get_position() + position_offset);
   }
 
+  // Informs the reader implementation that we will process data in the given range.
+  // The reader can use this information to retrieve a larger chunk of data instead of individual read() calls.
+  // Returns the file size that was made available, but you still have to check each read() call.
+  // Returning a value shorter than the requested range end indicates to libheif that the data is not available.
   virtual uint64_t request_range(uint64_t start, uint64_t size) {
-    return std::numeric_limits<uint64_t>::max()-1; // -1 because we use the maximum as an indication for 'invalid'
+    return std::numeric_limits<uint64_t>::max();
   }
+
+  virtual void release_range(uint64_t start, uint64_t size) { }
+
+  virtual void request_hint_range(uint64_t start, uint64_t size) { }
 };
 
 
