@@ -27,7 +27,7 @@
 /**
  * Component type.
  *
- * See ISO/IEC 23001-17 Table.
+ * See ISO/IEC 23001-17 Table 1.
 */
 enum heif_uncompressed_component_type
 {
