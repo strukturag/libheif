@@ -67,13 +67,23 @@ public:
   // The reader can use this information to retrieve a larger chunk of data instead of individual read() calls.
   // Returns the file size that was made available, but you still have to check each read() call.
   // Returning a value shorter than the requested range end indicates to libheif that the data is not available.
-  virtual uint64_t request_range(uint64_t start, uint64_t size) {
+  // Returns 0 on error.
+  virtual uint64_t request_range(uint64_t start, uint64_t end_pos) {
     return std::numeric_limits<uint64_t>::max();
   }
 
-  virtual void release_range(uint64_t start, uint64_t size) { }
+  virtual void release_range(uint64_t start, uint64_t end_pos) { }
 
-  virtual void request_hint_range(uint64_t start, uint64_t size) { }
+  virtual void request_hint_range(uint64_t start, uint64_t end_pos) { }
+
+  Error get_error() const {
+    return m_last_error;
+  }
+
+  void clear_last_error() { m_last_error = {}; }
+
+protected:
+  Error m_last_error;
 };
 
 
@@ -111,7 +121,8 @@ public:
 
   bool seek(int64_t position) override;
 
-  uint64_t request_range(uint64_t start, uint64_t size) override {
+  // end_pos is last byte to read + 1. I.e. like a file size.
+  uint64_t request_range(uint64_t start, uint64_t end_pos) override {
     return m_length;
   }
 
@@ -137,6 +148,54 @@ public:
   bool read(void* data, size_t size) override { return !m_func_table->read(data, size, m_userdata); }
 
   bool seek(int64_t position) override { return !m_func_table->seek(position, m_userdata); }
+
+  uint64_t request_range(uint64_t start, uint64_t end_pos) override {
+    if (m_func_table->reader_api_version >= 2) {
+      heif_reader_range_request_result result = m_func_table->request_range(start, end_pos, m_userdata);
+
+      switch (result.status) {
+        case heif_reader_grow_status_size_reached:
+          return end_pos;
+        case heif_reader_grow_status_timeout:
+          return 0; // invalid return value from callback
+        case heif_reader_grow_status_size_beyond_eof:
+          m_last_error = {heif_error_Invalid_input, heif_suberror_End_of_data, "Read beyond file size"};
+          return result.range_end;
+        case heif_reader_grow_status_error: {
+          if (result.reader_error_msg) {
+            std::stringstream sstr;
+            sstr << "Input error (" << result.reader_error_code << ") : " << result.reader_error_msg;
+            m_last_error = {heif_error_Invalid_input, heif_suberror_Unspecified, sstr.str()};
+          }
+          else {
+            std::stringstream sstr;
+            sstr << "Input error (" << result.reader_error_code << ")";
+            m_last_error = {heif_error_Invalid_input, heif_suberror_Unspecified, sstr.str()};
+          }
+
+          return 0; // error occurred
+        }
+        default:
+          m_last_error = {heif_error_Invalid_input, heif_suberror_Unspecified, "Invalid input reader return value"};
+          return 0;
+      }
+    }
+    else {
+      return std::numeric_limits<uint64_t>::max();
+    }
+  }
+
+  void release_range(uint64_t start, uint64_t end_pos) override {
+    if (m_func_table->reader_api_version >= 2) {
+      m_func_table->release_file_range(start, end_pos, m_userdata);
+    }
+  }
+
+  void request_hint_range(uint64_t start, uint64_t end_pos) override {
+    if (m_func_table->reader_api_version >= 2) {
+      m_func_table->preload_range_hint(start, end_pos, m_userdata);
+    }
+  }
 
 private:
   const heif_reader* m_func_table;
