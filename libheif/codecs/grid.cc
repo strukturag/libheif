@@ -494,6 +494,10 @@ int ImageItem_Grid::get_luma_bits_per_pixel() const
   }
 
   auto image = get_context()->get_image(child);
+  if (!image) {
+    return -1;
+  }
+
   return image->get_luma_bits_per_pixel();
 }
 
