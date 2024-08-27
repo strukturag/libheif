@@ -115,6 +115,12 @@ static void ffmpeg_free_decoder(void* decoder_raw)
 {
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
+  //decoder->NalMap not needed anymore
+  for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
+      delete current->second;
+  }
+  decoder->NalMap.clear();
+
   delete decoder;
 }
 
