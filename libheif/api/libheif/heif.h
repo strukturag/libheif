@@ -427,7 +427,7 @@ enum heif_compression_format
   /**
    * Uncompressed encoding.
    *
-   * This is defined in ISO/IEC 23001-17:2023 (Final Draft International Standard).
+   * This is defined in ISO/IEC 23001-17:2024.
   */
   heif_compression_uncompressed = 8,
   /**
