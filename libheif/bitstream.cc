@@ -35,19 +35,19 @@ StreamReader_istream::StreamReader_istream(std::unique_ptr<std::istream>&& istr)
   m_istr->seekg(0, std::ios_base::beg);
 }
 
-int64_t StreamReader_istream::get_position() const
+uint64_t StreamReader_istream::get_position() const
 {
   return m_istr->tellg();
 }
 
-StreamReader::grow_status StreamReader_istream::wait_for_file_size(int64_t target_size)
+StreamReader::grow_status StreamReader_istream::wait_for_file_size(uint64_t target_size)
 {
-  return (target_size > m_length) ? size_beyond_eof : size_reached;
+  return (target_size > m_length) ? grow_status::size_beyond_eof : grow_status::size_reached;
 }
 
 bool StreamReader_istream::read(void* data, size_t size)
 {
-  int64_t end_pos = get_position() + size;
+  uint64_t end_pos = get_position() + size;
   if (end_pos > m_length) {
     return false;
   }
@@ -56,7 +56,7 @@ bool StreamReader_istream::read(void* data, size_t size)
   return true;
 }
 
-bool StreamReader_istream::seek(int64_t position)
+bool StreamReader_istream::seek(uint64_t position)
 {
   if (position > m_length)
     return false;
@@ -88,19 +88,19 @@ StreamReader_memory::~StreamReader_memory()
   }
 }
 
-int64_t StreamReader_memory::get_position() const
+uint64_t StreamReader_memory::get_position() const
 {
   return m_position;
 }
 
-StreamReader::grow_status StreamReader_memory::wait_for_file_size(int64_t target_size)
+StreamReader::grow_status StreamReader_memory::wait_for_file_size(uint64_t target_size)
 {
-  return (target_size > m_length) ? size_beyond_eof : size_reached;
+  return (target_size > m_length) ? grow_status::size_beyond_eof : grow_status::size_reached;
 }
 
 bool StreamReader_memory::read(void* data, size_t size)
 {
-  int64_t end_pos = m_position + size;
+  uint64_t end_pos = m_position + size;
   if (end_pos > m_length) {
     return false;
   }
@@ -111,7 +111,7 @@ bool StreamReader_memory::read(void* data, size_t size)
   return true;
 }
 
-bool StreamReader_memory::seek(int64_t position)
+bool StreamReader_memory::seek(uint64_t position)
 {
   if (position > m_length || position < 0)
     return false;
@@ -126,19 +126,19 @@ StreamReader_CApi::StreamReader_CApi(const heif_reader* func_table, void* userda
 {
 }
 
-StreamReader::grow_status StreamReader_CApi::wait_for_file_size(int64_t target_size)
+StreamReader::grow_status StreamReader_CApi::wait_for_file_size(uint64_t target_size)
 {
   heif_reader_grow_status status = m_func_table->wait_for_file_size(target_size, m_userdata);
   switch (status) {
     case heif_reader_grow_status_size_reached:
-      return size_reached;
+      return grow_status::size_reached;
     case heif_reader_grow_status_timeout:
-      return timeout;
+      return grow_status::timeout;
     case heif_reader_grow_status_size_beyond_eof:
-      return size_beyond_eof;
+      return grow_status::size_beyond_eof;
     default:
       assert(0);
-      return size_beyond_eof;
+      return grow_status::size_beyond_eof;
   }
 }
 

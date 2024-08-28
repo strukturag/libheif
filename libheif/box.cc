@@ -240,7 +240,7 @@ Error BoxHeader::parse_header(BitstreamRange& range)
 {
   StreamReader::grow_status status;
   status = range.wait_for_available_bytes(8);
-  if (status != StreamReader::size_reached) {
+  if (status != StreamReader::grow_status::size_reached) {
     // TODO: return recoverable error at timeout
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data);
@@ -253,7 +253,7 @@ Error BoxHeader::parse_header(BitstreamRange& range)
 
   if (m_size == 1) {
     status = range.wait_for_available_bytes(8);
-    if (status != StreamReader::size_reached) {
+    if (status != StreamReader::grow_status::size_reached) {
       // TODO: return recoverable error at timeout
       return Error(heif_error_Invalid_input,
                    heif_suberror_End_of_data);
@@ -277,7 +277,7 @@ Error BoxHeader::parse_header(BitstreamRange& range)
 
   if (m_type == fourcc("uuid")) {
     status = range.wait_for_available_bytes(16);
-    if (status != StreamReader::size_reached) {
+    if (status != StreamReader::grow_status::size_reached) {
       // TODO: return recoverable error at timeout
       return Error(heif_error_Invalid_input,
                    heif_suberror_End_of_data);
@@ -736,7 +736,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     // --- wait for data to arrive
 
     auto status = range.wait_for_available_bytes(static_cast<size_t>(nBytes));
-    if (status != StreamReader::size_reached) {
+    if (status != StreamReader::grow_status::size_reached) {
       // TODO: return recoverable error at timeout
       return {heif_error_Invalid_input,
               heif_suberror_End_of_data};
@@ -1476,7 +1476,7 @@ Error Box_iloc::read_data(const Item& item,
       }
 
       StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
-      if (status == StreamReader::size_beyond_eof) {
+      if (status == StreamReader::grow_status::size_beyond_eof) {
         // Out-of-bounds
         // TODO: I think we should not clear this. Maybe we want to try reading again later and
         // hence should not lose the data already read.
@@ -1490,7 +1490,7 @@ Error Box_iloc::read_data(const Item& item,
                 heif_suberror_End_of_data,
                 sstr.str()};
       }
-      else if (status == StreamReader::timeout) {
+      else if (status == StreamReader::grow_status::timeout) {
         // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
         return {heif_error_Invalid_input,
                 heif_suberror_End_of_data};
@@ -1528,19 +1528,33 @@ Error Box_iloc::read_data(const Item& item,
       }
 
 
+      // --- request file range
+
+      uint64_t data_start_pos = extent.offset + item.base_offset + skip_len;
+      uint64_t rangeRequestEndPos = istr->request_range(data_start_pos, data_start_pos + read_len);
+      if (rangeRequestEndPos == 0) {
+        return istr->get_error();
+      }
+
       // --- move file pointer to start of data
 
-      bool success = istr->seek(extent.offset + item.base_offset + skip_len);
-      assert(success);
-      (void) success;
+      bool success = istr->seek(data_start_pos);
+      if (!success) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "Error setting input file position"};
+      }
 
 
       // --- read data
 
       dest->resize(static_cast<size_t>(old_size + read_len));
       success = istr->read((char*) dest->data() + old_size, static_cast<size_t>(read_len));
-      assert(success);
-      (void) success;
+      if (!success) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "Error reading input file"};
+      }
 
       size -= read_len;
     }
@@ -2239,7 +2253,7 @@ Error Box_pixi::parse(BitstreamRange& range)
   StreamReader::grow_status status;
   uint8_t num_channels = range.read8();
   status = range.wait_for_available_bytes(num_channels);
-  if (status != StreamReader::size_reached) {
+  if (status != StreamReader::grow_status::size_reached) {
     // TODO: return recoverable error at timeout
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data);
@@ -3384,8 +3398,8 @@ Error Box_idat::read_data(const std::shared_ptr<StreamReader>& istr,
   }
 
   StreamReader::grow_status status = istr->wait_for_file_size((int64_t) m_data_start_pos + start + length);
-  if (status == StreamReader::size_beyond_eof ||
-      status == StreamReader::timeout) {
+  if (status == StreamReader::grow_status::size_beyond_eof ||
+      status == StreamReader::grow_status::timeout) {
     // TODO: maybe we should introduce some 'Recoverable error' instead of 'Invalid input'
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data);

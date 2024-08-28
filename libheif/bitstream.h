@@ -41,9 +41,9 @@ class StreamReader
 public:
   virtual ~StreamReader() = default;
 
-  virtual int64_t get_position() const = 0;
+  virtual uint64_t get_position() const = 0;
 
-  enum grow_status
+  enum class grow_status : uint8_t
   {
     size_reached,   // requested size has been reached
     timeout,        // size has not been reached yet, but it may still grow further
@@ -51,14 +51,14 @@ public:
   };
 
   // a StreamReader can maintain a timeout for waiting for new data
-  virtual grow_status wait_for_file_size(int64_t target_size) = 0;
+  virtual grow_status wait_for_file_size(uint64_t target_size) = 0;
 
   // returns 'false' when we read out of the available file size
   virtual bool read(void* data, size_t size) = 0;
 
-  virtual bool seek(int64_t position) = 0;
+  virtual bool seek(uint64_t position) = 0;
 
-  bool seek_cur(int64_t position_offset)
+  bool seek_cur(uint64_t position_offset)
   {
     return seek(get_position() + position_offset);
   }
@@ -74,7 +74,7 @@ public:
 
   virtual void release_range(uint64_t start, uint64_t end_pos) { }
 
-  virtual void request_hint_range(uint64_t start, uint64_t end_pos) { }
+  virtual void preload_range_hint(uint64_t start, uint64_t end_pos) { }
 
   Error get_error() const {
     return m_last_error;
@@ -86,23 +86,37 @@ protected:
   Error m_last_error;
 };
 
+#include <iostream>
 
 class StreamReader_istream : public StreamReader
 {
 public:
   StreamReader_istream(std::unique_ptr<std::istream>&& istr);
 
-  int64_t get_position() const override;
+  uint64_t get_position() const override;
 
-  grow_status wait_for_file_size(int64_t target_size) override;
+  grow_status wait_for_file_size(uint64_t target_size) override;
 
   bool read(void* data, size_t size) override;
 
-  bool seek(int64_t position) override;
+  bool seek(uint64_t position) override;
+
+  uint64_t request_range(uint64_t start, uint64_t end_pos) override {
+    std::cout << "[istream] request_range " << start << " - " << end_pos << "\n";
+    return end_pos;
+  }
+
+  void release_range(uint64_t start, uint64_t end_pos) override {
+    std::cout << "[istream] release_range " << start << " - " << end_pos << "\n";
+  }
+
+  void preload_range_hint(uint64_t start, uint64_t end_pos) override {
+    std::cout << "[istream] preload_range_hint " << start << " - " << end_pos << "\n";
+  }
 
 private:
   std::unique_ptr<std::istream> m_istr;
-  int64_t m_length;
+  uint64_t m_length;
 };
 
 
@@ -113,13 +127,13 @@ public:
 
   ~StreamReader_memory() override;
 
-  int64_t get_position() const override;
+  uint64_t get_position() const override;
 
-  grow_status wait_for_file_size(int64_t target_size) override;
+  grow_status wait_for_file_size(uint64_t target_size) override;
 
   bool read(void* data, size_t size) override;
 
-  bool seek(int64_t position) override;
+  bool seek(uint64_t position) override;
 
   // end_pos is last byte to read + 1. I.e. like a file size.
   uint64_t request_range(uint64_t start, uint64_t end_pos) override {
@@ -128,8 +142,8 @@ public:
 
 private:
   const uint8_t* m_data;
-  int64_t m_length;
-  int64_t m_position;
+  uint64_t m_length;
+  uint64_t m_position;
 
   // if we made a copy of the data, we store a pointer to the owned memory area here
   uint8_t* m_owned_data = nullptr;
@@ -141,13 +155,13 @@ class StreamReader_CApi : public StreamReader
 public:
   StreamReader_CApi(const heif_reader* func_table, void* userdata);
 
-  int64_t get_position() const override { return m_func_table->get_position(m_userdata); }
+  uint64_t get_position() const override { return m_func_table->get_position(m_userdata); }
 
-  StreamReader::grow_status wait_for_file_size(int64_t target_size) override;
+  StreamReader::grow_status wait_for_file_size(uint64_t target_size) override;
 
   bool read(void* data, size_t size) override { return !m_func_table->read(data, size, m_userdata); }
 
-  bool seek(int64_t position) override { return !m_func_table->seek(position, m_userdata); }
+  bool seek(uint64_t position) override { return !m_func_table->seek(position, m_userdata); }
 
   uint64_t request_range(uint64_t start, uint64_t end_pos) override {
     if (m_func_table->reader_api_version >= 2) {
@@ -191,7 +205,7 @@ public:
     }
   }
 
-  void request_hint_range(uint64_t start, uint64_t end_pos) override {
+  void preload_range_hint(uint64_t start, uint64_t end_pos) override {
     if (m_func_table->reader_api_version >= 2) {
       m_func_table->preload_range_hint(start, end_pos, m_userdata);
     }

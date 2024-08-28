@@ -221,7 +221,7 @@ Error color_profile_nclx::parse(BitstreamRange& range)
 {
   StreamReader::grow_status status;
   status = range.wait_for_available_bytes(7);
-  if (status != StreamReader::size_reached) {
+  if (status != StreamReader::grow_status::size_reached) {
     // TODO: return recoverable error at timeout
     return Error(heif_error_Invalid_input,
                  heif_suberror_End_of_data);
@@ -386,7 +386,7 @@ Error Box_colr::parse(BitstreamRange& range)
     size_t profile_size = static_cast<size_t>(profile_size_64);
 
     status = range.wait_for_available_bytes(profile_size);
-    if (status != StreamReader::size_reached) {
+    if (status != StreamReader::grow_status::size_reached) {
       // TODO: return recoverable error at timeout
       return Error(heif_error_Invalid_input,
                    heif_suberror_End_of_data);
