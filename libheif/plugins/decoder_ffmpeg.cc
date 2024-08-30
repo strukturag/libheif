@@ -27,6 +27,7 @@
 #endif
 
 #include <map>
+#include <memory>
 
 extern "C" 
 {
@@ -59,7 +60,7 @@ struct ffmpeg_decoder
     #define NAL_UNIT_IDR_W_RADL 19
     #define NAL_UNIT_IDR_N_LP   20
 
-    std::map<int,NalUnit*> NalMap;
+    std::map<int, std::unique_ptr<NalUnit>> NalMap;
 
     bool strict_decoding = false;
 };
@@ -172,12 +173,11 @@ static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data
           return err;
       }
 
-      NalUnit* nal_unit = new NalUnit();
+      std::unique_ptr<NalUnit> nal_unit = std::unique_ptr<NalUnit>(new NalUnit());
       nal_unit->set_data(cdata + ptr, nal_size);
 
-      NalUnit* old_nal_unit = decoder->NalMap[nal_unit->unit_type()];
-      decoder->NalMap[nal_unit->unit_type()] = nal_unit;
-      delete old_nal_unit;
+      // overwrite NalMap (frees old NalUnit, if it was set)
+      decoder->NalMap[nal_unit->unit_type()] = std::move(nal_unit);
 
       ptr += nal_size;
   }
@@ -414,10 +414,7 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   hevc_data_ptr += hevc_AnnexB_StartCode_size;
   memcpy(hevc_data_ptr, heif_idrpic_data, heif_idrpic_size);
 
-  //decoder->NalMap not needed anymore
-  for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
-      delete current->second;
-  }
+  // decoder->NalMap not needed anymore
   decoder->NalMap.clear();
 
   const AVCodec* hevc_codec = NULL;
