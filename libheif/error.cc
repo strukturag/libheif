@@ -106,6 +106,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No 'vvcC' box";
     case heif_suberror_No_av1C_box:
       return "No 'av1C' box";
+    case heif_suberror_No_avcC_box:
+      return "No 'avcC' box";
     case heif_suberror_No_pitm_box:
       return "No 'pitm' box";
     case heif_suberror_No_ipco_box:
