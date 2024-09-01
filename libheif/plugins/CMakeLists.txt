@@ -110,7 +110,9 @@ plugin_compilation(vvenc vvenc vvenc_FOUND VVENC VVENC)
 
 target_sources(heif PRIVATE
                encoder_mask.h
-               encoder_mask.cc)
+               encoder_mask.cc
+               nalu_utils.h
+               nalu_utils.cc)
 
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
