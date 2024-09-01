@@ -161,6 +161,23 @@ if (WITH_VVENC)
     endif()
 endif ()
 
+# openh264 decoder
+
+plugin_option(OPENH264_DECODER "OpenH264 decoder" ON OFF)
+plugin_option(OPENH264_ENCODER "OpenH264 encoder" ON OFF)
+if (WITH_OPENH264_ENCODER OR WITH_OPENH264_DECODER)
+    find_package(OpenH264)
+
+    # When decoding/encoding is disabled, overwrite the *_FOUND variables, because they are used to ultimately decide what to build.
+    # TODO
+    if (OpenH264_FOUND AND WITH_OPENH264_DECODER)
+        set(OpenH264_DECODER_FOUND TRUE)
+    endif()
+    if (OpenH264_FOUND AND WITH_OPENH264_ENCODER)
+        set(OpenH264_ENCODER_FOUND TRUE)
+    endif()
+endif()
+
 # dav1d
 
 plugin_option(DAV1D "Dav1d AV1 decoder" OFF ON)
@@ -248,6 +265,8 @@ plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
 plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
 plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+plugin_compilation_info(OpenH264_DECODER OpenH264_DECODER "OpenH264 decoder")
+plugin_compilation_info(OpenH264_ENCODER OpenH264_ENCODER "OpenH264 encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
@@ -316,6 +335,12 @@ endif()
 if (vvdec_FOUND AND WITH_VVDEC)
     set(SUPPORTS_VVC_DECODING TRUE)
 endif()
+if (OpenH264_DECODER_FOUND)
+    set(SUPPORTS_AVC_DECODING TRUE)
+endif()
+if (OpenH264_ENCODER_FOUND)
+    set(SUPPORTS_AVC_ENCODING TRUE)
+endif()
 
 if (WITH_UNCOMPRESSED_CODEC)
     set(SUPPORTS_UNCOMPRESSED_DECODING TRUE)
@@ -327,6 +352,7 @@ message("format        decoding   encoding")
 format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
 format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
 format_compilation_info("VVC"  SUPPORTS_VVC_DECODING SUPPORTS_VVC_ENCODING)
+format_compilation_info("AVC"  SUPPORTS_AVC_DECODING SUPPORTS_AVC_ENCODING)
 format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
 format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
 format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)
