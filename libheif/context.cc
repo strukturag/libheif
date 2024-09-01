@@ -233,6 +233,7 @@ std::string HeifContext::debug_dump_boxes() const
 static bool item_type_is_image(const std::string& item_type, const std::string& content_type)
 {
   return (item_type == "hvc1" ||
+          item_type == "av01" ||
           item_type == "grid" ||
           item_type == "tild" ||
           item_type == "iden" ||
