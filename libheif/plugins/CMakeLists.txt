@@ -112,12 +112,6 @@ set(OpenH264_DECODER_sources decoder_openh264.cc decoder_openh264.h)
 set(OpenH264_DECODER_extra_plugin_sources)
 plugin_compilation(openh264dec OpenH264 OpenH264_DECODER_FOUND OpenH264_DECODER OpenH264_DECODER)
 
-message("a ${WITH_OpenH264_DECODER_PLUGIN}")
-message("b ${WITH_OPENH264_DECODER_PLUGIN}")
-
-message("aa ${WITH_OpenH264_DECODER}")
-message("bb ${WITH_OPENH264_DECODER}")
-
 target_sources(heif PRIVATE
                encoder_mask.h
                encoder_mask.cc)
