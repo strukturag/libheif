@@ -25,6 +25,7 @@
 #include <codecs/jpeg.h>
 #include <codecs/jpeg2000.h>
 #include <codecs/avif.h>
+#include <codecs/avc.h>
 #include <codecs/hevc.h>
 #include <codecs/grid.h>
 #include <codecs/overlay.h>
@@ -120,6 +121,9 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   }
   else if (item_type == "vvc1") {
     return std::make_shared<ImageItem_VVC>(ctx, id);
+  }
+  else if (item_type == "avc1") {
+    return std::make_shared<ImageItem_AVC>(ctx, id);
   }
 #if WITH_UNCOMPRESSED_CODEC
   else if (item_type == "unci") {
