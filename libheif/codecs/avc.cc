@@ -147,13 +147,23 @@ std::string Box_avcC::profileIndicationAsText() const {
 }
 
 
-void Box_avcC::get_headers(std::vector<uint8_t>& data) const
+void Box_avcC::get_header_nals(std::vector<uint8_t>& data) const
 {
   for (const auto& sps : m_sps) {
+    data.push_back((sps.size() >> 24) & 0xFF);
+    data.push_back((sps.size() >> 16) & 0xFF);
+    data.push_back((sps.size() >> 8) & 0xFF);
+    data.push_back((sps.size() >> 0) & 0xFF);
+
     data.insert(data.end(), sps.begin(), sps.end());
   }
 
   for (const auto& pps : m_pps) {
+    data.push_back((pps.size() >> 24) & 0xFF);
+    data.push_back((pps.size() >> 16) & 0xFF);
+    data.push_back((pps.size() >> 8) & 0xFF);
+    data.push_back((pps.size() >> 0) & 0xFF);
+
     data.insert(data.end(), pps.begin(), pps.end());
   }
 }
@@ -259,7 +269,7 @@ Result<std::vector<uint8_t>> ImageItem_AVC::read_bitstream_configuration_data(he
                  heif_suberror_No_av1C_box};
   }
 
-  avcC_box->get_headers(data);
+  avcC_box->get_header_nals(data);
 
   return data;
 }

@@ -1,6 +1,6 @@
 /*
- * JPEG codec.
- * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
+ * openh264 codec.
+ * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -20,61 +20,56 @@
 
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
-#include "decoder_jpeg.h"
+#include "decoder_openh264.h"
 #include <memory>
 #include <cstring>
 #include <cassert>
 #include <vector>
 #include <cstdio>
 
-extern "C" {
-#include <jpeglib.h>
-}
+#include <wels/codec_api.h>
 
 
-struct jpeg_decoder
+struct openh264_decoder
 {
   std::vector<uint8_t> data;
 };
 
 static const char kSuccess[] = "Success";
 
-static const int JPEG_PLUGIN_PRIORITY = 100;
+static const int OpenH264_PLUGIN_PRIORITY = 100;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 
 static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 
-#define xstr(s) str(s)
-#define str(s) #s
+static heif_error kError_EOF = {heif_error_Decoder_plugin_error, heif_suberror_End_of_data, "Insufficient input data"};
 
-static const char* jpeg_plugin_name()
+
+static const char* openh264_plugin_name()
 {
-#ifdef LIBJPEG_TURBO_VERSION
-  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH-1, "libjpeg-turbo " xstr(LIBJPEG_TURBO_VERSION) " (libjpeg %d.%d)", JPEG_LIB_VERSION/10, JPEG_LIB_VERSION%10);
-  plugin_name[MAX_PLUGIN_NAME_LENGTH-1] = 0;
-#else
-  sprintf(plugin_name, "libjpeg %d.%d", JPEG_LIB_VERSION/10, JPEG_LIB_VERSION%10);
-#endif
+  OpenH264Version version = WelsGetCodecVersion();
+
+  sprintf(plugin_name, "OpenH264 %d.%d.%d", version.uMajor, version.uMinor, version.uRevision);
 
   return plugin_name;
 }
 
 
-static void jpeg_init_plugin()
+static void openh264_init_plugin()
 {
 }
 
 
-static void jpeg_deinit_plugin()
+static void openh264_deinit_plugin()
 {
 }
 
 
-static int jpeg_does_support_format(enum heif_compression_format format)
+static int openh264_does_support_format(enum heif_compression_format format)
 {
-  if (format == heif_compression_JPEG) {
-    return JPEG_PLUGIN_PRIORITY;
+  if (format == heif_compression_AVC) {
+    return OpenH264_PLUGIN_PRIORITY;
   }
   else {
     return 0;
@@ -82,9 +77,9 @@ static int jpeg_does_support_format(enum heif_compression_format format)
 }
 
 
-struct heif_error jpeg_new_decoder(void** dec)
+struct heif_error openh264_new_decoder(void** dec)
 {
-  struct jpeg_decoder* decoder = new jpeg_decoder();
+  struct openh264_decoder* decoder = new openh264_decoder();
   *dec = decoder;
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -92,9 +87,9 @@ struct heif_error jpeg_new_decoder(void** dec)
 }
 
 
-void jpeg_free_decoder(void* decoder_raw)
+void openh264_free_decoder(void* decoder_raw)
 {
-  struct jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
+  struct openh264_decoder* decoder = (openh264_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -104,17 +99,17 @@ void jpeg_free_decoder(void* decoder_raw)
 }
 
 
-void jpeg_set_strict_decoding(void* decoder_raw, int flag)
+void openh264_set_strict_decoding(void* decoder_raw, int flag)
 {
-//  struct jpeg_decoder* decoder = (jpeg_decoder*) decoder_raw;
+//  auto* decoder = (openh264_decoder*) decoder_raw;
 }
 
 
-struct heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
+struct heif_error openh264_push_data(void* decoder_raw, const void* frame_data, size_t frame_size)
 {
-  struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
+  auto* decoder = (struct openh264_decoder*) decoder_raw;
 
-  const uint8_t* input_data = (const uint8_t*)frame_data;
+  const auto* input_data = (const uint8_t*) frame_data;
 
   decoder->data.insert(decoder->data.end(), input_data, input_data + frame_size);
 
@@ -123,110 +118,153 @@ struct heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size
 }
 
 
-struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
+struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
-  struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
+  auto* decoder = (struct openh264_decoder*) decoder_raw;
 
+  if (decoder->data.size() < 4) {
+    return kError_EOF;
+  }
 
-  struct jpeg_decompress_struct cinfo;
-  struct jpeg_error_mgr jerr;
+  const std::vector<uint8_t>& indata = decoder->data;
+  std::vector<uint8_t> scdata;
 
-  // to store embedded icc profile
-//  uint32_t iccLen;
-//  uint8_t* iccBuffer = NULL;
-
-//  std::vector<uint8_t> xmpData;
-//  std::vector<uint8_t> exifData;
-
-  // initialize decompressor
-
-  jpeg_create_decompress(&cinfo);
-
-  cinfo.err = jpeg_std_error(&jerr);
-  jpeg_mem_src(&cinfo, decoder->data.data(), static_cast<unsigned long>(decoder->data.size()));
-
-  /* Adding this part to prepare for icc profile reading. */
-//  jpeg_save_markers(&cinfo, JPEG_ICC_MARKER, 0xFFFF);
-//  jpeg_save_markers(&cinfo, JPEG_XMP_MARKER, 0xFFFF);
-//  jpeg_save_markers(&cinfo, JPEG_EXIF_MARKER, 0xFFFF);
-
-  jpeg_read_header(&cinfo, TRUE);
-
-//  bool embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
-//  bool embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
-//  if (embeddedXMPFlag) {
-//    img.xmp = xmpData;
-//  }
-
-//  bool embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
-//  if (embeddedEXIFFlag) {
-//    img.exif = exifData;
-//    img.orientation = (heif_orientation) read_exif_orientation_tag(exifData.data(), (int) exifData.size());
-//  }
-
-  if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
-    cinfo.out_color_space = JCS_GRAYSCALE;
-
-    jpeg_start_decompress(&cinfo);
-
-    JSAMPARRAY buffer;
-    buffer = (*cinfo.mem->alloc_sarray)
-        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
-
-
-    // create destination image
-
-    struct heif_image* heif_img = nullptr;
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_monochrome,
-                                              heif_chroma_monochrome,
-                                              &heif_img);
-    if (err.code != heif_error_Ok) {
-      assert(heif_img==nullptr);
-      return err;
+  size_t idx = 0;
+  while (idx < indata.size()) {
+    if (indata.size() - 4 < idx) {
+      return kError_EOF;
     }
 
-    heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
+    uint32_t size = ((indata[idx] << 24) | (indata[idx + 1] << 16) | (indata[idx + 2] << 8) | indata[idx + 3]);
+    idx += 4;
 
-    int y_stride;
-    uint8_t* py = heif_image_get_plane(heif_img, heif_channel_Y, &y_stride);
+    if (indata.size() < size || indata.size() - size < idx) {
+      return kError_EOF;
+    }
+
+    scdata.push_back(0);
+    scdata.push_back(0);
+    scdata.push_back(1);
+
+    // check for need of start code emulation prevention
+
+    bool do_start_code_emulation_check = true;
+
+    while (do_start_code_emulation_check && size >= 3) {
+
+      bool found_start_code_emulation = false;
+
+      for (size_t i = 0; i < size - 3; i++) {
+        if (indata[idx + 0] == 0 &&
+            indata[idx + 1] == 0 &&
+            (indata[idx + 2] >= 0 && indata[idx + 2] <= 3)) {
+          scdata.push_back(0);
+          scdata.push_back(0);
+          scdata.push_back(3);
+
+          scdata.insert(scdata.end(), &indata[idx + 2], &indata[idx + i + 2]);
+          idx += i + 2;
+          size -= (uint32_t)(i + 2);
+          found_start_code_emulation = true;
+          break;
+        }
+      }
+
+      do_start_code_emulation_check = found_start_code_emulation;
+    }
+
+    assert(size > 0);
+    scdata.insert(scdata.end(), &indata[idx], &indata[idx + size]);
+
+    idx += size;
+  }
+
+  if (idx != indata.size()) {
+    return kError_EOF;
+  }
+
+  // input: encoded bitstream start position; should include start code prefix
+  unsigned char* pBuf = scdata.data();
+
+  // input: encoded bit stream length; should include the size of start code prefix
+  int iSize = static_cast<int>(scdata.size());
+
+  //output: [0~2] for Y,U,V buffer for Decoding only
+  unsigned char* pData[3] = {nullptr, nullptr, nullptr};
+
+  // in-out: for Decoding only: declare and initialize the output buffer info, this should never co-exist with Parsing only
+
+  SBufferInfo sDstBufInfo;
+  memset(&sDstBufInfo, 0, sizeof(SBufferInfo));
+
+  // Step 2:decoder creation
+  ISVCDecoder* pSvcDecoder;
+  WelsCreateDecoder(&pSvcDecoder);
+  if (!pSvcDecoder) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Unspecified,
+            "Cannot create OpenH264 decoder"};
+  }
+
+  std::unique_ptr<ISVCDecoder, void (*)(ISVCDecoder*)> dummy_h264_decoder_ptr(pSvcDecoder, WelsDestroyDecoder);
 
 
-    // read the image
+  // Step 3:declare required parameter, used to differentiate Decoding only and Parsing only
+  SDecodingParam sDecParam = {0};
+  sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_AVC;
 
-    while (cinfo.output_scanline < cinfo.output_height) {
-      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+  //for Parsing only, the assignment is mandatory
+  // sDecParam.bParseOnly = true;
 
-      memcpy(py + (cinfo.output_scanline - 1) * y_stride, *buffer, cinfo.output_width);
+  // Step 4:initialize the parameter and decoder context, allocate memory
+  pSvcDecoder->Initialize(&sDecParam);
+
+  // Step 5:do actual decoding process in slice level; this can be done in a loop until data ends
+
+  //for Decoding only
+  int iRet = pSvcDecoder->DecodeFrameNoDelay(pBuf, iSize, pData, &sDstBufInfo);
+
+  if (iRet != 0) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Unspecified,
+            "OpenH264 decoder error"};
+  }
+
+  /*
+  // TODO: I receive an iBufferStatus==0, but the output image is still decoded
+  if (sDstBufInfo.iBufferStatus == 0) {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Unspecified,
+            "OpenH264 decoder did not output any image"};
+  }
+  */
+
+  uint32_t width = sDstBufInfo.UsrData.sSystemBuffer.iWidth;
+  uint32_t height = sDstBufInfo.UsrData.sSystemBuffer.iHeight;
+
+  struct heif_image* heif_img;
+  struct heif_error err{};
+
+  uint32_t cwidth, cheight;
+
+  if (sDstBufInfo.UsrData.sSystemBuffer.iFormat == videoFormatI420) {
+    cwidth = (width + 1) / 2;
+    cheight = (height + 1) / 2;
+
+    err = heif_image_create(width, height,
+                            heif_colorspace_YCbCr,
+                            heif_chroma_420,
+                            &heif_img);
+    if (err.code != heif_error_Ok) {
+      assert(heif_img == nullptr);
+      return err;
     }
 
     *out_img = heif_img;
-  }
-  else {
-    cinfo.out_color_space = JCS_YCbCr;
 
-    jpeg_start_decompress(&cinfo);
-
-    JSAMPARRAY buffer;
-    buffer = (*cinfo.mem->alloc_sarray)
-        ((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
-
-
-    // create destination image
-
-    struct heif_image* heif_img = nullptr;
-    struct heif_error err = heif_image_create(cinfo.output_width, cinfo.output_height,
-                                              heif_colorspace_YCbCr,
-                                              heif_chroma_420,
-                                              &heif_img);
-    if (err.code != heif_error_Ok) {
-      assert(heif_img==nullptr);
-      return err;
-    }
-
-    heif_image_add_plane(heif_img, heif_channel_Y, cinfo.output_width, cinfo.output_height, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cb, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
-    heif_image_add_plane(heif_img, heif_channel_Cr, (cinfo.output_width + 1) / 2, (cinfo.output_height + 1) / 2, 8);
+    heif_image_add_plane(heif_img, heif_channel_Y, width, height, 8);
+    heif_image_add_plane(heif_img, heif_channel_Cb, cwidth, cheight, 8);
+    heif_image_add_plane(heif_img, heif_channel_Cr, cwidth, cheight, 8);
 
     int y_stride;
     int cb_stride;
@@ -235,57 +273,27 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
     uint8_t* pcb = heif_image_get_plane(heif_img, heif_channel_Cb, &cb_stride);
     uint8_t* pcr = heif_image_get_plane(heif_img, heif_channel_Cr, &cr_stride);
 
-    // read the image
+    int ystride = sDstBufInfo.UsrData.sSystemBuffer.iStride[0];
+    int cstride = sDstBufInfo.UsrData.sSystemBuffer.iStride[1];
 
-    //printf("jpeg size: %d %d\n",cinfo.output_width, cinfo.output_height);
-
-    while (cinfo.output_scanline < cinfo.output_height) {
-      JOCTET* bufp;
-
-      (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-      bufp = buffer[0];
-
-      int y = cinfo.output_scanline - 1;
-
-      for (unsigned int x = 0; x < cinfo.output_width; x += 2) {
-        py[y * y_stride + x] = *bufp++;
-        pcb[y / 2 * cb_stride + x / 2] = *bufp++;
-        pcr[y / 2 * cr_stride + x / 2] = *bufp++;
-
-        if (x + 1 < cinfo.output_width) {
-          py[y * y_stride + x + 1] = *bufp++;
-        }
-
-        bufp += 2;
-      }
-
-
-      if (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        bufp = buffer[0];
-
-        y = cinfo.output_scanline - 1;
-
-        for (unsigned int x = 0; x < cinfo.output_width; x++) {
-          py[y * y_stride + x] = *bufp++;
-          bufp += 2;
-        }
-      }
+    for (uint32_t y = 0; y < height; y++) {
+      memcpy(py + y * y_stride, sDstBufInfo.pDst[0] + y * ystride, width);
     }
 
-    *out_img = heif_img;
+    for (uint32_t y = 0; y < (height + 1) / 2; y++) {
+      memcpy(pcb + y * cb_stride, sDstBufInfo.pDst[1] + y * cstride, (width + 1) / 2);
+      memcpy(pcr + y * cr_stride, sDstBufInfo.pDst[2] + y * cstride, (width + 1) / 2);
+    }
+  }
+  else {
+    return {heif_error_Decoder_plugin_error,
+            heif_suberror_Unspecified,
+            "Unsupported image pixel format"};
   }
 
-//  if (embeddedIccFlag && iccLen > 0) {
-//    heif_image_set_raw_color_profile(image, "prof", iccBuffer, (size_t) iccLen);
-//  }
+  // Step 6:uninitialize the decoder and memory free
 
-  // cleanup
-//  free(iccBuffer);
-  jpeg_finish_decompress(&cinfo);
-  jpeg_destroy_decompress(&cinfo);
+  pSvcDecoder->Uninitialize(); // TODO: do we have to Uninitialize when an error is returned?
 
   decoder->data.clear();
 
@@ -293,32 +301,31 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
 }
 
 
-static const struct heif_decoder_plugin decoder_jpeg
-    {
+static const struct heif_decoder_plugin decoder_openh264{
         3,
-        jpeg_plugin_name,
-        jpeg_init_plugin,
-        jpeg_deinit_plugin,
-        jpeg_does_support_format,
-        jpeg_new_decoder,
-        jpeg_free_decoder,
-        jpeg_push_data,
-        jpeg_decode_image,
-        jpeg_set_strict_decoding,
-        "jpeg"
-    };
+        openh264_plugin_name,
+        openh264_init_plugin,
+        openh264_deinit_plugin,
+        openh264_does_support_format,
+        openh264_new_decoder,
+        openh264_free_decoder,
+        openh264_push_data,
+        openh264_decode_image,
+        openh264_set_strict_decoding,
+        "openh264"
+};
 
 
-const struct heif_decoder_plugin* get_decoder_plugin_jpeg()
+const struct heif_decoder_plugin* get_decoder_plugin_openh264()
 {
-  return &decoder_jpeg;
+  return &decoder_openh264;
 }
 
 
-#if PLUGIN_JPEG_DECODER
+#if PLUGIN_OpenH264_DECODER
 heif_plugin_info plugin_info {
   1,
   heif_plugin_type_decoder,
-  &decoder_jpeg
+  &decoder_openh264
 };
 #endif

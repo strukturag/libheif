@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,14 +18,14 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_DECODER_JPEG_H
-#define LIBHEIF_DECODER_JPEG_H
+#ifndef LIBHEIF_DECODER_OPENH264_H
+#define LIBHEIF_DECODER_OPENH264_H
 
 #include "common_utils.h"
 
-const struct heif_decoder_plugin* get_decoder_plugin_jpeg();
+const struct heif_decoder_plugin* get_decoder_plugin_openh264();
 
-#if PLUGIN_JPEG_DECODER
+#if PLUGIN_OpenH264_DECODER
 extern "C" {
 MAYBE_UNUSED LIBHEIF_API extern heif_plugin_info plugin_info;
 }

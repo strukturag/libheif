@@ -163,20 +163,22 @@ endif ()
 
 # openh264 decoder
 
-plugin_option(OPENH264_DECODER "OpenH264 decoder" ON OFF)
-plugin_option(OPENH264_ENCODER "OpenH264 encoder" ON OFF)
-if (WITH_OPENH264_ENCODER OR WITH_OPENH264_DECODER)
+plugin_option(OpenH264_DECODER "OpenH264 decoder" ON OFF)
+plugin_option(OpenH264_ENCODER "OpenH264 encoder" ON OFF)
+if (WITH_OpenH264_ENCODER OR WITH_OpenH264_DECODER)
     find_package(OpenH264)
 
     # When decoding/encoding is disabled, overwrite the *_FOUND variables, because they are used to ultimately decide what to build.
     # TODO
-    if (OpenH264_FOUND AND WITH_OPENH264_DECODER)
+    if (OpenH264_FOUND AND WITH_OpenH264_DECODER)
         set(OpenH264_DECODER_FOUND TRUE)
     endif()
-    if (OpenH264_FOUND AND WITH_OPENH264_ENCODER)
+    if (OpenH264_FOUND AND WITH_OpenH264_ENCODER)
         set(OpenH264_ENCODER_FOUND TRUE)
     endif()
 endif()
+
+
 
 # dav1d
 
