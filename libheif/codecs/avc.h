@@ -63,7 +63,7 @@ public:
     return m_pps;
   }
 
-  void get_headers(std::vector<uint8_t>& data) const;
+  void get_header_nals(std::vector<uint8_t>& data) const;
 
   std::string dump(Indent &) const override;
 
