@@ -237,7 +237,7 @@ static bool item_type_is_image(const std::string& item_type, const std::string& 
           item_type == "tild" ||
           item_type == "iden" ||
           item_type == "iovl" ||
-          item_type == "av01" ||
+          item_type == "avc1" ||
           item_type == "unci" ||
           item_type == "vvc1" ||
           item_type == "jpeg" ||

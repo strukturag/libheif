@@ -218,7 +218,8 @@ enum heif_suberror_code
 
   heif_suberror_Invalid_pixi_box = 130,
 
-  heif_suberror_No_av1C_box = 131,
+  heif_suberror_No_av1C_box = 131,   // deprecated: typo in name. Use 'heif_suberror_No_avcC_box' instead.
+  heif_suberror_No_avcC_box = 131,
 
   heif_suberror_Wrong_tile_image_pixel_depth = 132,
 

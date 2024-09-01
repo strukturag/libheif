@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include "codecs/image_item.h"
 
 class Box_avcC : public Box {
 public:
@@ -61,6 +62,7 @@ public:
     return m_pps;
   }
 
+  void get_headers(std::vector<uint8_t>& data) const;
 
   std::string dump(Indent &) const override;
 
@@ -75,6 +77,37 @@ private:
   configuration m_configuration;
   std::vector< std::vector<uint8_t> > m_sps;
   std::vector< std::vector<uint8_t> > m_pps;
+};
+
+
+class ImageItem_AVC : public ImageItem
+{
+public:
+  ImageItem_AVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+
+  ImageItem_AVC(HeifContext* ctx) : ImageItem(ctx) {}
+
+  const char* get_infe_type() const override { return "avc1"; }
+
+  const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
+
+  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
+
+  heif_compression_format get_compression_format() const override { return heif_compression_AVC; }
+
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
+
+protected:
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+
+public:
+
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
 };
 
 #endif
