@@ -79,7 +79,7 @@ static int openh264_does_support_format(enum heif_compression_format format)
 
 struct heif_error openh264_new_decoder(void** dec)
 {
-  struct openh264_decoder* decoder = new openh264_decoder();
+  auto* decoder = new openh264_decoder();
   *dec = decoder;
 
   struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
@@ -89,7 +89,7 @@ struct heif_error openh264_new_decoder(void** dec)
 
 void openh264_free_decoder(void* decoder_raw)
 {
-  struct openh264_decoder* decoder = (openh264_decoder*) decoder_raw;
+  auto* decoder = (openh264_decoder*) decoder_raw;
 
   if (!decoder) {
     return;
@@ -210,7 +210,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
 
 
   // Step 3:declare required parameter, used to differentiate Decoding only and Parsing only
-  SDecodingParam sDecParam = {0};
+  SDecodingParam sDecParam{};
   sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_AVC;
 
   //for Parsing only, the assignment is mandatory
