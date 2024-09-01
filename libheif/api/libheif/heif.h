@@ -218,8 +218,7 @@ enum heif_suberror_code
 
   heif_suberror_Invalid_pixi_box = 130,
 
-  heif_suberror_No_av1C_box = 131,   // deprecated: typo in name. Use 'heif_suberror_No_avcC_box' instead.
-  heif_suberror_No_avcC_box = 131,
+  heif_suberror_No_av1C_box = 131,
 
   heif_suberror_Wrong_tile_image_pixel_depth = 132,
 
@@ -246,6 +245,8 @@ enum heif_suberror_code
 
   // icbr is only needed in some situations, this error is for those cases
   heif_suberror_No_icbr_box = 142,
+
+  heif_suberror_No_avcC_box = 143,
 
   // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
   heif_suberror_Decompression_invalid_data = 150,
