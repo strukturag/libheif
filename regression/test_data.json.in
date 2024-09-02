@@ -1,0 +1,4 @@
+{
+    "static_test_data" : "@TESTING_DATA_DIRECTORY@",
+    "conformance_test_data" : "heif_conformance"
+}

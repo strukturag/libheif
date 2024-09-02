@@ -1,0 +1,20 @@
+MIME type: image/heif
+main brand: mif1
+compatible brands: heic, mif1, miaf, MiHB
+
+image: 360x640 (id=1002), primary
+  colorspace: YCbCr, 4:2:0
+  bit depth: 8
+  thumbnail: 360x640
+  color profile: no
+  alpha channel: no 
+  depth channel: no
+metadata:
+  none
+transformations:
+  crop: left=320 top=180 right=320 bottom=180
+  angle (ccw): 90
+  mirror: vertical
+region annotations:
+  none
+properties:
