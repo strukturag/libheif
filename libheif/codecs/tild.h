@@ -23,9 +23,52 @@
 
 
 #include <codecs/image_item.h>
+#include "box.h"
 #include <vector>
 #include <string>
 #include <memory>
+
+
+uint64_t number_of_tiles(const heif_tild_image_parameters& params);
+
+uint64_t nTiles_h(const heif_tild_image_parameters& params);
+
+uint64_t nTiles_v(const heif_tild_image_parameters& params);
+
+
+class Box_tilC : public FullBox
+{
+  /*
+   * Flags:
+   * bit 0-1 - number of bits for offsets   (0: 32, 1: 40, 2: 48, 3: 64)
+   * bit 2-3 - number of bits for tile size (0:  0, 1: 24; 2: 32, 3: 64)
+   * bit 4   - sequential ordering hint
+   * bit 5   - use 64 bit dimensions (currently unused because ispe is limited to 32 bit)
+   */
+public:
+  Box_tilC()
+  {
+    set_short_type(fourcc("tilC"));
+  }
+
+  bool is_essential() const override { return true; }
+
+  void derive_box_version() override;
+
+  void set_parameters(const heif_tild_image_parameters& params) { m_parameters = params; }
+
+  const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
+
+  Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  heif_tild_image_parameters m_parameters;
+};
 
 
 #define TILD_OFFSET_NOT_AVAILABLE 0
@@ -39,17 +82,11 @@ public:
 
   const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
 
-  Error parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id);
+  Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id);
 
-  std::vector<uint8_t> write();
+  std::vector<uint8_t> write_offset_table();
 
   std::string dump() const;
-
-  uint64_t number_of_tiles() const;
-
-  uint64_t nTiles_h() const;
-
-  uint64_t nTiles_v() const;
 
   void set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size);
 
@@ -62,13 +99,6 @@ public:
 private:
   uint8_t version = 1;
 
-  /*
-   * Flags:
-   * bit 0-1 - number of bits for offsets   (0: 32, 1: 40, 2: 48, 3: 64)
-   * bit 2-3 - number of bits for tile size (0:  0, 1: 24; 2: 32, 3: 64)
-   * bit 4   - sequential ordering hint
-   * bit 5   - use 64 bit dimensions (currently unused because ispe is limited to 32 bit)
-   */
   heif_tild_image_parameters m_parameters;
 
   struct TileOffset {
@@ -91,7 +121,7 @@ public:
 
   ImageItem_Tild(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "tild"; }
+  const char* get_infe_type() const override { return "tili"; }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

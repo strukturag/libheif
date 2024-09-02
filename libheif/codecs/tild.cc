@@ -37,249 +37,49 @@ static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
 }
 
 
-void TildHeader::set_parameters(const heif_tild_image_parameters& params)
+uint64_t number_of_tiles(const heif_tild_image_parameters& params)
 {
-  m_parameters = params;
+  uint64_t nTiles = nTiles_h(params) * nTiles_v(params);
 
-  m_offsets.resize(number_of_tiles());
-
-  for (auto& tile : m_offsets) {
-    tile.offset = TILD_OFFSET_NOT_AVAILABLE;
-  }
-}
-
-
-
-Error TildHeader::parse(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
-{
-  const Error eofError(heif_error_Invalid_input,
-                       heif_suberror_Unspecified,
-                       "Tild header data incomplete");
-
-  std::vector<uint8_t> data;
-
-#if 0
-  const uint64_t APPROX_TILD_HEADER_SIZE = 1024;
-  uint64_t maxDataLen = file->request_iloc_data(tild_id, 0, APPROX_TILD_HEADER_SIZE);
-#endif
-
-  Error err;
-  err = file->append_data_from_iloc(tild_id, data, 0, 3);
-  if (err) {
-    return err;
-  }
-
-  assert(data.size() == 3);
-
-#if 0
-  if (data.size() < 2 + 1 + 2 * 4 + 2 * 4 + 4) {
-    return eofError;
-  }
-#endif
-
-  size_t idx = 0;
-  version = data[idx++];
-  if (version != 1) {
-    std::stringstream sstr;
-    sstr << "'tild' image version " << ((int) version) << " is not implemented yet";
-
-    return {heif_error_Unsupported_feature,
-            heif_suberror_Unsupported_data_version,
-            sstr.str()};
-  }
-
-  int flags = data[idx++];
-
-  switch (flags & 0x03) {
-    case 0:
-      m_parameters.offset_field_length = 32;
-      break;
-    case 1:
-      m_parameters.offset_field_length = 40;
-      break;
-    case 2:
-      m_parameters.offset_field_length = 48;
-      break;
-    case 3:
-      m_parameters.offset_field_length = 64;
-      break;
-  }
-
-  switch (flags & 0x0c) {
-    case 0x00:
-      m_parameters.size_field_length = 0;
-      break;
-    case 0x04:
-      m_parameters.size_field_length = 24;
-      break;
-    case 0x08:
-      m_parameters.size_field_length = 32;
-      break;
-    case 0xc0:
-      m_parameters.size_field_length = 64;
-      break;
-  }
-
-  m_parameters.tiles_are_sequential = !!(flags % 0x10);
-  bool dimensions_are_64bit = (flags & 0x20);
-
-  m_parameters.number_of_extra_dimensions = data[idx++];
-
-  size_t size_of_header_without_offsets = 3 + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4;
-
-  err = file->append_data_from_iloc(tild_id, data, 3, size_of_header_without_offsets - 3);
-  if (err) {
-    return err;
-  }
-
-#if 0
-  if (data.size() < idx + 2 * (dimensions_are_64bit ? 8 : 4)) {
-    return eofError;
-  }
-
-  if (data.size() < idx + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4) {
-    return eofError;
-  }
-#endif
-
-  m_parameters.image_width = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
-  m_parameters.image_height = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
-
-  if (m_parameters.image_width == 0 || m_parameters.image_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "'tild' image with zero width or height."};
-  }
-
-  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
-    uint64_t size = readvec(data, idx, dimensions_are_64bit ? 8 : 4);
-
-    if (size == 0) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "'tild' extra dimension may not be zero."};
-    }
-
-    if (i < 8) {
-      m_parameters.extra_dimensions[i] = size;
-    }
-    else {
-      // TODO: error: too many dimensions (not supported)
-    }
-  }
-
-  m_parameters.tile_width = static_cast<uint32_t>(readvec(data, idx, 4));
-  m_parameters.tile_height = static_cast<uint32_t>(readvec(data, idx, 4));
-
-  m_parameters.compression_type_fourcc = static_cast<uint32_t>(readvec(data, idx, 4));
-
-  if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "Tile with zero width or height."};
-  }
-
-  uint64_t nTiles = number_of_tiles();
-  if (nTiles > MAX_TILD_TILES) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Security_limit_exceeded,
-            "Number of tiles exceeds security limit."};
-  }
-
-  m_offsets.resize(nTiles);
-
-
-  // --- load offsets (TODO: do this on-demand)
-
-  size_t size_of_offset_table = nTiles * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
-
-  err = file->append_data_from_iloc(tild_id, data, size_of_header_without_offsets, size_of_offset_table);
-  if (err) {
-    return err;
-  }
-
-  for (uint64_t i=0; i<nTiles; i++) {
-    m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length/8);
-
-    if (m_parameters.size_field_length) {
-      assert(m_parameters.size_field_length <= 32);
-      m_offsets[i].size = static_cast<uint32_t>(readvec(data, idx, m_parameters.size_field_length / 8));
-    }
-
-    // printf("[%zu] : offset/size: %zu %d\n", i, m_offsets[i].offset, m_offsets[i].size);
-  }
-
-  return Error::Ok;
-}
-
-
-uint64_t TildHeader::number_of_tiles() const
-{
-  uint64_t nTiles_h = (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
-  uint64_t nTiles_v = (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
-  uint64_t nTiles = nTiles_h * nTiles_v;
-
-  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+  for (int i = 0; i < params.number_of_extra_dimensions; i++) {
     // We only support up to 8 extra dimensions
     if (i == 8) {
       break;
     }
 
-    nTiles *= m_parameters.extra_dimensions[i];
+    nTiles *= params.extra_dimensions[i];
   }
 
   return nTiles;
 }
 
 
-uint64_t TildHeader::nTiles_h() const
+uint64_t nTiles_h(const heif_tild_image_parameters& params)
 {
-  return (m_parameters.image_width + m_parameters.tile_width - 1) / m_parameters.tile_width;
+  return (params.image_width + params.tile_width - 1) / params.tile_width;
 }
 
 
-uint64_t TildHeader::nTiles_v() const
+uint64_t nTiles_v(const heif_tild_image_parameters& params)
 {
-  return (m_parameters.image_height + m_parameters.tile_height - 1) / m_parameters.tile_height;
+  return (params.image_height + params.tile_height - 1) / params.tile_height;
 }
 
 
-size_t TildHeader::get_header_size() const
+bool dimensions_64bit(const heif_tild_image_parameters& params)
 {
-  assert(m_header_size);
-  return m_header_size;
+  return (params.image_width > 0xFFFF || params.image_height > 0xFFFF);
 }
 
 
-void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
+void Box_tilC::derive_box_version()
 {
-  uint64_t idx = tile_y * nTiles_h() + tile_x;
-  m_offsets[idx].offset = offset;
-  m_offsets[idx].size = size;
-}
-
-
-template<typename I>
-void writevec(uint8_t* data, size_t& idx, I value, int len)
-{
-  for (int i = 0; i < len; i++) {
-    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
-  }
-
-  idx += len;
-}
-
-
-std::vector<uint8_t> TildHeader::write()
-{
-  assert(m_parameters.version == 1);
+  set_version(1);
 
   uint8_t flags = 0;
-  bool dimensions_are_64bit = false;
 
-  if (m_parameters.image_width > 0xFFFF || m_parameters.image_height > 0xFFFF) {
+  if (dimensions_64bit(m_parameters)) {
     flags |= 0x20;
-    dimensions_are_64bit = true;
   }
 
   switch (m_parameters.offset_field_length) {
@@ -316,48 +116,258 @@ std::vector<uint8_t> TildHeader::write()
       assert(false); // TODO: return error
   }
 
-  printf("> %d %d -> %d\n", m_parameters.offset_field_length, m_parameters.size_field_length, (int)flags);
+  // printf("> %d %d -> %d\n", m_parameters.offset_field_length, m_parameters.size_field_length, (int)flags);
 
   if (m_parameters.tiles_are_sequential) {
     flags |= 0x10;
   }
 
-  uint64_t nTiles = number_of_tiles();
+  set_flags(flags);
+}
 
-  int offset_entry_size = (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
 
-  std::vector<uint8_t> data;
-  uint64_t size = (2 +  // version, flags
-                   1 +  // number of extra dimensions
-                   (dimensions_are_64bit ? 8 : 4) * (2 + m_parameters.number_of_extra_dimensions) + // image size
-                   2 * 4 + // tile size
-                   4 + // compression type
-                   nTiles * offset_entry_size); // offsets
+Error Box_tilC::write(StreamWriter& writer) const
+{
+  assert(m_parameters.version == 1);
 
-  data.resize(size);
-  size_t idx = 0;
-  data[idx++] = version;
-  data[idx++] = flags;
+  size_t box_start = reserve_box_header_space(writer);
+
+  bool dimensions_are_64bit = dimensions_64bit(m_parameters);
 
   if (m_parameters.number_of_extra_dimensions > 8) {
     assert(false); // currently not supported
   }
 
-  data[idx++] = m_parameters.number_of_extra_dimensions;
+  writer.write8(m_parameters.number_of_extra_dimensions);
 
-  writevec(data.data(), idx, m_parameters.image_width, dimensions_are_64bit ? 8 : 4);
-  writevec(data.data(), idx, m_parameters.image_height, dimensions_are_64bit ? 8 : 4);
+  writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_width);
+  writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_height);
 
   for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
-    writevec(data.data(), idx, m_parameters.extra_dimensions[i], dimensions_are_64bit ? 8 : 4);
+    writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.extra_dimensions[i]);
   }
 
-  writevec(data.data(), idx, m_parameters.tile_width, 4);
-  writevec(data.data(), idx, m_parameters.tile_height, 4);
+  writer.write32(m_parameters.tile_width);
+  writer.write32(m_parameters.tile_height);
+  writer.write32(m_parameters.compression_type_fourcc);
 
-  writevec(data.data(), idx, m_parameters.compression_type_fourcc, 4);
+  prepend_header(writer, box_start);
 
-  for (const auto& offset : m_offsets) {
+  return Error::Ok;
+}
+
+
+std::string Box_tilC::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+
+  sstr << BoxHeader::dump(indent);
+
+  sstr << indent << "version: " << ((int) get_version()) << "\n"
+       << indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
+       << indent << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n";
+
+  return sstr.str();
+
+}
+
+
+Error Box_tilC::parse(BitstreamRange& range)
+{
+  parse_full_box_header(range);
+
+  if (get_version() != 1) {
+    std::stringstream sstr;
+    sstr << "'tild' image version " << ((int) get_version()) << " is not implemented yet";
+
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            sstr.str()};
+  }
+
+  m_parameters.version = get_version();
+
+  uint32_t flags = get_flags();
+
+  switch (flags & 0x03) {
+    case 0:
+      m_parameters.offset_field_length = 32;
+      break;
+    case 1:
+      m_parameters.offset_field_length = 40;
+      break;
+    case 2:
+      m_parameters.offset_field_length = 48;
+      break;
+    case 3:
+      m_parameters.offset_field_length = 64;
+      break;
+  }
+
+  switch (flags & 0x0c) {
+    case 0x00:
+      m_parameters.size_field_length = 0;
+      break;
+    case 0x04:
+      m_parameters.size_field_length = 24;
+      break;
+    case 0x08:
+      m_parameters.size_field_length = 32;
+      break;
+    case 0xc0:
+      m_parameters.size_field_length = 64;
+      break;
+  }
+
+  m_parameters.tiles_are_sequential = !!(flags % 0x10);
+  bool dimensions_are_64bit = (flags & 0x20);
+
+  m_parameters.number_of_extra_dimensions = range.read8();
+
+#if 0
+  if (data.size() < idx + 2 * (dimensions_are_64bit ? 8 : 4)) {
+    return eofError;
+  }
+
+  if (data.size() < idx + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4) {
+    return eofError;
+  }
+#endif
+
+  m_parameters.image_width = (dimensions_are_64bit ? range.read64() : range.read32());
+  m_parameters.image_height = (dimensions_are_64bit ? range.read64() : range.read32());
+
+  if (m_parameters.image_width == 0 || m_parameters.image_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "'tild' image with zero width or height."};
+  }
+
+  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+    uint64_t size = (dimensions_are_64bit ? range.read64() : range.read32());
+
+    if (size == 0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "'tild' extra dimension may not be zero."};
+    }
+
+    if (i < 8) {
+      m_parameters.extra_dimensions[i] = size;
+    }
+    else {
+      // TODO: error: too many dimensions (not supported)
+    }
+  }
+
+  m_parameters.tile_width = range.read32();
+  m_parameters.tile_height = range.read32();
+  m_parameters.compression_type_fourcc = range.read32();
+
+  if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Tile with zero width or height."};
+  }
+
+  return range.get_error();
+}
+
+
+void TildHeader::set_parameters(const heif_tild_image_parameters& params)
+{
+  m_parameters = params;
+
+  m_offsets.resize(number_of_tiles(params));
+
+  for (auto& tile: m_offsets) {
+    tile.offset = TILD_OFFSET_NOT_AVAILABLE;
+  }
+}
+
+
+Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
+{
+  const Error eofError(heif_error_Invalid_input,
+                       heif_suberror_Unspecified,
+                       "Tild header data incomplete");
+
+  std::vector<uint8_t> data;
+
+  uint64_t nTiles = number_of_tiles(m_parameters);
+  if (nTiles > MAX_TILD_TILES) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            "Number of tiles exceeds security limit."};
+  }
+
+  m_offsets.resize(nTiles);
+
+
+  // --- load offsets (TODO: do this on-demand)
+
+  size_t size_of_offset_table = nTiles * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+
+  Error err = file->append_data_from_iloc(tild_id, data, 0, size_of_offset_table);
+  if (err) {
+    return err;
+  }
+
+  size_t idx = 0;
+  for (uint64_t i = 0; i < nTiles; i++) {
+    m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length / 8);
+
+    if (m_parameters.size_field_length) {
+      assert(m_parameters.size_field_length <= 32);
+      m_offsets[i].size = static_cast<uint32_t>(readvec(data, idx, m_parameters.size_field_length / 8));
+    }
+
+    // printf("[%zu] : offset/size: %zu %d\n", i, m_offsets[i].offset, m_offsets[i].size);
+  }
+
+  return Error::Ok;
+}
+
+
+size_t TildHeader::get_header_size() const
+{
+  assert(m_header_size);
+  return m_header_size;
+}
+
+
+void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
+{
+  uint64_t idx = tile_y * nTiles_h(m_parameters) + tile_x;
+  m_offsets[idx].offset = offset;
+  m_offsets[idx].size = size;
+}
+
+
+template<typename I>
+void writevec(uint8_t* data, size_t& idx, I value, int len)
+{
+  for (int i = 0; i < len; i++) {
+    data[idx + i] = static_cast<uint8_t>((value >> (len - 1 - i) * 8) & 0xFF);
+  }
+
+  idx += len;
+}
+
+
+std::vector<uint8_t> TildHeader::write_offset_table()
+{
+  uint64_t nTiles = number_of_tiles(m_parameters);
+
+  int offset_entry_size = (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+  uint64_t size = nTiles * offset_entry_size;
+
+  std::vector<uint8_t> data;
+  data.resize(size);
+
+  size_t idx = 0;
+
+  for (const auto& offset: m_offsets) {
     writevec(data.data(), idx, offset.offset, m_parameters.offset_field_length / 8);
 
     if (m_parameters.size_field_length != 0) {
@@ -377,14 +387,11 @@ std::string TildHeader::dump() const
 {
   std::stringstream sstr;
 
-  sstr << "version: " << ((int) m_parameters.version) << "\n"
-       << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
-       << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
-       << "offsets: ";
+  sstr << "offsets: ";
 
   // TODO
 
-  for (const auto& offset : m_offsets) {
+  for (const auto& offset: m_offsets) {
     sstr << offset.offset << ", size: " << offset.size << "\n";
   }
 
@@ -393,13 +400,13 @@ std::string TildHeader::dump() const
 
 
 ImageItem_Tild::ImageItem_Tild(HeifContext* ctx)
-    : ImageItem(ctx)
+        : ImageItem(ctx)
 {
 }
 
 
 ImageItem_Tild::ImageItem_Tild(HeifContext* ctx, heif_item_id id)
-    : ImageItem(ctx, id)
+        : ImageItem(ctx, id)
 {
 }
 
@@ -415,7 +422,16 @@ Error ImageItem_Tild::on_load_file()
   Error err;
   auto heif_file = get_context()->get_heif_file();
 
-  err = m_tild_header.parse(heif_file, get_id());
+  auto tilC_box = heif_file->get_property<Box_tilC>(get_id());
+  if (!tilC_box) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Tiled image without 'tilC' property box."};
+  }
+
+  m_tild_header.set_parameters(tilC_box->get_parameters());
+
+  err = m_tild_header.read_full_offset_table(heif_file, get_id());
   if (err) {
     return err;
   }
@@ -424,15 +440,9 @@ Error ImageItem_Tild::on_load_file()
 }
 
 
-Result<std::shared_ptr<ImageItem_Tild>> ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tild>>
+ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters)
 {
-  // Create header
-
-  TildHeader tild_header;
-  tild_header.set_parameters(*parameters);
-
-  std::vector<uint8_t> header_data = tild_header.write();
-
   // Create 'tild' Item
 
   auto file = ctx->get_heif_file();
@@ -440,6 +450,19 @@ Result<std::shared_ptr<ImageItem_Tild>> ImageItem_Tild::add_new_tild_item(HeifCo
   heif_item_id tild_id = ctx->get_heif_file()->add_new_image("tild");
   auto tild_image = std::make_shared<ImageItem_Tild>(ctx, tild_id);
   ctx->insert_new_image(tild_id, tild_image);
+
+  // Create tilC box
+
+  auto tilC_box = std::make_shared<Box_tilC>();
+  tilC_box->set_parameters(*parameters);
+  ctx->get_heif_file()->add_property(tild_id, tilC_box, true);
+
+  // Create header + offset table
+
+  TildHeader tild_header;
+  tild_header.set_parameters(*parameters);
+
+  std::vector<uint8_t> header_data = tild_header.write_offset_table();
 
   const int construction_method = 0; // 0=mdat 1=idat
   file->append_iloc_data(tild_id, header_data, construction_method);
@@ -480,26 +503,30 @@ void ImageItem_Tild::process_before_write()
 
   const int construction_method = 0; // 0=mdat 1=idat
 
-  std::vector<uint8_t> header_data = m_tild_header.write();
+  std::vector<uint8_t> header_data = m_tild_header.write_offset_table();
   get_file()->replace_iloc_data(get_id(), 0, header_data, construction_method);
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_compressed_image(const struct heif_decoding_options& options,
-                                                                                bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+Result<std::shared_ptr<HeifPixelImage>>
+ImageItem_Tild::decode_compressed_image(const struct heif_decoding_options& options,
+                                        bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
     return decode_grid_tile(options, tile_x0, tile_y0);
   }
   else {
-    return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "'tild' images can only be access per tile"};
+    return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified,
+                 "'tild' images can only be access per tile"};
   }
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+Result<std::shared_ptr<HeifPixelImage>>
+ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
 {
-  heif_compression_format format = compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
+  heif_compression_format format = compression_format_from_fourcc_infe_type(
+          m_tild_header.get_parameters().compression_type_fourcc);
 
   // --- get compressed data
 
@@ -512,7 +539,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Tild::decode_grid_tile(const h
 
   // --- decode
 
-  uint32_t idx = (uint32_t)(ty * m_tild_header.nTiles_h() + tx);
+  uint32_t idx = (uint32_t) (ty * nTiles_h(m_tild_header.get_parameters()) + tx);
 
   uint64_t offset = m_tild_header.get_tile_offset(idx);
   uint64_t size = m_tild_header.get_tile_size(idx);
@@ -528,8 +555,8 @@ heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
 {
   heif_image_tiling tiling{};
 
-  tiling.num_columns = m_tild_header.nTiles_h();
-  tiling.num_rows = m_tild_header.nTiles_v();
+  tiling.num_columns = nTiles_h(m_tild_header.get_parameters());
+  tiling.num_rows = nTiles_v(m_tild_header.get_parameters());
 
   tiling.tile_width = m_tild_header.get_parameters().tile_width;
   tiling.tile_height = m_tild_header.get_parameters().tile_height;

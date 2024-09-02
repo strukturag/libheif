@@ -29,6 +29,7 @@
 #include "codecs/mask_image.h"
 #include "codecs/vvc.h"
 #include "codecs/avc.h"
+#include "codecs/tild.h"
 
 #include <iomanip>
 #include <utility>
@@ -671,6 +672,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
 
     case fourcc("avcC"):
       box = std::make_shared<Box_avcC>();
+      break;
+
+    case fourcc("tilC"):
+      box = std::make_shared<Box_tilC>();
       break;
 
     case fourcc("mdat"):
