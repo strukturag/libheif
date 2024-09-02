@@ -104,6 +104,10 @@
 #include "plugins/encoder_openjph.h"
 #endif
 
+#if HAVE_NV_DECODER
+#include "plugins/decoder_nvdec.h"
+#endif
+
 std::set<const struct heif_decoder_plugin*> s_decoder_plugins;
 
 std::multiset<std::unique_ptr<struct heif_encoder_descriptor>,
@@ -209,6 +213,10 @@ void register_default_plugins()
 
 #if HAVE_OpenH264_DECODER
   register_decoder(get_decoder_plugin_openh264());
+#endif
+
+#if HAVE_NV_DECODER
+  register_decoder(get_decoder_plugin_nvdec());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

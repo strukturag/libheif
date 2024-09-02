@@ -1030,7 +1030,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_from_compressed_data(h
   // --- decode image with the plugin
 
   void* decoder;
-  struct heif_error err = decoder_plugin->new_decoder(&decoder);
+
+  struct heif_error err;
+  if (decoder_plugin->plugin_api_version >= 4) {
+    heif_decoder_configuration decoder_configuration {.version = 1, .compression_format = compression_format};
+    err = decoder_plugin->new_decoder2(&decoder, &decoder_configuration);
+  } else {
+    err = decoder_plugin->new_decoder(&decoder);
+  }
+
   if (err.code != heif_error_Ok) {
     return Error(err.code, err.subcode, err.message);
   }
