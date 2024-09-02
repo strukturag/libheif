@@ -23,6 +23,25 @@
 #include <utility>
 #include "nalu_utils.h"
 
+NalUnit::NalUnit()
+{
+    nal_data_ptr = NULL;
+    nal_unit_type = 0;
+    nal_data_size = 0;
+}
+
+NalUnit::~NalUnit()
+{
+
+}
+
+bool NalUnit::set_data(const unsigned char* in_data, int n)
+{
+    nal_data_ptr = in_data;
+    nal_unit_type = bitExtracted(nal_data_ptr[0], 6, 2);
+    nal_data_size = n;
+    return true;
+}
 
 int NalUnit::bitExtracted(int number, int bits_count, int position_nr)
 {
