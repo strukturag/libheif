@@ -32,7 +32,7 @@ class NalUnit
 {
 public:
     NalUnit();
-    ~NalUnit();
+    ~NalUnit() = default;
     bool set_data(const unsigned char* in_data, int n);
     int size() const { return nal_data_size; }
     int unit_type() const { return nal_unit_type;  }
