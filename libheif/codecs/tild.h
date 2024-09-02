@@ -97,8 +97,6 @@ public:
   uint32_t get_tile_size(uint32_t idx) const { return m_offsets[idx].size; }
 
 private:
-  uint8_t version = 1;
-
   heif_tild_image_parameters m_parameters;
 
   struct TileOffset {
