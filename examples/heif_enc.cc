@@ -373,6 +373,9 @@ static const char* get_compression_format_name(heif_compression_format format)
     case heif_compression_AV1:
       return "AV1";
       break;
+    case heif_compression_AVC:
+      return "AVC";
+      break;
     case heif_compression_VVC:
       return "VVC";
       break;
@@ -399,18 +402,19 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-    for (auto compression_format : {heif_compression_HEVC, heif_compression_AV1, heif_compression_VVC, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
+    for (auto compression_format : {heif_compression_AVC, heif_compression_AV1, heif_compression_HEVC, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
 #if WITH_UNCOMPRESSED_CODEC
 , heif_compression_uncompressed
 #endif
+, heif_compression_VVC
   }) {
 
     switch (compression_format) {
+      case heif_compression_AVC:
+        std::cout << "AVC";
+        break;
       case heif_compression_AV1:
         std::cout << "AVIF";
-        break;
-      case heif_compression_VVC:
-        std::cout << "VVIC";
         break;
       case heif_compression_HEVC:
         std::cout << "HEIC";
@@ -422,10 +426,13 @@ static void show_list_of_all_encoders()
         std::cout << "JPEG 2000";
         break;
       case heif_compression_HTJ2K:
-        std::cout << "HT-J2K";
+        std::cout << "JPEG 2000 (HT)";
         break;
       case heif_compression_uncompressed:
         std::cout << "Uncompressed";
+        break;
+      case heif_compression_VVC:
+        std::cout << "VVIC";
         break;
       default:
         assert(false);
