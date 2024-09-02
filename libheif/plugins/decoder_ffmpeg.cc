@@ -105,26 +105,6 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
   decoder->strict_decoding = flag;
 }
 
-NalUnit::NalUnit()
-{
-    nal_data_ptr = NULL;
-    nal_unit_type = 0;
-    nal_data_size = 0;
-}
-
-NalUnit::~NalUnit()
-{
-
-}
-
-bool NalUnit::set_data(const unsigned char* in_data, int n)
-{
-    nal_data_ptr = in_data;
-    nal_unit_type = bitExtracted(nal_data_ptr[0], 6, 2);
-    nal_data_size = n;
-    return true;
-}
-
 static struct heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_t size)
 {
 
