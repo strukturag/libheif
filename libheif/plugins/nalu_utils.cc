@@ -30,11 +30,6 @@ NalUnit::NalUnit()
     nal_data_size = 0;
 }
 
-NalUnit::~NalUnit()
-{
-
-}
-
 bool NalUnit::set_data(const unsigned char* in_data, int n)
 {
     nal_data_ptr = in_data;
