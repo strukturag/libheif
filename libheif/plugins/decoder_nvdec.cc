@@ -75,7 +75,7 @@ static int nvdec_does_support_format(enum heif_compression_format format)
     {
         return 0;
     }
-#if 0
+#if 1
   char szDeviceName[80];
   result = cuDeviceGetName(szDeviceName, sizeof(szDeviceName), cuDevice);
   if (result != CUDA_SUCCESS) {
@@ -163,26 +163,14 @@ struct heif_error nvdec_decode_image(void *decoder, struct heif_image **out_img)
 
     heif_error err;
     NalMap nalus;
-// TODO
-#if 0
     if (ctx->eCodec == cudaVideoCodec_HEVC) {
         err = nalus.parseHevcNalu(ctx->data.data(), ctx->data.size());
         if (err.code != heif_error_Ok) {
             return err;
         }
-        if ((!nalus.NUTs_are_valid()) || (!nalus.IDR_is_valid())) {
-            if (!nalus.NUTs_are_valid()) {
-                printf("NUTs not valid");
-            }
-            if (!nalus.IDR_is_valid()) {
-                printf("IDR not valid");
-            }
-            struct heif_error err = {heif_error_Decoder_plugin_error,
-                                    heif_suberror_End_of_data,
-                                    "Unexpected end of data"};
-            return err;
-        }
     }
+// TODO
+#if 0
     if (ctx->eCodec == cudaVideoCodec_H264) {
         err = nalus.parseNALU_AVC(ctx->data.data(), ctx->data.size());
         if (err.code != heif_error_Ok) {
@@ -240,13 +228,97 @@ struct heif_error nvdec_decode_image(void *decoder, struct heif_image **out_img)
     }
 
     int nFrameReturned;
-// TODO
-#if 0
     if (ctx->eCodec == cudaVideoCodec_HEVC) {
         uint8_t *hevc_data;
-        size_t avc_data_size;
-        nalus.buildWithStartCodesHEVC(&hevc_data, &avc_data_size);
-        nFrameReturned = dec.Decode(hevc_data, avc_data_size);
+        size_t hevc_data_size;
+        {
+            int heif_idrpic_size;
+            int heif_vps_size;
+            int heif_sps_size;
+            int heif_pps_size;
+            const unsigned char* heif_vps_data;
+            const unsigned char* heif_sps_data;
+            const unsigned char* heif_pps_data;
+            const unsigned char* heif_idrpic_data;
+
+            if ((nalus.count(NAL_UNIT_VPS_NUT) > 0) && (nalus.count(NAL_UNIT_SPS_NUT) > 0) && (nalus.count(NAL_UNIT_PPS_NUT) > 0))
+            {
+                heif_vps_size = nalus.size(NAL_UNIT_VPS_NUT);
+                heif_vps_data = nalus.data(NAL_UNIT_VPS_NUT);
+
+                heif_sps_size = nalus.size(NAL_UNIT_SPS_NUT);
+                heif_sps_data = nalus.data(NAL_UNIT_SPS_NUT);
+
+                heif_pps_size = nalus.size(NAL_UNIT_PPS_NUT);
+                heif_pps_data = nalus.data(NAL_UNIT_PPS_NUT);
+            }
+            else
+            {
+                struct heif_error err = { heif_error_Decoder_plugin_error,
+                                            heif_suberror_End_of_data,
+                                            "Unexpected end of data" };
+                return err;
+            }
+
+            if ((nalus.count(NAL_UNIT_IDR_W_RADL) > 0) || (nalus.count(NAL_UNIT_IDR_N_LP) > 0))
+            {
+                if (nalus.count(NAL_UNIT_IDR_W_RADL) > 0)
+                {
+                    heif_idrpic_data = nalus.data(NAL_UNIT_IDR_W_RADL);
+                    heif_idrpic_size = nalus.size(NAL_UNIT_IDR_W_RADL);
+                }
+                else
+                {
+                    heif_idrpic_data = nalus.data(NAL_UNIT_IDR_N_LP);
+                    heif_idrpic_size = nalus.size(NAL_UNIT_IDR_N_LP);
+                }
+            }
+            else
+            {
+                struct heif_error err = { heif_error_Decoder_plugin_error,
+                                            heif_suberror_End_of_data,
+                                            "Unexpected end of data" };
+                return err;
+            }
+
+            const char hevc_AnnexB_StartCode[] = { 0x00, 0x00, 0x00, 0x01 };
+            int hevc_AnnexB_StartCode_size = 4;
+
+            hevc_data_size = heif_vps_size + heif_sps_size + heif_pps_size + heif_idrpic_size + 4 * hevc_AnnexB_StartCode_size;
+            hevc_data = (uint8_t*)malloc(hevc_data_size);
+
+            //Copy hevc pps data
+            uint8_t* hevc_data_ptr = hevc_data;
+            memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+            hevc_data_ptr += hevc_AnnexB_StartCode_size;
+            memcpy(hevc_data_ptr, heif_vps_data, heif_vps_size);
+            hevc_data_ptr += heif_vps_size;
+
+            //Copy hevc sps data
+            memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+            hevc_data_ptr += hevc_AnnexB_StartCode_size;
+            memcpy(hevc_data_ptr, heif_sps_data, heif_sps_size);
+            hevc_data_ptr += heif_sps_size;
+
+            //Copy hevc pps data
+            memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+            hevc_data_ptr += hevc_AnnexB_StartCode_size;
+            memcpy(hevc_data_ptr, heif_pps_data, heif_pps_size);
+            hevc_data_ptr += heif_pps_size;
+
+            //Copy hevc idrpic data
+            memcpy(hevc_data_ptr, hevc_AnnexB_StartCode, hevc_AnnexB_StartCode_size);
+            hevc_data_ptr += hevc_AnnexB_StartCode_size;
+            memcpy(hevc_data_ptr, heif_idrpic_data, heif_idrpic_size);
+
+            // decoder->NalMap not needed anymore
+            nalus.clear();
+        }
+
+        nFrameReturned = dec.Decode(hevc_data, hevc_data_size);
+    } else {
+// TODO
+#if 0
     } else if (ctx->eCodec == cudaVideoCodec_H264) {
         uint8_t *avc_data;
         size_t avc_data_size;
@@ -255,8 +327,8 @@ struct heif_error nvdec_decode_image(void *decoder, struct heif_image **out_img)
         printf("nFrameReturned: %d\n", nFrameReturned);
     } else 
 #endif
-// TODO: else closure
-    nFrameReturned = dec.Decode(ctx->data.data(), ctx->data.size());
+        nFrameReturned = dec.Decode(ctx->data.data(), ctx->data.size());
+    }
     
     if (nFrameReturned > 0) {
         uint8_t *pFrame = dec.GetFrame();
