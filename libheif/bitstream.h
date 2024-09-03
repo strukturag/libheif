@@ -102,16 +102,16 @@ public:
   bool seek(uint64_t position) override;
 
   uint64_t request_range(uint64_t start, uint64_t end_pos) override {
-    std::cout << "[istream] request_range " << start << " - " << end_pos << "\n";
+    // std::cout << "[istream] request_range " << start << " - " << end_pos << "\n";
     return end_pos;
   }
 
   void release_range(uint64_t start, uint64_t end_pos) override {
-    std::cout << "[istream] release_range " << start << " - " << end_pos << "\n";
+    // std::cout << "[istream] release_range " << start << " - " << end_pos << "\n";
   }
 
   void preload_range_hint(uint64_t start, uint64_t end_pos) override {
-    std::cout << "[istream] preload_range_hint " << start << " - " << end_pos << "\n";
+    // std::cout << "[istream] preload_range_hint " << start << " - " << end_pos << "\n";
   }
 
 private:
