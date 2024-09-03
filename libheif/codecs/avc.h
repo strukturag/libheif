@@ -41,6 +41,9 @@ public:
     uint8_t profile_compatibility; // constraint set flags
     uint8_t AVCLevelIndication; // level_idc
     uint8_t lengthSize;
+    uint8_t chroma_format;
+    uint8_t bit_depth_luma = 8;
+    uint8_t bit_depth_chroma = 8;
   };
 
   void set_configuration(const configuration& config)
@@ -63,6 +66,11 @@ public:
     return m_pps;
   }
 
+  const std::vector< std::vector<uint8_t> > getSequenceParameterSetExt() const
+  {
+    return m_sps_ext;
+  }
+
   void get_header_nals(std::vector<uint8_t>& data) const;
 
   std::string dump(Indent &) const override;
@@ -78,6 +86,7 @@ private:
   configuration m_configuration;
   std::vector< std::vector<uint8_t> > m_sps;
   std::vector< std::vector<uint8_t> > m_pps;
+  std::vector< std::vector<uint8_t> > m_sps_ext;
 };
 
 

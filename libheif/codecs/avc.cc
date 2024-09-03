@@ -55,7 +55,16 @@ Error Box_avcC::parse(BitstreamRange &range) {
   if ((m_configuration.AVCProfileIndication != 66) &&
       (m_configuration.AVCProfileIndication != 77) &&
       (m_configuration.AVCProfileIndication != 88)) {
-    // TODO: we don't support this yet
+    m_configuration.chroma_format = range.read8() & 0b00000011;
+    m_configuration.bit_depth_luma = 8 + (range.read8() & 0b00000111);
+    m_configuration.bit_depth_chroma = 8 + (range.read8() & 0b00000111);
+    uint8_t numOfSequenceParameterSetExt = range.read8();
+    for (int i = 0; i < numOfSequenceParameterSetExt; i++) {
+      uint16_t sequenceParameterSetExtLength = range.read16();
+      std::vector<uint8_t> sps_ext(sequenceParameterSetExtLength);
+      range.read(sps_ext.data(), sps_ext.size());
+      m_sps_ext.push_back(sps_ext);
+    }
   }
 
   return range.get_error();
@@ -279,7 +288,7 @@ int ImageItem_AVC::get_luma_bits_per_pixel() const
 {
   auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
   if (avcC_box) {
-    return 8; // TODO avcC_box->get_configuration().bit_depth_luma;
+    return avcC_box->get_configuration().bit_depth_luma;
   }
 
   return -1;
@@ -290,7 +299,7 @@ int ImageItem_AVC::get_chroma_bits_per_pixel() const
 {
   auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
   if (avcC_box) {
-    return 8; // TODO avcC_box->get_configuration().bit_depth_chroma;
+    return avcC_box->get_configuration().bit_depth_chroma;
   }
 
   return -1;
