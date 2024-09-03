@@ -113,7 +113,7 @@ fi
 
 if [ ! -z "$WITH_NVIDIA" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        libnvidia-decode \
+        libnvidia-decode-535 \
         "
 fi
 
