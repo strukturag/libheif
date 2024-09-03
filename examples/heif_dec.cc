@@ -168,17 +168,14 @@ void list_decoders(heif_compression_format format)
 
 void list_all_decoders()
 {
-  std::cout << "HEIC decoders:\n";
-  list_decoders(heif_compression_HEVC);
+  std::cout << "AVC decoders:\n";
+  list_decoders(heif_compression_AVC);
 
   std::cout << "AVIF decoders:\n";
   list_decoders(heif_compression_AV1);
 
-  std::cout << "VVIC decoders:\n";
-  list_decoders(heif_compression_VVC);
-
-  std::cout << "AVC decoders:\n";
-  list_decoders(heif_compression_AVC);
+  std::cout << "HEIC decoders:\n";
+  list_decoders(heif_compression_HEVC);
 
   std::cout << "JPEG decoders:\n";
   list_decoders(heif_compression_JPEG);
@@ -186,7 +183,7 @@ void list_all_decoders()
   std::cout << "JPEG 2000 decoders:\n";
   list_decoders(heif_compression_JPEG2000);
 
-  std::cout << "HT-J2K decoders:\n";
+  std::cout << "JPEG 2000 (HT) decoders:\n";
   list_decoders(heif_compression_HTJ2K);
 
 #if WITH_UNCOMPRESSED_CODEC
@@ -194,6 +191,9 @@ void list_all_decoders()
 #else
   std::cout << "uncompressed: no\n";
 #endif
+
+  std::cout << "VVIC decoders:\n";
+  list_decoders(heif_compression_VVC);
 }
 
 
