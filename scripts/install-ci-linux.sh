@@ -113,7 +113,6 @@ fi
 
 if [ ! -z "$WITH_NVIDIA" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
-        nvidia-cuda-dev \
         nvidia-cuda-toolkit \
         libnvidia-decode-535 \
         "
