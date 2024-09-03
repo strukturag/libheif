@@ -115,7 +115,7 @@ plugin_compilation(openh264dec OpenH264 OpenH264_DECODER_FOUND OpenH264_DECODER 
 set(NV_DECODER_sources decoder_nvdec.cc decoder_nvdec.h NvDecoder.cpp NvDecoder.h)
 set(NV_DECODER_extra_plugin_sources)
 plugin_compilation(nvdec NVDEC NVDEC_FOUND NV_DECODER NV_DECODER)
-if(WITH_NV_DECODER)
+if(NVDEC_FOUND)
     target_link_libraries(heif PRIVATE CUDA::cuda_driver)
 endif()
 
