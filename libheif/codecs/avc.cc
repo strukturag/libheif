@@ -98,21 +98,26 @@ Error Box_avcC::write(StreamWriter &writer) const {
 std::string Box_avcC::dump(Indent &indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "configuration_version: "
-       << ((int)m_configuration.configuration_version) << "\n"
-       << indent << "AVCProfileIndication: "
-       << ((int)m_configuration.AVCProfileIndication) << " ("
-       << profileIndicationAsText() << ")"
-       << "\n"
-       << indent << "profile_compatibility: "
-       << ((int)m_configuration.profile_compatibility) << "\n"
-       << indent
-       << "AVCLevelIndication: " << ((int)m_configuration.AVCLevelIndication)
-       << "\n";
+  sstr << indent << "configuration_version: " << ((int)m_configuration.configuration_version) << "\n"
+       << indent << "AVCProfileIndication: " << ((int)m_configuration.AVCProfileIndication) << " (" << profileIndicationAsText() << ")\n"
+       << indent << "profile_compatibility: " << ((int)m_configuration.profile_compatibility) << "\n"
+       << indent << "AVCLevelIndication: " << ((int)m_configuration.AVCLevelIndication) << "\n"
+       << indent << "Chroma format: " << ((int)m_configuration.chroma_format) << "\n"
+       << indent << "Bit depth luma: " << ((int)m_configuration.bit_depth_luma) << "\n"
+       << indent << "Bit depth chroma: " << ((int)m_configuration.bit_depth_chroma) << "\n";
 
   for (const auto &sps : m_sps) {
     sstr << indent << "SPS: ";
     for (uint8_t b : sps) {
+      sstr << std::setfill('0') << std::setw(2) << std::hex << ((int)b) << " ";
+    }
+    sstr << "\n";
+    sstr << std::dec;
+  }
+
+  for (const auto &spsext : m_sps_ext) {
+    sstr << indent << "SPS-EXT: ";
+    for (uint8_t b : spsext) {
       sstr << std::setfill('0') << std::setw(2) << std::hex << ((int)b) << " ";
     }
     sstr << "\n";
