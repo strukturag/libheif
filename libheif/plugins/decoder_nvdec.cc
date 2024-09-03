@@ -38,6 +38,8 @@
 #include "nalu_utils.h"
 #include <mutex>
 
+static heif_error kError_EOF = {heif_error_Decoder_plugin_error, heif_suberror_End_of_data, "Insufficient input data"};
+
 static const int NVDEC_PLUGIN_PRIORITY = 120;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
@@ -169,15 +171,6 @@ struct heif_error nvdec_decode_image(void *decoder, struct heif_image **out_img)
             return err;
         }
     }
-// TODO
-#if 0
-    if (ctx->eCodec == cudaVideoCodec_H264) {
-        err = nalus.parseNALU_AVC(ctx->data.data(), ctx->data.size());
-        if (err.code != heif_error_Ok) {
-            return err;
-        }
-    }
-#endif
     CUdevice cuDevice = 0;
 
     CUresult result;
@@ -238,17 +231,60 @@ struct heif_error nvdec_decode_image(void *decoder, struct heif_image **out_img)
             return err;
         }
         nFrameReturned = dec.Decode(hevc_data, hevc_data_size);
-    } else {
-// TODO
-#if 0
     } else if (ctx->eCodec == cudaVideoCodec_H264) {
-        uint8_t *avc_data;
-        size_t avc_data_size;
-        nalus.buildWithStartCodesAVC(&avc_data, &avc_data_size);
-        nFrameReturned = dec.Decode(avc_data, avc_data_size);
+        // TODO: ideally we'd share this code with the OpenH264 decoder
+        const std::vector<uint8_t>& indata = ctx->data;
+        std::vector<uint8_t> scdata;
+
+        size_t idx = 0;
+        while (idx < indata.size()) {
+            if (indata.size() - 4 < idx) {
+                return kError_EOF;
+            }
+
+            uint32_t size = ((indata[idx] << 24) | (indata[idx + 1] << 16) | (indata[idx + 2] << 8) | indata[idx + 3]);
+            idx += 4;
+
+            if (indata.size() < size || indata.size() - size < idx) {
+                return kError_EOF;
+            }
+
+            scdata.push_back(0);
+            scdata.push_back(0);
+            scdata.push_back(1);
+
+            // check for need of start code emulation prevention
+            bool do_start_code_emulation_check = true;
+            while (do_start_code_emulation_check && size >= 3) {
+                bool found_start_code_emulation = false;
+                for (size_t i = 0; i < size - 3; i++) {
+                    if (indata[idx + 0] == 0 && indata[idx + 1] == 0 && (indata[idx + 2] >= 0 && indata[idx + 2] <= 3)) {
+                        scdata.push_back(0);
+                        scdata.push_back(0);
+                        scdata.push_back(3);
+                        scdata.insert(scdata.end(), &indata[idx + 2], &indata[idx + i + 2]);
+                        idx += i + 2;
+                        size -= (uint32_t)(i + 2);
+                        found_start_code_emulation = true;
+                        break;
+                    }
+                }
+
+                do_start_code_emulation_check = found_start_code_emulation;
+            }
+
+            assert(size > 0);
+            scdata.insert(scdata.end(), &indata[idx], &indata[idx + size]);
+
+            idx += size;
+        }
+
+        if (idx != indata.size()) {
+            return kError_EOF;
+        }
+        nFrameReturned = dec.Decode(scdata.data(), scdata.size());
         printf("nFrameReturned: %d\n", nFrameReturned);
-    } else 
-#endif
+    } else {
         nFrameReturned = dec.Decode(ctx->data.data(), ctx->data.size());
     }
     
