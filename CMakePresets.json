@@ -43,6 +43,10 @@
         "WITH_OpenJPEG_ENCODER_PLUGIN" : "OFF",
         "WITH_FFMPEG_DECODER" : "ON",
         "WITH_FFMPEG_DECODER_PLUGIN" : "OFF",
+        "WITH_OpenH264_DECODER" : "ON",
+        "WITH_OpenH264_DECODER_PLUGIN" : "OFF",
+        "WITH_NV_DECODER" : "ON",
+        "WITH_NV_DECODER_PLUGIN" : "OFF",
 
         "WITH_REDUCED_VISIBILITY" : "OFF",
         "WITH_HEADER_COMPRESSION" : "ON",
@@ -89,6 +93,10 @@
         "WITH_OPENJPH_ENCODER" : "ON",
         "WITH_FFMPEG_DECODER" : "ON",
         "WITH_FFMPEG_DECODER_PLUGIN" : "ON",
+        "WITH_OpenH264_DECODER" : "ON",
+        "WITH_OpenH264_DECODER_PLUGIN" : "ON",
+        "WITH_NV_DECODER" : "ON",
+        "WITH_NV_DECODER_PLUGIN" : "ON",
 
         "WITH_REDUCED_VISIBILITY" : "ON",
         "WITH_HEADER_COMPRESSION" : "ON",
