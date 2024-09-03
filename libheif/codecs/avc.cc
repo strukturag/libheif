@@ -167,6 +167,15 @@ void Box_avcC::get_header_nals(std::vector<uint8_t>& data) const
     data.insert(data.end(), sps.begin(), sps.end());
   }
 
+  for (const auto& spsext : m_sps_ext) {
+    data.push_back((spsext.size() >> 24) & 0xFF);
+    data.push_back((spsext.size() >> 16) & 0xFF);
+    data.push_back((spsext.size() >> 8) & 0xFF);
+    data.push_back((spsext.size() >> 0) & 0xFF);
+
+    data.insert(data.end(), spsext.begin(), spsext.end());
+  }
+
   for (const auto& pps : m_pps) {
     data.push_back((pps.size() >> 24) & 0xFF);
     data.push_back((pps.size() >> 16) & 0xFF);
