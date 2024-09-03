@@ -402,11 +402,9 @@ static const char* get_compression_format_name(heif_compression_format format)
 
 static void show_list_of_all_encoders()
 {
-    for (auto compression_format : {heif_compression_AVC, heif_compression_AV1, heif_compression_HEVC, heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K
-#if WITH_UNCOMPRESSED_CODEC
-, heif_compression_uncompressed
-#endif
-, heif_compression_VVC
+  for (auto compression_format: {heif_compression_AVC, heif_compression_AV1, heif_compression_HEVC,
+                                 heif_compression_JPEG, heif_compression_JPEG2000, heif_compression_HTJ2K,
+                                 heif_compression_uncompressed, heif_compression_VVC
   }) {
 
     switch (compression_format) {
@@ -429,7 +427,12 @@ static void show_list_of_all_encoders()
         std::cout << "JPEG 2000 (HT)";
         break;
       case heif_compression_uncompressed:
-        std::cout << "Uncompressed";
+#if WITH_UNCOMPRESSED_CODEC
+        std::cout << "Uncompressed: yes\n";
+#else
+        std::cout << "Uncompressed: no\n";
+#endif
+        continue; // special handling of this case because it is built in without plugin
         break;
       case heif_compression_VVC:
         std::cout << "VVIC";
