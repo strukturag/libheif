@@ -78,10 +78,6 @@ void Box_tilC::derive_box_version()
 
   uint8_t flags = 0;
 
-  if (dimensions_64bit(m_parameters)) {
-    flags |= 0x20;
-  }
-
   switch (m_parameters.offset_field_length) {
     case 32:
       flags |= 0;
@@ -122,6 +118,10 @@ void Box_tilC::derive_box_version()
     flags |= 0x10;
   }
 
+  if (dimensions_64bit(m_parameters)) {
+    flags |= 0x20;
+  }
+
   set_flags(flags);
 }
 
@@ -140,6 +140,7 @@ Error Box_tilC::write(StreamWriter& writer) const
 
   writer.write8(m_parameters.number_of_extra_dimensions);
 
+  // TODO: this is redundant because we can also get this from 'ispe' (but currently only as uint32_t)
   writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_width);
   writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_height);
 
@@ -164,8 +165,13 @@ std::string Box_tilC::dump(Indent& indent) const
   sstr << BoxHeader::dump(indent);
 
   sstr << indent << "version: " << ((int) get_version()) << "\n"
-       << indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
-       << indent << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n";
+       //<< indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
+       << indent << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
+       << indent << "compression: " << to_fourcc(m_parameters.compression_type_fourcc) << "\n"
+       << indent << "tiles are sequential: " << (m_parameters.tiles_are_sequential ? "yes" : "no") << "\n"
+       << indent << "offset field length: " << ((int) m_parameters.offset_field_length) << " bits\n"
+       << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"
+       << indent << "number of extra dimensions: " << ((int) m_parameters.number_of_extra_dimensions) << "\n";
 
   return sstr.str();
 
@@ -219,7 +225,7 @@ Error Box_tilC::parse(BitstreamRange& range)
       break;
   }
 
-  m_parameters.tiles_are_sequential = !!(flags % 0x10);
+  m_parameters.tiles_are_sequential = !!(flags & 0x10);
   bool dimensions_are_64bit = (flags & 0x20);
 
   m_parameters.number_of_extra_dimensions = range.read8();
@@ -545,7 +551,9 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
   uint64_t size = m_tild_header.get_tile_size(idx);
 
   Error err = get_file()->append_data_from_iloc(get_id(), data, offset, size);
-  assert(!err.error_code);
+  if (err.error_code) {
+    return err;
+  }
 
   return decode_from_compressed_data(get_compression_format(), options, data);
 }
