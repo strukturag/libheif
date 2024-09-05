@@ -936,7 +936,7 @@ struct heif_reading_options;
 enum heif_reader_grow_status
 {
   heif_reader_grow_status_size_reached,    // requested size has been reached, we can read until this point
-  heif_reader_grow_status_timeout,         // size has not been reached yet, but it may still grow further
+  heif_reader_grow_status_timeout,         // size has not been reached yet, but it may still grow further (deprecated)
   heif_reader_grow_status_size_beyond_eof, // size has not been reached and never will. The file has grown to its full size
   heif_reader_grow_status_error            // an error has occurred
 };
@@ -945,8 +945,11 @@ struct heif_reader_range_request_result
 {
   enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
 
-  // for status == 'heif_reader_grow_status_size_beyond_eof'
-  uint64_t range_end;           // if not the whole file range could be read, this is the end position
+  // Indicates until what position the file has been read.
+  // If we cannot read the whole file range (status == 'heif_reader_grow_status_size_beyond_eof'), this is the actual end position.
+  // On the other hand, it may be that the reader was reading more data than requested. In that case, it should indicate the full size here
+  // and libheif may decide to make use of the additional data (e.g. for filling 'tild' offset tables).
+  uint64_t range_end;
 
   // for status == 'heif_reader_grow_status_error'
   int reader_error_code;        // a reader specific error code
