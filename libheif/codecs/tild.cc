@@ -141,8 +141,8 @@ Error Box_tilC::write(StreamWriter& writer) const
   writer.write8(m_parameters.number_of_extra_dimensions);
 
   // TODO: this is redundant because we can also get this from 'ispe' (but currently only as uint32_t)
-  writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_width);
-  writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_height);
+  //writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_width);
+  //writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_height);
 
   for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
     writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.extra_dimensions[i]);
@@ -240,6 +240,7 @@ Error Box_tilC::parse(BitstreamRange& range)
   }
 #endif
 
+  /*
   m_parameters.image_width = (dimensions_are_64bit ? range.read64() : range.read32());
   m_parameters.image_height = (dimensions_are_64bit ? range.read64() : range.read32());
 
@@ -248,6 +249,7 @@ Error Box_tilC::parse(BitstreamRange& range)
             heif_suberror_Unspecified,
             "'tild' image with zero width or height."};
   }
+*/
 
   for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
     uint64_t size = (dimensions_are_64bit ? range.read64() : range.read32());
@@ -435,7 +437,24 @@ Error ImageItem_Tild::on_load_file()
             "Tiled image without 'tilC' property box."};
   }
 
-  m_tild_header.set_parameters(tilC_box->get_parameters());
+  auto ispe_box = heif_file->get_property<Box_ispe>(get_id());
+  if (!ispe_box) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Tiled image without 'ispe' property box."};
+  }
+
+  heif_tild_image_parameters parameters = tilC_box->get_parameters();
+  parameters.image_width = ispe_box->get_width();
+  parameters.image_height = ispe_box->get_height();
+
+  if (parameters.image_width == 0 || parameters.image_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "'tild' image with zero width or height."};
+  }
+
+  m_tild_header.set_parameters(parameters);
 
   err = m_tild_header.read_full_offset_table(heif_file, get_id());
   if (err) {
