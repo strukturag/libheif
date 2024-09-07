@@ -38,6 +38,8 @@ extern "C" {
 
 #include "decoder_tiff.h"
 
+struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 static bool seekTIFF(TIFF* tif, toff_t offset, int whence) {
   TIFFSeekProc seekProc = TIFFGetSeekProc(tif);
   if (!seekProc) {
@@ -255,14 +257,48 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
-void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image *image)
+heif_error readPixelInterleaveMono(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
 {
   uint32_t row;
-  heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(image, channel, (int)width, (int)height, samplesPerPixel * 8);
+  heif_error err = heif_image_create((int) width, (int) height, heif_colorspace_monochrome, heif_chroma_monochrome, image);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+  heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, samplesPerPixel * 8);
 
   int y_stride;
-  uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
+  uint8_t *py = heif_image_get_plane(*image, heif_channel_Y, &y_stride);
+  for (row = 0; row < height; row++)
+  {
+    TIFFReadScanline(tif, py, row, 0);
+    py += y_stride;
+  }
+  return heif_error_ok;
+}
+
+heif_error readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+{
+  uint32_t row;
+  printf("pixel, samplesPerPixel: %d\n", samplesPerPixel);
+  if (samplesPerPixel == 1) {
+    return readPixelInterleaveMono(tif, width, height, samplesPerPixel, image);
+  }
+  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
+  if (samplesPerPixel == 4) {
+    chroma = heif_chroma_interleaved_RGBA;
+  }
+
+  heif_error err = heif_image_create((int) width, (int) height, colorspace, chroma, image);
+  if (err.code != heif_error_Ok) {
+    printf("err.code: %d\n", err.code);
+    return err;
+  }
+  heif_channel channel = heif_channel_interleaved;
+  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
+
+  int y_stride;
+  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
 
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
   for (row = 0; row < height; row++)
@@ -272,17 +308,28 @@ void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t sa
     py += y_stride;
   }
   _TIFFfree(buf);
+  return heif_error_ok;
 }
 
 
-void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image *image)
+heif_error readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
 {
   uint32_t row;
+  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
+  if (samplesPerPixel == 4) {
+    chroma = heif_chroma_interleaved_RGBA;
+  }
+
+  heif_error err = heif_image_create((int) width, (int) height, colorspace, chroma, image);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
   heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(image, channel, (int)width, (int)height, samplesPerPixel * 8);
+  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
 
   int y_stride;
-  uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
+  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
 
   if (samplesPerPixel == 4)
   {
@@ -290,7 +337,7 @@ void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t sam
     char emsg[1024] = {0};
     if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
     {
-      heif_image_release(image);
+      heif_image_release(*image);
       std::cerr << "Could not get RGBA image: " << emsg << "\n";
       exit(1);
     }
@@ -323,6 +370,7 @@ void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t sam
     }
     _TIFFfree(buf);
   }
+  return heif_error_ok;
 }
 
 InputImage loadTIFF(const char* filename) {
@@ -374,27 +422,21 @@ InputImage loadTIFF(const char* filename) {
 
   struct heif_error err;
   struct heif_image* image = nullptr;
-  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
-  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
-  if (samplesPerPixel == 4) {
-    chroma = heif_chroma_interleaved_RGBA;
-  }
-
-  err = heif_image_create((int) width, (int) height, colorspace, chroma, &image);
-  (void) err;
-  // TODO: handle error
 
   switch (config) {
     case PLANARCONFIG_CONTIG:
-      readPixelInterleave(tif, width, height, samplesPerPixel, image);
+      err = readPixelInterleave(tif, width, height, samplesPerPixel, &image);
       break;
     case PLANARCONFIG_SEPARATE:
-      readBandInterleave(tif, width, height, samplesPerPixel, image);
+      err = readBandInterleave(tif, width, height, samplesPerPixel, &image);
       break;
     default:
-      heif_image_release(image);
       std::cerr << "Unsupported planar config: " << config << "\n";
       exit(1);
+  }
+  if (err.code != 0) {
+    printf("err.code = %d\n", err.code);
+    input_image.image = nullptr;
   }
 
   input_image.image = std::shared_ptr<heif_image>(image,

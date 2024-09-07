@@ -834,6 +834,10 @@ int main(int argc, char** argv)
     }
     else if (filetype == TIFF) {
       input_image = loadTIFF(input_filename.c_str());
+      if (input_image.image == nullptr) {
+       std::cerr << "Can not load TIFF input_image." << std::endl;
+        exit(1);
+      }
     }
     else {
       input_image = loadJPEG(input_filename.c_str());
