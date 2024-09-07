@@ -257,14 +257,14 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
-heif_error readPixelInterleaveMono(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readMono(TIFF *tif, uint32_t width, uint32_t height, heif_image **image)
 {
   uint32_t row;
   heif_error err = heif_image_create((int) width, (int) height, heif_colorspace_monochrome, heif_chroma_monochrome, image);
   if (err.code != heif_error_Ok) {
     return err;
   }
-  heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, samplesPerPixel * 8);
+  heif_image_add_plane(*image, heif_channel_Y, (int)width, (int)height, 8);
 
   int y_stride;
   uint8_t *py = heif_image_get_plane(*image, heif_channel_Y, &y_stride);
@@ -276,22 +276,18 @@ heif_error readPixelInterleaveMono(TIFF *tif, uint32_t width, uint32_t height, u
   return heif_error_ok;
 }
 
-heif_error readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readPixelInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
 {
   uint32_t row;
-  printf("pixel, samplesPerPixel: %d\n", samplesPerPixel);
-  if (samplesPerPixel == 1) {
-    return readPixelInterleaveMono(tif, width, height, samplesPerPixel, image);
-  }
-  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
-  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
+  heif_colorspace colorspace = heif_colorspace_RGB;
+  heif_chroma chroma = heif_chroma_interleaved_RGB;
   if (samplesPerPixel == 4) {
     chroma = heif_chroma_interleaved_RGBA;
   }
 
-  heif_error err = heif_image_create((int) width, (int) height, colorspace, chroma, image);
-  if (err.code != heif_error_Ok) {
-    printf("err.code: %d\n", err.code);
+  heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, image);
+  if (err.code != heif_error_Ok)
+  {
     return err;
   }
   heif_channel channel = heif_channel_interleaved;
@@ -311,17 +307,18 @@ heif_error readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint1
   return heif_error_ok;
 }
 
-
-heif_error readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
 {
-  uint32_t row;
-  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
-  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
-  if (samplesPerPixel == 4) {
-    chroma = heif_chroma_interleaved_RGBA;
+  if (samplesPerPixel == 1) {
+    return readMono(tif, width, height, image);
+  } else {
+    return readPixelInterleaveRGB(tif, width, height, samplesPerPixel, image);
   }
+}
 
-  heif_error err = heif_image_create((int) width, (int) height, colorspace, chroma, image);
+heif_error readBandInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+{
+  heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -331,46 +328,72 @@ heif_error readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16
   int y_stride;
   uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
 
-  if (samplesPerPixel == 4)
+  uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
+  for (uint16_t i = 0; i < samplesPerPixel; i++)
   {
-    TIFFRGBAImage img;
-    char emsg[1024] = {0};
-    if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
+    uint8_t *dest = py + i;
+    for (uint32_t row = 0; row < height; row++)
     {
-      heif_image_release(*image);
-      std::cerr << "Could not get RGBA image: " << emsg << "\n";
-      exit(1);
-    }
-
-    uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * samplesPerPixel));
-    for (row = 0; row < height; row++)
-    {
-      TIFFReadRGBAStrip(tif, row, buf);
-      memcpy(py, buf, width * samplesPerPixel);
-      py += y_stride;
-    }
-    _TIFFfree(buf);
-    TIFFRGBAImageEnd(&img);
-  }
-  else
-  {
-    uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
-    for (uint16_t i = 0; i < samplesPerPixel; i++)
-    {
-      uint8_t *dest = py + i;
-      for (row = 0; row < height; row++)
+      TIFFReadScanline(tif, buf, row, i);
+      for (uint32_t x = 0; x < width; x++, dest += samplesPerPixel)
       {
-        TIFFReadScanline(tif, buf, row, i);
-        for (uint32_t x = 0; x < width; x++, dest += samplesPerPixel)
-        {
-          *dest = buf[x];
-        }
-        dest += (y_stride - width * samplesPerPixel);
+        *dest = buf[x];
       }
+      dest += (y_stride - width * samplesPerPixel);
     }
-    _TIFFfree(buf);
   }
+  _TIFFfree(buf);
   return heif_error_ok;
+}
+
+heif_error readBandInterleaveRGBA(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+{
+  heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+  heif_channel channel = heif_channel_interleaved;
+  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
+
+  int y_stride;
+  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
+
+  TIFFRGBAImage img;
+  char emsg[1024] = {0};
+  if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
+  {
+    heif_image_release(*image);
+    std::cerr << "Could not get RGBA image: " << emsg << "\n";
+    exit(1);
+  }
+
+  uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * samplesPerPixel));
+  for (uint32_t row = 0; row < height; row++)
+  {
+    TIFFReadRGBAStrip(tif, row, buf);
+    memcpy(py, buf, width * samplesPerPixel);
+    py += y_stride;
+  }
+  _TIFFfree(buf);
+  TIFFRGBAImageEnd(&img);
+  return heif_error_ok;
+}
+
+heif_error readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+{
+  if (samplesPerPixel == 1) {
+    return readMono(tif, width, height, image);
+  } else if (samplesPerPixel == 3) {
+    return readBandInterleaveRGB(tif, width, height, samplesPerPixel, image);
+  } else if (samplesPerPixel == 4) {
+    return readBandInterleaveRGBA(tif, width, height, samplesPerPixel, image);
+  } else {
+    struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unsupported_bit_depth,
+      .message = "Only 1, 3 and 4 bands are supported"};
+    return err;
+  }
 }
 
 InputImage loadTIFF(const char* filename) {
@@ -435,7 +458,6 @@ InputImage loadTIFF(const char* filename) {
       exit(1);
   }
   if (err.code != 0) {
-    printf("err.code = %d\n", err.code);
     input_image.image = nullptr;
   }
 
