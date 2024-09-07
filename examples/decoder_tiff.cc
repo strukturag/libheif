@@ -274,6 +274,57 @@ void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bp
   _TIFFfree(buf);
 }
 
+
+void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp, heif_image *image)
+{
+  uint32_t row;
+  heif_channel channel = heif_channel_interleaved;
+  heif_image_add_plane(image, channel, (int)width, (int)height, bpp * 8);
+
+  int y_stride;
+  uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
+
+  if (bpp == 4)
+  {
+    TIFFRGBAImage img;
+    char emsg[1024] = {0};
+    if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
+    {
+      heif_image_release(image);
+      std::cerr << "Could not get RGBA image: " << emsg << "\n";
+      exit(1);
+    }
+
+    uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * bpp));
+    for (row = 0; row < height; row++)
+    {
+      TIFFReadRGBAStrip(tif, row, buf);
+      memcpy(py, buf, width * bpp);
+      py += y_stride;
+    }
+    _TIFFfree(buf);
+    TIFFRGBAImageEnd(&img);
+  }
+  else
+  {
+    uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
+    for (uint16_t i = 0; i < bpp; i++)
+    {
+      uint8_t *dest = py + i;
+      for (row = 0; row < height; row++)
+      {
+        TIFFReadScanline(tif, buf, row, i);
+        for (uint32_t x = 0; x < width; x++, dest += bpp)
+        {
+          *dest = buf[x];
+        }
+        dest += (y_stride - width * bpp);
+      }
+    }
+    _TIFFfree(buf);
+  }
+}
+
 InputImage loadTIFF(const char* filename) {
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
   if (!tifPtr) {
@@ -292,7 +343,6 @@ InputImage loadTIFF(const char* filename) {
 
   uint16_t shortv, bpp, bps, config, format;
   uint32_t width, height;
-  uint32_t row;
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &shortv) && shortv == PHOTOMETRIC_PALETTE) {
     std::cerr << "Palette TIFF images are not supported.\n";
     exit(1);
@@ -339,45 +389,7 @@ InputImage loadTIFF(const char* filename) {
       readPixelInterleave(tif, width, height, bpp, image);
       break;
     case PLANARCONFIG_SEPARATE:
-      {
-        heif_channel channel = heif_channel_interleaved;
-        heif_image_add_plane(image, channel, (int) width, (int) height, bpp*8);
-
-        int y_stride;
-        uint8_t* py = heif_image_get_plane(image, channel, &y_stride);
-
-        if (bpp == 4) {
-          TIFFRGBAImage img;
-          char emsg[1024] = { 0 };
-          if (!TIFFRGBAImageBegin(&img, tif, 1, emsg)) {
-            heif_image_release(image);
-            std::cerr << "Could not get RGBA image: " << emsg << "\n";
-            exit(1);
-          }
-
-          uint32_t* buf = static_cast<uint32_t*>(_TIFFmalloc(width*bpp));
-          for (row = 0; row < height; row++) {
-            TIFFReadRGBAStrip(tif, row, buf);
-            memcpy(py, buf, width*bpp);
-            py += y_stride;
-          }
-          _TIFFfree(buf);
-          TIFFRGBAImageEnd(&img);
-        } else {
-          uint8_t* buf = static_cast<uint8_t*>(_TIFFmalloc(TIFFScanlineSize(tif)));
-          for (uint16_t i = 0; i < bpp; i++) {
-            uint8_t* dest = py+i;
-            for (row = 0; row < height; row++) {
-              TIFFReadScanline(tif, buf, row, i);
-              for (uint32_t x = 0; x < width; x++, dest+=bpp) {
-                *dest = buf[x];
-              }
-              dest += (y_stride - width*bpp);
-            }
-          }
-          _TIFFfree(buf);
-        }
-      }
+      readBandInterleave(tif, width, height, bpp, image);
       break;
     default:
       heif_image_release(image);
@@ -397,5 +409,4 @@ InputImage loadTIFF(const char* filename) {
   }
   return input_image;
 }
-
 
