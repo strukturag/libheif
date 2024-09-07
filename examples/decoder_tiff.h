@@ -29,6 +29,6 @@
 
 #include "decoder.h"
 
-InputImage loadTIFF(const char* filename);
+InputImage loadTIFF(const char *filename);
 
-#endif //LIBHEIF_DECODER_TIFF_H
+#endif // LIBHEIF_DECODER_TIFF_H

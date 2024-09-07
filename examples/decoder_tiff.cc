@@ -255,6 +255,25 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
+void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp, heif_image *image)
+{
+  uint32_t row;
+  heif_channel channel = heif_channel_interleaved;
+  heif_image_add_plane(image, channel, (int)width, (int)height, bpp * 8);
+
+  int y_stride;
+  uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
+
+  tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
+  for (row = 0; row < height; row++)
+  {
+    TIFFReadScanline(tif, buf, row, 0);
+    memcpy(py, buf, width * bpp);
+    py += y_stride;
+  }
+  _TIFFfree(buf);
+}
+
 InputImage loadTIFF(const char* filename) {
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
   if (!tifPtr) {
@@ -317,21 +336,7 @@ InputImage loadTIFF(const char* filename) {
 
   switch (config) {
     case PLANARCONFIG_CONTIG:
-      {
-        heif_channel channel = heif_channel_interleaved;
-        heif_image_add_plane(image, channel, (int) width, (int) height, bpp*8);
-
-        int y_stride;
-        uint8_t* py = heif_image_get_plane(image, channel, &y_stride);
-
-        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
-        for (row = 0; row < height; row++) {
-          TIFFReadScanline(tif, buf, row, 0);
-          memcpy(py, buf, width*bpp);
-          py += y_stride;
-        }
-        _TIFFfree(buf);
-      }
+      readPixelInterleave(tif, width, height, bpp, image);
       break;
     case PLANARCONFIG_SEPARATE:
       {
@@ -392,3 +397,5 @@ InputImage loadTIFF(const char* filename) {
   }
   return input_image;
 }
+
+
