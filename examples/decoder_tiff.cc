@@ -255,11 +255,11 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
-void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp, heif_image *image)
+void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image *image)
 {
   uint32_t row;
   heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(image, channel, (int)width, (int)height, bpp * 8);
+  heif_image_add_plane(image, channel, (int)width, (int)height, samplesPerPixel * 8);
 
   int y_stride;
   uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
@@ -268,23 +268,23 @@ void readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bp
   for (row = 0; row < height; row++)
   {
     TIFFReadScanline(tif, buf, row, 0);
-    memcpy(py, buf, width * bpp);
+    memcpy(py, buf, width * samplesPerPixel);
     py += y_stride;
   }
   _TIFFfree(buf);
 }
 
 
-void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp, heif_image *image)
+void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image *image)
 {
   uint32_t row;
   heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(image, channel, (int)width, (int)height, bpp * 8);
+  heif_image_add_plane(image, channel, (int)width, (int)height, samplesPerPixel * 8);
 
   int y_stride;
   uint8_t *py = heif_image_get_plane(image, channel, &y_stride);
 
-  if (bpp == 4)
+  if (samplesPerPixel == 4)
   {
     TIFFRGBAImage img;
     char emsg[1024] = {0};
@@ -295,11 +295,11 @@ void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp
       exit(1);
     }
 
-    uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * bpp));
+    uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * samplesPerPixel));
     for (row = 0; row < height; row++)
     {
       TIFFReadRGBAStrip(tif, row, buf);
-      memcpy(py, buf, width * bpp);
+      memcpy(py, buf, width * samplesPerPixel);
       py += y_stride;
     }
     _TIFFfree(buf);
@@ -308,17 +308,17 @@ void readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t bpp
   else
   {
     uint8_t *buf = static_cast<uint8_t *>(_TIFFmalloc(TIFFScanlineSize(tif)));
-    for (uint16_t i = 0; i < bpp; i++)
+    for (uint16_t i = 0; i < samplesPerPixel; i++)
     {
       uint8_t *dest = py + i;
       for (row = 0; row < height; row++)
       {
         TIFFReadScanline(tif, buf, row, i);
-        for (uint32_t x = 0; x < width; x++, dest += bpp)
+        for (uint32_t x = 0; x < width; x++, dest += samplesPerPixel)
         {
           *dest = buf[x];
         }
-        dest += (y_stride - width * bpp);
+        dest += (y_stride - width * samplesPerPixel);
       }
     }
     _TIFFfree(buf);
@@ -341,7 +341,7 @@ InputImage loadTIFF(const char* filename) {
 
   InputImage input_image;
 
-  uint16_t shortv, bpp, bps, config, format;
+  uint16_t shortv, samplesPerPixel, bps, config, format;
   uint32_t width, height;
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &shortv) && shortv == PHOTOMETRIC_PALETTE) {
     std::cerr << "Palette TIFF images are not supported.\n";
@@ -355,9 +355,9 @@ InputImage loadTIFF(const char* filename) {
   }
 
   TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &config);
-  TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &bpp);
-  if (bpp != 1 && bpp != 3 && bpp != 4) {
-    std::cerr << "Unsupported TIFF samples per pixel: " << bpp << "\n";
+  TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+  if (samplesPerPixel != 1 && samplesPerPixel != 3 && samplesPerPixel != 4) {
+    std::cerr << "Unsupported TIFF samples per pixel: " << samplesPerPixel << "\n";
     exit(1);
   }
 
@@ -374,9 +374,9 @@ InputImage loadTIFF(const char* filename) {
 
   struct heif_error err;
   struct heif_image* image = nullptr;
-  heif_colorspace colorspace = bpp == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
-  heif_chroma chroma = bpp == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
-  if (bpp == 4) {
+  heif_colorspace colorspace = samplesPerPixel == 1 ? heif_colorspace_monochrome : heif_colorspace_RGB;
+  heif_chroma chroma = samplesPerPixel == 1 ? heif_chroma_monochrome : heif_chroma_interleaved_RGB;
+  if (samplesPerPixel == 4) {
     chroma = heif_chroma_interleaved_RGBA;
   }
 
@@ -386,10 +386,10 @@ InputImage loadTIFF(const char* filename) {
 
   switch (config) {
     case PLANARCONFIG_CONTIG:
-      readPixelInterleave(tif, width, height, bpp, image);
+      readPixelInterleave(tif, width, height, samplesPerPixel, image);
       break;
     case PLANARCONFIG_SEPARATE:
-      readBandInterleave(tif, width, height, bpp, image);
+      readBandInterleave(tif, width, height, samplesPerPixel, image);
       break;
     default:
       heif_image_release(image);
