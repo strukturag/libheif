@@ -344,7 +344,11 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image
   if (err.code != heif_error_Ok) {
     return err;
   }
-  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
+  if (samplesPerPixel == 3) {
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
+  } else {
+    err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
+  }
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -372,48 +376,6 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image
   return heif_error_ok;
 }
 
-heif_error readBandInterleaveRGBA(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
-{
-  uint32_t width, height;
-  heif_error err = getImageWidthAndHeight(tif, width, height);
-  if (err.code != heif_error_Ok) {
-    return err;
-  }
-  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
-  if (err.code != heif_error_Ok) {
-    return err;
-  }
-  heif_channel channel = heif_channel_interleaved;
-  heif_image_add_plane(*image, channel, (int)width, (int)height, samplesPerPixel * 8);
-
-  int y_stride;
-  uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
-
-  TIFFRGBAImage img;
-  char emsg[1024] = {0};
-  if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
-  {
-    heif_image_release(*image);
-    std::stringstream sstr;
-    sstr << "Could not get RGBA image: " << emsg;
-    struct heif_error err = {
-      .code = heif_error_Invalid_input,
-      .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
-    return err;
-  }
-
-  uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * samplesPerPixel));
-  for (uint32_t row = 0; row < height; row++)
-  {
-    TIFFReadRGBAStrip(tif, row, buf);
-    memcpy(py, buf, width * samplesPerPixel);
-    py += y_stride;
-  }
-  _TIFFfree(buf);
-  TIFFRGBAImageEnd(&img);
-  return heif_error_ok;
-}
 
 heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
 {
@@ -422,7 +384,7 @@ heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **
   } else if (samplesPerPixel == 3) {
     return readBandInterleaveRGB(tif, samplesPerPixel, image);
   } else if (samplesPerPixel == 4) {
-    return readBandInterleaveRGBA(tif,  samplesPerPixel, image);
+    return readBandInterleaveRGB(tif,  samplesPerPixel, image);
   } else {
     struct heif_error err = {
       .code = heif_error_Unsupported_feature,
