@@ -28,7 +28,6 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
-#include <sstream>
 #include <string>
 
 static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
@@ -43,12 +42,10 @@ heif_error loadY4M(const char *filename, InputImage *input_image)
 
   std::ifstream istr(filename, std::ios_base::binary);
   if (istr.fail()) {
-    std::stringstream sstr;
-    sstr << "Cannot open " << filename;
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
+      .message = "Cannot open Y4M file"};
     return err;
   }
 
