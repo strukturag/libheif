@@ -28,12 +28,13 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
+static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
-InputImage loadY4M(const char* filename)
+heif_error loadY4M(const char *filename, InputImage *input_image)
 {
-  InputImage inputimage;
 
   struct heif_image* image = nullptr;
 
@@ -42,8 +43,13 @@ InputImage loadY4M(const char* filename)
 
   std::ifstream istr(filename, std::ios_base::binary);
   if (istr.fail()) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Cannot open " << filename;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
 
@@ -51,8 +57,11 @@ InputImage loadY4M(const char* filename)
   getline(istr, header);
 
   if (header.find("YUV4MPEG2 ") != 0) {
-    std::cerr << "Input is not a Y4M file.\n";
-    exit(1);
+    struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Input is not a Y4M file."};
+    return err;
   }
 
   int w = -1;
@@ -71,8 +80,11 @@ InputImage loadY4M(const char* filename)
     }
 
     if (end - pos <= 1) {
-      std::cerr << "Header format error in Y4M file.\n";
-      exit(1);
+      struct heif_error err = {
+        .code = heif_error_Unsupported_feature,
+        .subcode = heif_suberror_Unspecified,
+        .message = "Header format error in Y4M file."};
+      return err;
     }
 
     char tag = header[pos];
@@ -89,21 +101,28 @@ InputImage loadY4M(const char* filename)
   getline(istr, frameheader);
 
   if (frameheader != "FRAME") {
-    std::cerr << "Y4M misses the frame header.\n";
-    exit(1);
+    struct heif_error err = {
+        .code = heif_error_Unsupported_feature,
+        .subcode = heif_suberror_Unspecified,
+        .message = "Y4M misses the frame header."};
+    return err;
   }
 
   if (w < 0 || h < 0) {
-    std::cerr << "Y4M has invalid frame size.\n";
-    exit(1);
+    struct heif_error err = {
+        .code = heif_error_Unsupported_feature,
+        .subcode = heif_suberror_Unspecified,
+        .message = "Y4M has invalid frame size."};
+    return err;
   }
 
   struct heif_error err = heif_image_create(w, h,
                                             heif_colorspace_YCbCr,
                                             heif_chroma_420,
                                             &image);
-  (void) err;
-  // TODO: handle error
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
 
   heif_image_add_plane(image, heif_channel_Y, w, h, 8);
   heif_image_add_plane(image, heif_channel_Cb, (w + 1) / 2, (h + 1) / 2, 8);
@@ -126,8 +145,8 @@ InputImage loadY4M(const char* filename)
     istr.read((char*) (pcr + y * cr_stride), (w + 1) / 2);
   }
 
-  inputimage.image = std::shared_ptr<heif_image>(image,
-                                                 [](heif_image* img) { heif_image_release(img); });
+  input_image->image = std::shared_ptr<heif_image>(image,
+                                                   [](heif_image* img) { heif_image_release(img); });
 
-  return inputimage;
+  return heif_error_ok;
 }

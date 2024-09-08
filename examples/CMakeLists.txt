@@ -10,6 +10,28 @@ if (MSVC)
     include_directories("../extra")
 endif ()
 
+add_library(heifio
+        decoder.h
+        decoder_y4m.cc
+        decoder_y4m.h)
+
+find_package(TIFF)
+if (TIFF_FOUND)
+    target_sources(heifio PRIVATE decoder_tiff.cc decoder_tiff.h)
+    target_link_libraries(heifio PRIVATE TIFF::TIFF)
+endif()
+
+set_target_properties(heifio
+        PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR})
+
+
+target_compile_definitions(heifio
+        PUBLIC
+        LIBHEIF_EXPORTS
+        HAVE_VISIBILITY)
+
 add_executable(heif-info ${getopt_sources}
         heif_info.cc
         common.cc
@@ -47,11 +69,9 @@ add_executable(heif-enc ${getopt_sources}
         benchmark.h
         benchmark.cc
         encoder.cc
-        decoder_y4m.cc
-        decoder_y4m.h
         common.cc
         common.h)
-target_link_libraries(heif-enc PRIVATE heif)
+target_link_libraries(heif-enc PRIVATE heif heifio)
 install(TARGETS heif-enc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES heif-enc.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
@@ -132,10 +152,14 @@ if (TIFF_FOUND)
     target_link_libraries(heif-dec PRIVATE TIFF::TIFF)
     target_link_libraries(heif-enc PRIVATE TIFF::TIFF)
     target_sources(heif-dec PRIVATE encoder_tiff.cc encoder_tiff.h)
-    target_sources(heif-enc PRIVATE decoder_tiff.cc decoder_tiff.h)
     target_compile_definitions(heif-dec PUBLIC HAVE_LIBTIFF=1)
     target_compile_definitions(heif-enc PUBLIC HAVE_LIBTIFF=1)
 endif ()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory (tests)
+endif()
 
 message("")
 message("=== Active input formats for heif-enc ===")

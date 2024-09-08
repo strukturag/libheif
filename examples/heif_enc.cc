@@ -830,12 +830,16 @@ int main(int argc, char** argv)
       input_image = loadPNG(input_filename.c_str(), output_bit_depth);
     }
     else if (filetype == Y4M) {
-      input_image = loadY4M(input_filename.c_str());
+      heif_error err = loadY4M(input_filename.c_str(), &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
+        exit(1);
+      }
     }
     else if (filetype == TIFF) {
-      input_image = loadTIFF(input_filename.c_str());
-      if (input_image.image == nullptr) {
-       std::cerr << "Can not load TIFF input_image." << std::endl;
+      heif_error err = loadTIFF(input_filename.c_str(), &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
         exit(1);
       }
     }

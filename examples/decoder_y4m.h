@@ -29,6 +29,15 @@
 
 #include "decoder.h"
 
-InputImage loadY4M(const char* filename);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+LIBHEIF_API
+heif_error loadY4M(const char *filename, InputImage *input_image);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LIBHEIF_DECODER_Y4M_H

@@ -24,12 +24,12 @@
   SOFTWARE.
 */
 
+#include <cstring>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
-
-#include <string.h>
 
 extern "C" {
 #include <tiff.h>
@@ -38,7 +38,7 @@ extern "C" {
 
 #include "decoder_tiff.h"
 
-struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
 static bool seekTIFF(TIFF* tif, toff_t offset, int whence) {
   TIFFSeekProc seekProc = TIFFGetSeekProc(tif);
@@ -257,10 +257,28 @@ void ExifTags::Encode(std::vector<uint8_t>* dest) {
   }
 }
 
-heif_error readMono(TIFF *tif, uint32_t width, uint32_t height, heif_image **image)
+heif_error getImageWidthAndHeight(TIFF *tif, uint32_t &width, uint32_t &height)
 {
-  uint32_t row;
-  heif_error err = heif_image_create((int) width, (int) height, heif_colorspace_monochrome, heif_chroma_monochrome, image);
+  if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width) ||
+      !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height))
+  {
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Can not read width and/or height from TIFF image."};
+    return err;
+  }
+  return heif_error_ok;
+}
+
+heif_error readMono(TIFF *tif, heif_image **image)
+{
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+  err = heif_image_create((int) width, (int) height, heif_colorspace_monochrome, heif_chroma_monochrome, image);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -268,7 +286,7 @@ heif_error readMono(TIFF *tif, uint32_t width, uint32_t height, heif_image **ima
 
   int y_stride;
   uint8_t *py = heif_image_get_plane(*image, heif_channel_Y, &y_stride);
-  for (row = 0; row < height; row++)
+  for (uint32_t row = 0; row < height; row++)
   {
     TIFFReadScanline(tif, py, row, 0);
     py += y_stride;
@@ -276,16 +294,19 @@ heif_error readMono(TIFF *tif, uint32_t width, uint32_t height, heif_image **ima
   return heif_error_ok;
 }
 
-heif_error readPixelInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readPixelInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
 {
-  uint32_t row;
-  heif_colorspace colorspace = heif_colorspace_RGB;
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
   heif_chroma chroma = heif_chroma_interleaved_RGB;
   if (samplesPerPixel == 4) {
     chroma = heif_chroma_interleaved_RGBA;
   }
 
-  heif_error err = heif_image_create((int)width, (int)height, colorspace, chroma, image);
+  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, chroma, image);
   if (err.code != heif_error_Ok)
   {
     return err;
@@ -297,7 +318,7 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, ui
   uint8_t *py = heif_image_get_plane(*image, channel, &y_stride);
 
   tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tif));
-  for (row = 0; row < height; row++)
+  for (uint32_t row = 0; row < height; row++)
   {
     TIFFReadScanline(tif, buf, row, 0);
     memcpy(py, buf, width * samplesPerPixel);
@@ -307,18 +328,23 @@ heif_error readPixelInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, ui
   return heif_error_ok;
 }
 
-heif_error readPixelInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readPixelInterleave(TIFF *tif,  uint16_t samplesPerPixel, heif_image **image)
 {
   if (samplesPerPixel == 1) {
-    return readMono(tif, width, height, image);
+    return readMono(tif, image);
   } else {
-    return readPixelInterleaveRGB(tif, width, height, samplesPerPixel, image);
+    return readPixelInterleaveRGB(tif, samplesPerPixel, image);
   }
 }
 
-heif_error readBandInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readBandInterleaveRGB(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
 {
-  heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGB, image);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -346,9 +372,14 @@ heif_error readBandInterleaveRGB(TIFF *tif, uint32_t width, uint32_t height, uin
   return heif_error_ok;
 }
 
-heif_error readBandInterleaveRGBA(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readBandInterleaveRGBA(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
 {
-  heif_error err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
+  uint32_t width, height;
+  heif_error err = getImageWidthAndHeight(tif, width, height);
+  if (err.code != heif_error_Ok) {
+    return err;
+  }
+  err = heif_image_create((int)width, (int)height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, image);
   if (err.code != heif_error_Ok) {
     return err;
   }
@@ -363,8 +394,13 @@ heif_error readBandInterleaveRGBA(TIFF *tif, uint32_t width, uint32_t height, ui
   if (!TIFFRGBAImageBegin(&img, tif, 1, emsg))
   {
     heif_image_release(*image);
-    std::cerr << "Could not get RGBA image: " << emsg << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Could not get RGBA image: " << emsg;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
   uint32_t *buf = static_cast<uint32_t *>(_TIFFmalloc(width * samplesPerPixel));
@@ -379,68 +415,84 @@ heif_error readBandInterleaveRGBA(TIFF *tif, uint32_t width, uint32_t height, ui
   return heif_error_ok;
 }
 
-heif_error readBandInterleave(TIFF *tif, uint32_t width, uint32_t height, uint16_t samplesPerPixel, heif_image **image)
+heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **image)
 {
   if (samplesPerPixel == 1) {
-    return readMono(tif, width, height, image);
+    return readMono(tif, image);
   } else if (samplesPerPixel == 3) {
-    return readBandInterleaveRGB(tif, width, height, samplesPerPixel, image);
+    return readBandInterleaveRGB(tif, samplesPerPixel, image);
   } else if (samplesPerPixel == 4) {
-    return readBandInterleaveRGBA(tif, width, height, samplesPerPixel, image);
+    return readBandInterleaveRGBA(tif,  samplesPerPixel, image);
   } else {
     struct heif_error err = {
       .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unsupported_bit_depth,
+      .subcode = heif_suberror_Unspecified,
       .message = "Only 1, 3 and 4 bands are supported"};
     return err;
   }
 }
 
-InputImage loadTIFF(const char* filename) {
+heif_error loadTIFF(const char* filename, InputImage *input_image) {
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
   if (!tifPtr) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Cannot open " << filename;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
   TIFF* tif = tifPtr.get();
   if (TIFFIsTiled(tif)) {
-    // TODO: Implement this.
-    std::cerr << "Tiled TIFF images are not supported.\n";
-    exit(1);
+    struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Tiled TIFF images are not supported yet"};
+    return err;
   }
-
-  InputImage input_image;
 
   uint16_t shortv, samplesPerPixel, bps, config, format;
-  uint32_t width, height;
   if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &shortv) && shortv == PHOTOMETRIC_PALETTE) {
-    std::cerr << "Palette TIFF images are not supported.\n";
-    exit(1);
-  }
-
-  if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width) ||
-      !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height)) {
-    std::cerr << "Can't read width and/or height from TIFF image.\n";
-    exit(1);
+    struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Palette TIFF images are not supported yet"};
+    return err;
   }
 
   TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &config);
   TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
   if (samplesPerPixel != 1 && samplesPerPixel != 3 && samplesPerPixel != 4) {
-    std::cerr << "Unsupported TIFF samples per pixel: " << samplesPerPixel << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Unsupported TIFF samples per pixel: " << samplesPerPixel;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
   if (bps != 8) {
-    std::cerr << "Unsupported TIFF bits per sample: " << bps << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Unsupported TIFF bits per sample: " << bps;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
   if (TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &format) && format != SAMPLEFORMAT_UINT) {
-    std::cerr << "Unsupported TIFF sample format: " << format << "\n";
-    exit(1);
+    std::stringstream sstr;
+    sstr << "Unsupported TIFF sample format: " << format;
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = sstr.str().c_str()};
+    return err;
   }
 
   struct heif_error err;
@@ -448,20 +500,25 @@ InputImage loadTIFF(const char* filename) {
 
   switch (config) {
     case PLANARCONFIG_CONTIG:
-      err = readPixelInterleave(tif, width, height, samplesPerPixel, &image);
+      err = readPixelInterleave(tif, samplesPerPixel, &image);
       break;
     case PLANARCONFIG_SEPARATE:
-      err = readBandInterleave(tif, width, height, samplesPerPixel, &image);
+      err = readBandInterleave(tif, samplesPerPixel, &image);
       break;
     default:
-      std::cerr << "Unsupported planar config: " << config << "\n";
-      exit(1);
+      std::stringstream sstr;
+      sstr << "Unsupported planar configuration: " << config;
+      struct heif_error err = {
+        .code = heif_error_Invalid_input,
+        .subcode = heif_suberror_Unspecified,
+        .message = sstr.str().c_str()};
+      return err;
   }
-  if (err.code != 0) {
-    input_image.image = nullptr;
+  if (err.code != heif_error_Ok) {
+    return err;
   }
 
-  input_image.image = std::shared_ptr<heif_image>(image,
+  input_image->image = std::shared_ptr<heif_image>(image,
                                           [](heif_image* img) { heif_image_release(img); });
 
   // Unfortunately libtiff doesn't provide a way to read a raw dictionary.
@@ -469,8 +526,8 @@ InputImage loadTIFF(const char* filename) {
   // them for use in the HEIF image.
   std::unique_ptr<ExifTags> tags = ExifTags::Parse(tif);
   if (tags) {
-    tags->Encode(&input_image.exif);
+    tags->Encode(&(input_image->exif));
   }
-  return input_image;
+  return heif_error_ok;
 }
 

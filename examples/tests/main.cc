@@ -1,9 +1,9 @@
 /*
-  libheif example application "heif".
+  libheif unit tests
 
   MIT License
 
-  Copyright (c) 2024 Joachim Bauch <bauch@struktur.de>
+  Copyright (c) 2019 Dirk Farin <dirk.farin@gmail.com>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -24,21 +24,5 @@
   SOFTWARE.
 */
 
-#ifndef LIBHEIF_DECODER_TIFF_H
-#define LIBHEIF_DECODER_TIFF_H
-
-#include "decoder.h"
-#include <libheif/heif.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-LIBHEIF_API
-heif_error loadTIFF(const char *filename, InputImage *input_image);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // LIBHEIF_DECODER_TIFF_H
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
