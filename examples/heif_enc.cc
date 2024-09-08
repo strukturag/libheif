@@ -525,7 +525,7 @@ int main(int argc, char** argv)
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
+    int c = getopt_long(argc, argv, (char*)"hq:Lo:vPp:t:b:AEe:C:"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif

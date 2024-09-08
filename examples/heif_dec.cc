@@ -244,7 +244,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:vo:", long_options, &option_index);
+    int c = getopt_long(argc, argv, (char*)"hq:sd:C:vo:", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -261,7 +261,7 @@ int main(int argc, char** argv)
         break;
       case '?':
         std::cerr << "\n";
-        // fallthrough
+        [[fallthrough]];
       case 'h':
         show_help(argv[0]);
         return 0;
