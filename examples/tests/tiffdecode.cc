@@ -33,6 +33,7 @@
 #include <libheif/heif.h>
 #include <libheif/api_structs.h>
 
+#if HAVE_LIBTIFF
 void checkMono(InputImage input_image) {
   REQUIRE(input_image.orientation == heif_orientation_normal);
   REQUIRE(input_image.image != nullptr);
@@ -51,6 +52,7 @@ void checkMono(InputImage input_image) {
   REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == false);
   REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == false);
 }
+
 TEST_CASE("mono8") {
   InputImage input_image;
   std::string path = get_path_for_test_file("mono.tif");
@@ -137,3 +139,5 @@ TEST_CASE("rgba_planar") {
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
 }
+
+#endif // HAVE_LIBTIFF
