@@ -399,7 +399,7 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = "Cannot open file"};
+      .message = "Cannot open TIFF ile"};
     return err;
   }
 
