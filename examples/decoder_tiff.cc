@@ -27,7 +27,6 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -397,12 +396,10 @@ heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **
 heif_error loadTIFF(const char* filename, InputImage *input_image) {
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
   if (!tifPtr) {
-    std::stringstream sstr;
-    sstr << "Cannot open " << filename;
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
+      .message = "Cannot open file"};
     return err;
   }
 
@@ -427,33 +424,27 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
   TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &config);
   TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
   if (samplesPerPixel != 1 && samplesPerPixel != 3 && samplesPerPixel != 4) {
-    std::stringstream sstr;
-    sstr << "Unsupported TIFF samples per pixel: " << samplesPerPixel;
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
+      .message = "Only 1, 3 and 4 samples per pixel are supported."};
     return err;
   }
 
   TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps);
-  if (bps != 8) {
-    std::stringstream sstr;
-    sstr << "Unsupported TIFF bits per sample: " << bps;
+  if (bps != 8) {    
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
+      .message = "Only 8 bits per sample are supported."};
     return err;
   }
 
   if (TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &format) && format != SAMPLEFORMAT_UINT) {
-    std::stringstream sstr;
-    sstr << "Unsupported TIFF sample format: " << format;
     struct heif_error err = {
       .code = heif_error_Invalid_input,
       .subcode = heif_suberror_Unspecified,
-      .message = sstr.str().c_str()};
+      .message = "Only UINT sample format is supported."};
     return err;
   }
 
@@ -468,12 +459,10 @@ heif_error loadTIFF(const char* filename, InputImage *input_image) {
       err = readBandInterleave(tif, samplesPerPixel, &image);
       break;
     default:
-      std::stringstream sstr;
-      sstr << "Unsupported planar configuration: " << config;
       struct heif_error err = {
         .code = heif_error_Invalid_input,
         .subcode = heif_suberror_Unspecified,
-        .message = sstr.str().c_str()};
+        .message = "Unsupported planar configuration"};
       return err;
   }
   if (err.code != heif_error_Ok) {
