@@ -15,6 +15,8 @@ add_library(heifio
         decoder_y4m.cc
         decoder_y4m.h)
 
+target_link_libraries(heifio PRIVATE heif)
+
 find_package(TIFF)
 if (TIFF_FOUND)
     target_sources(heifio PRIVATE decoder_tiff.cc decoder_tiff.h)
