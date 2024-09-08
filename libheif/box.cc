@@ -50,7 +50,13 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#include <unistd.h> // TODO: Windows
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <unistd.h>
+#else
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 
 Fraction::Fraction(int32_t num, int32_t den)
 {
@@ -155,7 +161,7 @@ bool Fraction::is_valid() const
   return denominator != 0;
 }
 
-uint32_t from_fourcc(const char* string)
+static uint32_t from_fourcc(const char* string)
 {
   return ((string[0] << 24) |
           (string[1] << 16) |
@@ -1035,7 +1041,7 @@ Error Box_ftyp::parse(BitstreamRange& range)
   m_major_brand = range.read32();
   m_minor_version = range.read32();
 
-  if (get_box_size() <= get_header_size() + 8) {
+  if (get_box_size() - 8 <= get_header_size()) {
     // Sanity check.
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size,
@@ -1406,8 +1412,15 @@ void Box_iloc::set_use_tmp_file(bool flag)
 {
   m_use_tmpfile = flag;
   if (flag) {
+#if !defined(_WIN32) && !defined(_WIN64)
     strcpy(m_tmp_filename, "/tmp/libheif-XXXXXX");
     m_tmpfile_fd = mkstemp(m_tmp_filename);
+#else
+    char tmpname[L_tmpnam_s];
+    // TODO: check return value (errno_t)
+    tmpnam_s(tmpname, L_tmpnam_s);
+    _sopen_s(&m_tmpfile_fd, tmpname, _O_CREAT | _O_TEMPORARY | _O_TRUNC | _O_RDWR, _SH_DENYRW, _S_IREAD | _S_IWRITE);
+#endif
   }
 }
 
@@ -1629,7 +1642,11 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   extent.length = data.size();
 
   if (m_use_tmpfile && construction_method==0) {
+#if !defined(_WIN32) && !defined(_WIN64)
     ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
+#else
+    int cnt = _write(m_tmpfile_fd, data.data(), data.size());
+#endif
     if (cnt < 0) {
       std::stringstream sstr;
       sstr << "Could not write to tmp file: error " << errno;
@@ -1883,7 +1900,11 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 
         if (m_use_tmpfile) {
           std::vector<uint8_t> data(extent.length);
+#if !defined(_WIN32) && !defined(_WIN64)
           ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
+#else
+          int cnt = _read(m_tmpfile_fd, data.data(), extent.length);
+#endif
           if (cnt<0) {
             std::stringstream sstr;
             sstr << "Cannot read tmp data file, error " << errno;
@@ -2632,7 +2653,7 @@ Error Box_ipma::parse(BitstreamRange& range)
 
     int assoc_cnt = range.read8();
     for (int k = 0; k < assoc_cnt; k++) {
-      PropertyAssociation association;
+      PropertyAssociation association{};
 
       uint16_t index;
       if (get_flags() & 1) {
@@ -3902,9 +3923,9 @@ Error Box_cmin::write(StreamWriter& writer) const
 }
 
 
-std::array<double,9> mul(const std::array<double,9>& a, const std::array<double,9>& b)
+static std::array<double,9> mul(const std::array<double,9>& a, const std::array<double,9>& b)
 {
-  std::array<double,9> m;
+  std::array<double, 9> m{};
 
   m[0] = a[0]*b[0] + a[1]*b[3] + a[2]*b[6];
   m[1] = a[0]*b[1] + a[1]*b[4] + a[2]*b[7];
