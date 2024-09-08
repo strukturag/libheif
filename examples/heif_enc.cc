@@ -218,12 +218,13 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
 
 
 #if !HAVE_LIBTIFF
-InputImage loadTIFF(const char* filename)
+heif_error loadTIFF(const char *filename, InputImage *input_image)
 {
-  std::cerr << "Cannot load TIFF because libtiff support was not compiled.\n";
-  exit(1);
-
-  return {};
+  struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Cannot load TIFF because libtiff support was not compiled."};
+    return err;
 }
 #endif
 
