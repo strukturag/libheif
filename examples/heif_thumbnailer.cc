@@ -69,7 +69,7 @@ int main(int argc, char** argv)
   int size = 512; // default thumbnail size
   bool thumbnail_from_primary_image_only = false;
 
-  while ((opt = getopt(argc, argv, "s:hpv")) != -1) {
+  while ((opt = getopt(argc, argv, (char*)"s:hpv")) != -1) {
     switch (opt) {
       case 's':
         size = atoi(optarg);
