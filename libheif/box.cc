@@ -1413,14 +1413,18 @@ void Box_iloc::set_use_tmp_file(bool flag)
 {
   m_use_tmpfile = flag;
   if (flag) {
-#if !defined(_WIN32) && !defined(_WIN64)
+#if !defined(_WIN32)
     strcpy(m_tmp_filename, "/tmp/libheif-XXXXXX");
     m_tmpfile_fd = mkstemp(m_tmp_filename);
 #else
+    // TODO Currently unused code. Implement when needed.
+    assert(false);
+#  if 0
     char tmpname[L_tmpnam_s];
     // TODO: check return value (errno_t)
     tmpnam_s(tmpname, L_tmpnam_s);
     _sopen_s(&m_tmpfile_fd, tmpname, _O_CREAT | _O_TEMPORARY | _O_TRUNC | _O_RDWR, _SH_DENYRW, _S_IREAD | _S_IWRITE);
+#  endif
 #endif
   }
 }
@@ -1643,10 +1647,14 @@ Error Box_iloc::append_data(heif_item_id item_ID,
   extent.length = data.size();
 
   if (m_use_tmpfile && construction_method==0) {
-#if !defined(_WIN32) && !defined(_WIN64)
+#if !defined(_WIN32)
     ssize_t cnt = ::write(m_tmpfile_fd, data.data(), data.size());
 #else
+    // TODO Currently unused code. Implement when needed.
+    assert(false);
+#  if 0
     int cnt = _write(m_tmpfile_fd, data.data(), data.size());
+#  endif
 #endif
     if (cnt < 0) {
       std::stringstream sstr;
@@ -1904,7 +1912,11 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 #if !defined(_WIN32) && !defined(_WIN64)
           ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
 #else
+          // TODO Currently unused code. Implement when needed.
+          assert(false);
+# if 0
           int cnt = _read(m_tmpfile_fd, data.data(), extent.length);
+# endif
 #endif
           if (cnt<0) {
             std::stringstream sstr;
