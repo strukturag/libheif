@@ -261,7 +261,7 @@ int main(int argc, char** argv)
         break;
       case '?':
         std::cerr << "\n";
-        // fallthrough
+        [[fallthrough]];
       case 'h':
         show_help(argv[0]);
         return 0;
