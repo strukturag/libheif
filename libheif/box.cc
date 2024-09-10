@@ -1041,7 +1041,8 @@ Error Box_ftyp::parse(BitstreamRange& range)
   m_major_brand = range.read32();
   m_minor_version = range.read32();
 
-  if (get_box_size() - 8 <= get_header_size()) {
+  uint64_t box_size = get_box_size();
+  if (box_size < 8 || box_size - 8 <= get_header_size()) {
     // Sanity check.
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size,
