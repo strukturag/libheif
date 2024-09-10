@@ -66,12 +66,6 @@ uint64_t nTiles_v(const heif_tild_image_parameters& params)
 }
 
 
-bool dimensions_64bit(const heif_tild_image_parameters& params)
-{
-  return (params.image_width > 0xFFFF || params.image_height > 0xFFFF);
-}
-
-
 void Box_tilC::derive_box_version()
 {
   set_version(1);
@@ -112,14 +106,8 @@ void Box_tilC::derive_box_version()
       assert(false); // TODO: return error
   }
 
-  // printf("> %d %d -> %d\n", m_parameters.offset_field_length, m_parameters.size_field_length, (int)flags);
-
   if (m_parameters.tiles_are_sequential) {
     flags |= 0x10;
-  }
-
-  if (dimensions_64bit(m_parameters)) {
-    flags |= 0x20;
   }
 
   set_flags(flags);
@@ -132,25 +120,19 @@ Error Box_tilC::write(StreamWriter& writer) const
 
   size_t box_start = reserve_box_header_space(writer);
 
-  bool dimensions_are_64bit = dimensions_64bit(m_parameters);
-
   if (m_parameters.number_of_extra_dimensions > 8) {
     assert(false); // currently not supported
-  }
-
-  writer.write8(m_parameters.number_of_extra_dimensions);
-
-  // TODO: this is redundant because we can also get this from 'ispe' (but currently only as uint32_t)
-  //writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_width);
-  //writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.image_height);
-
-  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
-    writer.write(dimensions_are_64bit ? 8 : 4, m_parameters.extra_dimensions[i]);
   }
 
   writer.write32(m_parameters.tile_width);
   writer.write32(m_parameters.tile_height);
   writer.write32(m_parameters.compression_type_fourcc);
+
+  writer.write8(m_parameters.number_of_extra_dimensions);
+
+  for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
+    writer.write32(m_parameters.extra_dimensions[i]);
+  }
 
   prepend_header(writer, box_start);
 
@@ -226,33 +208,25 @@ Error Box_tilC::parse(BitstreamRange& range)
   }
 
   m_parameters.tiles_are_sequential = !!(flags & 0x10);
-  bool dimensions_are_64bit = (flags & 0x20);
+
+
+  m_parameters.tile_width = range.read32();
+  m_parameters.tile_height = range.read32();
+  m_parameters.compression_type_fourcc = range.read32();
+
+  if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Tile with zero width or height."};
+  }
+
+
+  // --- extra dimensions
 
   m_parameters.number_of_extra_dimensions = range.read8();
 
-#if 0
-  if (data.size() < idx + 2 * (dimensions_are_64bit ? 8 : 4)) {
-    return eofError;
-  }
-
-  if (data.size() < idx + (2 + m_parameters.number_of_extra_dimensions) * (dimensions_are_64bit ? 8 : 4) + 3 * 4) {
-    return eofError;
-  }
-#endif
-
-  /*
-  m_parameters.image_width = (dimensions_are_64bit ? range.read64() : range.read32());
-  m_parameters.image_height = (dimensions_are_64bit ? range.read64() : range.read32());
-
-  if (m_parameters.image_width == 0 || m_parameters.image_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "'tild' image with zero width or height."};
-  }
-*/
-
   for (int i = 0; i < m_parameters.number_of_extra_dimensions; i++) {
-    uint64_t size = (dimensions_are_64bit ? range.read64() : range.read32());
+    uint32_t size = range.read32();
 
     if (size == 0) {
       return {heif_error_Invalid_input,
@@ -268,15 +242,6 @@ Error Box_tilC::parse(BitstreamRange& range)
     }
   }
 
-  m_parameters.tile_width = range.read32();
-  m_parameters.tile_height = range.read32();
-  m_parameters.compression_type_fourcc = range.read32();
-
-  if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "Tile with zero width or height."};
-  }
 
   return range.get_error();
 }

@@ -2429,8 +2429,8 @@ struct heif_tild_image_parameters {
 
   // --- version 1
 
-  uint64_t image_width;
-  uint64_t image_height;
+  uint32_t image_width;
+  uint32_t image_height;
 
   uint32_t tile_width;
   uint32_t tile_height;
@@ -2441,7 +2441,7 @@ struct heif_tild_image_parameters {
   uint8_t size_field_length;     // one of:  0, 24, 32, 64
 
   uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
-  uint64_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
+  uint32_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
 
   // boolean flags
   uint8_t tiles_are_sequential;  // TODO: can we derive this automatically
