@@ -41,7 +41,7 @@ public:
     uint8_t profile_compatibility; // constraint set flags
     uint8_t AVCLevelIndication; // level_idc
     uint8_t lengthSize;
-    uint8_t chroma_format;
+    heif_chroma chroma_format = heif_chroma_420; // Note: avcC integer value can be cast to heif_chroma enum
     uint8_t bit_depth_luma = 8;
     uint8_t bit_depth_chroma = 8;
   };

@@ -68,7 +68,7 @@ TEST_CASE("avcC") {
                         "AVCProfileIndication: 66 (Constrained Baseline)\n"
                         "profile_compatibility: 128\n"
                         "AVCLevelIndication: 30\n"
-                        "Chroma format: 32\n"
+                        "Chroma format: 4:2:0\n"
                         "Bit depth luma: 8\n"
                         "Bit depth chroma: 8\n"
                         "SPS: 67 64 00 28 ac 72 04 40 40 04 1a 10 00 00 03 00 "
