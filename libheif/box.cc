@@ -1654,6 +1654,8 @@ Error Box_iloc::append_data(heif_item_id item_ID,
     assert(false);
 #  if 0
     int cnt = _write(m_tmpfile_fd, data.data(), data.size());
+#  else
+    int cnt = -1;
 #  endif
 #endif
     if (cnt < 0) {
@@ -1916,6 +1918,8 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
           assert(false);
 # if 0
           int cnt = _read(m_tmpfile_fd, data.data(), extent.length);
+# else
+          int cnt = -1;
 # endif
 #endif
           if (cnt<0) {
