@@ -50,7 +50,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#if !defined(_WIN32) && !defined(_WIN64)
+#if !defined(_WIN32)
 #include <unistd.h>
 #else
 #include <fcntl.h>
@@ -1909,7 +1909,7 @@ Error Box_iloc::write_mdat_after_iloc(StreamWriter& writer)
 
         if (m_use_tmpfile) {
           std::vector<uint8_t> data(extent.length);
-#if !defined(_WIN32) && !defined(_WIN64)
+#if !defined(_WIN32)
           ssize_t cnt = ::read(m_tmpfile_fd, data.data(), extent.length);
 #else
           // TODO Currently unused code. Implement when needed.
