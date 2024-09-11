@@ -831,7 +831,6 @@ Error HeifContext::interpret_heif_file()
 
 bool HeifContext::has_alpha(heif_item_id ID) const
 {
-
   assert(is_image(ID));
   auto img = m_all_images.find(ID)->second;
 
@@ -843,7 +842,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
   heif_colorspace colorspace;
   heif_chroma chroma;
-  img->get_coded_image_colorspace(&colorspace, &chroma);
+  Error err = img->get_coded_image_colorspace(&colorspace, &chroma);
+  if (err) {
+    return false;
+  }
 
   if (chroma == heif_chroma_interleaved_RGBA ||
       chroma == heif_chroma_interleaved_RRGGBBAA_BE ||
