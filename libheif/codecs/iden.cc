@@ -68,6 +68,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
   }
 
   std::shared_ptr<const ImageItem> imgitem = get_context()->get_image(reference_image_id);
+  if (!imgitem) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "'iden' image references unavailable image");
+  }
 
   return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
 }
