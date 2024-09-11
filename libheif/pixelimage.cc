@@ -21,6 +21,7 @@
 
 #include "pixelimage.h"
 #include "common_utils.h"
+#include "security_limits.h"
 
 #include <cassert>
 #include <cstring>
@@ -256,8 +257,12 @@ bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_cha
   stride = m_mem_width * bytes_per_pixel;
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
 
+  if ((MAX_MEMORY_BLOCK_SIZE - (alignment + 1)) / stride < m_mem_height) {
+    return false;
+  }
+
   try {
-    allocated_mem = new uint8_t[m_mem_height * stride + alignment - 1];
+    allocated_mem = new uint8_t[static_cast<size_t>(m_mem_height) * stride + alignment - 1];
     uint8_t* mem_8 = allocated_mem;
 
     // shift beginning of image data to aligned memory position
