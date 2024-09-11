@@ -55,6 +55,20 @@ bool is_integer_multiple_of_chroma_size(uint32_t width,
 // Returns the list of valid heif_chroma values for a given colorspace.
 std::vector<heif_chroma> get_valid_chroma_values_for_colorspace(heif_colorspace colorspace);
 
+// TODO: move to public API when used
+enum heif_chroma420_sample_position {
+  // values 0-5 according to ISO 23091-2 / ITU-T H.273
+  heif_chroma420_sample_position_00_05 = 0,
+  heif_chroma420_sample_position_05_05 = 1,
+  heif_chroma420_sample_position_00_00 = 2,
+  heif_chroma420_sample_position_05_00 = 3,
+  heif_chroma420_sample_position_00_10 = 4,
+  heif_chroma420_sample_position_05_10 = 5,
+
+  // values 6 according to ISO 23001-17
+  heif_chroma420_sample_position_00_00_01_00 = 6
+};
+
 
 class HeifPixelImage : public std::enable_shared_from_this<HeifPixelImage>,
                        public ErrorBuffer
