@@ -309,8 +309,16 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
     return err;
   }
 
-
   for (size_t i = 0; i < m_overlay_image_ids.size(); i++) {
+
+    // detect if 'iovl' is referencing itself
+
+    if (m_overlay_image_ids[i] == get_id()) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "Self-reference in 'iovl' image item."};
+    }
+
     auto imgItem = get_context()->get_image(m_overlay_image_ids[i]);
     if (!imgItem) {
       return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced, "'iovl' image references a non-existing item.");
