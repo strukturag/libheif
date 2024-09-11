@@ -909,18 +909,7 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 
   uint32_t w,h;
 
-  if (std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image)) {
-    gridItem->get_tile_size(w,h);
-  }
-  else if (std::shared_ptr<ImageItem_Tild> tildItem = std::dynamic_pointer_cast<ImageItem_Tild>(handle->image)) {
-    tildItem->get_tile_size(w,h);
-  }
-  else {
-    // return whole image size (the image is the only tile)
-
-    w = handle->image->get_width();
-    h = handle->image->get_height();
-  }
+  handle->image->get_tile_size(w,h);
 
   if (tile_width) {
     *tile_width = w;

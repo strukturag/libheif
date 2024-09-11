@@ -864,7 +864,7 @@ bool HeifContext::has_alpha(heif_item_id ID) const
     }
 
     ImageGrid grid;
-    Error err = grid.parse(grid_data);
+    err = grid.parse(grid_data);
     if (err) {
       return false;
     }

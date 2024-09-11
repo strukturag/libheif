@@ -128,6 +128,8 @@ public:
     m_height = h;
   }
 
+  virtual void get_tile_size(uint32_t& w, uint32_t& h) const;
+
   Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
 
   virtual void process_before_write() { }

@@ -112,7 +112,7 @@ public:
 
   heif_image_tiling get_heif_image_tiling() const;
 
-  void get_tile_size(uint32_t& w, uint32_t& h) const;
+  void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
 private:
   ImageGrid m_grid_spec;

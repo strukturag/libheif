@@ -403,6 +403,13 @@ uint32_t ImageItem::get_ispe_height() const
 }
 
 
+void ImageItem::get_tile_size(uint32_t& w, uint32_t& h) const
+{
+  w = get_width();
+  h = get_height();
+}
+
+
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   heif_item_id id;
