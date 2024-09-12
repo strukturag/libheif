@@ -3726,7 +3726,13 @@ Error Box_url::parse(BitstreamRange& range)
     return unsupported_version_error("url");
   }
 
-  m_location = range.read_string();
+  if (get_flags() & 1) {
+    // data in same file
+    m_location.clear();
+  }
+  else {
+    m_location = range.read_string();
+  }
 
   return range.get_error();
 }

@@ -1045,6 +1045,8 @@ class Box_url : public FullBox
 public:
   std::string dump(Indent&) const override;
 
+  bool is_same_file() const { return m_location.empty(); }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
