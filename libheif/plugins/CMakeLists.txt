@@ -22,7 +22,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} heif)
 
             install(TARGETS heif-${name}
-                    LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
+                    LIBRARY DESTINATION ${COMPUTED_PLUGIN_INSTALL_DIRECTORY}
                     )
         else ()
             message("Compiling '" ${name} "' as built-in backend")
