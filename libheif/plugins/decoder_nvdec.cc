@@ -48,17 +48,31 @@ static char plugin_name[MAX_PLUGIN_NAME_LENGTH];
 
 static const char *nvdec_plugin_name()
 {
-    snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "NVIDIA Video Decoder (Hardware)");
-
-    // make sure that the string is null-terminated
-    plugin_name[MAX_PLUGIN_NAME_LENGTH - 1] = 0;
-
     return plugin_name;
 }
 
 static void nvdec_init_plugin()
 {
     cuInit(0);
+
+    CUdevice cuDevice = 0;
+    CUresult result;
+    result = cuDeviceGet(&cuDevice, 0);
+    if (result != CUDA_SUCCESS)
+    {
+      return;
+    }
+
+    char szDeviceName[50];
+    result = cuDeviceGetName(szDeviceName, sizeof(szDeviceName), cuDevice);
+    if (result != CUDA_SUCCESS) {
+      return;
+    }
+
+    snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "NVIDIA Video Decoder (%s)", szDeviceName);
+
+    // make sure that the string is null-terminated
+    plugin_name[MAX_PLUGIN_NAME_LENGTH - 1] = 0;
 }
 
 static void nvdec_deinit_plugin()
