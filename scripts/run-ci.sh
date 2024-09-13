@@ -105,6 +105,10 @@ WITH_HEIF_DECODER=
 if [ ! -z "$WITH_LIBDE265" ] ; then
     WITH_HEIF_DECODER=1
 fi
+WITH_NV_DECODER=
+if [ ! -z "$WITH_NVIDIA" ] ; then
+    WITH_NV_DECODER=1
+fi
 WITH_AVIF_ENCODER=
 WITH_HEIF_ENCODER=
 # Need decoded images before encoding.
