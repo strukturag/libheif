@@ -254,6 +254,13 @@ public:
 
   uint64_t read64();
 
+  /**
+   * Read 32 bit floating point value from the bitstream.
+   *
+   * The data is assumed to be in big endian format.
+   */
+  float readFloat32();
+
   std::string read_string();
 
   bool read(uint8_t* data, size_t n);
@@ -417,6 +424,8 @@ public:
   void write32s(int32_t);
 
   void write64(uint64_t);
+
+  void writeFloat32(float);
 
   void write(int size, uint64_t value);
 

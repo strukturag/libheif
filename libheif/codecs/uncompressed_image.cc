@@ -56,14 +56,15 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
   for (Box_uncC::Component component : uncC->get_components()) {
     uint16_t component_index = component.component_index;
     uint16_t component_type = cmpd->get_components()[component_index].component_type;
-    if ((component_type > 7) && (component_type != component_type_padded)) {
+    if ((component_type > 7) && (component_type != component_type_padded) && (component_type != component_type_filter_array)) {
       std::stringstream sstr;
       sstr << "Uncompressed image with component_type " << ((int) component_type) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
                    heif_suberror_Unsupported_data_version,
                    sstr.str());
     }
-    if ((component.component_bit_depth > 8) && (component.component_bit_depth != 16)) {
+
+    if (component.component_bit_depth > 16) {
       std::stringstream sstr;
       sstr << "Uncompressed image with component_bit_depth " << ((int) component.component_bit_depth) << " is not implemented yet";
       return Error(heif_error_Unsupported_feature,
@@ -198,11 +199,14 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
                  heif_suberror_Unsupported_data_version,
                  sstr.str());
   }
+  /*
+  // TODO: check if this really works...
   if (uncC->is_components_little_endian()) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
                  "Uncompressed components_little_endian == 1 is not implemented yet");
   }
+  */
   if (uncC->is_block_pad_lsb()) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
@@ -286,6 +290,12 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(std::shared_ptr<Box_u
     *out_colourspace = heif_colorspace_monochrome;
   }
 
+  if (componentSet == (1 << component_type_filter_array)) {
+    // TODO - we should look up the components
+    *out_chroma = heif_chroma_monochrome;
+    *out_colourspace = heif_colorspace_monochrome;
+  }
+
   // TODO: more combinations
 
   if (*out_chroma == heif_chroma_undefined) {
@@ -337,6 +347,7 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
       case component_type_red:
       case component_type_green:
       case component_type_blue:
+      case component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
         break;
       case component_type_Y:
@@ -386,6 +397,7 @@ int UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(co
       case component_type_red:
       case component_type_green:
       case component_type_blue:
+      case component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
         break;
       case component_type_Cb:
@@ -480,6 +492,10 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd
     return true;
   case component_type_alpha:
     *channel = heif_channel_Alpha;
+    return true;
+  case component_type_filter_array:
+    // TODO: this is just a temporary hack
+    *channel = heif_channel_Y;
     return true;
   case component_type_padded:
     return false;

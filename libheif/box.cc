@@ -644,6 +644,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     case fourcc("icef"):
       box = std::make_shared<Box_icef>();
       break;
+
+    case fourcc("cpat"):
+      box = std::make_shared<Box_cpat>();
+      break;
 #endif
 
     // --- JPEG 2000
