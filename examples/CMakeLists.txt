@@ -10,7 +10,7 @@ if (MSVC)
     include_directories("../extra")
 endif ()
 
-add_library(heifio
+add_library(heifio STATIC
         decoder.h
         decoder_y4m.cc
         decoder_y4m.h)
@@ -25,8 +25,7 @@ endif()
 
 set_target_properties(heifio
         PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR})
+        VERSION ${PROJECT_VERSION})
 
 
 target_compile_definitions(heifio
