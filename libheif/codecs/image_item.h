@@ -263,6 +263,8 @@ public:
   virtual Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 
+  virtual Result<std::vector<uint8_t>> get_compressed_image_data() const;
+
   Error check_for_valid_image_size(uint32_t width, uint32_t height) const;
 
   // === encoding ===

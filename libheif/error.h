@@ -33,7 +33,7 @@
 #include <sstream>
 
 #include "libheif/heif.h"
-
+#include <cassert>
 
 static constexpr char kSuccess[] = "Success";
 
@@ -114,6 +114,12 @@ public:
   Result(const Error& e) : error(e) {}
 
   operator bool() const { return error.error_code == heif_error_Ok; }
+
+  T& operator*()
+  {
+    assert(error.error_code == heif_error_Ok);
+    return value;
+  }
 
   T value;
   Error error;

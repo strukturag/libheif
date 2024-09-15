@@ -447,8 +447,13 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
     *out_chroma = (heif_chroma) (av1C->get_configuration().get_heif_chroma());
   }
   else if (auto j2kH = m_heif_context->get_heif_file()->get_property<Box_j2kH>(id)) {
+    Result<std::vector<uint8_t>> dataResult = get_compressed_image_data();
+    if (dataResult.error) {
+      return dataResult.error;
+    }
+
     JPEG2000MainHeader jpeg2000Header;
-    err = jpeg2000Header.parseHeader(*m_heif_context->get_heif_file(), id);
+    err = jpeg2000Header.parseHeader(*dataResult);
     if (err) {
       return err;
     }
@@ -1079,16 +1084,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_from_compressed_data(h
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
-                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 {
-  // --- find the decoder plugin with the correct compression format
-
-  heif_compression_format compression_format = get_compression_format();
-  if (compression_format == heif_compression_undefined) {
-    return Error{heif_error_Decoder_plugin_error, heif_suberror_Unsupported_codec, "Decoding not supported"};
-  }
-
   // --- get the compressed image data
 
   // data from configuration blocks
@@ -1107,5 +1104,24 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
     return error;
   }
 
-  return decode_from_compressed_data(compression_format, options, data);
+  return data;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
+                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
+{
+  // --- find the decoder plugin with the correct compression format
+
+  heif_compression_format compression_format = get_compression_format();
+  if (compression_format == heif_compression_undefined) {
+    return Error{heif_error_Decoder_plugin_error, heif_suberror_Unsupported_codec, "Decoding not supported"};
+  }
+
+  Result<std::vector<uint8_t>> dataResult = get_compressed_image_data();
+  if (dataResult.error) {
+    return dataResult.error;
+  }
+
+  return decode_from_compressed_data(compression_format, options, *dataResult);
 }

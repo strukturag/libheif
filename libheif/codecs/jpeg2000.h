@@ -440,7 +440,7 @@ struct JPEG2000MainHeader
 public:
     JPEG2000MainHeader() = default;
 
-    Error parseHeader(const HeifFile& file, const heif_item_id imageID);
+    Error parseHeader(const std::vector<uint8_t>& compressedImageData);
 
     // Use parseHeader instead - these are mainly for unit testing
     Error doParse();

@@ -312,12 +312,11 @@ std::string Box_j2kH::dump(Indent& indent) const
 }
 
 
-Error JPEG2000MainHeader::parseHeader(const HeifFile& file, const heif_item_id imageID)
+Error JPEG2000MainHeader::parseHeader(const std::vector<uint8_t>& compressedImageData)
 {
-  Error err = file.get_compressed_image_data(imageID, &headerData);
-  if (err) {
-    return err;
-  }
+  // TODO: it is very inefficient to store the whole image data when we only need the header
+
+  headerData = compressedImageData;
   return doParse();
 }
 
@@ -569,8 +568,13 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
 
 int ImageItem_JPEG2000::get_luma_bits_per_pixel() const
 {
+  Result<std::vector<uint8_t>> imageDataResult = get_compressed_image_data();
+  if (imageDataResult.error) {
+    return -1;
+  }
+
   JPEG2000MainHeader header;
-  Error err = header.parseHeader(*get_file(), get_id());
+  Error err = header.parseHeader(*imageDataResult);
   if (err) {
     return -1;
   }
@@ -580,8 +584,13 @@ int ImageItem_JPEG2000::get_luma_bits_per_pixel() const
 
 int ImageItem_JPEG2000::get_chroma_bits_per_pixel() const
 {
+  Result<std::vector<uint8_t>> imageDataResult = get_compressed_image_data();
+  if (imageDataResult.error) {
+    return -1;
+  }
+
   JPEG2000MainHeader header;
-  Error err = header.parseHeader(*get_file(), get_id());
+  Error err = header.parseHeader(*imageDataResult);
   if (err) {
     return -1;
   }
