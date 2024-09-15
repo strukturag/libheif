@@ -577,6 +577,9 @@ void opj_query_encoded_size(void* encoder, uint32_t input_width, uint32_t input_
   // of required rounding, or a required minimum size. Use this function to return
   // the encoded size for a given input image size.
   // You may set this to NULL if no padding is required for any image size.
+
+  *encoded_width = input_width;
+  *encoded_height = input_height;
 }
 
 
