@@ -44,11 +44,20 @@ public:
                                          std::shared_ptr<HeifPixelImage>& img,
                                          const std::vector<uint8_t>& uncompressed_data);
 
-  static Error get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC,
-                                            std::shared_ptr<Box_cmpd>& cmpd,
+  static Error decode_uncompressed_image_tile(const HeifContext* context,
+                                              heif_item_id ID,
+                                              std::shared_ptr<HeifPixelImage>& img,
+                                              uint32_t tile_x0, uint32_t tile_y0);
+
+  static Error get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
+                                            const std::shared_ptr<const Box_cmpd>& cmpd,
                                             heif_chroma* out_chroma,
                                             heif_colorspace* out_colourspace);
 
+  static Result<std::shared_ptr<HeifPixelImage>> create_image(std::shared_ptr<const Box_cmpd>,
+                                                              std::shared_ptr<const Box_uncC>,
+                                                              uint32_t width,
+                                                              uint32_t height);
 };
 
 

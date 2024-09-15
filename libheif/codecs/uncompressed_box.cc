@@ -294,9 +294,11 @@ std::string Box_uncC::dump(Indent& indent) const
   if (get_version() == 0) {
     for (const auto& component : m_components) {
       sstr << indent << "component_index: " << component.component_index << "\n";
+      indent++;
       sstr << indent << "component_bit_depth: " << (int) component.component_bit_depth << "\n";
       sstr << indent << "component_format: " << get_name(heif_uncompressed_component_format(component.component_format), sNames_uncompressed_component_format) << "\n";
       sstr << indent << "component_align_size: " << (int) component.component_align_size << "\n";
+      indent--;
     }
 
     sstr << indent << "sampling_type: " << get_name(heif_uncompressed_sampling_mode(m_sampling_type), sNames_uncompressed_sampling_mode) << "\n";

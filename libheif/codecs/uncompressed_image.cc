@@ -36,12 +36,14 @@
 #include "uncompressed_image.h"
 #include <codecs/image_item.h>
 
-static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<Box_uncC> &uncC)
+static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
 {
   return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
 }
 
-static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd)
+
+static Error uncompressed_image_type_is_supported(const std::shared_ptr<const Box_uncC>& uncC,
+                                                  const std::shared_ptr<const Box_cmpd>& cmpd)
 {
     if (isKnownUncompressedFrameConfigurationBoxProfile(uncC))
     {
@@ -229,7 +231,9 @@ static Error uncompressed_image_type_is_supported(std::shared_ptr<Box_uncC>& unc
 }
 
 
-Error UncompressedImageCodec::get_heif_chroma_uncompressed(std::shared_ptr<Box_uncC>& uncC, std::shared_ptr<Box_cmpd>& cmpd, heif_chroma* out_chroma, heif_colorspace* out_colourspace)
+Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
+                                                           const std::shared_ptr<const Box_cmpd>& cmpd,
+                                                           heif_chroma* out_chroma, heif_colorspace* out_colourspace)
 {
   *out_chroma = heif_chroma_undefined;
   *out_colourspace = heif_colorspace_undefined;
@@ -406,7 +410,10 @@ int UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(co
   }
 }
 
-static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd> &cmpd, const std::shared_ptr<Box_uncC> &uncC, Box_uncC::Component component, heif_channel *channel)
+static bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd> &cmpd,
+                                                  const std::shared_ptr<const Box_uncC> &uncC,
+                                                  Box_uncC::Component component,
+                                                  heif_channel *channel)
 {
   uint16_t component_index = component.component_index;
   if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
@@ -488,7 +495,18 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd
   }
 }
 
-  class UncompressedBitReader : public BitReader
+
+static uint32_t nAlignmentSkipBytes(uint32_t alignment, uint32_t size) {
+  if (alignment==0) {
+    return 0;
+  }
+
+  uint32_t residual = size % alignment;
+  return alignment - residual;
+}
+
+
+class UncompressedBitReader : public BitReader
   {
   public:
     UncompressedBitReader(const std::vector<uint8_t>& data) : BitReader(data.data(), (int)data.size())
@@ -547,8 +565,19 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<Box_cmpd
 class AbstractDecoder
 {
 public:
-  virtual Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) = 0;
   virtual ~AbstractDecoder() = default;
+
+  virtual Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) = 0;
+
+  virtual Error decode_tile(const HeifContext* context,
+                            heif_item_id item_id,
+                            std::shared_ptr<HeifPixelImage>& img,
+                            uint32_t out_x0, uint32_t out_y0,
+                            uint32_t image_width, uint32_t image_height,
+                            uint32_t tile_x, uint32_t tile_y) { assert(false); return Error{heif_error_Unsupported_feature,
+                                                                                            heif_suberror_Unsupported_image_type,
+                                                                                            "unci tile decoding not supported for this image type"};}
+
 protected:
   AbstractDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd> cmpd, const std::shared_ptr<Box_uncC> uncC):
     m_width(width),
@@ -605,7 +634,7 @@ protected:
   }
 
   protected:
-    void processComponentSample(UncompressedBitReader &srcBits, ChannelListEntry &entry, uint64_t dst_row_offset, uint32_t tile_column,  uint32_t tile_x) {
+    void processComponentSample(UncompressedBitReader &srcBits, const ChannelListEntry &entry, uint64_t dst_row_offset, uint32_t tile_column,  uint32_t tile_x) {
       uint64_t dst_col_number = tile_column * entry.tile_width + tile_x;
       uint64_t dst_column_offset = dst_col_number * entry.bytes_per_component_sample;
       int val = srcBits.get_bits(entry.bits_per_component_sample);
@@ -629,7 +658,30 @@ protected:
       srcBits.skip_to_byte_boundary();
     }
 
-  private:
+  void processComponentTileSample(UncompressedBitReader &srcBits, const ChannelListEntry &entry, uint64_t dst_offset, uint32_t tile_x) {
+    uint64_t dst_sample_offset = tile_x * entry.bytes_per_component_sample;
+    int val = srcBits.get_bits(entry.bits_per_component_sample);
+    memcpy(entry.dst_plane + dst_offset + dst_sample_offset, &val, entry.bytes_per_component_sample);
+  }
+
+  // Handles the case where a row consists of a single component type
+  // Not valid for Pixel interleave
+  // Not valid for the Cb/Cr channels in Mixed Interleave
+  // Not valid for multi-Y pixel interleave
+  void processComponentTileRow(ChannelListEntry &entry, UncompressedBitReader &srcBits, uint64_t dst_offset)
+  {
+    for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
+      if (entry.component_alignment != 0) {
+        srcBits.skip_to_byte_boundary();
+        int numPadBits = (entry.component_alignment * 8) - entry.bits_per_component_sample;
+        srcBits.skip_bits(numPadBits);
+      }
+      processComponentTileSample(srcBits, entry, dst_offset, tile_x);
+    }
+    srcBits.skip_to_byte_boundary();
+  }
+
+private:
     ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage> &img) {
       ChannelListEntry entry;
       entry.use_channel = map_uncompressed_component_to_channel(m_cmpd, m_uncC, component, &(entry.channel));
@@ -664,6 +716,52 @@ public:
   ComponentInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<Box_cmpd> cmpd, std::shared_ptr<Box_uncC> uncC):
     AbstractDecoder(width, height, std::move(cmpd), std::move(uncC))
   {}
+
+  Error decode_tile(const HeifContext* context,
+                    heif_item_id image_id,
+                    std::shared_ptr<HeifPixelImage>& img,
+                    uint32_t out_x0, uint32_t out_y0,
+                    uint32_t image_width, uint32_t image_height,
+                    uint32_t tile_x, uint32_t tile_y) override
+  {
+    buildChannelList(img);
+
+    uint64_t total_tile_size = 0;
+
+    for (ChannelListEntry& entry : channelList) {
+      uint32_t bytes_per_tile_row = entry.bytes_per_component_sample * entry.tile_width;
+      bytes_per_tile_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_tile_row);
+      uint64_t bytes_per_tile = bytes_per_tile_row * entry.tile_height;
+      total_tile_size += bytes_per_tile;
+    }
+
+    uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+
+    std::vector<uint8_t> src_data;
+    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    if (err) {
+      return err;
+    }
+
+    UncompressedBitReader srcBits(src_data);
+    //uint64_t src_data_offset = 0;
+
+    for (ChannelListEntry& entry : channelList) {
+      for (uint32_t y = 0; y < entry.tile_height; y++) {
+        srcBits.markRowStart();
+        if (entry.use_channel) {
+          uint64_t dst_row_offset = out_y0 + y * entry.dst_plane_stride; //entry.getDestinationRowOffset(y, tile_y);
+          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0);
+        }
+        else {
+          srcBits.skip_bytes(entry.bytes_per_tile_row_src);
+        }
+        srcBits.handleRowAlignment(m_uncC->get_row_align_size());
+      }
+    }
+
+    return Error::Ok;
+  }
 
   Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
     UncompressedBitReader srcBits(uncompressed_data);
@@ -878,6 +976,7 @@ public:
   }
 };
 
+
 static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd>& cmpd, const std::shared_ptr<Box_uncC>& uncC)
 {
   if (uncC->get_interleave_type() == interleave_mode_component) {
@@ -894,6 +993,78 @@ static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::
     return nullptr;
   }
 }
+
+
+Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(const std::shared_ptr<const Box_cmpd> cmpd,
+                                                                             const std::shared_ptr<const Box_uncC> uncC,
+                                                                             uint32_t width,
+                                                                             uint32_t height)
+{
+  auto img = std::make_shared<HeifPixelImage>();
+  heif_chroma chroma;
+  heif_colorspace colourspace;
+  Error error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
+  if (error) {
+    return error;
+  }
+  img->create(width, height,
+              colourspace,
+              chroma);
+
+  for (Box_uncC::Component component : uncC->get_components()) {
+    heif_channel channel;
+    if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
+      if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
+        img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth);
+      } else {
+        img->add_plane(channel, width, height, component.component_bit_depth);
+      }
+    }
+  }
+
+  return img;
+}
+
+
+Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* context,
+                                                             heif_item_id ID,
+                                                             std::shared_ptr<HeifPixelImage>& img,
+                                                             uint32_t tile_x0, uint32_t tile_y0)
+{
+  auto file = context->get_heif_file();
+  std::shared_ptr<Box_ispe> ispe = file->get_property<Box_ispe>(ID);
+  std::shared_ptr<Box_cmpd> cmpd = file->get_property<Box_cmpd>(ID);
+  std::shared_ptr<Box_uncC> uncC = file->get_property<Box_uncC>(ID);
+
+  uint32_t tile_width = ispe->get_width() / uncC->get_number_of_tile_columns();
+  uint32_t tile_height = ispe->get_height() / uncC->get_number_of_tile_rows();
+
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, tile_width, tile_height);
+  if (createImgResult.error) {
+    return createImgResult.error;
+  }
+
+  img = createImgResult.value;
+
+
+  AbstractDecoder *decoder = makeDecoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
+  if (decoder != nullptr) {
+    Error result = decoder->decode_tile(context, ID, img, 0, 0,
+                                        ispe->get_width(), ispe->get_height(),
+                                        tile_x0 / tile_width, tile_y0 / tile_height);
+    delete decoder;
+    return result;
+  } else {
+    std::stringstream sstr;
+    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+
+  return Error::Ok;
+}
+
 
 Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* context,
                                                         heif_item_id ID,
@@ -982,26 +1153,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  img = std::make_shared<HeifPixelImage>();
-  heif_chroma chroma;
-  heif_colorspace colourspace;
-  error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
-  if (error) {
-    return error;
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height);
+  if (createImgResult.error) {
+    return createImgResult.error;
   }
-  img->create(width, height,
-              colourspace,
-              chroma);
-
-  for (Box_uncC::Component component : uncC->get_components()) {
-    heif_channel channel;
-    if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
-      if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
-        img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth);
-      } else {
-        img->add_plane(channel, width, height, component.component_bit_depth);
-      }
-    }
+  else {
+    img = *createImgResult;
   }
 
   AbstractDecoder *decoder = makeDecoder(width, height, cmpd, uncC);
@@ -1240,17 +1397,28 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
 
   std::vector<uint8_t> data;
 
-  // image data, usually from 'mdat'
+  Error err;
 
-  Error error = get_file()->get_compressed_image_data(get_id(), &data);
-  if (error) {
-    return error;
+  if (decode_tile_only) {
+    err = UncompressedImageCodec::decode_uncompressed_image_tile(get_context(),
+                                                                 get_id(),
+                                                                 img,
+                                                                 tile_x0, tile_y0);
+  }
+  else {
+    // image data, usually from 'mdat'
+
+    err = get_file()->get_compressed_image_data(get_id(), &data);
+    if (err) {
+      return err;
+    }
+
+    err = UncompressedImageCodec::decode_uncompressed_image(get_context(),
+                                                            get_id(),
+                                                            img,
+                                                            data);
   }
 
-  Error err = UncompressedImageCodec::decode_uncompressed_image(get_context(),
-                                                                get_id(),
-                                                                img,
-                                                                data);
   if (err) {
     return err;
   }
