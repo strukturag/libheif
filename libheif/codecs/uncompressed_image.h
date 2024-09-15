@@ -74,6 +74,8 @@ public:
 
   int get_chroma_bits_per_pixel() const override;
 
+  void get_tile_size(uint32_t& w, uint32_t& h) const override;
+
   // Code from encode_uncompressed_image() has been moved to here.
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,

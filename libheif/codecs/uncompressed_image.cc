@@ -1421,3 +1421,17 @@ int ImageItem_uncompressed::get_chroma_bits_per_pixel() const
   int bpp = UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(*get_file(), get_id());
   return bpp;
 }
+
+
+void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
+{
+  auto ispe = get_file()->get_property<Box_ispe>(get_id());
+  auto uncC = get_file()->get_property<Box_uncC>(get_id());
+
+  if (!ispe || !uncC) {
+    w=h=0;
+  }
+
+  w = ispe->get_width() / uncC->get_number_of_tile_columns();
+  h = ispe->get_height() / uncC->get_number_of_tile_rows();
+}
