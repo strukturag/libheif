@@ -30,7 +30,7 @@
 #include <memory>
 
 static const int OPENJPEG_PLUGIN_PRIORITY = 100;
-
+static const int OPENJPEG_PLUGIN_PRIORITY_HTJ2K = 90;
 
 struct openjpeg_decoder
 {
@@ -65,6 +65,9 @@ static int openjpeg_does_support_format(enum heif_compression_format format)
 {
   if (format == heif_compression_JPEG2000) {
     return OPENJPEG_PLUGIN_PRIORITY;
+  }
+  else if (format == heif_compression_HTJ2K) {
+    return OPENJPEG_PLUGIN_PRIORITY_HTJ2K;
   }
   else {
     return 0;
