@@ -39,7 +39,7 @@ static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
 
 uint64_t number_of_tiles(const heif_tild_image_parameters& params)
 {
-  uint64_t nTiles = nTiles_h(params) * nTiles_v(params);
+  uint64_t nTiles = nTiles_h(params) * static_cast<uint64_t>(nTiles_v(params));
 
   for (int i = 0; i < params.number_of_extra_dimensions; i++) {
     // We only support up to 8 extra dimensions
@@ -54,13 +54,13 @@ uint64_t number_of_tiles(const heif_tild_image_parameters& params)
 }
 
 
-uint64_t nTiles_h(const heif_tild_image_parameters& params)
+uint32_t nTiles_h(const heif_tild_image_parameters& params)
 {
   return (params.image_width + params.tile_width - 1) / params.tile_width;
 }
 
 
-uint64_t nTiles_v(const heif_tild_image_parameters& params)
+uint32_t nTiles_v(const heif_tild_image_parameters& params)
 {
   return (params.image_height + params.tile_height - 1) / params.tile_height;
 }

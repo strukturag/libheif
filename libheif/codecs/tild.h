@@ -31,9 +31,9 @@
 
 uint64_t number_of_tiles(const heif_tild_image_parameters& params);
 
-uint64_t nTiles_h(const heif_tild_image_parameters& params);
+uint32_t nTiles_h(const heif_tild_image_parameters& params);
 
-uint64_t nTiles_v(const heif_tild_image_parameters& params);
+uint32_t nTiles_v(const heif_tild_image_parameters& params);
 
 
 class Box_tilC : public FullBox

@@ -905,8 +905,6 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
   }
 
 
-  // --- 'grid' image
-
   uint32_t w,h;
 
   handle->image->get_tile_size(w,h);

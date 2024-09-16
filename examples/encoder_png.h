@@ -50,7 +50,7 @@ public:
 
   heif_chroma chroma(bool has_alpha, int bit_depth) const override
   {
-    if (bit_depth == 8) {
+    if (bit_depth <= 8) {
       if (has_alpha)
         return heif_chroma_interleaved_RGBA;
       else
