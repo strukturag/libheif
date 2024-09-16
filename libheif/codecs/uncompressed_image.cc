@@ -589,6 +589,9 @@ protected:
   {
     m_tile_height = m_height / m_uncC->get_number_of_tile_rows();
     m_tile_width = m_width / m_uncC->get_number_of_tile_columns();
+
+    assert(m_tile_width > 0);
+    assert(m_tile_height > 0);
   }
 
   const uint32_t m_width;
@@ -880,6 +883,7 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
+    assert(m_tile_width > 0);
     uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
     uint64_t tile_start_offset = total_tile_size * tileIdx;
 
@@ -968,6 +972,7 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
+    assert(m_tile_width > 0);
     uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
     uint64_t tile_start_offset = total_tile_size * tileIdx;
 
@@ -1059,6 +1064,7 @@ public:
       tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), tile_size);
     }
 
+    assert(m_tile_width > 0);
     uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
     uint64_t tile_start_offset = tile_size * tileIdx;
 
@@ -1168,6 +1174,7 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
+    assert(m_tile_width > 0);
     uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
     uint64_t tile_start_offset = total_tile_size * tileIdx;
 
@@ -1261,6 +1268,9 @@ public:
     }
 
     uint64_t component_start_offset = 0;
+
+    assert(m_tile_width > 0);
+    assert(m_tile_height > 0);
 
     for (ChannelListEntry& entry : channelList) {
       //processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
