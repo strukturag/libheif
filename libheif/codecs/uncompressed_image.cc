@@ -943,24 +943,19 @@ public:
   {
     // --- compute which file range we need to read for the tile
 
-    uint32_t bits_per_pixel = 0;
+    uint64_t total_tile_size = 0;
+
     for (ChannelListEntry& entry : channelList) {
-      bits_per_pixel += entry.bits_per_component_sample;
+      uint32_t bits_per_row = entry.bits_per_component_sample * m_tile_width;
+
+      uint32_t bytes_per_row = (bits_per_row + 7) / 8;
+      if (m_uncC->get_row_align_size()) {
+        bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+      }
+
+      total_tile_size += bytes_per_row * static_cast<uint64_t>(m_tile_height);
     }
 
-    uint32_t bytes_per_row;
-    if (m_uncC->get_pixel_size() != 0) {
-      uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-      bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
-      bytes_per_row = bytes_per_pixel * m_tile_width;
-    }
-    else {
-      bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
-    }
-
-    bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
-
-    uint64_t total_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
     uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
 
 
@@ -1005,30 +1000,8 @@ public:
   {}
 
   Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    UncompressedBitReader srcBits(uncompressed_data);
-
-    buildChannelList(img);
-
-    for (ChannelListEntry &entry : channelList) {
-      if (!entry.use_channel) {
-        uint64_t bytes_per_component = entry.get_bytes_per_tile() * m_uncC->get_number_of_tile_columns() * m_uncC->get_number_of_tile_rows();
-        srcBits.skip_bytes((int)bytes_per_component);
-        continue;
-      }
-      for (uint32_t tile_row = 0; tile_row < m_uncC->get_number_of_tile_rows(); tile_row++) {
-        for (uint32_t tile_column = 0; tile_column < m_uncC->get_number_of_tile_columns(); tile_column++) {
-          srcBits.markTileStart();
-          for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-            srcBits.markRowStart();
-            uint64_t dst_row_offset = entry.getDestinationRowOffset(tile_row, tile_y);
-            processComponentRow(entry, srcBits, dst_row_offset, tile_column);
-            srcBits.handleRowAlignment(m_uncC->get_row_align_size());
-          }
-          srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
-        }
-      }
-    }
-
+    // TODO: not used anymore
+    assert(false);
     return Error::Ok;
   }
 
