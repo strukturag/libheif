@@ -786,35 +786,63 @@ public:
   {}
 
   Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    UncompressedBitReader srcBits(uncompressed_data);
+    // TODO: not used anymore
+    assert(false);
+    return Error::Ok;
+  }
 
-    buildChannelList(img);
+  Error decode_tile(const HeifContext* context,
+                    heif_item_id image_id,
+                    std::shared_ptr<HeifPixelImage>& img,
+                    uint32_t out_x0, uint32_t out_y0,
+                    uint32_t image_width, uint32_t image_height,
+                    uint32_t tile_x, uint32_t tile_y) override
+  {
+    // --- compute which file range we need to read for the tile
 
-    for (uint32_t tile_row = 0; tile_row < m_uncC->get_number_of_tile_rows(); tile_row++) {
-      for (uint32_t tile_column = 0; tile_column < m_uncC->get_number_of_tile_columns(); tile_column++) {
-        srcBits.markTileStart();
-        processTile(srcBits, tile_row, tile_column);
-        srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
-      }
+    uint32_t bits_per_pixel = 0;
+    for (ChannelListEntry& entry : channelList) {
+      bits_per_pixel += entry.bits_per_component_sample;
     }
+    uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+    bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
+
+    uint32_t bytes_per_row = bytes_per_pixel * m_tile_width;
+    bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+
+    uint64_t total_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+    uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+
+
+    // --- read required file range
+
+    std::vector<uint8_t> src_data;
+    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    if (err) {
+      return err;
+    }
+
+    UncompressedBitReader srcBits(src_data);
+
+    processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
 
     return Error::Ok;
   }
 
-  void processTile(UncompressedBitReader &srcBits, uint32_t tile_row, uint32_t tile_column) {
+  void processTile(UncompressedBitReader &srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0) {
     for (uint32_t tile_y = 0; tile_y < m_tile_height; tile_y++) {
       srcBits.markRowStart();
       for (uint32_t tile_x = 0; tile_x < m_tile_width; tile_x++) {
         srcBits.markPixelStart();
         for (ChannelListEntry &entry : channelList) {
           if (entry.use_channel) {
-            uint64_t dst_row_offset = entry.getDestinationRowOffset(tile_row, tile_y);
+            uint64_t dst_row_offset = entry.getDestinationRowOffset(0, tile_y + out_y0);
             if (entry.component_alignment != 0) {
               srcBits.skip_to_byte_boundary();
               int numPadBits = (entry.component_alignment * 8) - entry.bits_per_component_sample;
               srcBits.skip_bits(numPadBits);
             }
-            processComponentSample(srcBits, entry, dst_row_offset, tile_column, tile_x);
+            processComponentSample(srcBits, entry, dst_row_offset, 0, out_x0 + tile_x);
           } else {
             srcBits.skip_bytes(entry.bytes_per_component_sample);
           }
@@ -825,6 +853,7 @@ public:
     }
   }
 };
+
 
 class MixedInterleaveDecoder : public AbstractDecoder
 {
