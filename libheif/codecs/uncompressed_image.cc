@@ -730,14 +730,38 @@ protected:
       return context->get_heif_file()->append_data_from_iloc(ID, *data, range_start_offset, range_size);
     }
 
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
-    if (err) {
-      return err;
-    }
+    if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
+      const auto& units = icef_box->get_units();
+      if (tile_idx >= units.size()) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "no icef-box entry for tile index"};
+      }
 
-    if (icef_box) {
-      for (Box_icef::CompressedUnitInfo unit_info: icef_box->get_units()) {
+      const auto unit = units[tile_idx];
+
+      // get all data and decode all
+      std::vector<uint8_t> compressed_bytes;
+      Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes, unit.unit_offset, unit.unit_size);
+      if (err) {
+        return err;
+      }
+
+      // decompress only the unit
+      err = do_decompress_data(cmpC_box, compressed_bytes, data);
+      if (err) {
+        return err;
+      }
+    }
+    else if (icef_box) {
+      // get all data and decode all
+      std::vector<uint8_t> compressed_bytes;
+      Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
+      if (err) {
+        return err;
+      }
+
+      for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
         auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
         auto unit_end = unit_start + unit_info.unit_size;
         std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
@@ -748,16 +772,29 @@ protected:
         }
         data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
       }
-    } else {
+
+      // cut out the range that we actually need
+      memcpy(data->data(), data->data() + range_start_offset, range_size);
+      data->resize(range_size);
+    }
+    else {
+      // get all data and decode all
+      std::vector<uint8_t> compressed_bytes;
+      Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
+      if (err) {
+        return err;
+      }
+
       // Decode as a single blob
       err = do_decompress_data(cmpC_box, compressed_bytes, data);
       if (err) {
         return err;
       }
-    }
 
-    memcpy(data->data(), data->data() + range_start_offset, range_size);
-    data->resize(range_size);
+      // cut out the range that we actually need
+      memcpy(data->data(), data->data() + range_start_offset, range_size);
+      data->resize(range_size);
+    }
 
     return Error::Ok;
   }

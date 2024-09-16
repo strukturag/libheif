@@ -222,6 +222,15 @@ protected:
   uint32_t m_num_tile_rows = 1;
 };
 
+
+enum heif_cmpC_compressed_unit_type {
+  heif_cmpC_compressed_unit_type_full_item = 0,
+  heif_cmpC_compressed_unit_type_image = 1,
+  heif_cmpC_compressed_unit_type_image_tile = 2,
+  heif_cmpC_compressed_unit_type_image_row = 3,
+  heif_cmpC_compressed_unit_type_image_pixel = 4
+};
+
 /**
  * Generic compression configuration box (cmpC).
  *
@@ -238,7 +247,7 @@ public:
   std::string dump(Indent&) const override;
 
   uint32_t get_compression_type() const { return compression_type; }
-  uint8_t get_compressed_unit_type() const { return compressed_unit_type; }
+  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type)compressed_unit_type; }
 
   Error write(StreamWriter& writer) const override;
 
