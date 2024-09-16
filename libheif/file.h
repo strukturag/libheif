@@ -229,12 +229,6 @@ private:
   Error check_for_ref_cycle_recursion(heif_item_id ID,
                                       const std::shared_ptr<Box_iref>& iref_box,
                                       std::unordered_set<heif_item_id>& parent_items) const;
-
-#if WITH_UNCOMPRESSED_CODEC
-  const Error get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const;
-
-  const Error do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const;
-#endif
 };
 
 #endif

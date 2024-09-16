@@ -710,6 +710,100 @@ private:
       entry.bytes_per_tile_row_src = entry.tile_width * entry.bytes_per_component_sample;
       return entry;
     }
+
+protected:
+
+  // generic compression and uncompressed, per 23001-17
+  const Error get_compressed_image_data_uncompressed(const HeifContext* context, heif_item_id ID,
+                                                     std::vector<uint8_t> *data,
+                                                     uint64_t range_start_offset, uint64_t range_size,
+                                                     uint32_t tile_idx,
+                                                     const Box_iloc::Item *item) const
+  {
+    // --- get codec configuration
+
+    std::shared_ptr<const Box_cmpC> cmpC_box = context->get_heif_file()->get_property<const Box_cmpC>(ID);
+    std::shared_ptr<const Box_icef> icef_box = context->get_heif_file()->get_property<const Box_icef>(ID);
+
+    if (!cmpC_box) {
+      // assume no generic compression
+      return context->get_heif_file()->append_data_from_iloc(ID, *data, range_start_offset, range_size);
+    }
+
+    std::vector<uint8_t> compressed_bytes;
+    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
+    if (err) {
+      return err;
+    }
+
+    if (icef_box) {
+      for (Box_icef::CompressedUnitInfo unit_info: icef_box->get_units()) {
+        auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
+        auto unit_end = unit_start + unit_info.unit_size;
+        std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
+        std::vector<uint8_t> uncompressed_unit_data;
+        err = do_decompress_data(cmpC_box, compressed_unit_data, &uncompressed_unit_data);
+        if (err) {
+          return err;
+        }
+        data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
+      }
+    } else {
+      // Decode as a single blob
+      err = do_decompress_data(cmpC_box, compressed_bytes, data);
+      if (err) {
+        return err;
+      }
+    }
+
+    memcpy(data->data(), data->data() + range_start_offset, range_size);
+    data->resize(range_size);
+
+    return Error::Ok;
+  }
+
+  const Error do_decompress_data(std::shared_ptr<const Box_cmpC> &cmpC_box,
+                                 std::vector<uint8_t> compressed_data,
+                                 std::vector<uint8_t> *data) const
+  {
+    if (cmpC_box->get_compression_type() == fourcc("brot")) {
+#if HAVE_BROTLI
+      return decompress_brotli(compressed_data, data);
+#else
+      std::stringstream sstr;
+    sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
+    } else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
+#if HAVE_ZLIB
+      return decompress_zlib(compressed_data, data);
+#else
+      std::stringstream sstr;
+    sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
+    } else if (cmpC_box->get_compression_type() == fourcc("defl")) {
+#if HAVE_ZLIB
+      return decompress_deflate(compressed_data, data);
+#else
+      std::stringstream sstr;
+    sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_generic_compression_method,
+                 sstr.str());
+#endif
+    } else {
+      std::stringstream sstr;
+      sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << std::endl;
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_generic_compression_method,
+                   sstr.str());
+    }
+  }
 };
 
 
@@ -749,14 +843,15 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
-
-    uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+    uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
+    uint64_t tile_start_offset = total_tile_size * tileIdx;
 
 
     // --- read required file range
 
     std::vector<uint8_t> src_data;
-    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
     if (err) {
       return err;
     }
@@ -836,13 +931,15 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
-    uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+    uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
+    uint64_t tile_start_offset = total_tile_size * tileIdx;
 
 
     // --- read required file range
 
     std::vector<uint8_t> src_data;
-    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
+    //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
     if (err) {
       return err;
     }
@@ -925,13 +1022,15 @@ public:
       tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), tile_size);
     }
 
-    uint64_t tile_start_offset = tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+    uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
+    uint64_t tile_start_offset = tile_size * tileIdx;
 
 
     // --- read required file range
 
     std::vector<uint8_t> src_data;
-    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, tile_size);
+    Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, tile_size, tileIdx, nullptr);
+    //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, tile_size);
     if (err) {
       return err;
     }
@@ -1032,13 +1131,15 @@ public:
       total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
-    uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+    uint32_t tileIdx = tile_x + tile_y * (image_width / m_tile_width);
+    uint64_t tile_start_offset = total_tile_size * tileIdx;
 
 
     // --- read required file range
 
     std::vector<uint8_t> src_data;
-    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
+    Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
+    //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
     if (err) {
       return err;
     }
@@ -1137,10 +1238,12 @@ public:
 
       // --- read required file range
 
-      uint64_t tile_start_offset = component_start_offset + channel_tile_size[entry.channel] * (tile_column + tile_row * (image_width / m_tile_width));
+      uint32_t tileIdx = tile_column + tile_row * (image_width / m_tile_width);
+      uint64_t tile_start_offset = component_start_offset + channel_tile_size[entry.channel] * tileIdx;
 
       std::vector<uint8_t> src_data;
-      Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, channel_tile_size[entry.channel]);
+      Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, channel_tile_size[entry.channel], tileIdx, nullptr);
+      //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, channel_tile_size[entry.channel]);
       if (err) {
         return err;
       }

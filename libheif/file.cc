@@ -636,7 +636,8 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   }
 #if WITH_UNCOMPRESSED_CODEC
   else if (item_type == "unci") {
-    return get_compressed_image_data_uncompressed(ID, data, item);
+    assert(false);
+    // return get_compressed_image_data_uncompressed(ID, data, item);
   }
 #endif
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
@@ -733,105 +734,6 @@ Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out
 
   return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &out_data, offset, size);
 }
-
-
-#if WITH_UNCOMPRESSED_CODEC
-// generic compression and uncompressed, per 23001-17
-const Error HeifFile::get_compressed_image_data_uncompressed(heif_item_id ID, std::vector<uint8_t> *data, const Box_iloc::Item *item) const
-{
-  std::vector<std::shared_ptr<Box>> properties;
-  Error err = m_ipco_box->get_properties_for_item_ID(ID, m_ipma_box, properties);
-  if (err) {
-    return err;
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<Box_cmpC> cmpC_box;
-  std::shared_ptr<Box_icef> icef_box;
-  for (auto& prop : properties) {
-    if (prop->get_short_type() == fourcc("cmpC")) {
-      cmpC_box = std::dynamic_pointer_cast<Box_cmpC>(prop);
-    }
-    if (prop->get_short_type() == fourcc("icef")) {
-      icef_box = std::dynamic_pointer_cast<Box_icef>(prop);
-    }
-    if (cmpC_box && icef_box) {
-      break;
-    }
-  }
-  if (!cmpC_box) {
-    // assume no generic compression
-    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
-  }
-  std::vector<uint8_t> compressed_bytes;
-  err = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_bytes);
-  if (err) {
-    return err;
-  }
-  if (icef_box) {
-    for (Box_icef::CompressedUnitInfo unit_info: icef_box->get_units()) {
-      auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
-      auto unit_end = unit_start + unit_info.unit_size;
-      std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
-      std::vector<uint8_t> uncompressed_unit_data;
-      err = do_decompress_data(cmpC_box, compressed_unit_data, &uncompressed_unit_data);
-      if (err) {
-        return err;
-      }
-      data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
-    }
-  } else {
-    // Decode as a single blob
-    err = do_decompress_data(cmpC_box, compressed_bytes, data);
-    if (err) {
-      return err;
-    }
-  }
-  return Error::Ok;
-}
-
-const Error HeifFile::do_decompress_data(std::shared_ptr<Box_cmpC> &cmpC_box, std::vector<uint8_t> compressed_data, std::vector<uint8_t> *data) const
-{
-  if (cmpC_box->get_compression_type() == fourcc("brot")) {
-#if HAVE_BROTLI
-    return decompress_brotli(compressed_data, data);
-#else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with brotli compression - not enabled" << std::endl;
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
-#endif
-  } else if (cmpC_box->get_compression_type() == fourcc("zlib")) {
-#if HAVE_ZLIB
-    return decompress_zlib(compressed_data, data);
-#else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with zlib compression - not enabled" << std::endl;
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
-#endif
-  } else if (cmpC_box->get_compression_type() == fourcc("defl")) {
-#if HAVE_ZLIB
-    return decompress_deflate(compressed_data, data);
-#else
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with deflate compression - not enabled" << std::endl;
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
-#endif
-  } else {
-    std::stringstream sstr;
-    sstr << "cannot decode unci item with unsupported compression type: " << cmpC_box->get_compression_type() << std::endl;
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_generic_compression_method,
-                 sstr.str());
-  }
-}
-#endif
 
 
 Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const
