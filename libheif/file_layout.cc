@@ -99,7 +99,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
     // TODO: overflow
     uint64_t next_box_header_end = next_box_start + MAXIMUM_BOX_HEADER_SIZE;
     if (next_box_header_end > m_max_length) {
-      m_max_length = stream->request_range(next_box_start, MAXIMUM_BOX_HEADER_SIZE);
+      m_max_length = stream->request_range(next_box_start, next_box_header_end);
     }
 
     if (next_box_header_end > m_max_length) {
