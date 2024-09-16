@@ -730,7 +730,7 @@ public:
     uint64_t total_tile_size = 0;
 
     for (ChannelListEntry& entry : channelList) {
-      uint32_t bytes_per_tile_row = entry.bytes_per_component_sample * entry.tile_width;
+      uint32_t bytes_per_tile_row = (entry.bits_per_component_sample * entry.tile_width + 7)/8;
       bytes_per_tile_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_tile_row);
       uint64_t bytes_per_tile = bytes_per_tile_row * entry.tile_height;
       total_tile_size += bytes_per_tile;
@@ -947,10 +947,17 @@ public:
     for (ChannelListEntry& entry : channelList) {
       bits_per_pixel += entry.bits_per_component_sample;
     }
-    uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-    bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
 
-    uint32_t bytes_per_row = bytes_per_pixel * m_tile_width;
+    uint32_t bytes_per_row;
+    if (m_uncC->get_pixel_size() != 0) {
+      uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+      bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
+      bytes_per_row = bytes_per_pixel * m_tile_width;
+    }
+    else {
+      bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
+    }
+
     bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
 
     uint64_t total_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
