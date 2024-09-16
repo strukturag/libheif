@@ -861,6 +861,10 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override
   {
+    if (m_tile_width == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: ComponentInterleaveDecoder tile_width=0"};
+    }
+
     // --- compute which file range we need to read for the tile
 
     uint64_t total_tile_size = 0;
@@ -935,6 +939,10 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override
   {
+    if (m_tile_width == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: PixelInterleaveDecoder tile_width=0"};
+    }
+
     // --- compute which file range we need to read for the tile
 
     uint32_t bits_per_row = 0;
@@ -1033,6 +1041,10 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override
   {
+    if (m_tile_width == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: MixedInterleaveDecoder tile_width=0"};
+    }
+
     // --- compute which file range we need to read for the tile
 
     uint64_t tile_size = 0;
@@ -1136,6 +1148,10 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override
   {
+    if (m_tile_width == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: RowInterleaveDecoder tile_width=0"};
+    }
+
     // --- compute which file range we need to read for the tile
 
     uint32_t bits_per_row = 0;
@@ -1227,6 +1243,13 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_column, uint32_t tile_row) override
   {
+    if (m_tile_width == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: TileComponentInterleaveDecoder tile_width=0"};
+    }
+    if (m_tile_height == 0) {
+      return {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, "Internal error: TileComponentInterleaveDecoder tile_height=0"};
+    }
+
     // --- compute which file range we need to read for the tile
 
     std::map<heif_channel, uint64_t> channel_tile_size;
