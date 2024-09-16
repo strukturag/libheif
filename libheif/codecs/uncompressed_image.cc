@@ -571,8 +571,6 @@ class AbstractDecoder
 public:
   virtual ~AbstractDecoder() = default;
 
-  virtual Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) = 0;
-
   virtual Error decode_tile(const HeifContext* context,
                             heif_item_id item_id,
                             std::shared_ptr<HeifPixelImage>& img,
@@ -784,13 +782,6 @@ public:
 
     return Error::Ok;
   }
-
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override
-  {
-    // TODO: not used anymore
-    assert(false);
-    return Error::Ok;
-  }
 };
 
 
@@ -800,12 +791,6 @@ public:
   PixelInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<Box_cmpd> cmpd, std::shared_ptr<Box_uncC> uncC):
     AbstractDecoder(width, height, std::move(cmpd), std::move(uncC))
   {}
-
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    // TODO: not used anymore
-    assert(false);
-    return Error::Ok;
-  }
 
   Error decode_tile(const HeifContext* context,
                     heif_item_id image_id,
@@ -902,23 +887,64 @@ public:
     AbstractDecoder(width, height, std::move(cmpd), std::move(uncC))
   {}
 
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    UncompressedBitReader srcBits(uncompressed_data);
+  Error decode_tile(const HeifContext* context,
+                    heif_item_id image_id,
+                    std::shared_ptr<HeifPixelImage>& img,
+                    uint32_t out_x0, uint32_t out_y0,
+                    uint32_t image_width, uint32_t image_height,
+                    uint32_t tile_x, uint32_t tile_y) override
+  {
+    // --- compute which file range we need to read for the tile
 
-    buildChannelList(img);
+    uint64_t tile_size = 0;
 
-    for (uint32_t tile_row = 0; tile_row < m_uncC->get_number_of_tile_rows(); tile_row++) {
-      for (uint32_t tile_column = 0; tile_column < m_uncC->get_number_of_tile_columns(); tile_column++) {
-        srcBits.markTileStart();
-        processTile(srcBits, tile_row, tile_column);
-        srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
+    for (ChannelListEntry& entry : channelList) {
+      if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
+        uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
+        bits_per_row = (bits_per_row+7) & ~7; // align to byte boundary
+
+        tile_size += bits_per_row / 8 * entry.tile_height;
+      }
+      else {
+        uint32_t bits_per_component = entry.bits_per_component_sample;
+        if (entry.component_alignment > 0) {
+          uint32_t bytes_per_component = (bits_per_component + 7)/8;
+          bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+          bits_per_component = bytes_per_component * 8;
+        }
+
+        uint32_t bits_per_row = bits_per_component * entry.tile_width;
+        bits_per_row = (bits_per_row+7) & ~7; // align to byte boundary
+
+        tile_size += bits_per_row / 8 * entry.tile_height;
       }
     }
+
+
+    if (m_uncC->get_tile_align_size() != 0) {
+      tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), tile_size);
+    }
+
+    uint64_t tile_start_offset = tile_size * (tile_x + tile_y * (image_width / m_tile_width));
+
+
+    // --- read required file range
+
+    std::vector<uint8_t> src_data;
+    Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, tile_size);
+    if (err) {
+      return err;
+    }
+
+    UncompressedBitReader srcBits(src_data);
+
+    processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
 
     return Error::Ok;
   }
 
-  void processTile(UncompressedBitReader &srcBits, uint32_t tile_row, uint32_t tile_column) {
+
+  void processTile(UncompressedBitReader &srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0) {
     bool haveProcessedChromaForThisTile = false;
     for (ChannelListEntry &entry : channelList) {
       if (entry.use_channel) {
@@ -926,10 +952,10 @@ public:
           if (!haveProcessedChromaForThisTile) {
             for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
               // TODO: row padding
-              uint64_t dst_row_number = tile_row * entry.tile_width + tile_y;
+              uint64_t dst_row_number = tile_y + out_y0;
               uint64_t dst_row_offset = dst_row_number * entry.dst_plane_stride;
               for (uint32_t tile_x = 0; tile_x < entry.tile_width; tile_x++) {
-                uint64_t dst_column_number = tile_column * entry.tile_width + tile_x;
+                uint64_t dst_column_number = out_x0 + tile_x;
                 uint64_t dst_column_offset = dst_column_number * entry.bytes_per_component_sample;
                 int val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
                 memcpy(entry.dst_plane + dst_row_offset + dst_column_offset, &val, entry.bytes_per_component_sample);
@@ -960,12 +986,6 @@ public:
   RowInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<Box_cmpd> cmpd, std::shared_ptr<Box_uncC> uncC):
     AbstractDecoder(width, height, std::move(cmpd), std::move(uncC))
   {}
-
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    // TODO: not used anymore
-    assert(false);
-    return Error::Ok;
-  }
 
   Error decode_tile(const HeifContext* context,
                     heif_item_id image_id,
@@ -1054,12 +1074,6 @@ public:
   TileComponentInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<Box_cmpd> cmpd, std::shared_ptr<Box_uncC> uncC):
     AbstractDecoder(width, height, std::move(cmpd), std::move(uncC))
   {}
-
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    // TODO: not used anymore
-    assert(false);
-    return Error::Ok;
-  }
 
   Error decode_tile(const HeifContext* context,
                     heif_item_id image_id,
