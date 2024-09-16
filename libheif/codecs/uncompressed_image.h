@@ -41,8 +41,7 @@ public:
 
   static Error decode_uncompressed_image(const HeifContext* context,
                                          heif_item_id ID,
-                                         std::shared_ptr<HeifPixelImage>& img,
-                                         const std::vector<uint8_t>& uncompressed_data);
+                                         std::shared_ptr<HeifPixelImage>& img);
 
   static Error decode_uncompressed_image_tile(const HeifContext* context,
                                               heif_item_id ID,

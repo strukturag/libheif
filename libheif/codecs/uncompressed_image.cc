@@ -626,6 +626,7 @@ protected:
 
   std::vector<ChannelListEntry> channelList;
 
+public:
   void buildChannelList(std::shared_ptr<HeifPixelImage>& img) {
     for (Box_uncC::Component component : m_uncC->get_components()) {
       ChannelListEntry entry = buildChannelListEntry(component, img);
@@ -633,7 +634,7 @@ protected:
     }
   }
 
-  protected:
+protected:
     void processComponentSample(UncompressedBitReader &srcBits, const ChannelListEntry &entry, uint64_t dst_row_offset, uint32_t tile_column,  uint32_t tile_x) {
       uint64_t dst_col_number = tile_column * entry.tile_width + tile_x;
       uint64_t dst_column_offset = dst_col_number * entry.bytes_per_component_sample;
@@ -724,7 +725,7 @@ public:
                     uint32_t image_width, uint32_t image_height,
                     uint32_t tile_x, uint32_t tile_y) override
   {
-    buildChannelList(img);
+    // --- compute which file range we need to read for the tile
 
     uint64_t total_tile_size = 0;
 
@@ -737,6 +738,9 @@ public:
 
     uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
 
+
+    // --- read required file range
+
     std::vector<uint8_t> src_data;
     Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
     if (err) {
@@ -744,13 +748,15 @@ public:
     }
 
     UncompressedBitReader srcBits(src_data);
-    //uint64_t src_data_offset = 0;
+
+
+    // --- decode tile
 
     for (ChannelListEntry& entry : channelList) {
       for (uint32_t y = 0; y < entry.tile_height; y++) {
         srcBits.markRowStart();
         if (entry.use_channel) {
-          uint64_t dst_row_offset = out_y0 + y * entry.dst_plane_stride; //entry.getDestinationRowOffset(y, tile_y);
+          uint64_t dst_row_offset = (out_y0 + y) * entry.dst_plane_stride;
           processComponentTileRow(entry, srcBits, dst_row_offset + out_x0);
         }
         else {
@@ -763,37 +769,14 @@ public:
     return Error::Ok;
   }
 
-  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override {
-    UncompressedBitReader srcBits(uncompressed_data);
-
-    buildChannelList(img);
-
-    for (uint32_t tile_row = 0; tile_row < m_uncC->get_number_of_tile_rows(); tile_row++) {
-      for (uint32_t tile_column = 0; tile_column < m_uncC->get_number_of_tile_columns(); tile_column++) {
-        srcBits.markTileStart();
-        processTile(srcBits, tile_row, tile_column);
-        srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
-      }
-    }
-
+  Error decode(const std::vector<uint8_t>& uncompressed_data, std::shared_ptr<HeifPixelImage>& img) override
+  {
+    // TODO: not used anymore
+    assert(false);
     return Error::Ok;
   }
-
-  void processTile(UncompressedBitReader &srcBits, uint32_t tile_row, uint32_t tile_column) {
-    for (ChannelListEntry &entry : channelList) {
-      for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
-        srcBits.markRowStart();
-        if (entry.use_channel) {
-          uint64_t dst_row_offset = entry.getDestinationRowOffset(tile_row, tile_y);
-          processComponentRow(entry, srcBits, dst_row_offset, tile_column);
-        } else {
-          srcBits.skip_bytes(entry.bytes_per_tile_row_src);
-        }
-        srcBits.handleRowAlignment(m_uncC->get_row_align_size());
-      }
-    }
-  }
 };
+
 
 class PixelInterleaveDecoder : public AbstractDecoder
 {
@@ -1048,13 +1031,7 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
 
   AbstractDecoder *decoder = makeDecoder(ispe->get_width(), ispe->get_height(), cmpd, uncC);
-  if (decoder != nullptr) {
-    Error result = decoder->decode_tile(context, ID, img, 0, 0,
-                                        ispe->get_width(), ispe->get_height(),
-                                        tile_x0 / tile_width, tile_y0 / tile_height);
-    delete decoder;
-    return result;
-  } else {
+  if (decoder == nullptr) {
     std::stringstream sstr;
     sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
@@ -1062,21 +1039,20 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
                  sstr.str());
   }
 
-  return Error::Ok;
+  decoder->buildChannelList(img);
+
+  Error result = decoder->decode_tile(context, ID, img, 0, 0,
+                                      ispe->get_width(), ispe->get_height(),
+                                      tile_x0 / tile_width, tile_y0 / tile_height);
+  delete decoder;
+  return result;
 }
 
 
 Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* context,
                                                         heif_item_id ID,
-                                                        std::shared_ptr<HeifPixelImage>& img,
-                                                        const std::vector<uint8_t>& source_data)
+                                                        std::shared_ptr<HeifPixelImage>& img)
 {
-  if (source_data.empty()) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "Uncompressed image data is empty"};
-  }
-
   // Get the properties for this item
   // We need: ispe, cmpd, uncC
   std::vector<std::shared_ptr<Box>> item_properties;
@@ -1162,17 +1138,33 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   }
 
   AbstractDecoder *decoder = makeDecoder(width, height, cmpd, uncC);
-  if (decoder != nullptr) {
-    Error result = decoder->decode(source_data, img);
-    delete decoder;
-    return result;
-  } else {
+  if (decoder == nullptr) {
     std::stringstream sstr;
     sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
     return Error(heif_error_Unsupported_feature,
-                heif_suberror_Unsupported_data_version,
-               sstr.str());
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
   }
+
+  decoder->buildChannelList(img);
+
+  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
+  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
+
+  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
+    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
+      error = decoder->decode_tile(context, ID, img, tile_x0, tile_y0,
+                                   width, height,
+                                   tile_x0 / tile_width, tile_y0 / tile_height);
+      if (error) {
+        delete decoder;
+        return error;
+      }
+    }
+
+  //Error result = decoder->decode(source_data, img);
+  delete decoder;
+  return Error::Ok;
 }
 
 Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
@@ -1406,17 +1398,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
                                                                  tile_x0, tile_y0);
   }
   else {
-    // image data, usually from 'mdat'
-
-    err = get_file()->get_compressed_image_data(get_id(), &data);
-    if (err) {
-      return err;
-    }
-
     err = UncompressedImageCodec::decode_uncompressed_image(get_context(),
                                                             get_id(),
-                                                            img,
-                                                            data);
+                                                            img);
   }
 
   if (err) {
