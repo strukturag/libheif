@@ -496,12 +496,12 @@ static bool map_uncompressed_component_to_channel(const std::shared_ptr<const Bo
 }
 
 
-static uint32_t nAlignmentSkipBytes(uint32_t alignment, uint32_t size) {
+template <typename T> T nAlignmentSkipBytes(uint32_t alignment, T size) {
   if (alignment==0) {
     return 0;
   }
 
-  uint32_t residual = size % alignment;
+  T residual = size % alignment;
   if (residual==0) {
     return 0;
   }
