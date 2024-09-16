@@ -941,7 +941,7 @@ public:
         uint32_t bits_per_component = entry.bits_per_component_sample;
         if (entry.component_alignment > 0) {
           // start at byte boundary
-          bits_per_row = (bits_per_row + 7) & ~7;
+          bits_per_row = (bits_per_row + 7) & ~7U;
 
           uint32_t bytes_per_component = (bits_per_component + 7)/8;
           bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
@@ -1035,7 +1035,7 @@ public:
     for (ChannelListEntry& entry : channelList) {
       if (entry.channel == heif_channel_Cb || entry.channel == heif_channel_Cr) {
         uint32_t bits_per_row = entry.bits_per_component_sample * entry.tile_width;
-        bits_per_row = (bits_per_row+7) & ~7; // align to byte boundary
+        bits_per_row = (bits_per_row+7) & ~7U; // align to byte boundary
 
         tile_size += bits_per_row / 8 * entry.tile_height;
       }
@@ -1048,7 +1048,7 @@ public:
         }
 
         uint32_t bits_per_row = bits_per_component * entry.tile_width;
-        bits_per_row = (bits_per_row+7) & ~7; // align to byte boundary
+        bits_per_row = (bits_per_row+7) & ~7U; // align to byte boundary
 
         tile_size += bits_per_row / 8 * entry.tile_height;
       }
@@ -1137,7 +1137,7 @@ public:
       uint32_t bits_per_component = entry.bits_per_component_sample;
       if (entry.component_alignment > 0) {
         // start at byte boundary
-        bits_per_row = (bits_per_row + 7) & ~7;
+        bits_per_row = (bits_per_row + 7) & ~7U;
 
         uint32_t bytes_per_component = (bits_per_component + 7)/8;
         bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
@@ -1153,7 +1153,7 @@ public:
         bits_per_row += bits_per_component * m_tile_width;
       }
 
-      bits_per_row = (bits_per_row + 7) & ~7;
+      bits_per_row = (bits_per_row + 7) & ~7U;
     }
 
     uint32_t bytes_per_row = (bits_per_row + 7) / 8;
@@ -1230,7 +1230,7 @@ public:
       uint32_t bits_per_pixel = entry.bits_per_component_sample;
       if (entry.component_alignment > 0) {
         // start at byte boundary
-        //bits_per_row = (bits_per_row + 7) & ~7;
+        //bits_per_row = (bits_per_row + 7) & ~7U;
 
         uint32_t bytes_per_component = (bits_per_pixel + 7)/8;
         bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
