@@ -25,10 +25,15 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON CACHE BOOL "Treat compilation warning as error")
 
 if(NOT MSVC)
+  # cmake 3.24 introduces this variable, but for backward compatibility, we set it explicitly
+  if (CMAKE_COMPILE_WARNING_AS_ERROR)
+      add_definitions(-Werror)
+  endif ()
+
   add_definitions(-Wall)
-  add_definitions(-Werror)
   add_definitions(-Wsign-compare)
   add_definitions(-Wconversion)
   add_definitions(-Wno-sign-conversion)
