@@ -113,6 +113,9 @@ const (
 	ChannelB           = C.heif_channel_B
 	ChannelAlpha       = C.heif_channel_Alpha
 	ChannelInterleaved = C.heif_channel_interleaved
+	ChannelFilterArray = C.heif_channel_filter_array
+	ChannelDepth       = C.heif_channel_depth
+	ChannelDisparity   = C.heif_channel_disparity
 	ChannelOtherFirst  = C.heif_channel_other_first
 	ChannelOtherLast   = C.heif_channel_other_last
 )
