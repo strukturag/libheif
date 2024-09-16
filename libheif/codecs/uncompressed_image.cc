@@ -1031,6 +1031,81 @@ public:
 
     return Error::Ok;
   }
+
+  Error decode_tile(const HeifContext* context,
+                    heif_item_id image_id,
+                    std::shared_ptr<HeifPixelImage>& img,
+                    uint32_t out_x0, uint32_t out_y0,
+                    uint32_t image_width, uint32_t image_height,
+                    uint32_t tile_column, uint32_t tile_row) override
+  {
+    // --- compute which file range we need to read for the tile
+
+    std::map<heif_channel, uint64_t> channel_tile_size;
+
+    //uint64_t total_tile_size = 0;
+
+    for (ChannelListEntry& entry : channelList) {
+      uint32_t bits_per_pixel = entry.bits_per_component_sample;
+
+      uint32_t bytes_per_row;
+      if (m_uncC->get_pixel_size() != 0) { // TODO: does pixel_size apply here?
+        uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+        bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
+        bytes_per_row = bytes_per_pixel * m_tile_width;
+      }
+      else {
+        bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
+      }
+
+      bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+
+      uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+      channel_tile_size[entry.channel] = component_tile_size;
+
+      //total_tile_size += component_tile_size;
+    }
+
+    uint64_t component_start_offset = 0;
+
+    for (ChannelListEntry& entry : channelList) {
+      //processTile(srcBits, tile_y, tile_x, out_x0, out_y0);
+
+      if (!entry.use_channel) {
+        //uint64_t bytes_per_component = entry.get_bytes_per_tile() * m_uncC->get_number_of_tile_columns() * m_uncC->get_number_of_tile_rows();
+        //srcBits.skip_bytes((int)bytes_per_component);
+
+        component_start_offset += channel_tile_size[entry.channel] * (m_width / m_tile_width) * (m_height / m_tile_height);
+        continue;
+      }
+
+      // --- read required file range
+
+      uint64_t tile_start_offset = component_start_offset + channel_tile_size[entry.channel] * (tile_column + tile_row * (image_width / m_tile_width));
+
+      std::vector<uint8_t> src_data;
+      Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, channel_tile_size[entry.channel]);
+      if (err) {
+        return err;
+      }
+
+      UncompressedBitReader srcBits(src_data);
+
+      srcBits.markTileStart();
+      for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
+        srcBits.markRowStart();
+        uint64_t dst_row_offset = entry.getDestinationRowOffset(0, tile_y + out_y0);
+        processComponentRow(entry, srcBits, dst_row_offset + out_x0, 0);
+        srcBits.handleRowAlignment(m_uncC->get_row_align_size());
+      }
+      srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
+
+
+      component_start_offset += channel_tile_size[entry.channel] * (m_width / m_tile_width) * (m_height / m_tile_height);
+    }
+
+    return Error::Ok;
+  }
 };
 
 
