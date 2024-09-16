@@ -502,6 +502,10 @@ static uint32_t nAlignmentSkipBytes(uint32_t alignment, uint32_t size) {
   }
 
   uint32_t residual = size % alignment;
+  if (residual==0) {
+    return 0;
+  }
+
   return alignment - residual;
 }
 
@@ -730,11 +734,23 @@ public:
     uint64_t total_tile_size = 0;
 
     for (ChannelListEntry& entry : channelList) {
-      uint32_t bytes_per_tile_row = (entry.bits_per_component_sample * entry.tile_width + 7)/8;
+      uint32_t bits_per_component = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        uint32_t bytes_per_component = (bits_per_component + 7)/8;
+        bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+        bits_per_component = bytes_per_component * 8;
+      }
+
+      uint32_t bytes_per_tile_row = (bits_per_component * entry.tile_width + 7)/8;
       bytes_per_tile_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_tile_row);
       uint64_t bytes_per_tile = bytes_per_tile_row * entry.tile_height;
       total_tile_size += bytes_per_tile;
     }
+
+    if (m_uncC->get_tile_align_size() != 0) {
+      total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
+    }
+
 
     uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
 
@@ -757,7 +773,7 @@ public:
         srcBits.markRowStart();
         if (entry.use_channel) {
           uint64_t dst_row_offset = (out_y0 + y) * entry.dst_plane_stride;
-          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0);
+          processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
         }
         else {
           srcBits.skip_bytes(entry.bytes_per_tile_row_src);
@@ -800,24 +816,41 @@ public:
   {
     // --- compute which file range we need to read for the tile
 
-    uint32_t bits_per_pixel = 0;
-    for (ChannelListEntry& entry : channelList) {
-      bits_per_pixel += entry.bits_per_component_sample;
+    uint32_t bits_per_row = 0;
+    for (uint32_t x = 0 ; x<m_tile_width;x++) {
+      uint32_t bits_per_pixel = 0;
+
+      for (ChannelListEntry& entry : channelList) {
+        uint32_t bits_per_component = entry.bits_per_component_sample;
+        if (entry.component_alignment > 0) {
+          // start at byte boundary
+          bits_per_row = (bits_per_row + 7) & ~7;
+
+          uint32_t bytes_per_component = (bits_per_component + 7)/8;
+          bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+          bits_per_component = bytes_per_component * 8;
+        }
+
+        bits_per_pixel += bits_per_component;
+      }
+
+      if (m_uncC->get_pixel_size() != 0) {
+        uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
+        bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
+        bits_per_pixel = bytes_per_pixel * 8;
+      }
+
+      bits_per_row += bits_per_pixel;
     }
 
-    uint32_t bytes_per_row;
-    if (m_uncC->get_pixel_size() != 0) {
-      uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-      bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
-      bytes_per_row = bytes_per_pixel * m_tile_width;
-    }
-    else {
-      bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
-    }
-
+    uint32_t bytes_per_row = (bits_per_row + 7)/8;
     bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
 
     uint64_t total_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+    if (m_uncC->get_tile_align_size() != 0) {
+      total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
+    }
+
     uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
 
 
@@ -943,17 +976,40 @@ public:
   {
     // --- compute which file range we need to read for the tile
 
-    uint64_t total_tile_size = 0;
-
+    uint32_t bits_per_row = 0;
     for (ChannelListEntry& entry : channelList) {
-      uint32_t bits_per_row = entry.bits_per_component_sample * m_tile_width;
+      uint32_t bits_per_component = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        // start at byte boundary
+        bits_per_row = (bits_per_row + 7) & ~7;
 
-      uint32_t bytes_per_row = (bits_per_row + 7) / 8;
-      if (m_uncC->get_row_align_size()) {
-        bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+        uint32_t bytes_per_component = (bits_per_component + 7)/8;
+        bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+        bits_per_component = bytes_per_component * 8;
       }
 
-      total_tile_size += bytes_per_row * static_cast<uint64_t>(m_tile_height);
+      if (m_uncC->get_row_align_size() != 0) {
+        uint32_t bytes_this_row = (bits_per_component * m_tile_width + 7) / 8;
+        bytes_this_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_this_row);
+        bits_per_row += bytes_this_row * 8;
+      }
+      else {
+        bits_per_row += bits_per_component * m_tile_width;
+      }
+
+      bits_per_row = (bits_per_row + 7) & ~7;
+    }
+
+    uint32_t bytes_per_row = (bits_per_row + 7) / 8;
+    if (m_uncC->get_row_align_size()) {
+      bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+    }
+
+    uint64_t total_tile_size = 0;
+    total_tile_size += bytes_per_row * static_cast<uint64_t>(m_tile_height);
+
+    if (m_uncC->get_tile_align_size() != 0) {
+      total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
     }
 
     uint64_t tile_start_offset = total_tile_size * (tile_x + tile_y * (image_width / m_tile_width));
@@ -981,7 +1037,7 @@ private:
         srcBits.markRowStart();
         if (entry.use_channel) {
           uint64_t dst_row_offset = entry.getDestinationRowOffset(0, tile_y + out_y0);
-          processComponentRow(entry, srcBits, dst_row_offset + out_x0, 0);
+          processComponentRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample, 0);
         } else {
           srcBits.skip_bytes(entry.bytes_per_tile_row_src);
         }
@@ -1020,6 +1076,14 @@ public:
 
     for (ChannelListEntry& entry : channelList) {
       uint32_t bits_per_pixel = entry.bits_per_component_sample;
+      if (entry.component_alignment > 0) {
+        // start at byte boundary
+        //bits_per_row = (bits_per_row + 7) & ~7;
+
+        uint32_t bytes_per_component = (bits_per_pixel + 7)/8;
+        bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+        bits_per_pixel = bytes_per_component * 8;
+      }
 
       uint32_t bytes_per_row;
       if (m_uncC->get_pixel_size() != 0) { // TODO: does pixel_size apply here?
@@ -1034,6 +1098,11 @@ public:
       bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
 
       uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
+
+      if (m_uncC->get_tile_align_size() != 0) {
+        component_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), component_tile_size);
+      }
+
       channel_tile_size[entry.channel] = component_tile_size;
 
       //total_tile_size += component_tile_size;
@@ -1068,7 +1137,7 @@ public:
       for (uint32_t tile_y = 0; tile_y < entry.tile_height; tile_y++) {
         srcBits.markRowStart();
         uint64_t dst_row_offset = entry.getDestinationRowOffset(0, tile_y + out_y0);
-        processComponentRow(entry, srcBits, dst_row_offset + out_x0, 0);
+        processComponentRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample, 0);
         srcBits.handleRowAlignment(m_uncC->get_row_align_size());
       }
       srcBits.handleTileAlignment(m_uncC->get_tile_align_size());
