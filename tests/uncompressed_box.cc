@@ -214,7 +214,7 @@ TEST_CASE( "uncC" )
 
     Indent indent;
     std::string dump_output = uncC->dump(indent);
-    REQUIRE(dump_output == "Box: uncC -----\nsize: 0   (header size: 0)\nprofile: 1919378017 (rgba)\ncomponent_index: 0\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 1\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 2\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\ncomponent_index: 3\ncomponent_bit_depth: 8\ncomponent_format: unsigned\ncomponent_align_size: 0\nsampling_type: no subsampling\ninterleave_type: pixel\nblock_size: 0\ncomponents_little_endian: 0\nblock_pad_lsb: 0\nblock_little_endian: 0\nblock_reversed: 0\npad_unknown: 0\npixel_size: 0\nrow_align_size: 0\ntile_align_size: 0\nnum_tile_cols: 1\nnum_tile_rows: 1\n");
+    REQUIRE(dump_output == "Box: uncC -----\nsize: 0   (header size: 0)\nprofile: 1919378017 (rgba)\ncomponent_index: 0\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 1\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 2\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\ncomponent_index: 3\n| component_bit_depth: 8\n| component_format: unsigned\n| component_align_size: 0\nsampling_type: no subsampling\ninterleave_type: pixel\nblock_size: 0\ncomponents_little_endian: 0\nblock_pad_lsb: 0\nblock_little_endian: 0\nblock_reversed: 0\npad_unknown: 0\npixel_size: 0\nrow_align_size: 0\ntile_align_size: 0\nnum_tile_cols: 1\nnum_tile_rows: 1\n");
 }
 
 TEST_CASE("uncC_parse") {
@@ -249,21 +249,21 @@ TEST_CASE("uncC_parse") {
                         "size: 64   (header size: 12)\n"
                         "profile: 1919378017 (rgba)\n"
                         "component_index: 0\n"
-                        "component_bit_depth: 8\n"
-                        "component_format: unsigned\n"
-                        "component_align_size: 0\n"
+                        "| component_bit_depth: 8\n"
+                        "| component_format: unsigned\n"
+                        "| component_align_size: 0\n"
                         "component_index: 1\n"
-                        "component_bit_depth: 8\n"
-                        "component_format: unsigned\n"
-                        "component_align_size: 0\n"
+                        "| component_bit_depth: 8\n"
+                        "| component_format: unsigned\n"
+                        "| component_align_size: 0\n"
                         "component_index: 2\n"
-                        "component_bit_depth: 8\n"
-                        "component_format: unsigned\n"
-                        "component_align_size: 0\n"
+                        "| component_bit_depth: 8\n"
+                        "| component_format: unsigned\n"
+                        "| component_align_size: 0\n"
                         "component_index: 3\n"
-                        "component_bit_depth: 8\n"
-                        "component_format: unsigned\n"
-                        "component_align_size: 0\n"
+                        "| component_bit_depth: 8\n"
+                        "| component_format: unsigned\n"
+                        "| component_align_size: 0\n"
                         "sampling_type: no subsampling\n"
                         "interleave_type: pixel\n"
                         "block_size: 0\n"
