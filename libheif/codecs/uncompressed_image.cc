@@ -1462,10 +1462,20 @@ Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const 
             "Missing required cmpd or uncC version 1 box for uncompressed codec"};
   }
 
-  if (uncC->get_components().size() != cmpd->get_components().size()) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "Number of components in uncC and cmpd do not match"};
+  if (cmpd) {
+    if (uncC->get_components().size() != cmpd->get_components().size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Number of components in uncC and cmpd do not match"};
+    }
+
+    for (const auto& comp : uncC->get_components()) {
+      if (comp.component_index > cmpd->get_components().size()) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "Invalid component index in uncC box"};
+      }
+    }
   }
 
   if (uncC->get_number_of_tile_rows() > ispe->get_height() ||
@@ -1480,14 +1490,6 @@ Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const 
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Invalid tile size (image size not a multiple of the tile size)"};
-  }
-
-  for (const auto& comp : uncC->get_components()) {
-    if (comp.component_index > cmpd->get_components().size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Invalid component index in uncC box"};
-    }
   }
 
   return Error::Ok;
