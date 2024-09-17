@@ -57,6 +57,10 @@ public:
                                                               std::shared_ptr<const Box_uncC>,
                                                               uint32_t width,
                                                               uint32_t height);
+
+  static Error check_header_validity(const std::shared_ptr<const Box_ispe>&,
+                                     const std::shared_ptr<const Box_cmpd>&,
+                                     const std::shared_ptr<const Box_uncC>&);
 };
 
 

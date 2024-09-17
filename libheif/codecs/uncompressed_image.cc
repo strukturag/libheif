@@ -1375,6 +1375,12 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
   for (Box_uncC::Component component : uncC->get_components()) {
     heif_channel channel;
     if (map_uncompressed_component_to_channel(cmpd, uncC, component, &channel)) {
+      if (img->has_channel(channel)) {
+        return Error{heif_error_Unsupported_feature,
+                     heif_suberror_Unspecified,
+                     "Cannot generate image with several similar heif_channels."};
+      }
+
       if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
         img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth);
       } else {
@@ -1396,6 +1402,11 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
   std::shared_ptr<Box_ispe> ispe = file->get_property<Box_ispe>(ID);
   std::shared_ptr<Box_cmpd> cmpd = file->get_property<Box_cmpd>(ID);
   std::shared_ptr<Box_uncC> uncC = file->get_property<Box_uncC>(ID);
+
+  Error error = check_header_validity(ispe, cmpd, uncC);
+  if (error) {
+    return error;
+  }
 
   uint32_t tile_width = ispe->get_width() / uncC->get_number_of_tile_columns();
   uint32_t tile_height = ispe->get_height() / uncC->get_number_of_tile_rows();
@@ -1427,6 +1438,62 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 }
 
 
+Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const Box_ispe>& ispe,
+                                                    const std::shared_ptr<const Box_cmpd>& cmpd,
+                                                    const std::shared_ptr<const Box_uncC>& uncC)
+{
+  // if we miss a required box, show error
+
+  if (!ispe) {
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            "Missing required ispe box for uncompressed codec"};
+  }
+
+  if (!uncC) {
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            "Missing required uncC box for uncompressed codec"};
+  }
+
+  if (!cmpd && (uncC->get_version() != 1)) {
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_data_version,
+            "Missing required cmpd or uncC version 1 box for uncompressed codec"};
+  }
+
+  if (uncC->get_components().size() != cmpd->get_components().size()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Number of components in uncC and cmpd do not match"};
+  }
+
+  if (uncC->get_number_of_tile_rows() > ispe->get_height() ||
+      uncC->get_number_of_tile_columns() > ispe->get_width()) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "More tiles than pixels in uncC box"};
+  }
+
+  if (ispe->get_height() % uncC->get_number_of_tile_rows() != 0 ||
+      ispe->get_width() % uncC->get_number_of_tile_columns() != 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Invalid tile size (image size not a multiple of the tile size)"};
+  }
+
+  for (const auto& comp : uncC->get_components()) {
+    if (comp.component_index > cmpd->get_components().size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Invalid component index in uncC box"};
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* context,
                                                         heif_item_id ID,
                                                         std::shared_ptr<HeifPixelImage>& img)
@@ -1439,70 +1506,26 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  uint32_t width = 0;
-  uint32_t height = 0;
-  bool found_ispe = false;
-  std::shared_ptr<Box_cmpd> cmpd;
-  std::shared_ptr<Box_uncC> uncC;
-  std::shared_ptr<Box_cmpC> cmpC;
-  std::shared_ptr<Box_icef> icef;
+  std::shared_ptr<Box_ispe> ispe = context->get_heif_file()->get_property<Box_ispe>(ID);
+  std::shared_ptr<Box_cmpd> cmpd = context->get_heif_file()->get_property<Box_cmpd>(ID);
+  std::shared_ptr<Box_uncC> uncC = context->get_heif_file()->get_property<Box_uncC>(ID);
 
-  for (const auto& prop : item_properties) {
-    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
-    if (ispe) {
-      width = ispe->get_width();
-      height = ispe->get_height();
-      error = context->check_resolution(width, height);
-      if (error) {
-        return error;
-      }
-
-      found_ispe = true;
-    }
-
-    auto maybe_cmpd = std::dynamic_pointer_cast<Box_cmpd>(prop);
-    if (maybe_cmpd) {
-      cmpd = maybe_cmpd;
-    }
-
-    auto maybe_uncC = std::dynamic_pointer_cast<Box_uncC>(prop);
-    if (maybe_uncC) {
-      uncC = maybe_uncC;
-    }
-
-    auto maybe_cmpC = std::dynamic_pointer_cast<Box_cmpC>(prop);
-    if (maybe_cmpC) {
-      cmpC = maybe_cmpC;
-    }
-
-    auto maybe_icef = std::dynamic_pointer_cast<Box_icef>(prop);
-    if (maybe_icef) {
-      icef= maybe_icef;
-    }
-
+  error = check_header_validity(ispe, cmpd, uncC);
+  if (error) {
+    return error;
   }
-
-
-  // if we miss a required box, show error
-  if (!found_ispe) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Missing required ispe box for uncompressed codec");
-  }
-  if (!uncC) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Missing required uncC box for uncompressed codec");
-  }
-  if (!cmpd && (uncC->get_version() !=1)) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Missing required cmpd or uncC version 1 box for uncompressed codec");
-}
 
   // check if we support the type of image
 
-  error = uncompressed_image_type_is_supported(uncC, cmpd);
+  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
+  if (error) {
+    return error;
+  }
+
+  assert(ispe);
+  uint32_t width = ispe->get_width();
+  uint32_t height = ispe->get_height();
+  error = context->check_resolution(width, height);
   if (error) {
     return error;
   }

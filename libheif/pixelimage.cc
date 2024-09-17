@@ -191,6 +191,8 @@ static uint32_t rounded_size(uint32_t s)
 
 bool HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth)
 {
+  assert(!has_channel(channel));
+
   ImagePlane plane;
   int num_interleaved_pixels = num_interleaved_pixels_per_plane(m_chroma);
 
