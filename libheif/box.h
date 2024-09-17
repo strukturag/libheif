@@ -165,6 +165,14 @@ enum class BoxStorageMode {
 };
 
 
+// Consequence of a box parse error
+enum class parse_error_fatality {
+  fatal,     // failure to parse this box leads to the associated item being unreable
+  ignorable, // ignoring this box will lead to unexpected output, but may be better than nothing
+  optional   // the box contains extra information that is not essential for viewing
+};
+
+
 class Box : public BoxHeader
 {
 public:
@@ -221,6 +229,8 @@ public:
   BoxStorageMode get_box_storage_mode() const { return m_storage_mode; }
 
   void set_output_position(uint64_t pos) { m_output_position = pos; }
+
+  virtual parse_error_fatality get_parse_error_fatality() const { return parse_error_fatality::fatal; }
 
   virtual bool is_essential() const { return m_is_essential; } // only used for properties
 
@@ -318,6 +328,32 @@ protected:
   Error parse(BitstreamRange& range) override;
 
   std::vector<uint8_t> m_data;
+};
+
+
+
+class Box_Error : public Box
+{
+public:
+  Box_Error(uint32_t box4cc, Error err, parse_error_fatality fatality)
+  {
+    set_short_type(fourcc("ERR "));
+
+    m_box_type_with_parse_error = box4cc;
+    m_error = err;
+    m_fatality = fatality;
+  }
+
+  Error write(StreamWriter& writer) const override { return {heif_error_Usage_error, heif_suberror_Unspecified, "Cannot write dummy error box."}; }
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override { assert(false); return Error::Ok; }
+
+  uint32_t m_box_type_with_parse_error;
+  Error m_error;
+  parse_error_fatality m_fatality;
 };
 
 
@@ -772,6 +808,8 @@ public:
   // Only these multiples of 90 are allowed: 0, 90, 180, 270.
   void set_rotation_ccw(int rot) { m_rotation = rot; }
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
@@ -797,6 +835,8 @@ public:
   void set_mirror_direction(heif_transform_mirror_direction dir) { m_axis = dir; }
 
   std::string dump(Indent&) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -834,6 +874,8 @@ public:
 
   void set(uint32_t clap_width, uint32_t clap_height,
            uint32_t image_width, uint32_t image_height);
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1008,6 +1050,8 @@ public:
 
   const std::vector<LayerInfo>& get_layers() const { return m_layer_infos; }
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
+
 protected:
   uint16_t tile_size_x = 0;
   uint16_t tile_size_y = 0;
@@ -1074,6 +1118,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
@@ -1097,6 +1143,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 };
@@ -1115,6 +1163,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1138,6 +1188,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 };
@@ -1153,6 +1205,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1224,6 +1278,8 @@ public:
 
   void set_intrinsic_matrix(RelativeIntrinsicMatrix matrix);
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
 protected:
   Error parse(BitstreamRange& range) override;
 
@@ -1276,6 +1332,8 @@ public:
   ExtrinsicMatrix get_extrinsic_matrix() const { return m_matrix; }
 
   Error set_extrinsic_matrix(ExtrinsicMatrix matrix);
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
   Error parse(BitstreamRange& range) override;
@@ -1386,6 +1444,8 @@ public:
    * Comma separated user defined tags applicable to the item or group.
    */
   void set_tags(const std::string tags) { m_tags = tags; }
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
   Error parse(BitstreamRange& range) override;

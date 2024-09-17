@@ -772,11 +772,20 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
                           &range);
 
   err = box->parse(boxrange);
+  boxrange.skip_to_end_of_box();
+
   if (err == Error::Ok) {
     *result = std::move(box);
   }
+  else {
+    parse_error_fatality fatality = box->get_parse_error_fatality();
 
-  boxrange.skip_to_end_of_box();
+    box = std::make_shared<Box_Error>(box->get_short_type(), err, fatality);
+    if (fatality == parse_error_fatality::optional) {
+      err = Error::Ok;
+      *result = std::move(box);
+    }
+  }
 
   return err;
 }
@@ -1031,6 +1040,21 @@ std::string Box_other::dump(Indent& indent) const
   sstr << write_raw_data_as_hex(m_data.data(), len,
                                 "data: ",
                                 "      ");
+
+  return sstr.str();
+}
+
+
+std::string Box_Error::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << indent << '\'' << to_fourcc(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
+  sstr << indent << "fatality: ";
+  switch (m_fatality) {
+    case parse_error_fatality::fatal: sstr << "fatal\n";
+    case parse_error_fatality::ignorable: sstr << "ignorable\n";
+    case parse_error_fatality::optional: sstr << "optional\n";
+  }
 
   return sstr.str();
 }
