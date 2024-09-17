@@ -469,6 +469,8 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     return range.get_error();
   }
 
+  result->reset();
+
   std::shared_ptr<Box> box;
 
   switch (hdr.get_short_type()) {
@@ -781,11 +783,9 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     parse_error_fatality fatality = box->get_parse_error_fatality();
 
     box = std::make_shared<Box_Error>(box->get_short_type(), err, fatality);
-    *result = std::move(box);
 
-    // We return 'Ok' despite the parse error so that we can continue decoding items that are not affected.
-    // Parse error is only relevant if it affects a processed item.
-    err = Error::Ok;
+    // We return a Box_Error that represents the parse error.
+    *result = std::move(box);
   }
 
   return err;
@@ -891,7 +891,7 @@ Error Box::read_children(BitstreamRange& range, int max_number)
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::Ok) {
+    if (error != Error::Ok && box->get_parse_error_fatality() == parse_error_fatality::fatal) {
       return error;
     }
 
