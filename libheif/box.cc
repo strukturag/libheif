@@ -891,7 +891,7 @@ Error Box::read_children(BitstreamRange& range, int max_number)
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
     Error error = Box::read(range, &box);
-    if (error != Error::Ok && box->get_parse_error_fatality() == parse_error_fatality::fatal) {
+    if (error != Error::Ok && (!box || box->get_parse_error_fatality() == parse_error_fatality::fatal)) {
       return error;
     }
 
