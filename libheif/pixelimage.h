@@ -233,6 +233,8 @@ public:
 
   void add_warning(Error warning) { m_warnings.emplace_back(std::move(warning)); }
 
+  void add_warnings(const std::vector<Error>& warning) { for (const auto& err : warning) m_warnings.emplace_back(err); }
+
   const std::vector<Error>& get_warnings() const { return m_warnings; }
 
 private:

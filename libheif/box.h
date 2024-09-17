@@ -348,6 +348,10 @@ public:
 
   std::string dump(Indent&) const override;
 
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override;
+
+  [[nodiscard]] Error get_error() const { return m_error; }
+
 protected:
   Error parse(BitstreamRange& range) override { assert(false); return Error::Ok; }
 

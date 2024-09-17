@@ -342,6 +342,10 @@ public:
   const std::vector<heif_item_id>& get_region_item_ids() const { return m_region_item_ids; }
 
 
+  void add_decoding_warning(Error err) { m_decoding_warnings.emplace_back(std::move(err)); }
+
+  const std::vector<Error>& get_decoding_warnings() const { return m_decoding_warnings; }
+
 private:
   HeifContext* m_heif_context;
 
@@ -381,6 +385,8 @@ private:
 
   bool m_has_extrinsic_matrix = false;
   Box_cmex::ExtrinsicMatrix m_extrinsic_matrix{};
+
+  std::vector<Error> m_decoding_warnings;
 
 protected:
   static Result<std::shared_ptr<HeifPixelImage>> decode_from_compressed_data(heif_compression_format compression_format,

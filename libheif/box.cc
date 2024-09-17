@@ -1059,6 +1059,11 @@ std::string Box_Error::dump(Indent& indent) const
   return sstr.str();
 }
 
+parse_error_fatality Box_Error::get_parse_error_fatality() const
+{
+  return m_fatality;
+}
+
 
 Error Box_ftyp::parse(BitstreamRange& range)
 {

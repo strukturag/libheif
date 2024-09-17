@@ -331,7 +331,6 @@ Error HeifContext::interpret_heif_file()
 
     // --- are there any 'essential' properties that we did not parse?
 
-
     for (const auto& prop : properties) {
       if (std::dynamic_pointer_cast<Box_other>(prop) &&
           get_heif_file()->get_ipco_box()->is_property_essential_for_item(pair.first, prop, get_heif_file()->get_ipma_box())) {
@@ -339,6 +338,17 @@ Error HeifContext::interpret_heif_file()
         std::stringstream sstr;
         sstr << "could not parse item property '" << prop->get_type_string() << "'";
         return {heif_error_Unsupported_feature, heif_suberror_Unsupported_essential_property, sstr.str()};
+      }
+    }
+
+
+    // --- Are there any parse errors in optional properties? Attach the errors as warnings to the images.
+
+    for (const auto& prop : properties) {
+      if (auto errorbox = std::dynamic_pointer_cast<Box_Error>(prop)) {
+        if (errorbox->get_parse_error_fatality() == parse_error_fatality::optional) {
+          image->add_decoding_warning(errorbox->get_error());
+        }
       }
     }
 
@@ -996,6 +1006,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
       return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
     }
   }
+
+  img->add_warnings(imginfo->get_decoding_warnings());
 
   return img;
 }
