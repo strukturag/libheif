@@ -344,10 +344,18 @@ Error HeifContext::interpret_heif_file()
 
     // --- Are there any parse errors in optional properties? Attach the errors as warnings to the images.
 
+    bool ignore_nonfatal_parse_errors = false; // TODO: this should be a user option. Where should we put this (heif_decoding_options, or while creating the context) ?
+
     for (const auto& prop : properties) {
       if (auto errorbox = std::dynamic_pointer_cast<Box_Error>(prop)) {
-        if (errorbox->get_parse_error_fatality() == parse_error_fatality::optional) {
+        parse_error_fatality fatality = errorbox->get_parse_error_fatality();
+
+        if (fatality == parse_error_fatality::optional ||
+            (fatality == parse_error_fatality::ignorable && ignore_nonfatal_parse_errors)) {
           image->add_decoding_warning(errorbox->get_error());
+        }
+        else {
+          return errorbox->get_error();
         }
       }
     }

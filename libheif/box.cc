@@ -781,10 +781,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
     parse_error_fatality fatality = box->get_parse_error_fatality();
 
     box = std::make_shared<Box_Error>(box->get_short_type(), err, fatality);
-    if (fatality == parse_error_fatality::optional) {
-      err = Error::Ok;
-      *result = std::move(box);
-    }
+    *result = std::move(box);
+
+    // We return 'Ok' despite the parse error so that we can continue decoding items that are not affected.
+    // Parse error is only relevant if it affects a processed item.
+    err = Error::Ok;
   }
 
   return err;
