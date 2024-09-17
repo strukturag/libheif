@@ -305,53 +305,59 @@ a {
     };
 
     window.onload = function() {
-        hide("loading");
-        if (typeof libheif === "undefined") {
+	hide("loading");
+
+	if (typeof libheif === "undefined") {
             alert("libheif could not be loaded, please check your browser console for details.");
             return;
         }
 
-        console.log("Using libheif", libheif.heif_get_version());
-        var demo = new HeifDemo(libheif);
+        fetch('libheif.wasm')
+            .then((res) => res.arrayBuffer())
+            .then((wasmBinary) => {
+                var demo = new HeifDemo(libheif({ wasmBinary: wasmBinary }));
 
-        show("form");
+		console.log("Using libheif", demo.libheif.heif_get_version());
 
-        document.getElementById("file").addEventListener("change", function(event) {
-            var files = event.target.files;
-            if (!files || !files.length) {
-                return;
-            }
+		show("form");
 
-            hide("container");
-            hide("error-format");
-            hide("decoding");
-            show("loading");
-            demo.reset();
-            var file = files[0];
-            var reader = new FileReader();
-            reader.onload = (function(theFile) {
-                return function(e) {
-                    hide("container");
-                    hide("save-container");
-                    setTimeout(function() {
-                        var buffer = e.target.result;
-                        if (!demo.loadBuffer(buffer, theFile.name)) {
-                            hide("container");
-                            show("error-format");
-                        }
-                    }, 1);
-                };
-            })(file);
-            reader.readAsArrayBuffer(file);
-        });
+		document.getElementById("file").addEventListener("change", function(event) {
+		    var files = event.target.files;
+		    if (!files || !files.length) {
+			return;
+		    }
 
-        document.getElementById("save").addEventListener("click", function(event) {
-            demo.saveImage();
-        });
+		    hide("container");
+		    hide("error-format");
+		    hide("decoding");
+		    show("loading");
+		    demo.reset();
+		    var file = files[0];
+		    var reader = new FileReader();
+		    reader.onload = (function(theFile) {
+			return function(e) {
+			    hide("container");
+			    hide("save-container");
+			    setTimeout(function() {
+				var buffer = e.target.result;
+				if (!demo.loadBuffer(buffer, theFile.name)) {
+				    hide("container");
+				    show("error-format");
+				}
+			    }, 1);
+			};
+		    })(file);
+		    reader.readAsArrayBuffer(file);
+		});
 
-        // Start with example image.
-        var url = "example.heic";
-        demo.loadUrl(url);
+		document.getElementById("save").addEventListener("click", function(event) {
+		    demo.saveImage();
+		});
+
+		// Start with example image.
+		var url = "example.heic";
+		demo.loadUrl(url);
+	    });
     };
 
 }).call();
