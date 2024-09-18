@@ -31,8 +31,6 @@
 #include <cstddef>
 #include <cstdio>
 
-#include <jpeglib.h>
-
 #include <string>
 
 #include "encoder.h"
@@ -60,14 +58,6 @@ public:
 
 private:
   static const int kDefaultQuality = 90;
-
-  struct ErrorHandler
-  {
-    struct jpeg_error_mgr pub;  /* "public" fields */
-    jmp_buf setjmp_buffer;  /* for return to caller */
-  };
-
-  static void OnJpegError(j_common_ptr cinfo);
 
   int quality_;
 };

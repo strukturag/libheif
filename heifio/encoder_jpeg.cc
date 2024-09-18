@@ -24,9 +24,8 @@
   SOFTWARE.
 */
 
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 
 #include <vector>
 #include <limits>
@@ -34,8 +33,18 @@
 #include "encoder_jpeg.h"
 #include "exif.h"
 
+#include <jpeglib.h>
+
 #define JPEG_XMP_MARKER  (JPEG_APP0+1)  /* JPEG marker code for XMP */
 #define JPEG_XMP_MARKER_ID "http://ns.adobe.com/xap/1.0/"
+
+
+struct ErrorHandler
+{
+  struct jpeg_error_mgr pub;  /* "public" fields */
+  jmp_buf setjmp_buffer;  /* for return to caller */
+};
+
 
 
 JpegEncoder::JpegEncoder(int quality) : quality_(quality)
@@ -56,7 +65,7 @@ void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
 }
 
 // static
-void JpegEncoder::OnJpegError(j_common_ptr cinfo)
+static void OnJpegError(j_common_ptr cinfo)
 {
   ErrorHandler* handler = reinterpret_cast<ErrorHandler*>(cinfo->err);
   longjmp(handler->setjmp_buffer, 1);
@@ -147,7 +156,7 @@ bool JpegEncoder::Encode(const struct heif_image_handle* handle,
   struct jpeg_compress_struct cinfo;
   struct ErrorHandler jerr;
   cinfo.err = jpeg_std_error(reinterpret_cast<struct jpeg_error_mgr*>(&jerr));
-  jerr.pub.error_exit = &JpegEncoder::OnJpegError;
+  jerr.pub.error_exit = &OnJpegError;
   if (setjmp(jerr.setjmp_buffer)) {
     cinfo.err->output_message(reinterpret_cast<j_common_ptr>(&cinfo));
     jpeg_destroy_compress(&cinfo);
