@@ -24,8 +24,9 @@
   SOFTWARE.
 */
 
-#include <errno.h>
-#include <string.h>
+#include <cassert>
+#include <cerrno>
+#include <cstring>
 #include <getopt.h>
 
 #include <fstream>
@@ -52,11 +53,9 @@
 #include "heifio/decoder_tiff.h"
 #endif
 
-#include "../heifio/decoder_y4m.h"
+#include "heifio/decoder_y4m.h"
 
-#include <assert.h>
 #include "benchmark.h"
-#include "exif.h"
 #include "common.h"
 
 int master_alpha = 1;

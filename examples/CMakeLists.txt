@@ -21,7 +21,6 @@ install(FILES heif-info.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 add_executable(heif-dec ${getopt_sources}
         heif_dec.cc
-        ../libheif/exif.cc
         common.cc
         common.h)
 target_link_libraries(heif-dec PRIVATE heif heifio)
@@ -39,8 +38,6 @@ endif()
 
 add_executable(heif-enc ${getopt_sources}
         heif_enc.cc
-        ../libheif/exif.cc
-        ../libheif/exif.cc
         benchmark.h
         benchmark.cc
         common.cc
@@ -58,8 +55,6 @@ endif ()
 if (PNG_FOUND)
     add_executable(heif-thumbnailer ${getopt_sources}
             heif_thumbnailer.cc
-            ../libheif/exif.h
-            ../libheif/exif.cc
             common.cc
             common.h)
     target_link_libraries(heif-thumbnailer heif heifio)
