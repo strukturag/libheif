@@ -45,24 +45,21 @@
 
 #include <libheif/heif.h>
 
-#include "encoder.h"
+#include "heifio/encoder.h"
 
 #if HAVE_LIBJPEG
-
-#include "encoder_jpeg.h"
-
+#include "heifio/encoder_jpeg.h"
 #endif
+
 #if HAVE_LIBPNG
-
-#include "encoder_png.h"
-
+#include "heifio/encoder_png.h"
 #endif
 
 #if HAVE_LIBTIFF
-#include "encoder_tiff.h"
+#include "heifio/encoder_tiff.h"
 #endif
 
-#include "encoder_y4m.h"
+#include "../heifio/encoder_y4m.h"
 #include "common.h"
 
 #if defined(_MSC_VER)
@@ -661,7 +658,7 @@ int main(int argc, char** argv)
             s << output_filename_suffix;
 
             std::string auxFilename = s.str();
-            
+
             written = encoder->Encode(aux_handle, aux_image, auxFilename);
             if (!written) {
               fprintf(stderr, "could not write auxiliary image\n");

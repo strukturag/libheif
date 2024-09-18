@@ -41,18 +41,18 @@
 #include "libheif/heif_items.h"
 
 #if HAVE_LIBJPEG
-#include "decoder_jpeg.h"
+#include "heifio/decoder_jpeg.h"
 #endif
 
 #if HAVE_LIBPNG
-#include "decoder_png.h"
+#include "heifio/decoder_png.h"
 #endif
 
 #if HAVE_LIBTIFF
-#include "decoder_tiff.h"
+#include "heifio/decoder_tiff.h"
 #endif
 
-#include "decoder_y4m.h"
+#include "../heifio/decoder_y4m.h"
 
 #include <assert.h>
 #include "benchmark.h"

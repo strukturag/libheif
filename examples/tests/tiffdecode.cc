@@ -28,7 +28,7 @@
 #include <cstdint>
 #include <iostream>
 #include "decoder.h"
-#include "decoder_tiff.h"
+#include "../../heifio/decoder_tiff.h"
 #include "test_utils.h"
 #include <libheif/heif.h>
 #include <libheif/api_structs.h>

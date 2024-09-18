@@ -28,7 +28,7 @@
 #define LIBHEIF_DECODER_TIFF_H
 
 #include "decoder.h"
-#include <libheif/heif.h>
+#include "libheif/heif.h"
 
 #ifdef __cplusplus
 extern "C" {
