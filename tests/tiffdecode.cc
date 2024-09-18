@@ -27,11 +27,11 @@
 #include "catch.hpp"
 #include <cstdint>
 #include <iostream>
-#include "decoder.h"
-#include "../../heifio/decoder_tiff.h"
+#include "heifio/decoder.h"
+#include "heifio/decoder_tiff.h"
 #include "test_utils.h"
-#include <libheif/heif.h>
-#include <libheif/api_structs.h>
+#include "libheif/heif.h"
+#include "libheif/api_structs.h"
 
 #if HAVE_LIBTIFF
 void checkMono(InputImage input_image) {
@@ -55,7 +55,7 @@ void checkMono(InputImage input_image) {
 
 TEST_CASE("mono8") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("mono.tif");
+  std::string path = get_path_for_heifio_test_file("mono.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkMono(input_image);
@@ -63,7 +63,7 @@ TEST_CASE("mono8") {
 
 TEST_CASE("mono8planar") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("mono_planar.tif");
+  std::string path = get_path_for_heifio_test_file("mono_planar.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkMono(input_image);
@@ -90,7 +90,7 @@ void checkRGB(InputImage input_image) {
 
 TEST_CASE("rgb") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("rgb.tif");
+  std::string path = get_path_for_heifio_test_file("rgb.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkRGB(input_image);
@@ -98,7 +98,7 @@ TEST_CASE("rgb") {
 
 TEST_CASE("rgb_planar") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("rgb_planar.tif");
+  std::string path = get_path_for_heifio_test_file("rgb_planar.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkRGB(input_image);
@@ -126,7 +126,7 @@ void checkRGBA(InputImage input_image) {
 
 TEST_CASE("rgba") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("rgba.tif");
+  std::string path = get_path_for_heifio_test_file("rgba.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
@@ -134,7 +134,7 @@ TEST_CASE("rgba") {
 
 TEST_CASE("rgba_planar") {
   InputImage input_image;
-  std::string path = get_path_for_test_file("rgba_planar.tif");
+  std::string path = get_path_for_heifio_test_file("rgba_planar.tif");
   heif_error err = loadTIFF(path.c_str(), &input_image);
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);

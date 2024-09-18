@@ -4,12 +4,21 @@ include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libhei
 # prepare C++ configuration file (test-config.cc)
 
 set(TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data")
+set(LIBHEIFIO_TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data/heifio")
 configure_file(test-config.cc.in ${CMAKE_BINARY_DIR}/generated/test-config.cc)
 
 macro(add_libheif_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
     add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
     target_link_libraries(${TEST_NAME} PRIVATE heif)
+    add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
+endmacro()
+
+macro(add_heifio_test TEST_FILE)
+    set(TEST_NAME ${TEST_FILE})
+    add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
+    target_link_libraries(${TEST_NAME} PRIVATE heif heifio)
+    target_include_directories(${TEST_NAME} PRIVATE ${libheif_SOURCE_DIR})
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
 endmacro()
 
@@ -64,3 +73,5 @@ if (WITH_UNCOMPRESSED_CODEC)
 else()
     message(WARNING "Tests of the 'uncompressed codec' are not compiled because the uncompressed codec is not enabled (WITH_UNCOMPRESSED_CODEC==OFF)")
 endif ()
+
+add_heifio_test(tiffdecode)

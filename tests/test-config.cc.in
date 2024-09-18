@@ -27,3 +27,4 @@
 #include <string>
 
 std::string tests_data_directory = "@TESTING_DATA_DIRECTORY@";
+std::string libheifio_tests_data_directory = "@LIBHEIFIO_TESTING_DATA_DIRECTORY@";

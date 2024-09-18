@@ -74,9 +74,3 @@ add_executable(heif-test ${getopt_sources}
         common.cc
         common.h)
 target_link_libraries(heif-test heif)
-
-
-include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory (tests)
-endif()

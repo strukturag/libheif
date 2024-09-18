@@ -168,3 +168,9 @@ struct heif_image * createImage_RGB_planar()
 
   return image;
 }
+
+
+std::string get_path_for_heifio_test_file(std::string filename)
+{
+  return libheifio_tests_data_directory + "/" + filename;
+}
