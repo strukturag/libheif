@@ -25,9 +25,9 @@
 */
 #include "encoder_y4m.h"
 
-#include <errno.h>
-#include <string.h>
-#include <assert.h>
+#include <cerrno>
+#include <cstring>
+#include <cassert>
 
 
 Y4MEncoder::Y4MEncoder() = default;
@@ -36,6 +36,7 @@ Y4MEncoder::Y4MEncoder() = default;
 void Y4MEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
                                        struct heif_decoding_options* options) const
 {
+  options->convert_hdr_to_8bit = 1;
 }
 
 

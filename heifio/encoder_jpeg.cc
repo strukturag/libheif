@@ -57,10 +57,6 @@ JpegEncoder::JpegEncoder(int quality) : quality_(quality)
 void JpegEncoder::UpdateDecodingOptions(const struct heif_image_handle* handle,
                                         struct heif_decoding_options* options) const
 {
-  if (HasExifMetaData(handle)) {
-    options->ignore_transformations = 0;
-  }
-
   options->convert_hdr_to_8bit = 1;
 }
 
