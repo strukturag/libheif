@@ -29,6 +29,7 @@
 
 #include "decoder.h"
 
-InputImage loadJPEG(const char* filename);
+LIBHEIF_API
+heif_error loadJPEG(const char *filename, InputImage *input_image);
 
 #endif //LIBHEIF_DECODER_JPEG_H

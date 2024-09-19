@@ -54,6 +54,7 @@ extern "C" {
 #define JPEG_ICC_MARKER  (JPEG_APP0+2)  /* JPEG marker code for ICC */
 #define JPEG_ICC_OVERHEAD_LEN  14        /* size of non-profile data in APP2 */
 
+static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 
 static bool JPEGMarkerIsIcc(jpeg_saved_marker_ptr marker)
 {
@@ -223,9 +224,8 @@ bool ReadEXIFFromJPEG(j_decompress_ptr cinfo,
 #endif
 
 
-InputImage loadJPEG(const char* filename)
+heif_error loadJPEG(const char *filename, InputImage *input_image)
 {
-  InputImage img;
   struct heif_image* image = nullptr;
 
 
@@ -245,8 +245,11 @@ InputImage loadJPEG(const char* filename)
 
   FILE* infile;
   if ((infile = fopen(filename, "rb")) == NULL) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Cannot open JPEG file"};
+    return err;
   }
 
 
@@ -267,13 +270,13 @@ InputImage loadJPEG(const char* filename)
   bool embeddedIccFlag = ReadICCProfileFromJPEG(&cinfo, &iccBuffer, &iccLen);
   bool embeddedXMPFlag = ReadXMPFromJPEG(&cinfo, xmpData);
   if (embeddedXMPFlag) {
-    img.xmp = xmpData;
+    input_image->xmp = xmpData;
   }
 
   bool embeddedEXIFFlag = ReadEXIFFromJPEG(&cinfo, exifData);
   if (embeddedEXIFFlag) {
-    img.exif = exifData;
-    img.orientation = (heif_orientation) read_exif_orientation_tag(exifData.data(), (int) exifData.size());
+    input_image->exif = exifData;
+    input_image->orientation = (heif_orientation) read_exif_orientation_tag(exifData.data(), (int) exifData.size());
   }
 
   if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
@@ -484,8 +487,8 @@ InputImage loadJPEG(const char* filename)
 
   fclose(infile);
 
-  img.image = std::shared_ptr<heif_image>(image,
+  input_image->image = std::shared_ptr<heif_image>(image,
                                           [](heif_image* img) { heif_image_release(img); });
 
-  return img;
+  return heif_error_ok;
 }

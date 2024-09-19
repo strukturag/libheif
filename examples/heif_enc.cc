@@ -827,7 +827,11 @@ int main(int argc, char** argv)
 
     InputImage input_image;
     if (filetype == PNG) {
-      input_image = loadPNG(input_filename.c_str(), output_bit_depth);
+      heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
+        exit(1);
+      }
     }
     else if (filetype == Y4M) {
       heif_error err = loadY4M(input_filename.c_str(), &input_image);
@@ -844,7 +848,11 @@ int main(int argc, char** argv)
       }
     }
     else {
-      input_image = loadJPEG(input_filename.c_str());
+      heif_error err = loadJPEG(input_filename.c_str(), &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load JPEG input_image: " << err.message << std::endl;
+        exit(1);
+      }
     }
 
     std::shared_ptr<heif_image> image = input_image.image;

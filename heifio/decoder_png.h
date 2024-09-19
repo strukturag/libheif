@@ -29,6 +29,7 @@
 
 #include "decoder.h"
 
-InputImage loadPNG(const char* filename, int output_bit_depth);
+LIBHEIF_API
+heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input_image);
 
 #endif //LIBHEIF_DECODER_PNG_H
