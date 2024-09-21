@@ -44,13 +44,13 @@ void checkMono(InputImage input_image) {
   REQUIRE(heif_image_get_height(image, heif_channel_Y) == 64);
   REQUIRE(heif_image_get_bits_per_pixel(image, heif_channel_Y) == 8);
   REQUIRE(heif_image_get_bits_per_pixel_range(image, heif_channel_Y) == 8);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == true);
-  REQUIRE(heif_image_has_channel(image, heif_channel_R) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_G) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_B) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == false);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == 1);
+  REQUIRE(heif_image_has_channel(image, heif_channel_R) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_G) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_B) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == 0);
 }
 
 TEST_CASE("mono8") {
@@ -79,13 +79,13 @@ void checkRGB(InputImage input_image) {
   REQUIRE(heif_image_get_height(image, heif_channel_interleaved) == 10);
   REQUIRE(heif_image_get_bits_per_pixel(image, heif_channel_interleaved) == 24);
   REQUIRE(heif_image_get_bits_per_pixel_range(image, heif_channel_interleaved) == 8);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_R) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_G) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_B) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == true);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == false);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_R) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_G) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_B) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == 1);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == 0);
 }
 
 TEST_CASE("rgb") {
@@ -115,13 +115,13 @@ void checkRGBA(InputImage input_image) {
   REQUIRE(heif_image_get_height(image, heif_channel_interleaved) == 10);
   REQUIRE(heif_image_get_bits_per_pixel(image, heif_channel_interleaved) == 32);
   REQUIRE(heif_image_get_bits_per_pixel_range(image, heif_channel_interleaved) == 8);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_R) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_G) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_B) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == true);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == false);
-  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == false);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Y) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_R) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_G) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_B) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_interleaved) == 1);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cr) == 0);
+  REQUIRE(heif_image_has_channel(image, heif_channel_Cb) == 0);
 }
 
 TEST_CASE("rgba") {
