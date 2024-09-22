@@ -41,18 +41,9 @@
 #include <libheif/heif_properties.h>
 #include "libheif/heif_items.h"
 
-#if HAVE_LIBJPEG
 #include "heifio/decoder_jpeg.h"
-#endif
-
-#if HAVE_LIBPNG
 #include "heifio/decoder_png.h"
-#endif
-
-#if HAVE_LIBTIFF
 #include "heifio/decoder_tiff.h"
-#endif
-
 #include "heifio/decoder_y4m.h"
 
 #include "benchmark.h"
@@ -192,42 +183,6 @@ void show_help(const char* argv0)
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n";
 }
-
-
-#if !HAVE_LIBJPEG
-heif_error loadJPEG(const char *filename, InputImage *input_image)
-{
-  struct heif_error err = {
-      .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Cannot load JPEG because libjpeg support was not compiled."};
-  return err;
-}
-#endif
-
-
-#if !HAVE_LIBPNG
-heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input_image)
-{
-  struct heif_error err = {
-      .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Cannot load PNG because libpng support was not compiled."};
-  return err;
-}
-#endif
-
-
-#if !HAVE_LIBTIFF
-heif_error loadTIFF(const char *filename, InputImage *input_image)
-{
-  struct heif_error err = {
-      .code = heif_error_Unsupported_feature,
-      .subcode = heif_suberror_Unspecified,
-      .message = "Cannot load TIFF because libtiff support was not compiled."};
-  return err;
-}
-#endif
 
 
 void list_encoder_parameters(heif_encoder* encoder)

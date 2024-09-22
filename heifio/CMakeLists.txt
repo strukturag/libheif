@@ -10,7 +10,8 @@ add_library(heifio STATIC
         encoder_y4m.h
         encoder_y4m.cc
         exif.h
-        exif.cc)
+        exif.cc
+        stubs.cc)
 
 target_link_libraries(heifio PRIVATE heif)
 
