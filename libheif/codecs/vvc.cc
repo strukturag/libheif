@@ -620,8 +620,6 @@ Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<He
 
 Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  std::vector<uint8_t> data;
-
   // --- get properties for this image
 
   std::vector<std::shared_ptr<Box>> properties;
@@ -634,26 +632,16 @@ Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(he
 
   // --- get codec configuration
 
-  std::shared_ptr<Box_vvcC> vvcC_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("vvcC"))
-    {
-      vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(prop);
-      if (vvcC_box)
-      {
-        break;
-      }
-    }
-  }
-
+  std::shared_ptr<Box_vvcC> vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
   if (!vvcC_box)
   {
     assert(false);
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_vvcC_box);
   }
-  else if (!vvcC_box->get_headers(&data))
+
+  std::vector<uint8_t> data;
+  if (!vvcC_box->get_headers(&data))
   {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_item_data);

@@ -241,11 +241,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     }
   }
 
-
-  auto ipma = get_file()->get_ipma_box();
-  auto ipco = get_file()->get_ipco_box();
-  auto pixi_box = ipco->get_property_for_item_ID(get_id(), ipma, fourcc("pixi"));
-  auto pixi = std::dynamic_pointer_cast<Box_pixi>(pixi_box);
+  //auto pixi = get_file()->get_property<Box_pixi>(get_id());
 
   const uint32_t w = grid.get_width();
   const uint32_t h = grid.get_height();

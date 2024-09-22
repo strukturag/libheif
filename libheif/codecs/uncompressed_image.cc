@@ -310,16 +310,13 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
 
 int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
 {
-  auto ipco = heif_file.get_ipco_box();
-  auto ipma = heif_file.get_ipma_box();
+  std::shared_ptr<Box_uncC> uncC_box = heif_file.get_property<Box_uncC>(imageID);
+  std::shared_ptr<Box_cmpd> cmpd_box = heif_file.get_property<Box_cmpd>(imageID);
 
-  auto box1 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("uncC"));
-  std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
-  auto box2 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("cmpd"));
-  std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
   if (!uncC_box) {
     return -1;
   }
+
   if (!cmpd_box) {
     if (isKnownUncompressedFrameConfigurationBoxProfile(uncC_box)) {
       return 8;
@@ -362,17 +359,14 @@ int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(cons
 
 int UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
 {
-  auto ipco = heif_file.get_ipco_box();
-  auto ipma = heif_file.get_ipma_box();
+  std::shared_ptr<Box_uncC> uncC_box = heif_file.get_property<Box_uncC>(imageID);
+  std::shared_ptr<Box_cmpd> cmpd_box = heif_file.get_property<Box_cmpd>(imageID);
 
-  auto box1 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("uncC"));
-  std::shared_ptr<Box_uncC> uncC_box = std::dynamic_pointer_cast<Box_uncC>(box1);
-  auto box2 = ipco->get_property_for_item_ID(imageID, ipma, fourcc("cmpd"));
-  std::shared_ptr<Box_cmpd> cmpd_box = std::dynamic_pointer_cast<Box_cmpd>(box2);
   if (uncC_box && uncC_box->get_version() == 1) {
     // All of the version 1 cases are 8 bit
     return 8;
   }
+
   if (!uncC_box || !cmpd_box) {
     return -1;
   }

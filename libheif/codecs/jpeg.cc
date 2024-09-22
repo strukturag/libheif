@@ -165,30 +165,14 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
 
 Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  std::vector<uint8_t> data;
-
-  // --- check if 'jpgC' is present
-  std::vector<std::shared_ptr<Box>> properties;
-  auto ipma_box = get_file()->get_ipma_box();
-  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
-  if (err) {
-    return err;
-  }
-
   // --- get codec configuration
 
-  std::shared_ptr<Box_jpgC> jpgC_box;
-  for (auto& prop : properties) {
-    if (prop->get_short_type() == fourcc("jpgC")) {
-      jpgC_box = std::dynamic_pointer_cast<Box_jpgC>(prop);
-      if (jpgC_box) {
-        data = jpgC_box->get_data();
-        break;
-      }
-    }
+  std::shared_ptr<Box_jpgC> jpgC_box = get_file()->get_property<Box_jpgC>(get_id());
+  if (jpgC_box) {
+    return jpgC_box->get_data();
   }
 
-  return data;
+  return std::vector<uint8_t>{};
 }
 
 

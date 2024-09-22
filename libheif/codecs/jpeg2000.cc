@@ -525,32 +525,9 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_p
 
 Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  std::vector<uint8_t> data;
-
-  // --- get properties for this image
-
-  std::vector<std::shared_ptr<Box>> properties;
-  auto ipma_box = get_file()->get_ipma_box();
-  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
-  if (err) {
-    return err;
-  }
-
   // --- get codec configuration
 
-  std::shared_ptr<Box_j2kH> j2kH_box;
-  for (auto &prop : properties)
-  {
-    if (prop->get_short_type() == fourcc("j2kH"))
-    {
-      j2kH_box = std::dynamic_pointer_cast<Box_j2kH>(prop);
-      if (j2kH_box)
-      {
-        break;
-      }
-    }
-  }
-
+  std::shared_ptr<Box_j2kH> j2kH_box = get_file()->get_property<Box_j2kH>(get_id());
   if (!j2kH_box)
   {
     // TODO - Correctly Find the j2kH box
@@ -562,7 +539,7 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
   //                heif_suberror_No_item_data);
   // }
 
-  return data;
+  return std::vector<uint8_t>{};
 }
 
 
