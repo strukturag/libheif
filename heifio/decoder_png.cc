@@ -36,6 +36,8 @@ extern "C" {
 #include <png.h>
 }
 
+static struct heif_error heif_error_ok = {heif_error_Ok, heif_suberror_Unspecified, "Success"};
+
 static void
 user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 {
@@ -45,16 +47,16 @@ user_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
 } // user_read_data
 
 
-InputImage loadPNG(const char* filename, int output_bit_depth)
+heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input_image)
 {
   FILE* fh = fopen(filename, "rb");
   if (!fh) {
-    std::cerr << "Can't open " << filename << "\n";
-    exit(1);
+    struct heif_error err = {
+      .code = heif_error_Invalid_input,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Cannot open PNG file"};
+    return err;
   }
-
-
-  InputImage input_image;
 
   // ### Code copied from LibVideoGfx and slightly modified to use HeifPixelImage
 
@@ -203,11 +205,11 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   png_bytep exifPtr = nullptr;
   png_uint_32 exifSize = 0;
   if (png_get_eXIf_1(png_ptr, info_ptr, &exifSize, &exifPtr) == PNG_INFO_eXIf) {
-    input_image.exif.resize(exifSize);
-    memcpy(input_image.exif.data(), exifPtr, exifSize);
+    input_image->exif.resize(exifSize);
+    memcpy(input_image->exif.data(), exifPtr, exifSize);
 
     // remove the EXIF orientation since it is informal only in PNG and we do not want to confuse with an orientation not matching irot/imir
-    modify_exif_orientation_tag_if_it_exists(input_image.exif.data(), (int) input_image.exif.size(), 1);
+    modify_exif_orientation_tag_if_it_exists(input_image->exif.data(), (int) input_image->exif.size(), 1);
   }
 #endif
 
@@ -227,8 +229,8 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
         // TODO: error
       }
       else {
-        input_image.xmp.resize(textLength);
-        memcpy(input_image.xmp.data(), textPtr->text, textLength);
+        input_image->xmp.resize(textLength);
+        memcpy(input_image->xmp.data(), textPtr->text, textLength);
       }
     }
   }
@@ -444,8 +446,8 @@ InputImage loadPNG(const char* filename, int output_bit_depth)
   delete[] row_pointers;
   fclose(fh);
 
-  input_image.image = std::shared_ptr<heif_image>(image,
+  input_image->image = std::shared_ptr<heif_image>(image,
                                                   [](heif_image* img) { heif_image_release(img); });
 
-  return input_image;
+  return heif_error_ok;
 }

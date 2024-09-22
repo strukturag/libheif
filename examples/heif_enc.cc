@@ -195,23 +195,25 @@ void show_help(const char* argv0)
 
 
 #if !HAVE_LIBJPEG
-InputImage loadJPEG(const char* filename)
+heif_error loadJPEG(const char *filename, InputImage *input_image)
 {
-  std::cerr << "Cannot load JPEG because libjpeg support was not compiled.\n";
-  exit(1);
-
-  return {};
+  struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Cannot load JPEG because libjpeg support was not compiled."};
+  return err;
 }
 #endif
 
 
 #if !HAVE_LIBPNG
-InputImage loadPNG(const char* filename, int output_bit_depth)
+heif_error loadPNG(const char* filename, int output_bit_depth, InputImage *input_image)
 {
-  std::cerr << "Cannot load PNG because libpng support was not compiled.\n";
-  exit(1);
-
-  return {};
+  struct heif_error err = {
+      .code = heif_error_Unsupported_feature,
+      .subcode = heif_suberror_Unspecified,
+      .message = "Cannot load PNG because libpng support was not compiled."};
+  return err;
 }
 #endif
 
@@ -223,7 +225,7 @@ heif_error loadTIFF(const char *filename, InputImage *input_image)
       .code = heif_error_Unsupported_feature,
       .subcode = heif_suberror_Unspecified,
       .message = "Cannot load TIFF because libtiff support was not compiled."};
-    return err;
+  return err;
 }
 #endif
 
@@ -827,7 +829,11 @@ int main(int argc, char** argv)
 
     InputImage input_image;
     if (filetype == PNG) {
-      input_image = loadPNG(input_filename.c_str(), output_bit_depth);
+      heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
+        exit(1);
+      }
     }
     else if (filetype == Y4M) {
       heif_error err = loadY4M(input_filename.c_str(), &input_image);
@@ -844,7 +850,11 @@ int main(int argc, char** argv)
       }
     }
     else {
-      input_image = loadJPEG(input_filename.c_str());
+      heif_error err = loadJPEG(input_filename.c_str(), &input_image);
+      if (err.code != heif_error_Ok) {
+        std::cerr << "Can not load JPEG input_image: " << err.message << std::endl;
+        exit(1);
+      }
     }
 
     std::shared_ptr<heif_image> image = input_image.image;
