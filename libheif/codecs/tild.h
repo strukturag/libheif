@@ -27,6 +27,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <utility>
 
 
 uint64_t number_of_tiles(const heif_tild_image_parameters& params);
