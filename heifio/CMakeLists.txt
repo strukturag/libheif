@@ -25,7 +25,7 @@ target_compile_definitions(heifio
         LIBHEIF_EXPORTS
         HAVE_VISIBILITY)
 
-find_package(TIFFq)
+find_package(TIFF)
 if (TIFF_FOUND)
     target_sources(heifio PRIVATE decoder_tiff.cc decoder_tiff.h encoder_tiff.h encoder_tiff.cc)
     target_link_libraries(heifio PRIVATE TIFF::TIFF)
