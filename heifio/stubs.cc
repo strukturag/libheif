@@ -27,7 +27,6 @@
 #include "libheif/heif.h"
 #include "decoder.h"
 
-extern "C" {
 
 #if !HAVE_LIBJPEG
 heif_error loadJPEG(const char *filename, InputImage *input_image)
@@ -63,5 +62,3 @@ heif_error loadTIFF(const char *filename, InputImage *input_image)
   return err;
 }
 #endif
-
-}

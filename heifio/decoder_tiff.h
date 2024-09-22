@@ -30,15 +30,7 @@
 #include "decoder.h"
 #include "libheif/heif.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 LIBHEIF_API
 heif_error loadTIFF(const char *filename, InputImage *input_image);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // LIBHEIF_DECODER_TIFF_H
