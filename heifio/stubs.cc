@@ -24,6 +24,10 @@
   SOFTWARE.
 */
 
+#include "libheif/heif.h"
+#include "decoder.h"
+
+
 #if !HAVE_LIBJPEG
 heif_error loadJPEG(const char *filename, InputImage *input_image)
 {
