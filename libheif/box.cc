@@ -827,31 +827,6 @@ Error Box::write(StreamWriter& writer) const
 }
 
 
-std::shared_ptr<Box> Box::get_child_box(uint32_t short_type) const
-{
-  for (auto& box : m_children) {
-    if (box->get_short_type() == short_type) {
-      return box;
-    }
-  }
-
-  return nullptr;
-}
-
-
-std::vector<std::shared_ptr<Box>> Box::get_child_boxes(uint32_t short_type) const
-{
-  std::vector<std::shared_ptr<Box>> result;
-  for (auto& box : m_children) {
-    if (box->get_short_type() == short_type) {
-      result.push_back(box);
-    }
-  }
-
-  return result;
-}
-
-
 bool Box::operator==(const Box& other) const
 {
   if (this->get_short_type() != other.get_short_type()) {

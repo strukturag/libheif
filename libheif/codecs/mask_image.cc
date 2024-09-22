@@ -61,34 +61,23 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
                                         std::shared_ptr<HeifPixelImage>& img,
                                         const std::vector<uint8_t>& data)
 {
-  std::vector<std::shared_ptr<Box>> item_properties;
-  Error error = context->get_heif_file()->get_properties(ID, item_properties);
-  if (error) {
-    return error;
-  }
-  std::shared_ptr<Box_mskC> mskC;
+  std::shared_ptr<Box_ispe> ispe = context->get_heif_file()->get_property<Box_ispe>(ID);
+  std::shared_ptr<Box_mskC> mskC = context->get_heif_file()->get_property<Box_mskC>(ID);
+
   uint32_t width = 0;
   uint32_t height = 0;
-  bool found_ispe = false;
-  for (const auto& prop : item_properties) {
-    auto ispe = std::dynamic_pointer_cast<Box_ispe>(prop);
-    if (ispe) {
-      width = ispe->get_width();
-      height = ispe->get_height();
-      error = context->check_resolution(width, height);
-      if (error) {
-        return error;
-      }
 
-      found_ispe = true;
-    }
+  if (ispe) {
+    width = ispe->get_width();
+    height = ispe->get_height();
 
-    auto maybe_mskC = std::dynamic_pointer_cast<Box_mskC>(prop);
-    if (maybe_mskC) {
-      mskC = maybe_mskC;
+    Error error = context->check_resolution(width, height);
+    if (error) {
+      return error;
     }
   }
-  if (!found_ispe || !mskC) {
+
+  if (!ispe || !mskC) {
     return Error(heif_error_Unsupported_feature,
                   heif_suberror_Unsupported_data_version,
                   "Missing required box for mask codec");

@@ -851,8 +851,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
     error = ipco_box->get_properties_for_item_ID(m_id, ipma_box, properties);
 
     for (const auto& property : properties) {
-      if (property->get_short_type() == fourcc("irot")) {
-        auto rot = std::dynamic_pointer_cast<Box_irot>(property);
+      if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
         auto rotateResult = img->rotate_ccw(rot->get_rotation());
         if (rotateResult.error) {
           return error;
@@ -862,8 +861,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
       }
 
 
-      if (property->get_short_type() == fourcc("imir")) {
-        auto mirror = std::dynamic_pointer_cast<Box_imir>(property);
+      if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
         auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction());
         if (mirrorResult.error) {
           return error;
@@ -872,8 +870,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
       }
 
 
-      if (property->get_short_type() == fourcc("clap")) {
-        auto clap = std::dynamic_pointer_cast<Box_clap>(property);
+      if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
         std::shared_ptr<HeifPixelImage> clap_img;
 
         uint32_t img_width = img->get_width();
@@ -990,27 +987,21 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     // CLLI
 
-    auto clli_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("clli"));
-    auto clli = std::dynamic_pointer_cast<Box_clli>(clli_box);
-
+    auto clli = get_file()->get_property<Box_clli>(m_id);
     if (clli) {
       img->set_clli(clli->clli);
     }
 
     // MDCV
 
-    auto mdcv_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("mdcv"));
-    auto mdcv = std::dynamic_pointer_cast<Box_mdcv>(mdcv_box);
-
+    auto mdcv = get_file()->get_property<Box_mdcv>(m_id);
     if (mdcv) {
       img->set_mdcv(mdcv->mdcv);
     }
 
     // PASP
 
-    auto pasp_box = ipco_box->get_property_for_item_ID(m_id, ipma_box, fourcc("pasp"));
-    auto pasp = std::dynamic_pointer_cast<Box_pasp>(pasp_box);
-
+    auto pasp = get_file()->get_property<Box_pasp>(m_id);
     if (pasp) {
       img->set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
     }

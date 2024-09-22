@@ -197,19 +197,32 @@ public:
 
   std::string dump(Indent&) const override;
 
-  std::shared_ptr<Box> get_child_box(uint32_t short_type) const;
+  template<typename T> [[nodiscard]] std::shared_ptr<T> get_child_box() const
+  {
+    // TODO: we could remove the dynamic_cast<> by adding the fourcc type of each Box
+    //       as a "constexpr uint32_t Box::short_type", compare to that and use static_cast<>
+    for (auto& box : m_children) {
+      if (auto typed_box = std::dynamic_pointer_cast<T>(box)) {
+        return typed_box;
+      }
+    }
 
-  std::vector<std::shared_ptr<Box>> get_child_boxes(uint32_t short_type) const;
+    return nullptr;
+  }
+
+
 
   template<typename T>
-  std::vector<std::shared_ptr<T>> get_typed_child_boxes(uint32_t short_type) const
+  std::vector<std::shared_ptr<T>> get_child_boxes() const
   {
-    auto boxes = get_child_boxes(short_type);
-    std::vector<std::shared_ptr<T>> typedBoxes;
-    for (const auto& box : boxes) {
-      typedBoxes.push_back(std::dynamic_pointer_cast<T>(box));
+    std::vector<std::shared_ptr<T>> result;
+    for (auto& box : m_children) {
+      if (auto typed_box = std::dynamic_pointer_cast<T>(box)) {
+        result.push_back(typed_box);
+      }
     }
-    return typedBoxes;
+
+    return result;
   }
 
   const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const { return m_children; }

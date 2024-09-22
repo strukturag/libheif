@@ -348,7 +348,7 @@ Error HeifFile::parse_heif_file()
   }
 
 
-  m_hdlr_box = std::dynamic_pointer_cast<Box_hdlr>(m_meta_box->get_child_box(fourcc("hdlr")));
+  m_hdlr_box = m_meta_box->get_child_box<Box_hdlr>();
   if (STRICT_PARSING && !m_hdlr_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_hdlr_box);
@@ -363,25 +363,25 @@ Error HeifFile::parse_heif_file()
 
   // --- find mandatory boxes needed for image decoding
 
-  m_pitm_box = std::dynamic_pointer_cast<Box_pitm>(m_meta_box->get_child_box(fourcc("pitm")));
+  m_pitm_box = m_meta_box->get_child_box<Box_pitm>();
   if (!m_pitm_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_pitm_box);
   }
 
-  m_iprp_box = std::dynamic_pointer_cast<Box_iprp>(m_meta_box->get_child_box(fourcc("iprp")));
+  m_iprp_box = m_meta_box->get_child_box<Box_iprp>();
   if (!m_iprp_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_iprp_box);
   }
 
-  m_ipco_box = std::dynamic_pointer_cast<Box_ipco>(m_iprp_box->get_child_box(fourcc("ipco")));
+  m_ipco_box = m_iprp_box->get_child_box<Box_ipco>();
   if (!m_ipco_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipco_box);
   }
 
-  auto ipma_boxes = m_iprp_box->get_typed_child_boxes<Box_ipma>(fourcc("ipma"));
+  auto ipma_boxes = m_iprp_box->get_child_boxes<Box_ipma>();
   if (ipma_boxes.empty()) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_ipma_box);
@@ -391,15 +391,15 @@ Error HeifFile::parse_heif_file()
   }
   m_ipma_box = ipma_boxes[0];
 
-  m_iloc_box = std::dynamic_pointer_cast<Box_iloc>(m_meta_box->get_child_box(fourcc("iloc")));
+  m_iloc_box = m_meta_box->get_child_box<Box_iloc>();
   if (!m_iloc_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_iloc_box);
   }
 
-  m_idat_box = std::dynamic_pointer_cast<Box_idat>(m_meta_box->get_child_box(fourcc("idat")));
+  m_idat_box = m_meta_box->get_child_box<Box_idat>();
 
-  m_iref_box = std::dynamic_pointer_cast<Box_iref>(m_meta_box->get_child_box(fourcc("iref")));
+  m_iref_box = m_meta_box->get_child_box<Box_iref>();
   if (m_iref_box) {
     Error error = check_for_ref_cycle(get_primary_image_ID(), m_iref_box);
     if (error) {
@@ -407,21 +407,20 @@ Error HeifFile::parse_heif_file()
     }
   }
 
-  m_iinf_box = std::dynamic_pointer_cast<Box_iinf>(m_meta_box->get_child_box(fourcc("iinf")));
+  m_iinf_box = m_meta_box->get_child_box<Box_iinf>();
   if (!m_iinf_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_iinf_box);
   }
 
-  m_grpl_box = std::dynamic_pointer_cast<Box_grpl>(m_meta_box->get_child_box(fourcc("grpl")));
+  m_grpl_box = m_meta_box->get_child_box<Box_grpl>();
 
 
   // --- build list of images
 
-  std::vector<std::shared_ptr<Box>> infe_boxes = m_iinf_box->get_child_boxes(fourcc("infe"));
+  std::vector<std::shared_ptr<Box_infe>> infe_boxes = m_iinf_box->get_child_boxes<Box_infe>();
 
-  for (auto& box : infe_boxes) {
-    std::shared_ptr<Box_infe> infe_box = std::dynamic_pointer_cast<Box_infe>(box);
+  for (auto& infe_box : infe_boxes) {
     if (!infe_box) {
       return Error(heif_error_Invalid_input,
                    heif_suberror_No_infe_box);
@@ -531,8 +530,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 {
   // HEVC
 
-  auto box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("hvcC"));
-  std::shared_ptr<Box_hvcC> hvcC_box = std::dynamic_pointer_cast<Box_hvcC>(box);
+  std::shared_ptr<Box_hvcC> hvcC_box = get_property<Box_hvcC>(imageID);
   if (hvcC_box) {
     return (heif_chroma) (hvcC_box->get_configuration().chroma_format);
   }
@@ -540,8 +538,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 
   // VVC
 
-  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("vvcC"));
-  std::shared_ptr<Box_vvcC> vvcC_box = std::dynamic_pointer_cast<Box_vvcC>(box);
+  std::shared_ptr<Box_vvcC> vvcC_box = get_property<Box_vvcC>(imageID);
   if (vvcC_box) {
     return (heif_chroma) (vvcC_box->get_configuration().chroma_format_idc);
   }
@@ -549,8 +546,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 
   // AV1
 
-  box = m_ipco_box->get_property_for_item_ID(imageID, m_ipma_box, fourcc("av1C"));
-  std::shared_ptr<Box_av1C> av1C_box = std::dynamic_pointer_cast<Box_av1C>(box);
+  std::shared_ptr<Box_av1C> av1C_box = get_property<Box_av1C>(imageID);
   if (av1C_box) {
     Box_av1C::configuration config = av1C_box->get_configuration();
     if (config.chroma_subsampling_x == 1 &&
