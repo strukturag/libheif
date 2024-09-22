@@ -254,19 +254,13 @@ void TildHeader::set_parameters(const heif_tild_image_parameters& params)
   m_offsets.resize(number_of_tiles(params));
 
   for (auto& tile: m_offsets) {
-    tile.offset = TILD_OFFSET_NOT_AVAILABLE;
+    tile.offset = TILD_OFFSET_NOT_LOADED;
   }
 }
 
 
 Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
 {
-  const Error eofError(heif_error_Invalid_input,
-                       heif_suberror_Unspecified,
-                       "Tild header data incomplete");
-
-  std::vector<uint8_t> data;
-
   uint64_t nTiles = number_of_tiles(m_parameters);
   if (nTiles > MAX_TILD_TILES) {
     return {heif_error_Invalid_input,
@@ -274,20 +268,38 @@ Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, 
             "Number of tiles exceeds security limit."};
   }
 
-  m_offsets.resize(nTiles);
+  return read_offset_table_range(file, tild_id, 0, nTiles);
+}
 
 
-  // --- load offsets (TODO: do this on-demand)
+Error TildHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
+                                          uint64_t start, uint64_t end)
+{
+  const Error eofError(heif_error_Invalid_input,
+                       heif_suberror_Unspecified,
+                       "Tild header data incomplete");
 
-  size_t size_of_offset_table = nTiles * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+  std::vector<uint8_t> data;
 
-  Error err = file->append_data_from_iloc(tild_id, data, 0, size_of_offset_table);
+
+
+  // --- load offsets
+
+  size_t size_to_read = (end - start) * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+  size_t start_offset = start * (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+
+  // TODO: when we request a file range from the stream reader, it may return a larger range.
+  //       We should then also use this larger range to read more table entries.
+  //       But this is not easy since our data may span several iloc extents and we have to map this back to item addresses.
+  //       Maybe it is easier to just ignore the extra data and rely on the stream read to cache this data.
+
+  Error err = file->append_data_from_iloc(tild_id, data, start_offset, size_to_read);
   if (err) {
     return err;
   }
 
   size_t idx = 0;
-  for (uint64_t i = 0; i < nTiles; i++) {
+  for (uint64_t i = start; i < end; i++) {
     m_offsets[i].offset = readvec(data, idx, m_parameters.offset_field_length / 8);
 
     if (m_parameters.size_field_length) {
@@ -306,6 +318,40 @@ size_t TildHeader::get_header_size() const
 {
   assert(m_header_size);
   return m_header_size;
+}
+
+
+uint32_t TildHeader::get_offset_table_entry_size() const
+{
+  return (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
+}
+
+
+std::pair<uint32_t, uint32_t> TildHeader::get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const
+{
+  uint32_t start = idx;
+  uint32_t end = idx+1;
+
+  while (end < m_offsets.size() && end - idx < nEntries && m_offsets[end].offset == TILD_OFFSET_NOT_LOADED) {
+    end++;
+  }
+
+  while (start > 0 && idx - start < nEntries && m_offsets[start-1].offset == TILD_OFFSET_NOT_LOADED) {
+    start--;
+  }
+
+  // try to fill the smaller hole
+
+  if (end - start > nEntries) {
+    if (idx - start < end - idx) {
+      end = start + nEntries;
+    }
+    else {
+      start = end - nEntries;
+    }
+  }
+
+  return {start, end};
 }
 
 
@@ -421,9 +467,11 @@ Error ImageItem_Tild::on_load_file()
 
   m_tild_header.set_parameters(parameters);
 
-  err = m_tild_header.read_full_offset_table(heif_file, get_id());
-  if (err) {
-    return err;
+  if (m_preload_offset_table) {
+    err = m_tild_header.read_full_offset_table(heif_file, get_id());
+    if (err) {
+      return err;
+    }
   }
 
   return Error::Ok;
@@ -531,6 +579,13 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
 
   uint32_t idx = (uint32_t) (ty * nTiles_h(m_tild_header.get_parameters()) + tx);
 
+  if (!m_tild_header.is_tile_offset_known(idx)) {
+    Error err = const_cast<ImageItem_Tild*>(this)->load_tile_offset_entry(idx);
+    if (err) {
+      return err;
+    }
+  }
+
   uint64_t offset = m_tild_header.get_tile_offset(idx);
   uint64_t size = m_tild_header.get_tile_size(idx);
 
@@ -540,6 +595,15 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
   }
 
   return decode_from_compressed_data(get_compression_format(), options, data);
+}
+
+
+Error ImageItem_Tild::load_tile_offset_entry(uint32_t idx)
+{
+  uint32_t nEntries = mReadChunkSize_bytes / m_tild_header.get_offset_table_entry_size();
+  std::pair<uint32_t, uint32_t> range = m_tild_header.get_tile_offset_table_range_to_read(idx, nEntries);
+
+  return m_tild_header.read_offset_table_range(get_file(), get_id(), range.first, range.second);
 }
 
 

@@ -84,6 +84,9 @@ public:
 
   Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id);
 
+  Error read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
+                                uint64_t start, uint64_t end);
+
   std::vector<uint8_t> write_offset_table();
 
   std::string dump() const;
@@ -95,6 +98,17 @@ public:
   uint64_t get_tile_offset(uint32_t idx) const { return m_offsets[idx].offset; }
 
   uint32_t get_tile_size(uint32_t idx) const { return m_offsets[idx].size; }
+
+  bool is_tile_offset_known(uint32_t idx) const { std::cout << "table size: " << m_offsets.size() << "\n";
+    std::cout << "offset["<<idx<<"] = " << m_offsets[idx].offset << "\n";
+    return m_offsets[idx].offset != TILD_OFFSET_NOT_LOADED; }
+
+  uint32_t get_offset_table_entry_size() const;
+
+  // Assuming that we have to read offset table 'idx', but we'd like to read more entries at once to reduce
+  // the load of small network transfers (preferred: 'nEntries'). Return a range of indices to read.
+  // This may be less than 'nEntries'. The returned range is [start, end)
+  [[nodiscard]] std::pair<uint32_t, uint32_t> get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const;
 
 private:
   heif_tild_image_parameters m_parameters;
@@ -146,7 +160,6 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
-
   // --- tild
 
   void set_tild_header(const TildHeader& header) { m_tild_header = header; }
@@ -165,7 +178,12 @@ private:
   TildHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
 
+  uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB
+  bool m_preload_offset_table = false;
+
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
+
+  Error load_tile_offset_entry(uint32_t idx);
 };
 
 
