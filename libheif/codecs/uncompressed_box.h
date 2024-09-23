@@ -201,10 +201,14 @@ public:
     m_num_tile_rows = num_tile_rows;
   }
 
+  uint32_t get_number_of_tiles() const { return m_num_tile_rows * m_num_tile_rows; }
+
+  uint64_t compute_tile_data_size_bytes(uint32_t image_width, uint32_t image_height) const;
+
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint32_t m_profile = 0; // not compliant to any profile
+  uint32_t m_profile = 0; // 0 = not compliant to any profile
 
   std::vector<Component> m_components;
   uint8_t m_sampling_type = sampling_mode_no_subsampling; // no subsampling

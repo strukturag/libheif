@@ -326,6 +326,7 @@ std::string Box_uncC::dump(Indent& indent) const
   return sstr.str();
 }
 
+
 Error Box_uncC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
@@ -363,6 +364,41 @@ Error Box_uncC::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+
+uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t image_width, uint32_t image_height) const
+{
+  if (m_profile != 0) {
+    switch (m_profile) {
+      case fourcc("rgba"):
+        return 4 * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+
+      case fourcc("rgb3"):
+        return 3 * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+
+      default:
+        assert(false);
+        return 0;
+    }
+  }
+
+  switch (m_interleave_type) {
+    case interleave_mode_component:
+    case interleave_mode_pixel: {
+      uint32_t bytes_per_pixel = 0;
+
+      for (const auto& comp : m_components) {
+        assert(comp.component_bit_depth % 8 == 0); // TODO: component sizes that are no multiples of bytes
+        bytes_per_pixel += comp.component_bit_depth / 8;
+      }
+
+      return bytes_per_pixel * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+    }
+    default:
+      assert(false);
+      return 0;
+  }
 }
 
 

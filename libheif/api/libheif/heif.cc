@@ -37,6 +37,10 @@
 #include <set>
 #include <limits>
 
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed_image.h"
+#endif
+
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
 #include "heif_emscripten.h"
 #endif
@@ -3469,6 +3473,35 @@ struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
 {
   Error err = ctx->context->add_tild_image_tile(tild_image->image->get_id(), tile_x, tile_y, image->image, encoder);
   return err.error_struct(ctx->context.get());
+}
+
+
+struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
+                                              const struct heif_unci_image_parameters* parameters,
+                                              const struct heif_encoding_options* encoding_options,
+                                              const heif_image* prototype,
+                                              struct heif_image_handle** out_unci_image_handle)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
+  unciImageResult = ctx->context->add_unci_item(parameters, encoding_options, prototype->image);
+
+  if (unciImageResult.error != Error::Ok) {
+    return unciImageResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_unci_image_handle) {
+    *out_unci_image_handle = new heif_image_handle;
+    (*out_unci_image_handle)->image = unciImageResult.value;
+    (*out_unci_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+#else
+  return {heif_error_Unsupported_feature,
+          heif_suberror_Unspecified,
+          "support for uncompressed images (ISO23001-17) has been disabled."};
+#endif
 }
 
 

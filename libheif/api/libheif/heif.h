@@ -2464,6 +2464,27 @@ struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder);
 
+struct heif_unci_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  // TODO: interleave type, padding
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
+                                              const struct heif_unci_image_parameters* parameters,
+                                              const struct heif_encoding_options* encoding_options,
+                                              const struct heif_image* prototype,
+                                              struct heif_image_handle** out_unci_image_handle);
 
 // offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
 // If background_rgba is NULL, the background is transparent.

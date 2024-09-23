@@ -1564,8 +1564,14 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   return Error::Ok;
 }
 
-Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
+                         std::shared_ptr<Box_uncC>& uncC,
+                         const std::shared_ptr<const HeifPixelImage>& image,
+                         const heif_unci_image_parameters* parameters)
 {
+  uint32_t nTileColumns = parameters->image_width / parameters->tile_width;
+  uint32_t nTileRows = parameters->image_height / parameters->tile_height;
+
   const heif_colorspace colourspace = image->get_colorspace();
   if (colourspace == heif_colorspace_YCbCr) {
     if (!(image->has_channel(heif_channel_Y) && image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr)))
@@ -1617,8 +1623,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else if (colourspace == heif_colorspace_RGB)
   {
@@ -1713,8 +1719,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else if (colourspace == heif_colorspace_monochrome)
   {
@@ -1745,8 +1751,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else
   {
@@ -1758,7 +1764,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
 }
 
 
-static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<const HeifPixelImage>& image)
 {
   uncC->set_version(0);
   if (image->get_colorspace() != heif_colorspace_RGB) {
@@ -1809,30 +1815,66 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
 }
 
 
+struct unciHeaders
+{
+  std::shared_ptr<Box_uncC> uncC;
+  std::shared_ptr<Box_cmpd> cmpd;
+};
+
+
+static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                            const heif_unci_image_parameters* parameters,
+                                            const struct heif_encoding_options* options)
+{
+  unciHeaders headers;
+
+  std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
+  if (options && options->prefer_uncC_short_form) {
+    maybe_make_minimised_uncC(uncC, src_image);
+  }
+
+  if (uncC->get_version() == 1) {
+    headers.uncC = uncC;
+  } else {
+    std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
+
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters);
+    if (error) {
+      return error;
+    }
+
+    headers.cmpd = cmpd;
+    headers.uncC = uncC;
+  }
+
+  return headers;
+}
+
+
 Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
                                                                  struct heif_encoder* encoder,
                                                                  const struct heif_encoding_options& options,
                                                                  enum heif_image_input_class input_class)
 {
-  CodedImageData codedImageData;
+  heif_unci_image_parameters parameters{};
+  parameters.image_width = src_image->get_width();
+  parameters.image_height = src_image->get_height();
+  parameters.tile_width = parameters.image_width;
+  parameters.tile_height = parameters.image_height;
 
-#if WITH_UNCOMPRESSED_CODEC
-  std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options.prefer_uncC_short_form) {
-    maybe_make_minimised_uncC(uncC, src_image);
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, &parameters, &options);
+  if (genHeadersResult.error) {
+    return genHeadersResult.error;
   }
-  if (uncC->get_version() == 1) {
-    codedImageData.properties.push_back(uncC);
-  } else {
-    std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
-    if (error) {
-      return error;
-    }
+  const unciHeaders& headers = *genHeadersResult;
 
-    codedImageData.properties.push_back(cmpd);
-    codedImageData.properties.push_back(uncC);
+  CodedImageData codedImageData;
+  if (headers.uncC) {
+    codedImageData.properties.push_back(headers.uncC);
+  }
+  if (headers.cmpd) {
+    codedImageData.properties.push_back(headers.cmpd);
   }
 
   std::vector<uint8_t> data;
@@ -1952,9 +1994,68 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
                  heif_suberror_Unsupported_data_version,
                  "Unsupported colourspace");
   }
-#endif
 
   return codedImageData;
+}
+
+
+Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci_item(HeifContext* ctx,
+                                                                                      const heif_unci_image_parameters* parameters,
+                                                                                      const struct heif_encoding_options* encoding_options,
+                                                                                      const std::shared_ptr<const HeifPixelImage>& prototype)
+{
+  // Create 'tild' Item
+
+  auto file = ctx->get_heif_file();
+
+  heif_item_id unci_id = ctx->get_heif_file()->add_new_image("unci");
+  auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
+  ctx->insert_new_image(unci_id, unci_image);
+
+
+  // Generate headers
+
+  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, encoding_options);
+  if (genHeadersResult.error) {
+    return genHeadersResult.error;
+  }
+
+  const unciHeaders& headers = *genHeadersResult;
+
+  if (headers.uncC) {
+    file->add_property(unci_id, headers.uncC, true);
+  }
+
+  if (headers.cmpd) {
+    file->add_property(unci_id, headers.cmpd, true);
+  }
+
+  // Add `ispe` property
+
+  file->add_ispe_property(unci_id,
+                          static_cast<uint32_t>(parameters->image_width),
+                          static_cast<uint32_t>(parameters->image_height));
+
+  // Create empty image
+
+  uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width, parameters->image_height);
+
+  std::cout << "tile size: " << tile_size << "\n";
+
+  std::vector<uint8_t> dummydata;
+  dummydata.resize(tile_size);
+
+  for (uint64_t i = 0; i < tile_size; i++) {
+    const int construction_method = 0; // 0=mdat 1=idat
+    file->append_iloc_data(unci_id, dummydata, construction_method);
+  }
+
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return {unci_image};
 }
 
 

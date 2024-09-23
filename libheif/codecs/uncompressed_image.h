@@ -93,10 +93,24 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
+  // --- encoding
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class) override;
+
+  static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
+                                                                const heif_unci_image_parameters* parameters,
+                                                                const struct heif_encoding_options* encoding_options,
+                                                                const std::shared_ptr<const HeifPixelImage>& prototype);
+
+private:
+  /*
+  Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                                     const heif_unci_image_parameters* parameters,
+                                                     const struct heif_encoding_options* options);
+                                                     */
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_IMAGE_H
