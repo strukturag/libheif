@@ -113,6 +113,8 @@ private:
                                                      const heif_unci_image_parameters* parameters,
                                                      const struct heif_encoding_options* options);
                                                      */
+
+  uint64_t m_next_tile_write_pos = 0;
 };
 
 #endif //LIBHEIF_UNCOMPRESSED_IMAGE_H

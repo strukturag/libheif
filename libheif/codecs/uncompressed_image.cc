@@ -2067,19 +2067,39 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
                           static_cast<uint32_t>(parameters->image_width),
                           static_cast<uint32_t>(parameters->image_height));
 
-  // Create empty image
+  if (parameters->compression != heif_metadata_compression_off) {
+    auto icef = std::make_shared<Box_icef>();
+    auto cmpC = std::make_shared<Box_cmpC>();
+    cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
 
-  uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
-                                                                  parameters->image_height / headers.uncC->get_number_of_tile_rows());
+    if (parameters->compression == heif_metadata_compression_deflate) {
+      cmpC->set_compression_type(fourcc("defl"));
+    }
+    else if (parameters->compression == heif_metadata_compression_zlib) {
+      cmpC->set_compression_type(fourcc("zlib"));
+    }
+    else {
+      assert(false);
+    }
 
-  std::vector<uint8_t> dummydata;
-  dummydata.resize(tile_size);
-
-  for (uint64_t i = 0; i < tile_size; i++) {
-    const int construction_method = 0; // 0=mdat 1=idat
-    file->append_iloc_data(unci_id, dummydata, construction_method);
+    file->add_property(unci_id, cmpC, true);
+    file->add_property(unci_id, icef, true);
   }
 
+  // Create empty image. If we use compression, we append the data piece by piece.
+
+  if (parameters->compression == heif_metadata_compression_off) {
+    uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
+                                                                    parameters->image_height / headers.uncC->get_number_of_tile_rows());
+
+    std::vector<uint8_t> dummydata;
+    dummydata.resize(tile_size);
+
+    for (uint64_t i = 0; i < tile_size; i++) {
+      const int construction_method = 0; // 0=mdat 1=idat
+      file->append_iloc_data(unci_id, dummydata, construction_method);
+    }
+  }
 
   // Set Brands
   ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
@@ -2108,7 +2128,43 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     return codedBitstreamResult.error;
   }
 
-  get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
+  std::shared_ptr<Box_cmpC> cmpC = get_file()->get_property<Box_cmpC>(get_id());
+  std::shared_ptr<Box_icef> icef = get_file()->get_property<Box_icef>(get_id());
+
+  if (!icef || !cmpC) {
+    assert(!icef);
+    assert(!cmpC);
+
+    // uncompressed
+
+    get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
+  }
+  else {
+    std::vector<uint8_t> compressed_data;
+    const std::vector<uint8_t>& raw_data = codedBitstreamResult.value;
+
+    uint32_t compr = cmpC->get_compression_type();
+    switch (compr) {
+      case fourcc("defl"):
+        compressed_data = compress_deflate(raw_data.data(), raw_data.size());
+        break;
+      case fourcc("zlib"):
+        compressed_data = compress_zlib(raw_data.data(), raw_data.size());
+        break;
+      default:
+        assert(false);
+        break;
+    }
+
+    get_file()->append_iloc_data(get_id(), compressed_data, 0);
+
+    Box_icef::CompressedUnitInfo unit_info;
+    unit_info.unit_offset = m_next_tile_write_pos;
+    unit_info.unit_size = compressed_data.size();
+    icef->add_component(unit_info);
+
+    m_next_tile_write_pos += compressed_data.size();
+  }
 
   return Error::Ok;
 }

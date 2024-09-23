@@ -410,8 +410,8 @@ Error Box_cmpC::parse(BitstreamRange& range)
     return unsupported_version_error("cmpC");
   }
 
-  compression_type = range.read32();
-  compressed_unit_type = range.read8();
+  m_compression_type = range.read32();
+  m_compressed_unit_type = range.read8();
   return range.get_error();
 }
 
@@ -420,8 +420,8 @@ std::string Box_cmpC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "compression_type: " << to_fourcc(compression_type) << "\n";
-  sstr << indent << "compressed_entity_type: " << (int)compressed_unit_type << "\n";
+  sstr << indent << "m_compression_type: " << to_fourcc(m_compression_type) << "\n";
+  sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
   return sstr.str();
 }
 
@@ -429,8 +429,8 @@ Error Box_cmpC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write32(compression_type);
-  writer.write8(compressed_unit_type);
+  writer.write32(m_compression_type);
+  writer.write8(m_compressed_unit_type);
 
   prepend_header(writer, box_start);
 

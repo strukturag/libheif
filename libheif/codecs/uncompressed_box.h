@@ -250,16 +250,21 @@ public:
 
   std::string dump(Indent&) const override;
 
-  uint32_t get_compression_type() const { return compression_type; }
-  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type)compressed_unit_type; }
+  uint32_t get_compression_type() const { return m_compression_type; }
+
+  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type) m_compressed_unit_type; }
+
+  void set_compression_type(uint32_t type) { m_compression_type = type; }
+
+  void set_compressed_unit_type(heif_cmpC_compressed_unit_type type) { m_compressed_unit_type = type; }
 
   Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint32_t compression_type;
-  uint8_t compressed_unit_type;
+  uint32_t m_compression_type;
+  uint8_t m_compressed_unit_type;
 };
 
 /**
@@ -279,8 +284,8 @@ public:
 
   struct CompressedUnitInfo
   {
-    uint64_t unit_offset;
-    uint64_t unit_size;
+    uint64_t unit_offset = 0;
+    uint64_t unit_size = 0;
   };
 
   const std::vector<CompressedUnitInfo>& get_units() const { return m_unit_infos; }

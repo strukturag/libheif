@@ -520,6 +520,16 @@ enum heif_channel_datatype
   heif_channel_datatype_complex_number = 4
 };
 
+enum heif_metadata_compression
+{
+  heif_metadata_compression_off = 0,
+  heif_metadata_compression_auto = 1,
+  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_zlib = 4,    // do not use for header data
+  heif_metadata_compression_brotli = 5
+};
+
 // ========================= library initialization ======================
 
 struct heif_init_params
@@ -2475,6 +2485,8 @@ struct heif_unci_image_parameters {
   uint32_t tile_width;
   uint32_t tile_height;
 
+  enum heif_metadata_compression compression; // TODO
+
   // TODO: interleave type, padding
 };
 
@@ -2517,16 +2529,6 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
                                                 const struct heif_encoding_options* options,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_thumb_image_handle);
-
-enum heif_metadata_compression
-{
-  heif_metadata_compression_off = 0,
-  heif_metadata_compression_auto = 1,
-  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
-  heif_metadata_compression_deflate = 3,
-  heif_metadata_compression_zlib = 4,    // do not use for header data
-  heif_metadata_compression_brotli = 5
-};
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API
