@@ -1888,9 +1888,13 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
       {
         uint32_t src_stride;
         const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-        uint64_t out_size = src_image->get_height() * src_stride;
+        uint64_t out_size = src_image->get_height() * src_image->get_width();
+
         data.resize(data.size() + out_size);
-        memcpy(data.data() + offset, src_data, out_size);
+        for (uint32_t y = 0; y < src_image->get_height(); y++) {
+          memcpy(data.data() + offset + y * src_image->get_width(), src_data + y * src_stride, src_image->get_width());
+        }
+
         offset += out_size;
       }
 
@@ -2058,8 +2062,6 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
                                                                   parameters->image_height / headers.uncC->get_number_of_tile_rows());
-
-  std::cout << "tile size: " << tile_size << "\n";
 
   std::vector<uint8_t> dummydata;
   dummydata.resize(tile_size);
