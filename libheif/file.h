@@ -26,7 +26,7 @@
 #include "codecs/avif.h"
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
 #include <map>

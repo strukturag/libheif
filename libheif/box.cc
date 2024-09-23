@@ -43,7 +43,7 @@
 
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #endif
 
 #ifndef M_PI

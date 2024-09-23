@@ -19,8 +19,8 @@
  */
 
 
-#ifndef LIBHEIF_UNCOMPRESSED_IMAGE_H
-#define LIBHEIF_UNCOMPRESSED_IMAGE_H
+#ifndef LIBHEIF_UNC_IMAGE_H
+#define LIBHEIF_UNC_IMAGE_H
 
 #include "pixelimage.h"
 #include "file.h"
@@ -119,4 +119,4 @@ private:
   uint64_t m_next_tile_write_pos = 0;
 };
 
-#endif //LIBHEIF_UNCOMPRESSED_IMAGE_H
+#endif //LIBHEIF_UNC_IMAGE_H

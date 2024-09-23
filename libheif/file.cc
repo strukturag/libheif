@@ -26,7 +26,7 @@
 #include "codecs/jpeg2000.h"
 #include "codecs/jpeg.h"
 #include "codecs/vvc.h"
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 
 #include <cstdint>
 #include <fstream>
@@ -48,7 +48,7 @@
 
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_image.h"
+#include "codecs/uncompressed/unc_image.h"
 #endif
 
 // TODO: make this a decoder option

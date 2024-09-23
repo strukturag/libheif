@@ -170,10 +170,10 @@ endif ()
 if (WITH_UNCOMPRESSED_CODEC)
     target_compile_definitions(heif PUBLIC WITH_UNCOMPRESSED_CODEC=1)
     target_sources(heif PRIVATE
-            codecs/uncompressed_box.h
-            codecs/uncompressed_box.cc
-            codecs/uncompressed_image.h
-            codecs/uncompressed_image.cc)
+            codecs/uncompressed/unc_boxes.h
+            codecs/uncompressed/unc_boxes.cc
+            codecs/uncompressed/unc_image.h
+            codecs/uncompressed/unc_image.cc)
 endif ()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)

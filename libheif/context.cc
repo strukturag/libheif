@@ -55,7 +55,7 @@
 #include "codecs/tild.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_image.h"
+#include "codecs/uncompressed/unc_image.h"
 #endif
 
 

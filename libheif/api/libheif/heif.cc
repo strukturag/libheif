@@ -38,7 +38,7 @@
 #include <limits>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_image.h"
+#include "codecs/uncompressed/unc_image.h"
 #endif
 
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)

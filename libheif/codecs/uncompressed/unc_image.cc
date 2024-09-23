@@ -31,10 +31,10 @@
 #include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
-#include "uncompressed.h"
-#include "uncompressed_box.h"
-#include "uncompressed_image.h"
-#include <codecs/image_item.h>
+#include "unc_types.h"
+#include "unc_boxes.h"
+#include "unc_image.h"
+#include "codecs/image_item.h"
 
 static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
 {

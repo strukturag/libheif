@@ -29,8 +29,8 @@
 
 #include "libheif/heif.h"
 #include "security_limits.h"
-#include "uncompressed.h"
-#include "uncompressed_box.h"
+#include "unc_types.h"
+#include "unc_boxes.h"
 
 
 /**

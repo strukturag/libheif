@@ -19,12 +19,12 @@
  */
 
 
-#ifndef LIBHEIF_UNCOMPRESSED_BOX_H
-#define LIBHEIF_UNCOMPRESSED_BOX_H
+#ifndef LIBHEIF_UNC_BOXES_H
+#define LIBHEIF_UNC_BOXES_H
 
 #include "box.h"
 #include "bitstream.h"
-#include "uncompressed.h"
+#include "unc_types.h"
 
 #include <cstdint>
 #include <string>
@@ -318,4 +318,4 @@ private:
   const uint8_t get_required_size_code(uint64_t size) const;
 };
 
-#endif //LIBHEIF_UNCOMPRESSED_BOX_H
+#endif //LIBHEIF_UNC_BOXES_H
