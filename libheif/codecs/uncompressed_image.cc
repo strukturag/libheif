@@ -2078,9 +2078,11 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     else if (parameters->compression == heif_metadata_compression_zlib) {
       cmpC->set_compression_type(fourcc("zlib"));
     }
+#if HAVE_BROTLI
     else if (parameters->compression == heif_metadata_compression_brotli) {
       cmpC->set_compression_type(fourcc("brot"));
     }
+#endif
     else {
       assert(false);
     }
@@ -2154,9 +2156,11 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
       case fourcc("zlib"):
         compressed_data = compress_zlib(raw_data.data(), raw_data.size());
         break;
+#if HAVE_BROTLI
       case fourcc("brot"):
         compressed_data = compress_brotli(raw_data.data(), raw_data.size());
         break;
+#endif
       default:
         assert(false);
         break;
