@@ -901,6 +901,16 @@ heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<B
 }
 
 
+heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
+{
+  int index = m_ipco_box->append_child_box(property);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
+
+  return index + 1;
+}
+
+
 void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orientation)
 {
   // Note: ISO/IEC 23000-22:2019(E) (MIAF) 7.3.6.7 requires the following order:

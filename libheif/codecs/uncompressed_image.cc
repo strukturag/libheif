@@ -1426,7 +1426,7 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   Error result = decoder->decode_tile(context, ID, img, 0, 0,
                                       ispe->get_width(), ispe->get_height(),
-                                      tile_x0 / tile_width, tile_y0 / tile_height);
+                                      tile_x0, tile_y0);
   delete decoder;
   return result;
 }
@@ -2088,7 +2088,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     }
 
     file->add_property(unci_id, cmpC, true);
-    file->add_property(unci_id, icef, true);
+    file->add_property_without_deduplication(unci_id, icef, true); // icef is empty. A normal add_property() would lead to a wrong deduplication.
   }
 
   // Create empty image. If we use compression, we append the data piece by piece.
@@ -2122,9 +2122,6 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
   uint32_t tile_height = image->get_height();
 
   uint64_t tile_data_size = uncC->compute_tile_data_size_bytes(tile_width, tile_height);
-
-  tile_x /= tile_width;
-  tile_y /= tile_height;
 
   uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
 
@@ -2171,7 +2168,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     Box_icef::CompressedUnitInfo unit_info;
     unit_info.unit_offset = m_next_tile_write_pos;
     unit_info.unit_size = compressed_data.size();
-    icef->add_component(unit_info);
+    icef->set_component(tile_idx, unit_info);
 
     m_next_tile_write_pos += compressed_data.size();
   }
@@ -2205,4 +2202,26 @@ void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
 
   w = ispe->get_width() / uncC->get_number_of_tile_columns();
   h = ispe->get_height() / uncC->get_number_of_tile_rows();
+}
+
+
+heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
+{
+  heif_image_tiling tiling{};
+
+  auto ispe = get_file()->get_property<Box_ispe>(get_id());
+  auto uncC = get_file()->get_property<Box_uncC>(get_id());
+  assert(ispe && uncC);
+
+  tiling.num_columns = uncC->get_number_of_tile_columns();
+  tiling.num_rows = uncC->get_number_of_tile_rows();
+
+  tiling.tile_width = ispe->get_width() / tiling.num_columns;
+  tiling.tile_height = ispe->get_height() / tiling.num_rows;
+
+  tiling.image_width = ispe->get_width();
+  tiling.image_height = ispe->get_height();
+  tiling.number_of_extra_dimensions = 0;
+
+  return tiling;
 }

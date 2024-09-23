@@ -295,6 +295,15 @@ public:
     m_unit_infos.push_back(unit_info);
   }
 
+  void set_component(uint32_t tile_idx, const CompressedUnitInfo& unit_info)
+  {
+    if (tile_idx >= m_unit_infos.size()) {
+      m_unit_infos.resize(tile_idx+1);
+    }
+
+    m_unit_infos[tile_idx] = unit_info;
+  }
+
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;

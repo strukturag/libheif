@@ -877,6 +877,13 @@ struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_im
     return tildItem->get_heif_image_tiling();
   }
 
+#if WITH_UNCOMPRESSED_CODEC
+  std::shared_ptr<ImageItem_uncompressed> unciItem = std::dynamic_pointer_cast<ImageItem_uncompressed>(handle->image);
+  if (unciItem) {
+    return unciItem->get_heif_image_tiling();
+  }
+#endif
+
   return tiling;
 }
 
