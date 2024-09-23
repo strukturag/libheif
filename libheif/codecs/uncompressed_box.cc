@@ -420,7 +420,7 @@ std::string Box_cmpC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "m_compression_type: " << to_fourcc(m_compression_type) << "\n";
+  sstr << indent << "compression_type: " << to_fourcc(m_compression_type) << "\n";
   sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
   return sstr.str();
 }
