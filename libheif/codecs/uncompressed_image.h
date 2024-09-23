@@ -105,6 +105,8 @@ public:
                                                                 const struct heif_encoding_options* encoding_options,
                                                                 const std::shared_ptr<const HeifPixelImage>& prototype);
 
+  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
+
 private:
   /*
   Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,

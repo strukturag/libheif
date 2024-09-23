@@ -2458,11 +2458,11 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
                                               struct heif_image_handle** out_tild_image_handle);
 
 LIBHEIF_API
-struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
-                                                   struct heif_image_handle* tild_image,
-                                                   uint32_t tile_x, uint32_t tile_y,
-                                                   const struct heif_image* image,
-                                                   struct heif_encoder* encoder);
+struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
+                                              struct heif_image_handle* tild_image,
+                                              uint32_t tile_x, uint32_t tile_y,
+                                              const struct heif_image* image,
+                                              struct heif_encoder* encoder);
 
 struct heif_unci_image_parameters {
   int version;

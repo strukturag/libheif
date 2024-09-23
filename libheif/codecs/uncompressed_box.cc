@@ -367,15 +367,15 @@ Error Box_uncC::write(StreamWriter& writer) const
 }
 
 
-uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t image_width, uint32_t image_height) const
+uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
 {
   if (m_profile != 0) {
     switch (m_profile) {
       case fourcc("rgba"):
-        return 4 * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+        return 4 * tile_width * tile_height;
 
       case fourcc("rgb3"):
-        return 3 * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+        return 3 * tile_width * tile_height;
 
       default:
         assert(false);
@@ -393,7 +393,7 @@ uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t image_width, uint32_t i
         bytes_per_pixel += comp.component_bit_depth / 8;
       }
 
-      return bytes_per_pixel * image_width / m_num_tile_cols * image_height / m_num_tile_rows;
+      return bytes_per_pixel * tile_width * tile_height;
     }
     default:
       assert(false);

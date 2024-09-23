@@ -1392,9 +1392,9 @@ Result<std::shared_ptr<ImageItem_uncompressed>> HeifContext::add_unci_item(const
 #if WITH_UNCOMPRESSED_CODEC
   return ImageItem_uncompressed::add_unci_item(this, parameters, encoding_options, prototype);
 #else
-  return {heif_error_Unsupported_feature,
-          heif_suberror_Unspecified,
-          "support for uncompressed images has been disabled"};
+  return Error{heif_error_Unsupported_feature,
+               heif_suberror_Unspecified,
+               "support for uncompressed images has been disabled"};
 #endif
 }
 
