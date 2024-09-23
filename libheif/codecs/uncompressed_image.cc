@@ -2026,7 +2026,16 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
                                                                                       const struct heif_encoding_options* encoding_options,
                                                                                       const std::shared_ptr<const HeifPixelImage>& prototype)
 {
-  // Create 'tild' Item
+  // Check input parameters
+
+  if (parameters->image_width % parameters->tile_width != 0 ||
+      parameters->image_height % parameters->tile_height != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "ISO 23001-17 image size must be an integer multiple of the tile size."};
+  }
+
+  // Create 'unci' Item
 
   auto file = ctx->get_heif_file();
 
