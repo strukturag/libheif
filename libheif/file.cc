@@ -26,7 +26,7 @@
 #include "codecs/jpeg2000.h"
 #include "codecs/jpeg.h"
 #include "codecs/vvc.h"
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 
 #include <cstdint>
 #include <fstream>
@@ -48,7 +48,7 @@
 
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_image.h"
+#include "codecs/uncompressed/unc_image.h"
 #endif
 
 // TODO: make this a decoder option
@@ -894,6 +894,16 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
 heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
   int index = m_ipco_box->find_or_append_child_box(property);
+
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
+
+  return index + 1;
+}
+
+
+heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
+{
+  int index = m_ipco_box->append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 

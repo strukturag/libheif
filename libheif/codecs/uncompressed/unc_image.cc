@@ -31,10 +31,10 @@
 #include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
-#include "uncompressed.h"
-#include "uncompressed_box.h"
-#include "uncompressed_image.h"
-#include <codecs/image_item.h>
+#include "unc_types.h"
+#include "unc_boxes.h"
+#include "unc_image.h"
+#include "codecs/image_item.h"
 
 static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
 {
@@ -1426,7 +1426,7 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   Error result = decoder->decode_tile(context, ID, img, 0, 0,
                                       ispe->get_width(), ispe->get_height(),
-                                      tile_x0 / tile_width, tile_y0 / tile_height);
+                                      tile_x0, tile_y0);
   delete decoder;
   return result;
 }
@@ -1564,8 +1564,14 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   return Error::Ok;
 }
 
-Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
+                         std::shared_ptr<Box_uncC>& uncC,
+                         const std::shared_ptr<const HeifPixelImage>& image,
+                         const heif_unci_image_parameters* parameters)
 {
+  uint32_t nTileColumns = parameters->image_width / parameters->tile_width;
+  uint32_t nTileRows = parameters->image_height / parameters->tile_height;
+
   const heif_colorspace colourspace = image->get_colorspace();
   if (colourspace == heif_colorspace_YCbCr) {
     if (!(image->has_channel(heif_channel_Y) && image->has_channel(heif_channel_Cb) && image->has_channel(heif_channel_Cr)))
@@ -1617,8 +1623,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else if (colourspace == heif_colorspace_RGB)
   {
@@ -1713,8 +1719,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else if (colourspace == heif_colorspace_monochrome)
   {
@@ -1745,8 +1751,8 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
     uncC->set_pixel_size(0);
     uncC->set_row_align_size(0);
     uncC->set_tile_align_size(0);
-    uncC->set_number_of_tile_columns(1);
-    uncC->set_number_of_tile_rows(1);
+    uncC->set_number_of_tile_columns(nTileColumns);
+    uncC->set_number_of_tile_rows(nTileRows);
   }
   else
   {
@@ -1758,7 +1764,7 @@ Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd, std::shared_ptr<Box_un
 }
 
 
-static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<HeifPixelImage>& image)
+static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std::shared_ptr<const HeifPixelImage>& image)
 {
   uncC->set_version(0);
   if (image->get_colorspace() != heif_colorspace_RGB) {
@@ -1809,32 +1815,44 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_uncompressed::decode_compresse
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
-                                                                 struct heif_encoder* encoder,
-                                                                 const struct heif_encoding_options& options,
-                                                                 enum heif_image_input_class input_class)
+struct unciHeaders
 {
-  CodedImageData codedImageData;
+  std::shared_ptr<Box_uncC> uncC;
+  std::shared_ptr<Box_cmpd> cmpd;
+};
 
-#if WITH_UNCOMPRESSED_CODEC
+
+static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                            const heif_unci_image_parameters* parameters,
+                                            const struct heif_encoding_options* options)
+{
+  unciHeaders headers;
+
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options.prefer_uncC_short_form) {
+  if (options && options->prefer_uncC_short_form) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
+
   if (uncC->get_version() == 1) {
-    codedImageData.properties.push_back(uncC);
+    headers.uncC = uncC;
   } else {
     std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
-    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image);
+    Error error = fill_cmpd_and_uncC(cmpd, uncC, src_image, parameters);
     if (error) {
       return error;
     }
 
-    codedImageData.properties.push_back(cmpd);
-    codedImageData.properties.push_back(uncC);
+    headers.cmpd = cmpd;
+    headers.uncC = uncC;
   }
 
+  return headers;
+}
+
+
+Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifPixelImage>& src_image)
+{
   std::vector<uint8_t> data;
 
   if (src_image->get_colorspace() == heif_colorspace_YCbCr)
@@ -1845,7 +1863,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
       uint32_t src_stride;
       uint32_t src_width = src_image->get_width(channel);
       uint32_t src_height = src_image->get_height(channel);
-      uint8_t* src_data = src_image->get_plane(channel, &src_stride);
+      const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
       uint64_t out_size = src_width * src_height;
       data.resize(data.size() + out_size);
       for (uint32_t y = 0; y < src_height; y++) {
@@ -1854,7 +1872,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
       offset += out_size;
     }
 
-    codedImageData.append(data.data(), data.size());
+    return data;
   }
   else if (src_image->get_colorspace() == heif_colorspace_RGB)
   {
@@ -1869,14 +1887,18 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
       for (heif_channel channel : channels)
       {
         uint32_t src_stride;
-        uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-        uint64_t out_size = src_image->get_height() * src_stride;
+        const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
+        uint64_t out_size = src_image->get_height() * src_image->get_width();
+
         data.resize(data.size() + out_size);
-        memcpy(data.data() + offset, src_data, out_size);
+        for (uint32_t y = 0; y < src_image->get_height(); y++) {
+          memcpy(data.data() + offset + y * src_image->get_width(), src_data + y * src_stride, src_image->get_width());
+        }
+
         offset += out_size;
       }
 
-      codedImageData.append(data.data(), data.size());
+      return data;
     }
     else if ((src_image->get_chroma_format() == heif_chroma_interleaved_RGB) ||
              (src_image->get_chroma_format() == heif_chroma_interleaved_RGBA) ||
@@ -1906,14 +1928,14 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
       }
 
       uint32_t src_stride;
-      uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
+      const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
       uint64_t out_size = src_image->get_height() * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
       for (uint32_t y = 0; y < src_image->get_height(); y++) {
         memcpy(data.data() + y * src_image->get_width() * bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * bytes_per_pixel);
       }
 
-      codedImageData.append(data.data(), data.size());
+      return data;
     }
     else
     {
@@ -1937,14 +1959,14 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
     for (heif_channel channel : channels)
     {
       uint32_t src_stride;
-      uint8_t* src_data = src_image->get_plane(channel, &src_stride);
+      const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
       uint64_t out_size = src_image->get_height() * src_stride;
       data.resize(data.size() + out_size);
       memcpy(data.data() + offset, src_data, out_size);
       offset += out_size;
     }
 
-    codedImageData.append(data.data(), data.size());
+    return data;
   }
   else
   {
@@ -1952,9 +1974,206 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
                  heif_suberror_Unsupported_data_version,
                  "Unsupported colourspace");
   }
-#endif
+
+}
+
+
+Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
+                                                                 struct heif_encoder* encoder,
+                                                                 const struct heif_encoding_options& options,
+                                                                 enum heif_image_input_class input_class)
+{
+  heif_unci_image_parameters parameters{};
+  parameters.image_width = src_image->get_width();
+  parameters.image_height = src_image->get_height();
+  parameters.tile_width = parameters.image_width;
+  parameters.tile_height = parameters.image_height;
+
+
+  // --- generate configuration property boxes
+
+  Result<unciHeaders> genHeadersResult = generate_headers(src_image, &parameters, &options);
+  if (genHeadersResult.error) {
+    return genHeadersResult.error;
+  }
+
+  const unciHeaders& headers = *genHeadersResult;
+
+  CodedImageData codedImageData;
+  if (headers.uncC) {
+    codedImageData.properties.push_back(headers.uncC);
+  }
+  if (headers.cmpd) {
+    codedImageData.properties.push_back(headers.cmpd);
+  }
+
+
+  // --- encode image
+
+  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(src_image);
+  if (codedBitstreamResult.error) {
+    return codedBitstreamResult.error;
+  }
+
+  codedImageData.bitstream = *codedBitstreamResult;
 
   return codedImageData;
+}
+
+
+Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci_item(HeifContext* ctx,
+                                                                                      const heif_unci_image_parameters* parameters,
+                                                                                      const struct heif_encoding_options* encoding_options,
+                                                                                      const std::shared_ptr<const HeifPixelImage>& prototype)
+{
+  // Check input parameters
+
+  if (parameters->image_width % parameters->tile_width != 0 ||
+      parameters->image_height % parameters->tile_height != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Invalid_parameter_value,
+                 "ISO 23001-17 image size must be an integer multiple of the tile size."};
+  }
+
+  // Create 'unci' Item
+
+  auto file = ctx->get_heif_file();
+
+  heif_item_id unci_id = ctx->get_heif_file()->add_new_image("unci");
+  auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
+  ctx->insert_new_image(unci_id, unci_image);
+
+
+  // Generate headers
+
+  Result<unciHeaders> genHeadersResult = generate_headers(prototype, parameters, encoding_options);
+  if (genHeadersResult.error) {
+    return genHeadersResult.error;
+  }
+
+  const unciHeaders& headers = *genHeadersResult;
+
+  if (headers.uncC) {
+    file->add_property(unci_id, headers.uncC, true);
+  }
+
+  if (headers.cmpd) {
+    file->add_property(unci_id, headers.cmpd, true);
+  }
+
+  // Add `ispe` property
+
+  file->add_ispe_property(unci_id,
+                          static_cast<uint32_t>(parameters->image_width),
+                          static_cast<uint32_t>(parameters->image_height));
+
+  if (parameters->compression != heif_metadata_compression_off) {
+    auto icef = std::make_shared<Box_icef>();
+    auto cmpC = std::make_shared<Box_cmpC>();
+    cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
+
+    if (parameters->compression == heif_metadata_compression_deflate) {
+      cmpC->set_compression_type(fourcc("defl"));
+    }
+    else if (parameters->compression == heif_metadata_compression_zlib) {
+      cmpC->set_compression_type(fourcc("zlib"));
+    }
+#if HAVE_BROTLI
+    else if (parameters->compression == heif_metadata_compression_brotli) {
+      cmpC->set_compression_type(fourcc("brot"));
+    }
+#endif
+    else {
+      assert(false);
+    }
+
+    file->add_property(unci_id, cmpC, true);
+    file->add_property_without_deduplication(unci_id, icef, true); // icef is empty. A normal add_property() would lead to a wrong deduplication.
+  }
+
+  // Create empty image. If we use compression, we append the data piece by piece.
+
+  if (parameters->compression == heif_metadata_compression_off) {
+    uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
+                                                                    parameters->image_height / headers.uncC->get_number_of_tile_rows());
+
+    std::vector<uint8_t> dummydata;
+    dummydata.resize(tile_size);
+
+    for (uint64_t i = 0; i < tile_size; i++) {
+      const int construction_method = 0; // 0=mdat 1=idat
+      file->append_iloc_data(unci_id, dummydata, construction_method);
+    }
+  }
+
+  // Set Brands
+  ctx->get_heif_file()->set_brand(heif_compression_uncompressed, unci_image->is_miaf_compatible());
+
+  return {unci_image};
+}
+
+
+Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image)
+{
+  std::shared_ptr<Box_uncC> uncC = get_file()->get_property<Box_uncC>(get_id());
+  assert(uncC);
+
+  uint32_t tile_width = image->get_width();
+  uint32_t tile_height = image->get_height();
+
+  uint64_t tile_data_size = uncC->compute_tile_data_size_bytes(tile_width, tile_height);
+
+  uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
+
+  Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image);
+  if (codedBitstreamResult.error) {
+    return codedBitstreamResult.error;
+  }
+
+  std::shared_ptr<Box_cmpC> cmpC = get_file()->get_property<Box_cmpC>(get_id());
+  std::shared_ptr<Box_icef> icef = get_file()->get_property<Box_icef>(get_id());
+
+  if (!icef || !cmpC) {
+    assert(!icef);
+    assert(!cmpC);
+
+    // uncompressed
+
+    get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
+  }
+  else {
+    std::vector<uint8_t> compressed_data;
+    const std::vector<uint8_t>& raw_data = codedBitstreamResult.value;
+
+    uint32_t compr = cmpC->get_compression_type();
+    switch (compr) {
+      case fourcc("defl"):
+        compressed_data = compress_deflate(raw_data.data(), raw_data.size());
+        break;
+      case fourcc("zlib"):
+        compressed_data = compress_zlib(raw_data.data(), raw_data.size());
+        break;
+#if HAVE_BROTLI
+      case fourcc("brot"):
+        compressed_data = compress_brotli(raw_data.data(), raw_data.size());
+        break;
+#endif
+      default:
+        assert(false);
+        break;
+    }
+
+    get_file()->append_iloc_data(get_id(), compressed_data, 0);
+
+    Box_icef::CompressedUnitInfo unit_info;
+    unit_info.unit_offset = m_next_tile_write_pos;
+    unit_info.unit_size = compressed_data.size();
+    icef->set_component(tile_idx, unit_info);
+
+    m_next_tile_write_pos += compressed_data.size();
+  }
+
+  return Error::Ok;
 }
 
 
@@ -1983,4 +2202,26 @@ void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
 
   w = ispe->get_width() / uncC->get_number_of_tile_columns();
   h = ispe->get_height() / uncC->get_number_of_tile_rows();
+}
+
+
+heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
+{
+  heif_image_tiling tiling{};
+
+  auto ispe = get_file()->get_property<Box_ispe>(get_id());
+  auto uncC = get_file()->get_property<Box_uncC>(get_id());
+  assert(ispe && uncC);
+
+  tiling.num_columns = uncC->get_number_of_tile_columns();
+  tiling.num_rows = uncC->get_number_of_tile_rows();
+
+  tiling.tile_width = ispe->get_width() / tiling.num_columns;
+  tiling.tile_height = ispe->get_height() / tiling.num_rows;
+
+  tiling.image_width = ispe->get_width();
+  tiling.image_height = ispe->get_height();
+  tiling.number_of_extra_dimensions = 0;
+
+  return tiling;
 }

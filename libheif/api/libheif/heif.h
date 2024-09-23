@@ -520,6 +520,16 @@ enum heif_channel_datatype
   heif_channel_datatype_complex_number = 4
 };
 
+enum heif_metadata_compression
+{
+  heif_metadata_compression_off = 0,
+  heif_metadata_compression_auto = 1,
+  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_zlib = 4,    // do not use for header data
+  heif_metadata_compression_brotli = 5
+};
+
 // ========================= library initialization ======================
 
 struct heif_init_params
@@ -2458,12 +2468,35 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
                                               struct heif_image_handle** out_tild_image_handle);
 
 LIBHEIF_API
-struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
-                                                   struct heif_image_handle* tild_image,
-                                                   uint32_t tile_x, uint32_t tile_y,
-                                                   const struct heif_image* image,
-                                                   struct heif_encoder* encoder);
+struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
+                                              struct heif_image_handle* tild_image,
+                                              uint32_t tile_x, uint32_t tile_y,
+                                              const struct heif_image* image,
+                                              struct heif_encoder* encoder);
 
+struct heif_unci_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  enum heif_metadata_compression compression; // TODO
+
+  // TODO: interleave type, padding
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
+                                              const struct heif_unci_image_parameters* parameters,
+                                              const struct heif_encoding_options* encoding_options,
+                                              const struct heif_image* prototype,
+                                              struct heif_image_handle** out_unci_image_handle);
 
 // offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
 // If background_rgba is NULL, the background is transparent.
@@ -2496,16 +2529,6 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
                                                 const struct heif_encoding_options* options,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_thumb_image_handle);
-
-enum heif_metadata_compression
-{
-  heif_metadata_compression_off = 0,
-  heif_metadata_compression_auto = 1,
-  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
-  heif_metadata_compression_deflate = 3,
-  heif_metadata_compression_zlib = 4,    // do not use for header data
-  heif_metadata_compression_brotli = 5
-};
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API

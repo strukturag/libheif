@@ -19,12 +19,12 @@
  */
 
 
-#ifndef LIBHEIF_UNCOMPRESSED_BOX_H
-#define LIBHEIF_UNCOMPRESSED_BOX_H
+#ifndef LIBHEIF_UNC_BOXES_H
+#define LIBHEIF_UNC_BOXES_H
 
 #include "box.h"
 #include "bitstream.h"
-#include "uncompressed.h"
+#include "unc_types.h"
 
 #include <cstdint>
 #include <string>
@@ -201,10 +201,14 @@ public:
     m_num_tile_rows = num_tile_rows;
   }
 
+  uint32_t get_number_of_tiles() const { return m_num_tile_rows * m_num_tile_rows; }
+
+  uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const;
+
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint32_t m_profile = 0; // not compliant to any profile
+  uint32_t m_profile = 0; // 0 = not compliant to any profile
 
   std::vector<Component> m_components;
   uint8_t m_sampling_type = sampling_mode_no_subsampling; // no subsampling
@@ -246,16 +250,21 @@ public:
 
   std::string dump(Indent&) const override;
 
-  uint32_t get_compression_type() const { return compression_type; }
-  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type)compressed_unit_type; }
+  uint32_t get_compression_type() const { return m_compression_type; }
+
+  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type) m_compressed_unit_type; }
+
+  void set_compression_type(uint32_t type) { m_compression_type = type; }
+
+  void set_compressed_unit_type(heif_cmpC_compressed_unit_type type) { m_compressed_unit_type = type; }
 
   Error write(StreamWriter& writer) const override;
 
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint32_t compression_type;
-  uint8_t compressed_unit_type;
+  uint32_t m_compression_type;
+  uint8_t m_compressed_unit_type;
 };
 
 /**
@@ -275,8 +284,8 @@ public:
 
   struct CompressedUnitInfo
   {
-    uint64_t unit_offset;
-    uint64_t unit_size;
+    uint64_t unit_offset = 0;
+    uint64_t unit_size = 0;
   };
 
   const std::vector<CompressedUnitInfo>& get_units() const { return m_unit_infos; }
@@ -284,6 +293,15 @@ public:
   void add_component(const CompressedUnitInfo& unit_info)
   {
     m_unit_infos.push_back(unit_info);
+  }
+
+  void set_component(uint32_t tile_idx, const CompressedUnitInfo& unit_info)
+  {
+    if (tile_idx >= m_unit_infos.size()) {
+      m_unit_infos.resize(tile_idx+1);
+    }
+
+    m_unit_infos[tile_idx] = unit_info;
   }
 
   std::string dump(Indent&) const override;
@@ -300,4 +318,4 @@ private:
   const uint8_t get_required_size_code(uint64_t size) const;
 };
 
-#endif //LIBHEIF_UNCOMPRESSED_BOX_H
+#endif //LIBHEIF_UNC_BOXES_H

@@ -26,7 +26,7 @@
 #include "codecs/avif.h"
 #include "codecs/hevc.h"
 #include "codecs/vvc.h"
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
 #include <map>
@@ -161,8 +161,10 @@ public:
 
   void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0);
 
-  // TODO: can be remove the 'essential' parameter and take this from the box? Or is that depending on the context?
+  // TODO: can we remove the 'essential' parameter and take this from the box? Or is that depending on the context?
   heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
+
+  heif_property_id add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
 
   Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
 

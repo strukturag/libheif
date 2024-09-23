@@ -24,12 +24,14 @@
 
 const size_t BUF_SIZE = (1 << 18);
 #include <brotli/decode.h>
+#include <brotli/encode.h>
 #include <cstring>
 #include <cstdio>
 #include <string>
 #include <vector>
 
 #include "error.h"
+
 
 Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vector<uint8_t> *output)
 {
@@ -80,6 +82,46 @@ Error decompress_brotli(const std::vector<uint8_t> &compressed_input, std::vecto
     }
 
     return Error::Ok;
+}
+
+
+std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size)
+{
+  std::unique_ptr<BrotliEncoderState, void(*)(BrotliEncoderState*)> state(BrotliEncoderCreateInstance(nullptr, nullptr, nullptr), BrotliEncoderDestroyInstance);
+
+  size_t available_in = size;
+  const uint8_t* next_in = input;
+
+  std::vector<uint8_t> tmp(BUF_SIZE);
+  size_t available_out = BUF_SIZE;
+  uint8_t* next_out = tmp.data();
+
+  std::vector<uint8_t> result;
+
+  for (;;) {
+    BROTLI_BOOL success = BrotliEncoderCompressStream(state.get(),
+                                                      BROTLI_OPERATION_FINISH,
+                                                      &available_in,
+                                                      &next_in,
+                                                      &available_out,
+                                                      &next_out,
+                                                      nullptr);
+    if (!success) {
+      return {};
+    }
+
+    if (next_out != tmp.data()) {
+      result.insert(result.end(), tmp.data(), tmp.data() + std::distance(tmp.data(), next_out));
+      available_out = BUF_SIZE;
+      next_out = tmp.data();
+    }
+
+    if (BrotliEncoderIsFinished(state.get())) {
+      break;
+    }
+  }
+
+  return result;
 }
 
 #endif

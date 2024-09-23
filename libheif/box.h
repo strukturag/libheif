@@ -533,7 +533,7 @@ public:
                     uint8_t construction_method = 0);
 
   Error replace_data(heif_item_id item_ID,
-                     uint64_t offset,
+                     uint64_t output_offset,
                      const std::vector<uint8_t>& data,
                      uint8_t construction_method);
 

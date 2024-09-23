@@ -29,8 +29,8 @@
 
 #include "libheif/heif.h"
 #include "security_limits.h"
-#include "uncompressed.h"
-#include "uncompressed_box.h"
+#include "unc_types.h"
+#include "unc_boxes.h"
 
 
 /**
@@ -326,6 +326,7 @@ std::string Box_uncC::dump(Indent& indent) const
   return sstr.str();
 }
 
+
 Error Box_uncC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
@@ -366,6 +367,41 @@ Error Box_uncC::write(StreamWriter& writer) const
 }
 
 
+uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const
+{
+  if (m_profile != 0) {
+    switch (m_profile) {
+      case fourcc("rgba"):
+        return 4 * tile_width * tile_height;
+
+      case fourcc("rgb3"):
+        return 3 * tile_width * tile_height;
+
+      default:
+        assert(false);
+        return 0;
+    }
+  }
+
+  switch (m_interleave_type) {
+    case interleave_mode_component:
+    case interleave_mode_pixel: {
+      uint32_t bytes_per_pixel = 0;
+
+      for (const auto& comp : m_components) {
+        assert(comp.component_bit_depth % 8 == 0); // TODO: component sizes that are no multiples of bytes
+        bytes_per_pixel += comp.component_bit_depth / 8;
+      }
+
+      return bytes_per_pixel * tile_width * tile_height;
+    }
+    default:
+      assert(false);
+      return 0;
+  }
+}
+
+
 Error Box_cmpC::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
@@ -374,8 +410,8 @@ Error Box_cmpC::parse(BitstreamRange& range)
     return unsupported_version_error("cmpC");
   }
 
-  compression_type = range.read32();
-  compressed_unit_type = range.read8();
+  m_compression_type = range.read32();
+  m_compressed_unit_type = range.read8();
   return range.get_error();
 }
 
@@ -384,8 +420,8 @@ std::string Box_cmpC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "compression_type: " << to_fourcc(compression_type) << "\n";
-  sstr << indent << "compressed_entity_type: " << (int)compressed_unit_type << "\n";
+  sstr << indent << "compression_type: " << to_fourcc(m_compression_type) << "\n";
+  sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
   return sstr.str();
 }
 
@@ -393,8 +429,8 @@ Error Box_cmpC::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  writer.write32(compression_type);
-  writer.write8(compressed_unit_type);
+  writer.write32(m_compression_type);
+  writer.write8(m_compressed_unit_type);
 
   prepend_header(writer, box_start);
 

@@ -19,8 +19,8 @@
  */
 
 
-#ifndef LIBHEIF_UNCOMPRESSED_H
-#define LIBHEIF_UNCOMPRESSED_H
+#ifndef LIBHEIF_UNC_TYPES_H
+#define LIBHEIF_UNC_TYPES_H
 
 #include <cstdint>
 
@@ -282,4 +282,4 @@ enum heif_uncompressed_interleave_mode
 
 
 
-#endif //LIBHEIF_UNCOMPRESSED_H
+#endif //LIBHEIF_UNC_TYPES_H

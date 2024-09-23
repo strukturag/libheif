@@ -19,8 +19,8 @@
  */
 
 
-#ifndef LIBHEIF_UNCOMPRESSED_IMAGE_H
-#define LIBHEIF_UNCOMPRESSED_IMAGE_H
+#ifndef LIBHEIF_UNC_IMAGE_H
+#define LIBHEIF_UNC_IMAGE_H
 
 #include "pixelimage.h"
 #include "file.h"
@@ -93,10 +93,30 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
+  heif_image_tiling get_heif_image_tiling() const;
+
+  // --- encoding
+
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class) override;
+
+  static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
+                                                                const heif_unci_image_parameters* parameters,
+                                                                const struct heif_encoding_options* encoding_options,
+                                                                const std::shared_ptr<const HeifPixelImage>& prototype);
+
+  Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
+
+private:
+  /*
+  Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
+                                                     const heif_unci_image_parameters* parameters,
+                                                     const struct heif_encoding_options* options);
+                                                     */
+
+  uint64_t m_next_tile_write_pos = 0;
 };
 
-#endif //LIBHEIF_UNCOMPRESSED_IMAGE_H
+#endif //LIBHEIF_UNC_IMAGE_H

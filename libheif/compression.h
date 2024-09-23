@@ -91,6 +91,7 @@ Error decompress_deflate(const std::vector<uint8_t>& compressed_input, std::vect
  */
 Error decompress_brotli(const std::vector<uint8_t>& compressed_input, std::vector<uint8_t>* output);
 
+std::vector<uint8_t> compress_brotli(const uint8_t* input, size_t size);
 #endif
 
 #endif //LIBHEIF_COMPRESSION_H

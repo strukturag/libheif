@@ -43,7 +43,7 @@
 
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed_box.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #endif
 
 #ifndef M_PI
@@ -1701,12 +1701,11 @@ Error Box_iloc::append_data(heif_item_id item_ID,
 
 
 Error Box_iloc::replace_data(heif_item_id item_ID,
-                             uint64_t offset,
+                             uint64_t output_offset,
                              const std::vector<uint8_t>& data,
                              uint8_t construction_method)
 {
   assert(construction_method == 0); // TODO
-  assert(offset == 0); // TODO
 
   // check whether this item ID already exists
 
@@ -1718,8 +1717,27 @@ Error Box_iloc::replace_data(heif_item_id item_ID,
   }
 
   assert(idx != m_items.size());
-  assert(m_items[idx].extents[0].data.size() >= data.size()); // TODO
-  memcpy(m_items[idx].extents[0].data.data(), data.data(), data.size());
+
+  uint64_t data_start = 0;
+  for (auto& extent : m_items[idx].extents) {
+    if (output_offset >= extent.data.size()) {
+      output_offset -= extent.data.size();
+    }
+    else {
+      uint64_t write_n = std::min(extent.data.size() - output_offset,
+                                  data.size() - data_start);
+      assert(write_n > 0);
+
+      memcpy(extent.data.data() + output_offset, data.data() + data_start, write_n);
+
+      data_start += write_n;
+      output_offset = 0;
+    }
+
+    if (data_start == data.size()) {
+      break;
+    }
+  }
 
   return Error::Ok;
 }

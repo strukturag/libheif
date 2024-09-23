@@ -37,6 +37,10 @@
 #include <set>
 #include <limits>
 
+#if WITH_UNCOMPRESSED_CODEC
+#include "codecs/uncompressed/unc_image.h"
+#endif
+
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
 #include "heif_emscripten.h"
 #endif
@@ -872,6 +876,13 @@ struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_im
   if (tildItem) {
     return tildItem->get_heif_image_tiling();
   }
+
+#if WITH_UNCOMPRESSED_CODEC
+  std::shared_ptr<ImageItem_uncompressed> unciItem = std::dynamic_pointer_cast<ImageItem_uncompressed>(handle->image);
+  if (unciItem) {
+    return unciItem->get_heif_image_tiling();
+  }
+#endif
 
   return tiling;
 }
@@ -3461,14 +3472,58 @@ struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_tild_image_tile(struct heif_context* ctx,
-                                                   struct heif_image_handle* tild_image,
-                                                   uint32_t tile_x, uint32_t tile_y,
-                                                   const struct heif_image* image,
-                                                   struct heif_encoder* encoder)
+struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
+                                              struct heif_image_handle* tiled_image,
+                                              uint32_t tile_x, uint32_t tile_y,
+                                              const struct heif_image* image,
+                                              struct heif_encoder* encoder)
 {
-  Error err = ctx->context->add_tild_image_tile(tild_image->image->get_id(), tile_x, tile_y, image->image, encoder);
-  return err.error_struct(ctx->context.get());
+  if (tiled_image->image->get_infe_type() == std::string{"tili"}) {
+    Error err = ctx->context->add_tild_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
+    return err.error_struct(ctx->context.get());
+  }
+#if WITH_UNCOMPRESSED_CODEC
+  else if (auto unci = std::dynamic_pointer_cast<ImageItem_uncompressed>(tiled_image->image)) {
+    Error err = unci->add_image_tile(tile_x, tile_y, image->image);
+    return err.error_struct(ctx->context.get());
+  }
+#endif
+  else {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "Cannot add tile to a non-tiled image"
+    };
+  }
+}
+
+
+struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
+                                              const struct heif_unci_image_parameters* parameters,
+                                              const struct heif_encoding_options* encoding_options,
+                                              const heif_image* prototype,
+                                              struct heif_image_handle** out_unci_image_handle)
+{
+#if WITH_UNCOMPRESSED_CODEC
+  Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
+  unciImageResult = ctx->context->add_unci_item(parameters, encoding_options, prototype->image);
+
+  if (unciImageResult.error != Error::Ok) {
+    return unciImageResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_unci_image_handle) {
+    *out_unci_image_handle = new heif_image_handle;
+    (*out_unci_image_handle)->image = unciImageResult.value;
+    (*out_unci_image_handle)->context = ctx->context;
+  }
+
+  return heif_error_success;
+#else
+  return {heif_error_Unsupported_feature,
+          heif_suberror_Unspecified,
+          "support for uncompressed images (ISO23001-17) has been disabled."};
+#endif
 }
 
 
