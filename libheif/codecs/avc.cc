@@ -362,7 +362,7 @@ Result<std::vector<uint8_t>> ImageItem_AVC::read_bitstream_configuration_data(he
   auto avcC_box = get_file()->get_property<Box_avcC>(itemId);
   if (!avcC_box) {
     return Error{heif_error_Invalid_input,
-                 heif_suberror_No_av1C_box};
+                 heif_suberror_No_avcC_box};
   }
 
   avcC_box->get_header_nals(data);

@@ -167,7 +167,7 @@ Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(h
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_jpgC> jpgC_box = get_file()->get_property<Box_jpgC>(get_id());
+  std::shared_ptr<Box_jpgC> jpgC_box = get_file()->get_property<Box_jpgC>(itemId);
   if (jpgC_box) {
     return jpgC_box->get_data();
   }

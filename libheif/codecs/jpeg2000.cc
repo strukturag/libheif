@@ -527,7 +527,7 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_j2kH> j2kH_box = get_file()->get_property<Box_j2kH>(get_id());
+  std::shared_ptr<Box_j2kH> j2kH_box = get_file()->get_property<Box_j2kH>(itemId);
   if (!j2kH_box)
   {
     // TODO - Correctly Find the j2kH box

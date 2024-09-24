@@ -727,7 +727,7 @@ Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(h
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_hvcC> hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
+  std::shared_ptr<Box_hvcC> hvcC_box = get_file()->get_property<Box_hvcC>(itemId);
   if (!hvcC_box) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_hvcC_box};

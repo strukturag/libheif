@@ -620,19 +620,9 @@ Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<He
 
 Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  // --- get properties for this image
-
-  std::vector<std::shared_ptr<Box>> properties;
-  auto ipma_box = get_file()->get_ipma_box();
-  Error err = get_file()->get_ipco_box()->get_properties_for_item_ID(itemId, ipma_box, properties);
-  if (err)
-  {
-    return err;
-  }
-
   // --- get codec configuration
 
-  std::shared_ptr<Box_vvcC> vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
+  std::shared_ptr<Box_vvcC> vvcC_box = get_file()->get_property<Box_vvcC>(itemId);
   if (!vvcC_box)
   {
     assert(false);

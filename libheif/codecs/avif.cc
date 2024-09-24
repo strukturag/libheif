@@ -612,7 +612,7 @@ Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(h
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_av1C> av1C_box = get_file()->get_property<Box_av1C>(get_id());
+  std::shared_ptr<Box_av1C> av1C_box = get_file()->get_property<Box_av1C>(itemId);
   if (!av1C_box)
   {
     return Error(heif_error_Invalid_input,
