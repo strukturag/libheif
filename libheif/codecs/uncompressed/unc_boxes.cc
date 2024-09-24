@@ -504,13 +504,25 @@ std::string Box_icef::dump(Indent& indent) const
 
 Error Box_icef::write(StreamWriter& writer) const
 {
+  // check that all units have a non-zero size
+
+  for (const CompressedUnitInfo& unit_info: m_unit_infos) {
+    if (unit_info.unit_size == 0) {
+      return {
+        heif_error_Usage_error,
+        heif_suberror_Unspecified,
+        "tiled 'unci' image has an undefined tile."
+      };
+    }
+  }
+
   size_t box_start = reserve_box_header_space(writer);
 
   uint8_t unit_offset_code = 1;
   uint8_t unit_size_code = 0;
   uint64_t implied_offset = 0;
   bool can_use_implied_offsets = true;
-  for (CompressedUnitInfo unit_info: m_unit_infos) {
+  for (const CompressedUnitInfo& unit_info: m_unit_infos) {
     if (unit_info.unit_offset != implied_offset) {
       can_use_implied_offsets = false;
     }
