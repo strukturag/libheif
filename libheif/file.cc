@@ -879,14 +879,14 @@ std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
 }
 
 
-void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height)
+void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential)
 {
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
   int index = m_ipco_box->find_or_append_child_box(ispe);
 
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
+  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 }
 
 

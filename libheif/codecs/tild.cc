@@ -514,7 +514,8 @@ ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parame
   // Add ISPE property
   file->add_ispe_property(tild_id,
                           static_cast<uint32_t>(parameters->image_width),
-                          static_cast<uint32_t>(parameters->image_height));
+                          static_cast<uint32_t>(parameters->image_height),
+                          true);
 
 #if 0
   // TODO

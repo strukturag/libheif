@@ -2065,7 +2065,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   file->add_ispe_property(unci_id,
                           static_cast<uint32_t>(parameters->image_width),
-                          static_cast<uint32_t>(parameters->image_height));
+                          static_cast<uint32_t>(parameters->image_height),
+                          true);
 
   if (parameters->compression != heif_metadata_compression_off) {
     auto icef = std::make_shared<Box_icef>();

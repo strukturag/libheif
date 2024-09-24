@@ -154,7 +154,7 @@ public:
 
   std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
 
-  void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height);
+  void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 
   // set irot/imir according to heif_orientation
   void add_orientation_properties(heif_item_id id, heif_orientation);

@@ -1195,7 +1195,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   // Add ISPE property
   int image_width = tile_width * columns;
   int image_height = tile_height * rows;
-  m_heif_file->add_ispe_property(grid_id, image_width, image_height);
+  m_heif_file->add_ispe_property(grid_id, image_width, image_height, false);
 
   // Add PIXI property (copy from first tile)
   auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
@@ -1248,7 +1248,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
 
   // Add ISPE property
-  m_heif_file->add_ispe_property(grid_id, output_width, output_height);
+  m_heif_file->add_ispe_property(grid_id, output_width, output_height, false);
 
   // Add PIXI property (copy from first tile)
   auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
@@ -1294,7 +1294,7 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
   m_heif_file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
 
   // Add ISPE property
-  m_heif_file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height());
+  m_heif_file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height(), false);
 
   // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
   auto pixi = m_heif_file->get_property<Box_pixi>(ref_ids[0]);
