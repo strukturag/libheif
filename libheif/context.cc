@@ -1347,6 +1347,13 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
 
   auto& header = tildImg->get_tild_header();
 
+  if (image->get_width() != header.get_parameters().tile_width ||
+      image->get_height() != header.get_parameters().tile_height) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Tile image size does not match the specified tile size."};
+  }
+
   uint64_t offset = tildImg->get_next_tild_position();
   size_t dataSize = encodeResult.value.bitstream.size();
   if (dataSize > 0xFFFFFFFF) {
