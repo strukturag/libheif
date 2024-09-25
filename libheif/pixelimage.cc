@@ -285,7 +285,7 @@ bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_cha
 }
 
 
-bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height)
+bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size)
 {
   for (auto& planeIter : m_planes) {
     auto* plane = &planeIter.second;
@@ -296,6 +296,8 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height)
 
     uint32_t old_width = plane->m_width;
     uint32_t old_height = plane->m_height;
+
+    int bytes_per_pixel = get_storage_bits_per_pixel(planeIter.first) / 8;
 
     if (plane->m_mem_width < subsampled_width ||
         plane->m_mem_height < subsampled_height) {
@@ -310,7 +312,7 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height)
       for (uint32_t y = 0; y < plane->m_height; y++) {
         memcpy(static_cast<uint8_t*>(newPlane.mem) + y * newPlane.stride,
                static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-               plane->m_width);
+               plane->m_width * bytes_per_pixel);
       }
 
       planeIter.second = newPlane;
@@ -319,24 +321,35 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height)
 
     // extend plane size
 
-    int bytes_per_pixel = (plane->m_bit_depth + 7) / 8;
-
-    for (uint32_t y = 0; y < old_height; y++) {
-      for (uint32_t x = old_width; x < subsampled_width; x++) {
-        memcpy(static_cast<uint8_t*>(plane->mem) + y * plane->stride + x * bytes_per_pixel,
-               static_cast<uint8_t*>(plane->mem) + y * plane->stride + (plane->m_width - 1) * bytes_per_pixel,
-               bytes_per_pixel);
+    if (old_width != subsampled_width) {
+      for (uint32_t y = 0; y < old_height; y++) {
+        for (uint32_t x = old_width; x < subsampled_width; x++) {
+          memcpy(static_cast<uint8_t*>(plane->mem) + y * plane->stride + x * bytes_per_pixel,
+                 static_cast<uint8_t*>(plane->mem) + y * plane->stride + (old_width - 1) * bytes_per_pixel,
+                 bytes_per_pixel);
+        }
       }
     }
 
     for (uint32_t y = old_height; y < subsampled_height; y++) {
       memcpy(static_cast<uint8_t*>(plane->mem) + y * plane->stride,
-             static_cast<uint8_t*>(plane->mem) + (plane->m_height - 1) * plane->stride,
+             static_cast<uint8_t*>(plane->mem) + (old_height - 1) * plane->stride,
              subsampled_width * bytes_per_pixel);
+    }
+
+
+    if (adjust_size) {
+      plane->m_width = subsampled_width;
+      plane->m_height = subsampled_height;
     }
   }
 
   // don't modify the logical image size
+
+  if (adjust_size) {
+    m_width = width;
+    m_height = height;
+  }
 
   return true;
 }

@@ -189,7 +189,7 @@ public:
 
   void debug_dump() const;
 
-  bool extend_padding_to_size(uint32_t width, uint32_t height);
+  bool extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size = false);
 
   // --- pixel aspect ratio
 
