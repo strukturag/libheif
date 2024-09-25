@@ -191,6 +191,8 @@ public:
 
   bool extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size = false);
 
+  bool extend_to_size_with_zero(uint32_t width, uint32_t height);
+
   // --- pixel aspect ratio
 
   bool has_nonsquare_pixel_ratio() const { return m_PixelAspectRatio_h != m_PixelAspectRatio_v; }

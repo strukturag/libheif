@@ -355,6 +355,69 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, boo
 }
 
 
+bool HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height)
+{
+  for (auto& planeIter : m_planes) {
+    auto* plane = &planeIter.second;
+
+    uint32_t subsampled_width, subsampled_height;
+    get_subsampled_size(width, height, planeIter.first, m_chroma,
+                        &subsampled_width, &subsampled_height);
+
+    uint32_t old_width = plane->m_width;
+    uint32_t old_height = plane->m_height;
+
+    int bytes_per_pixel = get_storage_bits_per_pixel(planeIter.first) / 8;
+
+    if (plane->m_mem_width < subsampled_width ||
+        plane->m_mem_height < subsampled_height) {
+
+      ImagePlane newPlane;
+      if (!newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
+        return false;
+      }
+
+      // copy the visible part of the old plane into the new plane
+
+      for (uint32_t y = 0; y < plane->m_height; y++) {
+        memcpy(static_cast<uint8_t*>(newPlane.mem) + y * newPlane.stride,
+               static_cast<uint8_t*>(plane->mem) + y * plane->stride,
+               plane->m_width * bytes_per_pixel);
+      }
+
+      planeIter.second = newPlane;
+      plane = &planeIter.second;
+    }
+
+    // extend plane size
+
+    if (old_width != subsampled_width) {
+      for (uint32_t y = 0; y < old_height; y++) {
+        memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride + old_width * bytes_per_pixel,
+               0,
+               bytes_per_pixel * (subsampled_width - old_width));
+      }
+    }
+
+    for (uint32_t y = old_height; y < subsampled_height; y++) {
+      memset(static_cast<uint8_t*>(plane->mem) + y * plane->stride,
+             0,
+             subsampled_width * bytes_per_pixel);
+    }
+
+
+    plane->m_width = subsampled_width;
+    plane->m_height = subsampled_height;
+  }
+
+  // don't modify the logical image size
+
+  m_width = width;
+  m_height = height;
+
+  return true;
+}
+
 bool HeifPixelImage::has_channel(heif_channel channel) const
 {
   return (m_planes.find(channel) != m_planes.end());
