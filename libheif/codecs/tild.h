@@ -100,9 +100,7 @@ public:
 
   uint32_t get_tile_size(uint32_t idx) const { return m_offsets[idx].size; }
 
-  bool is_tile_offset_known(uint32_t idx) const { std::cout << "table size: " << m_offsets.size() << "\n";
-    std::cout << "offset["<<idx<<"] = " << m_offsets[idx].offset << "\n";
-    return m_offsets[idx].offset != TILD_OFFSET_NOT_LOADED; }
+  bool is_tile_offset_known(uint32_t idx) const { return m_offsets[idx].offset != TILD_OFFSET_NOT_LOADED; }
 
   uint32_t get_offset_table_entry_size() const;
 
