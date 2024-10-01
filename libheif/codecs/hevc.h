@@ -124,7 +124,7 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 class ImageItem_HEVC : public ImageItem
 {
 public:
-  ImageItem_HEVC(HeifContext* ctx, heif_item_id id);
+  ImageItem_HEVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
 
   ImageItem_HEVC(HeifContext* ctx) : ImageItem(ctx) {}
 
@@ -136,6 +136,8 @@ public:
   const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
   heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
+
+  Error on_load_file() override;
 
   int get_luma_bits_per_pixel() const override;
 
