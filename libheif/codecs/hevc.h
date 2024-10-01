@@ -124,7 +124,7 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 class ImageItem_HEVC : public ImageItem
 {
 public:
-  ImageItem_HEVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_HEVC(HeifContext* ctx, heif_item_id id);
 
   ImageItem_HEVC(HeifContext* ctx) : ImageItem(ctx) {}
 

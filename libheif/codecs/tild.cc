@@ -613,7 +613,7 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
 
   // --- decode
 
-  return decode_from_compressed_data(get_compression_format(), options, data);
+  return Decoder::decode_single_frame_from_compressed_data(get_compression_format(), options, data);
 }
 
 

@@ -22,6 +22,7 @@
 #include "bitstream.h"
 #include "error.h"
 #include "file.h"
+#include "hevc_dec.h"
 
 #include <cassert>
 #include <cmath>
@@ -638,6 +639,28 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 }
 
 
+
+ImageItem_HEVC::ImageItem_HEVC(HeifContext* ctx, heif_item_id id)
+: ImageItem(ctx, id)
+{
+  auto hvcC_box = ctx->get_heif_file()->get_property<Box_hvcC>(id);
+  assert(hvcC_box);
+#if 0
+  if (!hvcC_box) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_hvcC_box};
+  }
+#endif
+
+  m_decoder = std::make_shared<Decoder_HEVC>(hvcC_box);
+
+  DataExtent extent;
+  extent.set_from_image_item(ctx->get_heif_file().get(), id);
+
+  m_decoder->set_data_extent(extent);
+}
+
+
 Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                          struct heif_encoder* encoder,
                                                          const struct heif_encoding_options& options,
@@ -723,43 +746,20 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
   return codedImage;
 }
 
+
 Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  // --- get codec configuration
-
-  std::shared_ptr<Box_hvcC> hvcC_box = get_file()->get_property<Box_hvcC>(itemId);
-  if (!hvcC_box) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_No_hvcC_box};
-  }
-
-  std::vector<uint8_t> data;
-  if (!hvcC_box->get_headers(&data)) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_No_item_data};
-  }
-
-  return data;
+  return m_decoder->read_bitstream_configuration_data();
 }
 
 
 int ImageItem_HEVC::get_luma_bits_per_pixel() const
 {
-  auto hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
-  if (hvcC_box) {
-    return hvcC_box->get_configuration().bit_depth_luma;
-  }
-
-  return -1;
+  return m_decoder->get_luma_bits_per_pixel();
 }
 
 
 int ImageItem_HEVC::get_chroma_bits_per_pixel() const
 {
-  auto hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
-  if (hvcC_box) {
-    return hvcC_box->get_configuration().bit_depth_chroma;
-  }
-
-  return -1;
+  return m_decoder->get_chroma_bits_per_pixel();
 }

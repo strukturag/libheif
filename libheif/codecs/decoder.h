@@ -77,6 +77,11 @@ public:
 
   Result<std::vector<uint8_t>> get_compressed_data() const;
 
+  static Result<std::shared_ptr<HeifPixelImage>>
+  decode_single_frame_from_compressed_data(heif_compression_format compression_format,
+                                           const struct heif_decoding_options& options,
+                                           const std::vector<uint8_t>& data);
+
 private:
   DataExtent m_data_extent;
 };

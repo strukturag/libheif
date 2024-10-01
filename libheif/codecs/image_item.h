@@ -393,10 +393,6 @@ private:
   std::vector<Error> m_decoding_warnings;
 
 protected:
-  static Result<std::shared_ptr<HeifPixelImage>> decode_from_compressed_data(heif_compression_format compression_format,
-                                                                             const struct heif_decoding_options& options,
-                                                                             const std::vector<uint8_t>& data);
-
   Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,

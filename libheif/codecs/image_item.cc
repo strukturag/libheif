@@ -31,6 +31,7 @@
 #include <codecs/overlay.h>
 #include <codecs/iden.h>
 #include <codecs/tild.h>
+#include <codecs/decoder.h>
 #include <color-conversion/colorconversion.h>
 #include <libheif/api_structs.h>
 #include <plugin_registry.h>
@@ -1042,62 +1043,6 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 }
 
 
-// TODO: move into Decoder
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_from_compressed_data(heif_compression_format compression_format,
-                                                                               const struct heif_decoding_options& options,
-                                                                               const std::vector<uint8_t>& data)
-{
-  const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression_format, options.decoder_id);
-  if (!decoder_plugin) {
-    return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
-  }
-
-
-  // --- decode image with the plugin
-
-  void* decoder;
-  struct heif_error err = decoder_plugin->new_decoder(&decoder);
-  if (err.code != heif_error_Ok) {
-    return Error(err.code, err.subcode, err.message);
-  }
-
-  if (decoder_plugin->plugin_api_version >= 2) {
-    if (decoder_plugin->set_strict_decoding) {
-      decoder_plugin->set_strict_decoding(decoder, options.strict_decoding);
-    }
-  }
-
-  err = decoder_plugin->push_data(decoder, data.data(), data.size());
-  if (err.code != heif_error_Ok) {
-    decoder_plugin->free_decoder(decoder);
-    return Error(err.code, err.subcode, err.message);
-  }
-
-  heif_image* decoded_img = nullptr;
-
-  err = decoder_plugin->decode_image(decoder, &decoded_img);
-  if (err.code != heif_error_Ok) {
-    decoder_plugin->free_decoder(decoder);
-    return Error(err.code, err.subcode, err.message);
-  }
-
-  if (!decoded_img) {
-    // TODO(farindk): The plugin should return an error in this case.
-    decoder_plugin->free_decoder(decoder);
-    return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
-  }
-
-  // -- cleanup
-
-  std::shared_ptr<HeifPixelImage> img = std::move(decoded_img->image);
-  heif_image_release(decoded_img);
-
-  decoder_plugin->free_decoder(decoder);
-
-  return img;
-}
-
-
 Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 {
   // TODO: Remove this later when decoding is done through Decoder.
@@ -1139,5 +1084,5 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
     return dataResult.error;
   }
 
-  return decode_from_compressed_data(compression_format, options, *dataResult);
+  return Decoder::decode_single_frame_from_compressed_data(compression_format, options, *dataResult);
 }
