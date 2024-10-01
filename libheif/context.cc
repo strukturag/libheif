@@ -873,6 +873,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
   // --- if the image is a 'grid', check if there is alpha in any of the tiles
 
+  // TODO: move this into ImageItem
+
   std::string image_type = m_heif_file->get_item_type(ID);
   if (image_type == "grid") {
     std::vector<uint8_t> grid_data;
