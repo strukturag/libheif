@@ -410,6 +410,28 @@ void ImageItem::get_tile_size(uint32_t& w, uint32_t& h) const
 }
 
 
+Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_colorspace, heif_chroma* inout_chroma) const
+{
+#if 0
+  auto pixi = m_heif_context->get_heif_file()->get_property<Box_pixi>(id);
+  if (pixi && pixi->get_num_channels() == 1) {
+    *out_colorspace = heif_colorspace_monochrome;
+    *out_chroma = heif_chroma_monochrome;
+  }
+#endif
+
+  if (*inout_colorspace == heif_colorspace_YCbCr) {
+    auto nclx = get_color_profile_nclx();
+    if (nclx && nclx->get_matrix_coefficients() == 0) {
+      *inout_colorspace = heif_colorspace_RGB;
+      *inout_chroma = heif_chroma_444; // TODO: this or keep the original chroma?
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   heif_item_id id;
@@ -1020,6 +1042,7 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 }
 
 
+// TODO: move into Decoder
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_from_compressed_data(heif_compression_format compression_format,
                                                                                const struct heif_decoding_options& options,
                                                                                const std::vector<uint8_t>& data)
@@ -1077,6 +1100,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_from_compressed_data(h
 
 Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 {
+  // TODO: Remove this later when decoding is done through Decoder.
+
   // --- get the compressed image data
 
   // data from configuration blocks

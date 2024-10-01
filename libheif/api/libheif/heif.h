@@ -1141,16 +1141,18 @@ LIBHEIF_API
 int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
+// Only defined for images coded in the YCbCr colorspace.
 LIBHEIF_API
 int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
+// Only defined for images coded in the YCbCr colorspace.
 LIBHEIF_API
 int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
 
 // Return the colorspace that libheif proposes to use for decoding.
 // Usually, these will be either YCbCr or Monochrome, but it may also propose RGB for images
-// encoded with matrix_coefficients=0.
+// encoded with matrix_coefficients=0 or for images coded natively in RGB.
 // It may also return *_undefined if the file misses relevant information to determine this without decoding.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,

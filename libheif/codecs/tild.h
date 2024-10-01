@@ -144,9 +144,11 @@ public:
 
   void process_before_write() override;
 
-  int get_luma_bits_per_pixel() const override { return -1; } // TODO (create dummy ImageItem, then call this function)
+  Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const override;
 
-  int get_chroma_bits_per_pixel() const override { return -1; } // TODO
+  int get_luma_bits_per_pixel() const override;
+
+  int get_chroma_bits_per_pixel() const override;
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
@@ -180,9 +182,13 @@ private:
   uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB
   bool m_preload_offset_table = false;
 
+  std::shared_ptr<class Decoder> m_tile_decoder;
+
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
 
   Error load_tile_offset_entry(uint32_t idx);
+
+  Error append_compressed_tile_data(std::vector<uint8_t>& data, uint32_t tx, uint32_t ty) const;
 };
 
 

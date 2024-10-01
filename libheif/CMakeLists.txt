@@ -50,14 +50,20 @@ set(libheif_sources
         api/libheif/heif_items.cc
         api/libheif/heif_experimental.h
         api/libheif/heif_experimental.cc
+        codecs/decoder.h
+        codecs/decoder.cc
         codecs/hevc.cc
         codecs/hevc.h
+        codecs/hevc_dec.cc
+        codecs/hevc_dec.h
         codecs/avif.cc
         codecs/avif.h
         codecs/jpeg.h
         codecs/jpeg.cc
         codecs/jpeg2000.h
         codecs/jpeg2000.cc
+        codecs/jpeg2000_dec.h
+        codecs/jpeg2000_dec.cc
         codecs/vvc.h
         codecs/vvc.cc
         codecs/avc.h

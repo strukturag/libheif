@@ -23,6 +23,7 @@
 #include "file.h"
 #include <algorithm>
 #include <security_limits.h>
+#include "hevc_dec.h"
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
@@ -467,6 +468,13 @@ Error ImageItem_Tild::on_load_file()
 
   m_tild_header.set_parameters(parameters);
 
+  m_tile_decoder = Decoder::alloc_for_compression_format(get_context(), get_id(), parameters.compression_type_fourcc);
+  if (!m_tile_decoder) {
+    return {heif_error_Unsupported_feature,
+            heif_suberror_Unsupported_codec,
+            "'tild' image with unsupported compression format."};
+  }
+
   if (m_preload_offset_table) {
     err = m_tild_header.read_full_offset_table(heif_file, get_id());
     if (err) {
@@ -561,23 +569,8 @@ ImageItem_Tild::decode_compressed_image(const struct heif_decoding_options& opti
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+Error ImageItem_Tild::append_compressed_tile_data(std::vector<uint8_t>& data, uint32_t tx, uint32_t ty) const
 {
-  heif_compression_format format = compression_format_from_fourcc_infe_type(
-          m_tild_header.get_parameters().compression_type_fourcc);
-
-  // --- get compressed data
-
-  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(get_id(), format);
-  if (dataResult.error) {
-    return dataResult.error;
-  }
-
-  std::vector<uint8_t>& data = dataResult.value;
-
-  // --- decode
-
   uint32_t idx = (uint32_t) (ty * nTiles_h(m_tild_header.get_parameters()) + tx);
 
   if (!m_tild_header.is_tile_offset_known(idx)) {
@@ -594,6 +587,31 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
   if (err.error_code) {
     return err;
   }
+
+  return Error::Ok;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+{
+  heif_compression_format format = compression_format_from_fourcc_infe_type(
+          m_tild_header.get_parameters().compression_type_fourcc);
+
+  // --- get compressed data
+
+  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(get_id(), format);
+  if (dataResult.error) {
+    return dataResult.error;
+  }
+
+  std::vector<uint8_t>& data = dataResult.value;
+  Error err = append_compressed_tile_data(data, tx, ty);
+  if (err) {
+    return err;
+  }
+
+  // --- decode
 
   return decode_from_compressed_data(get_compression_format(), options, data);
 }
@@ -633,4 +651,36 @@ void ImageItem_Tild::get_tile_size(uint32_t& w, uint32_t& h) const
 {
   w = m_tild_header.get_parameters().tile_width;
   h = m_tild_header.get_parameters().tile_height;
+}
+
+
+Error ImageItem_Tild::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+{
+  Error err = m_tile_decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
+  if (err) {
+    return err;
+  }
+
+  postprocess_coded_image_colorspace(out_colorspace, out_chroma);
+
+  return Error::Ok;
+}
+
+
+int ImageItem_Tild::get_luma_bits_per_pixel() const
+{
+  DataExtent any_tile_extent;
+  append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
+  m_tile_decoder->set_data_extent(any_tile_extent);
+
+  return m_tile_decoder->get_luma_bits_per_pixel();
+}
+
+int ImageItem_Tild::get_chroma_bits_per_pixel() const
+{
+  DataExtent any_tile_extent;
+  append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
+  m_tile_decoder->set_data_extent(any_tile_extent);
+
+  return m_tile_decoder->get_chroma_bits_per_pixel();
 }

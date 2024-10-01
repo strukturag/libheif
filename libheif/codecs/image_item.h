@@ -77,6 +77,8 @@ public:
 
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
 
+  virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const { return std::vector<uint8_t>{}; }
+
   void clear()
   {
     m_thumbnails.clear();
@@ -130,7 +132,9 @@ public:
 
   virtual void get_tile_size(uint32_t& w, uint32_t& h) const;
 
-  Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
+  virtual Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const;
+
+  Error postprocess_coded_image_colorspace(heif_colorspace* inout_colorspace, heif_chroma* inout_chroma) const;
 
   virtual void process_before_write() { }
 
@@ -394,8 +398,6 @@ protected:
                                                                              const std::vector<uint8_t>& data);
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
-
-  virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const { return std::vector<uint8_t>{}; }
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
