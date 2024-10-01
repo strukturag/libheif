@@ -1462,7 +1462,7 @@ std::string Box_iloc::dump(Indent& indent) const
 }
 
 
-Error Box_iloc::read_data(const Item& item,
+Error Box_iloc::read_data(heif_item_id item,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest) const
@@ -1471,12 +1471,29 @@ Error Box_iloc::read_data(const Item& item,
 }
 
 
-Error Box_iloc::read_data(const Item& item,
+Error Box_iloc::read_data(heif_item_id item_id,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest,
                           uint64_t offset, uint64_t size) const
 {
+  const Item* item = nullptr;
+  for (auto& i : m_items) {
+    if (i.item_ID == item_id) {
+      item = &i;
+      break;
+    }
+  }
+
+  if (!item) {
+    std::stringstream sstr;
+    sstr << "Item with ID " << item_id << " has no compressed data";
+
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_item_data,
+                 sstr.str());
+  }
+
 #if ENABLE_MULTITHREADING_SUPPORT
   static std::mutex read_mutex;
 
@@ -1490,20 +1507,20 @@ Error Box_iloc::read_data(const Item& item,
   //       the image data is concatenated with data in a configuration box. However, it seems that
   //       this function clears the array in some cases. This should be corrected.
 
-  for (const auto& extent : item.extents) {
-    if (item.construction_method == 0) {
+  for (const auto& extent : item->extents) {
+    if (item->construction_method == 0) {
 
       // --- make sure that all data is available
 
       if (extent.offset > MAX_FILE_POS ||
-          item.base_offset > MAX_FILE_POS ||
+          item->base_offset > MAX_FILE_POS ||
           extent.length > MAX_FILE_POS) {
         return {heif_error_Invalid_input,
                 heif_suberror_Security_limit_exceeded,
                 "iloc data pointers out of allowed range"};
       }
 
-      StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item.base_offset + extent.length);
+      StreamReader::grow_status status = istr->wait_for_file_size(extent.offset + item->base_offset + extent.length);
       if (status == StreamReader::grow_status::size_beyond_eof) {
         // Out-of-bounds
         // TODO: I think we should not clear this. Maybe we want to try reading again later and
@@ -1512,7 +1529,7 @@ Error Box_iloc::read_data(const Item& item,
 
         std::stringstream sstr;
         sstr << "Extent in iloc box references data outside of file bounds "
-             << "(points to file position " << extent.offset + item.base_offset << ")\n";
+             << "(points to file position " << extent.offset + item->base_offset << ")\n";
 
         return {heif_error_Invalid_input,
                 heif_suberror_End_of_data,
@@ -1558,7 +1575,7 @@ Error Box_iloc::read_data(const Item& item,
 
       // --- request file range
 
-      uint64_t data_start_pos = extent.offset + item.base_offset + skip_len;
+      uint64_t data_start_pos = extent.offset + item->base_offset + skip_len;
       uint64_t rangeRequestEndPos = istr->request_range(data_start_pos, data_start_pos + read_len);
       if (rangeRequestEndPos == 0) {
         return istr->get_error();
@@ -1586,7 +1603,7 @@ Error Box_iloc::read_data(const Item& item,
 
       size -= read_len;
     }
-    else if (item.construction_method == 1) {
+    else if (item->construction_method == 1) {
       if (!idat) {
         return {heif_error_Invalid_input,
                 heif_suberror_No_idat_box,
@@ -1594,7 +1611,7 @@ Error Box_iloc::read_data(const Item& item,
       }
 
       idat->read_data(istr,
-                      extent.offset + item.base_offset,
+                      extent.offset + item->base_offset,
                       extent.length,
                       *dest);
 
@@ -1602,7 +1619,7 @@ Error Box_iloc::read_data(const Item& item,
     }
     else {
       std::stringstream sstr;
-      sstr << "Item construction method " << (int) item.construction_method << " not implemented";
+      sstr << "Item construction method " << (int) item->construction_method << " not implemented";
       return {heif_error_Unsupported_feature,
               heif_suberror_Unsupported_item_construction_method,
               sstr.str()};

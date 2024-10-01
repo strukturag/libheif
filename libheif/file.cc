@@ -595,23 +595,6 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 
   // --- get coded image data pointers
 
-  const auto& items = m_iloc_box->get_items();
-  const Box_iloc::Item* item = nullptr;
-  for (const auto& i : items) {
-    if (i.item_ID == ID) {
-      item = &i;
-      break;
-    }
-  }
-  if (!item) {
-    std::stringstream sstr;
-    sstr << "Item with ID " << ID << " has no compressed data";
-
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data,
-                 sstr.str());
-  }
-
   if (item_type == "hvc1") {
     // --- --- --- HEVC
     assert(false);
@@ -649,7 +632,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 #if HAVE_ZLIB
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
         if (error) {
           return error;
         }
@@ -667,7 +650,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 #if HAVE_ZLIB
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
         if (error) {
           return error;
         }
@@ -685,7 +668,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
 #if HAVE_BROTLI
         read_uncompressed = false;
         std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
         if (error) {
           return error;
         }
@@ -702,7 +685,7 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
     }
 
     if (read_uncompressed) {
-      return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, data);
+      return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data);
     }
   }
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
@@ -728,7 +711,7 @@ Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out
             sstr.str()};
   }
 
-  return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &out_data, offset, size);
+  return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, offset, size);
 }
 
 
@@ -745,25 +728,6 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   std::string item_type = infe_box->get_item_type();
   std::string content_type = infe_box->get_content_type();
 
-  // --- get item
-
-  auto items = m_iloc_box->get_items();
-  const Box_iloc::Item* item = nullptr;
-  for (const auto& i : items) {
-    if (i.item_ID == ID) {
-      item = &i;
-      break;
-    }
-  }
-  if (!item) {
-    std::stringstream sstr;
-    sstr << "Item with ID " << ID << " has no data";
-
-    return {heif_error_Invalid_input,
-            heif_suberror_No_item_data,
-            sstr.str()};
-  }
-
   // --- non 'mime' data (uncompressed)
 
   if (item_type != "mime") {
@@ -771,7 +735,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data);
   }
 
 
@@ -788,7 +752,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(*item, m_input_stream, m_idat_box, out_data);
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data);
   }
   else if (encoding == "compress_zlib") {
     compression = heif_metadata_compression_zlib;
@@ -806,7 +770,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   // read compressed data
 
   std::vector<uint8_t> compressed_data;
-  error = m_iloc_box->read_data(*item, m_input_stream, m_idat_box, &compressed_data);
+  error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
   if (error) {
     return error;
   }

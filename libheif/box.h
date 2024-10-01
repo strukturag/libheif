@@ -512,13 +512,13 @@ public:
 
   const std::vector<Item>& get_items() const { return m_items; }
 
-  Error read_data(const Item& item,
+  Error read_data(heif_item_id item,
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
                   std::vector<uint8_t>* dest) const;
 
   // Note: size==std::numeric_limits<uint64_t>::max() reads the data until the end
-  Error read_data(const Item& item,
+  Error read_data(heif_item_id item,
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
                   std::vector<uint8_t>* dest,
