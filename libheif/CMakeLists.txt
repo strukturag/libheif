@@ -58,6 +58,8 @@ set(libheif_sources
         codecs/hevc_dec.h
         codecs/avif.cc
         codecs/avif.h
+        codecs/avif_dec.cc
+        codecs/avif_dec.h
         codecs/jpeg.h
         codecs/jpeg.cc
         codecs/jpeg2000.h

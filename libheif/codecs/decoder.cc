@@ -25,6 +25,7 @@
 #include "libheif/api_structs.h"
 
 #include "codecs/hevc_dec.h"
+#include "codecs/avif_dec.h"
 #include "codecs/jpeg2000_dec.h"
 
 #include <limits>
@@ -93,6 +94,10 @@ std::shared_ptr<Decoder> Decoder::alloc_for_compression_format(const HeifContext
     case fourcc("hvc1"): {
       auto hvcC = ctx->get_heif_file()->get_property<Box_hvcC>(id);
       return std::make_shared<Decoder_HEVC>(hvcC);
+    }
+    case fourcc("av01"): {
+      auto av1C = ctx->get_heif_file()->get_property<Box_av1C>(id);
+      return std::make_shared<Decoder_AVIF>(av1C);
     }
     case fourcc("j2k1"): {
       auto j2kH = ctx->get_heif_file()->get_property<Box_j2kH>(id);

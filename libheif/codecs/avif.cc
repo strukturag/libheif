@@ -20,6 +20,7 @@
 
 #include "pixelimage.h"
 #include "avif.h"
+#include "avif_dec.h"
 #include "bitstream.h"
 #include "common_utils.h"
 #include "libheif/api_structs.h"
@@ -561,6 +562,25 @@ bool fill_av1C_configuration_from_stream(Box_av1C::configuration* out_config, co
 }
 
 
+Error ImageItem_AVIF::on_load_file()
+{
+  auto av1C_box = get_file()->get_property<Box_av1C>(get_id());
+  if (!av1C_box) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_av1C_box};
+  }
+
+  m_decoder = std::make_shared<Decoder_AVIF>(av1C_box);
+
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
+
+  m_decoder->set_data_extent(extent);
+
+  return Error::Ok;
+}
+
+
 Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                          struct heif_encoder* encoder,
                                                          const struct heif_encoding_options& options,
@@ -610,47 +630,11 @@ Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<H
 
 Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  // --- get codec configuration
-
-  std::shared_ptr<Box_av1C> av1C_box = get_file()->get_property<Box_av1C>(itemId);
-  if (!av1C_box)
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_av1C_box);
-  }
-
-  std::vector<uint8_t> data;
-  if (!av1C_box->get_headers(&data))
-  {
-    return Error(heif_error_Invalid_input,
-                 heif_suberror_No_item_data);
-  }
-
-  return data;
+  return m_decoder->read_bitstream_configuration_data();
 }
 
 
-int ImageItem_AVIF::get_luma_bits_per_pixel() const
+std::shared_ptr<struct Decoder> ImageItem_AVIF::get_decoder() const
 {
-  auto av1C_box = get_file()->get_property<Box_av1C>(get_id());
-  if (av1C_box) {
-    Box_av1C::configuration config = av1C_box->get_configuration();
-    if (!config.high_bitdepth) {
-      return 8;
-    }
-    else if (config.twelve_bit) {
-      return 12;
-    }
-    else {
-      return 10;
-    }
-  }
-
-  return -1;
-}
-
-
-int ImageItem_AVIF::get_chroma_bits_per_pixel() const
-{
-  return get_luma_bits_per_pixel();
+  return m_decoder;
 }
