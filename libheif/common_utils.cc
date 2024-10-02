@@ -102,7 +102,7 @@ uint8_t compute_avif_profile(int bits_per_pixel, heif_chroma chroma)
 }
 
 
-std::string to_fourcc(uint32_t code)
+std::string fourcc_to_string(uint32_t code)
 {
   std::string str("    ");
   str[0] = static_cast<char>((code >> 24) & 0xFF);

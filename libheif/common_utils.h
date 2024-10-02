@@ -40,7 +40,7 @@ constexpr inline uint32_t fourcc(const char* id)
           ((((uint32_t) id[3])&0xFF) << 0));
 }
 
-std::string to_fourcc(uint32_t code);
+std::string fourcc_to_string(uint32_t code);
 
 
 // Functions for common use in libheif and the plugins.

@@ -202,7 +202,7 @@ std::string BoxHeader::get_type_string() const
     return sstr.str();
   }
   else {
-    return to_fourcc(m_type);
+    return fourcc_to_string(m_type);
   }
 }
 
@@ -1005,7 +1005,7 @@ std::string Box_other::dump(Indent& indent) const
 std::string Box_Error::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << indent << '\'' << to_fourcc(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
+  sstr << indent << '\'' << fourcc_to_string(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
   sstr << indent << "fatality: ";
   switch (m_fatality) {
     case parse_error_fatality::fatal: sstr << "fatal\n";
@@ -1060,7 +1060,7 @@ std::string Box_ftyp::dump(Indent& indent) const
 
   sstr << BoxHeader::dump(indent);
 
-  sstr << indent << "major brand: " << to_fourcc(m_major_brand) << "\n"
+  sstr << indent << "major brand: " << fourcc_to_string(m_major_brand) << "\n"
        << indent << "minor version: " << m_minor_version << "\n"
        << indent << "compatible brands: ";
 
@@ -1069,7 +1069,7 @@ std::string Box_ftyp::dump(Indent& indent) const
     if (first) { first = false; }
     else { sstr << ','; }
 
-    sstr << to_fourcc(brand);
+    sstr << fourcc_to_string(brand);
   }
   sstr << "\n";
 
@@ -1171,7 +1171,7 @@ std::string Box_hdlr::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "pre_defined: " << m_pre_defined << "\n"
-       << indent << "handler_type: " << to_fourcc(m_handler_type) << "\n"
+       << indent << "handler_type: " << fourcc_to_string(m_handler_type) << "\n"
        << indent << "name: " << m_name << "\n";
 
   return sstr.str();
@@ -2166,7 +2166,7 @@ std::string Box_infe::dump(Indent& indent) const
 
   sstr << indent << "item_ID: " << m_item_ID << "\n"
        << indent << "item_protection_index: " << m_item_protection_index << "\n"
-       << indent << "item_type: " << to_fourcc(m_item_type_4cc) << "\n"
+       << indent << "item_type: " << fourcc_to_string(m_item_type_4cc) << "\n"
        << indent << "item_name: " << m_item_name << "\n";
 
   if (m_item_type_4cc == fourcc("mime")) {

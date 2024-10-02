@@ -288,7 +288,7 @@ std::string Box_uncC::dump(Indent& indent) const
 
   sstr << indent << "profile: " << m_profile;
   if (m_profile != 0) {
-    sstr << " (" << to_fourcc(m_profile) << ")";
+    sstr << " (" << fourcc_to_string(m_profile) << ")";
   }
   sstr << "\n";
   if (get_version() == 0) {
@@ -420,7 +420,7 @@ std::string Box_cmpC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "compression_type: " << to_fourcc(m_compression_type) << "\n";
+  sstr << indent << "compression_type: " << fourcc_to_string(m_compression_type) << "\n";
   sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
   return sstr.str();
 }

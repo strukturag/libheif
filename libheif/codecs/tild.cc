@@ -150,7 +150,7 @@ std::string Box_tilC::dump(Indent& indent) const
   sstr << indent << "version: " << ((int) get_version()) << "\n"
        //<< indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
        << indent << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
-       << indent << "compression: " << to_fourcc(m_parameters.compression_type_fourcc) << "\n"
+       << indent << "compression: " << fourcc_to_string(m_parameters.compression_type_fourcc) << "\n"
        << indent << "tiles are sequential: " << (m_parameters.tiles_are_sequential ? "yes" : "no") << "\n"
        << indent << "offset field length: " << ((int) m_parameters.offset_field_length) << " bits\n"
        << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"

@@ -713,7 +713,7 @@ Error HeifContext::interpret_heif_file()
 
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
-    metadata->item_type = to_fourcc(item_type);
+    metadata->item_type = fourcc_to_string(item_type);
     metadata->content_type = content_type;
     metadata->item_uri_type = item_uri_type;
 
