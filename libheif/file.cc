@@ -575,7 +575,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
 #if ENABLE_PARALLEL_TILE_DECODING
-  std::lock_guard<std::mutex> guard(m_read_mutex);
+  // std::lock_guard<std::mutex> guard(m_read_mutex);   // TODO: I think that this is not needed anymore because this function is not used for image data anymore.
 #endif
 
   if (!image_exists(ID)) {
