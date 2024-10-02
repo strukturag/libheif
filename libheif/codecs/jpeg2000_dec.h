@@ -39,6 +39,8 @@ class Decoder_JPEG2000 : public Decoder
 public:
   Decoder_JPEG2000(const std::shared_ptr<const Box_j2kH>& j2kH) : m_j2kH(j2kH) {}
 
+  heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
+
   void set_data_extent(DataExtent extent) { m_data_extent = std::move(extent); }
 
   int get_luma_bits_per_pixel() const override;

@@ -613,7 +613,12 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
 
   // --- decode
 
-  return Decoder::decode_single_frame_from_compressed_data(get_compression_format(), options, data);
+  DataExtent extent;
+  extent.m_raw = data;
+
+  m_tile_decoder->set_data_extent(std::move(extent));
+
+  return m_tile_decoder->decode_single_frame_from_compressed_data(options);
 }
 
 

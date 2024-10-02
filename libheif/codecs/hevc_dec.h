@@ -39,6 +39,8 @@ class Decoder_HEVC : public Decoder
 public:
   Decoder_HEVC(const std::shared_ptr<const Box_hvcC>& hvcC) : m_hvcC(hvcC) {}
 
+  heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
+
   int get_luma_bits_per_pixel() const override;
 
   int get_chroma_bits_per_pixel() const override;

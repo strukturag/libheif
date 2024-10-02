@@ -651,7 +651,7 @@ Error ImageItem_HEVC::on_load_file()
   m_decoder = std::make_shared<Decoder_HEVC>(hvcC_box);
 
   DataExtent extent;
-  extent.set_from_image_item(get_context()->get_heif_file().get(), get_id());
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
   m_decoder->set_data_extent(extent);
 
@@ -760,4 +760,10 @@ int ImageItem_HEVC::get_luma_bits_per_pixel() const
 int ImageItem_HEVC::get_chroma_bits_per_pixel() const
 {
   return m_decoder->get_chroma_bits_per_pixel();
+}
+
+
+std::shared_ptr<class Decoder> ImageItem_HEVC::get_decoder() const
+{
+  return m_decoder;
 }

@@ -23,6 +23,7 @@
 
 #include <cinttypes>
 #include "libheif/heif.h"
+#include <string>
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED
@@ -38,6 +39,11 @@ constexpr inline uint32_t fourcc_to_uint32(const char* id)
           ((((uint32_t) id[2])&0xFF) << 8) |
           ((((uint32_t) id[3])&0xFF) << 0));
 }
+
+// abbreviation
+constexpr inline uint32_t fourcc(const char* id) { return fourcc_to_uint32(id); }
+
+std::string to_fourcc(uint32_t code);
 
 
 // Functions for common use in libheif and the plugins.

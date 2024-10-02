@@ -91,9 +91,7 @@ public:
 
   const HeifContext* get_context() const { return m_heif_context; }
 
-  std::shared_ptr<class HeifFile> get_file();
-
-  std::shared_ptr<const class HeifFile> get_file() const;
+  std::shared_ptr<class HeifFile> get_file() const;
 
   Error check_resolution(uint32_t w, uint32_t h) const;
 
@@ -407,6 +405,8 @@ protected:
                                 enum heif_image_input_class input_class,
                                 const heif_color_profile_nclx* target_heif_nclx,
                                 ImageItem::CodedImageData& inout_codedImage);
+
+  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
 };
 
 

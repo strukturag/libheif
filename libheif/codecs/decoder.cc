@@ -30,10 +30,11 @@
 #include <limits>
 
 
-void DataExtent::set_from_image_item(class HeifFile* file, heif_item_id item)
+void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
 {
-  m_iloc = file->get_property<Box_iloc>(item);
+  m_file = file;
   m_item_id = item;
+  m_source = Source::Image;
 }
 
 
@@ -42,9 +43,14 @@ Result<std::vector<uint8_t>*> DataExtent::read_data() const
   if (!m_raw.empty()) {
     return &m_raw;
   }
-  else if (m_iloc) {
+  else if (m_source == Source::Image) {
+    assert(m_file);
+
     // image
-    m_iloc->read_data(m_item_id, m_file->get_reader(), nullptr, &m_raw, 0, std::numeric_limits<uint64_t>::max());
+    Error err = m_file->append_data_from_iloc(m_item_id, m_raw);
+    if (err) {
+      return err;
+    }
   }
   else {
     // sequence
@@ -63,11 +69,11 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
     data.insert(data.begin(), m_raw.begin() + offset, m_raw.begin() + offset + size);
     return data;
   }
-  else if (m_iloc) {
+  else if (m_source == Source::Image) {
     // TODO: cache data
 
     // image
-    Error err = m_iloc->read_data(m_item_id, m_file->get_reader(), nullptr, &m_raw, 0, size);
+    Error err = m_file->append_data_from_iloc(m_item_id, m_raw, 0, size);
     if (err) {
       return err;
     }
@@ -114,25 +120,23 @@ Result<std::vector<uint8_t>> Decoder::get_compressed_data() const
 
   std::vector<uint8_t> data = confData.value;
 
-  // image data, usually from 'mdat'
+  // append image data
 
   Result dataResult = m_data_extent.read_data();
   if (dataResult.error) {
     return dataResult.error;
   }
 
-  data.insert(data.begin(), dataResult.value->begin(), dataResult.value->end());
+  data.insert(data.end(), dataResult.value->begin(), dataResult.value->end());
 
   return data;
 }
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-Decoder::decode_single_frame_from_compressed_data(heif_compression_format compression_format,
-                                                  const struct heif_decoding_options& options,
-                                                  const std::vector<uint8_t>& data)
+Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options)
 {
-  const struct heif_decoder_plugin* decoder_plugin = get_decoder(compression_format, options.decoder_id);
+  const struct heif_decoder_plugin* decoder_plugin = get_decoder(get_compression_format(), options.decoder_id);
   if (!decoder_plugin) {
     return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed);
   }
@@ -152,7 +156,12 @@ Decoder::decode_single_frame_from_compressed_data(heif_compression_format compre
     }
   }
 
-  err = decoder_plugin->push_data(decoder, data.data(), data.size());
+  auto dataResult = get_compressed_data();
+  if (dataResult.error) {
+    return dataResult.error;
+  }
+
+  err = decoder_plugin->push_data(decoder, dataResult.value.data(), dataResult.value.size());
   if (err.code != heif_error_Ok) {
     decoder_plugin->free_decoder(decoder);
     return Error(err.code, err.subcode, err.message);

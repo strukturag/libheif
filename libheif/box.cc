@@ -2075,6 +2075,8 @@ Error Box_infe::parse(BitstreamRange& range)
     m_content_encoding = range.read_string();
   }
 
+  m_item_type_4cc = 0;
+
   if (get_version() >= 2) {
     m_hidden_item = (get_flags() & 1);
 
@@ -2086,17 +2088,17 @@ Error Box_infe::parse(BitstreamRange& range)
     }
 
     m_item_protection_index = range.read16();
-    uint32_t item_type = range.read32();
-    if (item_type != 0) {
-      m_item_type = to_fourcc(item_type);
+    m_item_type_4cc = range.read32();
+    if (m_item_type_4cc != 0) {
+      m_item_type = to_fourcc(m_item_type_4cc);
     }
 
     m_item_name = range.read_string();
-    if (item_type == fourcc("mime")) {
+    if (m_item_type_4cc == fourcc("mime")) {
       m_content_type = range.read_string();
       m_content_encoding = range.read_string();
     }
-    else if (item_type == fourcc("uri ")) {
+    else if (m_item_type_4cc == fourcc("uri ")) {
       m_item_uri_type = range.read_string();
     }
   }

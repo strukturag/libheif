@@ -64,13 +64,7 @@ bool HeifContext::is_image(heif_item_id ID) const
 }
 
 
-std::shared_ptr<HeifFile> ImageItem::get_file()
-{
-  return m_heif_context->get_heif_file();
-}
-
-
-std::shared_ptr<const HeifFile> ImageItem::get_file() const
+std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();
 }
@@ -1072,17 +1066,13 @@ Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
                                                                            bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
-  // --- find the decoder plugin with the correct compression format
+  DataExtent extent;
+  extent.set_from_image_item(get_file(), get_id());
 
-  heif_compression_format compression_format = get_compression_format();
-  if (compression_format == heif_compression_undefined) {
-    return Error{heif_error_Decoder_plugin_error, heif_suberror_Unsupported_codec, "Decoding not supported"};
-  }
+  auto decoder = get_decoder();
+  assert(decoder);
 
-  Result<std::vector<uint8_t>> dataResult = get_compressed_image_data();
-  if (dataResult.error) {
-    return dataResult.error;
-  }
+  decoder->set_data_extent(std::move(extent));
 
-  return Decoder::decode_single_frame_from_compressed_data(compression_format, options, *dataResult);
+  return decoder->decode_single_frame_from_compressed_data(options);
 }
