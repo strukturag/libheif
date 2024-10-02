@@ -634,7 +634,7 @@ Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(h
 }
 
 
-std::shared_ptr<struct Decoder> ImageItem_AVIF::get_decoder() const
+std::shared_ptr<class Decoder> ImageItem_AVIF::get_decoder() const
 {
   return m_decoder;
 }
