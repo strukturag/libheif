@@ -230,21 +230,21 @@ std::string HeifContext::debug_dump_boxes() const
 }
 
 
-static bool item_type_is_image(const std::string& item_type, const std::string& content_type)
+static bool item_type_is_image(uint32_t item_type, const std::string& content_type)
 {
-  return (item_type == "hvc1" ||
-          item_type == "av01" ||
-          item_type == "grid" ||
-          item_type == "tild" ||
-          item_type == "iden" ||
-          item_type == "iovl" ||
-          item_type == "avc1" ||
-          item_type == "unci" ||
-          item_type == "vvc1" ||
-          item_type == "jpeg" ||
-          (item_type == "mime" && content_type == "image/jpeg") ||
-          item_type == "j2k1" ||
-          item_type == "mski");
+  return (item_type == fourcc("hvc1") ||
+          item_type == fourcc("av01") ||
+          item_type == fourcc("grid") ||
+          item_type == fourcc("tild") ||
+          item_type == fourcc("iden") ||
+          item_type == fourcc("iovl") ||
+          item_type == fourcc("avc1") ||
+          item_type == fourcc("unci") ||
+          item_type == fourcc("vvc1") ||
+          item_type == fourcc("jpeg") ||
+          (item_type == fourcc("mime") && content_type == "image/jpeg") ||
+          item_type == fourcc("j2k1") ||
+          item_type == fourcc("mski"));
 }
 
 
@@ -629,7 +629,7 @@ Error HeifContext::interpret_heif_file()
     auto& image = pair.second;
 
     std::shared_ptr<Box_infe> infe = m_heif_file->get_infe_box(image->get_id());
-    if (infe->get_item_type() == "hvc1") {
+    if (infe->get_item_type_4cc() == fourcc("hvc1")) {
 
       auto ipma = m_heif_file->get_ipma_box();
       auto ipco = m_heif_file->get_ipco_box();
@@ -640,7 +640,7 @@ Error HeifContext::interpret_heif_file()
                      "No hvcC property in hvc1 type image");
       }
     }
-    if (infe->get_item_type() == "vvc1") {
+    if (infe->get_item_type_4cc() == fourcc("vvc1")) {
 
       auto ipma = m_heif_file->get_ipma_box();
       auto ipco = m_heif_file->get_ipco_box();
@@ -669,7 +669,7 @@ Error HeifContext::interpret_heif_file()
       break;
     }
 
-    if (infe_box->get_item_type() == "grid") {
+    if (infe_box->get_item_type_4cc() == fourcc("grid")) {
       std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
       if (image_references.empty()) {
@@ -698,12 +698,12 @@ Error HeifContext::interpret_heif_file()
   // --- read metadata and assign to image
 
   for (heif_item_id id : image_IDs) {
-    std::string item_type = m_heif_file->get_item_type(id);
+    uint32_t item_type = m_heif_file->get_item_type_4cc(id);
     std::string content_type = m_heif_file->get_content_type(id);
 
     // 'rgan': skip region annotations, handled next
     // 'iden': iden images are no metadata
-    if (item_type_is_image(item_type, content_type) || item_type == "rgan") {
+    if (item_type_is_image(item_type, content_type) || item_type == fourcc("rgan")) {
       continue;
     }
 
@@ -713,13 +713,13 @@ Error HeifContext::interpret_heif_file()
 
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
-    metadata->item_type = item_type;
+    metadata->item_type = to_fourcc(item_type);
     metadata->content_type = content_type;
     metadata->item_uri_type = item_uri_type;
 
     Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
     if (err) {
-      if (item_type == "Exif" || item_type == "mime") {
+      if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
         return err;
       }
@@ -771,8 +771,8 @@ Error HeifContext::interpret_heif_file()
   // --- read region item and assign to image(s)
 
   for (heif_item_id id : image_IDs) {
-    std::string item_type = m_heif_file->get_item_type(id);
-    if (item_type != "rgan") {
+    uint32_t item_type = m_heif_file->get_item_type_4cc(id);
+    if (item_type != fourcc("rgan")) {
       continue;
     }
 
@@ -875,8 +875,8 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
   // TODO: move this into ImageItem
 
-  std::string image_type = m_heif_file->get_item_type(ID);
-  if (image_type == "grid") {
+  uint32_t image_type = m_heif_file->get_item_type_4cc(ID);
+  if (image_type == fourcc("grid")) {
     std::vector<uint8_t> grid_data;
     Error error = m_heif_file->get_compressed_image_data(ID, &grid_data);
     if (error) {
@@ -937,10 +937,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
 Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
 {
-  std::string image_type = m_heif_file->get_item_type(id);
-  if (image_type == "grid" ||
-      image_type == "iden" ||
-      image_type == "iovl") {
+  uint32_t image_type = m_heif_file->get_item_type_4cc(id);
+  if (image_type == fourcc("grid") ||
+      image_type == fourcc("iden") ||
+      image_type == fourcc("iovl")) {
     auto iref_box = m_heif_file->get_iref_box();
     if (!iref_box) {
       return Error(heif_error_Invalid_input,
@@ -974,8 +974,6 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
                                                                   const struct heif_decoding_options& options,
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
-  std::string image_type = m_heif_file->get_item_type(ID);
-
   std::shared_ptr<ImageItem> imginfo;
   if (m_all_images.find(ID) != m_all_images.end()) {
     imginfo = m_all_images.find(ID)->second;

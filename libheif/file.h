@@ -84,6 +84,8 @@ public:
 
   std::string get_item_type(heif_item_id ID) const;
 
+  uint32_t get_item_type_4cc(heif_item_id ID) const;
+
   std::string get_content_type(heif_item_id ID) const;
 
   std::string get_item_uri_type(heif_item_id ID) const;

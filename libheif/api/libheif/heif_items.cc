@@ -61,13 +61,7 @@ int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
 
 uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id item_id)
 {
-  auto type = ctx->context->get_heif_file()->get_item_type(item_id);
-  if (type.empty()) {
-    return 0;
-  }
-  else {
-    return fourcc(type.c_str());
-  }
+  return ctx->context->get_heif_file()->get_item_type_4cc(item_id);
 }
 
 
@@ -88,7 +82,7 @@ const char* heif_context_get_mime_item_content_type(const struct heif_context* c
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "mime") {
+  if (infe->get_item_type_4cc() != fourcc("mime")) {
     return nullptr;
   }
 
@@ -100,7 +94,7 @@ const char* heif_context_get_mime_item_content_encoding(const struct heif_contex
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "mime") {
+  if (infe->get_item_type_4cc() != fourcc("mime")) {
     return nullptr;
   }
 
@@ -113,7 +107,7 @@ const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, h
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "uri ") {
+  if (infe->get_item_type_4cc() != fourcc("uri ")) {
     return nullptr;
   }
 

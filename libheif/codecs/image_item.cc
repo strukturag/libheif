@@ -101,46 +101,46 @@ heif_compression_format ImageItem::compression_format_from_fourcc_infe_type(uint
 
 std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const std::shared_ptr<Box_infe>& infe)
 {
-  std::string item_type = infe->get_item_type();
+  uint32_t item_type = infe->get_item_type_4cc();
   heif_item_id id = infe->get_item_ID();
 
-  if (item_type == "jpeg" ||
-      (item_type == "mime" && infe->get_content_type() == "image/jpeg")) {
+  if (item_type == fourcc("jpeg") ||
+      (item_type == fourcc("mime") && infe->get_content_type() == "image/jpeg")) {
     return std::make_shared<ImageItem_JPEG>(ctx, id);
   }
-  else if (item_type == "hvc1") {
+  else if (item_type == fourcc("hvc1")) {
     return std::make_shared<ImageItem_HEVC>(ctx, id);
   }
-  else if (item_type == "av01") {
+  else if (item_type == fourcc("av01")) {
     return std::make_shared<ImageItem_AVIF>(ctx, id);
   }
-  else if (item_type == "vvc1") {
+  else if (item_type == fourcc("vvc1")) {
     return std::make_shared<ImageItem_VVC>(ctx, id);
   }
-  else if (item_type == "avc1") {
+  else if (item_type == fourcc("avc1")) {
     return std::make_shared<ImageItem_AVC>(ctx, id);
   }
 #if WITH_UNCOMPRESSED_CODEC
-  else if (item_type == "unci") {
+  else if (item_type == fourcc("unci")) {
     return std::make_shared<ImageItem_uncompressed>(ctx, id);
   }
 #endif
-  else if (item_type == "j2k1") {
+  else if (item_type == fourcc("j2k1")) {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
-  else if (item_type == "mski") {
+  else if (item_type == fourcc("mski")) {
     return std::make_shared<ImageItem_mask>(ctx, id);
   }
-  else if (item_type == "grid") {
+  else if (item_type == fourcc("grid")) {
     return std::make_shared<ImageItem_Grid>(ctx, id);
   }
-  else if (item_type == "iovl") {
+  else if (item_type == fourcc("iovl")) {
     return std::make_shared<ImageItem_Overlay>(ctx, id);
   }
-  else if (item_type == "iden") {
+  else if (item_type == fourcc("iden")) {
     return std::make_shared<ImageItem_iden>(ctx, id);
   }
-  else if (item_type == "tild") {
+  else if (item_type == fourcc("tild")) {
     return std::make_shared<ImageItem_Tild>(ctx, id);
   }
   else {

@@ -489,6 +489,17 @@ std::string HeifFile::get_item_type(heif_item_id ID) const
 }
 
 
+uint32_t HeifFile::get_item_type_4cc(heif_item_id ID) const
+{
+  auto infe_box = get_infe_box(ID);
+  if (!infe_box) {
+    return 0;
+  }
+
+  return infe_box->get_item_type_4cc();
+}
+
+
 std::string HeifFile::get_content_type(heif_item_id ID) const
 {
   auto infe_box = get_infe_box(ID);
@@ -590,43 +601,43 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   }
 
 
-  std::string item_type = infe_box->get_item_type();
+  uint32_t item_type = infe_box->get_item_type_4cc();
   std::string content_type = infe_box->get_content_type();
 
   // --- get coded image data pointers
 
-  if (item_type == "hvc1") {
+  if (item_type == fourcc("hvc1")) {
     // --- --- --- HEVC
     assert(false);
   }
-  else if (item_type == "vvc1") {
+  else if (item_type == fourcc("vvc1")) {
     // --- --- --- VVC
     assert(false);
   }
-  else if (item_type == "av01") {
+  else if (item_type == fourcc("av01")) {
     assert(false);
   }
-  else if (item_type == "jpeg" ||
-           (item_type == "mime" && get_content_type(ID) == "image/jpeg")) {
+  else if (item_type == fourcc("jpeg") ||
+           (item_type == fourcc("mime") && get_content_type(ID) == "image/jpeg")) {
     assert(false);
   }
-  else if (item_type == "j2k1") {
+  else if (item_type == fourcc("j2k1")) {
     assert(false);
   }
 #if WITH_UNCOMPRESSED_CODEC
-  else if (item_type == "unci") {
+  else if (item_type == fourcc("unci")) {
     assert(false);
     // return get_compressed_image_data_uncompressed(ID, data, item);
   }
 #endif
   else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
-           item_type == "grid" ||
-           item_type == "iovl" ||
-           item_type == "Exif" ||
-           (item_type == "mime" && content_type == "application/rdf+xml")) {
+           item_type == fourcc("grid") ||
+           item_type == fourcc("iovl") ||
+           item_type == fourcc("Exif") ||
+           (item_type == fourcc("mime") && content_type == "application/rdf+xml")) {
     Error error;
     bool read_uncompressed = true;
-    if (item_type == "mime") {
+    if (item_type == fourcc("mime")) {
       std::string encoding = infe_box->get_content_encoding();
       if (encoding == "compress_zlib") {
 #if HAVE_ZLIB
@@ -725,12 +736,12 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
             heif_suberror_Nonexisting_item_referenced};
   }
 
-  std::string item_type = infe_box->get_item_type();
+  uint32_t item_type = infe_box->get_item_type_4cc();
   std::string content_type = infe_box->get_content_type();
 
   // --- non 'mime' data (uncompressed)
 
-  if (item_type != "mime") {
+  if (item_type != fourcc("mime")) {
     if (out_compression) {
       *out_compression = heif_metadata_compression_off;
     }
@@ -1037,7 +1048,7 @@ Error HeifFile::set_item_data(const std::shared_ptr<Box_infe>& item, const uint8
 
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (compression != heif_metadata_compression_off &&
-      item->get_item_type() != "mime") {
+      item->get_item_type_4cc() != fourcc("mime")) {
     // TODO: error, compression not supported
   }
 
@@ -1081,7 +1092,7 @@ Error HeifFile::set_precompressed_item_data(const std::shared_ptr<Box_infe>& ite
 {
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (!content_encoding.empty() &&
-      item->get_item_type() != "mime") {
+      item->get_item_type_4cc() != fourcc("mime")) {
     // TODO: error, compression not supported
   }
 
