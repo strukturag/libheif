@@ -751,18 +751,6 @@ Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(h
 }
 
 
-int ImageItem_HEVC::get_luma_bits_per_pixel() const
-{
-  return m_decoder->get_luma_bits_per_pixel();
-}
-
-
-int ImageItem_HEVC::get_chroma_bits_per_pixel() const
-{
-  return m_decoder->get_chroma_bits_per_pixel();
-}
-
-
 std::shared_ptr<class Decoder> ImageItem_HEVC::get_decoder() const
 {
   return m_decoder;

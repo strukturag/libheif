@@ -427,6 +427,7 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 }
 
 
+// TODO: when all decoders are implemented, this function should just forward to the Decoder object.
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   heif_item_id id;
@@ -496,6 +497,25 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
 
   return err;
 }
+
+
+int ImageItem::get_luma_bits_per_pixel() const
+{
+  auto decoder = get_decoder();
+  assert(decoder);
+
+  return decoder->get_luma_bits_per_pixel();
+}
+
+
+int ImageItem::get_chroma_bits_per_pixel() const
+{
+  auto decoder = get_decoder();
+  assert(decoder);
+
+  return decoder->get_chroma_bits_per_pixel();
+}
+
 
 #if 0
 int ImageItem::get_luma_bits_per_pixel() const
