@@ -253,7 +253,7 @@ Error ImageItem_Overlay::read_overlay_spec()
 
 
   std::vector<uint8_t> overlay_data;
-  Error err = heif_file->get_compressed_image_data(get_id(), &overlay_data);
+  Error err = heif_file->get_uncompressed_item_data(get_id(), &overlay_data);
   if (err) {
     return err;
   }

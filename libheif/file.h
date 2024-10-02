@@ -88,7 +88,7 @@ public:
 
   std::string get_item_uri_type(heif_item_id ID) const;
 
-  Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
+  Error get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const;
 
   Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
 

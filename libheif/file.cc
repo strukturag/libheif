@@ -572,7 +572,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
 }
 
 
-Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* data) const
+Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
 #if ENABLE_PARALLEL_TILE_DECODING
   std::lock_guard<std::mutex> guard(m_read_mutex);
@@ -593,101 +593,72 @@ Error HeifFile::get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>*
   uint32_t item_type = infe_box->get_item_type_4cc();
   std::string content_type = infe_box->get_content_type();
 
-  // --- get coded image data pointers
+  // --- decompress data
 
-  if (item_type == fourcc("hvc1")) {
-    // --- --- --- HEVC
-    assert(false);
-  }
-  else if (item_type == fourcc("vvc1")) {
-    // --- --- --- VVC
-    assert(false);
-  }
-  else if (item_type == fourcc("av01")) {
-    assert(false);
-  }
-  else if (item_type == fourcc("jpeg") ||
-           (item_type == fourcc("mime") && get_content_type(ID) == "image/jpeg")) {
-    assert(false);
-  }
-  else if (item_type == fourcc("j2k1")) {
-    assert(false);
-  }
-#if WITH_UNCOMPRESSED_CODEC
-  else if (item_type == fourcc("unci")) {
-    assert(false);
-    // return get_compressed_image_data_uncompressed(ID, data, item);
-  }
-#endif
-  else if (true ||  // fallback case for all kinds of generic metadata (e.g. 'iptc')
-           item_type == fourcc("grid") ||
-           item_type == fourcc("iovl") ||
-           item_type == fourcc("Exif") ||
-           (item_type == fourcc("mime") && content_type == "application/rdf+xml")) {
-    Error error;
-    bool read_uncompressed = true;
-    if (item_type == fourcc("mime")) {
-      std::string encoding = infe_box->get_content_encoding();
-      if (encoding == "compress_zlib") {
+  Error error;
+  bool read_uncompressed = true;
+  if (item_type == fourcc("mime")) {
+    std::string encoding = infe_box->get_content_encoding();
+    if (encoding == "compress_zlib") {
 #if HAVE_ZLIB
-        read_uncompressed = false;
-        std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
-        if (error) {
-          return error;
-        }
-        error = decompress_zlib(compressed_data, data);
-        if (error) {
-          return error;
-        }
-#else
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_header_compression_method,
-                     encoding);
-#endif
+      read_uncompressed = false;
+      std::vector<uint8_t> compressed_data;
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      if (error) {
+        return error;
       }
-      else if (encoding == "deflate") {
+      error = decompress_zlib(compressed_data, data);
+      if (error) {
+        return error;
+      }
+#else
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_header_compression_method,
+                   encoding);
+#endif
+    }
+    else if (encoding == "deflate") {
 #if HAVE_ZLIB
-        read_uncompressed = false;
-        std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
-        if (error) {
-          return error;
-        }
-        error = decompress_deflate(compressed_data, data);
-        if (error) {
-          return error;
-        }
-#else
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_header_compression_method,
-                     encoding);
-#endif
+      read_uncompressed = false;
+      std::vector<uint8_t> compressed_data;
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      if (error) {
+        return error;
       }
-      else if (encoding == "br") {
+      error = decompress_deflate(compressed_data, data);
+      if (error) {
+        return error;
+      }
+#else
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_header_compression_method,
+                   encoding);
+#endif
+    }
+    else if (encoding == "br") {
 #if HAVE_BROTLI
-        read_uncompressed = false;
-        std::vector<uint8_t> compressed_data;
-        error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
-        if (error) {
-          return error;
-        }
-        error = decompress_brotli(compressed_data, data);
-        if (error) {
-          return error;
-        }
-#else
-        return Error(heif_error_Unsupported_feature,
-                     heif_suberror_Unsupported_header_compression_method,
-                     encoding);
-#endif
+      read_uncompressed = false;
+      std::vector<uint8_t> compressed_data;
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      if (error) {
+        return error;
       }
-    }
-
-    if (read_uncompressed) {
-      return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data);
+      error = decompress_brotli(compressed_data, data);
+      if (error) {
+        return error;
+      }
+#else
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_header_compression_method,
+                   encoding);
+#endif
     }
   }
+
+  if (read_uncompressed) {
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data);
+  }
+
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
 }
 

@@ -717,7 +717,7 @@ Error HeifContext::interpret_heif_file()
     metadata->content_type = content_type;
     metadata->item_uri_type = item_uri_type;
 
-    Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
+    Error err = m_heif_file->get_uncompressed_item_data(id, &(metadata->m_data));
     if (err) {
       if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
@@ -779,7 +779,7 @@ Error HeifContext::interpret_heif_file()
     std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
     region_item->item_id = id;
     std::vector<uint8_t> region_data;
-    Error err = m_heif_file->get_compressed_image_data(id, &(region_data));
+    Error err = m_heif_file->get_uncompressed_item_data(id, &(region_data));
     if (err) {
       return err;
     }
@@ -878,7 +878,7 @@ bool HeifContext::has_alpha(heif_item_id ID) const
   uint32_t image_type = m_heif_file->get_item_type_4cc(ID);
   if (image_type == fourcc("grid")) {
     std::vector<uint8_t> grid_data;
-    Error error = m_heif_file->get_compressed_image_data(ID, &grid_data);
+    Error error = m_heif_file->get_uncompressed_item_data(ID, &grid_data);
     if (error) {
       return false;
     }

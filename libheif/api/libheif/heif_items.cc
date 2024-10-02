@@ -172,7 +172,7 @@ struct heif_error heif_context_get_item_data(struct heif_context* ctx,
                                              void* out_data)
 {
   std::vector<uint8_t> data;
-  Error err = ctx->context->get_heif_file()->get_compressed_image_data(item_id, &data);
+  Error err = ctx->context->get_heif_file()->get_uncompressed_item_data(item_id, &data);
 
   if (err) {
     return err.error_struct(ctx->context.get());

@@ -169,7 +169,7 @@ Error ImageItem_Grid::read_grid_spec()
   auto heif_file = get_context()->get_heif_file();
 
   std::vector<uint8_t> grid_data;
-  Error err = heif_file->get_compressed_image_data(get_id(), &grid_data);
+  Error err = heif_file->get_uncompressed_item_data(get_id(), &grid_data);
   if (err) {
     return err;
   }
