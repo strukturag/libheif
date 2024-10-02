@@ -132,7 +132,7 @@ public:
 
   ImageItem_Tild(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "tili"; }
+  uint32_t get_infe_type() const override { return fourcc("tili"); }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

@@ -180,7 +180,7 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
 
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
-  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
+  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("rgan"));
   box->set_hidden_item(true);
 
   auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
@@ -1183,7 +1183,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   }
 
   // Create Grid Item
-  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
   out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1238,7 +1238,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
 
   // Create Grid Item
 
-  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
   out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1284,7 +1284,7 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 
   // Create IOVL Item
 
-  heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
+  heif_item_id iovl_id = m_heif_file->add_new_image(fourcc("iovl"));
   std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(this, iovl_id);
   m_all_images.insert(std::make_pair(iovl_id, iovl_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1516,19 +1516,19 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<ImageItem>& master_im
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr, nullptr, heif_metadata_compression_off, nullptr);
+                              fourcc("Exif"), nullptr, nullptr, heif_metadata_compression_off, nullptr);
 }
 
 
 Error HeifContext::add_XMP_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression, nullptr);
+  return add_generic_metadata(master_image, data, size, fourcc("mime"), "application/rdf+xml", nullptr, compression, nullptr);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
+                                        uint32_t item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
                                         heif_item_id* out_item_id)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
@@ -1559,7 +1559,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (compression != heif_metadata_compression_off &&
-      strcmp(item_type, "mime") != 0) {
+      item_type != fourcc("mime")) {
     // TODO: error, compression not supported
   }
 

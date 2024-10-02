@@ -80,7 +80,7 @@ public:
 
   ImageItem_Grid(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "grid"; }
+  uint32_t get_infe_type() const override { return fourcc("grid"); }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

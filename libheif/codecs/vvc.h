@@ -112,7 +112,7 @@ public:
 
   ImageItem_VVC(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "vvc1"; }
+  uint32_t get_infe_type() const override { return fourcc("vvc1"); }
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 

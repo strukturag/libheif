@@ -82,8 +82,6 @@ public:
 
   bool has_item_with_id(heif_item_id ID) const;
 
-  std::string get_item_type(heif_item_id ID) const;
-
   uint32_t get_item_type_4cc(heif_item_id ID) const;
 
   std::string get_content_type(heif_item_id ID) const;
@@ -152,9 +150,9 @@ public:
 
   heif_item_id get_unused_item_id() const;
 
-  heif_item_id add_new_image(const char* item_type);
+  heif_item_id add_new_image(uint32_t item_type);
 
-  std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
+  std::shared_ptr<Box_infe> add_new_infe_box(uint32_t item_type);
 
   void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 
@@ -168,7 +166,7 @@ public:
 
   heif_property_id add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
 
-  Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
+  Result<heif_item_id> add_infe(uint32_t item_type, const uint8_t* data, size_t size);
 
   Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
 

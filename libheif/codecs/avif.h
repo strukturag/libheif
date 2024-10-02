@@ -159,7 +159,7 @@ public:
 
   ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "av01"; }
+  uint32_t get_infe_type() const override { return fourcc("av01"); }
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 

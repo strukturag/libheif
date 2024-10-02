@@ -478,17 +478,6 @@ bool HeifFile::has_item_with_id(heif_item_id ID) const
 }
 
 
-std::string HeifFile::get_item_type(heif_item_id ID) const
-{
-  auto infe_box = get_infe_box(ID);
-  if (!infe_box) {
-    return "";
-  }
-
-  return infe_box->get_item_type();
-}
-
-
 uint32_t HeifFile::get_item_type_4cc(heif_item_id ID) const
 {
   auto infe_box = get_infe_box(ID);
@@ -831,21 +820,21 @@ heif_item_id HeifFile::get_unused_item_id() const
 }
 
 
-heif_item_id HeifFile::add_new_image(const char* item_type)
+heif_item_id HeifFile::add_new_image(uint32_t item_type)
 {
   auto box = add_new_infe_box(item_type);
   return box->get_item_ID();
 }
 
 
-std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(const char* item_type)
+std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(uint32_t item_type)
 {
   heif_item_id id = get_unused_item_id();
 
   auto infe = std::make_shared<Box_infe>();
   infe->set_item_ID(id);
   infe->set_hidden_item(false);
-  infe->set_item_type(item_type);
+  infe->set_item_type_4cc(item_type);
 
   m_infe_boxes[id] = infe;
   m_iinf_box->append_child_box(infe);
@@ -963,7 +952,7 @@ void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_
 }
 
 
-Result<heif_item_id> HeifFile::add_infe(const char* item_type, const uint8_t* data, size_t size)
+Result<heif_item_id> HeifFile::add_infe(uint32_t item_type, const uint8_t* data, size_t size)
 {
   Result<heif_item_id> result;
 
@@ -987,7 +976,7 @@ Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_meta
 
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_box = add_new_infe_box("mime");
+  auto infe_box = add_new_infe_box(fourcc("mime"));
   infe_box->set_hidden_item(true);
   infe_box->set_content_type(content_type);
 
@@ -1006,7 +995,7 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
 
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_box = add_new_infe_box("mime");
+  auto infe_box = add_new_infe_box(fourcc("mime"));
   infe_box->set_hidden_item(true);
   infe_box->set_content_type(content_type);
 
@@ -1025,7 +1014,7 @@ Result<heif_item_id> HeifFile::add_infe_uri(const char* item_uri_type, const uin
 
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
 
-  auto infe_box = add_new_infe_box("uri ");
+  auto infe_box = add_new_infe_box(fourcc("uri "));
   infe_box->set_hidden_item(true);
   infe_box->set_item_uri_type(item_uri_type);
 

@@ -523,7 +523,7 @@ public:
 
   ImageItem_JPEG2000(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "j2k1"; }
+  uint32_t get_infe_type() const override { return fourcc("j2k1"); }
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
 

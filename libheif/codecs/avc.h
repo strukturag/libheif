@@ -97,7 +97,7 @@ public:
 
   ImageItem_AVC(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "avc1"; }
+  uint32_t get_infe_type() const override { return fourcc("avc1"); }
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 

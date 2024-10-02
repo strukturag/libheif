@@ -66,7 +66,7 @@ public:
                                                                           struct heif_encoder* encoder,
                                                                           const struct heif_encoding_options& options);
 
-  virtual const char* get_infe_type() const { return "????"; } // TODO = 0;
+  virtual uint32_t get_infe_type() const { return 0; }
 
   virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 

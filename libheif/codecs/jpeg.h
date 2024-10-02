@@ -59,7 +59,7 @@ public:
 
   ImageItem_JPEG(HeifContext* ctx) : ImageItem(ctx) { }
 
-  const char* get_infe_type() const override { return "jpeg"; }
+  uint32_t get_infe_type() const override { return fourcc("jpeg"); }
 
   const heif_color_profile_nclx* get_forced_output_nclx() const override;
 

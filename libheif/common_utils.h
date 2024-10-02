@@ -32,16 +32,13 @@
 #endif
 
 
-constexpr inline uint32_t fourcc_to_uint32(const char* id)
+constexpr inline uint32_t fourcc(const char* id)
 {
   return (((((uint32_t) id[0])&0xFF) << 24) |
           ((((uint32_t) id[1])&0xFF) << 16) |
           ((((uint32_t) id[2])&0xFF) << 8) |
           ((((uint32_t) id[3])&0xFF) << 0));
 }
-
-// abbreviation
-constexpr inline uint32_t fourcc(const char* id) { return fourcc_to_uint32(id); }
 
 std::string to_fourcc(uint32_t code);
 

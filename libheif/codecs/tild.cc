@@ -493,7 +493,7 @@ ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parame
 
   auto file = ctx->get_heif_file();
 
-  heif_item_id tild_id = ctx->get_heif_file()->add_new_image("tild");
+  heif_item_id tild_id = ctx->get_heif_file()->add_new_image(fourcc("tild"));
   auto tild_image = std::make_shared<ImageItem_Tild>(ctx, tild_id);
   ctx->insert_new_image(tild_id, tild_image);
 

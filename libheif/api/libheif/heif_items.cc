@@ -238,7 +238,13 @@ struct heif_error heif_context_add_item(struct heif_context* ctx,
                                         const void* data, int size,
                                         heif_item_id* out_item_id)
 {
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(item_type, (const uint8_t*) data, size);
+  if (item_type == nullptr || strlen(item_type) != 4) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "called heif_context_add_item() with invalid 'item_type'."};
+  }
+
+  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
 
   if (result && out_item_id) {
     *out_item_id = result.value;

@@ -87,7 +87,7 @@ public:
 
   ImageItem_mask(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "mski"; }
+  uint32_t get_infe_type() const override { return fourcc("mski"); }
 
   const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

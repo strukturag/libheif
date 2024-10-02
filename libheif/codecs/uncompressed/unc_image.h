@@ -71,7 +71,7 @@ public:
 
   ImageItem_uncompressed(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "unci"; }
+  uint32_t get_infe_type() const override { return fourcc("unci"); }
 
   heif_compression_format get_compression_format() const override { return heif_compression_uncompressed; }
 

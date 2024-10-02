@@ -201,14 +201,14 @@ Error Box_uncC::parse(BitstreamRange& range)
   parse_full_box_header(range);
   m_profile = range.read32();
   if (get_version() == 1) {
-    if (m_profile == fourcc_to_uint32("rgb3")) {
+    if (m_profile == fourcc("rgb3")) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
       add_component(component0);
       Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
       add_component(component1);
       Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
       add_component(component2);
-    } else if ((m_profile == fourcc_to_uint32("rgba")) || (m_profile == fourcc_to_uint32("abgr"))) {
+    } else if ((m_profile == fourcc("rgba")) || (m_profile == fourcc("abgr"))) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
       add_component(component0);
       Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};

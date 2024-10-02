@@ -128,7 +128,7 @@ public:
 
   ImageItem_HEVC(HeifContext* ctx) : ImageItem(ctx) {}
 
-  const char* get_infe_type() const override { return "hvc1"; }
+  uint32_t get_infe_type() const override { return fourcc("hvc1"); }
 
   // TODO: MIAF says that the *:hevc:* urn is deprecated and we should use "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:hevc:2015:auxid:1"; }

@@ -1777,9 +1777,9 @@ static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std
     return;
   }
   if (image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
-    uncC->set_profile(fourcc_to_uint32("rgba"));
+    uncC->set_profile(fourcc("rgba"));
   } else {
-    uncC->set_profile(fourcc_to_uint32("rgb3"));
+    uncC->set_profile(fourcc("rgb3"));
   }
   uncC->set_version(1);
 }
@@ -2039,7 +2039,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   auto file = ctx->get_heif_file();
 
-  heif_item_id unci_id = ctx->get_heif_file()->add_new_image("unci");
+  heif_item_id unci_id = ctx->get_heif_file()->add_new_image(fourcc("unci"));
   auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
   ctx->insert_new_image(unci_id, unci_image);
 

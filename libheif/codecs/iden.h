@@ -34,7 +34,7 @@ public:
 
   ImageItem_iden(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "iden"; }
+  uint32_t get_infe_type() const override { return fourcc("iden"); }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
@@ -52,7 +52,7 @@ public:
                                 enum heif_image_input_class input_class) override
   {
     return Error{heif_error_Unsupported_feature,
-                 heif_suberror_Unspecified, "Cannot encode image to 'iovl'"};
+                 heif_suberror_Unspecified, "Cannot encode image to 'iden'"};
   }
 
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,

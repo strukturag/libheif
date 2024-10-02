@@ -161,25 +161,6 @@ bool Fraction::is_valid() const
   return denominator != 0;
 }
 
-static uint32_t from_fourcc(const char* string)
-{
-  return ((string[0] << 24) |
-          (string[1] << 16) |
-          (string[2] << 8) |
-          (string[3]));
-}
-
-std::string to_fourcc(uint32_t code)
-{
-  std::string str("    ");
-  str[0] = static_cast<char>((code >> 24) & 0xFF);
-  str[1] = static_cast<char>((code >> 16) & 0xFF);
-  str[2] = static_cast<char>((code >> 8) & 0xFF);
-  str[3] = static_cast<char>((code >> 0) & 0xFF);
-
-  return str;
-}
-
 
 BoxHeader::BoxHeader() = default;
 
@@ -2089,9 +2070,6 @@ Error Box_infe::parse(BitstreamRange& range)
 
     m_item_protection_index = range.read16();
     m_item_type_4cc = range.read32();
-    if (m_item_type_4cc != 0) {
-      m_item_type = to_fourcc(m_item_type_4cc);
-    }
 
     m_item_name = range.read_string();
     if (m_item_type_4cc == fourcc("mime")) {
@@ -2120,7 +2098,7 @@ void Box_infe::derive_box_version()
   }
 
 
-  if (m_item_type != "") {
+  if (m_item_type_4cc != 0) {
     min_version = std::max(min_version, 2);
   }
 
@@ -2163,19 +2141,14 @@ Error Box_infe::write(StreamWriter& writer) const
 
     writer.write16(m_item_protection_index);
 
-    if (m_item_type.empty()) {
-      writer.write32(0);
-    }
-    else {
-      writer.write32(from_fourcc(m_item_type.c_str()));
-    }
+    writer.write32(m_item_type_4cc);
 
     writer.write(m_item_name);
-    if (m_item_type == "mime") {
+    if (m_item_type_4cc == fourcc("mime")) {
       writer.write(m_content_type);
       writer.write(m_content_encoding);
     }
-    else if (m_item_type == "uri ") {
+    else if (m_item_type_4cc == fourcc("uri ")) {
       writer.write(m_item_uri_type);
     }
   }
@@ -2193,15 +2166,15 @@ std::string Box_infe::dump(Indent& indent) const
 
   sstr << indent << "item_ID: " << m_item_ID << "\n"
        << indent << "item_protection_index: " << m_item_protection_index << "\n"
-       << indent << "item_type: " << m_item_type << "\n"
+       << indent << "item_type: " << to_fourcc(m_item_type_4cc) << "\n"
        << indent << "item_name: " << m_item_name << "\n";
 
-  if (m_item_type == "mime") {
+  if (m_item_type_4cc == fourcc("mime")) {
     sstr << indent << "content_type: " << m_content_type << "\n"
          << indent << "content_encoding: " << m_content_encoding << "\n";
   }
 
-  if (m_item_type == "uri ") {
+  if (m_item_type_4cc == fourcc("uri ")) {
     sstr << indent << "item uri type: " << m_item_uri_type << "\n";
   }
 

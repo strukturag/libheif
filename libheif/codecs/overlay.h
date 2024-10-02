@@ -90,7 +90,7 @@ public:
 
   ImageItem_Overlay(HeifContext* ctx);
 
-  const char* get_infe_type() const override { return "iovl"; }
+  uint32_t get_infe_type() const override { return fourcc("iovl"); }
 
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
