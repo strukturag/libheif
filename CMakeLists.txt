@@ -261,6 +261,13 @@ if (WITH_OPENJPH_ENCODER OR WITH_OPENJPH_DECODER)
     find_package(OPENJPH)
 endif()
 
+# nvidia hardware decode
+
+plugin_option(NV_DECODER "NVIDIA Hardware AVC/AV1/HEVC/JPEG decoder" OFF OFF)
+if (WITH_NV_DECODER)
+    find_package(NVDEC)
+endif()
+
 # uncompressed
 
 option(WITH_UNCOMPRESSED_CODEC " Support internal ISO/IEC 23001-17 uncompressed codec (experimental) " OFF)
@@ -289,6 +296,8 @@ plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
 plugin_compilation_info(VVENC vvenc "vvenc VVC enc. (experimental)")
 plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
+plugin_compilation_info(NV_DECODER NVDEC "NVIDIA hardware decoder")
+
 
 # --- show summary which formats are supported
 
@@ -355,6 +364,12 @@ if (OpenH264_DECODER_FOUND)
 endif()
 if (OpenH264_ENCODER_FOUND)
     set(SUPPORTS_AVC_ENCODING TRUE)
+endif()
+if (NVDEC_FOUND)
+    set(SUPPORTS_HEIC_DECODING TRUE)
+    set(SUPPORTS_AVC_DECODING TRUE)
+    set(SUPPORTS_JPEG_DECODING TRUE)
+    set(SUPPORTS_AVIF_DECODING TRUE)
 endif()
 
 if (WITH_UNCOMPRESSED_CODEC)

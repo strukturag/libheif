@@ -16,6 +16,7 @@ jobs:
           - { NAME: "graphics", WITH_GRAPHICS: 1 }
           - { NAME: "x265", WITH_X265: 1 }
           - { NAME: "x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1 }
+          - { NAME: "nvidia / graphics", WITH_GRAPHICS: 1, WITH_NVIDIA: 1 }
           - { NAME: "libde265 (1) / graphics", WITH_GRAPHICS: 1, WITH_LIBDE265: 1 }
           - { NAME: "libde265 (2) / graphics", WITH_GRAPHICS: 1, WITH_LIBDE265: 2 }
           - { NAME: "libde265 (1) / x265 / graphics", WITH_GRAPHICS: 1, WITH_X265: 1, WITH_LIBDE265: 1 }

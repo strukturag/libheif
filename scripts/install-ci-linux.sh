@@ -111,6 +111,13 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         "
 fi
 
+if [ ! -z "$WITH_NVIDIA" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        nvidia-cuda-toolkit \
+        libnvidia-decode-535 \
+        "
+fi
+
 if [ ! -z "$WITH_UNCOMPRESSED_CODEC" ]; then
     INSTALL_PACKAGES="$INSTALL_PACKAGES \
         libbrotli-dev \
