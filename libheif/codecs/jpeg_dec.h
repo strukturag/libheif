@@ -24,10 +24,11 @@
 #include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
+#include "codecs/decoder.h"
 
 #include <memory>
 #include <vector>
-#include <codecs/decoder.h>
+#include <optional>
 
 class Box_jpgC;
 
@@ -49,6 +50,19 @@ public:
 
 private:
   const std::shared_ptr<const Box_jpgC> m_jpgC; // Optional jpgC box. May be NULL.
+
+  struct ConfigInfo {
+    uint8_t sample_precision = 0;
+    heif_chroma chroma = heif_chroma_undefined;
+
+    uint8_t nComponents = 0;
+    uint8_t h_sampling[3]{};
+    uint8_t v_sampling[3]{};
+  };
+
+  std::optional<ConfigInfo> m_config;
+
+  Error parse_SOF();
 };
 
 #endif

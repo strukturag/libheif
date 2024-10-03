@@ -42,8 +42,12 @@ Result<std::vector<uint8_t>> Decoder_JPEG::read_bitstream_configuration_data() c
 static bool isSOF[16] = {true, true, true, true, false, true, true, true,
                          false, true, true, true, false, true, true, true};
 
-int Decoder_JPEG::get_luma_bits_per_pixel() const
+Error Decoder_JPEG::parse_SOF()
 {
+  if (m_config) {
+    return Error::Ok;
+  }
+
   // image data, usually from 'mdat'
 
   auto dataResult = get_compressed_data();
@@ -53,19 +57,79 @@ int Decoder_JPEG::get_luma_bits_per_pixel() const
 
   const std::vector<uint8_t>& data = dataResult.value;
 
+  const Error error_invalidSOF{heif_error_Invalid_input,
+                               heif_suberror_Unspecified,
+                               "Invalid JPEG SOF header"};
+
   for (size_t i = 0; i + 1 < data.size(); i++) {
     if (data[i] == 0xFF && (data[i + 1] & 0xF0) == 0xC0 && isSOF[data[i + 1] & 0x0F]) {
-      i += 4;
-      if (i < data.size()) {
-        return data[i];
+
+      if (i + 9 >= data.size()) {
+        return error_invalidSOF;
+      }
+
+      ConfigInfo info;
+      info.sample_precision = data[i + 4];
+      info.nComponents = data[i + 9];
+
+      if (i + 11 + 3 * info.nComponents >= data.size()) {
+        return error_invalidSOF;
+      }
+
+      for (int c = 0; c < std::min(info.nComponents, uint8_t(3)); c++) {
+        int ss = data[i + 11 + 3 * c];
+        info.h_sampling[c] = (ss >> 4) & 0xF;
+        info.v_sampling[c] = ss & 0xF;
+      }
+
+      if (info.nComponents == 1) {
+        info.chroma = heif_chroma_monochrome;
+      }
+      else if (info.nComponents != 3) {
+        return error_invalidSOF;
       }
       else {
-        return -1;
+        if (info.h_sampling[1] != info.h_sampling[2] ||
+            info.v_sampling[1] != info.v_sampling[2]) {
+          return error_invalidSOF;
+        }
+
+        if (info.h_sampling[0] == 2 && info.v_sampling[0] == 2 &&
+            info.h_sampling[1] == 1 && info.v_sampling[1] == 1) {
+          info.chroma = heif_chroma_420;
+        }
+        else if (info.h_sampling[0] == 2 && info.v_sampling[0] == 1 &&
+                 info.h_sampling[1] == 1 && info.v_sampling[1] == 1) {
+          info.chroma = heif_chroma_422;
+        }
+        else if (info.h_sampling[0] == 1 && info.v_sampling[0] == 1 &&
+                 info.h_sampling[1] == 1 && info.v_sampling[1] == 1) {
+          info.chroma = heif_chroma_444;
+        }
+        else {
+          return error_invalidSOF;
+        }
       }
+
+      m_config = info;
+
+      return Error::Ok;
     }
   }
 
-  return -1;
+  return error_invalidSOF;
+}
+
+
+int Decoder_JPEG::get_luma_bits_per_pixel() const
+{
+  Error err = const_cast<Decoder_JPEG*>(this)->parse_SOF();
+  if (err) {
+    return -1;
+  }
+  else {
+    return m_config->sample_precision;
+  }
 }
 
 
@@ -77,9 +141,12 @@ int Decoder_JPEG::get_chroma_bits_per_pixel() const
 
 Error Decoder_JPEG::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
-  //*out_chroma = (heif_chroma) (m_jpgC->);
+  Error err = const_cast<Decoder_JPEG*>(this)->parse_SOF();
+  if (err) {
+    return err;
+  }
 
-  *out_chroma = heif_chroma_420; // TODO
+  *out_chroma = m_config->chroma;
 
   if (*out_chroma == heif_chroma_monochrome) {
     *out_colorspace = heif_colorspace_monochrome;
