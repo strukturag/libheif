@@ -527,10 +527,6 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
@@ -538,6 +534,14 @@ public:
 
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+
+  std::shared_ptr<Decoder> get_decoder() const override;
+
+public:
+  Error on_load_file() override;
+
+private:
+  std::shared_ptr<class Decoder_JPEG2000> m_decoder;
 };
 
 #endif // LIBHEIF_JPEG2000_H

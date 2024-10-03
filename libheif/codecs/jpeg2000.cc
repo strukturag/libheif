@@ -20,9 +20,10 @@
 
 #include "jpeg2000.h"
 #include "libheif/api_structs.h"
+#include "jpeg2000_dec.h"
 #include <cstdint>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 
 static const uint16_t JPEG2000_CAP_MARKER = 0xFF50;
 static const uint16_t JPEG2000_SIZ_MARKER = 0xFF51;
@@ -542,34 +543,26 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
   return std::vector<uint8_t>{};
 }
 
-
-int ImageItem_JPEG2000::get_luma_bits_per_pixel() const
+std::shared_ptr<Decoder> ImageItem_JPEG2000::get_decoder() const
 {
-  Result<std::vector<uint8_t>> imageDataResult = get_compressed_image_data();
-  if (imageDataResult.error) {
-    return -1;
-  }
-
-  JPEG2000MainHeader header;
-  Error err = header.parseHeader(*imageDataResult);
-  if (err) {
-    return -1;
-  }
-  return header.get_precision(0);
+  return m_decoder;
 }
 
-
-int ImageItem_JPEG2000::get_chroma_bits_per_pixel() const
+Error ImageItem_JPEG2000::on_load_file()
 {
-  Result<std::vector<uint8_t>> imageDataResult = get_compressed_image_data();
-  if (imageDataResult.error) {
-    return -1;
+  auto j2kH = get_file()->get_property<Box_j2kH>(get_id());
+  if (!j2kH) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "No j2kH box found."};
   }
 
-  JPEG2000MainHeader header;
-  Error err = header.parseHeader(*imageDataResult);
-  if (err) {
-    return -1;
-  }
-  return header.get_precision(1);
+  m_decoder = std::make_shared<Decoder_JPEG2000>(j2kH);
+
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
+
+  m_decoder->set_data_extent(extent);
+
+  return Error::Ok;
 }
