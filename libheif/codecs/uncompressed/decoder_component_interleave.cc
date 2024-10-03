@@ -39,22 +39,6 @@
 #include "decoder_component_interleave.h"
 
 
-template<typename T>
-T nAlignmentSkipBytes(uint32_t alignment, T size)
-{
-  if (alignment == 0) {
-    return 0;
-  }
-
-  T residual = size % alignment;
-  if (residual == 0) {
-    return 0;
-  }
-
-  return alignment - residual;
-}
-
-
 Error ComponentInterleaveDecoder::decode_tile(const HeifContext* context,
                                               heif_item_id image_id,
                                               std::shared_ptr<HeifPixelImage>& img,

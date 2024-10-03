@@ -100,6 +100,21 @@ private:
 };
 
 
+template<typename T> T nAlignmentSkipBytes(uint32_t alignment, T size)
+{
+  if (alignment == 0) {
+    return 0;
+  }
+
+  T residual = size % alignment;
+  if (residual == 0) {
+    return 0;
+  }
+
+  return alignment - residual;
+}
+
+
 class AbstractDecoder
 {
 public:

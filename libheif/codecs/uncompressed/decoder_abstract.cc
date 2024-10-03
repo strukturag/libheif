@@ -37,22 +37,6 @@
 #include "decoder_abstract.h"
 
 
-template<typename T>
-T nAlignmentSkipBytes(uint32_t alignment, T size)
-{
-  if (alignment == 0) {
-    return 0;
-  }
-
-  T residual = size % alignment;
-  if (residual == 0) {
-    return 0;
-  }
-
-  return alignment - residual;
-}
-
-
 AbstractDecoder::AbstractDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd> cmpd, const std::shared_ptr<Box_uncC> uncC) :
     m_width(width),
     m_height(height),

@@ -195,7 +195,9 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/decoder_abstract.h
             codecs/uncompressed/decoder_abstract.cc
             codecs/uncompressed/decoder_component_interleave.h
-            codecs/uncompressed/decoder_component_interleave.cc)
+            codecs/uncompressed/decoder_component_interleave.cc
+            codecs/uncompressed/decoder_pixel_interleave.h
+            codecs/uncompressed/decoder_pixel_interleave.cc)
 endif ()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)
