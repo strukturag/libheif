@@ -19,7 +19,7 @@
  */
 
 #include "codecs/uncompressed/unc_dec.h"
-#include "codecs/uncompressed/unc_image.h"
+#include "codecs/uncompressed/unc_codec.h"
 #include "error.h"
 #include "context.h"
 

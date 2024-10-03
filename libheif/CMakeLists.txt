@@ -188,6 +188,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_boxes.cc
             codecs/uncompressed/unc_image.h
             codecs/uncompressed/unc_image.cc
+            codecs/uncompressed/unc_codec.h
+            codecs/uncompressed/unc_codec.cc
             codecs/uncompressed/unc_dec.h
             codecs/uncompressed/unc_dec.cc)
 endif ()

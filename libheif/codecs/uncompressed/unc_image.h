@@ -34,40 +34,6 @@
 class HeifContext;
 
 
-bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC);
-
-
-class UncompressedImageCodec
-{
-public:
-  static int get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID);
-  static int get_chroma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID);
-
-  static Error decode_uncompressed_image(const HeifContext* context,
-                                         heif_item_id ID,
-                                         std::shared_ptr<HeifPixelImage>& img);
-
-  static Error decode_uncompressed_image_tile(const HeifContext* context,
-                                              heif_item_id ID,
-                                              std::shared_ptr<HeifPixelImage>& img,
-                                              uint32_t tile_x0, uint32_t tile_y0);
-
-  static Error get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
-                                            const std::shared_ptr<const Box_cmpd>& cmpd,
-                                            heif_chroma* out_chroma,
-                                            heif_colorspace* out_colourspace);
-
-  static Result<std::shared_ptr<HeifPixelImage>> create_image(std::shared_ptr<const Box_cmpd>,
-                                                              std::shared_ptr<const Box_uncC>,
-                                                              uint32_t width,
-                                                              uint32_t height);
-
-  static Error check_header_validity(const std::shared_ptr<const Box_ispe>&,
-                                     const std::shared_ptr<const Box_cmpd>&,
-                                     const std::shared_ptr<const Box_uncC>&);
-};
-
-
 class ImageItem_uncompressed : public ImageItem
 {
 public:
