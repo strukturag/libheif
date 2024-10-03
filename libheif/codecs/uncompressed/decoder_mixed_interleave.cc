@@ -18,15 +18,13 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
-#include <algorithm>
-#include <cassert>
+#include "decoder_mixed_interleave.h"
 #include "context.h"
 #include "error.h"
-#include "libheif/heif.h"
-#include "unc_dec.h"
 
-#include "decoder_mixed_interleave.h"
+#include <cstring>
+#include <cassert>
+#include <vector>
 
 
 Error MixedInterleaveDecoder::decode_tile(const HeifContext* context,

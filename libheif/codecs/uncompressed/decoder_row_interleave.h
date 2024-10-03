@@ -22,6 +22,8 @@
 #define UNCI_DECODER_ROW_INTERLEAVE_H
 
 #include "decoder_abstract.h"
+#include <memory>
+#include <utility>
 
 
 class RowInterleaveDecoder : public AbstractDecoder

@@ -41,7 +41,8 @@
 
 #include "decoder_abstract.h"
 #include "decoder_component_interleave.h"
-
+#include <memory>
+#include <utility>
 
 
 class PixelInterleaveDecoder : public AbstractDecoder

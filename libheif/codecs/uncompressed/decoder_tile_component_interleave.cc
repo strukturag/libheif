@@ -19,16 +19,13 @@
  */
 
 
-#include <algorithm>
-#include <map>
-#include <cassert>
-
+#include "decoder_tile_component_interleave.h"
 #include "context.h"
 #include "error.h"
-#include "libheif/heif.h"
-#include "unc_dec.h"
 
-#include "decoder_tile_component_interleave.h"
+#include <map>
+#include <cassert>
+#include <vector>
 
 
 Error TileComponentInterleaveDecoder::decode_tile(const HeifContext* context,

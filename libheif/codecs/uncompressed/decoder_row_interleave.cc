@@ -19,13 +19,11 @@
  */
 
 #include "decoder_row_interleave.h"
-
-#include <algorithm>
-#include <cassert>
 #include "context.h"
 #include "error.h"
-#include "libheif/heif.h"
-#include "unc_dec.h"
+
+#include <cassert>
+#include <vector>
 
 
 Error RowInterleaveDecoder::decode_tile(const HeifContext* context,

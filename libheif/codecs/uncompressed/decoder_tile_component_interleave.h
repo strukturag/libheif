@@ -22,6 +22,8 @@
 #define UNCI_DECODER_TILE_COMPONENT_INTERLEAVE_H
 
 #include "decoder_abstract.h"
+#include <memory>
+#include <utility>
 
 
 class TileComponentInterleaveDecoder : public AbstractDecoder

@@ -22,6 +22,8 @@
 #define UNCI_DECODER_COMPONENT_INTERLEAVE_H
 
 #include "decoder_abstract.h"
+#include <memory>
+#include <utility>
 
 
 class ComponentInterleaveDecoder : public AbstractDecoder

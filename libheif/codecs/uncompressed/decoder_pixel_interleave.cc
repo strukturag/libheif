@@ -19,12 +19,11 @@
  */
 
 #include "decoder_pixel_interleave.h"
-
-#include <algorithm>
-#include <cassert>
 #include "context.h"
 #include "error.h"
-#include "libheif/heif.h"
+
+#include <cassert>
+#include <vector>
 
 
 Error PixelInterleaveDecoder::decode_tile(const HeifContext* context,
