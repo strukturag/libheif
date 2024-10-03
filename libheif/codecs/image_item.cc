@@ -450,7 +450,9 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
     return err;
   }
 
-  return get_decoder()->get_coded_image_colorspace(out_colorspace, out_chroma);
+  auto decoder = get_decoder();
+  assert(decoder);
+  return decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
 
   // TODO: this should be codec specific. JPEG 2000, for example, can use RGB internally.
 
