@@ -187,7 +187,9 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_boxes.h
             codecs/uncompressed/unc_boxes.cc
             codecs/uncompressed/unc_image.h
-            codecs/uncompressed/unc_image.cc)
+            codecs/uncompressed/unc_image.cc
+            codecs/uncompressed/unc_dec.h
+            codecs/uncompressed/unc_dec.cc)
 endif ()
 
 write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake COMPATIBILITY ExactVersion)

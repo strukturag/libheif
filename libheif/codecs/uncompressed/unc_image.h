@@ -33,6 +33,10 @@
 
 class HeifContext;
 
+
+bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC);
+
+
 class UncompressedImageCodec
 {
 public:
@@ -82,10 +86,6 @@ public:
 
   bool is_ispe_essential() const override { return true; }
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
   // Code from encode_uncompressed_image() has been moved to here.
@@ -94,6 +94,10 @@ public:
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
   heif_image_tiling get_heif_image_tiling() const;
+
+  Error on_load_file() override;
+
+public:
 
   // --- encoding
 
@@ -109,7 +113,11 @@ public:
 
   Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
 
+protected:
+  std::shared_ptr<struct Decoder> get_decoder() const override;
+
 private:
+  std::shared_ptr<class Decoder_uncompressed> m_decoder;
   /*
   Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                      const heif_unci_image_parameters* parameters,

@@ -34,9 +34,11 @@
 #include "unc_types.h"
 #include "unc_boxes.h"
 #include "unc_image.h"
+#include "unc_dec.h"
 #include "codecs/image_item.h"
 
-static bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
+
+bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
 {
   return ((uncC != nullptr) && (uncC->get_version() == 1) && ((uncC->get_profile() == fourcc("rgb3")) || (uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))));
 }
@@ -304,103 +306,6 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
   }
   else {
     return Error::Ok;
-  }
-}
-
-
-int UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
-{
-  std::shared_ptr<Box_uncC> uncC_box = heif_file.get_property<Box_uncC>(imageID);
-  std::shared_ptr<Box_cmpd> cmpd_box = heif_file.get_property<Box_cmpd>(imageID);
-
-  if (!uncC_box) {
-    return -1;
-  }
-
-  if (!cmpd_box) {
-    if (isKnownUncompressedFrameConfigurationBoxProfile(uncC_box)) {
-      return 8;
-    } else {
-      return -1;
-    }
-  }
-
-  int luma_bits = 0;
-  int alternate_channel_bits = 0;
-  for (Box_uncC::Component component : uncC_box->get_components()) {
-    uint16_t component_index = component.component_index;
-    if (component_index >= cmpd_box->get_components().size()) {
-      return -1;
-    }
-    auto component_type = cmpd_box->get_components()[component_index].component_type;
-    switch (component_type) {
-      case component_type_monochrome:
-      case component_type_red:
-      case component_type_green:
-      case component_type_blue:
-        alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
-        break;
-      case component_type_Y:
-        luma_bits = std::max(luma_bits, (int)component.component_bit_depth);
-        break;
-        // TODO: there are other things we'll need to handle eventually, like palette.
-    }
-  }
-  if (luma_bits > 0) {
-    return luma_bits;
-  }
-  else if (alternate_channel_bits > 0) {
-    return alternate_channel_bits;
-  }
-  else {
-    return 8;
-  }
-}
-
-int UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(const HeifFile& heif_file, heif_item_id imageID)
-{
-  std::shared_ptr<Box_uncC> uncC_box = heif_file.get_property<Box_uncC>(imageID);
-  std::shared_ptr<Box_cmpd> cmpd_box = heif_file.get_property<Box_cmpd>(imageID);
-
-  if (uncC_box && uncC_box->get_version() == 1) {
-    // All of the version 1 cases are 8 bit
-    return 8;
-  }
-
-  if (!uncC_box || !cmpd_box) {
-    return -1;
-  }
-
-  int chroma_bits = 0;
-  int alternate_channel_bits = 0;
-  for (Box_uncC::Component component : uncC_box->get_components()) {
-    uint16_t component_index = component.component_index;
-    if (component_index >= cmpd_box->get_components().size()) {
-      return -1;
-    }
-    auto component_type = cmpd_box->get_components()[component_index].component_type;
-    switch (component_type) {
-      case component_type_monochrome:
-      case component_type_red:
-      case component_type_green:
-      case component_type_blue:
-        alternate_channel_bits = std::max(alternate_channel_bits, (int)component.component_bit_depth);
-        break;
-      case component_type_Cb:
-      case component_type_Cr:
-        chroma_bits = std::max(chroma_bits, (int)component.component_bit_depth);
-        break;
-        // TODO: there are other things we'll need to handle eventually, like palette.
-    }
-  }
-  if (chroma_bits > 0) {
-    return chroma_bits;
-  }
-  else if (alternate_channel_bits > 0) {
-    return alternate_channel_bits;
-  }
-  else {
-    return 8;
   }
 }
 
@@ -2178,20 +2083,6 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 }
 
 
-int ImageItem_uncompressed::get_luma_bits_per_pixel() const
-{
-  int bpp = UncompressedImageCodec::get_luma_bits_per_pixel_from_configuration_unci(*get_file(), get_id());
-  return bpp;
-}
-
-
-int ImageItem_uncompressed::get_chroma_bits_per_pixel() const
-{
-  int bpp = UncompressedImageCodec::get_chroma_bits_per_pixel_from_configuration_unci(*get_file(), get_id());
-  return bpp;
-}
-
-
 void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
 {
   auto ispe = get_file()->get_property<Box_ispe>(get_id());
@@ -2225,4 +2116,30 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
   tiling.number_of_extra_dimensions = 0;
 
   return tiling;
+}
+
+std::shared_ptr<Decoder> ImageItem_uncompressed::get_decoder() const
+{
+  return m_decoder;
+}
+
+Error ImageItem_uncompressed::on_load_file()
+{
+  std::shared_ptr<Box_cmpd> cmpd = get_file()->get_property<Box_cmpd>(get_id());
+  std::shared_ptr<Box_uncC> uncC = get_file()->get_property<Box_uncC>(get_id());
+
+  if (!uncC) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "No 'uncC' box found."};
+  }
+
+  m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd);
+
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
+
+  m_decoder->set_data_extent(extent);
+
+  return Error::Ok;
 }

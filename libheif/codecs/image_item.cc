@@ -436,6 +436,7 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
     return err;
   }
 
+  // TODO: should we use this or maybe use this just as an additional check that pixi and coded colorspace match?
   auto pixi = m_heif_context->get_heif_file()->get_property<Box_pixi>(id);
   if (pixi && pixi->get_num_channels() == 1) {
     *out_colorspace = heif_colorspace_monochrome;
@@ -453,53 +454,6 @@ Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, hei
   auto decoder = get_decoder();
   assert(decoder);
   return decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
-
-  // TODO: this should be codec specific. JPEG 2000, for example, can use RGB internally.
-
-  *out_colorspace = heif_colorspace_YCbCr;
-  *out_chroma = heif_chroma_undefined;
-
-  if (auto hvcC = m_heif_context->get_heif_file()->get_property<Box_hvcC>(id)) {
-    *out_chroma = (heif_chroma) (hvcC->get_configuration().chroma_format);
-  }
-  else if (auto vvcC = m_heif_context->get_heif_file()->get_property<Box_vvcC>(id)) {
-    *out_chroma = (heif_chroma) (vvcC->get_configuration().chroma_format_idc);
-  }
-  else if (auto av1C = m_heif_context->get_heif_file()->get_property<Box_av1C>(id)) {
-    *out_chroma = (heif_chroma) (av1C->get_configuration().get_heif_chroma());
-  }
-  else if (auto j2kH = m_heif_context->get_heif_file()->get_property<Box_j2kH>(id)) {
-    Result<std::vector<uint8_t>> dataResult = get_compressed_image_data();
-    if (dataResult.error) {
-      return dataResult.error;
-    }
-
-    JPEG2000MainHeader jpeg2000Header;
-    err = jpeg2000Header.parseHeader(*dataResult);
-    if (err) {
-      return err;
-    }
-    *out_chroma = jpeg2000Header.get_chroma_format();
-  }
-#if WITH_UNCOMPRESSED_CODEC
-  else if (auto uncC = m_heif_context->get_heif_file()->get_property<Box_uncC>(id)) {
-    if (uncC->get_version() == 1) {
-      // This is the shortform case, no cmpd box, and always some kind of RGB
-      *out_colorspace = heif_colorspace_RGB;
-      if (uncC->get_profile() == fourcc("rgb3")) {
-        *out_chroma = heif_chroma_interleaved_RGB;
-      }
-      else if ((uncC->get_profile() == fourcc("rgba")) || (uncC->get_profile() == fourcc("abgr"))) {
-        *out_chroma = heif_chroma_interleaved_RGBA;
-      }
-    }
-    if (auto cmpd = m_heif_context->get_heif_file()->get_property<Box_cmpd>(id)) {
-      UncompressedImageCodec::get_heif_chroma_uncompressed(uncC, cmpd, out_chroma, out_colorspace);
-    }
-  }
-#endif
-
-  return err;
 }
 
 
