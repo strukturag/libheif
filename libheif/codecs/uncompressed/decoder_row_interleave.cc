@@ -49,13 +49,13 @@ Error RowInterleaveDecoder::decode_tile(const HeifContext* context,
       bits_per_row = (bits_per_row + 7) & ~7U;
 
       uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-      bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+      skip_to_alignment(bytes_per_component, entry.component_alignment);
       bits_per_component = bytes_per_component * 8;
     }
 
     if (m_uncC->get_row_align_size() != 0) {
       uint32_t bytes_this_row = (bits_per_component * m_tile_width + 7) / 8;
-      bytes_this_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_this_row);
+      skip_to_alignment(bytes_this_row, m_uncC->get_row_align_size());
       bits_per_row += bytes_this_row * 8;
     }
     else {
@@ -67,14 +67,14 @@ Error RowInterleaveDecoder::decode_tile(const HeifContext* context,
 
   uint32_t bytes_per_row = (bits_per_row + 7) / 8;
   if (m_uncC->get_row_align_size()) {
-    bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+    skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
   }
 
   uint64_t total_tile_size = 0;
   total_tile_size += bytes_per_row * static_cast<uint64_t>(m_tile_height);
 
   if (m_uncC->get_tile_align_size() != 0) {
-    total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
+    skip_to_alignment(total_tile_size, m_uncC->get_tile_align_size());
   }
 
   assert(m_tile_width > 0);

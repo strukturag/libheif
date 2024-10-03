@@ -55,7 +55,7 @@ Error MixedInterleaveDecoder::decode_tile(const HeifContext* context,
       uint32_t bits_per_component = entry.bits_per_component_sample;
       if (entry.component_alignment > 0) {
         uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-        bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+        skip_to_alignment(bytes_per_component, entry.component_alignment);
         bits_per_component = bytes_per_component * 8;
       }
 
@@ -68,7 +68,7 @@ Error MixedInterleaveDecoder::decode_tile(const HeifContext* context,
 
 
   if (m_uncC->get_tile_align_size() != 0) {
-    tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), tile_size);
+    skip_to_alignment(tile_size, m_uncC->get_tile_align_size());
   }
 
   assert(m_tile_width > 0);

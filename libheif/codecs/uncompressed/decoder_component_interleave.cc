@@ -47,18 +47,18 @@ Error ComponentInterleaveDecoder::decode_tile(const HeifContext* context,
     uint32_t bits_per_component = entry.bits_per_component_sample;
     if (entry.component_alignment > 0) {
       uint32_t bytes_per_component = (bits_per_component + 7) / 8;
-      bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+      skip_to_alignment(bytes_per_component, entry.component_alignment);
       bits_per_component = bytes_per_component * 8;
     }
 
     uint32_t bytes_per_tile_row = (bits_per_component * entry.tile_width + 7) / 8;
-    bytes_per_tile_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_tile_row);
+    skip_to_alignment(bytes_per_tile_row, m_uncC->get_row_align_size());
     uint64_t bytes_per_tile = bytes_per_tile_row * entry.tile_height;
     total_tile_size += bytes_per_tile;
   }
 
   if (m_uncC->get_tile_align_size() != 0) {
-    total_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), total_tile_size);
+    skip_to_alignment(total_tile_size, m_uncC->get_tile_align_size());
   }
 
   assert(m_tile_width > 0);

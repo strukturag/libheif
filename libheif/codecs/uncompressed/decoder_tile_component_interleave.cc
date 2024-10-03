@@ -58,26 +58,26 @@ Error TileComponentInterleaveDecoder::decode_tile(const HeifContext* context,
       //bits_per_row = (bits_per_row + 7) & ~7U;
 
       uint32_t bytes_per_component = (bits_per_pixel + 7) / 8;
-      bytes_per_component += nAlignmentSkipBytes(entry.component_alignment, bytes_per_component);
+      skip_to_alignment(bytes_per_component, entry.component_alignment);
       bits_per_pixel = bytes_per_component * 8;
     }
 
     uint32_t bytes_per_row;
     if (m_uncC->get_pixel_size() != 0) { // TODO: does pixel_size apply here?
       uint32_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
-      bytes_per_pixel += nAlignmentSkipBytes(m_uncC->get_pixel_size(), bytes_per_pixel);
+      skip_to_alignment(bytes_per_pixel, m_uncC->get_pixel_size());
       bytes_per_row = bytes_per_pixel * m_tile_width;
     }
     else {
       bytes_per_row = (bits_per_pixel * m_tile_width + 7) / 8;
     }
 
-    bytes_per_row += nAlignmentSkipBytes(m_uncC->get_row_align_size(), bytes_per_row);
+    skip_to_alignment(bytes_per_row, m_uncC->get_row_align_size());
 
     uint64_t component_tile_size = bytes_per_row * static_cast<uint64_t>(m_tile_height);
 
     if (m_uncC->get_tile_align_size() != 0) {
-      component_tile_size += nAlignmentSkipBytes(m_uncC->get_tile_align_size(), component_tile_size);
+      skip_to_alignment(component_tile_size, m_uncC->get_tile_align_size());
     }
 
     channel_tile_size[entry.channel] = component_tile_size;

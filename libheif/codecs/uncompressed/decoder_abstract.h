@@ -102,18 +102,18 @@ private:
 };
 
 
-template<typename T> T nAlignmentSkipBytes(uint32_t alignment, T size)
+template<typename T> void skip_to_alignment(T& position, uint32_t alignment)
 {
   if (alignment == 0) {
-    return 0;
+    return;
   }
 
-  T residual = size % alignment;
+  T residual = position % alignment;
   if (residual == 0) {
-    return 0;
+    return;
   }
 
-  return alignment - residual;
+  position += alignment - residual;
 }
 
 
