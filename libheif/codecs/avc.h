@@ -29,6 +29,7 @@
 #include <memory>
 #include "codecs/image_item.h"
 
+
 class Box_avcC : public Box {
 public:
   Box_avcC() { set_short_type(fourcc("avcC")); }
@@ -108,7 +109,7 @@ public:
   Error on_load_file() override;
 
 protected:
-  std::shared_ptr<struct Decoder> get_decoder() const override;
+  std::shared_ptr<Decoder> get_decoder() const override;
 
 public:
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,

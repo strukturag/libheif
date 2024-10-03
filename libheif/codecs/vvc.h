@@ -128,7 +128,7 @@ public:
   Error on_load_file() override;
 
 protected:
-  std::shared_ptr<struct Decoder> get_decoder() const override;
+  std::shared_ptr<Decoder> get_decoder() const override;
 
   Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
 
