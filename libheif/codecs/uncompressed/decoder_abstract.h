@@ -28,6 +28,8 @@
 #include <iostream>
 #include <cassert>
 #include <utility>
+#include <vector>
+#include <memory>
 
 #include "common_utils.h"
 #include "context.h"
