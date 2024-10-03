@@ -24,6 +24,7 @@
 #include "context.h"
 
 #include <string>
+#include <algorithm>
 
 
 Result<std::vector<uint8_t>> Decoder_uncompressed::read_bitstream_configuration_data() const
