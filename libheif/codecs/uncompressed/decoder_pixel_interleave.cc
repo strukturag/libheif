@@ -18,25 +18,13 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
-#include <map>
-#include <iostream>
-#include <cassert>
-#include <utility>
+#include "decoder_pixel_interleave.h"
 
-#include "common_utils.h"
+#include <algorithm>
+#include <cassert>
 #include "context.h"
-#include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
-#include "unc_types.h"
-#include "unc_boxes.h"
-#include "unc_codec.h"
-#include "unc_dec.h"
-
-#include "decoder_pixel_interleave.h"
 
 
 Error PixelInterleaveDecoder::decode_tile(const HeifContext* context,

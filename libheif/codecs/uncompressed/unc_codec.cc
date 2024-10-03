@@ -18,23 +18,14 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
-#include <map>
-#include <iostream>
-#include <cassert>
-#include <utility>
+#include "unc_codec.h"
 
 #include "common_utils.h"
 #include "context.h"
-#include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
 #include "unc_types.h"
 #include "unc_boxes.h"
-#include "unc_codec.h"
-#include "unc_dec.h"
 
 #include "decoder_abstract.h"
 #include "decoder_component_interleave.h"
@@ -42,6 +33,11 @@
 #include "decoder_mixed_interleave.h"
 #include "decoder_row_interleave.h"
 #include "decoder_tile_component_interleave.h"
+
+#include <algorithm>
+#include <map>
+#include <iostream>
+#include <cassert>
 
 
 bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
@@ -401,23 +397,19 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
 
 static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd>& cmpd, const std::shared_ptr<Box_uncC>& uncC)
 {
-  if (uncC->get_interleave_type() == interleave_mode_component) {
-    return new ComponentInterleaveDecoder(width, height, cmpd, uncC);
-  }
-  else if (uncC->get_interleave_type() == interleave_mode_pixel) {
-    return new PixelInterleaveDecoder(width, height, cmpd, uncC);
-  }
-  else if (uncC->get_interleave_type() == interleave_mode_mixed) {
-    return new MixedInterleaveDecoder(width, height, cmpd, uncC);
-  }
-  else if (uncC->get_interleave_type() == interleave_mode_row) {
-    return new RowInterleaveDecoder(width, height, cmpd, uncC);
-  }
-  else if (uncC->get_interleave_type() == interleave_mode_tile_component) {
-    return new TileComponentInterleaveDecoder(width, height, cmpd, uncC);
-  }
-  else {
-    return nullptr;
+  switch (uncC->get_interleave_type()) {
+    case interleave_mode_component:
+      return new ComponentInterleaveDecoder(width, height, cmpd, uncC);
+    case interleave_mode_pixel:
+      return new PixelInterleaveDecoder(width, height, cmpd, uncC);
+    case interleave_mode_mixed:
+      return new MixedInterleaveDecoder(width, height, cmpd, uncC);
+    case interleave_mode_row:
+      return new RowInterleaveDecoder(width, height, cmpd, uncC);
+    case interleave_mode_tile_component:
+      return new TileComponentInterleaveDecoder(width, height, cmpd, uncC);
+    default:
+      return nullptr;
   }
 }
 

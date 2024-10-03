@@ -18,10 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdint>
 #include <cstring>
 #include <algorithm>
-#include <map>
 #include <iostream>
 #include <cassert>
 #include <utility>

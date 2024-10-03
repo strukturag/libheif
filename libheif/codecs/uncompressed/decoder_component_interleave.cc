@@ -18,22 +18,11 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdint>
-#include <cstring>
 #include <algorithm>
-#include <map>
-#include <iostream>
 #include <cassert>
-#include <utility>
-
-#include "common_utils.h"
 #include "context.h"
-#include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
-#include "unc_types.h"
-#include "unc_boxes.h"
-#include "unc_codec.h"
 #include "unc_dec.h"
 
 #include "decoder_component_interleave.h"

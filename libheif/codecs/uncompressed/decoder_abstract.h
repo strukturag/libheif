@@ -127,13 +127,9 @@ public:
                             std::shared_ptr<HeifPixelImage>& img,
                             uint32_t out_x0, uint32_t out_y0,
                             uint32_t image_width, uint32_t image_height,
-                            uint32_t tile_x, uint32_t tile_y)
-  {
-    assert(false);
-    return Error{heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_image_type,
-                 "unci tile decoding not supported for this image type"};
-  }
+                            uint32_t tile_x, uint32_t tile_y) = 0;
+
+  void buildChannelList(std::shared_ptr<HeifPixelImage>& img);
 
 protected:
   AbstractDecoder(uint32_t width, uint32_t height,
@@ -178,10 +174,6 @@ protected:
 
   std::vector<ChannelListEntry> channelList;
 
-public:
-  void buildChannelList(std::shared_ptr<HeifPixelImage>& img);
-
-protected:
   void processComponentSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_row_offset, uint32_t tile_column, uint32_t tile_x);
 
   // Handles the case where a row consists of a single component type
@@ -198,11 +190,6 @@ protected:
   // Not valid for multi-Y pixel interleave
   void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset);
 
-private:
-  ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
-
-protected:
-
   // generic compression and uncompressed, per 23001-17
   const Error get_compressed_image_data_uncompressed(const HeifContext* context, heif_item_id ID,
                                                      std::vector<uint8_t>* data,
@@ -213,6 +200,9 @@ protected:
   const Error do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
                                  std::vector<uint8_t> compressed_data,
                                  std::vector<uint8_t>* data) const;
+
+private:
+  ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
 };
 
 #endif
