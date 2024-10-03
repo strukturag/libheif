@@ -62,14 +62,20 @@ set(libheif_sources
         codecs/avif_dec.h
         codecs/jpeg.h
         codecs/jpeg.cc
+        codecs/jpeg_dec.h
+        codecs/jpeg_dec.cc
         codecs/jpeg2000.h
         codecs/jpeg2000.cc
         codecs/jpeg2000_dec.h
         codecs/jpeg2000_dec.cc
         codecs/vvc.h
         codecs/vvc.cc
+        codecs/vvc_dec.h
+        codecs/vvc_dec.cc
         codecs/avc.h
         codecs/avc.cc
+        codecs/avc_dec.h
+        codecs/avc_dec.cc
         codecs/mask_image.h
         codecs/mask_image.cc
         codecs/image_item.h

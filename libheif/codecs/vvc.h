@@ -120,17 +120,20 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_VVC; }
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
-
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class) override;
 
+  Error on_load_file() override;
+
 protected:
+  std::shared_ptr<struct Decoder> get_decoder() const override;
+
   Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+
+private:
+  std::shared_ptr<class Decoder_VVC> m_decoder;
 };
 
 #endif // LIBHEIF_VVC_H

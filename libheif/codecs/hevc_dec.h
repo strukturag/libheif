@@ -24,20 +24,18 @@
 #include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
-#include "file.h"
 
 #include <memory>
-#include <string>
-#include <utility>
 #include <vector>
-#include <codecs/hevc.h>
 #include <codecs/decoder.h>
+
+class Box_hvcC;
 
 
 class Decoder_HEVC : public Decoder
 {
 public:
-  Decoder_HEVC(const std::shared_ptr<const Box_hvcC>& hvcC) : m_hvcC(hvcC) {}
+  explicit Decoder_HEVC(const std::shared_ptr<const Box_hvcC>& hvcC) : m_hvcC(hvcC) {}
 
   heif_compression_format get_compression_format() const override { return heif_compression_HEVC; }
 

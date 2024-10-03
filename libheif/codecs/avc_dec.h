@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HEIF_AVIF_DEC_H
-#define HEIF_AVIF_DEC_H
+#ifndef HEIF_AVC_DEC_H
+#define HEIF_AVC_DEC_H
 
 #include "libheif/heif.h"
 #include "error.h"
@@ -28,15 +28,15 @@
 #include <vector>
 #include <codecs/decoder.h>
 
-class Box_av1C;
+class Box_avcC;
 
 
-class Decoder_AVIF : public Decoder
+class Decoder_AVC : public Decoder
 {
 public:
-  explicit Decoder_AVIF(const std::shared_ptr<const Box_av1C>& av1C) : m_av1C(av1C) {}
+  explicit Decoder_AVC(const std::shared_ptr<const Box_avcC>& avcC) : m_avcC(avcC) {}
 
-  heif_compression_format get_compression_format() const override { return heif_compression_AV1; }
+  heif_compression_format get_compression_format() const override { return heif_compression_AVC; }
 
   int get_luma_bits_per_pixel() const override;
 
@@ -47,7 +47,7 @@ public:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
 private:
-  const std::shared_ptr<const Box_av1C> m_av1C;
+  const std::shared_ptr<const Box_avcC> m_avcC;
 };
 
 #endif

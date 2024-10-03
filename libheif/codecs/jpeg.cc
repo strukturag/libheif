@@ -19,6 +19,7 @@
  */
 
 #include "jpeg.h"
+#include "jpeg_dec.h"
 #include <string>
 #include "security_limits.h"
 #include <pixelimage.h>
@@ -165,50 +166,26 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
 
 Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(heif_item_id itemId) const
 {
-  // --- get codec configuration
-
-  std::shared_ptr<Box_jpgC> jpgC_box = get_file()->get_property<Box_jpgC>(itemId);
-  if (jpgC_box) {
-    return jpgC_box->get_data();
-  }
-
-  return std::vector<uint8_t>{};
+  return m_decoder->read_bitstream_configuration_data();
 }
 
 
-// This checks whether a start code FFCx with nibble 'x' is a SOF marker.
-// E.g. FFC0-FFC3 are, while FFC4 is not.
-static bool isSOF[16] = {true, true, true, true, false, true, true, true,
-                         false, true, true, true, false, true, true, true};
-
-int ImageItem_JPEG::get_luma_bits_per_pixel() const
+std::shared_ptr<Decoder> ImageItem_JPEG::get_decoder() const
 {
-  std::vector<uint8_t> data;
-
-  // image data, usually from 'mdat'
-
-  Error error = get_file()->append_data_from_iloc(get_id(), data);
-  if (error) {
-    return error;
-  }
-
-  for (size_t i = 0; i + 1 < data.size(); i++) {
-    if (data[i] == 0xFF && (data[i + 1] & 0xF0) == 0xC0 && isSOF[data[i + 1] & 0x0F]) {
-      i += 4;
-      if (i < data.size()) {
-        return data[i];
-      }
-      else {
-        return -1;
-      }
-    }
-  }
-
-  return -1;
+  return m_decoder;
 }
 
-
-int ImageItem_JPEG::get_chroma_bits_per_pixel() const
+Error ImageItem_JPEG::on_load_file()
 {
-  return get_luma_bits_per_pixel();
+  // Note: jpgC box is optional. NULL is a valid value.
+  auto jpgC_box = get_file()->get_property<Box_jpgC>(get_id());
+
+  m_decoder = std::make_shared<Decoder_JPEG>(jpgC_box);
+
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
+
+  m_decoder->set_data_extent(extent);
+
+  return Error::Ok;
 }

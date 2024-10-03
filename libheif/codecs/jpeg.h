@@ -36,7 +36,7 @@ public:
     set_short_type(fourcc("jpgC"));
   }
 
-  const std::vector<uint8_t>& get_data() { return m_data; }
+  const std::vector<uint8_t>& get_data() const { return m_data; }
 
   void set_data(const std::vector<uint8_t>& data) { m_data = data; }
 
@@ -65,9 +65,10 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG; }
 
-  int get_luma_bits_per_pixel() const override;
 
-  int get_chroma_bits_per_pixel() const override;
+  Error on_load_file() override;
+
+public:
 
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,
@@ -75,7 +76,12 @@ public:
                                         enum heif_image_input_class input_class) override;
 
 protected:
+  std::shared_ptr<struct Decoder> get_decoder() const override;
+
   Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+
+private:
+  std::shared_ptr<class Decoder_JPEG> m_decoder;
 };
 
 #endif // LIBHEIF_JPEG_H

@@ -26,9 +26,13 @@
 
 #include "codecs/hevc_dec.h"
 #include "codecs/avif_dec.h"
+#include "codecs/avc_dec.h"
+#include "codecs/vvc_dec.h"
+#include "codecs/jpeg_dec.h"
 #include "codecs/jpeg2000_dec.h"
+#include "avc.h"
+#include "jpeg.h"
 
-#include <limits>
 
 
 void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
@@ -99,9 +103,21 @@ std::shared_ptr<Decoder> Decoder::alloc_for_compression_format(const HeifContext
       auto av1C = ctx->get_heif_file()->get_property<Box_av1C>(id);
       return std::make_shared<Decoder_AVIF>(av1C);
     }
+    case fourcc("avc1"): {
+      auto avcC = ctx->get_heif_file()->get_property<Box_avcC>(id);
+      return std::make_shared<Decoder_AVC>(avcC);
+    }
     case fourcc("j2k1"): {
       auto j2kH = ctx->get_heif_file()->get_property<Box_j2kH>(id);
       return std::make_shared<Decoder_JPEG2000>(j2kH);
+    }
+    case fourcc("vvc1"): {
+      auto vvcC = ctx->get_heif_file()->get_property<Box_vvcC>(id);
+      return std::make_shared<Decoder_VVC>(vvcC);
+    }
+    case fourcc("jpeg"): {
+      auto jpgC = ctx->get_heif_file()->get_property<Box_jpgC>(id);
+      return std::make_shared<Decoder_JPEG>(jpgC);
     }
 #if WITH_UNCOMPRESSED_CODEC
 #endif

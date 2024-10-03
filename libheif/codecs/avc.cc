@@ -25,6 +25,7 @@
 #include <vector>
 #include "file.h"
 #include "context.h"
+#include "avc_dec.h"
 
 
 Error Box_avcC::parse(BitstreamRange& range)
@@ -355,39 +356,27 @@ Result<ImageItem::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<He
   return {};
 }
 
-Result<std::vector<uint8_t>> ImageItem_AVC::read_bitstream_configuration_data(heif_item_id itemId) const
-{
-  std::vector<uint8_t> data;
 
-  auto avcC_box = get_file()->get_property<Box_avcC>(itemId);
+std::shared_ptr<Decoder> ImageItem_AVC::get_decoder() const
+{
+  return m_decoder;
+}
+
+
+Error ImageItem_AVC::on_load_file()
+{
+  auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
   if (!avcC_box) {
     return Error{heif_error_Invalid_input,
-                 heif_suberror_No_avcC_box};
+                 heif_suberror_No_av1C_box};
   }
 
-  avcC_box->get_header_nals(data);
+  m_decoder = std::make_shared<Decoder_AVC>(avcC_box);
 
-  return data;
-}
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
+  m_decoder->set_data_extent(extent);
 
-int ImageItem_AVC::get_luma_bits_per_pixel() const
-{
-  auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
-  if (avcC_box) {
-    return avcC_box->get_configuration().bit_depth_luma;
-  }
-
-  return -1;
-}
-
-
-int ImageItem_AVC::get_chroma_bits_per_pixel() const
-{
-  auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
-  if (avcC_box) {
-    return avcC_box->get_configuration().bit_depth_chroma;
-  }
-
-  return -1;
+  return Error::Ok;
 }

@@ -18,25 +18,26 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HEIF_AVIF_DEC_H
-#define HEIF_AVIF_DEC_H
+#ifndef HEIF_JPEG_DEC_H
+#define HEIF_JPEG_DEC_H
 
 #include "libheif/heif.h"
+#include "box.h"
 #include "error.h"
 
 #include <memory>
 #include <vector>
 #include <codecs/decoder.h>
 
-class Box_av1C;
+class Box_jpgC;
 
 
-class Decoder_AVIF : public Decoder
+class Decoder_JPEG : public Decoder
 {
 public:
-  explicit Decoder_AVIF(const std::shared_ptr<const Box_av1C>& av1C) : m_av1C(av1C) {}
+  explicit Decoder_JPEG(const std::shared_ptr<const Box_jpgC>& jpgC) : m_jpgC(jpgC) {}
 
-  heif_compression_format get_compression_format() const override { return heif_compression_AV1; }
+  heif_compression_format get_compression_format() const override { return heif_compression_JPEG; }
 
   int get_luma_bits_per_pixel() const override;
 
@@ -47,7 +48,7 @@ public:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
 private:
-  const std::shared_ptr<const Box_av1C> m_av1C;
+  const std::shared_ptr<const Box_jpgC> m_jpgC; // Optional jpgC box. May be NULL.
 };
 
 #endif

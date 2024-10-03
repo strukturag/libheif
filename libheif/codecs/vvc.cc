@@ -19,6 +19,7 @@
  */
 
 #include "vvc.h"
+#include "vvc_dec.h"
 #include "file.h"
 #include <cstring>
 #include <string>
@@ -641,24 +642,25 @@ Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(he
 }
 
 
-int ImageItem_VVC::get_luma_bits_per_pixel() const
+std::shared_ptr<Decoder> ImageItem_VVC::get_decoder() const
 {
-  auto vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
-  if (vvcC_box) {
-    const Box_vvcC::configuration& config = vvcC_box->get_configuration();
-    if (config.ptl_present_flag) {
-      return config.bit_depth_minus8 + 8;
-    }
-    else {
-      return 8; // TODO: what shall we do if the bit-depth is unknown? Use PIXI?
-    }
-  }
-
-  return -1;
+  return m_decoder;
 }
 
-
-int ImageItem_VVC::get_chroma_bits_per_pixel() const
+Error ImageItem_VVC::on_load_file()
 {
-  return get_luma_bits_per_pixel();
+  auto vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
+  if (!vvcC_box) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_No_av1C_box};
+  }
+
+  m_decoder = std::make_shared<Decoder_VVC>(vvcC_box);
+
+  DataExtent extent;
+  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
+
+  m_decoder->set_data_extent(extent);
+
+  return Error::Ok;
 }

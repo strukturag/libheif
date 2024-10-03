@@ -105,19 +105,18 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_AVC; }
 
-  int get_luma_bits_per_pixel() const override;
-
-  int get_chroma_bits_per_pixel() const override;
+  Error on_load_file() override;
 
 protected:
-  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+  std::shared_ptr<struct Decoder> get_decoder() const override;
 
 public:
-
   Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class) override;
+
+  std::shared_ptr<class Decoder_AVC> m_decoder;
 };
 
 #endif
