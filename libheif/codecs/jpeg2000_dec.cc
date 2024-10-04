@@ -19,6 +19,7 @@
  */
 
 #include "jpeg2000_dec.h"
+#include "jpeg2000_boxes.h"
 #include "error.h"
 #include "context.h"
 

@@ -24,7 +24,7 @@
 #include "security_limits.h"
 #include "nclx.h"
 #include "codecs/jpeg_boxes.h"
-#include "codecs/jpeg2000.h"
+#include "codecs/jpeg2000_boxes.h"
 #include "codecs/hevc_boxes.h"
 #include "codecs/mask_image.h"
 #include "codecs/vvc.h"
