@@ -19,6 +19,7 @@
  */
 
 #include "hevc_dec.h"
+#include "hevc_boxes.h"
 #include "error.h"
 #include "context.h"
 

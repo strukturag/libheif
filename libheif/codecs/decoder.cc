@@ -32,6 +32,7 @@
 #include "codecs/jpeg2000_dec.h"
 #include "avc_boxes.h"
 #include "avif_boxes.h"
+#include "hevc_boxes.h"
 #include "jpeg.h"
 
 

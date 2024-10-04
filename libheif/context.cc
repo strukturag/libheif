@@ -31,6 +31,7 @@
 #include <cmath>
 #include <deque>
 #include <codecs/image_item.h>
+#include <codecs/hevc_boxes.h>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>

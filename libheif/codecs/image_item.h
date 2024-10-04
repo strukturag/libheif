@@ -298,8 +298,6 @@ public:
                        const struct heif_encoding_options& options,
                        enum heif_image_input_class input_class);
 
-  void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
-
   const std::shared_ptr<const color_profile_nclx>& get_color_profile_nclx() const { return m_color_profile_nclx; }
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }

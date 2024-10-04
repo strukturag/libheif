@@ -25,7 +25,7 @@
 #include "nclx.h"
 #include "codecs/jpeg.h"
 #include "codecs/jpeg2000.h"
-#include "codecs/hevc.h"
+#include "codecs/hevc_boxes.h"
 #include "codecs/mask_image.h"
 #include "codecs/vvc.h"
 #include "codecs/avc_boxes.h"

@@ -54,6 +54,8 @@ set(libheif_sources
         codecs/decoder.cc
         codecs/hevc.cc
         codecs/hevc.h
+        codecs/hevc_boxes.cc
+        codecs/hevc_boxes.h
         codecs/hevc_dec.cc
         codecs/hevc_dec.h
         codecs/avif.cc
