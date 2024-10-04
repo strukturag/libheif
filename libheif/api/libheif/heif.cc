@@ -31,14 +31,14 @@
 #include "error.h"
 #include "bitstream.h"
 #include "init.h"
-#include "codecs/grid.h"
-#include "codecs/overlay.h"
-#include "codecs/tild.h"
+#include "image-items/grid.h"
+#include "image-items/overlay.h"
+#include "image-items/tild.h"
 #include <set>
 #include <limits>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)
@@ -292,13 +292,13 @@ heif_brand2 heif_read_main_brand(const uint8_t* data, int len)
 }
 
 
-heif_brand2 heif_fourcc_to_brand(const char* fourcc)
+heif_brand2 heif_fourcc_to_brand(const char* fourcc_string)
 {
-  if (fourcc == nullptr || !fourcc[0] || !fourcc[1] || !fourcc[2] || !fourcc[3]) {
+  if (fourcc_string == nullptr || !fourcc_string[0] || !fourcc_string[1] || !fourcc_string[2] || !fourcc_string[3]) {
     return 0;
   }
 
-  return fourcc_to_uint32(fourcc);
+  return fourcc(fourcc_string);
 }
 
 
@@ -337,7 +337,7 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
     return -2;
   }
 
-  return ftyp->has_compatible_brand(fourcc_to_uint32(brand_fourcc)) ? 1 : 0;
+  return ftyp->has_compatible_brand(fourcc(brand_fourcc)) ? 1 : 0;
 }
 
 
@@ -3478,7 +3478,7 @@ struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
                                               const struct heif_image* image,
                                               struct heif_encoder* encoder)
 {
-  if (tiled_image->image->get_infe_type() == std::string{"tili"}) {
+  if (tiled_image->image->get_infe_type() == fourcc("tili")) {
     Error err = ctx->context->add_tild_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
     return err.error_struct(ctx->context.get());
   }
@@ -3642,8 +3642,14 @@ struct heif_error heif_context_add_generic_metadata(struct heif_context* ctx,
                                                     const void* data, int size,
                                                     const char* item_type, const char* content_type)
 {
+  if (item_type == nullptr || strlen(item_type) != 4) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "called heif_context_add_generic_metadata() with invalid 'item_type'."};
+  }
+
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   item_type, content_type, nullptr, heif_metadata_compression_off, nullptr);
+                                                   fourcc(item_type), content_type, nullptr, heif_metadata_compression_off, nullptr);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
@@ -3660,7 +3666,7 @@ struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx
                                                         heif_item_id* out_item_id)
 {
   Error error = ctx->context->add_generic_metadata(image_handle->image, data, size,
-                                                   "uri ", nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
+                                                   fourcc("uri "), nullptr, item_uri_type, heif_metadata_compression_off, out_item_id);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }

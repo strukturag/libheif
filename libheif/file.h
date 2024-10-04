@@ -23,9 +23,9 @@
 
 #include "box.h"
 #include "nclx.h"
-#include "codecs/avif.h"
-#include "codecs/hevc.h"
-#include "codecs/vvc.h"
+#include "image-items/avif.h"
+#include "image-items/hevc.h"
+#include "image-items/vvc.h"
 #include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
@@ -82,13 +82,13 @@ public:
 
   bool has_item_with_id(heif_item_id ID) const;
 
-  std::string get_item_type(heif_item_id ID) const;
+  uint32_t get_item_type_4cc(heif_item_id ID) const;
 
   std::string get_content_type(heif_item_id ID) const;
 
   std::string get_item_uri_type(heif_item_id ID) const;
 
-  Error get_compressed_image_data(heif_item_id ID, std::vector<uint8_t>* out_data) const;
+  Error get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const;
 
   Error append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const;
 
@@ -141,8 +141,6 @@ public:
     return nullptr;
   }
 
-  heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const; // TODO: move to ImageItem
-
   std::string debug_dump_boxes() const;
 
 
@@ -150,23 +148,21 @@ public:
 
   heif_item_id get_unused_item_id() const;
 
-  heif_item_id add_new_image(const char* item_type);
+  heif_item_id add_new_image(uint32_t item_type);
 
-  std::shared_ptr<Box_infe> add_new_infe_box(const char* item_type);
+  std::shared_ptr<Box_infe> add_new_infe_box(uint32_t item_type);
 
   void add_ispe_property(heif_item_id id, uint32_t width, uint32_t height, bool essential);
 
   // set irot/imir according to heif_orientation
   void add_orientation_properties(heif_item_id id, heif_orientation);
 
-  void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0);
-
   // TODO: can we remove the 'essential' parameter and take this from the box? Or is that depending on the context?
   heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
 
   heif_property_id add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
 
-  Result<heif_item_id> add_infe(const char* item_type, const uint8_t* data, size_t size);
+  Result<heif_item_id> add_infe(uint32_t item_type, const uint8_t* data, size_t size);
 
   Result<heif_item_id> add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size);
 

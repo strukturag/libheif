@@ -30,7 +30,8 @@
 #include <limits>
 #include <cmath>
 #include <deque>
-#include <codecs/image_item.h>
+#include "image-items/image_item.h"
+#include <codecs/hevc_boxes.h>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -44,18 +45,18 @@
 #include "compression.h"
 #include "color-conversion/colorconversion.h"
 #include "plugin_registry.h"
-#include "codecs/hevc.h"
-#include "codecs/vvc.h"
-#include "codecs/avif.h"
-#include "codecs/jpeg.h"
-#include "codecs/mask_image.h"
-#include "codecs/jpeg2000.h"
-#include "codecs/grid.h"
-#include "codecs/overlay.h"
-#include "codecs/tild.h"
+#include "image-items/hevc.h"
+#include "image-items/vvc.h"
+#include "image-items/avif.h"
+#include "image-items/jpeg.h"
+#include "image-items/mask_image.h"
+#include "image-items/jpeg2000.h"
+#include "image-items/grid.h"
+#include "image-items/overlay.h"
+#include "image-items/tild.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 
@@ -180,7 +181,7 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
 
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
-  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box("rgan");
+  std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("rgan"));
   box->set_hidden_item(true);
 
   auto regionItem = std::make_shared<RegionItem>(box->get_item_ID(), reference_width, reference_height);
@@ -230,21 +231,21 @@ std::string HeifContext::debug_dump_boxes() const
 }
 
 
-static bool item_type_is_image(const std::string& item_type, const std::string& content_type)
+static bool item_type_is_image(uint32_t item_type, const std::string& content_type)
 {
-  return (item_type == "hvc1" ||
-          item_type == "av01" ||
-          item_type == "grid" ||
-          item_type == "tild" ||
-          item_type == "iden" ||
-          item_type == "iovl" ||
-          item_type == "avc1" ||
-          item_type == "unci" ||
-          item_type == "vvc1" ||
-          item_type == "jpeg" ||
-          (item_type == "mime" && content_type == "image/jpeg") ||
-          item_type == "j2k1" ||
-          item_type == "mski");
+  return (item_type == fourcc("hvc1") ||
+          item_type == fourcc("av01") ||
+          item_type == fourcc("grid") ||
+          item_type == fourcc("tild") ||
+          item_type == fourcc("iden") ||
+          item_type == fourcc("iovl") ||
+          item_type == fourcc("avc1") ||
+          item_type == fourcc("unci") ||
+          item_type == fourcc("vvc1") ||
+          item_type == fourcc("jpeg") ||
+          (item_type == fourcc("mime") && content_type == "image/jpeg") ||
+          item_type == fourcc("j2k1") ||
+          item_type == fourcc("mski"));
 }
 
 
@@ -629,7 +630,7 @@ Error HeifContext::interpret_heif_file()
     auto& image = pair.second;
 
     std::shared_ptr<Box_infe> infe = m_heif_file->get_infe_box(image->get_id());
-    if (infe->get_item_type() == "hvc1") {
+    if (infe->get_item_type_4cc() == fourcc("hvc1")) {
 
       auto ipma = m_heif_file->get_ipma_box();
       auto ipco = m_heif_file->get_ipco_box();
@@ -640,7 +641,7 @@ Error HeifContext::interpret_heif_file()
                      "No hvcC property in hvc1 type image");
       }
     }
-    if (infe->get_item_type() == "vvc1") {
+    if (infe->get_item_type_4cc() == fourcc("vvc1")) {
 
       auto ipma = m_heif_file->get_ipma_box();
       auto ipco = m_heif_file->get_ipco_box();
@@ -669,7 +670,7 @@ Error HeifContext::interpret_heif_file()
       break;
     }
 
-    if (infe_box->get_item_type() == "grid") {
+    if (infe_box->get_item_type_4cc() == fourcc("grid")) {
       std::vector<heif_item_id> image_references = iref_box->get_references(id, fourcc("dimg"));
 
       if (image_references.empty()) {
@@ -698,12 +699,12 @@ Error HeifContext::interpret_heif_file()
   // --- read metadata and assign to image
 
   for (heif_item_id id : image_IDs) {
-    std::string item_type = m_heif_file->get_item_type(id);
+    uint32_t item_type = m_heif_file->get_item_type_4cc(id);
     std::string content_type = m_heif_file->get_content_type(id);
 
     // 'rgan': skip region annotations, handled next
     // 'iden': iden images are no metadata
-    if (item_type_is_image(item_type, content_type) || item_type == "rgan") {
+    if (item_type_is_image(item_type, content_type) || item_type == fourcc("rgan")) {
       continue;
     }
 
@@ -713,13 +714,13 @@ Error HeifContext::interpret_heif_file()
 
     std::shared_ptr<ImageMetadata> metadata = std::make_shared<ImageMetadata>();
     metadata->item_id = id;
-    metadata->item_type = item_type;
+    metadata->item_type = fourcc_to_string(item_type);
     metadata->content_type = content_type;
     metadata->item_uri_type = item_uri_type;
 
-    Error err = m_heif_file->get_compressed_image_data(id, &(metadata->m_data));
+    Error err = m_heif_file->get_uncompressed_item_data(id, &(metadata->m_data));
     if (err) {
-      if (item_type == "Exif" || item_type == "mime") {
+      if (item_type == fourcc("Exif") || item_type == fourcc("mime")) {
         // these item types should have data
         return err;
       }
@@ -771,15 +772,15 @@ Error HeifContext::interpret_heif_file()
   // --- read region item and assign to image(s)
 
   for (heif_item_id id : image_IDs) {
-    std::string item_type = m_heif_file->get_item_type(id);
-    if (item_type != "rgan") {
+    uint32_t item_type = m_heif_file->get_item_type_4cc(id);
+    if (item_type != fourcc("rgan")) {
       continue;
     }
 
     std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
     region_item->item_id = id;
     std::vector<uint8_t> region_data;
-    Error err = m_heif_file->get_compressed_image_data(id, &(region_data));
+    Error err = m_heif_file->get_uncompressed_item_data(id, &(region_data));
     if (err) {
       return err;
     }
@@ -875,10 +876,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
   // TODO: move this into ImageItem
 
-  std::string image_type = m_heif_file->get_item_type(ID);
-  if (image_type == "grid") {
+  uint32_t image_type = m_heif_file->get_item_type_4cc(ID);
+  if (image_type == fourcc("grid")) {
     std::vector<uint8_t> grid_data;
-    Error error = m_heif_file->get_compressed_image_data(ID, &grid_data);
+    Error error = m_heif_file->get_uncompressed_item_data(ID, &grid_data);
     if (error) {
       return false;
     }
@@ -937,10 +938,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
 
 Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_id& out) const
 {
-  std::string image_type = m_heif_file->get_item_type(id);
-  if (image_type == "grid" ||
-      image_type == "iden" ||
-      image_type == "iovl") {
+  uint32_t image_type = m_heif_file->get_item_type_4cc(id);
+  if (image_type == fourcc("grid") ||
+      image_type == fourcc("iden") ||
+      image_type == fourcc("iovl")) {
     auto iref_box = m_heif_file->get_iref_box();
     if (!iref_box) {
       return Error(heif_error_Invalid_input,
@@ -974,8 +975,6 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
                                                                   const struct heif_decoding_options& options,
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
-  std::string image_type = m_heif_file->get_item_type(ID);
-
   std::shared_ptr<ImageItem> imginfo;
   if (m_all_images.find(ID) != m_all_images.end()) {
     imginfo = m_all_images.find(ID)->second;
@@ -1185,7 +1184,7 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
   }
 
   // Create Grid Item
-  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
   out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1240,7 +1239,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
 
   // Create Grid Item
 
-  heif_item_id grid_id = m_heif_file->add_new_image("grid");
+  heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
   out_grid_image = std::make_shared<ImageItem>(this, grid_id);
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1286,7 +1285,7 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 
   // Create IOVL Item
 
-  heif_item_id iovl_id = m_heif_file->add_new_image("iovl");
+  heif_item_id iovl_id = m_heif_file->add_new_image(fourcc("iovl"));
   std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(this, iovl_id);
   m_all_images.insert(std::make_pair(iovl_id, iovl_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1518,19 +1517,19 @@ Error HeifContext::add_exif_metadata(const std::shared_ptr<ImageItem>& master_im
 
   return add_generic_metadata(master_image,
                               data_array.data(), (int) data_array.size(),
-                              "Exif", nullptr, nullptr, heif_metadata_compression_off, nullptr);
+                              fourcc("Exif"), nullptr, nullptr, heif_metadata_compression_off, nullptr);
 }
 
 
 Error HeifContext::add_XMP_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
                                     heif_metadata_compression compression)
 {
-  return add_generic_metadata(master_image, data, size, "mime", "application/rdf+xml", nullptr, compression, nullptr);
+  return add_generic_metadata(master_image, data, size, fourcc("mime"), "application/rdf+xml", nullptr, compression, nullptr);
 }
 
 
 Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size,
-                                        const char* item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
+                                        uint32_t item_type, const char* content_type, const char* item_uri_type, heif_metadata_compression compression,
                                         heif_item_id* out_item_id)
 {
   // create an infe box describing what kind of data we are storing (this also creates a new ID)
@@ -1561,7 +1560,7 @@ Error HeifContext::add_generic_metadata(const std::shared_ptr<ImageItem>& master
 
   // only set metadata compression for MIME type data which has 'content_encoding' field
   if (compression != heif_metadata_compression_off &&
-      strcmp(item_type, "mime") != 0) {
+      item_type != fourcc("mime")) {
     // TODO: error, compression not supported
   }
 

@@ -414,7 +414,7 @@ std::string Box_colr::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   if (m_color_profile) {
-    sstr << indent << "colour_type: " << to_fourcc(get_color_profile_type()) << "\n";
+    sstr << indent << "colour_type: " << fourcc_to_string(get_color_profile_type()) << "\n";
     sstr << m_color_profile->dump(indent);
   }
   else {

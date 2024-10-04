@@ -61,13 +61,7 @@ int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
 
 uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id item_id)
 {
-  auto type = ctx->context->get_heif_file()->get_item_type(item_id);
-  if (type.empty()) {
-    return 0;
-  }
-  else {
-    return fourcc(type.c_str());
-  }
+  return ctx->context->get_heif_file()->get_item_type_4cc(item_id);
 }
 
 
@@ -88,7 +82,7 @@ const char* heif_context_get_mime_item_content_type(const struct heif_context* c
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "mime") {
+  if (infe->get_item_type_4cc() != fourcc("mime")) {
     return nullptr;
   }
 
@@ -100,7 +94,7 @@ const char* heif_context_get_mime_item_content_encoding(const struct heif_contex
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "mime") {
+  if (infe->get_item_type_4cc() != fourcc("mime")) {
     return nullptr;
   }
 
@@ -113,7 +107,7 @@ const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, h
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
 
-  if (infe->get_item_type() != "uri ") {
+  if (infe->get_item_type_4cc() != fourcc("uri ")) {
     return nullptr;
   }
 
@@ -178,7 +172,7 @@ struct heif_error heif_context_get_item_data(struct heif_context* ctx,
                                              void* out_data)
 {
   std::vector<uint8_t> data;
-  Error err = ctx->context->get_heif_file()->get_compressed_image_data(item_id, &data);
+  Error err = ctx->context->get_heif_file()->get_uncompressed_item_data(item_id, &data);
 
   if (err) {
     return err.error_struct(ctx->context.get());
@@ -244,7 +238,13 @@ struct heif_error heif_context_add_item(struct heif_context* ctx,
                                         const void* data, int size,
                                         heif_item_id* out_item_id)
 {
-  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(item_type, (const uint8_t*) data, size);
+  if (item_type == nullptr || strlen(item_type) != 4) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "called heif_context_add_item() with invalid 'item_type'."};
+  }
+
+  Result<heif_item_id> result = ctx->context->get_heif_file()->add_infe(fourcc(item_type), (const uint8_t*) data, size);
 
   if (result && out_item_id) {
     *out_item_id = result.value;

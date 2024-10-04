@@ -23,13 +23,14 @@
 #include "box.h"
 #include "security_limits.h"
 #include "nclx.h"
-#include "codecs/jpeg.h"
-#include "codecs/jpeg2000.h"
-#include "codecs/hevc.h"
-#include "codecs/mask_image.h"
-#include "codecs/vvc.h"
-#include "codecs/avc.h"
-#include "codecs/tild.h"
+#include "codecs/jpeg_boxes.h"
+#include "codecs/jpeg2000_boxes.h"
+#include "codecs/hevc_boxes.h"
+#include "image-items/mask_image.h"
+#include "codecs/vvc_boxes.h"
+#include "codecs/avc_boxes.h"
+#include "codecs/avif_boxes.h"
+#include "image-items/tild.h"
 
 #include <iomanip>
 #include <utility>
@@ -161,25 +162,6 @@ bool Fraction::is_valid() const
   return denominator != 0;
 }
 
-static uint32_t from_fourcc(const char* string)
-{
-  return ((string[0] << 24) |
-          (string[1] << 16) |
-          (string[2] << 8) |
-          (string[3]));
-}
-
-std::string to_fourcc(uint32_t code)
-{
-  std::string str("    ");
-  str[0] = static_cast<char>((code >> 24) & 0xFF);
-  str[1] = static_cast<char>((code >> 16) & 0xFF);
-  str[2] = static_cast<char>((code >> 8) & 0xFF);
-  str[3] = static_cast<char>((code >> 0) & 0xFF);
-
-  return str;
-}
-
 
 BoxHeader::BoxHeader() = default;
 
@@ -221,7 +203,7 @@ std::string BoxHeader::get_type_string() const
     return sstr.str();
   }
   else {
-    return to_fourcc(m_type);
+    return fourcc_to_string(m_type);
   }
 }
 
@@ -1024,7 +1006,7 @@ std::string Box_other::dump(Indent& indent) const
 std::string Box_Error::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << indent << '\'' << to_fourcc(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
+  sstr << indent << '\'' << fourcc_to_string(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
   sstr << indent << "fatality: ";
   switch (m_fatality) {
     case parse_error_fatality::fatal: sstr << "fatal\n";
@@ -1079,7 +1061,7 @@ std::string Box_ftyp::dump(Indent& indent) const
 
   sstr << BoxHeader::dump(indent);
 
-  sstr << indent << "major brand: " << to_fourcc(m_major_brand) << "\n"
+  sstr << indent << "major brand: " << fourcc_to_string(m_major_brand) << "\n"
        << indent << "minor version: " << m_minor_version << "\n"
        << indent << "compatible brands: ";
 
@@ -1088,7 +1070,7 @@ std::string Box_ftyp::dump(Indent& indent) const
     if (first) { first = false; }
     else { sstr << ','; }
 
-    sstr << to_fourcc(brand);
+    sstr << fourcc_to_string(brand);
   }
   sstr << "\n";
 
@@ -1190,7 +1172,7 @@ std::string Box_hdlr::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   sstr << indent << "pre_defined: " << m_pre_defined << "\n"
-       << indent << "handler_type: " << to_fourcc(m_handler_type) << "\n"
+       << indent << "handler_type: " << fourcc_to_string(m_handler_type) << "\n"
        << indent << "name: " << m_name << "\n";
 
   return sstr.str();
@@ -2075,6 +2057,8 @@ Error Box_infe::parse(BitstreamRange& range)
     m_content_encoding = range.read_string();
   }
 
+  m_item_type_4cc = 0;
+
   if (get_version() >= 2) {
     m_hidden_item = (get_flags() & 1);
 
@@ -2086,17 +2070,14 @@ Error Box_infe::parse(BitstreamRange& range)
     }
 
     m_item_protection_index = range.read16();
-    uint32_t item_type = range.read32();
-    if (item_type != 0) {
-      m_item_type = to_fourcc(item_type);
-    }
+    m_item_type_4cc = range.read32();
 
     m_item_name = range.read_string();
-    if (item_type == fourcc("mime")) {
+    if (m_item_type_4cc == fourcc("mime")) {
       m_content_type = range.read_string();
       m_content_encoding = range.read_string();
     }
-    else if (item_type == fourcc("uri ")) {
+    else if (m_item_type_4cc == fourcc("uri ")) {
       m_item_uri_type = range.read_string();
     }
   }
@@ -2118,7 +2099,7 @@ void Box_infe::derive_box_version()
   }
 
 
-  if (m_item_type != "") {
+  if (m_item_type_4cc != 0) {
     min_version = std::max(min_version, 2);
   }
 
@@ -2161,19 +2142,14 @@ Error Box_infe::write(StreamWriter& writer) const
 
     writer.write16(m_item_protection_index);
 
-    if (m_item_type.empty()) {
-      writer.write32(0);
-    }
-    else {
-      writer.write32(from_fourcc(m_item_type.c_str()));
-    }
+    writer.write32(m_item_type_4cc);
 
     writer.write(m_item_name);
-    if (m_item_type == "mime") {
+    if (m_item_type_4cc == fourcc("mime")) {
       writer.write(m_content_type);
       writer.write(m_content_encoding);
     }
-    else if (m_item_type == "uri ") {
+    else if (m_item_type_4cc == fourcc("uri ")) {
       writer.write(m_item_uri_type);
     }
   }
@@ -2191,15 +2167,15 @@ std::string Box_infe::dump(Indent& indent) const
 
   sstr << indent << "item_ID: " << m_item_ID << "\n"
        << indent << "item_protection_index: " << m_item_protection_index << "\n"
-       << indent << "item_type: " << m_item_type << "\n"
+       << indent << "item_type: " << fourcc_to_string(m_item_type_4cc) << "\n"
        << indent << "item_name: " << m_item_name << "\n";
 
-  if (m_item_type == "mime") {
+  if (m_item_type_4cc == fourcc("mime")) {
     sstr << indent << "content_type: " << m_content_type << "\n"
          << indent << "content_encoding: " << m_content_encoding << "\n";
   }
 
-  if (m_item_type == "uri ") {
+  if (m_item_type_4cc == fourcc("uri ")) {
     sstr << indent << "item uri type: " << m_item_uri_type << "\n";
   }
 

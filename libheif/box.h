@@ -45,11 +45,6 @@
 #define HAS_BOOL_ARRAY 1
 #endif
 
-// abbreviation
-constexpr inline uint32_t fourcc(const char* id) { return fourcc_to_uint32(id); }
-
-std::string to_fourcc(uint32_t code);
-
 /*
   constexpr uint32_t fourcc(const char* string)
   {
@@ -594,9 +589,9 @@ public:
 
   void set_item_ID(heif_item_id id) { m_item_ID = id; }
 
-  const std::string& get_item_type() const { return m_item_type; }
+  uint32_t get_item_type_4cc() const { return m_item_type_4cc; }
 
-  void set_item_type(const std::string& type) { m_item_type = type; }
+  void set_item_type_4cc(uint32_t type) { m_item_type_4cc = type; }
 
   void set_item_name(const std::string& name) { m_item_name = name; }
 
@@ -625,7 +620,7 @@ private:
   heif_item_id m_item_ID = 0;
   uint16_t m_item_protection_index = 0;
 
-  std::string m_item_type;
+  uint32_t m_item_type_4cc = 0;
   std::string m_item_name;
   std::string m_content_type;
   std::string m_content_encoding;

@@ -201,14 +201,14 @@ Error Box_uncC::parse(BitstreamRange& range)
   parse_full_box_header(range);
   m_profile = range.read32();
   if (get_version() == 1) {
-    if (m_profile == fourcc_to_uint32("rgb3")) {
+    if (m_profile == fourcc("rgb3")) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
       add_component(component0);
       Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
       add_component(component1);
       Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
       add_component(component2);
-    } else if ((m_profile == fourcc_to_uint32("rgba")) || (m_profile == fourcc_to_uint32("abgr"))) {
+    } else if ((m_profile == fourcc("rgba")) || (m_profile == fourcc("abgr"))) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
       add_component(component0);
       Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
@@ -288,7 +288,7 @@ std::string Box_uncC::dump(Indent& indent) const
 
   sstr << indent << "profile: " << m_profile;
   if (m_profile != 0) {
-    sstr << " (" << to_fourcc(m_profile) << ")";
+    sstr << " (" << fourcc_to_string(m_profile) << ")";
   }
   sstr << "\n";
   if (get_version() == 0) {
@@ -420,7 +420,7 @@ std::string Box_cmpC::dump(Indent& indent) const
 {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "compression_type: " << to_fourcc(m_compression_type) << "\n";
+  sstr << indent << "compression_type: " << fourcc_to_string(m_compression_type) << "\n";
   sstr << indent << "compressed_entity_type: " << (int)m_compressed_unit_type << "\n";
   return sstr.str();
 }

@@ -82,11 +82,11 @@ static void vvenc_init_parameters()
   p->version = 2;
   p->name = heif_encoder_parameter_name_quality;
   p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 32;
+  p->integer.default_value = 50;
   p->has_default = true;
   p->integer.have_minimum_maximum = true;
   p->integer.minimum = 0;
-  p->integer.maximum = 63;
+  p->integer.maximum = 100;
   p->integer.valid_values = NULL;
   p->integer.num_valid_values = 0;
   d[i++] = p++;
@@ -438,7 +438,12 @@ static struct heif_error vvenc_encode_image(void* encoder_raw, const struct heif
 
   vvenc_config params;
 
-  int ret = vvenc_init_default(&params, encoded_width, encoded_height, 25, 0, encoder->quality, VVENC_MEDIUM);
+  // invert encoder quality range and scale to 0-63
+  int encoder_quality = 63 - encoder->quality*63/100;
+
+  int ret = vvenc_init_default(&params, encoded_width, encoded_height, 25, 0,
+                               encoder_quality,
+                               VVENC_MEDIUM);
   if (ret != VVENC_OK) {
     // TODO: cleanup memory
 
