@@ -468,7 +468,7 @@ Error ImageItem_Tild::on_load_file()
 
   m_tild_header.set_parameters(parameters);
 
-  m_tile_decoder = Decoder::alloc_for_compression_format(get_context(), get_id(), parameters.compression_type_fourcc);
+  m_tile_decoder = Decoder::alloc_for_infe_type(get_context(), get_id(), parameters.compression_type_fourcc);
   if (!m_tile_decoder) {
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_codec,

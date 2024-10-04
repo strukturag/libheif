@@ -96,7 +96,7 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
 }
 
 
-std::shared_ptr<Decoder> Decoder::alloc_for_compression_format(const HeifContext* ctx, heif_item_id id, uint32_t format_4cc)
+std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const HeifContext* ctx, heif_item_id id, uint32_t format_4cc)
 {
   switch (format_4cc) {
     case fourcc("hvc1"): {
@@ -124,9 +124,15 @@ std::shared_ptr<Decoder> Decoder::alloc_for_compression_format(const HeifContext
       return std::make_shared<Decoder_JPEG>(jpgC);
     }
 #if WITH_UNCOMPRESSED_CODEC
+    case fourcc("unci"): {
+      auto jpgC = ctx->get_heif_file()->get_property<Box_jpgC>(id);
+      return std::make_shared<Decoder_JPEG>(jpgC);
+    }
 #endif
+    case fourcc("mski"): {
+      return nullptr; // do we need a decoder for this?
+    }
     default:
-      assert(false);
       return nullptr;
   }
 }
