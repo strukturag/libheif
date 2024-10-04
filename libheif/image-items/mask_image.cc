@@ -30,7 +30,7 @@
 #include "libheif/heif.h"
 #include "logging.h"
 #include "mask_image.h"
-#include <codecs/image_item.h>
+#include "image_item.h"
 
 Error Box_mskC::parse(BitstreamRange& range)
 {

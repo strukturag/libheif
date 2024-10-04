@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_OVERLAY_H
 #define LIBHEIF_OVERLAY_H
 
-#include <codecs/image_item.h>
+#include "image_item.h"
 #include <vector>
 #include <string>
 #include <memory>

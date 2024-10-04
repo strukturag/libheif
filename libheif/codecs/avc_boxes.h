@@ -27,7 +27,7 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include "codecs/image_item.h"
+#include "image-items/image_item.h"
 
 
 class Box_avcC : public Box {

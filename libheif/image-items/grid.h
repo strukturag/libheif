@@ -21,7 +21,7 @@
 #ifndef LIBHEIF_IMAGEITEM_GRID_H
 #define LIBHEIF_IMAGEITEM_GRID_H
 
-#include <codecs/image_item.h>
+#include "image_item.h"
 #include <vector>
 #include <string>
 #include <memory>

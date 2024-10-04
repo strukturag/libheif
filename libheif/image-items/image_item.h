@@ -21,14 +21,14 @@
 #ifndef LIBHEIF_IMAGEITEM_H
 #define LIBHEIF_IMAGEITEM_H
 
-#include <libheif/heif.h>
-#include <error.h>
-#include <nclx.h>
+#include "api/libheif/heif.h"
+#include "error.h"
+#include "nclx.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <utility>
-#include <libheif/heif_plugin.h>
+#include "api/libheif/heif_plugin.h"
 
 class HeifContext;
 

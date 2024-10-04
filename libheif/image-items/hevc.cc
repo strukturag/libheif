@@ -19,11 +19,11 @@
  */
 
 #include "hevc.h"
-#include "hevc_boxes.h"
+#include "codecs/hevc_boxes.h"
 #include "bitstream.h"
 #include "error.h"
 #include "file.h"
-#include "hevc_dec.h"
+#include "codecs/hevc_dec.h"
 
 #include <cassert>
 #include <cmath>
@@ -31,7 +31,7 @@
 #include <iomanip>
 #include <string>
 #include <utility>
-#include <libheif/api_structs.h>
+#include "api/libheif/api_structs.h"
 
 
 Error ImageItem_HEVC::on_load_file()

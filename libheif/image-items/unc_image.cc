@@ -31,12 +31,12 @@
 #include "compression.h"
 #include "error.h"
 #include "libheif/heif.h"
-#include "unc_types.h"
-#include "unc_boxes.h"
+#include "codecs/uncompressed/unc_types.h"
+#include "codecs/uncompressed/unc_boxes.h"
 #include "unc_image.h"
-#include "unc_dec.h"
-#include "unc_codec.h"
-#include "codecs/image_item.h"
+#include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_codec.h"
+#include "image_item.h"
 
 
 

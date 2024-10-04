@@ -26,11 +26,11 @@
 #include "codecs/jpeg_boxes.h"
 #include "codecs/jpeg2000_boxes.h"
 #include "codecs/hevc_boxes.h"
-#include "codecs/mask_image.h"
+#include "image-items/mask_image.h"
 #include "codecs/vvc_boxes.h"
 #include "codecs/avc_boxes.h"
 #include "codecs/avif_boxes.h"
-#include "codecs/tild.h"
+#include "image-items/tild.h"
 
 #include <iomanip>
 #include <utility>

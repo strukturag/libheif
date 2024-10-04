@@ -31,14 +31,14 @@
 #include "error.h"
 #include "bitstream.h"
 #include "init.h"
-#include "codecs/grid.h"
-#include "codecs/overlay.h"
-#include "codecs/tild.h"
+#include "image-items/grid.h"
+#include "image-items/overlay.h"
+#include "image-items/tild.h"
 #include <set>
 #include <limits>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_STANDALONE_WASM__)

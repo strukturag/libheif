@@ -23,9 +23,9 @@
 #include "libheif/heif.h"
 #include "libheif/heif_properties.h"
 #include "compression.h"
-#include "codecs/jpeg2000.h"
-#include "codecs/jpeg.h"
-#include "codecs/vvc.h"
+#include "image-items/jpeg2000.h"
+#include "image-items/jpeg.h"
+#include "image-items/vvc.h"
 #include "codecs/uncompressed/unc_boxes.h"
 
 #include <cstdint>
@@ -48,7 +48,7 @@
 
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 // TODO: make this a decoder option

@@ -30,7 +30,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <codecs/jpeg2000.h>
+#include "image-items/jpeg2000.h"
 #include <codecs/decoder.h>
 
 

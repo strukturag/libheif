@@ -30,7 +30,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <codecs/hevc.h>
+#include "image-items/hevc.h"
 
 
 // Specifies the input data for decoding.

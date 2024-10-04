@@ -20,8 +20,8 @@
 
 #include "jpeg2000.h"
 #include "libheif/api_structs.h"
-#include "jpeg2000_dec.h"
-#include "jpeg2000_boxes.h"
+#include "codecs/jpeg2000_dec.h"
+#include "codecs/jpeg2000_boxes.h"
 #include <cstdint>
 #include <iostream>
 #include <cstdio>

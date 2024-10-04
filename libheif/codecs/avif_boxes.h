@@ -30,7 +30,7 @@
 #include "libheif/heif.h"
 #include "box.h"
 #include "error.h"
-#include <codecs/image_item.h>
+#include "image-items/image_item.h"
 
 
 class Box_av1C : public Box

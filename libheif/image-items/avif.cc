@@ -20,8 +20,8 @@
 
 #include "pixelimage.h"
 #include "avif.h"
-#include "avif_dec.h"
-#include "avif_boxes.h"
+#include "codecs/avif_dec.h"
+#include "codecs/avif_boxes.h"
 #include "bitstream.h"
 #include "common_utils.h"
 #include "libheif/api_structs.h"

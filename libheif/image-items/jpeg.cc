@@ -19,11 +19,11 @@
  */
 
 #include "jpeg.h"
-#include "jpeg_dec.h"
-#include "jpeg_boxes.h"
+#include "codecs/jpeg_dec.h"
+#include "codecs/jpeg_boxes.h"
 #include "security_limits.h"
-#include <pixelimage.h>
-#include <libheif/api_structs.h>
+#include "pixelimage.h"
+#include "api/libheif/api_structs.h"
 #include <cstring>
 
 

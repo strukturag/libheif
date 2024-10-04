@@ -23,9 +23,9 @@
 
 #include "box.h"
 #include "nclx.h"
-#include "codecs/avif.h"
-#include "codecs/hevc.h"
-#include "codecs/vvc.h"
+#include "image-items/avif.h"
+#include "image-items/hevc.h"
+#include "image-items/vvc.h"
 #include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 

@@ -22,8 +22,8 @@
 #include "context.h"
 #include "file.h"
 #include <algorithm>
-#include <security_limits.h>
-#include "hevc_dec.h"
+#include "security_limits.h"
+#include "codecs/hevc_dec.h"
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)

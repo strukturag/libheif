@@ -25,8 +25,8 @@
 #include <vector>
 #include "file.h"
 #include "context.h"
-#include "avc_dec.h"
-#include "avc_boxes.h"
+#include "codecs/avc_dec.h"
+#include "codecs/avc_boxes.h"
 
 
 Result<ImageItem::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,

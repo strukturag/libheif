@@ -19,12 +19,12 @@
  */
 
 #include "vvc.h"
-#include "vvc_dec.h"
-#include "vvc_boxes.h"
+#include "codecs/vvc_dec.h"
+#include "codecs/vvc_boxes.h"
 #include <cstring>
 #include <string>
 #include <cassert>
-#include <libheif/api_structs.h>
+#include "api/libheif/api_structs.h"
 
 
 Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,

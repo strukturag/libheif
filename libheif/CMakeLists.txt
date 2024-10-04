@@ -52,54 +52,54 @@ set(libheif_sources
         api/libheif/heif_experimental.cc
         codecs/decoder.h
         codecs/decoder.cc
-        codecs/hevc.cc
-        codecs/hevc.h
+        image-items/hevc.cc
+        image-items/hevc.h
         codecs/hevc_boxes.cc
         codecs/hevc_boxes.h
         codecs/hevc_dec.cc
         codecs/hevc_dec.h
-        codecs/avif.cc
-        codecs/avif.h
+        image-items/avif.cc
+        image-items/avif.h
         codecs/avif_dec.cc
         codecs/avif_dec.h
         codecs/avif_boxes.cc
         codecs/avif_boxes.h
-        codecs/jpeg.h
-        codecs/jpeg.cc
+        image-items/jpeg.h
+        image-items/jpeg.cc
         codecs/jpeg_boxes.h
         codecs/jpeg_boxes.cc
         codecs/jpeg_dec.h
         codecs/jpeg_dec.cc
-        codecs/jpeg2000.h
-        codecs/jpeg2000.cc
+        image-items/jpeg2000.h
+        image-items/jpeg2000.cc
         codecs/jpeg2000_dec.h
         codecs/jpeg2000_dec.cc
         codecs/jpeg2000_boxes.h
         codecs/jpeg2000_boxes.cc
-        codecs/vvc.h
-        codecs/vvc.cc
+        image-items/vvc.h
+        image-items/vvc.cc
         codecs/vvc_dec.h
         codecs/vvc_dec.cc
         codecs/vvc_boxes.h
         codecs/vvc_boxes.cc
-        codecs/avc.h
-        codecs/avc.cc
+        image-items/avc.h
+        image-items/avc.cc
         codecs/avc_boxes.h
         codecs/avc_boxes.cc
         codecs/avc_dec.h
         codecs/avc_dec.cc
-        codecs/mask_image.h
-        codecs/mask_image.cc
-        codecs/image_item.h
-        codecs/image_item.cc
-        codecs/grid.h
-        codecs/grid.cc
-        codecs/overlay.h
-        codecs/overlay.cc
-        codecs/iden.h
-        codecs/iden.cc
-        codecs/tild.h
-        codecs/tild.cc
+        image-items/mask_image.h
+        image-items/mask_image.cc
+        image-items/image_item.h
+        image-items/image_item.cc
+        image-items/grid.h
+        image-items/grid.cc
+        image-items/overlay.h
+        image-items/overlay.cc
+        image-items/iden.h
+        image-items/iden.cc
+        image-items/tild.h
+        image-items/tild.cc
         color-conversion/colorconversion.cc
         color-conversion/colorconversion.h
         color-conversion/rgb2yuv.cc
@@ -198,8 +198,8 @@ if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             codecs/uncompressed/unc_boxes.h
             codecs/uncompressed/unc_boxes.cc
-            codecs/uncompressed/unc_image.h
-            codecs/uncompressed/unc_image.cc
+            image-items/unc_image.h
+            image-items/unc_image.cc
             codecs/uncompressed/unc_codec.h
             codecs/uncompressed/unc_codec.cc
             codecs/uncompressed/unc_dec.h

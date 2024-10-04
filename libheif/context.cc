@@ -30,7 +30,7 @@
 #include <limits>
 #include <cmath>
 #include <deque>
-#include <codecs/image_item.h>
+#include "image-items/image_item.h"
 #include <codecs/hevc_boxes.h>
 
 #if ENABLE_PARALLEL_TILE_DECODING
@@ -45,18 +45,18 @@
 #include "compression.h"
 #include "color-conversion/colorconversion.h"
 #include "plugin_registry.h"
-#include "codecs/hevc.h"
-#include "codecs/vvc.h"
-#include "codecs/avif.h"
-#include "codecs/jpeg.h"
-#include "codecs/mask_image.h"
-#include "codecs/jpeg2000.h"
-#include "codecs/grid.h"
-#include "codecs/overlay.h"
-#include "codecs/tild.h"
+#include "image-items/hevc.h"
+#include "image-items/vvc.h"
+#include "image-items/avif.h"
+#include "image-items/jpeg.h"
+#include "image-items/mask_image.h"
+#include "image-items/jpeg2000.h"
+#include "image-items/grid.h"
+#include "image-items/overlay.h"
+#include "image-items/tild.h"
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 

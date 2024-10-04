@@ -20,27 +20,27 @@
 
 #include "image_item.h"
 #include "mask_image.h"
-#include <context.h>
-#include <file.h>
-#include <codecs/jpeg.h>
-#include <codecs/jpeg2000.h>
-#include <codecs/avif.h>
-#include <codecs/avc.h>
-#include <codecs/hevc.h>
-#include <codecs/grid.h>
-#include <codecs/overlay.h>
-#include <codecs/iden.h>
-#include <codecs/tild.h>
-#include <codecs/decoder.h>
-#include <color-conversion/colorconversion.h>
-#include <libheif/api_structs.h>
-#include <plugin_registry.h>
+#include "context.h"
+#include "file.h"
+#include "jpeg.h"
+#include "jpeg2000.h"
+#include "avif.h"
+#include "avc.h"
+#include "hevc.h"
+#include "grid.h"
+#include "overlay.h"
+#include "iden.h"
+#include "tild.h"
+#include "codecs/decoder.h"
+#include "color-conversion/colorconversion.h"
+#include "api/libheif/api_structs.h"
+#include "plugin_registry.h"
 #include <limits>
 #include <cassert>
 #include <cstring>
 
 #if WITH_UNCOMPRESSED_CODEC
-#include "codecs/uncompressed/unc_image.h"
+#include "image-items/unc_image.h"
 #endif
 
 
