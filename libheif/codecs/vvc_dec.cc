@@ -19,6 +19,7 @@
  */
 
 #include "vvc_dec.h"
+#include "vvc_boxes.h"
 #include "error.h"
 #include "context.h"
 

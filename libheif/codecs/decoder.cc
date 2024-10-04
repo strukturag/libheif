@@ -33,6 +33,7 @@
 #include "avc_boxes.h"
 #include "avif_boxes.h"
 #include "hevc_boxes.h"
+#include "vvc_boxes.h"
 #include "jpeg_boxes.h"
 #include "jpeg2000_boxes.h"
 

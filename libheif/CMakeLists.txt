@@ -80,6 +80,8 @@ set(libheif_sources
         codecs/vvc.cc
         codecs/vvc_dec.h
         codecs/vvc_dec.cc
+        codecs/vvc_boxes.h
+        codecs/vvc_boxes.cc
         codecs/avc.h
         codecs/avc.cc
         codecs/avc_boxes.h
