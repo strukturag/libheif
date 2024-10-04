@@ -525,53 +525,6 @@ Error HeifFile::get_properties(heif_item_id imageID,
   return m_ipco_box->get_properties_for_item_ID(imageID, m_ipma_box, properties);
 }
 
-#if 0
-heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) const
-{
-  // HEVC
-
-  std::shared_ptr<Box_hvcC> hvcC_box = get_property<Box_hvcC>(imageID);
-  if (hvcC_box) {
-    return (heif_chroma) (hvcC_box->get_configuration().chroma_format);
-  }
-
-
-  // VVC
-
-  std::shared_ptr<Box_vvcC> vvcC_box = get_property<Box_vvcC>(imageID);
-  if (vvcC_box) {
-    return (heif_chroma) (vvcC_box->get_configuration().chroma_format_idc);
-  }
-
-
-  // AV1
-
-  std::shared_ptr<Box_av1C> av1C_box = get_property<Box_av1C>(imageID);
-  if (av1C_box) {
-    Box_av1C::configuration config = av1C_box->get_configuration();
-    if (config.chroma_subsampling_x == 1 &&
-        config.chroma_subsampling_y == 1) {
-      return heif_chroma_420;
-    }
-    else if (config.chroma_subsampling_x == 1 &&
-             config.chroma_subsampling_y == 0) {
-      return heif_chroma_422;
-    }
-    else if (config.chroma_subsampling_x == 0 &&
-             config.chroma_subsampling_y == 0) {
-      return heif_chroma_444;
-    }
-    else {
-      return heif_chroma_undefined;
-    }
-  }
-
-
-  assert(false);
-  return heif_chroma_undefined;
-}
-#endif
-
 
 Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
@@ -906,21 +859,6 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
-}
-
-
-void HeifFile::add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2, uint8_t c3)
-{
-  auto pixi = std::make_shared<Box_pixi>();
-  pixi->add_channel_bits(c1);
-  if (c2 || c3) {
-    pixi->add_channel_bits(c2);
-    pixi->add_channel_bits(c3);
-  }
-
-  int index = m_ipco_box->find_or_append_child_box(pixi);
-
-  m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
 }
 
 

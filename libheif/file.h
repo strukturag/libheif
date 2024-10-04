@@ -141,8 +141,6 @@ public:
     return nullptr;
   }
 
-  heif_chroma get_image_chroma_from_configuration(heif_item_id imageID) const; // TODO: move to ImageItem
-
   std::string debug_dump_boxes() const;
 
 
@@ -158,8 +156,6 @@ public:
 
   // set irot/imir according to heif_orientation
   void add_orientation_properties(heif_item_id id, heif_orientation);
-
-  void add_pixi_property(heif_item_id id, uint8_t c1, uint8_t c2 = 0, uint8_t c3 = 0);
 
   // TODO: can we remove the 'essential' parameter and take this from the box? Or is that depending on the context?
   heif_property_id add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential);
