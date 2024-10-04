@@ -59,6 +59,7 @@ int Decoder_uncompressed::get_luma_bits_per_pixel() const
       case component_type_red:
       case component_type_green:
       case component_type_blue:
+      case component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int) component.component_bit_depth);
         break;
       case component_type_Y:
@@ -102,6 +103,7 @@ int Decoder_uncompressed::get_chroma_bits_per_pixel() const
       case component_type_red:
       case component_type_green:
       case component_type_blue:
+      case component_type_filter_array:
         alternate_channel_bits = std::max(alternate_channel_bits, (int) component.component_bit_depth);
         break;
       case component_type_Cb:

@@ -318,4 +318,49 @@ private:
   const uint8_t get_required_size_code(uint64_t size) const;
 };
 
+
+/**
+ * Component pattern definition box (cpat).
+ *
+ * The component pattern is used when representing filter array
+ * data, such as Bayer. It defines the filter mask in the raw
+ * data.
+ *
+ * This is from ISO/IEC 23001-17 Section 6.1.3.
+ */
+class Box_cpat : public FullBox
+{
+public:
+  Box_cpat()
+  {
+    set_short_type(fourcc("cpat"));
+  }
+
+  struct PatternComponent
+  {
+    uint32_t component_index;
+    float component_gain;
+  };
+
+  uint16_t get_pattern_width() const
+  {
+    return pattern_width;
+  }
+
+  uint16_t get_pattern_height() const
+  {
+    return (uint16_t)(components.size() / pattern_width);
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+  uint16_t pattern_width;
+  std::vector<PatternComponent> components;
+};
+
 #endif //LIBHEIF_UNC_BOXES_H

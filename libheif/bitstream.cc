@@ -270,6 +270,14 @@ uint32_t BitstreamRange::read32()
                      (buf[3]));
 }
 
+float BitstreamRange::readFloat32()
+{
+    int i = read32();
+    float f;
+    memcpy(&f, &i, sizeof(float));
+    return f;
+}
+
 uint64_t BitstreamRange::read64()
 {
   if (!prepare_read(8)) {
@@ -651,6 +659,14 @@ void StreamWriter::write32(uint32_t v)
   m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
   m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
+}
+
+
+void StreamWriter::writeFloat32(float v)
+{
+  uint32_t i;
+  memcpy(&i, &v, sizeof(float));
+  write32(i);
 }
 
 
