@@ -535,12 +535,6 @@ Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const 
   }
 
   if (cmpd) {
-    if (uncC->get_components().size() != cmpd->get_components().size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Number of components in uncC and cmpd do not match"};
-    }
-
     for (const auto& comp : uncC->get_components()) {
       if (comp.component_index > cmpd->get_components().size()) {
         return {heif_error_Invalid_input,
