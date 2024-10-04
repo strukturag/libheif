@@ -60,6 +60,8 @@ set(libheif_sources
         codecs/avif.h
         codecs/avif_dec.cc
         codecs/avif_dec.h
+        codecs/avif_boxes.cc
+        codecs/avif_boxes.h
         codecs/jpeg.h
         codecs/jpeg.cc
         codecs/jpeg_dec.h
@@ -74,6 +76,8 @@ set(libheif_sources
         codecs/vvc_dec.cc
         codecs/avc.h
         codecs/avc.cc
+        codecs/avc_boxes.h
+        codecs/avc_boxes.cc
         codecs/avc_dec.h
         codecs/avc_dec.cc
         codecs/mask_image.h

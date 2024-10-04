@@ -30,67 +30,6 @@
 #include "codecs/image_item.h"
 
 
-class Box_avcC : public Box {
-public:
-  Box_avcC() { set_short_type(fourcc("avcC")); }
-
-  bool is_essential() const override { return true; }
-
-  struct configuration {
-    uint8_t configuration_version;
-    uint8_t AVCProfileIndication; // profile_idc
-    uint8_t profile_compatibility; // constraint set flags
-    uint8_t AVCLevelIndication; // level_idc
-    uint8_t lengthSize;
-    heif_chroma chroma_format = heif_chroma_420; // Note: avcC integer value can be cast to heif_chroma enum
-    uint8_t bit_depth_luma = 8;
-    uint8_t bit_depth_chroma = 8;
-  };
-
-  void set_configuration(const configuration& config)
-  {
-    m_configuration = config;
-  }
-
-  const configuration& get_configuration() const
-  {
-    return m_configuration;
-  }
-
-  const std::vector< std::vector<uint8_t> > getSequenceParameterSets() const
-  {
-    return m_sps;
-  }
-
-  const std::vector< std::vector<uint8_t> > getPictureParameterSets() const
-  {
-    return m_pps;
-  }
-
-  const std::vector< std::vector<uint8_t> > getSequenceParameterSetExt() const
-  {
-    return m_sps_ext;
-  }
-
-  void get_header_nals(std::vector<uint8_t>& data) const;
-
-  std::string dump(Indent &) const override;
-
-  Error write(StreamWriter &writer) const override;
-
-protected:
-  Error parse(BitstreamRange &range) override;
-
-  std::string profileIndicationAsText() const;
-
-private:
-  configuration m_configuration;
-  std::vector< std::vector<uint8_t> > m_sps;
-  std::vector< std::vector<uint8_t> > m_pps;
-  std::vector< std::vector<uint8_t> > m_sps_ext;
-};
-
-
 class ImageItem_AVC : public ImageItem
 {
 public:

@@ -19,7 +19,7 @@
  */
 
 #include "avc_dec.h"
-#include "avc.h"
+#include "avc_boxes.h"
 #include "error.h"
 #include "context.h"
 

@@ -19,6 +19,7 @@
  */
 
 #include "avif_dec.h"
+#include "avif_boxes.h"
 #include "error.h"
 #include "context.h"
 

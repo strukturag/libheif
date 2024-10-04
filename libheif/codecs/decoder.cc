@@ -30,7 +30,8 @@
 #include "codecs/vvc_dec.h"
 #include "codecs/jpeg_dec.h"
 #include "codecs/jpeg2000_dec.h"
-#include "avc.h"
+#include "avc_boxes.h"
+#include "avif_boxes.h"
 #include "jpeg.h"
 
 

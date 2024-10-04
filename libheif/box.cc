@@ -28,7 +28,8 @@
 #include "codecs/hevc.h"
 #include "codecs/mask_image.h"
 #include "codecs/vvc.h"
-#include "codecs/avc.h"
+#include "codecs/avc_boxes.h"
+#include "codecs/avif_boxes.h"
 #include "codecs/tild.h"
 
 #include <iomanip>

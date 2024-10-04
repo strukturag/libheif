@@ -525,7 +525,7 @@ Error HeifFile::get_properties(heif_item_id imageID,
   return m_ipco_box->get_properties_for_item_ID(imageID, m_ipma_box, properties);
 }
 
-
+#if 0
 heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) const
 {
   // HEVC
@@ -570,6 +570,7 @@ heif_chroma HeifFile::get_image_chroma_from_configuration(heif_item_id imageID) 
   assert(false);
   return heif_chroma_undefined;
 }
+#endif
 
 
 Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
