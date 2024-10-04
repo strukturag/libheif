@@ -19,7 +19,7 @@
  */
 
 #include "jpeg_dec.h"
-#include "jpeg.h"
+#include "jpeg_boxes.h"
 #include "error.h"
 #include "context.h"
 

@@ -33,7 +33,7 @@
 #include "avc_boxes.h"
 #include "avif_boxes.h"
 #include "hevc_boxes.h"
-#include "jpeg.h"
+#include "jpeg_boxes.h"
 
 
 
