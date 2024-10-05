@@ -628,9 +628,15 @@ Error Box_cpat::parse(BitstreamRange& range)
   m_pattern_height = range.read16();
 
   if (m_pattern_width * m_pattern_height > MAX_BAYER_PATTERN_PIXELS) {
-    return {heif_error_Unsupported_filetype,
+    return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "Maximum Bayer pattern size exceeded."};
+  }
+
+  if (m_pattern_width == 0 || m_pattern_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_parameter_value,
+            "Zero Bayer pattern size."};
   }
 
   m_components.resize(m_pattern_width * m_pattern_height);
