@@ -79,7 +79,7 @@ private:
 class TildHeader
 {
 public:
-  void set_parameters(const heif_tild_image_parameters& params);
+  Error set_parameters(const heif_tild_image_parameters& params);
 
   const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
 

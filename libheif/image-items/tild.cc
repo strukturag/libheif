@@ -248,15 +248,23 @@ Error Box_tilC::parse(BitstreamRange& range)
 }
 
 
-void TildHeader::set_parameters(const heif_tild_image_parameters& params)
+Error TildHeader::set_parameters(const heif_tild_image_parameters& params)
 {
   m_parameters = params;
+
+  if (number_of_tiles(params) > MAX_TILD_TILES) {
+    return {heif_error_Unsupported_filetype,
+            heif_suberror_Security_limit_exceeded,
+            "Number of tiles exceeds security limit"};
+  }
 
   m_offsets.resize(number_of_tiles(params));
 
   for (auto& tile: m_offsets) {
     tile.offset = TILD_OFFSET_NOT_LOADED;
   }
+
+  return Error::Ok;
 }
 
 
@@ -439,7 +447,6 @@ heif_compression_format ImageItem_Tild::get_compression_format() const
 
 Error ImageItem_Tild::on_load_file()
 {
-  Error err;
   auto heif_file = get_context()->get_heif_file();
 
   auto tilC_box = heif_file->get_property<Box_tilC>(get_id());
@@ -466,7 +473,9 @@ Error ImageItem_Tild::on_load_file()
             "'tild' image with zero width or height."};
   }
 
-  m_tild_header.set_parameters(parameters);
+  if (Error err = m_tild_header.set_parameters(parameters)) {
+    return err;
+  }
 
   m_tile_decoder = Decoder::alloc_for_infe_type(get_context(), get_id(), parameters.compression_type_fourcc);
   if (!m_tile_decoder) {
@@ -476,8 +485,7 @@ Error ImageItem_Tild::on_load_file()
   }
 
   if (m_preload_offset_table) {
-    err = m_tild_header.read_full_offset_table(heif_file, get_id());
-    if (err) {
+    if (Error err = m_tild_header.read_full_offset_table(heif_file, get_id())) {
       return err;
     }
   }
@@ -489,6 +497,13 @@ Error ImageItem_Tild::on_load_file()
 Result<std::shared_ptr<ImageItem_Tild>>
 ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters)
 {
+  if (number_of_tiles(*parameters) > MAX_TILD_TILES) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Security_limit_exceeded,
+                 "Number of tiles exceeds security limit."};
+  }
+
+
   // Create 'tild' Item
 
   auto file = ctx->get_heif_file();
