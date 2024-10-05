@@ -46,4 +46,6 @@ static const int MAX_IREF_REFERENCES = 10000;
 
 static const int MAX_TILD_TILES = 4100*4100;
 
+static const uint32_t MAX_BAYER_PATTERN_PIXELS = 16*16; // maximum size of Bayer pattern
+
 #endif  // LIBHEIF_SECURITY_LIMITS_H

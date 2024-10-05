@@ -344,12 +344,12 @@ public:
 
   uint16_t get_pattern_width() const
   {
-    return pattern_width;
+    return m_pattern_width;
   }
 
   uint16_t get_pattern_height() const
   {
-    return (uint16_t)(components.size() / pattern_width);
+    return m_pattern_height;
   }
 
   std::string dump(Indent&) const override;
@@ -359,8 +359,9 @@ public:
 protected:
   Error parse(BitstreamRange& range) override;
 
-  uint16_t pattern_width;
-  std::vector<PatternComponent> components;
+  uint16_t m_pattern_width;
+  uint16_t m_pattern_height;
+  std::vector<PatternComponent> m_components;
 };
 
 #endif //LIBHEIF_UNC_BOXES_H
