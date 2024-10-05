@@ -615,6 +615,7 @@ const uint8_t Box_icef::get_required_size_code(uint64_t size) const
   return 4;
 }
 
+
 Error Box_cpat::parse(BitstreamRange& range)
 {
   parse_full_box_header(range);
@@ -622,17 +623,27 @@ Error Box_cpat::parse(BitstreamRange& range)
   if (get_version() != 0) {
     return unsupported_version_error("cpat");
   }
-  pattern_width = range.read16();
-  // we don't store pattern_height because we can infer it from the number of component entries
-  uint16_t pattern_height = range.read16();
-  for (int i = 0; i < pattern_height; i++) {
-    for (int j = 0; j < pattern_width; j++) {
-      struct PatternComponent component;
+
+  m_pattern_width = range.read16();
+  m_pattern_height = range.read16();
+
+  if (m_pattern_width * m_pattern_height > MAX_BAYER_PATTERN_PIXELS) {
+    return {heif_error_Unsupported_filetype,
+            heif_suberror_Security_limit_exceeded,
+            "Maximum Bayer pattern size exceeded."};
+  }
+
+  m_components.resize(m_pattern_width * m_pattern_height);
+
+  for (uint16_t i = 0; i < m_pattern_height; i++) {
+    for (uint16_t j = 0; j < m_pattern_width; j++) {
+      PatternComponent component{};
       component.component_index = range.read32();
       component.component_gain = range.readFloat32();
-      components.push_back(component);
+      m_components[i] = component;
     }
   }
+
   return range.get_error();
 }
 
@@ -640,29 +651,37 @@ Error Box_cpat::parse(BitstreamRange& range)
 std::string Box_cpat::dump(Indent& indent) const
 {
   std::ostringstream sstr;
-  sstr << Box::dump(indent);
+
+  sstr << FullBox::dump(indent);
   sstr << indent << "pattern_width: " << get_pattern_width() << "\n";
   sstr << indent << "pattern_height: " << get_pattern_height() << "\n";
-  for (const auto& component : components) {
+
+  for (const auto& component : m_components) {
     sstr << indent << "component index: " << component.component_index << ", gain: " << component.component_gain << "\n";
   }
   return sstr.str();
 }
 
+
 Error Box_cpat::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
-  uint16_t pattern_height = get_pattern_height();
-  if ((get_pattern_width() * pattern_height) != components.size()) {
+
+  if (m_pattern_width * m_pattern_height != m_components.size()) {
     // needs to be rectangular
-    return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "incorrect number of pattern components"};
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "incorrect number of pattern components"};
   }
-  writer.write16(get_pattern_width());
-  writer.write16(pattern_height);
-  for (const auto& component : components) {
+
+  writer.write16(m_pattern_width);
+  writer.write16(m_pattern_height);
+
+  for (const auto& component : m_components) {
     writer.write32(component.component_index);
     writer.writeFloat32(component.component_gain);
   }
+
   prepend_header(writer, box_start);
 
   return Error::Ok;
