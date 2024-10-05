@@ -21,6 +21,8 @@
 #include "mini.h"
 
 #include <cmath>
+#include <string>
+#include <vector>
 
 Error Box_mini::parse(BitstreamRange& range)
 {

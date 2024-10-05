@@ -24,6 +24,8 @@
 #include "libheif/heif.h"
 #include "box.h"
 
+#include <string>
+#include <vector>
 
 class Box_mini : public Box
 {
