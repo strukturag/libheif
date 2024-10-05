@@ -385,7 +385,11 @@ public:
 
   std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
 
+  uint32_t get_major_brand() const { return m_major_brand; }
+
   void set_major_brand(heif_brand2 major_brand) { m_major_brand = major_brand; }
+
+  uint32_t get_minor_version() const { return m_minor_version; }
 
   void set_minor_version(uint32_t minor_version) { m_minor_version = minor_version; }
 
@@ -547,6 +551,8 @@ public:
   Error write(StreamWriter& writer) const override;
 
   Error write_mdat_after_iloc(StreamWriter& writer);
+
+  void append_item(Item &item) { m_items.push_back(item); }
 
 protected:
   Error parse(BitstreamRange& range) override;

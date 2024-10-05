@@ -672,6 +672,12 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
       box = std::make_shared<Box_tilC>();
       break;
 
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+    case fourcc("mini"):
+      box = std::make_shared<Box_mini>();
+      break;
+#endif
+
     case fourcc("mdat"):
       // avoid generating a 'Box_other'
       box = std::make_shared<Box>();
@@ -1033,7 +1039,7 @@ Error Box_ftyp::parse(BitstreamRange& range)
   m_minor_version = range.read32();
 
   uint64_t box_size = get_box_size();
-  if (box_size < 8 || box_size - 8 <= get_header_size()) {
+  if (box_size < 8 || box_size - 8 < get_header_size()) {
     // Sanity check.
     return Error(heif_error_Invalid_input,
                  heif_suberror_Invalid_box_size,
@@ -1066,8 +1072,15 @@ std::string Box_ftyp::dump(Indent& indent) const
   sstr << BoxHeader::dump(indent);
 
   sstr << indent << "major brand: " << fourcc_to_string(m_major_brand) << "\n"
-       << indent << "minor version: " << m_minor_version << "\n"
-       << indent << "compatible brands: ";
+       << indent << "minor version: ";
+  if (m_minor_version < ('A' << 24)) {
+    // This is probably a version number
+    sstr << m_minor_version;
+  } else {
+    // probably a 4CC, as used for mif3
+    sstr << fourcc_to_string(m_minor_version);
+  }
+  sstr << "\n" << indent << "compatible brands: ";
 
   bool first = true;
   for (uint32_t brand : m_compatible_brands) {

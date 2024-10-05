@@ -253,6 +253,8 @@ const (
 
 	SuberrorNoAVCCBox = C.heif_suberror_No_avcC_box
 
+	SuberrorNoMiniBox = C.heif_suberror_No_mini_box
+
 	SuberrorInvalidCleanAperture = C.heif_suberror_Invalid_clean_aperture
 
 	// Invalid specification of overlay image

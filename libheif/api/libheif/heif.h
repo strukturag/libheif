@@ -248,6 +248,9 @@ enum heif_suberror_code
 
   heif_suberror_No_avcC_box = 143,
 
+  // we got a mini box, but could not read it properly
+  heif_suberror_No_mini_box = 149,
+
   // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
   heif_suberror_Decompression_invalid_data = 150,
 
@@ -782,6 +785,13 @@ typedef uint32_t heif_brand2;
 #define heif_brand2_mif2   heif_fourcc('m','i','f','2')
 
 /**
+ * HEIF image structural brand (`mif3`).
+ *
+ * This indicates the low-overhead (ftyp+mini) structure.
+ */
+#define heif_brand2_mif3   heif_fourcc('m','i','f','3')
+
+/**
  * HEIF image sequence structural brand (`msf1`).
  *
  * This does not imply a specific coding algorithm.
@@ -881,6 +891,10 @@ typedef uint32_t heif_brand2;
 // input data should be at least 12 bytes
 LIBHEIF_API
 heif_brand2 heif_read_main_brand(const uint8_t* data, int len);
+
+// input data should be at least 16 bytes
+LIBHEIF_API
+heif_brand2 heif_read_minor_version_brand(const uint8_t* data, int len);
 
 // 'brand_fourcc' must be 4 character long, but need not be 0-terminated
 LIBHEIF_API

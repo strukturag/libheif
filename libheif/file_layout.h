@@ -24,6 +24,9 @@
 #include "error.h"
 #include "bitstream.h"
 #include "box.h"
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#include "mini.h"
+#endif
 #include <memory>
 #include <vector>
 
@@ -55,6 +58,10 @@ public:
 
   std::shared_ptr<Box_meta> get_meta_box() { return m_meta_box; }
 
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+  std::shared_ptr<Box_mini> get_mini_box() { return m_mini_box; }
+#endif
+
 private:
   WriteMode m_writeMode = WriteMode::Floating;
 
@@ -67,6 +74,9 @@ private:
 
   std::shared_ptr<Box_ftyp> m_ftyp_box;
   std::shared_ptr<Box_meta> m_meta_box;
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+  std::shared_ptr<Box_mini> m_mini_box;
+#endif
 
 
   uint64_t m_max_length = 0; // Length seen so far. It can grow over time.
