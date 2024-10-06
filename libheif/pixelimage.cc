@@ -741,7 +741,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
 
   if (need_conversion) {
     heif_color_conversion_options options{};
-    heif_color_conversion_options_set_default(&options);
+    heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
     return converted_image->rotate_ccw(angle_degrees);
@@ -887,7 +887,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
 
   if (need_conversion) {
     heif_color_conversion_options options{};
-    heif_color_conversion_options_set_default(&options);
+    heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
     return converted_image->mirror_inplace(direction);
@@ -962,7 +962,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
 
   if (need_conversion) {
     heif_color_conversion_options options{};
-    heif_color_conversion_options_set_default(&options);
+    heif_color_conversion_options_set_defaults(&options);
 
     auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
     return converted_image->crop(left, right, top, bottom);

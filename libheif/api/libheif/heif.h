@@ -1006,7 +1006,7 @@ struct heif_reader
   // libheif might issue hints when it assumes that a file range might be needed in the future.
   // This may happen, for example, when your are doing selective tile accesses and libheif proposes
   // to preload offset pointer tables.
-  // Another difference to request_file_range() is that this call should non-blocking.
+  // Another difference to request_file_range() is that this call should be non-blocking.
   // If you preload any data, do this in a background thread.
   void (*preload_range_hint)(uint64_t start_pos, uint64_t end_pos, void* userdata);
 
@@ -1195,11 +1195,12 @@ struct heif_image_tiling
   uint32_t left_offset;
 
   uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
-  uint32_t extra_dimension_size[8];        // size of extra dimensions (first 8 dimensions)
+  uint32_t extra_dimension_size[8];    // size of extra dimensions (first 8 dimensions)
 };
 
 
-// If 'process_image_transformations' is true, this returns modified sizes. If it is false, the top_left_x/y_position will always be (0;0).
+// If 'process_image_transformations' is true, this returns modified sizes.
+// If it is false, the top_offset and left_offset will always be (0;0).
 LIBHEIF_API
 struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
 
@@ -1211,7 +1212,7 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
                                                            int process_image_transformations,
                                                            uint32_t tile_x, uint32_t tile_y,
-                                                           heif_item_id* tile_item_id);
+                                                           heif_item_id* out_tile_item_id);
 
 
 struct heif_decoding_options;
@@ -1241,11 +1242,13 @@ struct heif_entity_group
 };
 
 // Use 0 for `type_filter` or `item_filter` to disable the filter.
+// Returns an array of heif_entity_group structs with *out_num_groups entries.
 LIBHEIF_API
 struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context*, uint32_t type_filter, uint32_t item_filter, int* out_num_groups);
 
+// Release an array of entity groups returned by heif_context_get_entity_groups().
 LIBHEIF_API
-void heif_entity_group_release(struct heif_entity_group*, int num_groups);
+void heif_entity_groups_release(struct heif_entity_group*, int num_groups);
 
 
 // ------------------------- depth images -------------------------
@@ -1633,6 +1636,7 @@ enum heif_chroma_upsampling_algorithm
 
 struct heif_color_conversion_options
 {
+  // 'version' must be 1.
   uint8_t version;
 
   // --- version 1 options
@@ -1647,10 +1651,13 @@ struct heif_color_conversion_options
   // Set this field to 'true' if you want to make sure that the specified algorithm is used even
   // at the cost of slightly higher computation times.
   uint8_t only_use_preferred_chroma_algorithm;
+
+  // --- Note that we cannot extend this struct because it is embedded in other structs (heif_decoding_options and heif_encoding_options).
 };
 
+// Assumes that it is a version=1 struct.
 LIBHEIF_API
-void heif_color_conversion_options_set_default(struct heif_color_conversion_options*);
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*);
 
 
 struct heif_decoding_options
@@ -2301,12 +2308,12 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
 
 LIBHEIF_API
 struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
-                                           uint32_t image_width,
-                                           uint32_t image_height,
-                                           uint32_t tile_columns,
-                                           uint32_t tile_rows,
-                                           const heif_item_id* image_ids,
-                                           struct heif_image_handle** out_grid_image_handle);
+                                              uint32_t image_width,
+                                              uint32_t image_height,
+                                              uint32_t tile_columns,
+                                              uint32_t tile_rows,
+                                              const heif_item_id* image_ids,
+                                              struct heif_image_handle** out_grid_image_handle);
 
 LIBHEIF_API
 struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
