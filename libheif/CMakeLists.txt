@@ -11,6 +11,12 @@ set(libheif_headers
         api/libheif/heif_items.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
+option(INSTALL_EXPERIMENTAL_HEADERS "Install headers with unstable API" OFF)
+
+if (INSTALL_EXPERIMENTAL_HEADERS)
+    list(APPEND libheif_headers api/libheif/heif_experimental.h)
+endif()
+
 set(libheif_sources
         bitstream.cc
         bitstream.h
