@@ -1648,6 +1648,7 @@ enum heif_chroma_upsampling_algorithm
   heif_chroma_upsampling_bilinear = 2
 };
 
+
 struct heif_color_conversion_options
 {
   // 'version' must be 1.
@@ -1666,7 +1667,8 @@ struct heif_color_conversion_options
   // at the cost of slightly higher computation times.
   uint8_t only_use_preferred_chroma_algorithm;
 
-  // --- Note that we cannot extend this struct because it is embedded in other structs (heif_decoding_options and heif_encoding_options).
+  // --- Note that we cannot extend this struct because it is embedded in
+  //     other structs (heif_decoding_options and heif_encoding_options).
 };
 
 // Assumes that it is a version=1 struct.
