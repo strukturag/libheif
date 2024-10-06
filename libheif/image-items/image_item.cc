@@ -38,7 +38,7 @@
 #include <limits>
 #include <cassert>
 #include <cstring>
-#include <ranges>
+//#include <ranges>
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
@@ -706,8 +706,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     heif_image_tiling tiling = get_heif_image_tiling();
 
-    for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
-      if (auto irot = std::dynamic_pointer_cast<Box_irot>(prop)) {
+    //for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
+    for (auto propIter = propertiesResult.value.rbegin(); propIter != propertiesResult.value.rend(); propIter++) {
+      if (auto irot = std::dynamic_pointer_cast<Box_irot>(*propIter)) {
         switch (irot->get_rotation_ccw()) {
           case 90: {
             uint32_t tx0 = tiling.num_columns - 1 - tile_y0;
@@ -734,7 +735,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
         }
       }
 
-      if (auto imir = std::dynamic_pointer_cast<Box_imir>(prop)) {
+      if (auto imir = std::dynamic_pointer_cast<Box_imir>(*propIter)) {
         switch (imir->get_mirror_direction()) {
           case heif_transform_mirror_direction_horizontal:
             tile_x0 = tiling.num_columns - 1 - tile_x0;
@@ -1002,8 +1003,8 @@ heif_image_tiling ImageItem::get_heif_image_tiling() const
   tiling.image_width = m_width;
   tiling.image_height = m_height;
 
-  tiling.top_left_x_position = 0;
-  tiling.top_left_y_position = 0;
+  tiling.top_offset = 0;
+  tiling.left_offset = 0;
   tiling.number_of_extra_dimensions = 0;
 
   for (uint32_t& s : tiling.extra_dimension_size) {
@@ -1121,8 +1122,8 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
     }
   }
 
-  tiling.top_left_x_position = -left_excess;
-  tiling.top_left_y_position = -top_excess;
+  tiling.left_offset = left_excess;
+  tiling.top_offset = top_excess;
 
   return Error::Ok;
 }
