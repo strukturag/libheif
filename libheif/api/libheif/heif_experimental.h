@@ -110,6 +110,66 @@ struct heif_error heif_property_camera_extrinsic_matrix_get_position_vector(cons
 struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_property_camera_extrinsic_matrix* matrix,
                                                                                        uint32_t* out_wcs_id);
 
+// --- Tiled images
+
+struct heif_tild_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  uint32_t compression_type_fourcc;  // TODO: can this be set automatically ?
+
+  uint8_t offset_field_length;   // one of: 32, 40, 48, 64
+  uint8_t size_field_length;     // one of:  0, 24, 32, 64
+
+  uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
+  uint32_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
+
+  // boolean flags
+  uint8_t tiles_are_sequential;  // TODO: can we derive this automatically
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
+                                              const struct heif_tild_image_parameters* parameters,
+                                              const struct heif_encoding_options* options, // TODO: do we need this?
+                                              struct heif_image_handle** out_tild_image_handle);
+
+
+// --- 'unci' images
+
+struct heif_unci_image_parameters {
+  int version;
+
+  // --- version 1
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  enum heif_metadata_compression compression; // TODO
+
+  // TODO: interleave type, padding
+};
+
+
+LIBHEIF_API
+struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
+                                              const struct heif_unci_image_parameters* parameters,
+                                              const struct heif_encoding_options* encoding_options,
+                                              const struct heif_image* prototype,
+                                              struct heif_image_handle** out_unci_image_handle);
+
+
 #ifdef __cplusplus
 }
 #endif
