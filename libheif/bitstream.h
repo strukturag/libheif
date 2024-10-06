@@ -167,6 +167,17 @@ public:
     if (m_func_table->reader_api_version >= 2) {
       heif_reader_range_request_result result = m_func_table->request_range(start, end_pos, m_userdata);
 
+      // convert error message string and release input string memory
+
+      std::string error_msg;
+      if (result.reader_error_msg) {
+        error_msg = std::string{result.reader_error_msg};
+
+        if (m_func_table->release_error_msg) {
+          m_func_table->release_error_msg(result.reader_error_msg);
+        }
+      }
+
       switch (result.status) {
         case heif_reader_grow_status_size_reached:
           return end_pos;
@@ -178,7 +189,7 @@ public:
         case heif_reader_grow_status_error: {
           if (result.reader_error_msg) {
             std::stringstream sstr;
-            sstr << "Input error (" << result.reader_error_code << ") : " << result.reader_error_msg;
+            sstr << "Input error (" << result.reader_error_code << ") : " << error_msg;
             m_last_error = {heif_error_Invalid_input, heif_suberror_Unspecified, sstr.str()};
           }
           else {
