@@ -431,8 +431,8 @@ Error HeifContext::interpret_heif_file()
 
       auto irot = std::dynamic_pointer_cast<Box_irot>(prop);
       if (irot) {
-        if (irot->get_rotation() == 90 ||
-            irot->get_rotation() == 270) {
+        if (irot->get_rotation_ccw() == 90 ||
+            irot->get_rotation_ccw() == 270) {
           // swap width and height
           image->set_resolution(image->get_height(),
                                 image->get_width());

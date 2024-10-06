@@ -509,3 +509,15 @@ int ImageItem_Grid::get_chroma_bits_per_pixel() const
   auto image = get_context()->get_image(child);
   return image->get_chroma_bits_per_pixel();
 }
+
+std::shared_ptr<Decoder> ImageItem_Grid::get_decoder() const
+{
+  heif_item_id child;
+  Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
+  if (err) {
+    return nullptr;
+  }
+
+  auto image = get_context()->get_image(child);
+  return image->get_decoder();
+}

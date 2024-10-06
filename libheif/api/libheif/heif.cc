@@ -889,31 +889,24 @@ struct heif_context* heif_image_handle_get_context(const struct heif_image_handl
 }
 
 
-struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle)
+heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* tiling)
 {
-  struct heif_image_tiling tiling{};
-  if (!handle) {
-    return tiling;
+  if (!handle || !tiling) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL passed to heif_image_handle_get_image_tiling()"};
   }
 
-  std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
-  if (gridItem) {
-    return gridItem->get_heif_image_tiling();
+  *tiling = handle->image->get_heif_image_tiling();
+
+  if (process_image_transformations) {
+    Error error = handle->image->process_image_transformations_on_tiling(*tiling);
+    if (error) {
+      return error.error_struct(handle->context.get());
+    }
   }
 
-  std::shared_ptr<ImageItem_Tild> tildItem = std::dynamic_pointer_cast<ImageItem_Tild>(handle->image);
-  if (tildItem) {
-    return tildItem->get_heif_image_tiling();
-  }
-
-#if WITH_UNCOMPRESSED_CODEC
-  std::shared_ptr<ImageItem_uncompressed> unciItem = std::dynamic_pointer_cast<ImageItem_uncompressed>(handle->image);
-  if (unciItem) {
-    return unciItem->get_heif_image_tiling();
-  }
-#endif
-
-  return tiling;
+  return heif_error_ok;
 }
 
 

@@ -104,6 +104,10 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
+protected:
+  std::shared_ptr<Decoder> get_decoder() const override;
+
+public:
 
   // --- grid specific
 
@@ -111,7 +115,7 @@ public:
 
   const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
 
-  heif_image_tiling get_heif_image_tiling() const;
+  heif_image_tiling get_heif_image_tiling() const override;
 
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 

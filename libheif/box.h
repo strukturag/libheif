@@ -821,7 +821,7 @@ public:
 
   std::string dump(Indent&) const override;
 
-  int get_rotation() const { return m_rotation; }
+  int get_rotation_ccw() const { return m_rotation; }
 
   // Only these multiples of 90 are allowed: 0, 90, 180, 270.
   void set_rotation_ccw(int rot) { m_rotation = rot; }

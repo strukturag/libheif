@@ -271,6 +271,8 @@ public:
 
   Error check_for_valid_image_size(uint32_t width, uint32_t height) const;
 
+  Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
+
   // === encoding ===
 
   struct CodedImageData
@@ -348,6 +350,12 @@ public:
 
   const std::vector<Error>& get_decoding_warnings() const { return m_decoding_warnings; }
 
+  virtual heif_image_tiling get_heif_image_tiling() const;
+
+  Error process_image_transformations_on_tiling(heif_image_tiling&) const;
+
+  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
+
 private:
   HeifContext* m_heif_context;
 
@@ -405,8 +413,6 @@ protected:
                                 enum heif_image_input_class input_class,
                                 const heif_color_profile_nclx* target_heif_nclx,
                                 ImageItem::CodedImageData& inout_codedImage);
-
-  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
 };
 
 
