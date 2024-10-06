@@ -1291,7 +1291,7 @@ static heif_decoding_options normalize_options(const heif_decoding_options* inpu
 }
 
 
-void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*)
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options* options)
 {
   options->version = 1;
 #if HAVE_LIBSHARPYUV
