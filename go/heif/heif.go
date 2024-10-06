@@ -118,16 +118,6 @@ const (
 	ChannelDisparity   = C.heif_channel_disparity
 )
 
-type ChannelDatatype C.enum_heif_channel_datatype
-
-const (
-	ChannelDatatypeUndefined       = C.heif_channel_datatype_undefined
-	ChannelDatatypeUnsignedInteger = C.heif_channel_datatype_unsigned_integer
-	ChannelDatatypeSignedInteger   = C.heif_channel_datatype_signed_integer
-	ChannelDatatypeFloatingPoint   = C.heif_channel_datatype_floating_point
-	ChannelDatatypeComplexNumber   = C.heif_channel_datatype_complex_number
-)
-
 type ProgressStep C.enum_heif_progress_step
 
 const (
