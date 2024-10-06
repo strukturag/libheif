@@ -1213,8 +1213,8 @@ struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_han
 // For grid images, return the image item ID of a specific grid tile. Note that the tile position is given in
 // the original, non-transformed image.
 LIBHEIF_API
-heif_item_id heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
-                                                      uint32_t tile_x, uint32_t tile_y);
+struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
+                                                           uint32_t tile_x, uint32_t tile_y, heif_item_id* tile_item_id);
 
 
 struct heif_decoding_options;
