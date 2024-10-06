@@ -910,7 +910,7 @@ heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* ha
 }
 
 
-heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y)
+heif_item_id heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y)
 {
   if (!handle) {
     return 0;
@@ -930,6 +930,8 @@ heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle*
 }
 
 
+#if 0
+// TODO: do we need this ? This does not handle rotations. We can use heif_image_handle_get_image_tiling() to get the same information.
 struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* handle,
                                                   uint32_t* tile_width, uint32_t* tile_height)
 {
@@ -952,6 +954,7 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 
   return heif_error_success;
 }
+#endif
 
 
 struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context* ctx,

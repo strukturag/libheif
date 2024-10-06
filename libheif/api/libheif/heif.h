@@ -1218,28 +1218,30 @@ struct heif_image_tiling
 };
 
 
-// If 'process_image_transformations' is true, this returns modified sizes. If it is true, the top_left_x/y_position will always be (0;0).
+// If 'process_image_transformations' is true, this returns modified sizes. If it is false, the top_left_x/y_position will always be (0;0).
 LIBHEIF_API
 struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
 
-// TODO: we may also need the valid area of the tile because it may be partly cut off at the image border
+
+// For grid images, return the image item ID of a specific grid tile. Note that the tile position is given in
+// the original, non-transformed image.
 LIBHEIF_API
-heif_item_id heif_image_handle_get_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y);
+heif_item_id heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
+                                                      uint32_t tile_x, uint32_t tile_y);
 
 
 struct heif_decoding_options;
 
+// The tile position is given in tile indices, not in pixel coordinates.
+// If the image transformations are processed (option->ignore_image_transformations==false), the tile position
+// is given in the transformed coordinates.
 LIBHEIF_API
 struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
-                                         struct heif_image** out_img,
-                                         enum heif_colorspace colorspace,
-                                         enum heif_chroma chroma,
-                                         const struct heif_decoding_options* options,
-                                         uint32_t x0, uint32_t y0);
-
-LIBHEIF_API
-struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle* in_handle,
-                                                  uint32_t* tile_width, uint32_t* tile_height);
+                                                      struct heif_image** out_img,
+                                                      enum heif_colorspace colorspace,
+                                                      enum heif_chroma chroma,
+                                                      const struct heif_decoding_options* options,
+                                                      uint32_t tile_x, uint32_t tile_y);
 
 
 // ------------------------- entity groups ------------------------
