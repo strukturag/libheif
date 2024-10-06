@@ -464,13 +464,6 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_filetype_yes_unsupported", heif_filetype_yes_unsupported)
     .value("heif_filetype_maybe", heif_filetype_maybe);
 
-    emscripten::enum_<heif_channel_datatype>("heif_channel_datatype")
-    .value("heif_channel_datatype_undefined", heif_channel_datatype_undefined)
-    .value("heif_channel_datatype_unsigned_integer", heif_channel_datatype_unsigned_integer)
-    .value("heif_channel_datatype_signed_integer", heif_channel_datatype_signed_integer)
-    .value("heif_channel_datatype_floating_point", heif_channel_datatype_floating_point)
-    .value("heif_channel_datatype_complex_number", heif_channel_datatype_complex_number);
-
     emscripten::class_<heif_context>("heif_context");
     emscripten::class_<heif_image_handle>("heif_image_handle");
     emscripten::class_<heif_image>("heif_image");
