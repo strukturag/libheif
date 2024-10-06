@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include "libheif/heif_experimental.h"
 
 
 uint64_t number_of_tiles(const heif_tild_image_parameters& params);

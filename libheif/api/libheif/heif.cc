@@ -910,23 +910,31 @@ heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* ha
 }
 
 
-heif_item_id heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle, uint32_t tile_x, uint32_t tile_y)
+struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
+                                                           uint32_t tile_x, uint32_t tile_y, heif_item_id* tile_item_id)
 {
-  if (!handle) {
-    return 0;
+  if (!handle || !tile_item_id) {
+    return { heif_error_Usage_error,
+             heif_suberror_Null_pointer_argument };
   }
 
   std::shared_ptr<ImageItem_Grid> gridItem = std::dynamic_pointer_cast<ImageItem_Grid>(handle->image);
   if (!gridItem) {
-    return 0;
+    return { heif_error_Usage_error,
+             heif_suberror_Unspecified,
+             "Image is no grid image" };
   }
 
   const ImageGrid& gridspec = gridItem->get_grid_spec();
   if (tile_x >= gridspec.get_columns() || tile_y >= gridspec.get_rows()) {
-    return 0;
+    return { heif_error_Usage_error,
+             heif_suberror_Unspecified,
+             "Grid tile index out of range" };
   }
 
-  return gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+  *tile_item_id = gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
+
+  return heif_error_ok;
 }
 
 

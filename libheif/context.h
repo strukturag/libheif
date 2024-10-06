@@ -31,6 +31,7 @@
 #include "error.h"
 
 #include "libheif/heif.h"
+#include "libheif/heif_experimental.h"
 #include "libheif/heif_plugin.h"
 #include "bitstream.h"
 
