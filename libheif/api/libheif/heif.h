@@ -955,7 +955,7 @@ struct heif_reader_range_request_result
 
   // for status == 'heif_reader_grow_status_error'
   int reader_error_code;        // a reader specific error code
-  const char* reader_error_msg; // string memory will be not be released by libheif, the string will be copied by libheif immediately
+  const char* reader_error_msg; // libheif will call heif_reader.release_error_msg on this if it is not NULL
 };
 
 
@@ -1015,6 +1015,11 @@ struct heif_reader
   // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
   // need to implement this function.
   void (*release_file_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+
+  // Release an error message that was returned by heif_reader in an earlier call.
+  // If this function is NULL, the error message string will not be released.
+  // This is a viable option if you are only attaching static strings.
+  void (*release_error_msg)(const char* msg);
 };
 
 
