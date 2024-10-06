@@ -975,18 +975,18 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
                                                                   const struct heif_decoding_options& options,
                                                                   bool decode_only_tile, uint32_t tx, uint32_t ty) const
 {
-  std::shared_ptr<ImageItem> imginfo;
+  std::shared_ptr<ImageItem> imgitem;
   if (m_all_images.find(ID) != m_all_images.end()) {
-    imginfo = m_all_images.find(ID)->second;
+    imgitem = m_all_images.find(ID)->second;
   }
 
   // Note: this may happen, for example when an 'iden' image references a non-existing image item.
-  if (imginfo == nullptr) {
+  if (imgitem == nullptr) {
     return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced);
   }
 
 
-  auto decodingResult = imginfo->decode_image(options, decode_only_tile, tx, ty);
+  auto decodingResult = imgitem->decode_image(options, decode_only_tile, tx, ty);
   if (decodingResult.error) {
     return decodingResult.error;
   }
@@ -1016,7 +1016,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
     }
   }
 
-  img->add_warnings(imginfo->get_decoding_warnings());
+  img->add_warnings(imgitem->get_decoding_warnings());
 
   return img;
 }
