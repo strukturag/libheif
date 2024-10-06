@@ -172,7 +172,7 @@ public:
 
   void set_next_tild_position(uint64_t pos) { m_next_tild_position = pos; }
 
-  heif_image_tiling get_heif_image_tiling() const;
+  heif_image_tiling get_heif_image_tiling() const override;
 
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 

@@ -723,7 +723,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
-        auto rotateResult = img->rotate_ccw(rot->get_rotation());
+        auto rotateResult = img->rotate_ccw(rot->get_rotation_ccw());
         if (rotateResult.error) {
           return error;
         }
@@ -929,4 +929,145 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const
   decoder->set_data_extent(std::move(extent));
 
   return decoder->decode_single_frame_from_compressed_data(options);
+}
+
+
+heif_image_tiling ImageItem::get_heif_image_tiling() const
+{
+  // --- Return a dummy tiling consisting of only a single tile for the whole image
+
+  heif_image_tiling tiling{};
+
+  tiling.version = 1;
+  tiling.num_columns = 1;
+  tiling.num_rows = 1;
+
+  tiling.tile_width = m_width;
+  tiling.tile_height = m_height;
+  tiling.image_width = m_width;
+  tiling.image_height = m_height;
+
+  tiling.top_left_x_position = 0;
+  tiling.top_left_y_position = 0;
+  tiling.number_of_extra_dimensions = 0;
+
+  for (uint32_t& s : tiling.extra_dimension_size) {
+    s = 0;
+  }
+
+  return tiling;
+}
+
+
+Result<std::vector<std::shared_ptr<Box>>> ImageItem::get_properties() const
+{
+  std::vector<std::shared_ptr<Box>> properties;
+  auto ipco_box = get_file()->get_ipco_box();
+  auto ipma_box = get_file()->get_ipma_box();
+  Error error = ipco_box->get_properties_for_item_ID(m_id, ipma_box, properties);
+  if (error) {
+    return error;
+  }
+
+  return properties;
+}
+
+
+Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tiling) const
+{
+  Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
+  if (propertiesResult.error) {
+    return propertiesResult.error;
+  }
+
+  const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
+
+  uint32_t left_excess = 0;
+  uint32_t top_excess = 0;
+  uint32_t right_excess = tiling.image_width % tiling.tile_width;
+  uint32_t bottom_excess = tiling.image_height % tiling.tile_height;
+
+  for (const auto& property : properties) {
+    if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
+      int angle = rot->get_rotation_ccw();
+      if (angle == 90 || angle == 270) {
+        std::swap(tiling.tile_width, tiling.tile_height);
+        std::swap(tiling.image_width, tiling.image_height);
+        std::swap(tiling.num_rows, tiling.num_columns);
+      }
+
+      switch (angle) {
+        case 0:
+          break;
+        case 180:
+          std::swap(left_excess, right_excess);
+          std::swap(top_excess, bottom_excess);
+          break;
+        case 90: {
+          uint32_t old_top_excess = top_excess;
+          top_excess = right_excess;
+          right_excess = bottom_excess;
+          bottom_excess = left_excess;
+          left_excess = old_top_excess;
+          break;
+        }
+        case 270: {
+          uint32_t old_top_excess = top_excess;
+          top_excess = left_excess;
+          left_excess = bottom_excess;
+          bottom_excess = right_excess;
+          right_excess = old_top_excess;
+          break;
+        }
+        default:
+          assert(false);
+          break;
+      }
+    }
+
+    if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
+      switch (mirror->get_mirror_direction()) {
+        case heif_transform_mirror_direction_horizontal:
+          std::swap(left_excess, right_excess);
+          break;
+        case heif_transform_mirror_direction_vertical:
+          std::swap(top_excess, bottom_excess);
+          break;
+        default:
+          assert(false);
+          break;
+      }
+    }
+
+    if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
+      std::shared_ptr<HeifPixelImage> clap_img;
+
+      int left = clap->left_rounded(tiling.image_width);
+      int right = clap->right_rounded(tiling.image_width);
+      int top = clap->top_rounded(tiling.image_height);
+      int bottom = clap->bottom_rounded(tiling.image_height);
+
+      if (left < 0) { left = 0; }
+      if (top < 0) { top = 0; }
+
+      if ((uint32_t)right >= tiling.image_width) { right = tiling.image_width - 1; }
+      if ((uint32_t)bottom >= tiling.image_height) { bottom = tiling.image_height - 1; }
+
+      if (left > right ||
+          top > bottom) {
+        return {heif_error_Invalid_input,
+                heif_suberror_Invalid_clean_aperture};
+      }
+
+      left_excess += left;
+      right_excess += right;
+      top_excess += top;
+      bottom_excess += bottom;
+    }
+  }
+
+  tiling.top_left_x_position = -left_excess;
+  tiling.top_left_y_position = -top_excess;
+
+  return Error::Ok;
 }

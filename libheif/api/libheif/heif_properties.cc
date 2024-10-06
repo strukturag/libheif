@@ -254,7 +254,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
     return -1;
   }
 
-  return irot->get_rotation();
+  return irot->get_rotation_ccw();
 }
 
 

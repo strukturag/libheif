@@ -1182,6 +1182,10 @@ struct heif_context* heif_image_handle_get_context(const struct heif_image_handl
 
 struct heif_image_tiling
 {
+  int version;
+
+  // --- version 1
+  
   uint32_t num_columns;
   uint32_t num_rows;
   uint32_t tile_width;
@@ -1189,14 +1193,20 @@ struct heif_image_tiling
 
   uint32_t image_width;
   uint32_t image_height;
+
+  // Position of the top left tile.
+  // Usually, this is (0;0), but if a tiled image is rotated or cropped, it may be that the top left tile should be placed at a negative position.
+  int32_t top_left_x_position;
+  int32_t top_left_y_position;
+
   uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
-  uint32_t extra_dimensions[8];        // size of extra dimensions (first 8 dimensions)
+  uint32_t extra_dimension_size[8];        // size of extra dimensions (first 8 dimensions)
 };
 
-// If the image is not tiled, all entries of he returned struct will be zero.
-// TODO: how do we handle width/height when there are image rotations?
+
+// If 'process_image_transformations' is true, this returns modified sizes. If it is true, the top_left_x/y_position will always be (0;0).
 LIBHEIF_API
-struct heif_image_tiling heif_image_handle_get_image_tiling(const struct heif_image_handle* handle);
+struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
 
 // TODO: we may also need the valid area of the tile because it may be partly cut off at the image border
 LIBHEIF_API

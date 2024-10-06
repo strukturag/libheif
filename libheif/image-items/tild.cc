@@ -660,7 +660,7 @@ heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
   tiling.image_height = m_tild_header.get_parameters().image_height;
   tiling.number_of_extra_dimensions = m_tild_header.get_parameters().number_of_extra_dimensions;
   for (int i = 0; i < std::min(tiling.number_of_extra_dimensions, uint8_t(8)); i++) {
-    tiling.extra_dimensions[i] = m_tild_header.get_parameters().extra_dimensions[i];
+    tiling.extra_dimension_size[i] = m_tild_header.get_parameters().extra_dimensions[i];
   }
 
   return tiling;

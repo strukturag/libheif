@@ -59,7 +59,7 @@ public:
   Result<std::shared_ptr<HeifPixelImage>> decode_compressed_image(const struct heif_decoding_options& options,
                                                                   bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const override;
 
-  heif_image_tiling get_heif_image_tiling() const;
+  heif_image_tiling get_heif_image_tiling() const override;
 
   Error on_load_file() override;
 

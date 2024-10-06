@@ -259,7 +259,12 @@ int main(int argc, char** argv)
 
     printf("image: %dx%d (id=%d)%s\n", width, height, IDs[i], primary ? ", primary" : "");
 
-    heif_image_tiling tiling = heif_image_handle_get_image_tiling(handle);
+    heif_image_tiling tiling;
+    err = heif_image_handle_get_image_tiling(handle, true, &tiling);
+    if (err.code) {
+      std::cerr << err.message << "\n";
+      return 10;
+    }
     if (tiling.num_columns > 0) {
       std::cout << "  tiles: " << tiling.num_columns << "x" << tiling.num_rows
                 << ", tile size: " << tiling.tile_width << "x" << tiling.tile_height << "\n";
