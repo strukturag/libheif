@@ -77,6 +77,15 @@ Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
 }
 
 
+Error ImageItem::init_decoder_from_item(heif_item_id id)
+{
+  m_id = id;
+
+  Error err = on_load_file();
+  return err;
+}
+
+
 heif_compression_format ImageItem::compression_format_from_fourcc_infe_type(uint32_t type)
 {
   switch (type) {
@@ -943,6 +952,11 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 {
   auto item_codec = ImageItem::alloc_for_compression_format(const_cast<HeifContext*>(get_context()), format);
   assert(item_codec);
+
+  Error err = item_codec->init_decoder_from_item(itemId);
+  if (err) {
+    return err;
+  }
 
   return item_codec->read_bitstream_configuration_data(itemId);
 }
