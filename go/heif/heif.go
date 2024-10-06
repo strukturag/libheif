@@ -116,8 +116,6 @@ const (
 	ChannelFilterArray = C.heif_channel_filter_array
 	ChannelDepth       = C.heif_channel_depth
 	ChannelDisparity   = C.heif_channel_disparity
-	ChannelOtherFirst  = C.heif_channel_other_first
-	ChannelOtherLast   = C.heif_channel_other_last
 )
 
 type ChannelDatatype C.enum_heif_channel_datatype
