@@ -428,33 +428,19 @@ Error ImageItem::postprocess_coded_image_colorspace(heif_colorspace* inout_color
 }
 
 
-// TODO: when all decoders are implemented, this function should just forward to the Decoder object.
 Error ImageItem::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
-  heif_item_id id;
-  Error err = m_heif_context->get_id_of_non_virtual_child_image(m_id, id);
+  auto decoder = get_decoder();
+  assert(decoder);
+
+  Error err = decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
     return err;
   }
 
-  // TODO: should we use this or maybe use this just as an additional check that pixi and coded colorspace match?
-  auto pixi = m_heif_context->get_heif_file()->get_property<Box_pixi>(id);
-  if (pixi && pixi->get_num_channels() == 1) {
-    *out_colorspace = heif_colorspace_monochrome;
-    *out_chroma = heif_chroma_monochrome;
-    return err;
-  }
+  postprocess_coded_image_colorspace(out_colorspace, out_chroma);
 
-  auto nclx = get_color_profile_nclx();
-  if (nclx && nclx->get_matrix_coefficients() == 0) {
-    *out_colorspace = heif_colorspace_RGB;
-    *out_chroma = heif_chroma_444;
-    return err;
-  }
-
-  auto decoder = get_decoder();
-  assert(decoder);
-  return decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
+  return Error::Ok;
 }
 
 
@@ -697,6 +683,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
       }
     }
   }
+
+
+  // --- transform tile position
 
   if (decode_tile_only && options.ignore_transformations == false) {
     Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
@@ -1046,6 +1035,9 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
   uint32_t bottom_excess = tiling.image_height % tiling.tile_height;
 
   for (const auto& property : properties) {
+
+    // --- rotation
+
     if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
       int angle = rot->get_rotation_ccw();
       if (angle == 90 || angle == 270) {
@@ -1083,6 +1075,8 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
       }
     }
 
+    // --- mirror
+
     if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
       switch (mirror->get_mirror_direction()) {
         case heif_transform_mirror_direction_horizontal:
@@ -1096,6 +1090,8 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
           break;
       }
     }
+
+    // --- crop
 
     if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
       std::shared_ptr<HeifPixelImage> clap_img;
