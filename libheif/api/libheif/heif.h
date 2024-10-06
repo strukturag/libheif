@@ -1204,11 +1204,14 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
 
 
-// For grid images, return the image item ID of a specific grid tile. Note that the tile position is given in
-// the original, non-transformed image.
+// For grid images, return the image item ID of a specific grid tile.
+// If 'process_image_transformations' is true, the tile positions are given in the transformed image coordinate system and
+// are internally mapped to the original image tile positions.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
-                                                           uint32_t tile_x, uint32_t tile_y, heif_item_id* tile_item_id);
+                                                           int process_image_transformations,
+                                                           uint32_t tile_x, uint32_t tile_y,
+                                                           heif_item_id* tile_item_id);
 
 
 struct heif_decoding_options;

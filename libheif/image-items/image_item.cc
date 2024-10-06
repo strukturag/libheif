@@ -669,6 +669,63 @@ Error ImageItem::check_for_valid_image_size(uint32_t width, uint32_t height) con
 }
 
 
+Error ImageItem::transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const
+{
+  Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
+  if (propertiesResult.error) {
+    return propertiesResult.error;
+  }
+
+  heif_image_tiling tiling = get_heif_image_tiling();
+
+  //for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
+  for (auto propIter = propertiesResult.value.rbegin(); propIter != propertiesResult.value.rend(); propIter++) {
+    if (auto irot = std::dynamic_pointer_cast<Box_irot>(*propIter)) {
+      switch (irot->get_rotation_ccw()) {
+        case 90: {
+          uint32_t tx0 = tiling.num_columns - 1 - tile_y;
+          uint32_t ty0 = tile_x;
+          tile_y = ty0;
+          tile_x = tx0;
+          break;
+        }
+        case 270: {
+          uint32_t tx0 = tile_y;
+          uint32_t ty0 = tiling.num_rows - 1 - tile_x;
+          tile_y = ty0;
+          tile_x = tx0;
+          break;
+        }
+        case 180: {
+          tile_x = tiling.num_columns - 1 - tile_x;
+          tile_y = tiling.num_rows - 1 - tile_y;
+          break;
+        }
+        default:
+          assert(false);
+          break;
+      }
+    }
+
+    if (auto imir = std::dynamic_pointer_cast<Box_imir>(*propIter)) {
+      switch (imir->get_mirror_direction()) {
+        case heif_transform_mirror_direction_horizontal:
+          tile_x = tiling.num_columns - 1 - tile_x;
+          break;
+        case heif_transform_mirror_direction_vertical:
+          tile_y = tiling.num_rows - 1 - tile_y;
+          break;
+        default:
+          assert(false);
+          break;
+      }
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct heif_decoding_options& options,
                                                                 bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
@@ -688,55 +745,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // --- transform tile position
 
   if (decode_tile_only && options.ignore_transformations == false) {
-    Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
-    if (propertiesResult.error) {
-      return propertiesResult.error;
-    }
-
-    heif_image_tiling tiling = get_heif_image_tiling();
-
-    //for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
-    for (auto propIter = propertiesResult.value.rbegin(); propIter != propertiesResult.value.rend(); propIter++) {
-      if (auto irot = std::dynamic_pointer_cast<Box_irot>(*propIter)) {
-        switch (irot->get_rotation_ccw()) {
-          case 90: {
-            uint32_t tx0 = tiling.num_columns - 1 - tile_y0;
-            uint32_t ty0 = tile_x0; //tiling.num_rows - 1 - tile_x0;
-            tile_y0 = ty0;
-            tile_x0 = tx0;
-            break;
-          }
-          case 270: {
-            uint32_t tx0 = tile_y0;
-            uint32_t ty0 = tiling.num_rows - 1 - tile_x0;
-            tile_y0 = ty0;
-            tile_x0 = tx0;
-            break;
-          }
-          case 180: {
-            tile_x0 = tiling.num_columns - 1 - tile_x0;
-            tile_y0 = tiling.num_rows - 1 - tile_y0;
-            break;
-          }
-          default:
-            assert(false);
-            break;
-        }
-      }
-
-      if (auto imir = std::dynamic_pointer_cast<Box_imir>(*propIter)) {
-        switch (imir->get_mirror_direction()) {
-          case heif_transform_mirror_direction_horizontal:
-            tile_x0 = tiling.num_columns - 1 - tile_x0;
-            break;
-          case heif_transform_mirror_direction_vertical:
-            tile_y0 = tiling.num_rows - 1 - tile_y0;
-            break;
-          default:
-            assert(false);
-            break;
-        }
-      }
+    if (Error error = transform_requested_tile_position_to_original_tile_position(tile_x0, tile_y0)) {
+      return error;
     }
   }
 

@@ -882,7 +882,9 @@ heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* ha
 
 
 struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
-                                                           uint32_t tile_x, uint32_t tile_y, heif_item_id* tile_item_id)
+                                                           int process_image_transformations,
+                                                           uint32_t tile_x, uint32_t tile_y,
+                                                           heif_item_id* tile_item_id)
 {
   if (!handle || !tile_item_id) {
     return { heif_error_Usage_error,
@@ -901,6 +903,10 @@ struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_ima
     return { heif_error_Usage_error,
              heif_suberror_Unspecified,
              "Grid tile index out of range" };
+  }
+
+  if (process_image_transformations) {
+    gridItem->transform_requested_tile_position_to_original_tile_position(tile_x, tile_y);
   }
 
   *tile_item_id = gridItem->get_grid_tiles()[tile_y * gridspec.get_columns() + tile_x];
