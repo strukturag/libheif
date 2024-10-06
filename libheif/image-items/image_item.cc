@@ -767,8 +767,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
   Error error;
 
-  // TODO: for tile decoding, we should require that all transformations are ignored or processed
-
   if (options.ignore_transformations == false) {
     Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
     if (propertiesResult.error) {
@@ -797,37 +795,41 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
       }
 
 
-      if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
-        std::shared_ptr<HeifPixelImage> clap_img;
+      if (!decode_tile_only) {
+        // For tiles decoding, we do not process the 'clap' because this is handled by a shift of the tiling grid.
 
-        uint32_t img_width = img->get_width();
-        uint32_t img_height = img->get_height();
-        assert(img_width >= 0);
-        assert(img_height >= 0);
+        if (auto clap = std::dynamic_pointer_cast<Box_clap>(property)) {
+          std::shared_ptr<HeifPixelImage> clap_img;
 
-        int left = clap->left_rounded(img_width);
-        int right = clap->right_rounded(img_width);
-        int top = clap->top_rounded(img_height);
-        int bottom = clap->bottom_rounded(img_height);
+          uint32_t img_width = img->get_width();
+          uint32_t img_height = img->get_height();
+          assert(img_width >= 0);
+          assert(img_height >= 0);
 
-        if (left < 0) { left = 0; }
-        if (top < 0) { top = 0; }
+          int left = clap->left_rounded(img_width);
+          int right = clap->right_rounded(img_width);
+          int top = clap->top_rounded(img_height);
+          int bottom = clap->bottom_rounded(img_height);
 
-        if ((uint32_t)right >= img_width) { right = img_width - 1; }
-        if ((uint32_t)bottom >= img_height) { bottom = img_height - 1; }
+          if (left < 0) { left = 0; }
+          if (top < 0) { top = 0; }
 
-        if (left > right ||
-            top > bottom) {
-          return Error(heif_error_Invalid_input,
-                       heif_suberror_Invalid_clean_aperture);
+          if ((uint32_t) right >= img_width) { right = img_width - 1; }
+          if ((uint32_t) bottom >= img_height) { bottom = img_height - 1; }
+
+          if (left > right ||
+              top > bottom) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Invalid_clean_aperture);
+          }
+
+          auto cropResult = img->crop(left, right, top, bottom);
+          if (error) {
+            return error;
+          }
+
+          img = cropResult.value;
         }
-
-        auto cropResult = img->crop(left, right, top, bottom);
-        if (error) {
-          return error;
-        }
-
-        img = cropResult.value;
       }
     }
   }
