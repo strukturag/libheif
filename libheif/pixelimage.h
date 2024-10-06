@@ -25,6 +25,7 @@
 //#include "heif.h"
 #include "error.h"
 #include "nclx.h"
+#include <libheif/heif_experimental.h>
 
 #include <vector>
 #include <memory>
