@@ -38,6 +38,7 @@
 #include <limits>
 #include <cassert>
 #include <cstring>
+#include <ranges>
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
@@ -693,6 +694,58 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
       Error err = check_for_valid_image_size(ispe->get_width(), ispe->get_height());
       if (err) {
         return err;
+      }
+    }
+  }
+
+  if (decode_tile_only && options.ignore_transformations == false) {
+    Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
+    if (propertiesResult.error) {
+      return propertiesResult.error;
+    }
+
+    heif_image_tiling tiling = get_heif_image_tiling();
+
+    for (auto& prop : std::ranges::reverse_view(propertiesResult.value)) {
+      if (auto irot = std::dynamic_pointer_cast<Box_irot>(prop)) {
+        switch (irot->get_rotation_ccw()) {
+          case 90: {
+            uint32_t tx0 = tiling.num_columns - 1 - tile_y0;
+            uint32_t ty0 = tile_x0; //tiling.num_rows - 1 - tile_x0;
+            tile_y0 = ty0;
+            tile_x0 = tx0;
+            break;
+          }
+          case 270: {
+            uint32_t tx0 = tile_y0;
+            uint32_t ty0 = tiling.num_rows - 1 - tile_x0;
+            tile_y0 = ty0;
+            tile_x0 = tx0;
+            break;
+          }
+          case 180: {
+            tile_x0 = tiling.num_columns - 1 - tile_x0;
+            tile_y0 = tiling.num_rows - 1 - tile_y0;
+            break;
+          }
+          default:
+            assert(false);
+            break;
+        }
+      }
+
+      if (auto imir = std::dynamic_pointer_cast<Box_imir>(prop)) {
+        switch (imir->get_mirror_direction()) {
+          case heif_transform_mirror_direction_horizontal:
+            tile_x0 = tiling.num_columns - 1 - tile_x0;
+            break;
+          case heif_transform_mirror_direction_vertical:
+            tile_y0 = tiling.num_rows - 1 - tile_y0;
+            break;
+          default:
+            assert(false);
+            break;
+        }
       }
     }
   }
