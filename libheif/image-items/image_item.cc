@@ -716,10 +716,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // TODO: for tile decoding, we should require that all transformations are ignored or processed
 
   if (options.ignore_transformations == false) {
-    std::vector<std::shared_ptr<Box>> properties;
-    auto ipco_box = file->get_ipco_box();
-    auto ipma_box = file->get_ipma_box();
-    error = ipco_box->get_properties_for_item_ID(m_id, ipma_box, properties);
+    Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
+    if (propertiesResult.error) {
+      return propertiesResult.error;
+    }
+
+    const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
 
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
