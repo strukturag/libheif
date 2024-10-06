@@ -1196,8 +1196,8 @@ struct heif_image_tiling
 
   // Position of the top left tile.
   // Usually, this is (0;0), but if a tiled image is rotated or cropped, it may be that the top left tile should be placed at a negative position.
-  int32_t top_left_x_position;
-  int32_t top_left_y_position;
+  uint32_t top_offset;
+  uint32_t left_offset;
 
   uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
   uint32_t extra_dimension_size[8];        // size of extra dimensions (first 8 dimensions)
