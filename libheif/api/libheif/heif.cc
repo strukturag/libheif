@@ -1031,7 +1031,7 @@ struct heif_entity_group* heif_context_get_entity_groups(const struct heif_conte
 }
 
 
-void heif_entity_group_release(struct heif_entity_group* grp, int num_groups)
+void heif_entity_groups_release(struct heif_entity_group* grp, int num_groups)
 {
   for (int i=0;i<num_groups;i++) {
     delete[] grp[i].entities;
@@ -1320,7 +1320,7 @@ static heif_decoding_options normalize_options(const heif_decoding_options* inpu
 }
 
 
-void heif_color_conversion_options_set_default(struct heif_color_conversion_options* options)
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*)
 {
   options->version = 1;
 #if HAVE_LIBSHARPYUV
