@@ -237,6 +237,11 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
                                                            const std::shared_ptr<const Box_cmpd>& cmpd,
                                                            heif_chroma* out_chroma, heif_colorspace* out_colourspace)
 {
+  Error error = check_header_validity(std::nullopt, cmpd, uncC);
+  if (error) {
+    return error;
+  }
+
   *out_chroma = heif_chroma_undefined;
   *out_colourspace = heif_colorspace_undefined;
 
@@ -510,17 +515,11 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 }
 
 
-Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const Box_ispe>& ispe,
+Error UncompressedImageCodec::check_header_validity(std::optional<const std::shared_ptr<const Box_ispe>> ispe,
                                                     const std::shared_ptr<const Box_cmpd>& cmpd,
                                                     const std::shared_ptr<const Box_uncC>& uncC)
 {
   // if we miss a required box, show error
-
-  if (!ispe) {
-    return {heif_error_Unsupported_feature,
-            heif_suberror_Unsupported_data_version,
-            "Missing required ispe box for uncompressed codec"};
-  }
 
   if (!uncC) {
     return {heif_error_Unsupported_feature,
@@ -544,18 +543,27 @@ Error UncompressedImageCodec::check_header_validity(const std::shared_ptr<const 
     }
   }
 
-  if (uncC->get_number_of_tile_rows() > ispe->get_height() ||
-      uncC->get_number_of_tile_columns() > ispe->get_width()) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "More tiles than pixels in uncC box"};
-  }
 
-  if (ispe->get_height() % uncC->get_number_of_tile_rows() != 0 ||
-      ispe->get_width() % uncC->get_number_of_tile_columns() != 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Unspecified,
-            "Invalid tile size (image size not a multiple of the tile size)"};
+  if (ispe) {
+    if (!*ispe) {
+      return {heif_error_Unsupported_feature,
+              heif_suberror_Unsupported_data_version,
+              "Missing required ispe box for uncompressed codec"};
+    }
+
+    if (uncC->get_number_of_tile_rows() > (*ispe)->get_height() ||
+        uncC->get_number_of_tile_columns() > (*ispe)->get_width()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "More tiles than pixels in uncC box"};
+    }
+
+    if ((*ispe)->get_height() % uncC->get_number_of_tile_rows() != 0 ||
+        (*ispe)->get_width() % uncC->get_number_of_tile_columns() != 0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Invalid tile size (image size not a multiple of the tile size)"};
+    }
   }
 
   return Error::Ok;
