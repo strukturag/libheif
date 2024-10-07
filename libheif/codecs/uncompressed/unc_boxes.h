@@ -65,7 +65,7 @@ public:
   }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   std::vector<Component> m_components;
 };
@@ -206,7 +206,7 @@ public:
   uint64_t compute_tile_data_size_bytes(uint32_t tile_width, uint32_t tile_height) const;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   uint32_t m_profile = 0; // 0 = not compliant to any profile
 
@@ -261,7 +261,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   uint32_t m_compression_type;
   uint8_t m_compressed_unit_type;
@@ -309,7 +309,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   std::vector<CompressedUnitInfo> m_unit_infos;
 
@@ -357,7 +357,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   uint16_t m_pattern_width;
   uint16_t m_pattern_height;

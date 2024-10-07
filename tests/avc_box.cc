@@ -44,7 +44,7 @@ TEST_CASE("avcC") {
 
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(error == Error::Ok);
   REQUIRE(range.error() == 0);
 

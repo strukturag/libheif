@@ -28,7 +28,7 @@
 #include <limits>
 
 #include "libheif/heif.h"
-#include "security_limits.h"
+#include "libheif/heif_experimental.h"
 #include "unc_types.h"
 #include "unc_boxes.h"
 
@@ -129,7 +129,7 @@ template <typename T> const char* get_name(T val, const std::map<T, const char*>
   }
 }
 
-Error Box_cmpd::parse(BitstreamRange& range)
+Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   unsigned int component_count = range.read32();
 
@@ -196,7 +196,7 @@ Error Box_cmpd::write(StreamWriter& writer) const
   return Error::Ok;
 }
 
-Error Box_uncC::parse(BitstreamRange& range)
+Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
   m_profile = range.read32();
@@ -402,7 +402,7 @@ uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t ti
 }
 
 
-Error Box_cmpC::parse(BitstreamRange& range)
+Error Box_cmpC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -438,7 +438,7 @@ Error Box_cmpC::write(StreamWriter& writer) const
 }
 
 
-Error Box_icef::parse(BitstreamRange& range)
+Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -616,7 +616,7 @@ const uint8_t Box_icef::get_required_size_code(uint64_t size) const
 }
 
 
-Error Box_cpat::parse(BitstreamRange& range)
+Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -627,7 +627,8 @@ Error Box_cpat::parse(BitstreamRange& range)
   m_pattern_width = range.read16();
   m_pattern_height = range.read16();
 
-  if (m_pattern_width * m_pattern_height > MAX_BAYER_PATTERN_PIXELS) {
+  auto max_bayer_pattern_size = limits->max_bayer_pattern_pixels;
+  if (max_bayer_pattern_size && m_pattern_width * m_pattern_height > max_bayer_pattern_size) {
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "Maximum Bayer pattern size exceeded."};

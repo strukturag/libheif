@@ -33,7 +33,7 @@
 #include <libheif/api_structs.h>
 
 
-Error Box_hvcC::parse(BitstreamRange& range)
+Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 

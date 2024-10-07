@@ -22,6 +22,7 @@
 #include <string>
 #include "security_limits.h"
 #include <cstring>
+#include "libheif/heif_experimental.h"
 
 
 // returns 0 if the marker_type was not found
@@ -60,14 +61,14 @@ Error Box_jpgC::write(StreamWriter& writer) const
 }
 
 
-Error Box_jpgC::parse(BitstreamRange& range)
+Error Box_jpgC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   if (!has_fixed_box_size()) {
     return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified, "jpgC with unspecified size are not supported"};
   }
 
   size_t nBytes = range.get_remaining_bytes();
-  if (nBytes > MAX_MEMORY_BLOCK_SIZE) {
+  if (nBytes > limits->max_memory_block_size) {
     return Error{heif_error_Invalid_input, heif_suberror_Unspecified, "jpgC block exceeds maximum size"};
   }
 

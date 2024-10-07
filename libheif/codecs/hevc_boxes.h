@@ -82,7 +82,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   struct NalArray

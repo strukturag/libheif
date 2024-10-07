@@ -124,10 +124,12 @@ Error HeifFile::read_from_memory(const void* data, size_t size, bool copy)
 
 Error HeifFile::read(const std::shared_ptr<StreamReader>& reader)
 {
+  assert(m_limits);
+
   m_input_stream = reader;
 
   Error err;
-  err = m_file_layout->read(reader);
+  err = m_file_layout->read(reader, m_limits);
   if (err) {
     return err;
   }
@@ -528,6 +530,8 @@ Error HeifFile::get_properties(heif_item_id imageID,
 
 Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>* data) const
 {
+  assert(m_limits);
+
 #if ENABLE_PARALLEL_TILE_DECODING
   // std::lock_guard<std::mutex> guard(m_read_mutex);   // TODO: I think that this is not needed anymore because this function is not used for image data anymore.
 #endif
@@ -557,7 +561,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
 #if HAVE_ZLIB
       read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
-      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
         return error;
       }
@@ -575,7 +579,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
 #if HAVE_ZLIB
       read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
-      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
         return error;
       }
@@ -593,7 +597,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
 #if HAVE_BROTLI
       read_uncompressed = false;
       std::vector<uint8_t> compressed_data;
-      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+      error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
       if (error) {
         return error;
       }
@@ -610,7 +614,7 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
   }
 
   if (read_uncompressed) {
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data);
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, data, m_limits);
   }
 
   return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_codec);
@@ -636,13 +640,15 @@ Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out
             sstr.str()};
   }
 
-  return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, offset, size);
+  return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &out_data, offset, size, m_limits);
 }
 
 
 Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, heif_metadata_compression* out_compression) const
 {
   Error error;
+
+  assert(m_limits);
 
   auto infe_box = get_infe_box(ID);
   if (!infe_box) {
@@ -660,7 +666,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data);
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data, m_limits);
   }
 
 
@@ -677,7 +683,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
       *out_compression = heif_metadata_compression_off;
     }
 
-    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data);
+    return m_iloc_box->read_data(ID, m_input_stream, m_idat_box, out_data, m_limits);
   }
   else if (encoding == "compress_zlib") {
     compression = heif_metadata_compression_zlib;
@@ -695,7 +701,7 @@ Error HeifFile::get_item_data(heif_item_id ID, std::vector<uint8_t>* out_data, h
   // read compressed data
 
   std::vector<uint8_t> compressed_data;
-  error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data);
+  error = m_iloc_box->read_data(ID, m_input_stream, m_idat_box, &compressed_data, m_limits);
   if (error) {
     return error;
   }

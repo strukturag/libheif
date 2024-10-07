@@ -28,7 +28,7 @@
 #include <libheif/api_structs.h>
 
 
-Error Box_vvcC::parse(BitstreamRange& range)
+Error Box_vvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 

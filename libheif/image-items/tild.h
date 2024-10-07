@@ -66,7 +66,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   heif_tild_image_parameters m_parameters;
@@ -84,7 +84,7 @@ public:
 
   const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
 
-  Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id);
+  Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits);
 
   Error read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
                                 uint64_t start, uint64_t end);

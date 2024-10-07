@@ -28,7 +28,7 @@
 #include "avc_dec.h"
 
 
-Error Box_avcC::parse(BitstreamRange& range)
+Error Box_avcC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   m_configuration.configuration_version = range.read8();
   m_configuration.AVCProfileIndication = range.read8();

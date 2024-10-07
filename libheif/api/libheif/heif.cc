@@ -19,6 +19,7 @@
  */
 
 #include "heif_plugin.h"
+#include "security_limits.h"
 #include "region.h"
 #include "common_utils.h"
 #include <cstdint>
@@ -323,7 +324,7 @@ int heif_has_compatible_brand(const uint8_t* data, int len, const char* brand_fo
   BitstreamRange range(stream, len);
 
   std::shared_ptr<Box> box;
-  Error err = Box::read(range, &box);
+  Error err = Box::read(range, &box, heif_get_global_security_limits());
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
       return -1;
@@ -355,7 +356,7 @@ struct heif_error heif_list_compatible_brands(const uint8_t* data, int len, heif
   BitstreamRange range(stream, len);
 
   std::shared_ptr<Box> box;
-  Error err = Box::read(range, &box);
+  Error err = Box::read(range, &box, heif_get_global_security_limits());
   if (err) {
     if (err.sub_error_code == heif_suberror_End_of_data) {
       return {err.error_code, err.sub_error_code, "insufficient input data"};
@@ -477,6 +478,36 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
     return "";
   }
 }
+
+
+const struct heif_security_limits* heif_get_global_security_limits()
+{
+  return &global_security_limits;
+}
+
+
+struct heif_security_limits* heif_context_get_security_limits(const struct heif_context* ctx)
+{
+  if (!ctx) {
+    return nullptr;
+  }
+
+  return ctx->context->get_security_limits();
+}
+
+
+struct heif_error heif_context_set_security_limits(struct heif_context* ctx, const struct heif_security_limits* limits)
+{
+  if (ctx==nullptr || limits==nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument};
+  }
+
+  ctx->context->set_security_limits(limits);
+
+  return heif_error_ok;
+}
+
 
 
 heif_context* heif_context_alloc()

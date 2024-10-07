@@ -234,7 +234,7 @@ TEST_CASE("uncC_parse") {
 
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(error == Error::Ok);
   REQUIRE(range.error() == 0);
 
@@ -296,7 +296,7 @@ TEST_CASE("uncC_parse_no_overflow") {
 
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(error == Error::Ok);
   REQUIRE(range.error() == 0);
 
@@ -323,7 +323,7 @@ TEST_CASE("uncC_parse_excess_tile_cols") {
                                                       byteArray.size(), false);
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(range.error() == 0);
   REQUIRE(error.error_code == 6);
   REQUIRE(error.sub_error_code == 1000);
@@ -346,7 +346,7 @@ TEST_CASE("uncC_parse_excess_tile_rows") {
                                                       byteArray.size(), false);
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(range.error() == 0);
   REQUIRE(error.error_code == 6);
   REQUIRE(error.sub_error_code == 1000);
@@ -365,7 +365,7 @@ TEST_CASE("cmpC_defl") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -401,7 +401,7 @@ TEST_CASE("cmpC_zlib") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -436,7 +436,7 @@ TEST_CASE("cmpC_brot") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -475,7 +475,7 @@ TEST_CASE("icef_24_8_bit") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -513,7 +513,7 @@ TEST_CASE("icef_0_16_bit") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -555,7 +555,7 @@ TEST_CASE("icef_32bit") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -599,7 +599,7 @@ TEST_CASE("icef_uint64") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error == Error::Ok);
     REQUIRE(range.error() == 0);
 
@@ -641,7 +641,7 @@ TEST_CASE("icef_bad_version") {
 
     BitstreamRange range(reader, byteArray.size());
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, heif_get_global_security_limits());
     REQUIRE(error.error_code == heif_error_Unsupported_feature);
     REQUIRE(error.sub_error_code == heif_suberror_Unsupported_data_version);
     REQUIRE(error.message == std::string("icef box data version 1 is not implemented yet"));

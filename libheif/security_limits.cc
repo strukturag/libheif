@@ -1,6 +1,6 @@
 /*
  * HEIF codec.
- * Copyright (c) 2018 Dirk Farin <dirk.farin@gmail.com>
+ * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -17,22 +17,26 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBHEIF_SECURITY_LIMITS_H
-#define LIBHEIF_SECURITY_LIMITS_H
 
-#include "libheif/heif.h"
-#include <cinttypes>
-#include <cstddef>
+#include "security_limits.h"
 
-extern heif_security_limits global_security_limits;
 
-// Maximum nesting level of boxes in input files.
-// We put a limit on this to avoid unlimited stack usage by malicious input files.
-static const int MAX_BOX_NESTING_LEVEL = 20;
+struct heif_security_limits global_security_limits {
+    .version = 1,
 
-static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
-static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
-static const int64_t MAX_FILE_POS = 0x007FFFFFFFFFFFFFLL; // maximum file position
-static const int MAX_FRACTION_VALUE = 0x10000;
+    // --- version 1
 
-#endif  // LIBHEIF_SECURITY_LIMITS_H
+    // Artificial limit to avoid allocating too much memory.
+    // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
+    .max_image_size_pixels = 32768 * 32768,
+    .max_bayer_pattern_pixels = 16*16,
+
+    .max_iref_references = 0,
+    .max_iloc_items = 0,
+    .max_iloc_extents_per_item = 32,
+    .max_children_per_box = 65536,
+    .max_number_of_tiles = 4096 * 4096,
+
+    .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
+    .max_memory_block_size = 512 * 1024 * 1024   // 512 MB
+};

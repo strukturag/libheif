@@ -933,6 +933,7 @@ LIBHEIF_API
 void heif_context_free(struct heif_context*);
 
 
+
 struct heif_reading_options;
 
 enum heif_reader_grow_status
@@ -1098,6 +1099,39 @@ void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int max
 // to minimize parallelism in each decoder.
 LIBHEIF_API
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
+
+
+// --- security limits
+
+// If you set a limit to 0, the limit is disabled.
+struct heif_security_limits {
+  uint8_t version;
+
+  // --- version 1
+
+  // Artificial limit to avoid allocating too much memory.
+  // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
+  uint64_t max_image_size_pixels ;
+  uint32_t max_bayer_pattern_pixels;
+
+  uint32_t max_iref_references;
+  uint32_t max_iloc_items;
+  uint32_t max_iloc_extents_per_item;
+  uint32_t max_children_per_box;
+  uint64_t max_number_of_tiles;
+
+  uint32_t max_color_profile_size;
+  uint64_t max_memory_block_size;
+};
+
+LIBHEIF_API
+const struct heif_security_limits* heif_get_global_security_limits();
+
+LIBHEIF_API
+struct heif_security_limits* heif_context_get_security_limits(const struct heif_context*);
+
+LIBHEIF_API
+struct heif_error heif_context_set_security_limits(struct heif_context*, const struct heif_security_limits*);
 
 
 // ========================= heif_image_handle =========================

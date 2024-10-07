@@ -41,7 +41,7 @@ TEST_CASE("parse file layout") {
   auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
 
   FileLayout file;
-  Error err = file.read(reader);
+  Error err = file.read(reader, heif_get_global_security_limits());
 
   REQUIRE(err.error_code == heif_error_Ok);
 

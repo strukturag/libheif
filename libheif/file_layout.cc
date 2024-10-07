@@ -33,7 +33,7 @@ FileLayout::FileLayout()
 }
 
 
-Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
+Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_security_limits* limits)
 {
   m_boxes.clear();
 
@@ -85,7 +85,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
 
   BitstreamRange ftyp_range(m_stream_reader, 0, ftyp_size);
   std::shared_ptr<Box> ftyp_box;
-  err = Box::read(ftyp_range, &ftyp_box);
+  err = Box::read(ftyp_range, &ftyp_box, limits);
 
   m_boxes.push_back(ftyp_box);
   m_ftyp_box = std::dynamic_pointer_cast<Box_ftyp>(ftyp_box);
@@ -138,7 +138,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream)
 
       BitstreamRange meta_box_range(m_stream_reader, meta_box_start, end_of_meta_box);
       std::shared_ptr<Box> meta_box;
-      err = Box::read(meta_box_range, &meta_box);
+      err = Box::read(meta_box_range, &meta_box, limits);
       if (err) {
         return err;
       }
