@@ -34,7 +34,7 @@
 #include "init.h"
 #include "image-items/grid.h"
 #include "image-items/overlay.h"
-#include "image-items/tild.h"
+#include "image-items/tiled.h"
 #include <set>
 #include <limits>
 
@@ -3491,13 +3491,13 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 }
 
 
-struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
-                                              const struct heif_tild_image_parameters* parameters,
-                                              const struct heif_encoding_options* options, // TODO: do we need this?
-                                              struct heif_image_handle** out_grid_image_handle)
+struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
+                                               const struct heif_tiled_image_parameters* parameters,
+                                               const struct heif_encoding_options* options, // TODO: do we need this?
+                                               struct heif_image_handle** out_grid_image_handle)
 {
-  Result<std::shared_ptr<ImageItem_Tild>> gridImageResult;
-  gridImageResult = ctx->context->add_tild_item(parameters);
+  Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
+  gridImageResult = ctx->context->add_tiled_item(parameters);
 
   if (gridImageResult.error != Error::Ok) {
     return gridImageResult.error.error_struct(ctx->context.get());
@@ -3520,7 +3520,7 @@ struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
                                               struct heif_encoder* encoder)
 {
   if (tiled_image->image->get_infe_type() == fourcc("tili")) {
-    Error err = ctx->context->add_tild_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
+    Error err = ctx->context->add_tiled_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
     return err.error_struct(ctx->context.get());
   }
 #if WITH_UNCOMPRESSED_CODEC

@@ -112,7 +112,7 @@ struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_sys
 
 // --- Tiled images
 
-struct heif_tild_image_parameters {
+struct heif_tiled_image_parameters {
   int version;
 
   // --- version 1
@@ -137,10 +137,10 @@ struct heif_tild_image_parameters {
 
 
 LIBHEIF_API
-struct heif_error heif_context_add_tild_image(struct heif_context* ctx,
-                                              const struct heif_tild_image_parameters* parameters,
-                                              const struct heif_encoding_options* options, // TODO: do we need this?
-                                              struct heif_image_handle** out_tild_image_handle);
+struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
+                                               const struct heif_tiled_image_parameters* parameters,
+                                               const struct heif_encoding_options* options, // TODO: do we need this?
+                                               struct heif_image_handle** out_tiled_image_handle);
 
 
 // --- 'unci' images

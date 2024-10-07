@@ -18,8 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBHEIF_TILD_H
-#define LIBHEIF_TILD_H
+#ifndef LIBHEIF_TILED_H
+#define LIBHEIF_TILED_H
 
 
 #include "image_item.h"
@@ -31,11 +31,11 @@
 #include "libheif/heif_experimental.h"
 
 
-uint64_t number_of_tiles(const heif_tild_image_parameters& params);
+uint64_t number_of_tiles(const heif_tiled_image_parameters& params);
 
-uint32_t nTiles_h(const heif_tild_image_parameters& params);
+uint32_t nTiles_h(const heif_tiled_image_parameters& params);
 
-uint32_t nTiles_v(const heif_tild_image_parameters& params);
+uint32_t nTiles_v(const heif_tiled_image_parameters& params);
 
 
 class Box_tilC : public FullBox
@@ -57,9 +57,9 @@ public:
 
   void derive_box_version() override;
 
-  void set_parameters(const heif_tild_image_parameters& params) { m_parameters = params; }
+  void set_parameters(const heif_tiled_image_parameters& params) { m_parameters = params; }
 
-  const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
+  const heif_tiled_image_parameters& get_parameters() const { return m_parameters; }
 
   Error write(StreamWriter& writer) const override;
 
@@ -69,7 +69,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
-  heif_tild_image_parameters m_parameters;
+  heif_tiled_image_parameters m_parameters;
 };
 
 
@@ -80,9 +80,9 @@ private:
 class TildHeader
 {
 public:
-  Error set_parameters(const heif_tild_image_parameters& params);
+  Error set_parameters(const heif_tiled_image_parameters& params);
 
-  const heif_tild_image_parameters& get_parameters() const { return m_parameters; }
+  const heif_tiled_image_parameters& get_parameters() const { return m_parameters; }
 
   Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits);
 
@@ -111,7 +111,7 @@ public:
   [[nodiscard]] std::pair<uint32_t, uint32_t> get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const;
 
 private:
-  heif_tild_image_parameters m_parameters;
+  heif_tiled_image_parameters m_parameters;
 
   struct TileOffset {
     uint64_t offset = TILD_OFFSET_NOT_LOADED;
@@ -126,12 +126,12 @@ private:
 };
 
 
-class ImageItem_Tild : public ImageItem
+class ImageItem_Tiled : public ImageItem
 {
 public:
-  ImageItem_Tild(HeifContext* ctx, heif_item_id id);
+  ImageItem_Tiled(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_Tild(HeifContext* ctx);
+  ImageItem_Tiled(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("tili"); }
 
@@ -140,7 +140,7 @@ public:
 
   heif_compression_format get_compression_format() const override;
 
-  static Result<std::shared_ptr<ImageItem_Tild>> add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters);
+  static Result<std::shared_ptr<ImageItem_Tiled>> add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters);
 
   Error on_load_file() override;
 
@@ -194,4 +194,4 @@ private:
 };
 
 
-#endif //LIBHEIF_TILD_H
+#endif //LIBHEIF_TILED_H

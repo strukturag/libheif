@@ -30,7 +30,7 @@
 #include "grid.h"
 #include "overlay.h"
 #include "iden.h"
-#include "tild.h"
+#include "tiled.h"
 #include "codecs/decoder.h"
 #include "color-conversion/colorconversion.h"
 #include "api/libheif/api_structs.h"
@@ -150,8 +150,8 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == fourcc("iden")) {
     return std::make_shared<ImageItem_iden>(ctx, id);
   }
-  else if (item_type == fourcc("tild")) {
-    return std::make_shared<ImageItem_Tild>(ctx, id);
+  else if (item_type == fourcc("tili")) {
+    return std::make_shared<ImageItem_Tiled>(ctx, id);
   }
   else {
     return nullptr;

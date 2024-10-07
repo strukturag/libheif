@@ -18,7 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tild.h"
+#include "tiled.h"
 #include "context.h"
 #include "file.h"
 #include <algorithm>
@@ -38,7 +38,7 @@ static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
 }
 
 
-uint64_t number_of_tiles(const heif_tild_image_parameters& params)
+uint64_t number_of_tiles(const heif_tiled_image_parameters& params)
 {
   uint64_t nTiles = nTiles_h(params) * static_cast<uint64_t>(nTiles_v(params));
 
@@ -55,13 +55,13 @@ uint64_t number_of_tiles(const heif_tild_image_parameters& params)
 }
 
 
-uint32_t nTiles_h(const heif_tild_image_parameters& params)
+uint32_t nTiles_h(const heif_tiled_image_parameters& params)
 {
   return (params.image_width + params.tile_width - 1) / params.tile_width;
 }
 
 
-uint32_t nTiles_v(const heif_tild_image_parameters& params)
+uint32_t nTiles_v(const heif_tiled_image_parameters& params)
 {
   return (params.image_height + params.tile_height - 1) / params.tile_height;
 }
@@ -248,7 +248,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-Error TildHeader::set_parameters(const heif_tild_image_parameters& params)
+Error TildHeader::set_parameters(const heif_tiled_image_parameters& params)
 {
   m_parameters = params;
 
@@ -431,25 +431,25 @@ std::string TildHeader::dump() const
 }
 
 
-ImageItem_Tild::ImageItem_Tild(HeifContext* ctx)
+ImageItem_Tiled::ImageItem_Tiled(HeifContext* ctx)
         : ImageItem(ctx)
 {
 }
 
 
-ImageItem_Tild::ImageItem_Tild(HeifContext* ctx, heif_item_id id)
+ImageItem_Tiled::ImageItem_Tiled(HeifContext* ctx, heif_item_id id)
         : ImageItem(ctx, id)
 {
 }
 
 
-heif_compression_format ImageItem_Tild::get_compression_format() const
+heif_compression_format ImageItem_Tiled::get_compression_format() const
 {
   return compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
 }
 
 
-Error ImageItem_Tild::on_load_file()
+Error ImageItem_Tiled::on_load_file()
 {
   auto heif_file = get_context()->get_heif_file();
 
@@ -467,7 +467,7 @@ Error ImageItem_Tild::on_load_file()
             "Tiled image without 'ispe' property box."};
   }
 
-  heif_tild_image_parameters parameters = tilC_box->get_parameters();
+  heif_tiled_image_parameters parameters = tilC_box->get_parameters();
   parameters.image_width = ispe_box->get_width();
   parameters.image_height = ispe_box->get_height();
 
@@ -498,8 +498,8 @@ Error ImageItem_Tild::on_load_file()
 }
 
 
-Result<std::shared_ptr<ImageItem_Tild>>
-ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tiled>>
+ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters)
 {
   auto max_tild_tiles = ctx->get_security_limits()->max_number_of_tiles;
   if (max_tild_tiles && number_of_tiles(*parameters) > max_tild_tiles) {
@@ -513,8 +513,8 @@ ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parame
 
   auto file = ctx->get_heif_file();
 
-  heif_item_id tild_id = ctx->get_heif_file()->add_new_image(fourcc("tild"));
-  auto tild_image = std::make_shared<ImageItem_Tild>(ctx, tild_id);
+  heif_item_id tild_id = ctx->get_heif_file()->add_new_image(fourcc("tili"));
+  auto tild_image = std::make_shared<ImageItem_Tiled>(ctx, tild_id);
   ctx->insert_new_image(tild_id, tild_image);
 
   // Create tilC box
@@ -564,7 +564,7 @@ ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parame
 }
 
 
-void ImageItem_Tild::process_before_write()
+void ImageItem_Tiled::process_before_write()
 {
   // overwrite offsets
 
@@ -576,7 +576,7 @@ void ImageItem_Tild::process_before_write()
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tild::decode_compressed_image(const struct heif_decoding_options& options,
+ImageItem_Tiled::decode_compressed_image(const struct heif_decoding_options& options,
                                         bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
   if (decode_tile_only) {
@@ -589,12 +589,12 @@ ImageItem_Tild::decode_compressed_image(const struct heif_decoding_options& opti
 }
 
 
-Error ImageItem_Tild::append_compressed_tile_data(std::vector<uint8_t>& data, uint32_t tx, uint32_t ty) const
+Error ImageItem_Tiled::append_compressed_tile_data(std::vector<uint8_t>& data, uint32_t tx, uint32_t ty) const
 {
   uint32_t idx = (uint32_t) (ty * nTiles_h(m_tild_header.get_parameters()) + tx);
 
   if (!m_tild_header.is_tile_offset_known(idx)) {
-    Error err = const_cast<ImageItem_Tild*>(this)->load_tile_offset_entry(idx);
+    Error err = const_cast<ImageItem_Tiled*>(this)->load_tile_offset_entry(idx);
     if (err) {
       return err;
     }
@@ -613,7 +613,7 @@ Error ImageItem_Tild::append_compressed_tile_data(std::vector<uint8_t>& data, ui
 
 
 Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
 {
   heif_compression_format format = compression_format_from_fourcc_infe_type(
           m_tild_header.get_parameters().compression_type_fourcc);
@@ -642,7 +642,7 @@ ImageItem_Tild::decode_grid_tile(const heif_decoding_options& options, uint32_t 
 }
 
 
-Error ImageItem_Tild::load_tile_offset_entry(uint32_t idx)
+Error ImageItem_Tiled::load_tile_offset_entry(uint32_t idx)
 {
   uint32_t nEntries = mReadChunkSize_bytes / m_tild_header.get_offset_table_entry_size();
   std::pair<uint32_t, uint32_t> range = m_tild_header.get_tile_offset_table_range_to_read(idx, nEntries);
@@ -651,7 +651,7 @@ Error ImageItem_Tild::load_tile_offset_entry(uint32_t idx)
 }
 
 
-heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
+heif_image_tiling ImageItem_Tiled::get_heif_image_tiling() const
 {
   heif_image_tiling tiling{};
 
@@ -672,14 +672,14 @@ heif_image_tiling ImageItem_Tild::get_heif_image_tiling() const
 }
 
 
-void ImageItem_Tild::get_tile_size(uint32_t& w, uint32_t& h) const
+void ImageItem_Tiled::get_tile_size(uint32_t& w, uint32_t& h) const
 {
   w = m_tild_header.get_parameters().tile_width;
   h = m_tild_header.get_parameters().tile_height;
 }
 
 
-Error ImageItem_Tild::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+Error ImageItem_Tiled::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
   Error err = m_tile_decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
@@ -692,7 +692,7 @@ Error ImageItem_Tild::get_coded_image_colorspace(heif_colorspace* out_colorspace
 }
 
 
-int ImageItem_Tild::get_luma_bits_per_pixel() const
+int ImageItem_Tiled::get_luma_bits_per_pixel() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
@@ -701,7 +701,7 @@ int ImageItem_Tild::get_luma_bits_per_pixel() const
   return m_tile_decoder->get_luma_bits_per_pixel();
 }
 
-int ImageItem_Tild::get_chroma_bits_per_pixel() const
+int ImageItem_Tiled::get_chroma_bits_per_pixel() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded

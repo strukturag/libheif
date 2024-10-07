@@ -53,7 +53,7 @@
 #include "image-items/jpeg2000.h"
 #include "image-items/grid.h"
 #include "image-items/overlay.h"
-#include "image-items/tild.h"
+#include "image-items/tiled.h"
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "image-items/unc_image.h"
@@ -269,7 +269,7 @@ static bool item_type_is_image(uint32_t item_type, const std::string& content_ty
   return (item_type == fourcc("hvc1") ||
           item_type == fourcc("av01") ||
           item_type == fourcc("grid") ||
-          item_type == fourcc("tild") ||
+          item_type == fourcc("tili") ||
           item_type == fourcc("iden") ||
           item_type == fourcc("iovl") ||
           item_type == fourcc("avc1") ||
@@ -1342,15 +1342,15 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 }
 
 
-Result<std::shared_ptr<ImageItem_Tild>> HeifContext::add_tild_item(const heif_tild_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters)
 {
-  return ImageItem_Tild::add_new_tild_item(this, parameters);
+  return ImageItem_Tiled::add_new_tiled_item(this, parameters);
 }
 
 
-Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
-                                       const std::shared_ptr<HeifPixelImage>& image,
-                                       struct heif_encoder* encoder)
+Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
+                                        const std::shared_ptr<HeifPixelImage>& image,
+                                        struct heif_encoder* encoder)
 {
   auto item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
@@ -1374,9 +1374,9 @@ Error HeifContext::add_tild_image_tile(heif_item_id tild_id, uint32_t tile_x, ui
   m_heif_file->append_iloc_data(tild_id, encodeResult.value.bitstream, construction_method);
 
   auto imgItem = get_image(tild_id);
-  auto tildImg = std::dynamic_pointer_cast<ImageItem_Tild>(imgItem);
+  auto tildImg = std::dynamic_pointer_cast<ImageItem_Tiled>(imgItem);
   if (!tildImg) {
-    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item ID for add_tild_image_tile() is no 'tild' image."};
+    return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item ID for add_tiled_image_tile() is no 'tili' image."};
   }
 
   auto& header = tildImg->get_tild_header();
