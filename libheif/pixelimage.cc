@@ -259,7 +259,7 @@ bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_cha
   stride = m_mem_width * bytes_per_pixel;
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
 
-  if ((MAX_MEMORY_BLOCK_SIZE - (alignment + 1)) / stride < m_mem_height) {
+  if ((heif_get_global_security_limits()->max_memory_block_size - (alignment + 1)) / stride < m_mem_height) {
     return false;
   }
 

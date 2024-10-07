@@ -56,6 +56,10 @@ public:
 
   ~HeifFile();
 
+  // The limits will be shared from the HeifContext limits.
+  // You have to make sure that the pointer points to a valid object as long as the HeifFile is used.
+  void set_security_limits(const heif_security_limits* limits) { m_limits = limits; }
+
   Error read(const std::shared_ptr<StreamReader>& reader);
 
   Error read_from_file(const char* input_filename);
@@ -221,6 +225,8 @@ private:
   std::shared_ptr<Box_iprp> m_iprp_box;
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
+
+  const heif_security_limits* m_limits = nullptr;
 
   Error parse_heif_file();
 

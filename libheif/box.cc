@@ -397,7 +397,7 @@ std::string BoxHeader::dump(Indent& indent) const
 }
 
 
-Error Box::parse(BitstreamRange& range)
+Error Box::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   // skip box
 
@@ -439,7 +439,7 @@ Error FullBox::parse_full_box_header(BitstreamRange& range)
 }
 
 
-Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
+Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_security_limits* limits)
 {
   BoxHeader hdr;
   Error err = hdr.parse_header(range);
@@ -765,7 +765,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result)
                           box_size_without_header,
                           &range);
 
-  err = box->parse(boxrange);
+  err = box->parse(boxrange, limits);
   boxrange.skip_to_end_of_box();
 
   if (err == Error::Ok) {
@@ -851,20 +851,21 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
 }
 
 
-Error Box::read_children(BitstreamRange& range, int max_number)
+Error Box::read_children(BitstreamRange& range, int max_number, const heif_security_limits* limits)
 {
   int count = 0;
 
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
-    Error error = Box::read(range, &box);
+    Error error = Box::read(range, &box, limits);
     if (error != Error::Ok && (!box || box->get_parse_error_fatality() == parse_error_fatality::fatal)) {
       return error;
     }
 
-    if (m_children.size() > MAX_CHILDREN_PER_BOX) {
+    auto max_children_per_box = limits->max_children_per_box;
+    if (max_children_per_box && m_children.size() > max_children_per_box) {
       std::stringstream sstr;
-      sstr << "Maximum number of child boxes " << MAX_CHILDREN_PER_BOX << " exceeded.";
+      sstr << "Maximum number of child boxes " << max_children_per_box << " exceeded.";
 
       // Sanity check.
       return Error(heif_error_Memory_allocation_error,
@@ -941,7 +942,7 @@ void Box::derive_box_version_recursive()
 }
 
 
-Error Box_other::parse(BitstreamRange& range)
+Error Box_other::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   if (has_fixed_box_size()) {
     size_t len;
@@ -1033,7 +1034,7 @@ parse_error_fatality Box_Error::get_parse_error_fatality() const
 }
 
 
-Error Box_ftyp::parse(BitstreamRange& range)
+Error Box_ftyp::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   m_major_brand = range.read32();
   m_minor_version = range.read32();
@@ -1120,7 +1121,7 @@ Error Box_ftyp::write(StreamWriter& writer) const
 }
 
 
-Error Box_meta::parse(BitstreamRange& range)
+Error Box_meta::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1138,7 +1139,7 @@ Error Box_meta::parse(BitstreamRange& range)
   }
   */
 
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 
@@ -1163,7 +1164,7 @@ Error FullBox::unsupported_version_error(const char* box) const
 }
 
 
-Error Box_hdlr::parse(BitstreamRange& range)
+Error Box_hdlr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1215,7 +1216,7 @@ Error Box_hdlr::write(StreamWriter& writer) const
 }
 
 
-Error Box_pitm::parse(BitstreamRange& range)
+Error Box_pitm::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1274,7 +1275,7 @@ Error Box_pitm::write(StreamWriter& writer) const
 }
 
 
-Error Box_iloc::parse(BitstreamRange& range)
+Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -1304,10 +1305,11 @@ Error Box_iloc::parse(BitstreamRange& range)
   }
 
   // Sanity check.
-  if (item_count > MAX_ILOC_ITEMS) {
+  auto max_iloc_items = limits->max_iloc_items;
+  if (max_iloc_items && item_count > max_iloc_items) {
     std::stringstream sstr;
     sstr << "iloc box contains " << item_count << " items, which exceeds the security limit of "
-         << MAX_ILOC_ITEMS << " items.";
+         << max_iloc_items << " items.";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -1340,13 +1342,14 @@ Error Box_iloc::parse(BitstreamRange& range)
       item.base_offset |= range.read32();
     }
 
-    int extent_count = range.read16();
+    uint16_t extent_count = range.read16();
 
     // Sanity check.
-    if (extent_count > MAX_ILOC_EXTENTS_PER_ITEM) {
+    auto max_iloc_extents = limits->max_iloc_extents_per_item;
+    if (max_iloc_extents && extent_count > max_iloc_extents) {
       std::stringstream sstr;
       sstr << "Number of extents in iloc box (" << extent_count << ") exceeds security limit ("
-           << MAX_ILOC_EXTENTS_PER_ITEM << ")\n";
+           << max_iloc_extents << ")\n";
 
       return Error(heif_error_Memory_allocation_error,
                    heif_suberror_Security_limit_exceeded,
@@ -1464,9 +1467,10 @@ std::string Box_iloc::dump(Indent& indent) const
 Error Box_iloc::read_data(heif_item_id item,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
-                          std::vector<uint8_t>* dest) const
+                          std::vector<uint8_t>* dest,
+                          const heif_security_limits* limits) const
 {
-  return read_data(item, istr, idat, dest, 0, std::numeric_limits<uint64_t>::max());
+  return read_data(item, istr, idat, dest, 0, std::numeric_limits<uint64_t>::max(), limits);
 }
 
 
@@ -1474,7 +1478,8 @@ Error Box_iloc::read_data(heif_item_id item_id,
                           const std::shared_ptr<StreamReader>& istr,
                           const std::shared_ptr<Box_idat>& idat,
                           std::vector<uint8_t>* dest,
-                          uint64_t offset, uint64_t size) const
+                          uint64_t offset, uint64_t size,
+                          const heif_security_limits* limits) const
 {
   const Item* item = nullptr;
   for (auto& i : m_items) {
@@ -1560,11 +1565,12 @@ Error Box_iloc::read_data(heif_item_id item_id,
 
       // --- security check that we do not allocate too much memory
 
-      if (MAX_MEMORY_BLOCK_SIZE - old_size < read_len) {
+      auto max_memory_block_size = limits->max_memory_block_size;
+      if (max_memory_block_size && max_memory_block_size - old_size < read_len) {
         std::stringstream sstr;
         sstr << "iloc box contained " << extent.length << " bytes, total memory size would be "
              << (old_size + extent.length) << " bytes, exceeding the security limit of "
-             << MAX_MEMORY_BLOCK_SIZE << " bytes";
+             << max_memory_block_size << " bytes";
 
         return {heif_error_Memory_allocation_error,
                 heif_suberror_Security_limit_exceeded,
@@ -1612,7 +1618,7 @@ Error Box_iloc::read_data(heif_item_id item_id,
       idat->read_data(istr,
                       extent.offset + item->base_offset,
                       extent.length,
-                      *dest);
+                      *dest, limits);
 
       size -= extent.length;
     }
@@ -2056,7 +2062,7 @@ void Box_iloc::patch_iloc_header(StreamWriter& writer) const
  * Note: HEIF does not allow version 0 and version 1 boxes ! (see 23008-12, 10.2.1)
  */
 
-Error Box_infe::parse(BitstreamRange& range)
+Error Box_infe::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2202,7 +2208,7 @@ std::string Box_infe::dump(Indent& indent) const
 }
 
 
-Error Box_iinf::parse(BitstreamRange& range)
+Error Box_iinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2226,7 +2232,7 @@ Error Box_iinf::parse(BitstreamRange& range)
   }
 
   // TODO: Only try to read "item_count" children.
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 
@@ -2241,11 +2247,11 @@ std::string Box_iinf::dump(Indent& indent) const
 }
 
 
-Error Box_iprp::parse(BitstreamRange& range)
+Error Box_iprp::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 
@@ -2299,11 +2305,11 @@ int Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
 }
 
 
-Error Box_ipco::parse(BitstreamRange& range)
+Error Box_ipco::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 
@@ -2318,7 +2324,7 @@ std::string Box_ipco::dump(Indent& indent) const
 }
 
 
-Error Box_pixi::parse(BitstreamRange& range)
+Error Box_pixi::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2383,7 +2389,7 @@ Error Box_pixi::write(StreamWriter& writer) const
 }
 
 
-Error Box_pasp::parse(BitstreamRange& range)
+Error Box_pasp::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -2419,7 +2425,7 @@ Error Box_pasp::write(StreamWriter& writer) const
 }
 
 
-Error Box_lsel::parse(BitstreamRange& range)
+Error Box_lsel::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   layer_id = range.read16();
 
@@ -2450,7 +2456,7 @@ Error Box_lsel::write(StreamWriter& writer) const
 }
 
 
-Error Box_clli::parse(BitstreamRange& range)
+Error Box_clli::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -2494,7 +2500,7 @@ Box_mdcv::Box_mdcv()
 }
 
 
-Error Box_mdcv::parse(BitstreamRange& range)
+Error Box_mdcv::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -2629,7 +2635,7 @@ bool Box_ipco::is_property_essential_for_item(heif_item_id itemId,
 }
 
 
-Error Box_ispe::parse(BitstreamRange& range)
+Error Box_ispe::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2681,7 +2687,7 @@ bool Box_ispe::operator==(const Box& other) const
 }
 
 
-Error Box_ipma::parse(BitstreamRange& range)
+Error Box_ipma::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2869,7 +2875,7 @@ void Box_ipma::insert_entries_from_other_ipma_box(const Box_ipma& b)
 }
 
 
-Error Box_auxC::parse(BitstreamRange& range)
+Error Box_auxC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -2920,7 +2926,7 @@ std::string Box_auxC::dump(Indent& indent) const
 }
 
 
-Error Box_irot::parse(BitstreamRange& range)
+Error Box_irot::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -2956,7 +2962,7 @@ std::string Box_irot::dump(Indent& indent) const
 }
 
 
-Error Box_imir::parse(BitstreamRange& range)
+Error Box_imir::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -3006,7 +3012,7 @@ std::string Box_imir::dump(Indent& indent) const
 }
 
 
-Error Box_clap::parse(BitstreamRange& range)
+Error Box_clap::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -3160,7 +3166,7 @@ void Box_clap::set(uint32_t clap_width, uint32_t clap_height,
 }
 
 
-Error Box_iref::parse(BitstreamRange& range)
+Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -3208,7 +3214,8 @@ Error Box_iref::parse(BitstreamRange& range)
     nTotalRefs += ref.to_item_ID.size();
   }
 
-  if (nTotalRefs > MAX_IREF_REFERENCES) {
+  auto max_iref_references = limits->max_iref_references;
+  if (max_iref_references && nTotalRefs > max_iref_references) {
     return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
                  "Number of iref references exceeds security limit.");
   }
@@ -3406,7 +3413,7 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
 }
 
 
-Error Box_idat::parse(BitstreamRange& range)
+Error Box_idat::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -3445,17 +3452,19 @@ std::string Box_idat::dump(Indent& indent) const
 
 Error Box_idat::read_data(const std::shared_ptr<StreamReader>& istr,
                           uint64_t start, uint64_t length,
-                          std::vector<uint8_t>& out_data) const
+                          std::vector<uint8_t>& out_data,
+                          const heif_security_limits* limits) const
 {
   // --- security check that we do not allocate too much data
 
   auto curr_size = out_data.size();
 
-  if (MAX_MEMORY_BLOCK_SIZE - curr_size < length) {
+  auto max_memory_block_size = limits->max_memory_block_size;
+  if (max_memory_block_size && max_memory_block_size - curr_size < length) {
     std::stringstream sstr;
     sstr << "idat box contained " << length << " bytes, total memory size would be "
          << (curr_size + length) << " bytes, exceeding the security limit of "
-         << MAX_MEMORY_BLOCK_SIZE << " bytes";
+         << max_memory_block_size << " bytes";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -3500,11 +3509,11 @@ Error Box_idat::read_data(const std::shared_ptr<StreamReader>& istr,
 }
 
 
-Error Box_grpl::parse(BitstreamRange& range)
+Error Box_grpl::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
-  return read_children(range); // should we pass the parsing context 'grpl' or are the box types unique?
+  return read_children(range, READ_CHILDREN_ALL, limits); // should we pass the parsing context 'grpl' or are the box types unique?
 }
 
 
@@ -3517,7 +3526,7 @@ std::string Box_grpl::dump(Indent& indent) const
 }
 
 
-Error Box_EntityToGroup::parse(BitstreamRange& range)
+Error Box_EntityToGroup::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   Error err = parse_full_box_header(range);
   if (err != Error::Ok) {
@@ -3589,9 +3598,9 @@ std::string Box_EntityToGroup::dump(Indent& indent) const
 }
 
 
-Error Box_ster::parse(BitstreamRange& range)
+Error Box_ster::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  Error err = Box_EntityToGroup::parse(range);
+  Error err = Box_EntityToGroup::parse(range, limits);
   if (err) {
     return err;
   }
@@ -3620,9 +3629,9 @@ std::string Box_ster::dump(Indent& indent) const
 
 
 
-Error Box_pymd::parse(BitstreamRange& range)
+Error Box_pymd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  Error err = Box_EntityToGroup::parse(range);
+  Error err = Box_EntityToGroup::parse(range, limits);
   if (err) {
     return err;
   }
@@ -3686,11 +3695,11 @@ std::string Box_pymd::dump(Indent& indent) const
 }
 
 
-Error Box_dinf::parse(BitstreamRange& range)
+Error Box_dinf::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 
@@ -3704,7 +3713,7 @@ std::string Box_dinf::dump(Indent& indent) const
 }
 
 
-Error Box_dref::parse(BitstreamRange& range)
+Error Box_dref::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -3728,7 +3737,7 @@ Error Box_dref::parse(BitstreamRange& range)
                  "Too many entities in dref box.");
   }
 
-  Error err = read_children(range, (int)nEntities);
+  Error err = read_children(range, (int)nEntities, limits);
   if (err) {
     return err;
   }
@@ -3751,7 +3760,7 @@ std::string Box_dref::dump(Indent& indent) const
 }
 
 
-Error Box_url::parse(BitstreamRange& range)
+Error Box_url::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -3783,7 +3792,7 @@ std::string Box_url::dump(Indent& indent) const
 }
 
 
-Error Box_udes::parse(BitstreamRange& range)
+Error Box_udes::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -3872,7 +3881,7 @@ std::string Box_cmin::dump(Indent& indent) const
 }
 
 
-Error Box_cmin::parse(BitstreamRange& range)
+Error Box_cmin::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -4059,7 +4068,7 @@ std::array<double,9> Box_cmex::ExtrinsicMatrix::calculate_rotation_matrix() cons
 }
 
 
-Error Box_cmex::parse(BitstreamRange& range)
+Error Box_cmex::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 

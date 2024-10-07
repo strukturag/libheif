@@ -33,7 +33,7 @@
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
 
-Error Box_av1C::parse(BitstreamRange& range)
+Error Box_av1C::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   //parse_full_box_header(range);
 
@@ -189,7 +189,7 @@ Error fill_av1C_configuration(Box_av1C::configuration* inout_config, const std::
 }
 
 
-Error Box_a1op::parse(BitstreamRange& range)
+Error Box_a1op::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   op_index = range.read8();
 
@@ -220,7 +220,7 @@ Error Box_a1op::write(StreamWriter& writer) const
 }
 
 
-Error Box_a1lx::parse(BitstreamRange& range)
+Error Box_a1lx::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint8_t flags = range.read8();
 

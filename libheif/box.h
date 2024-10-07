@@ -24,6 +24,7 @@
 #include <cstdint>
 #include "common_utils.h"
 #include "libheif/heif.h"
+#include "libheif/heif_experimental.h"
 #include "libheif/heif_properties.h"
 #include <cinttypes>
 #include <cstddef>
@@ -181,7 +182,7 @@ public:
   // header size without the FullBox fields (if applicable)
   int calculate_header_size(bool data64bit) const;
 
-  static Error read(BitstreamRange& range, std::shared_ptr<Box>* box);
+  static Error read(BitstreamRange& range, std::shared_ptr<Box>* box, const heif_security_limits*);
 
   virtual Error write(StreamWriter& writer) const;
 
@@ -245,7 +246,7 @@ public:
   void set_is_essential(bool flag) { m_is_essential = flag; }
 
 protected:
-  virtual Error parse(BitstreamRange& range);
+  virtual Error parse(BitstreamRange& range, const heif_security_limits* limits);
 
   std::vector<std::shared_ptr<Box>> m_children;
 
@@ -263,7 +264,7 @@ protected:
 
   const static int READ_CHILDREN_ALL = -1;
 
-  Error read_children(BitstreamRange& range, int number = READ_CHILDREN_ALL);
+  Error read_children(BitstreamRange& range, int number /* READ_CHILDREN_ALL */, const heif_security_limits* limits);
 
   Error write_children(StreamWriter& writer) const;
 
@@ -333,7 +334,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   std::vector<uint8_t> m_data;
 };
@@ -361,7 +362,7 @@ public:
   [[nodiscard]] Error get_error() const { return m_error; }
 
 protected:
-  Error parse(BitstreamRange& range) override { assert(false); return Error::Ok; }
+  Error parse(BitstreamRange& range, const heif_security_limits*) override { assert(false); return Error::Ok; }
 
   uint32_t m_box_type_with_parse_error;
   Error m_error;
@@ -400,7 +401,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   uint32_t m_major_brand = 0;
@@ -420,7 +421,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -443,7 +444,7 @@ public:
   void set_name(std::string name) { m_name = std::move(name); }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   uint32_t m_pre_defined = 0;
@@ -472,7 +473,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   heif_item_id m_item_ID = 0;
@@ -514,14 +515,16 @@ public:
   Error read_data(heif_item_id item,
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
-                  std::vector<uint8_t>* dest) const;
+                  std::vector<uint8_t>* dest,
+                  const heif_security_limits* limits) const;
 
   // Note: size==std::numeric_limits<uint64_t>::max() reads the data until the end
   Error read_data(heif_item_id item,
                   const std::shared_ptr<StreamReader>& istr,
                   const std::shared_ptr<class Box_idat>&,
                   std::vector<uint8_t>* dest,
-                  uint64_t offset, uint64_t size) const;
+                  uint64_t offset, uint64_t size,
+                  const heif_security_limits* limits) const;
 
   void set_min_version(uint8_t min_version) { m_user_defined_min_version = min_version; }
 
@@ -555,7 +558,7 @@ public:
   void append_item(Item &item) { m_items.push_back(item); }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   std::vector<Item> m_items;
@@ -620,7 +623,7 @@ public:
   void set_item_uri_type(const std::string& uritype) { m_item_uri_type = uritype; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   heif_item_id m_item_ID = 0;
@@ -652,7 +655,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   //std::vector< std::shared_ptr<Box_infe> > m_iteminfos;
@@ -670,7 +673,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -699,7 +702,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -730,7 +733,7 @@ public:
   bool is_essential() const override { return false; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   uint32_t m_image_width = 0;
@@ -768,7 +771,7 @@ public:
   void insert_entries_from_other_ipma_box(const Box_ipma& b);
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   struct Entry
   {
@@ -799,7 +802,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -829,7 +832,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -857,7 +860,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -896,7 +899,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::ignorable; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -936,7 +939,7 @@ public:
   void add_references(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids);
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -954,7 +957,8 @@ public:
 
   Error read_data(const std::shared_ptr<StreamReader>& istr,
                   uint64_t start, uint64_t length,
-                  std::vector<uint8_t>& out_data) const;
+                  std::vector<uint8_t>& out_data,
+                  const heif_security_limits* limits) const;
 
   int append_data(const std::vector<uint8_t>& data)
   {
@@ -970,7 +974,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   std::streampos m_data_start_pos;
 
@@ -989,7 +993,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1012,7 +1016,7 @@ protected:
   heif_entity_group_id group_id = 0;
   std::vector<heif_item_id> entity_ids;
 
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   void write_entity_group_ids(StreamWriter& writer) const;
 };
@@ -1033,7 +1037,7 @@ public:
 
 protected:
 
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1076,7 +1080,7 @@ protected:
 
   std::vector<LayerInfo> m_layer_infos;
 
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1088,7 +1092,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1098,7 +1102,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1110,7 +1114,7 @@ public:
   bool is_same_file() const { return m_location.empty(); }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   std::string m_location;
 };
@@ -1139,7 +1143,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   std::vector<uint8_t> m_bits_per_channel;
@@ -1164,7 +1168,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1185,7 +1189,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1209,7 +1213,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1227,7 +1231,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 };
 
 
@@ -1299,7 +1303,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -1354,7 +1358,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
@@ -1466,7 +1470,7 @@ public:
   [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   std::string m_lang;

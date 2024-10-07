@@ -36,6 +36,7 @@ set(libheif_sources
         nclx.cc
         nclx.h
         plugin_registry.h
+        security_limits.cc
         security_limits.h
         init.cc
         init.h

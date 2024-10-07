@@ -69,16 +69,19 @@ public:
 
   int get_max_decoding_threads() const { return m_max_decoding_threads; }
 
+  void set_security_limits(const heif_security_limits* limits);
+
+  [[nodiscard]] heif_security_limits* get_security_limits() { return &m_limits; }
+
+  [[nodiscard]] const heif_security_limits* get_security_limits() const { return &m_limits; }
+
   // Sets the maximum size of both width and height of an image. The total limit
   // of the image size (width * height) will be "maximum_size * maximum_size".
-  void set_maximum_image_size_limit(uint32_t maximum_size)
-  {
-    m_maximum_image_size_limit = uint64_t(maximum_size) * maximum_size;
-  }
+  void set_maximum_image_size_limit(uint32_t maximum_size);
 
   uint64_t get_maximum_image_size_limit() const
   {
-    return m_maximum_image_size_limit;
+    return get_security_limits()->max_image_size_pixels;
   }
 
   Error read(const std::shared_ptr<StreamReader>& reader);
@@ -231,8 +234,7 @@ private:
 
   int m_max_decoding_threads = 4;
 
-  // Maximum image size in pixels (width * height).
-  uint64_t m_maximum_image_size_limit;
+  heif_security_limits m_limits;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
 

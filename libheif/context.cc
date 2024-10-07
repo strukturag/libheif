@@ -95,10 +95,11 @@ struct heif_error heif_encoder::alloc()
 
 HeifContext::HeifContext()
 {
-  m_maximum_image_size_limit = MAX_IMAGE_SIZE;
+  m_limits = global_security_limits;
 
   reset_to_empty_heif();
 }
+
 
 HeifContext::~HeifContext()
 {
@@ -109,9 +110,38 @@ HeifContext::~HeifContext()
   }
 }
 
+
+void HeifContext::set_maximum_image_size_limit(uint32_t maximum_size)
+{
+  m_limits.max_image_size_pixels = maximum_size;
+}
+
+
+static void copy_security_limits(heif_security_limits* dst, const heif_security_limits* src)
+{
+  dst->version = 1;
+  dst->max_image_size_pixels = src->max_image_size_pixels;
+  dst->max_bayer_pattern_pixels = src->max_bayer_pattern_pixels;
+  dst->max_iref_references = src->max_iref_references;
+  dst->max_iloc_items = src->max_iloc_items;
+  dst->max_iloc_extents_per_item = src->max_iloc_extents_per_item;
+  dst->max_children_per_box = src->max_children_per_box;
+  dst->max_number_of_tiles = src->max_number_of_tiles;
+  dst->max_color_profile_size = src->max_color_profile_size;
+  dst->max_memory_block_size = src->max_memory_block_size;
+}
+
+
+void HeifContext::set_security_limits(const heif_security_limits* limits)
+{
+  copy_security_limits(&m_limits, limits);
+}
+
+
 Error HeifContext::read(const std::shared_ptr<StreamReader>& reader)
 {
   m_heif_file = std::make_shared<HeifFile>();
+  m_heif_file->set_security_limits(&m_limits);
   Error err = m_heif_file->read(reader);
   if (err) {
     return err;
@@ -123,6 +153,7 @@ Error HeifContext::read(const std::shared_ptr<StreamReader>& reader)
 Error HeifContext::read_from_file(const char* input_filename)
 {
   m_heif_file = std::make_shared<HeifFile>();
+  m_heif_file->set_security_limits(&m_limits);
   Error err = m_heif_file->read_from_file(input_filename);
   if (err) {
     return err;
@@ -134,6 +165,7 @@ Error HeifContext::read_from_file(const char* input_filename)
 Error HeifContext::read_from_memory(const void* data, size_t size, bool copy)
 {
   m_heif_file = std::make_shared<HeifFile>();
+  m_heif_file->set_security_limits(&m_limits);
   Error err = m_heif_file->read_from_memory(data, size, copy);
   if (err) {
     return err;
@@ -145,6 +177,7 @@ Error HeifContext::read_from_memory(const void* data, size_t size, bool copy)
 void HeifContext::reset_to_empty_heif()
 {
   m_heif_file = std::make_shared<HeifFile>();
+  m_heif_file->set_security_limits(&m_limits);
   m_heif_file->new_empty_file();
 
   m_all_images.clear();
@@ -159,10 +192,10 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
   // --- check whether the image size is "too large"
   uint32_t max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
   if ((width > max_width_height || height > max_width_height) ||
-      (height != 0 && width > m_maximum_image_size_limit / height)) {
+      (height != 0 && width > get_security_limits()->max_image_size_pixels / height)) {
     std::stringstream sstr;
     sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-          << m_maximum_image_size_limit << "\n";
+          << get_security_limits()->max_image_size_pixels << "\n";
 
     return Error(heif_error_Memory_allocation_error,
                   heif_suberror_Security_limit_exceeded,
@@ -375,7 +408,7 @@ Error HeifContext::interpret_heif_file()
         if (width >= max_width_height || height >= max_width_height) {
           std::stringstream sstr;
           sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-                << m_maximum_image_size_limit << "\n";
+                << get_security_limits()->max_image_size_pixels << "\n";
 
           return Error(heif_error_Memory_allocation_error,
                         heif_suberror_Security_limit_exceeded,
@@ -780,7 +813,7 @@ Error HeifContext::interpret_heif_file()
     std::shared_ptr<RegionItem> region_item = std::make_shared<RegionItem>();
     region_item->item_id = id;
     std::vector<uint8_t> region_data;
-    Error err = m_heif_file->get_uncompressed_item_data(id, &(region_data));
+    Error err = m_heif_file->get_uncompressed_item_data(id, &region_data);
     if (err) {
       return err;
     }

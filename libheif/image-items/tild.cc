@@ -161,7 +161,7 @@ std::string Box_tilC::dump(Indent& indent) const
 }
 
 
-Error Box_tilC::parse(BitstreamRange& range)
+Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
@@ -252,7 +252,9 @@ Error TildHeader::set_parameters(const heif_tild_image_parameters& params)
 {
   m_parameters = params;
 
-  if (number_of_tiles(params) > MAX_TILD_TILES) {
+  auto max_tiles = heif_get_global_security_limits()->max_number_of_tiles;
+
+  if (max_tiles && number_of_tiles(params) > max_tiles) {
     return {heif_error_Unsupported_filetype,
             heif_suberror_Security_limit_exceeded,
             "Number of tiles exceeds security limit"};
@@ -268,10 +270,12 @@ Error TildHeader::set_parameters(const heif_tild_image_parameters& params)
 }
 
 
-Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id)
+Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits)
 {
+  auto max_tiles = heif_get_global_security_limits()->max_number_of_tiles;
+
   uint64_t nTiles = number_of_tiles(m_parameters);
-  if (nTiles > MAX_TILD_TILES) {
+  if (max_tiles && nTiles > max_tiles) {
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "Number of tiles exceeds security limit."};
@@ -485,7 +489,7 @@ Error ImageItem_Tild::on_load_file()
   }
 
   if (m_preload_offset_table) {
-    if (Error err = m_tild_header.read_full_offset_table(heif_file, get_id())) {
+    if (Error err = m_tild_header.read_full_offset_table(heif_file, get_id(), get_context()->get_security_limits())) {
       return err;
     }
   }
@@ -497,7 +501,8 @@ Error ImageItem_Tild::on_load_file()
 Result<std::shared_ptr<ImageItem_Tild>>
 ImageItem_Tild::add_new_tild_item(HeifContext* ctx, const heif_tild_image_parameters* parameters)
 {
-  if (number_of_tiles(*parameters) > MAX_TILD_TILES) {
+  auto max_tild_tiles = ctx->get_security_limits()->max_number_of_tiles;
+  if (max_tild_tiles && number_of_tiles(*parameters) > max_tild_tiles) {
     return Error{heif_error_Usage_error,
                  heif_suberror_Security_limit_exceeded,
                  "Number of tiles exceeds security limit."};

@@ -102,7 +102,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   configuration m_configuration;
@@ -126,7 +126,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 };
 
 
@@ -145,7 +145,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 };
 
 

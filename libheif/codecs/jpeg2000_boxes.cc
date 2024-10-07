@@ -29,7 +29,7 @@ static const uint16_t JPEG2000_SIZ_MARKER = 0xFF51;
 static const uint16_t JPEG2000_SOC_MARKER = 0xFF4F;
 
 
-Error Box_cdef::parse(BitstreamRange& range)
+Error Box_cdef::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   int channel_count = range.read16();
 
@@ -112,7 +112,7 @@ void Box_cdef::set_channels(heif_colorspace colorspace)
   }
 }
 
-Error Box_cmap::parse(BitstreamRange& range)
+Error Box_cmap::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   while (!range.eof() && !range.error()) {
     Component component;
@@ -157,7 +157,7 @@ Error Box_cmap::write(StreamWriter& writer) const
 }
 
 
-Error Box_pclr::parse(BitstreamRange& range)
+Error Box_pclr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint16_t num_entries = range.read16();
   uint8_t num_palette_columns = range.read8();
@@ -249,7 +249,7 @@ void Box_pclr::set_columns(uint8_t num_columns, uint8_t bit_depth)
   }
 }
 
-Error Box_j2kL::parse(BitstreamRange& range)
+Error Box_j2kL::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   int layer_count = range.read16();
 
@@ -296,9 +296,9 @@ Error Box_j2kL::write(StreamWriter& writer) const
 }
 
 
-Error Box_j2kH::parse(BitstreamRange& range)
+Error Box_j2kH::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  return read_children(range);
+  return read_children(range, READ_CHILDREN_ALL, limits);
 }
 
 std::string Box_j2kH::dump(Indent& indent) const

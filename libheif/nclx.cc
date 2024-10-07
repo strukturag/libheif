@@ -20,10 +20,9 @@
 
 
 #include "nclx.h"
-#include "security_limits.h"
+#include "libheif/heif_experimental.h"
 
 #include <cassert>
-#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -359,7 +358,7 @@ void color_profile_nclx::replace_undefined_values_with_sRGB_defaults()
 }
 
 
-Error Box_colr::parse(BitstreamRange& range)
+Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   StreamReader::grow_status status;
   uint32_t colour_type = range.read32();
@@ -379,7 +378,7 @@ Error Box_colr::parse(BitstreamRange& range)
     }
 
     uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
-    if (profile_size_64 > MAX_COLOR_PROFILE_SIZE) {
+    if (profile_size_64 > limits->max_color_profile_size) {
       return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
     }
 

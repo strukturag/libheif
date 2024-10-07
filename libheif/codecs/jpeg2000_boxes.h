@@ -108,7 +108,7 @@ public:
     void set_channels(heif_colorspace colorspace);
 
 protected:
-    Error parse(BitstreamRange &range) override;
+    Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
 
 private:
     std::vector<Channel> m_channels;
@@ -165,7 +165,7 @@ public:
     void add_component(Component component) { m_components.push_back(component); }
 
 protected:
-    Error parse(BitstreamRange &range) override;
+    Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
 
 private:
       std::vector<Component> m_components;
@@ -245,7 +245,7 @@ public:
     void set_columns(uint8_t num_columns, uint8_t bit_depth);
 
 protected:
-    Error parse(BitstreamRange &range) override;
+    Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
 
 private:
     std::vector<uint8_t> m_bitDepths;
@@ -301,7 +301,7 @@ public:
     void add_layer(Layer layer) { m_layers.push_back(layer); }
 
 protected:
-    Error parse(BitstreamRange &range) override;
+    Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
 
 private:
     std::vector<Layer> m_layers;
@@ -319,7 +319,7 @@ public:
     // Default write behaviour for a container is to write children
 
 protected:
-    Error parse(BitstreamRange &range) override;
+    Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
 };
 
 class Jpeg2000ImageCodec

@@ -334,8 +334,6 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         enum heif_channel channel,
                                                         uint32_t* out_stride);
 
-
-
 #ifdef __cplusplus
 }
 #endif

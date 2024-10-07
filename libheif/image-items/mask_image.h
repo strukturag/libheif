@@ -63,7 +63,7 @@ public:
   { m_bits_per_pixel = bits_per_pixel; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   uint8_t m_bits_per_pixel;

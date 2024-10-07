@@ -43,7 +43,7 @@ public:
   // Generate a file in WriteMode::Floating
   FileLayout();
 
-  Error read(const std::shared_ptr<StreamReader>& stream);
+  Error read(const std::shared_ptr<StreamReader>& stream, const heif_security_limits* limits);
 
   // For WriteMode::Streaming, writer cannot be null.
   void set_write_mode(WriteMode writeMode, const std::shared_ptr<StreamWriter>& writer = nullptr);

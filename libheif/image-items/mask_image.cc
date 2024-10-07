@@ -32,7 +32,7 @@
 #include "mask_image.h"
 #include "image_item.h"
 
-Error Box_mskC::parse(BitstreamRange& range)
+Error Box_mskC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
   m_bits_per_pixel = range.read8();
