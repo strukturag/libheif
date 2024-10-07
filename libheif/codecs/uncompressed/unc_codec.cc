@@ -237,13 +237,13 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
                                                            const std::shared_ptr<const Box_cmpd>& cmpd,
                                                            heif_chroma* out_chroma, heif_colorspace* out_colourspace)
 {
+  *out_chroma = heif_chroma_undefined;
+  *out_colourspace = heif_colorspace_undefined;
+
   Error error = check_header_validity(std::nullopt, cmpd, uncC);
   if (error) {
     return error;
   }
-
-  *out_chroma = heif_chroma_undefined;
-  *out_colourspace = heif_colorspace_undefined;
 
   if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
     *out_chroma = heif_chroma_444;
@@ -438,8 +438,9 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
                                                                              uint32_t height)
 {
   auto img = std::make_shared<HeifPixelImage>();
-  heif_chroma chroma;
-  heif_colorspace colourspace;
+  heif_chroma chroma = heif_chroma_undefined;
+  heif_colorspace colourspace = heif_colorspace_undefined;
+
   Error error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
   if (error) {
     return error;
