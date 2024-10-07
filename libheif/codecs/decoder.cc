@@ -36,7 +36,7 @@
 #include "vvc_boxes.h"
 #include "jpeg_boxes.h"
 #include "jpeg2000_boxes.h"
-
+#include "codecs/uncompressed/unc_dec.h"
 
 
 void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
@@ -125,8 +125,9 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const HeifContext* ctx, he
     }
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("unci"): {
-      auto jpgC = ctx->get_heif_file()->get_property<Box_jpgC>(id);
-      return std::make_shared<Decoder_JPEG>(jpgC);
+      auto uncC = ctx->get_heif_file()->get_property<Box_uncC>(id);
+      auto cmpd = ctx->get_heif_file()->get_property<Box_cmpd>(id);
+      return std::make_shared<Decoder_uncompressed>(uncC,cmpd);
     }
 #endif
     case fourcc("mski"): {
