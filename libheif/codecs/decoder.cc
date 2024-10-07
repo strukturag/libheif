@@ -181,6 +181,10 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
     return Error(err.code, err.subcode, err.message);
   }
 
+  // automatically delete decoder plugin when we leave the scope
+  auto pluginDestructor = [decoder_plugin](void* decoder) { decoder_plugin->free_decoder(decoder); };
+  std::unique_ptr<void, decltype(pluginDestructor)> decoderSmartPtr(decoder, pluginDestructor);
+
   if (decoder_plugin->plugin_api_version >= 2) {
     if (decoder_plugin->set_strict_decoding) {
       decoder_plugin->set_strict_decoding(decoder, options.strict_decoding);
@@ -189,13 +193,11 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   auto dataResult = get_compressed_data();
   if (dataResult.error) {
-    decoder_plugin->free_decoder(decoder);
     return dataResult.error;
   }
 
   err = decoder_plugin->push_data(decoder, dataResult.value.data(), dataResult.value.size());
   if (err.code != heif_error_Ok) {
-    decoder_plugin->free_decoder(decoder);
     return Error(err.code, err.subcode, err.message);
   }
 
@@ -203,13 +205,11 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   err = decoder_plugin->decode_image(decoder, &decoded_img);
   if (err.code != heif_error_Ok) {
-    decoder_plugin->free_decoder(decoder);
     return Error(err.code, err.subcode, err.message);
   }
 
   if (!decoded_img) {
     // TODO(farindk): The plugin should return an error in this case.
-    decoder_plugin->free_decoder(decoder);
     return Error(heif_error_Decoder_plugin_error, heif_suberror_Unspecified);
   }
 
@@ -217,8 +217,6 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   std::shared_ptr<HeifPixelImage> img = std::move(decoded_img->image);
   heif_image_release(decoded_img);
-
-  decoder_plugin->free_decoder(decoder);
 
   return img;
 }
