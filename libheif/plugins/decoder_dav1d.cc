@@ -92,7 +92,7 @@ struct heif_error dav1d_new_decoder(void** dec)
 
   dav1d_default_settings(&decoder->settings);
 
-  if (std::cmp_greater(heif_get_global_security_limits()->max_image_size_pixels, std::numeric_limits<unsigned int>::max())) {
+  if (heif_get_global_security_limits()->max_image_size_pixels > std::numeric_limits<unsigned int>::max()) {
     decoder->settings.frame_size_limit = 0;
   }
   else {
