@@ -182,8 +182,7 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
   }
 
   // automatically delete decoder plugin when we leave the scope
-  auto pluginDestructor = [decoder_plugin](void* decoder) { decoder_plugin->free_decoder(decoder); };
-  std::unique_ptr<void, decltype(pluginDestructor)> decoderSmartPtr(decoder, pluginDestructor);
+  std::unique_ptr<void, void (*)(void*)> decoderSmartPtr(decoder, decoder_plugin->free_decoder);
 
   if (decoder_plugin->plugin_api_version >= 2) {
     if (decoder_plugin->set_strict_decoding) {
