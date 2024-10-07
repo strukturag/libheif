@@ -189,6 +189,7 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   auto dataResult = get_compressed_data();
   if (dataResult.error) {
+    decoder_plugin->free_decoder(decoder);
     return dataResult.error;
   }
 
