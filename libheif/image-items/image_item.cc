@@ -710,6 +710,8 @@ Error ImageItem::transform_requested_tile_position_to_original_tile_position(uin
           tile_y = tiling.num_rows - 1 - tile_y;
           break;
         }
+        case 0:
+          break;
         default:
           assert(false);
           break;
