@@ -962,10 +962,10 @@ struct heif_reader_range_request_result
 {
   enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
 
-  // Indicates until what position the file has been read.
+  // Indicates up to what position the file has been read.
   // If we cannot read the whole file range (status == 'heif_reader_grow_status_size_beyond_eof'), this is the actual end position.
   // On the other hand, it may be that the reader was reading more data than requested. In that case, it should indicate the full size here
-  // and libheif may decide to make use of the additional data (e.g. for filling 'tild' offset tables).
+  // and libheif may decide to make use of the additional data (e.g. for filling 'tili' offset tables).
   uint64_t range_end;
 
   // for status == 'heif_reader_grow_status_error'
@@ -1033,7 +1033,7 @@ struct heif_reader
 
   // Release an error message that was returned by heif_reader in an earlier call.
   // If this function is NULL, the error message string will not be released.
-  // This is a viable option if you are only attaching static strings.
+  // This is a viable option if you are only returning static strings.
   void (*release_error_msg)(const char* msg);
 };
 
@@ -1123,9 +1123,9 @@ struct heif_security_limits {
 
   // --- version 1
 
-  // Artificial limit to avoid allocating too much memory.
+  // Limit on the maximum image size to avoid allocating too much memory.
   // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
-  uint64_t max_image_size_pixels ;
+  uint64_t max_image_size_pixels;
   uint32_t max_bayer_pattern_pixels;
 
   uint32_t max_iref_references;
@@ -1138,12 +1138,18 @@ struct heif_security_limits {
   uint64_t max_memory_block_size;
 };
 
+// The global security limits are the default for new heif_contexts.
+// These global limits cannot be changed, but you can override the limits for a specific heif_context.
 LIBHEIF_API
 const struct heif_security_limits* heif_get_global_security_limits();
 
+// Returns the security limits for a heif_context.
+// By default, the limits are set to the global limits, but you can change them in the returned object.
 LIBHEIF_API
 struct heif_security_limits* heif_context_get_security_limits(const struct heif_context*);
 
+// Overwrites the security limits of a heif_context.
+// This is a convenience function to easily copy limits.
 LIBHEIF_API
 struct heif_error heif_context_set_security_limits(struct heif_context*, const struct heif_security_limits*);
 
@@ -1183,7 +1189,7 @@ LIBHEIF_API
 int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
-// Only defined for images coded in the YCbCr colorspace.
+// Only defined for images coded in the YCbCr or monochrome colorspace.
 LIBHEIF_API
 int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 
@@ -1196,6 +1202,8 @@ int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*)
 // Usually, these will be either YCbCr or Monochrome, but it may also propose RGB for images
 // encoded with matrix_coefficients=0 or for images coded natively in RGB.
 // It may also return *_undefined if the file misses relevant information to determine this without decoding.
+// These are only proposed values that avoid colorspace conversions as much as possible.
+// You can still request the output in your preferred colorspace, but this may involve an internal conversion.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
@@ -1284,7 +1292,7 @@ typedef uint32_t heif_entity_group_id;
 struct heif_entity_group
 {
   heif_entity_group_id entity_group_id;
-  uint32_t entity_group_type;
+  uint32_t entity_group_type;  // this is a FourCC constant
   heif_item_id* entities;
   uint32_t num_entities;
 };
@@ -2367,7 +2375,7 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
 
 LIBHEIF_API
 struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
-                                              struct heif_image_handle* tild_image,
+                                              struct heif_image_handle* tiled_image,
                                               uint32_t tile_x, uint32_t tile_y,
                                               const struct heif_image* image,
                                               struct heif_encoder* encoder);
