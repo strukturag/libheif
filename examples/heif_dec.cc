@@ -37,6 +37,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <cassert>
 #include <algorithm>
@@ -90,6 +91,7 @@ static void show_help(const char* argv0)
                "      --skip-exif-offset         skip EXIF metadata offset bytes\n"
                "      --no-colons                replace ':' characters in auxiliary image filenames with '_'\n"
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
+               "      --tiles                    output all image tiles as separate images\n"
                "      --quiet                    do not output status messages to console\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n";
@@ -120,6 +122,7 @@ int option_with_exif = 0;
 int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
+int option_output_tiles = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -139,6 +142,7 @@ static struct option long_options[] = {
     {(char* const) "skip-exif-offset", no_argument,       &option_skip_exif_offset, 1},
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
+    {(char* const) "tiles",            no_argument,       &option_output_tiles,     1},
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
@@ -473,6 +477,96 @@ int decode_single_image(heif_image_handle* handle,
   return 0;
 }
 
+
+int digits_for_integer(uint32_t v)
+{
+  int digits=1;
+
+  while (v>=10) {
+    digits++;
+    v /= 10;
+  }
+
+  return digits;
+}
+
+
+int decode_image_tiles(heif_image_handle* handle,
+                       std::string filename_stem,
+                       std::string filename_suffix,
+                       heif_decoding_options* decode_options,
+                       std::unique_ptr<Encoder>& encoder)
+{
+  heif_image_tiling tiling;
+
+  heif_image_handle_get_image_tiling(handle, !decode_options->ignore_transformations, &tiling);
+  if (tiling.num_columns == 1 && tiling.num_rows == 1) {
+    return decode_single_image(handle, filename_stem, filename_suffix, decode_options, encoder);
+  }
+
+
+  int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
+  if (bit_depth < 0) {
+    std::cerr << "Input image has undefined bit-depth\n";
+    return 1;
+  }
+
+  int has_alpha = heif_image_handle_has_alpha_channel(handle);
+
+  int digits_tx = digits_for_integer(tiling.num_columns-1);
+  int digits_ty = digits_for_integer(tiling.num_rows-1);
+
+  for (uint32_t ty = 0; ty < tiling.num_rows; ty++)
+    for (uint32_t tx = 0; tx < tiling.num_columns; tx++) {
+      struct heif_image* image;
+      struct heif_error err;
+      err = heif_image_handle_decode_image_tile(handle,
+                                                &image,
+                                                encoder->colorspace(has_alpha),
+                                                encoder->chroma(has_alpha, bit_depth),
+                                                decode_options, tx, ty);
+      if (err.code) {
+        std::cerr << "Could not decode image tile: "
+                  << err.message << "\n";
+        return 1;
+      }
+
+      // show decoding warnings
+
+      for (int i = 0;; i++) {
+        int n = heif_image_get_decoding_warnings(image, i, &err, 1);
+        if (n == 0) {
+          break;
+        }
+
+        std::cerr << "Warning: " << err.message << "\n";
+      }
+
+      if (image) {
+        std::stringstream filename_str;
+        filename_str << filename_stem << "-"
+                     << std::setfill('0') << std::setw(digits_ty) << ty << '-'
+                     << std::setfill('0') << std::setw(digits_tx) << tx << "." << filename_suffix;
+
+        std::string filename = filename_str.str();
+
+        bool written = encoder->Encode(handle, image, filename);
+        if (!written) {
+          fprintf(stderr, "could not write image\n");
+        }
+        else {
+          if (!option_quiet) {
+            std::cout << "Written to " << filename << "\n";
+          }
+        }
+        heif_image_release(image);
+      }
+    }
+
+  return 0;
+}
+
+
 class LibHeifInitializer {
 public:
   LibHeifInitializer() { heif_init(nullptr); }
@@ -751,7 +845,14 @@ int main(int argc, char** argv)
       decode_options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
 
-    int ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+    int ret;
+
+    if (option_output_tiles) {
+      ret = decode_image_tiles(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+    }
+    else {
+      ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+    }
     if (ret) {
       heif_decoding_options_free(decode_options);
       heif_image_handle_release(handle);
