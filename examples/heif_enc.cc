@@ -457,6 +457,66 @@ std::string suffix_for_compression_format(heif_compression_format format)
 }
 
 
+InputImage load_image(const std::string& input_filename, int output_bit_depth)
+{
+  InputImage input_image;
+
+  // get file type from file name
+
+  std::string suffix;
+  auto suffix_pos = input_filename.find_last_of('.');
+  if (suffix_pos != std::string::npos) {
+    suffix = input_filename.substr(suffix_pos + 1);
+    std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
+  }
+
+  enum
+  {
+    PNG, JPEG, Y4M, TIFF
+  } filetype = JPEG;
+  if (suffix == "png") {
+    filetype = PNG;
+  }
+  else if (suffix == "y4m") {
+    filetype = Y4M;
+  }
+  else if (suffix == "tif" || suffix == "tiff") {
+    filetype = TIFF;
+  }
+
+  if (filetype == PNG) {
+    heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+  else if (filetype == Y4M) {
+    heif_error err = loadY4M(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+  else if (filetype == TIFF) {
+    heif_error err = loadTIFF(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load TIFF input_image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+  else {
+    heif_error err = loadJPEG(input_filename.c_str(), &input_image);
+    if (err.code != heif_error_Ok) {
+      std::cerr << "Can not load JPEG input_image: " << err.message << '\n';
+      exit(1);
+    }
+  }
+
+  return input_image;
+}
+
+
 class LibHeifInitializer
 {
 public:
@@ -755,57 +815,7 @@ int main(int argc, char** argv)
 
     // ==============================================================================
 
-    // get file type from file name
-
-    std::string suffix;
-    auto suffix_pos = input_filename.find_last_of('.');
-    if (suffix_pos != std::string::npos) {
-      suffix = input_filename.substr(suffix_pos + 1);
-      std::transform(suffix.begin(), suffix.end(), suffix.begin(), ::tolower);
-    }
-
-    enum
-    {
-      PNG, JPEG, Y4M, TIFF
-    } filetype = JPEG;
-    if (suffix == "png") {
-      filetype = PNG;
-    }
-    else if (suffix == "y4m") {
-      filetype = Y4M;
-    } else if (suffix == "tif" || suffix == "tiff") {
-      filetype = TIFF;
-    }
-
-    InputImage input_image;
-    if (filetype == PNG) {
-      heif_error err = loadPNG(input_filename.c_str(), output_bit_depth, &input_image);
-      if (err.code != heif_error_Ok) {
-        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
-        exit(1);
-      }
-    }
-    else if (filetype == Y4M) {
-      heif_error err = loadY4M(input_filename.c_str(), &input_image);
-      if (err.code != heif_error_Ok) {
-        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
-        exit(1);
-      }
-    }
-    else if (filetype == TIFF) {
-      heif_error err = loadTIFF(input_filename.c_str(), &input_image);
-      if (err.code != heif_error_Ok) {
-        std::cerr << "Can not load TIFF input_image: " << err.message << std::endl;
-        exit(1);
-      }
-    }
-    else {
-      heif_error err = loadJPEG(input_filename.c_str(), &input_image);
-      if (err.code != heif_error_Ok) {
-        std::cerr << "Can not load JPEG input_image: " << err.message << std::endl;
-        exit(1);
-      }
-    }
+    InputImage input_image = load_image(input_filename, output_bit_depth);
 
     std::shared_ptr<heif_image> image = input_image.image;
 
@@ -924,7 +934,6 @@ int main(int argc, char** argv)
     if (premultiplied_alpha) {
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
-
 
     struct heif_image_handle* handle;
     error = heif_context_encode_image(context.get(),
