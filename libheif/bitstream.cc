@@ -464,6 +464,20 @@ uint32_t BitReader::get_bits32(int n)
   return static_cast<uint32_t>(get_bits(n));
 }
 
+bool BitReader::get_flag()
+{
+  return (get_bits(1) == 0x01);
+}
+
+std::vector<uint8_t> BitReader::read_bytes(uint32_t n)
+{
+  // TODO: this implementation isn't very efficient
+  std::vector<uint8_t> bytes;
+  for (uint32_t i = 0; i < n; i++) {
+    bytes.push_back(get_bits8(8));
+  }
+  return bytes;
+}
 
 int BitReader::get_bits_fast(int n)
 {

@@ -480,6 +480,7 @@ option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 option(WITH_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
+option(ENABLE_EXPERIMENTAL_MINI_FORMAT "Enable experimental (draft) low-overhead box format (likely reduced interoperability)." OFF)
 
 if (WITH_REDUCED_VISIBILITY)
     set(CMAKE_CXX_VISIBILITY_PRESET hidden)

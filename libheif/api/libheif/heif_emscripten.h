@@ -360,6 +360,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     .value("heif_suberror_Missing_grid_images", heif_suberror_Missing_grid_images)
     .value("heif_suberror_No_av1C_box", heif_suberror_No_av1C_box)
     .value("heif_suberror_No_avcC_box", heif_suberror_No_avcC_box)
+    .value("heif_suberror_No_mini_box", heif_suberror_No_mini_box)
     .value("heif_suberror_Invalid_clean_aperture", heif_suberror_Invalid_clean_aperture)
     .value("heif_suberror_Invalid_overlay_data", heif_suberror_Invalid_overlay_data)
     .value("heif_suberror_Overlay_image_outside_of_canvas", heif_suberror_Overlay_image_outside_of_canvas)
