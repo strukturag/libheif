@@ -3,6 +3,7 @@
 
   MIT License
 
+  Copyright (c) 2017-2024 Dirk Farin <dirk.farin@gmail.com>
   Copyright (c) 2017 struktur AG, Joachim Bauch <bauch@struktur.de>
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -220,6 +221,266 @@ void show_png_compression_level_usage_warning()
                   "You can also use -1 to use the default compression level.\n");
 }
 
+
+int decode_single_image(heif_image_handle* handle,
+                        std::string filename_stem,
+                        std::string filename_suffix,
+                        heif_decoding_options* decode_options,
+                        std::unique_ptr<Encoder>& encoder)
+{
+  int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
+  if (bit_depth < 0) {
+    std::cerr << "Input image has undefined bit-depth\n";
+    return 1;
+  }
+
+  int has_alpha = heif_image_handle_has_alpha_channel(handle);
+
+  struct heif_image* image;
+  struct heif_error err;
+  err = heif_decode_image(handle,
+                          &image,
+                          encoder->colorspace(has_alpha),
+                          encoder->chroma(has_alpha, bit_depth),
+                          decode_options);
+  if (err.code) {
+    std::cerr << "Could not decode image: "
+              << err.message << "\n";
+    return 1;
+  }
+
+  // show decoding warnings
+
+  for (int i = 0;; i++) {
+    int n = heif_image_get_decoding_warnings(image, i, &err, 1);
+    if (n == 0) {
+      break;
+    }
+
+    std::cerr << "Warning: " << err.message << "\n";
+  }
+
+  if (image) {
+    std::string filename = filename_stem + '.' + filename_suffix;
+
+    bool written = encoder->Encode(handle, image, filename);
+    if (!written) {
+      fprintf(stderr, "could not write image\n");
+    }
+    else {
+      if (!option_quiet) {
+        std::cout << "Written to " << filename << "\n";
+      }
+    }
+    heif_image_release(image);
+
+
+    if (option_aux) {
+      int has_depth = heif_image_handle_has_depth_image(handle);
+      if (has_depth) {
+        heif_item_id depth_id;
+        int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
+        assert(nDepthImages == 1);
+        (void) nDepthImages;
+
+        struct heif_image_handle* depth_handle;
+        err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
+        if (err.code) {
+          heif_image_handle_release(handle);
+          std::cerr << "Could not read depth channel\n";
+          return 1;
+        }
+
+        int depth_bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
+
+        struct heif_image* depth_image;
+        err = heif_decode_image(depth_handle,
+                                &depth_image,
+                                encoder->colorspace(false),
+                                encoder->chroma(false, depth_bit_depth),
+                                nullptr);
+        if (err.code) {
+          heif_image_handle_release(depth_handle);
+          heif_image_handle_release(handle);
+          std::cerr << "Could not decode depth image: " << err.message << "\n";
+          return 1;
+        }
+
+        std::ostringstream s;
+        s << filename_stem;
+        s << "-depth.";
+        s << filename_suffix;
+
+        written = encoder->Encode(depth_handle, depth_image, s.str());
+        if (!written) {
+          fprintf(stderr, "could not write depth image\n");
+        }
+        else {
+          if (!option_quiet) {
+            std::cout << "Depth image written to " << s.str() << "\n";
+          }
+        }
+
+        heif_image_release(depth_image);
+        heif_image_handle_release(depth_handle);
+      }
+    }
+
+
+    // --- aux images
+
+    if (option_aux) {
+      int nAuxImages = heif_image_handle_get_number_of_auxiliary_images(handle, LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH);
+      if (nAuxImages > 0) {
+
+        std::vector<heif_item_id> auxIDs(nAuxImages);
+        heif_image_handle_get_list_of_auxiliary_image_IDs(handle,
+                                                          LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH,
+                                                          auxIDs.data(), nAuxImages);
+
+        for (heif_item_id auxId : auxIDs) {
+
+          struct heif_image_handle* aux_handle;
+          err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
+          if (err.code) {
+            heif_image_handle_release(handle);
+            std::cerr << "Could not read auxiliary image\n";
+            return 1;
+          }
+
+          int aux_bit_depth = heif_image_handle_get_luma_bits_per_pixel(aux_handle);
+
+          struct heif_image* aux_image;
+          err = heif_decode_image(aux_handle,
+                                  &aux_image,
+                                  encoder->colorspace(false),
+                                  encoder->chroma(false, aux_bit_depth),
+                                  nullptr);
+          if (err.code) {
+            heif_image_handle_release(aux_handle);
+            heif_image_handle_release(handle);
+            std::cerr << "Could not decode auxiliary image: " << err.message << "\n";
+            return 1;
+          }
+
+          const char* auxTypeC = nullptr;
+          err = heif_image_handle_get_auxiliary_type(aux_handle, &auxTypeC);
+          if (err.code) {
+            heif_image_release(aux_image);
+            heif_image_handle_release(aux_handle);
+            heif_image_handle_release(handle);
+            std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
+            return 1;
+          }
+
+          std::string auxType = std::string(auxTypeC);
+
+          heif_image_handle_release_auxiliary_type(aux_handle, &auxTypeC);
+
+          if (option_no_colons) {
+            std::replace(auxType.begin(), auxType.end(), ':', '_');
+          }
+
+          std::ostringstream s;
+          s << filename_stem;
+          s << "-" + auxType + ".";
+          s << filename_suffix;
+
+          std::string auxFilename = s.str();
+
+          written = encoder->Encode(aux_handle, aux_image, auxFilename);
+          if (!written) {
+            fprintf(stderr, "could not write auxiliary image\n");
+          }
+          else {
+            if (!option_quiet) {
+              std::cout << "Auxiliary image written to " << auxFilename << "\n";
+            }
+          }
+
+          heif_image_release(aux_image);
+          heif_image_handle_release(aux_handle);
+        }
+      }
+    }
+
+
+    // --- write metadata
+
+    if (option_with_xmp || option_with_exif) {
+      int numMetadata = heif_image_handle_get_number_of_metadata_blocks(handle, nullptr);
+      if (numMetadata > 0) {
+        std::vector<heif_item_id> ids(numMetadata);
+        heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, ids.data(), numMetadata);
+
+        for (int n = 0; n < numMetadata; n++) {
+
+          // check whether metadata block is XMP
+
+          std::string itemtype = heif_image_handle_get_metadata_type(handle, ids[n]);
+          std::string contenttype = heif_image_handle_get_metadata_content_type(handle, ids[n]);
+
+          if (option_with_xmp && contenttype == "application/rdf+xml") {
+            // read XMP data to memory array
+
+            size_t xmpSize = heif_image_handle_get_metadata_size(handle, ids[n]);
+            std::vector<uint8_t> xmp(xmpSize);
+            err = heif_image_handle_get_metadata(handle, ids[n], xmp.data());
+            if (err.code) {
+              heif_image_handle_release(handle);
+              std::cerr << "Could not read XMP metadata: " << err.message << "\n";
+              return 1;
+            }
+
+            // write XMP data to file
+
+            std::string xmp_filename = filename_stem + ".xmp";
+            std::ofstream ostr(xmp_filename.c_str());
+            ostr.write((char*) xmp.data(), xmpSize);
+          }
+          else if (option_with_exif && itemtype == "Exif") {
+            // read EXIF data to memory array
+
+            size_t exifSize = heif_image_handle_get_metadata_size(handle, ids[n]);
+            std::vector<uint8_t> exif(exifSize);
+            err = heif_image_handle_get_metadata(handle, ids[n], exif.data());
+            if (err.code) {
+              heif_image_handle_release(handle);
+              std::cerr << "Could not read EXIF metadata: " << err.message << "\n";
+              return 1;
+            }
+
+            uint32_t offset = 0;
+            if (option_skip_exif_offset) {
+              if (exifSize < 4) {
+                heif_image_handle_release(handle);
+                std::cerr << "Invalid EXIF metadata, it is too small.\n";
+                return 1;
+              }
+
+              offset = (exif[0] << 24) | (exif[1] << 16) | (exif[2] << 8) | exif[3];
+              offset += 4;
+
+              if (offset >= exifSize) {
+                heif_image_handle_release(handle);
+                std::cerr << "Invalid EXIF metadata, offset out of range.\n";
+                return 1;
+              }
+            }
+
+            // write EXIF data to file
+
+            std::string exif_filename = filename_stem + ".exif";
+            std::ofstream ostr(exif_filename.c_str());
+            ostr.write((char*) exif.data() + offset, exifSize - offset);
+          }
+        }
+      }
+    }
+  }
+
+  return 0;
+}
 
 class LibHeifInitializer {
 public:
@@ -469,10 +730,10 @@ int main(int argc, char** argv)
       numbered_output_filename_stem = s.str();
 
       s << "." << output_filename_suffix;
-      filename.assign(s.str());
+      filename = s.str();
     }
     else {
-      filename.assign(output_filename);
+      filename = output_filename;
       numbered_output_filename_stem = output_filename_stem;
     }
 
@@ -484,7 +745,6 @@ int main(int argc, char** argv)
       return 1;
     }
 
-    int has_alpha = heif_image_handle_has_alpha_channel(handle);
     struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
     encoder->UpdateDecodingOptions(handle, decode_options);
 
@@ -500,257 +760,14 @@ int main(int argc, char** argv)
       decode_options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
     }
 
-    int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
-    if (bit_depth < 0) {
+    int ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+    if (ret) {
       heif_decoding_options_free(decode_options);
       heif_image_handle_release(handle);
-      std::cerr << "Input image has undefined bit-depth\n";
-      return 1;
+      return ret;
     }
 
-    struct heif_image* image;
-    err = heif_decode_image(handle,
-                            &image,
-                            encoder->colorspace(has_alpha),
-                            encoder->chroma(has_alpha, bit_depth),
-                            decode_options);
-    heif_decoding_options_free(decode_options);
-    if (err.code) {
-      heif_image_handle_release(handle);
-      std::cerr << "Could not decode image: " << idx << ": "
-                << err.message << "\n";
-      return 1;
-    }
-
-    // show decoding warnings
-
-    for (int i = 0;; i++) {
-      int n = heif_image_get_decoding_warnings(image, i, &err, 1);
-      if (n == 0) {
-        break;
-      }
-
-      std::cerr << "Warning: " << err.message << "\n";
-    }
-
-    if (image) {
-      bool written = encoder->Encode(handle, image, filename);
-      if (!written) {
-        fprintf(stderr, "could not write image\n");
-      }
-      else {
-        if (!option_quiet) {
-          std::cout << "Written to " << filename << "\n";
-        }
-      }
-      heif_image_release(image);
-
-
-      if (option_aux) {
-        int has_depth = heif_image_handle_has_depth_image(handle);
-        if (has_depth) {
-          heif_item_id depth_id;
-          int nDepthImages = heif_image_handle_get_list_of_depth_image_IDs(handle, &depth_id, 1);
-          assert(nDepthImages == 1);
-          (void) nDepthImages;
-
-          struct heif_image_handle* depth_handle;
-          err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
-          if (err.code) {
-            heif_image_handle_release(handle);
-            std::cerr << "Could not read depth channel\n";
-            return 1;
-          }
-
-          int depth_bit_depth = heif_image_handle_get_luma_bits_per_pixel(depth_handle);
-
-          struct heif_image* depth_image;
-          err = heif_decode_image(depth_handle,
-                                  &depth_image,
-                                  encoder->colorspace(false),
-                                  encoder->chroma(false, depth_bit_depth),
-                                  nullptr);
-          if (err.code) {
-            heif_image_handle_release(depth_handle);
-            heif_image_handle_release(handle);
-            std::cerr << "Could not decode depth image: " << err.message << "\n";
-            return 1;
-          }
-
-          std::ostringstream s;
-          s << numbered_output_filename_stem;
-          s << "-depth.";
-          s << output_filename_suffix;
-
-          written = encoder->Encode(depth_handle, depth_image, s.str());
-          if (!written) {
-            fprintf(stderr, "could not write depth image\n");
-          }
-          else {
-            if (!option_quiet) {
-              std::cout << "Depth image written to " << s.str() << "\n";
-            }
-          }
-
-          heif_image_release(depth_image);
-          heif_image_handle_release(depth_handle);
-        }
-      }
-
-
-      // --- aux images
-
-      if (option_aux) {
-        int nAuxImages = heif_image_handle_get_number_of_auxiliary_images(handle, LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH);
-        if (nAuxImages > 0) {
-
-          std::vector<heif_item_id> auxIDs(nAuxImages);
-          heif_image_handle_get_list_of_auxiliary_image_IDs(handle,
-                                                            LIBHEIF_AUX_IMAGE_FILTER_OMIT_ALPHA | LIBHEIF_AUX_IMAGE_FILTER_OMIT_DEPTH,
-                                                            auxIDs.data(), nAuxImages);
-
-          for (heif_item_id auxId: auxIDs) {
-
-            struct heif_image_handle* aux_handle;
-            err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
-            if (err.code) {
-              heif_image_handle_release(handle);
-              std::cerr << "Could not read auxiliary image\n";
-              return 1;
-            }
-
-            int aux_bit_depth = heif_image_handle_get_luma_bits_per_pixel(aux_handle);
-
-            struct heif_image* aux_image;
-            err = heif_decode_image(aux_handle,
-                                    &aux_image,
-                                    encoder->colorspace(false),
-                                    encoder->chroma(false, aux_bit_depth),
-                                    nullptr);
-            if (err.code) {
-              heif_image_handle_release(aux_handle);
-              heif_image_handle_release(handle);
-              std::cerr << "Could not decode auxiliary image: " << err.message << "\n";
-              return 1;
-            }
-
-            const char* auxTypeC = nullptr;
-            err = heif_image_handle_get_auxiliary_type(aux_handle, &auxTypeC);
-            if (err.code) {
-              heif_image_release(aux_image);
-              heif_image_handle_release(aux_handle);
-              heif_image_handle_release(handle);
-              std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
-              return 1;
-            }
-
-            std::string auxType = std::string(auxTypeC);
-
-            heif_image_handle_release_auxiliary_type(aux_handle, &auxTypeC);
-
-            if (option_no_colons) {
-              std::replace(auxType.begin(), auxType.end(), ':', '_');
-            }
-
-            std::ostringstream s;
-            s << numbered_output_filename_stem;
-            s << "-" + auxType + ".";
-            s << output_filename_suffix;
-
-            std::string auxFilename = s.str();
-
-            written = encoder->Encode(aux_handle, aux_image, auxFilename);
-            if (!written) {
-              fprintf(stderr, "could not write auxiliary image\n");
-            }
-            else {
-              if (!option_quiet) {
-                std::cout << "Auxiliary image written to " << auxFilename << "\n";
-              }
-            }
-
-            heif_image_release(aux_image);
-            heif_image_handle_release(aux_handle);
-          }
-        }
-      }
-
-
-      // --- write metadata
-
-      if (option_with_xmp || option_with_exif) {
-        int numMetadata = heif_image_handle_get_number_of_metadata_blocks(handle, nullptr);
-        if (numMetadata>0) {
-          std::vector<heif_item_id> ids(numMetadata);
-          heif_image_handle_get_list_of_metadata_block_IDs(handle, nullptr, ids.data(), numMetadata);
-
-          for (int n = 0; n < numMetadata; n++) {
-
-            // check whether metadata block is XMP
-
-            std::string itemtype = heif_image_handle_get_metadata_type(handle, ids[n]);
-            std::string contenttype = heif_image_handle_get_metadata_content_type(handle, ids[n]);
-
-            if (option_with_xmp && contenttype == "application/rdf+xml") {
-              // read XMP data to memory array
-
-              size_t xmpSize = heif_image_handle_get_metadata_size(handle, ids[n]);
-              std::vector<uint8_t> xmp(xmpSize);
-              err = heif_image_handle_get_metadata(handle, ids[n], xmp.data());
-              if (err.code) {
-                heif_image_handle_release(handle);
-                std::cerr << "Could not read XMP metadata: " << err.message << "\n";
-                return 1;
-              }
-
-              // write XMP data to file
-
-              std::string xmp_filename = numbered_output_filename_stem + ".xmp";
-              std::ofstream ostr(xmp_filename.c_str());
-              ostr.write((char*)xmp.data(), xmpSize);
-            }
-            else if (option_with_exif && itemtype == "Exif") {
-              // read EXIF data to memory array
-
-              size_t exifSize = heif_image_handle_get_metadata_size(handle, ids[n]);
-              std::vector<uint8_t> exif(exifSize);
-              err = heif_image_handle_get_metadata(handle, ids[n], exif.data());
-              if (err.code) {
-                heif_image_handle_release(handle);
-                std::cerr << "Could not read EXIF metadata: " << err.message << "\n";
-                return 1;
-              }
-
-              uint32_t offset = 0;
-              if (option_skip_exif_offset) {
-                if (exifSize<4) {
-                  heif_image_handle_release(handle);
-                  std::cerr << "Invalid EXIF metadata, it is too small.\n";
-                  return 1;
-                }
-
-                offset = (exif[0]<<24) | (exif[1]<<16) | (exif[2]<<8) | exif[3];
-                offset += 4;
-
-                if (offset >= exifSize) {
-                  heif_image_handle_release(handle);
-                  std::cerr << "Invalid EXIF metadata, offset out of range.\n";
-                  return 1;
-                }
-              }
-
-              // write EXIF data to file
-
-              std::string exif_filename = numbered_output_filename_stem + ".exif";
-              std::ofstream ostr(exif_filename.c_str());
-              ostr.write((char*)exif.data() + offset, exifSize - offset);
-            }
-          }
-        }
-      }
-
-      heif_image_handle_release(handle);
-    }
+    heif_image_handle_release(handle);
 
     image_index++;
   }
