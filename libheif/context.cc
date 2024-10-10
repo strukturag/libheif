@@ -346,7 +346,7 @@ Error HeifContext::interpret_heif_file()
   if (!m_primary_image) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Nonexisting_item_referenced,
-                 "'pitm' box references a non-existing image");
+                 "'pitm' box references an unsupported or non-existing image");
   }
 
 
