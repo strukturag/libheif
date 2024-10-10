@@ -286,7 +286,6 @@ int decode_single_image(heif_image_handle* handle,
         struct heif_image_handle* depth_handle;
         err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
         if (err.code) {
-          heif_image_handle_release(handle);
           std::cerr << "Could not read depth channel\n";
           return 1;
         }
@@ -301,7 +300,6 @@ int decode_single_image(heif_image_handle* handle,
                                 nullptr);
         if (err.code) {
           heif_image_handle_release(depth_handle);
-          heif_image_handle_release(handle);
           std::cerr << "Could not decode depth image: " << err.message << "\n";
           return 1;
         }
@@ -343,7 +341,6 @@ int decode_single_image(heif_image_handle* handle,
           struct heif_image_handle* aux_handle;
           err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
           if (err.code) {
-            heif_image_handle_release(handle);
             std::cerr << "Could not read auxiliary image\n";
             return 1;
           }
@@ -358,7 +355,6 @@ int decode_single_image(heif_image_handle* handle,
                                   nullptr);
           if (err.code) {
             heif_image_handle_release(aux_handle);
-            heif_image_handle_release(handle);
             std::cerr << "Could not decode auxiliary image: " << err.message << "\n";
             return 1;
           }
@@ -368,7 +364,6 @@ int decode_single_image(heif_image_handle* handle,
           if (err.code) {
             heif_image_release(aux_image);
             heif_image_handle_release(aux_handle);
-            heif_image_handle_release(handle);
             std::cerr << "Could not get type of auxiliary image: " << err.message << "\n";
             return 1;
           }
@@ -427,7 +422,6 @@ int decode_single_image(heif_image_handle* handle,
             std::vector<uint8_t> xmp(xmpSize);
             err = heif_image_handle_get_metadata(handle, ids[n], xmp.data());
             if (err.code) {
-              heif_image_handle_release(handle);
               std::cerr << "Could not read XMP metadata: " << err.message << "\n";
               return 1;
             }
@@ -445,7 +439,6 @@ int decode_single_image(heif_image_handle* handle,
             std::vector<uint8_t> exif(exifSize);
             err = heif_image_handle_get_metadata(handle, ids[n], exif.data());
             if (err.code) {
-              heif_image_handle_release(handle);
               std::cerr << "Could not read EXIF metadata: " << err.message << "\n";
               return 1;
             }
@@ -453,7 +446,6 @@ int decode_single_image(heif_image_handle* handle,
             uint32_t offset = 0;
             if (option_skip_exif_offset) {
               if (exifSize < 4) {
-                heif_image_handle_release(handle);
                 std::cerr << "Invalid EXIF metadata, it is too small.\n";
                 return 1;
               }
@@ -462,7 +454,6 @@ int decode_single_image(heif_image_handle* handle,
               offset += 4;
 
               if (offset >= exifSize) {
-                heif_image_handle_release(handle);
                 std::cerr << "Invalid EXIF metadata, offset out of range.\n";
                 return 1;
               }
