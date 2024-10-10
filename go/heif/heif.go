@@ -333,6 +333,8 @@ const (
 
 	SuberrorNoIcbrBox = C.heif_suberror_No_icbr_box
 
+	SuberrorNoMiniBox = C.heif_suberror_No_mini_box
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.

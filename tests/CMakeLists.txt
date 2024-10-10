@@ -62,6 +62,13 @@ else()
     message(INFO "Disabling JPEG 2000 encoder tests because no JPEG 2000 codec is enabled")
 endif()
 
+if (WITH_EXPERIMENTAL_MINI_FORMAT)
+    if (NOT WITH_REDUCED_VISIBILITY)
+        add_libheif_test(mini_box)
+    endif()
+    add_libheif_test(mini_decode)
+endif()
+
 if (WITH_UNCOMPRESSED_CODEC)
     add_libheif_test(uncompressed_decode)
     add_libheif_test(uncompressed_decode_generic_compression)

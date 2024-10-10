@@ -23,6 +23,7 @@
         "WITH_AOM_ENCODER_PLUGIN" : "OFF",
         "WITH_DAV1D" : "ON",
         "WITH_DAV1D_PLUGIN" : "OFF",
+        "WITH_EXPERIMENTAL_MINI_FORMAT" : "ON",
         "WITH_LIBDE265" : "ON",
         "WITH_LIBDE265_PLUGIN" : "OFF",
         "WITH_RAV1E" : "ON",
