@@ -593,6 +593,11 @@ heif_error heif_context_get_primary_image_handle(heif_context* ctx, heif_image_h
     return err.error_struct(ctx->context.get());
   }
 
+  if (auto errImage = std::dynamic_pointer_cast<ImageItem_Error>(primary_image)) {
+    Error error = errImage->get_item_error();
+    return error.error_struct(ctx->context.get());
+  }
+
   *img = new heif_image_handle();
   (*img)->image = std::move(primary_image);
   (*img)->context = ctx->context;
