@@ -168,7 +168,6 @@ void show_help(const char* argv0)
             << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
             << "      --plugin-directory DIR  load all codec plugins in the directory\n"
-            << "  -E, --even-size   [deprecated] crop images to even width and height (odd sizes are not decoded correctly by some software)\n"
             << "  --matrix_coefficients     nclx profile: color conversion matrix coefficients, default=6 (see h.273)\n"
             << "  --colour_primaries        nclx profile: color primaries (see h.273)\n"
             << "  --transfer_characteristic nclx profile: transfer characteristics (see h.273)\n"
@@ -485,14 +484,13 @@ int main(int argc, char** argv)
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
   bool force_enc_htj2k = false;
-  bool crop_to_even_size = false;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:AEe:C:"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
@@ -539,9 +537,6 @@ int main(int argc, char** argv)
         force_enc_uncompressed = true;
         break;
 #endif
-      case 'E':
-        crop_to_even_size = true;
-        break;
       case 'e':
         encoderId = optarg;
         break;
@@ -924,29 +919,6 @@ int main(int argc, char** argv)
     else if (chroma_downsampling == "nearest-neighbor") {
       options->color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_nearest_neighbor;
       options->color_conversion_options.only_use_preferred_chroma_algorithm = true;
-    }
-
-    if (crop_to_even_size) {
-      if (heif_image_get_primary_width(image.get()) == 1 ||
-          heif_image_get_primary_height(image.get()) == 1) {
-        std::cerr << "Image only has a size of 1 pixel width or height. Cannot crop to even size.\n";
-        heif_encoder_release(encoder);
-        return 1;
-      }
-
-      std::cerr << "Warning: option --even-size/-E is deprecated as it is not needed anymore.\n";
-
-      int right = heif_image_get_primary_width(image.get()) % 2;
-      int bottom = heif_image_get_primary_height(image.get()) % 2;
-
-      error = heif_image_crop(image.get(), 0, right, 0, bottom);
-      if (error.code != 0) {
-        heif_encoding_options_free(options);
-        heif_nclx_color_profile_free(nclx);
-        heif_encoder_release(encoder);
-        std::cerr << "Could not crop image: " << error.message << "\n";
-        return 1;
-      }
     }
 
     if (premultiplied_alpha) {
