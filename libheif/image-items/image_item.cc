@@ -154,7 +154,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_Tiled>(ctx, id);
   }
   else {
-    return nullptr;
+    std::stringstream sstr;
+    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' are not supported.";
+    Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
+    return std::make_shared<ImageItem_Error>(item_type, id, err);
   }
 }
 

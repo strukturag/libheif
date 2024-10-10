@@ -671,6 +671,11 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
 
   auto image = ctx->context->get_image(id);
 
+  if (auto errImage = std::dynamic_pointer_cast<ImageItem_Error>(image)) {
+    Error error = errImage->get_item_error();
+    return error.error_struct(ctx->context.get());
+  }
+
   if (!image) {
     *imgHdl = nullptr;
 

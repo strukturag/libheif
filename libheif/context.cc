@@ -315,31 +315,22 @@ Error HeifContext::interpret_heif_file()
     }
 
     auto image = ImageItem::alloc_for_infe_box(this, infe_box);
-    if (image) {
-      m_all_images.insert(std::make_pair(id, image));
+    assert(image);
 
-      if (!infe_box->is_hidden_item()) {
-        if (id == m_heif_file->get_primary_image_ID()) {
-          image->set_primary(true);
-          m_primary_image = image;
-        }
+    m_all_images.insert(std::make_pair(id, image));
 
-        m_top_level_images.push_back(image);
+    if (!infe_box->is_hidden_item()) {
+      if (id == m_heif_file->get_primary_image_ID()) {
+        image->set_primary(true);
+        m_primary_image = image;
       }
 
-      Error err = image->on_load_file();
-      if (err) {
-        return err;
-      }
+      m_top_level_images.push_back(image);
+    }
 
-#if 0
-      if (infe_box->get_item_type() == "grid") {
-        Error err = image->read_grid_spec();
-        if (err) {
-          return err;
-        }
-      }
-#endif
+    Error err = image->on_load_file();
+    if (err) {
+      return err;
     }
   }
 
@@ -354,6 +345,10 @@ Error HeifContext::interpret_heif_file()
 
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
+
+    if (image->is_error_item()) {
+      continue;
+    }
 
     std::vector<std::shared_ptr<Box>> properties;
 
@@ -662,6 +657,10 @@ Error HeifContext::interpret_heif_file()
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
 
+    if (image->is_error_item()) {
+      continue;
+    }
+
     std::shared_ptr<Box_infe> infe = m_heif_file->get_infe_box(image->get_id());
     if (infe->get_item_type_4cc() == fourcc("hvc1")) {
 
@@ -693,6 +692,10 @@ Error HeifContext::interpret_heif_file()
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
     auto id = pair.first;
+
+    if (image->is_error_item()) {
+      continue;
+    }
 
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
