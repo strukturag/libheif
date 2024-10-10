@@ -71,6 +71,7 @@ struct encoder_struct_aom
   int threads;
   bool lossless;
   bool lossless_alpha;
+  bool auto_tiles;
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   std::vector<custom_option> custom_options;
@@ -159,6 +160,7 @@ static const char* kParam_alpha_quality = "alpha-quality";
 static const char* kParam_alpha_min_q = "alpha-min-q";
 static const char* kParam_alpha_max_q = "alpha-max-q";
 static const char* kParam_lossless_alpha = "lossless-alpha";
+static const char* kParam_auto_tiles = "auto-tiles";
 static const char* kParam_threads = "threads";
 static const char* kParam_realtime = "realtime";
 static const char* kParam_speed = "speed";
@@ -197,7 +199,7 @@ static const char* aom_plugin_name()
 }
 
 
-#define MAX_NPARAMETERS 14
+#define MAX_NPARAMETERS 15
 
 static struct heif_encoder_parameter aom_encoder_params[MAX_NPARAMETERS];
 static const struct heif_encoder_parameter* aom_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
@@ -357,6 +359,14 @@ static void aom_init_parameters()
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_lossless_alpha;
+  p->type = heif_encoder_parameter_type_boolean;
+  p->boolean.default_value = false;
+  p->has_default = true;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_auto_tiles;
   p->type = heif_encoder_parameter_type_boolean;
   p->boolean.default_value = false;
   p->has_default = true;
@@ -570,6 +580,9 @@ struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name,
           encoder->alpha_min_q = 0;
           encoder->alpha_min_q_set = true;
       }
+      return heif_error_ok;
+  } else if (strcmp(name, kParam_auto_tiles) == 0) {
+      encoder->auto_tiles = value;
       return heif_error_ok;
   }
 
@@ -979,6 +992,11 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     aom_codec_control(&codec, AV1E_SET_ROW_MT, 1);
 #endif
   }
+
+#if defined(AOM_CTRL_AV1E_SET_AUTO_TILES)
+  // aom 3.10.0
+  aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles);
+#endif
 
   // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
 
