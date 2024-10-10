@@ -1514,6 +1514,16 @@ void heif_image_get_content_light_level(const struct heif_image* image, struct h
   }
 }
 
+int heif_image_handle_get_content_light_level(const struct heif_image_handle* handle, struct heif_content_light_level* out)
+{
+  auto clli = handle->image->get_file()->get_property<Box_clli>(handle->image->get_id());
+  if (out && clli) {
+    *out = clli->clli;
+  }
+
+  return clli ? 1 : 0;
+}
+
 void heif_image_set_content_light_level(const struct heif_image* image, const struct heif_content_light_level* in)
 {
   if (in == nullptr) {
@@ -1532,6 +1542,16 @@ int heif_image_has_mastering_display_colour_volume(const struct heif_image* imag
 void heif_image_get_mastering_display_colour_volume(const struct heif_image* image, struct heif_mastering_display_colour_volume* out)
 {
   *out = image->image->get_mdcv();
+}
+
+int heif_image_handle_get_mastering_display_colour_volume(const struct heif_image_handle* handle, struct heif_mastering_display_colour_volume* out)
+{
+  auto mdcv = handle->image->get_file()->get_property<Box_mdcv>(handle->image->get_id());
+  if (out && mdcv) {
+    *out = mdcv->mdcv;
+  }
+
+  return mdcv ? 1 : 0;
 }
 
 void heif_image_set_mastering_display_colour_volume(const struct heif_image* image, const struct heif_mastering_display_colour_volume* in)
@@ -1599,6 +1619,21 @@ struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_
 void heif_image_get_pixel_aspect_ratio(const struct heif_image* image, uint32_t* aspect_h, uint32_t* aspect_v)
 {
   image->image->get_pixel_ratio(aspect_h, aspect_v);
+}
+
+int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* handle, uint32_t* aspect_h, uint32_t* aspect_v)
+{
+  auto pasp = handle->image->get_file()->get_property<Box_pasp>(handle->image->get_id());
+  if (pasp) {
+    *aspect_h = pasp->hSpacing;
+    *aspect_v = pasp->vSpacing;
+    return 1;
+  }
+  else {
+    *aspect_h = 1;
+    *aspect_v = 1;
+    return 0;
+  }
 }
 
 void heif_image_set_pixel_aspect_ratio(struct heif_image* image, uint32_t aspect_h, uint32_t aspect_v)
