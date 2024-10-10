@@ -31,10 +31,10 @@ struct heif_security_limits global_security_limits {
     .max_image_size_pixels = 32768 * 32768,
     .max_bayer_pattern_pixels = 16*16,
 
-    .max_iref_references = 0,
-    .max_iloc_items = 0,
+    .max_iref_references = 10000,
+    .max_iloc_items = 20000,
     .max_iloc_extents_per_item = 32,
-    .max_children_per_box = 65536,
+    .max_children_per_box = 20000,
     .max_number_of_tiles = 4096 * 4096,
 
     .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
