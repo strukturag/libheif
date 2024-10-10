@@ -1922,6 +1922,10 @@ int heif_image_has_content_light_level(const struct heif_image*);
 LIBHEIF_API
 void heif_image_get_content_light_level(const struct heif_image*, struct heif_content_light_level* out);
 
+// Returns whether the image has 'content light level' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_content_light_level(const struct heif_image_handle*, struct heif_content_light_level* out);
+
 LIBHEIF_API
 void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
 
@@ -1954,8 +1958,13 @@ int heif_image_has_mastering_display_colour_volume(const struct heif_image*);
 LIBHEIF_API
 void heif_image_get_mastering_display_colour_volume(const struct heif_image*, struct heif_mastering_display_colour_volume* out);
 
+// Returns whether the image has 'mastering display colour volume' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_mastering_display_colour_volume(const struct heif_image_handle*, struct heif_mastering_display_colour_volume* out);
+
 LIBHEIF_API
 void heif_image_set_mastering_display_colour_volume(const struct heif_image*, const struct heif_mastering_display_colour_volume* in);
+
 
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the
 // normalized values, collected in heif_decoded_mastering_display_colour_volume.
@@ -1966,6 +1975,10 @@ struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_
 
 LIBHEIF_API
 void heif_image_get_pixel_aspect_ratio(const struct heif_image*, uint32_t* aspect_h, uint32_t* aspect_v);
+
+// Returns whether the image has 'pixel aspect ratio information' information. If 0 is returned, the output is filled with the 1:1 default.
+LIBHEIF_API
+int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, uint32_t* aspect_h, uint32_t* aspect_v);
 
 LIBHEIF_API
 void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, uint32_t aspect_v);
