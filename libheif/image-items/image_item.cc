@@ -155,7 +155,7 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   }
   else {
     std::stringstream sstr;
-    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' are not supported.";
+    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' is not supported.";
     Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
     return std::make_shared<ImageItem_Error>(item_type, id, err);
   }
