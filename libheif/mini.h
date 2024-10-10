@@ -35,6 +35,7 @@ public:
     set_short_type(fourcc("mini"));
   }
 
+  bool get_icc_flag() const { return m_icc_flag; }
   bool get_exif_flag() const { return m_exif_flag; }
   bool get_xmp_flag() const { return m_xmp_flag; }
 
@@ -42,6 +43,8 @@ public:
   uint32_t get_height() const { return m_height; }
 
   std::vector<uint8_t> get_main_item_codec_config() const { return m_main_item_codec_config; }
+  std::vector<uint8_t> get_alpha_item_codec_config() const { return m_alpha_item_codec_config; }
+  std::vector<uint8_t> get_icc_data() const { return m_icc_data; }
 
   uint64_t get_main_item_data_offset() const { return m_main_item_data_offset; }
   uint32_t get_main_item_data_size() const { return m_main_item_data_size; }
@@ -60,7 +63,7 @@ public:
   std::string dump(Indent&) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   uint8_t m_version;

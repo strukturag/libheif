@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-Error Box_mini::parse(BitstreamRange& range)
+Error Box_mini::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint64_t start_offset = range.get_istream()->get_position();
   size_t length = range.get_remaining_bytes();
