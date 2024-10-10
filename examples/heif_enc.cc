@@ -517,6 +517,96 @@ InputImage load_image(const std::string& input_filename, int output_bit_depth)
 }
 
 
+heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encoder,
+                                                            heif_color_profile_nclx** out_nclx,
+                                                            std::shared_ptr<heif_image> input_image,
+                                                            bool lossless)
+{
+  *out_nclx = heif_nclx_color_profile_alloc();
+  if (!*out_nclx) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "Cannot allocate NCLX color profile."};
+  }
+
+  heif_color_profile_nclx* nclx = *out_nclx; // abbreviation;
+
+  if (lossless) {
+      heif_encoder_set_lossless(encoder, true);
+
+      if (heif_image_get_colorspace(input_image.get()) == heif_colorspace_RGB) {
+        nclx->matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
+        nclx->full_range_flag = true;
+
+        heif_error error = heif_encoder_set_parameter(encoder, "chroma", "444");
+        if (error.code) {
+          return error;
+        }
+      }
+      else {
+        heif_color_profile_nclx* input_nclx;
+
+        heif_error error = heif_image_get_nclx_color_profile(input_image.get(), &input_nclx);
+        if (error.code == heif_error_Color_profile_does_not_exist) {
+          // NOP, use default NCLX profile
+        }
+        else if (error.code) {
+          std::cerr << "Cannot get input NCLX color profile.\n";
+          return error;
+        }
+        else {
+          nclx->matrix_coefficients = input_nclx->matrix_coefficients;
+          nclx->transfer_characteristics = input_nclx->transfer_characteristics;
+          nclx->color_primaries = input_nclx->color_primaries;
+          nclx->full_range_flag = input_nclx->full_range_flag;
+
+          heif_nclx_color_profile_free(input_nclx);
+        }
+
+        // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
+        switch (heif_image_get_chroma_format(input_image.get())) {
+          case heif_chroma_420:
+          case heif_chroma_monochrome:
+            error = heif_encoder_set_parameter(encoder, "chroma", "420");
+            break;
+          case heif_chroma_422:
+            error = heif_encoder_set_parameter(encoder, "chroma", "422");
+            break;
+          case heif_chroma_444:
+            error = heif_encoder_set_parameter(encoder, "chroma", "444");
+            break;
+          default:
+            assert(false);
+            exit(5);
+        }
+
+        if (error.code) {
+          return error;
+        }
+      }
+  }
+
+  if (!lossless) {
+    heif_error error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
+    if (error.code) {
+      std::cerr << "Invalid matrix coefficients specified.\n";
+      exit(5);
+    }
+    error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
+    if (error.code) {
+      std::cerr << "Invalid transfer characteristics specified.\n";
+      exit(5);
+    }
+    error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
+    if (error.code) {
+      std::cerr << "Invalid color primaries specified.\n";
+      exit(5);
+    }
+    nclx->full_range_flag = (uint8_t) nclx_full_range;
+  }
+
+  return {heif_error_Ok};
+}
+
+
 class LibHeifInitializer
 {
 public:
@@ -782,6 +872,11 @@ int main(int argc, char** argv)
   }
 
 
+  if (lossless && !heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
+    std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
+    lossless = false;
+  }
+
   // If we were given a list of filenames and no '-o' option, check whether the last filename is the desired output filename.
 
   if (output_filename.empty() && argc>1) {
@@ -829,83 +924,14 @@ int main(int argc, char** argv)
     }
 #endif
 
-    heif_color_profile_nclx* nclx = heif_nclx_color_profile_alloc();
-    if (!nclx) {
-      std::cerr << "Cannot allocate NCLX color profile.\n";
-      exit(5);
-    }
-
-    if (lossless) {
-      if (heif_encoder_descriptor_supports_lossless_compression(active_encoder_descriptor)) {
-        heif_encoder_set_lossless(encoder, true);
-
-        if (heif_image_get_colorspace(primary_image.get()) == heif_colorspace_RGB) {
-          nclx->matrix_coefficients = heif_matrix_coefficients_RGB_GBR;
-          nclx->full_range_flag = true;
-          raw_params.emplace_back("chroma=444");
-        }
-        else {
-          heif_color_profile_nclx* input_nclx;
-
-          error = heif_image_get_nclx_color_profile(primary_image.get(), &input_nclx);
-          if (error.code == heif_error_Color_profile_does_not_exist) {
-            // NOP, use default NCLX profile
-          }
-          else if (error.code) {
-            std::cerr << "Cannot get input NCLX color profile.\n";
-            exit(5);
-          }
-          else {
-            nclx->matrix_coefficients = input_nclx->matrix_coefficients;
-            nclx->transfer_characteristics = input_nclx->transfer_characteristics;
-            nclx->color_primaries = input_nclx->color_primaries;
-            nclx->full_range_flag = input_nclx->full_range_flag;
-
-            heif_nclx_color_profile_free(input_nclx);
-          }
-
-          // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
-          switch (heif_image_get_chroma_format(primary_image.get())) {
-            case heif_chroma_420:
-            case heif_chroma_monochrome:
-              raw_params.emplace_back("chroma=420");
-              break;
-            case heif_chroma_422:
-              raw_params.emplace_back("chroma=422");
-              break;
-            case heif_chroma_444:
-              raw_params.emplace_back("chroma=444");
-              break;
-            default:
-              assert(false);
-              exit(5);
-          }
-        }
-      }
-      else {
-        std::cerr << "Warning: the selected encoder does not support lossless encoding. Encoding in lossy mode.\n";
-        lossless = false;
-      }
+    heif_color_profile_nclx* nclx;
+    heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, primary_image, lossless);
+    if (error.code) {
+      std::cerr << error.message << "\n";
+      return 5;
     }
 
     if (!lossless) {
-      error = heif_nclx_color_profile_set_matrix_coefficients(nclx, nclx_matrix_coefficients);
-      if (error.code) {
-        std::cerr << "Invalid matrix coefficients specified.\n";
-        exit(5);
-      }
-      error = heif_nclx_color_profile_set_transfer_characteristics(nclx, nclx_transfer_characteristic);
-      if (error.code) {
-        std::cerr << "Invalid transfer characteristics specified.\n";
-        exit(5);
-      }
-      error = heif_nclx_color_profile_set_color_primaries(nclx, nclx_colour_primaries);
-      if (error.code) {
-        std::cerr << "Invalid color primaries specified.\n";
-        exit(5);
-      }
-      nclx->full_range_flag = (uint8_t) nclx_full_range;
-
       heif_encoder_set_lossy_quality(encoder, quality);
     }
 
