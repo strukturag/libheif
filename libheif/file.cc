@@ -482,7 +482,11 @@ Error HeifFile::parse_heif_file()
       m_ipco_box->append_child_box(alpha_item_codec_prop); // entry 6
     }
 
-    // 7
+    if (m_mini_box->get_alpha_item_data_size() != 0) {
+      std::shared_ptr<Box_auxC> aux_type = std::make_shared<Box_auxC>();
+      aux_type->set_aux_type("urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
+      m_ipco_box->append_child_box(aux_type); // entry 7
+    }
 
     // 8
 
@@ -500,7 +504,7 @@ Error HeifFile::parse_heif_file()
     if (m_mini_box->get_alpha_item_data_size() > 0) {
       m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(6)});
       m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(2)});
-      // m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(7)});
+      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(7)});
       // m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(8)});
       // m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(9)});
       // m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(10)});
@@ -558,7 +562,7 @@ Error HeifFile::parse_heif_file()
     m_iref_box = std::make_shared<Box_iref>();
     std::vector<uint32_t> to_items = {1};
     if (m_mini_box->get_alpha_item_data_size() != 0) {
-      m_iref_box->add_references(6, fourcc("auxl"), to_items);
+      m_iref_box->add_references(2, fourcc("auxl"), to_items);
     }
     // TODO: if alpha prem
     // TODO: if gainmap flag && item 4
