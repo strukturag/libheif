@@ -59,12 +59,6 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 }
 
 
-bool HeifContext::is_image(heif_item_id ID) const
-{
-  return m_all_images.find(ID) != m_all_images.end();
-}
-
-
 std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();

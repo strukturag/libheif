@@ -319,9 +319,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
                    "Self-reference in 'iovl' image item."};
     }
 
-    auto imgItem = get_context()->get_image(m_overlay_image_ids[i]);
+    auto imgItem = get_context()->get_image(m_overlay_image_ids[i], true);
     if (!imgItem) {
       return Error(heif_error_Invalid_input, heif_suberror_Nonexisting_item_referenced, "'iovl' image references a non-existing item.");
+    }
+    if (auto error = imgItem->get_item_error()) {
+      return error;
     }
 
     auto decodeResult = imgItem->decode_image(options, false, 0,0);
@@ -369,7 +372,7 @@ int ImageItem_Overlay::get_luma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   return image->get_luma_bits_per_pixel();
 }
 
@@ -382,6 +385,6 @@ int ImageItem_Overlay::get_chroma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   return image->get_chroma_bits_per_pixel();
 }

@@ -72,7 +72,7 @@ public:
 
   virtual bool is_ispe_essential() const { return false; }
 
-  virtual bool is_error_item() const { return false; }
+  virtual Error get_item_error() const { return Error::Ok; }
 
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
@@ -435,9 +435,11 @@ public:
     return m_item_type;
   }
 
-  bool is_error_item() const override { return true; }
+  Error get_item_error() const override { return m_item_error; }
 
-  Error get_item_error() const { return m_item_error; }
+  [[nodiscard]] int get_luma_bits_per_pixel() const override { return -1; }
+
+  [[nodiscard]] int get_chroma_bits_per_pixel() const override { return -1; }
 
 private:
   uint32_t m_item_type;
