@@ -913,7 +913,11 @@ Error HeifContext::interpret_heif_file()
                              "Region mask referenced item is not an image");
               }
 
-              auto mask_image = m_all_images.find(mask_image_id)->second;
+              auto mask_image = get_image(mask_image_id, true);
+              if (auto error = mask_image->get_item_error()) {
+                return error;
+              }
+
               mask_geometry->referenced_item = mask_image_id;
               if (mask_geometry->width == 0) {
                 mask_geometry->width = mask_image->get_ispe_width();
