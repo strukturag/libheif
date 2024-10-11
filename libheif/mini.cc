@@ -21,13 +21,14 @@
 #include "mini.h"
 
 #include <cmath>
+#include <cstddef>
 #include <string>
 #include <vector>
 
 Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
 {
     uint64_t start_offset = range.get_istream()->get_position();
-    size_t length = range.get_remaining_bytes();
+    std::size_t length = range.get_remaining_bytes();
     std::vector<uint8_t> mini_data(length);
     range.read(mini_data.data(), mini_data.size());
     BitReader bits(mini_data.data(), (int)(mini_data.size()));
@@ -106,7 +107,8 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
 
     if (m_explicit_codec_types_flag)
     {
-        assert(false);
+        m_infe_type = bits.get_bits32(32);
+        m_codec_config_type = bits.get_bits32(32);
     }
     if (m_hdr_flag)
     {
@@ -271,7 +273,11 @@ std::string Box_mini::dump(Indent &indent) const
     sstr << "transfer_characteristics: " << (int)m_transfer_characteristics << "\n";
     sstr << "matrix_coefficients: " << (int)m_matrix_coefficients << "\n";
 
-    // TODO: if explicit_codec_types_flag
+    if (m_explicit_codec_types_flag)
+    {
+        sstr << "infe_type: " << fourcc_to_string(m_infe_type) << " (" << m_infe_type << ")" << "\n";
+        sstr << "codec_config_type: " << fourcc_to_string(m_codec_config_type) << " (" << m_codec_config_type << ")" << "\n"; 
+    }
 
     // TODO: hdr_flag + gainmap_flag
 

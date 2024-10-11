@@ -42,6 +42,8 @@ public:
 	uint32_t get_width() const { return m_width; }
 	uint32_t get_height() const { return m_height; }
 
+	uint8_t get_bit_depth() const { return m_bit_depth; }
+
 	std::vector<uint8_t> get_main_item_codec_config() const { return m_main_item_codec_config; }
 	std::vector<uint8_t> get_alpha_item_codec_config() const { return m_alpha_item_codec_config; }
 	std::vector<uint8_t> get_icc_data() const { return m_icc_data; }
@@ -88,6 +90,9 @@ private:
 	uint16_t m_colour_primaries;
 	uint16_t m_transfer_characteristics;
 	uint16_t m_matrix_coefficients;
+
+	uint32_t m_infe_type;
+	uint32_t m_codec_config_type;
 
 	bool m_gainmap_flag = false;
 	bool m_tmap_icc_flag = false;
