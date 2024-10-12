@@ -58,6 +58,8 @@ int run_benchmark = 0;
 int metadata_compression = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
+int tiled_image_width = 0;
+int tiled_image_height = 0;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
@@ -75,6 +77,9 @@ std::string property_pitm_description;
 #if HAVE_GETTIMEOFDAY
 
 #include <sys/time.h>
+#include <regex>
+#include <optional>
+#include <dirent.h>
 
 struct timeval time_encoding_start;
 struct timeval time_encoding_end;
@@ -127,6 +132,9 @@ static struct option long_options[] = {
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
+    {(char* const) "tiled-input",                 no_argument, 0, 'T'},
+    {(char* const) "tiled-image-width",           required_argument, &tiled_image_width, 0},
+    {(char* const) "tiled-image-height",          required_argument, &tiled_image_height, 0},
     {0, 0,                                                           0,  0},
 };
 
@@ -180,7 +188,10 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (experimental) set user description for primary image\n";
+            << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
+            << "  --tiled-input             input is a set of tile images (only provide the one filename with two tile coordinates)\n"
+            << "  --tiled-image-width #     override image width of tiled image\n"
+            << "  --tiled-image-height #    override image height of tiled image\n";
 }
 
 
@@ -607,6 +618,111 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
 }
 
 
+struct input_tiles_generator
+{
+  uint32_t first_start;
+  uint32_t first_end;
+  uint32_t first_digits;
+  uint32_t second_start;
+  uint32_t second_end;
+  uint32_t second_digits;
+
+  std::string directory;
+  std::string prefix;
+  std::string separator;
+  std::string suffix;
+
+  bool first_is_x = false;
+
+  uint32_t nColumns() const { return first_is_x ? (first_end - first_start + 1) : (second_end - second_end + 1); }
+  uint32_t nRows() const { return first_is_x ? (second_end - second_end + 1) : (first_end - first_start + 1); }
+
+  uint32_t nTiles() const { return (first_end - first_start + 1) * (second_end - second_start + 1); }
+
+  std::string filename(int tx,int ty) {
+    std::stringstream sstr;
+    sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty);
+    sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx);
+    sstr << suffix;
+    return sstr.str();
+  }
+};
+
+std::optional<input_tiles_generator> determine_input_images_tiling(const std::string& filename)
+{
+  std::regex pattern(R"((.*\D?)(\d+)(\D+?)(\d+)(\..+)$)");
+  std::smatch match;
+
+  input_tiles_generator generator;
+
+  if (std::regex_match(filename, match, pattern)) {
+    generator.prefix = match[1];
+    generator.separator = match[3];
+    generator.suffix = match[5];
+
+    generator.first_start = 9999;
+    generator.first_end = 0;
+    generator.first_digits = 9;
+
+    generator.second_start = 9999;
+    generator.second_end = 0;
+    generator.second_digits = 9;
+  }
+  else {
+    return std::nullopt;
+  }
+
+  auto p = generator.prefix.find_last_of('/');
+  if (p != std::string::npos) {
+    generator.directory = generator.prefix.substr(0,p);
+    generator.prefix = generator.prefix.substr(p+1);
+  }
+
+  std::string patternString = generator.prefix + "(\\d+)" + generator.separator + "(\\d+)" + generator.suffix + "$";
+  pattern = patternString;
+
+  std::regex dirPattern(R"((.*)/(.*?)$)");
+  std::smatch dirmatch;
+  std::string dirName;
+
+  if (std::regex_match(filename, dirmatch, dirPattern)) {
+    dirName = std::string(dirmatch[1]) + '/';
+  }
+  else {
+    dirName = {};
+  }
+
+  DIR* dir = opendir(dirName.c_str());
+  for (;;) {
+    struct dirent* entry = readdir(dir);
+    if (!entry) {
+      break;
+    }
+
+    if (entry->d_type == DT_REG) {
+      std::string s{entry->d_name};
+
+      if (std::regex_match(s, match, pattern)) {
+        uint32_t first = std::stoi(match[1]);
+        uint32_t second = std::stoi(match[2]);
+
+        generator.first_digits = std::min(generator.first_digits, (uint32_t)match[2].length());
+        generator.second_digits = std::min(generator.second_digits, (uint32_t)match[4].length());
+
+        generator.first_start = std::min(generator.first_start, first);
+        generator.first_end = std::max(generator.first_end, first);
+        generator.second_start = std::min(generator.second_start, second);
+        generator.second_end = std::max(generator.second_end, second);
+      }
+    }
+  }
+
+  closedir(dir);
+
+  return generator;
+}
+
+
 class LibHeifInitializer
 {
 public:
@@ -634,13 +750,14 @@ int main(int argc, char** argv)
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
   bool force_enc_htj2k = false;
+  bool use_tiling = false;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:T"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
@@ -749,6 +866,9 @@ int main(int argc, char** argv)
           return 5;
         }
 #endif
+        break;
+      case 'T':
+        use_tiling = true;
         break;
     }
   }
@@ -913,6 +1033,25 @@ int main(int argc, char** argv)
     InputImage input_image = load_image(input_filename, output_bit_depth);
 
     std::shared_ptr<heif_image> image = input_image.image;
+
+    heif_image_tiling tiling{};
+    std::optional<input_tiles_generator> tile_generator;
+    if (use_tiling) {
+      tile_generator = determine_input_images_tiling(input_filename);
+      if (tile_generator) {
+        tiling.version = 1;
+        tiling.num_columns = tile_generator->nColumns();
+        tiling.num_rows = tile_generator->nRows();
+        tiling.tile_width = heif_image_get_primary_width(image.get());
+        tiling.tile_height = heif_image_get_primary_height(image.get());
+        tiling.image_width = tiling.num_columns * tiling.tile_width;
+        tiling.image_height = tiling.num_rows * tiling.tile_height;
+        tiling.number_of_extra_dimensions = 0;
+      }
+
+      if (tiled_image_width) tiling.image_width = tiled_image_width;
+      if (tiled_image_height) tiling.image_height = tiled_image_height;
+    }
 
     if (!primary_image) {
       primary_image = image;
