@@ -57,6 +57,7 @@ int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
 int metadata_compression = 0;
+int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
 int tiled_image_width = 0;
@@ -138,6 +139,7 @@ static struct option long_options[] = {
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
     {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
     {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
+    {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
     {0, 0,                                                           0,  0},
 };
 
@@ -192,9 +194,15 @@ void show_help(const char* argv0)
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
-            << "  --tiled-input             input is a set of tile images (only provide the one filename with two tile coordinates)\n"
+            << "  --tiled-input             input is a set of tile images (only provide one filename with two tile position numbers).\n"
+            << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
+            << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
+            << "                            for the other tiles and determine the range of tiles automatically.\n"
             << "  --tiled-image-width #     override image width of tiled image\n"
-            << "  --tiled-image-height #    override image height of tiled image\n";
+            << "  --tiled-image-height #    override image height of tiled image\n"
+            << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
+            << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+            ;
 }
 
 
@@ -1104,6 +1112,9 @@ int main(int argc, char** argv)
       tile_generator = determine_input_images_tiling(input_filename);
       if (tile_generator) {
         tiling.version = 1;
+
+        if (tiled_input_x_y) tile_generator->first_is_x = true;
+
         tiling.num_columns = tile_generator->nColumns();
         tiling.num_rows = tile_generator->nRows();
         tiling.tile_width = heif_image_get_primary_width(image.get());
@@ -1116,7 +1127,7 @@ int main(int argc, char** argv)
       if (tiled_image_width) tiling.image_width = tiled_image_width;
       if (tiled_image_height) tiling.image_height = tiled_image_height;
 
-      if (use_tiling && (!tile_generator || tile_generator->nTiles()==1)) {
+      if (!tile_generator || tile_generator->nTiles()==1) {
         std::cerr << "Cannot enumerate input tiles. Please use filenames with the two tile coordinates in the name.\n";
         return 5;
       }
