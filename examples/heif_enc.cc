@@ -818,12 +818,27 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 
     error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
     if (error.code != 0) {
-      std::cerr << "Could not generate grid image: " << error.message << "\n";
+      std::cerr << "Could not generate tili image: " << error.message << "\n";
       return nullptr;
     }
   }
   else if (tiling_method == "unci") {
-    // TODO
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = tiling.image_width;
+    params.image_height = tiling.image_height;
+    params.tile_width = tiling.tile_width;
+    params.tile_height = tiling.tile_height;
+    params.compression = heif_metadata_compression_brotli;
+
+    std::string input_filename = tile_generator.filename(0,0);
+    InputImage prototype_image = load_image(input_filename, output_bit_depth);
+
+    error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate unci image: " << error.message << "\n";
+      return nullptr;
+    }
   }
   else {
     assert(false);
@@ -1277,6 +1292,11 @@ int main(int argc, char** argv)
         std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
         return 1;
       }
+    }
+
+    if (handle==nullptr) {
+      std::cerr << "Could not encode image\n";
+      return 1;
     }
 
     if (is_primary_image) {
