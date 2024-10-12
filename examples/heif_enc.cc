@@ -97,6 +97,8 @@ const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
 const int OPTION_VERBOSE = 1008;
 const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
 const int OPTION_USE_VVC_COMPRESSION = 1010;
+const int OPTION_TILED_IMAGE_WIDTH = 1011;
+const int OPTION_TILED_IMAGE_HEIGHT = 1012;
 
 
 static struct option long_options[] = {
@@ -134,8 +136,8 @@ static struct option long_options[] = {
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
     {(char* const) "tiled-input",                 no_argument, 0, 'T'},
-    {(char* const) "tiled-image-width",           required_argument, &tiled_image_width, 0},
-    {(char* const) "tiled-image-height",          required_argument, &tiled_image_height, 0},
+    {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
+    {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
     {0, 0,                                                           0,  0},
 };
 
@@ -735,6 +737,9 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 {
   std::vector<heif_item_id> image_ids;
 
+  std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
+            << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
+
   for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
     for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
       std::string input_filename = tile_generator.filename(tx,ty);
@@ -899,6 +904,12 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_TILED_IMAGE_WIDTH:
+        tiled_image_width = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILED_IMAGE_HEIGHT:
+        tiled_image_height = (int) strtol(optarg, nullptr, 0);
+        break;
       case 'C':
         chroma_downsampling = optarg;
         if (chroma_downsampling != "nn" &&
