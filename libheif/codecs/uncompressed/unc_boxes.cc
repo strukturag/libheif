@@ -628,7 +628,7 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_pattern_height = range.read16();
 
   auto max_bayer_pattern_size = limits->max_bayer_pattern_pixels;
-  if (max_bayer_pattern_size && m_pattern_width * m_pattern_height > max_bayer_pattern_size) {
+  if (max_bayer_pattern_size && m_pattern_height > max_bayer_pattern_size / m_pattern_width) {
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "Maximum Bayer pattern size exceeded."};
