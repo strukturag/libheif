@@ -64,6 +64,7 @@ std::string chroma_downsampling;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
 std::string tiling_method;
+heif_metadata_compression unci_compression = heif_metadata_compression_brotli;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
@@ -103,6 +104,7 @@ const int OPTION_USE_VVC_COMPRESSION = 1010;
 const int OPTION_TILED_IMAGE_WIDTH = 1011;
 const int OPTION_TILED_IMAGE_HEIGHT = 1012;
 const int OPTION_TILING_METHOD = 1013;
+const int OPTION_UNCI_COMPRESSION = 1014;
 
 
 static struct option long_options[] = {
@@ -127,6 +129,7 @@ static struct option long_options[] = {
     {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
+    {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
 #endif
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
     {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
@@ -180,7 +183,8 @@ void show_help(const char* argv0)
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
             << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
-            << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
 #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
@@ -829,7 +833,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     params.image_height = tiling.image_height;
     params.tile_width = tiling.tile_width;
     params.tile_height = tiling.tile_height;
-    params.compression = heif_metadata_compression_brotli;
+    params.compression = unci_compression;
 
     std::string input_filename = tile_generator.filename(0,0);
     InputImage prototype_image = load_image(input_filename, output_bit_depth);
@@ -1012,6 +1016,26 @@ int main(int argc, char** argv)
           exit(5);
         }
         break;
+      case OPTION_UNCI_COMPRESSION: {
+        std::string option(optarg);
+        if (option == "none") {
+          unci_compression = heif_metadata_compression_off;
+        }
+        else if (option == "brotli") {
+          unci_compression = heif_metadata_compression_brotli;
+        }
+        else if (option == "deflate") {
+          unci_compression = heif_metadata_compression_deflate;
+        }
+        else if (option == "zlib") {
+          unci_compression = heif_metadata_compression_zlib;
+        }
+        else {
+          std::cerr << "Invalid unci compression method '" << option << "'\n";
+          exit(5);
+        }
+        break;
+      }
       case 'C':
         chroma_downsampling = optarg;
         if (chroma_downsampling != "nn" &&
