@@ -3529,10 +3529,11 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                const struct heif_tiled_image_parameters* parameters,
                                                const struct heif_encoding_options* options, // TODO: do we need this?
+                                               const struct heif_encoder* encoder,
                                                struct heif_image_handle** out_grid_image_handle)
 {
   Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
-  gridImageResult = ctx->context->add_tiled_item(parameters);
+  gridImageResult = ctx->context->add_tiled_item(parameters, encoder);
 
   if (gridImageResult.error != Error::Ok) {
     return gridImageResult.error.error_struct(ctx->context.get());

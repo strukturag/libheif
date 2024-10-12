@@ -108,6 +108,28 @@ heif_compression_format ImageItem::compression_format_from_fourcc_infe_type(uint
   }
 }
 
+uint32_t ImageItem::compression_format_to_fourcc_infe_type(heif_compression_format format)
+{
+  switch (format) {
+    case heif_compression_JPEG:
+      return fourcc("jpeg");
+    case heif_compression_HEVC:
+      return fourcc("hvc1");
+    case heif_compression_AV1:
+      return fourcc("av01");
+    case heif_compression_VVC:
+      return fourcc("vvc1");
+    case heif_compression_JPEG2000:
+      return fourcc("j2k1");
+    case heif_compression_uncompressed:
+      return fourcc("unci");
+    case heif_compression_mask:
+      return fourcc("mski");
+    default:
+      return 0;
+  }
+}
+
 
 std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const std::shared_ptr<Box_infe>& infe)
 {

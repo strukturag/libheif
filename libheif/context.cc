@@ -1342,9 +1342,10 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 }
 
 
-Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters,
+                                                                     const struct heif_encoder* encoder)
 {
-  return ImageItem_Tiled::add_new_tiled_item(this, parameters);
+  return ImageItem_Tiled::add_new_tiled_item(this, parameters, encoder);
 }
 
 
@@ -1354,7 +1355,7 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 {
   auto item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
-  heif_encoding_options* options = heif_encoding_options_alloc();
+  heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
   if (colorConversionResult.error) {

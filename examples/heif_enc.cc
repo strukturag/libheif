@@ -49,6 +49,7 @@
 
 #include "benchmark.h"
 #include "common.h"
+#include "libheif/heif_experimental.h"
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -62,6 +63,7 @@ const char* encoderId = nullptr;
 std::string chroma_downsampling;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
+std::string tiling_method;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
@@ -100,6 +102,7 @@ const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
 const int OPTION_USE_VVC_COMPRESSION = 1010;
 const int OPTION_TILED_IMAGE_WIDTH = 1011;
 const int OPTION_TILED_IMAGE_HEIGHT = 1012;
+const int OPTION_TILING_METHOD = 1013;
 
 
 static struct option long_options[] = {
@@ -140,6 +143,7 @@ static struct option long_options[] = {
     {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
     {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
     {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
+    {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
     {0, 0,                                                           0,  0},
 };
 
@@ -202,6 +206,7 @@ void show_help(const char* argv0)
             << "  --tiled-image-height #    override image height of tiled image\n"
             << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
             << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+            << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
             ;
 }
 
@@ -738,10 +743,10 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
 }
 
 
-heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
-                                int output_bit_depth,
-                                const input_tiles_generator& tile_generator,
-                                const heif_image_tiling& tiling)
+heif_image_handle* encode_tiled_grid(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
+                                     int output_bit_depth,
+                                     const input_tiles_generator& tile_generator,
+                                     const heif_image_tiling& tiling)
 {
   std::vector<heif_item_id> image_ids;
 
@@ -784,6 +789,71 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
   }
 
   return grid_image;
+}
+
+
+heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
+                                int output_bit_depth,
+                                const input_tiles_generator& tile_generator,
+                                const heif_image_tiling& tiling)
+{
+  if (tiling_method == "grid") {
+    return encode_tiled_grid(ctx, encoder, options, output_bit_depth, tile_generator, tiling);
+  }
+
+
+  heif_image_handle* tiled_image;
+  heif_error error;
+  if (tiling_method == "tili") {
+    heif_tiled_image_parameters tiled_params{};
+    tiled_params.version = 1;
+    tiled_params.image_width = tiling.image_width;
+    tiled_params.image_height = tiling.image_height;
+    tiled_params.tile_width = tiling.tile_width;
+    tiled_params.tile_height = tiling.tile_height;
+    // tiled_params.compression_format_fourcc = heif_fourcc('a', 'v', '0', '1'); // TODO HACK
+    tiled_params.offset_field_length = 32;
+    tiled_params.size_field_length = 24;
+    tiled_params.tiles_are_sequential = 1;
+
+    error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate grid image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+  else if (tiling_method == "unci") {
+    // TODO
+  }
+  else {
+    assert(false);
+  }
+
+  std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
+            << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
+
+  for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
+    for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
+      std::string input_filename = tile_generator.filename(tx,ty);
+
+      InputImage input_image = load_image(input_filename, output_bit_depth);
+
+      std::cout << "encoding tile " << ty+1 << " " << tx+1
+                << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
+      std::cout.flush();
+
+      heif_error error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
+                                                   input_image.image.get(),
+                                                   encoder);
+      if (error.code != 0) {
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return nullptr;
+      }
+    }
+
+  std::cout << "\n";
+
+  return tiled_image;
 }
 
 
@@ -917,6 +987,15 @@ int main(int argc, char** argv)
         break;
       case OPTION_TILED_IMAGE_HEIGHT:
         tiled_image_height = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILING_METHOD:
+        tiling_method = optarg;
+        if (tiling_method != "grid" &&
+            tiling_method != "tili" &&
+            tiling_method != "unci") {
+          std::cerr << "Invalid tiling method '" << tiling_method << "'\n";
+          exit(5);
+        }
         break;
       case 'C':
         chroma_downsampling = optarg;

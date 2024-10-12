@@ -123,7 +123,7 @@ struct heif_tiled_image_parameters {
   uint32_t tile_width;
   uint32_t tile_height;
 
-  uint32_t compression_type_fourcc;  // TODO: can this be set automatically ?
+  uint32_t compression_format_fourcc;  // will be set automatically when calling heif_context_add_tiled_image()
 
   uint8_t offset_field_length;   // one of: 32, 40, 48, 64
   uint8_t size_field_length;     // one of:  0, 24, 32, 64
@@ -140,6 +140,7 @@ LIBHEIF_API
 struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                const struct heif_tiled_image_parameters* parameters,
                                                const struct heif_encoding_options* options, // TODO: do we need this?
+                                               const struct heif_encoder* encoder,
                                                struct heif_image_handle** out_tiled_image_handle);
 
 

@@ -62,6 +62,8 @@ public:
 
   static heif_compression_format compression_format_from_fourcc_infe_type(uint32_t type);
 
+  static uint32_t compression_format_to_fourcc_infe_type(heif_compression_format);
+
   Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                           struct heif_encoder* encoder,
                                                                           const struct heif_encoding_options& options);
