@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
