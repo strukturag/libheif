@@ -635,15 +635,19 @@ struct input_tiles_generator
 
   bool first_is_x = false;
 
-  uint32_t nColumns() const { return first_is_x ? (first_end - first_start + 1) : (second_end - second_end + 1); }
-  uint32_t nRows() const { return first_is_x ? (second_end - second_end + 1) : (first_end - first_start + 1); }
+  uint32_t nColumns() const { return first_is_x ? (first_end - first_start + 1) : (second_end - second_start + 1); }
+  uint32_t nRows() const { return first_is_x ? (second_end - second_start + 1) : (first_end - first_start + 1); }
 
   uint32_t nTiles() const { return (first_end - first_start + 1) * (second_end - second_start + 1); }
 
-  std::string filename(int tx,int ty) {
+  std::string filename(uint32_t tx, uint32_t ty) const
+  {
     std::stringstream sstr;
-    sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty);
-    sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx);
+    if (!directory.empty()) {
+      sstr << directory << '/';
+    }
+    sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty) + first_start;
+    sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx) + second_start;
     sstr << suffix;
     return sstr.str();
   }
@@ -651,7 +655,7 @@ struct input_tiles_generator
 
 std::optional<input_tiles_generator> determine_input_images_tiling(const std::string& filename)
 {
-  std::regex pattern(R"((.*\D?)(\d+)(\D+?)(\d+)(\..+)$)");
+  std::regex pattern(R"((.*\D)?(\d+)(\D+?)(\d+)(\..+)$)");
   std::smatch match;
 
   input_tiles_generator generator;
@@ -687,10 +691,10 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   std::string dirName;
 
   if (std::regex_match(filename, dirmatch, dirPattern)) {
-    dirName = std::string(dirmatch[1]) + '/';
+    dirName = std::string(dirmatch[1]);
   }
   else {
-    dirName = {};
+    dirName = ".";
   }
 
   DIR* dir = opendir(dirName.c_str());
@@ -707,8 +711,8 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
         uint32_t first = std::stoi(match[1]);
         uint32_t second = std::stoi(match[2]);
 
-        generator.first_digits = std::min(generator.first_digits, (uint32_t)match[2].length());
-        generator.second_digits = std::min(generator.second_digits, (uint32_t)match[4].length());
+        generator.first_digits = std::min(generator.first_digits, (uint32_t)match[1].length());
+        generator.second_digits = std::min(generator.second_digits, (uint32_t)match[2].length());
 
         generator.first_start = std::min(generator.first_start, first);
         generator.first_end = std::max(generator.first_end, first);
@@ -721,6 +725,52 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   closedir(dir);
 
   return generator;
+}
+
+
+heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
+                                int output_bit_depth,
+                                const input_tiles_generator& tile_generator,
+                                const heif_image_tiling& tiling)
+{
+  std::vector<heif_item_id> image_ids;
+
+  for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
+    for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
+      std::string input_filename = tile_generator.filename(tx,ty);
+
+      InputImage input_image = load_image(input_filename, output_bit_depth);
+
+      std::cout << "encoding tile " << ty+1 << " " << tx+1
+                << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
+      std::cout.flush();
+
+      heif_image_handle* handle;
+      heif_error error = heif_context_encode_image(ctx,
+                                        input_image.image.get(),
+                                                   encoder,
+                                                   options,
+                                                   &handle);
+      if (error.code != 0) {
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return nullptr;
+      }
+
+      image_ids.push_back(heif_image_handle_get_item_id(handle));
+      heif_image_handle_release(handle);
+    }
+
+  std::cout << "\n";
+
+  heif_image_handle* grid_image;
+  heif_error error = heif_context_add_grid_image(ctx, tiling.image_width, tiling.image_height,
+                                                 tiling.num_columns, tiling.num_rows, image_ids.data(), &grid_image);
+  if (error.code != 0) {
+    std::cerr << "Could not generate grid image: " << error.message << "\n";
+    return nullptr;
+  }
+
+  return grid_image;
 }
 
 
@@ -1011,6 +1061,8 @@ int main(int argc, char** argv)
 
   std::shared_ptr<heif_image> primary_image;
 
+  bool is_primary_image = true;
+
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
@@ -1052,6 +1104,11 @@ int main(int argc, char** argv)
 
       if (tiled_image_width) tiling.image_width = tiled_image_width;
       if (tiled_image_height) tiling.image_height = tiled_image_height;
+
+      if (use_tiling && (!tile_generator || tile_generator->nTiles()==1)) {
+        std::cerr << "Cannot enumerate input tiles. Please use filenames with the two tile coordinates in the name.\n";
+        return 5;
+      }
     }
 
     if (!primary_image) {
@@ -1102,17 +1159,27 @@ int main(int argc, char** argv)
     }
 
     struct heif_image_handle* handle;
-    error = heif_context_encode_image(context.get(),
-                                      image.get(),
-                                      encoder,
-                                      options,
-                                      &handle);
-    if (error.code != 0) {
-      heif_encoding_options_free(options);
-      heif_nclx_color_profile_free(nclx);
-      heif_encoder_release(encoder);
-      std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
-      return 1;
+
+    if (use_tiling) {
+      handle = encode_tiled(context.get(), encoder, options, output_bit_depth, *tile_generator, tiling);
+    }
+    else {
+      error = heif_context_encode_image(context.get(),
+                                        image.get(),
+                                        encoder,
+                                        options,
+                                        &handle);
+      if (error.code != 0) {
+        heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return 1;
+      }
+    }
+
+    if (is_primary_image) {
+      heif_context_set_primary_image(context.get(), handle);
     }
 
     // write EXIF to HEIC
@@ -1181,6 +1248,8 @@ int main(int argc, char** argv)
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
     heif_nclx_color_profile_free(nclx);
+
+    is_primary_image = false;
   }
 
   heif_encoder_release(encoder);
