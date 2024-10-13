@@ -25,7 +25,7 @@ endmacro()
 # --- tests that require access to internal symbols
 
 if (WITH_REDUCED_VISIBILITY)
-    message(WARNING "Conversion and box unit tests can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
+    message(WARNING "Several unit tests have been disabled because they can only be compiled with full symbol visibility (WITH_REDUCED_VISIBILITY=OFF)")
 else()
     add_libheif_test(bitstream_tests)
     add_libheif_test(box_equals)
@@ -33,8 +33,11 @@ else()
     add_libheif_test(idat)
     add_libheif_test(jpeg2000)
     add_libheif_test(avc_box)
-    add_libheif_test(pixel_data_types)
     add_libheif_test(file_layout)
+endif()
+
+if (WITH_EXPERIMENTAL_FEATURS AND WITH_REDUCED_VISIBILITY)
+    add_libheif_test(pixel_data_types)
 endif()
 
 if (NOT WITH_REDUCED_VISIBILITY AND WITH_UNCOMPRESSED_CODEC)
