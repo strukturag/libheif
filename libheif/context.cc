@@ -1487,7 +1487,11 @@ Error HeifContext::add_grid_image_tile(heif_item_id grid_id, uint32_t tile_x, ui
                                        const std::shared_ptr<HeifPixelImage>& image,
                                        struct heif_encoder* encoder)
 {
-  auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(get_image(grid_id));
+  auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(get_image(grid_id, true));
+  if (Error error = grid_item->get_item_error()) {
+    return error;
+  }
+
   auto encoding_options = grid_item->get_encoding_options();
 
   std::shared_ptr<ImageItem> encoded_image;
