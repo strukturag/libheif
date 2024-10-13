@@ -668,9 +668,11 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_avcC>();
       break;
 
+#if WITH_EXPERIMENTAL_FEATURES
     case fourcc("tilC"):
       box = std::make_shared<Box_tilC>();
       break;
+#endif
 
     case fourcc("mdat"):
       // avoid generating a 'Box_other'
