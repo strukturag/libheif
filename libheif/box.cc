@@ -2766,6 +2766,15 @@ void Box_ipma::add_property_for_item_ID(heif_item_id itemID,
     m_entries.push_back(entry);
   }
 
+  // If the property is already associated with the item, skip.
+  for (auto const& a : m_entries[idx].associations) {
+    if (a.property_index == assoc.property_index) {
+      return;
+    }
+
+    // TODO: should we check that the essential flag matches and return an internal error if not?
+  }
+
   // add the property association
   m_entries[idx].associations.push_back(assoc);
 }
@@ -3209,18 +3218,8 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // --- check for duplicate references
 
-  for (const auto& ref : m_references) {
-    std::set<heif_item_id> to_ids;
-    for (const auto to_id : ref.to_item_ID) {
-      if (to_ids.find(to_id) == to_ids.end()) {
-        to_ids.insert(to_id);
-      }
-      else {
-        return Error(heif_error_Invalid_input,
-                     heif_suberror_Unspecified,
-                     "'iref' has double references");
-      }
-    }
+  if (auto error = check_for_double_references()) {
+    return error;
   }
 
 
@@ -3279,6 +3278,26 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
+Error Box_iref::check_for_double_references() const
+{
+  for (const auto& ref : m_references) {
+    std::set<heif_item_id> to_ids;
+    for (const auto to_id : ref.to_item_ID) {
+      if (to_ids.find(to_id) == to_ids.end()) {
+        to_ids.insert(to_id);
+      }
+      else {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "'iref' has double references"};
+      }
+    }
+  }
+
+  return Error::Ok;
+}
+
+
 void Box_iref::derive_box_version()
 {
   uint8_t version = 0;
@@ -3303,6 +3322,10 @@ void Box_iref::derive_box_version()
 
 Error Box_iref::write(StreamWriter& writer) const
 {
+  if (auto error = check_for_double_references()) {
+    return error;
+  }
+
   size_t box_start = reserve_box_header_space(writer);
 
   int id_size = ((get_version() == 0) ? 2 : 4);
@@ -3321,7 +3344,6 @@ Error Box_iref::write(StreamWriter& writer) const
       writer.write(id_size, r);
     }
   }
-
 
   prepend_header(writer, box_start);
 
@@ -3397,6 +3419,21 @@ void Box_iref::add_references(heif_item_id from_id, uint32_t type, const std::ve
   assert(to_ids.size() <= 0xFFFF);
 
   m_references.push_back(ref);
+}
+
+
+void Box_iref::overwrite_reference(heif_item_id from_id, uint32_t type, uint32_t reference_idx, heif_item_id to_item)
+{
+  for (auto& ref : m_references) {
+    if (ref.from_item_ID == from_id && ref.header.get_short_type() == type) {
+      assert(reference_idx >= 0 && reference_idx < ref.to_item_ID.size());
+
+      ref.to_item_ID[reference_idx] = to_item;
+      return;
+    }
+  }
+
+  assert(false); // reference was not found
 }
 
 

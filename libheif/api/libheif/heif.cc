@@ -3429,14 +3429,10 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                                               uint32_t image_height,
                                               uint32_t tile_columns,
                                               uint32_t tile_rows,
-                                              const heif_item_id* image_ids,
+                                              const struct heif_encoding_options* encoding_options,
                                               struct heif_image_handle** out_grid_image_handle)
 {
-  if (!image_ids) {
-    return Error(heif_error_Usage_error,
-                 heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
-  }
-  else if (tile_rows == 0 || tile_columns == 0) {
+  if (tile_rows == 0 || tile_columns == 0) {
     return Error(heif_error_Usage_error,
                  heif_suberror_Invalid_parameter_value).error_struct(ctx->context.get());
   }
@@ -3446,16 +3442,11 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                       "Number of tile rows/columns may not exceed 65535"};
   }
 
-
-  std::vector<heif_item_id> tiles(tile_rows * tile_columns);
-  for (uint64_t i = 0; i < tile_rows * tile_columns; i++) {
-    tiles[i] = image_ids[i];
-  }
-
-  std::shared_ptr<ImageItem> gridimage;
-  Error error = ctx->context->add_grid_item(tiles, image_width, image_height,
+  std::shared_ptr<ImageItem_Grid> gridimage;
+  Error error = ctx->context->add_grid_item(image_width, image_height,
                                             static_cast<uint16_t>(tile_rows),
                                             static_cast<uint16_t>(tile_columns),
+                                            encoding_options,
                                             gridimage);
 
   if (error != Error::Ok) {
@@ -3565,6 +3556,10 @@ struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
     return err.error_struct(ctx->context.get());
   }
 #endif
+  else if (tiled_image->image->get_infe_type() == fourcc("grid")) {
+    Error err = ctx->context->add_grid_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
+    return err.error_struct(ctx->context.get());
+  }
   else {
     return {
       heif_error_Usage_error,

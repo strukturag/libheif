@@ -2369,7 +2369,7 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                                               uint32_t image_height,
                                               uint32_t tile_columns,
                                               uint32_t tile_rows,
-                                              const heif_item_id* image_ids,
+                                              const struct heif_encoding_options* encoding_options,
                                               struct heif_image_handle** out_grid_image_handle);
 
 LIBHEIF_API

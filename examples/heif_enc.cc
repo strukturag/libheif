@@ -63,7 +63,7 @@ const char* encoderId = nullptr;
 std::string chroma_downsampling;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
-std::string tiling_method;
+std::string tiling_method = "grid";
 heif_metadata_compression unci_compression = heif_metadata_compression_brotli;
 
 uint16_t nclx_colour_primaries = 1;
@@ -747,80 +747,38 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
 }
 
 
-heif_image_handle* encode_tiled_grid(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
-                                     int output_bit_depth,
-                                     const input_tiles_generator& tile_generator,
-                                     const heif_image_tiling& tiling)
-{
-  std::vector<heif_item_id> image_ids;
-
-  std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
-            << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
-
-  for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
-    for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
-      std::string input_filename = tile_generator.filename(tx,ty);
-
-      InputImage input_image = load_image(input_filename, output_bit_depth);
-
-      std::cout << "encoding tile " << ty+1 << " " << tx+1
-                << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
-      std::cout.flush();
-
-      heif_image_handle* handle;
-      heif_error error = heif_context_encode_image(ctx,
-                                        input_image.image.get(),
-                                                   encoder,
-                                                   options,
-                                                   &handle);
-      if (error.code != 0) {
-        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
-        return nullptr;
-      }
-
-      image_ids.push_back(heif_image_handle_get_item_id(handle));
-      heif_image_handle_release(handle);
-    }
-
-  std::cout << "\n";
-
-  heif_image_handle* grid_image;
-  heif_error error = heif_context_add_grid_image(ctx, tiling.image_width, tiling.image_height,
-                                                 tiling.num_columns, tiling.num_rows, image_ids.data(), &grid_image);
-  if (error.code != 0) {
-    std::cerr << "Could not generate grid image: " << error.message << "\n";
-    return nullptr;
-  }
-
-  return grid_image;
-}
-
-
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
                                 const input_tiles_generator& tile_generator,
                                 const heif_image_tiling& tiling)
 {
-  if (tiling_method == "grid") {
-    return encode_tiled_grid(ctx, encoder, options, output_bit_depth, tile_generator, tiling);
-  }
-
-
   heif_image_handle* tiled_image;
-  heif_error error;
-  if (tiling_method == "tili") {
+
+
+  // --- create the main grid image
+
+  if (tiling_method == "grid") {
+    heif_error error = heif_context_add_grid_image(ctx, tiling.image_width, tiling.image_height,
+                                                   tiling.num_columns, tiling.num_rows,
+                                                   options,
+                                                   &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate grid image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+  else if (tiling_method == "tili") {
     heif_tiled_image_parameters tiled_params{};
     tiled_params.version = 1;
     tiled_params.image_width = tiling.image_width;
     tiled_params.image_height = tiling.image_height;
     tiled_params.tile_width = tiling.tile_width;
     tiled_params.tile_height = tiling.tile_height;
-    // tiled_params.compression_format_fourcc = heif_fourcc('a', 'v', '0', '1'); // TODO HACK
     tiled_params.offset_field_length = 32;
     tiled_params.size_field_length = 24;
     tiled_params.tiles_are_sequential = 1;
 
-    error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
+    heif_error error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
     if (error.code != 0) {
       std::cerr << "Could not generate tili image: " << error.message << "\n";
       return nullptr;
@@ -835,10 +793,10 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     params.tile_height = tiling.tile_height;
     params.compression = unci_compression;
 
-    std::string input_filename = tile_generator.filename(0,0);
+    std::string input_filename = tile_generator.filename(0, 0);
     InputImage prototype_image = load_image(input_filename, output_bit_depth);
 
-    error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
+    heif_error error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
     if (error.code != 0) {
       std::cerr << "Could not generate unci image: " << error.message << "\n";
       return nullptr;
@@ -848,6 +806,9 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     assert(false);
     exit(10);
   }
+
+
+  // --- add all the image tiles
 
   std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
             << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
@@ -863,8 +824,8 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       std::cout.flush();
 
       heif_error error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
-                                                   input_image.image.get(),
-                                                   encoder);
+                                                     input_image.image.get(),
+                                                     encoder);
       if (error.code != 0) {
         std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
         return nullptr;
