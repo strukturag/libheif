@@ -225,8 +225,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/decoder_tile_component_interleave.cc)
 endif ()
 
-if (ENABLE_EXPERIMENTAL_MINI_FORMAT)
-    target_compile_definitions(heif PUBLIC ENABLE_EXPERIMENTAL_MINI_FORMAT=1)
+if (WITH_EXPERIMENTAL_MINI_FORMAT)
+    target_compile_definitions(heif PUBLIC WITH_EXPERIMENTAL_MINI_FORMAT=1)
     target_sources(heif PRIVATE
             mini.h
             mini.cc)

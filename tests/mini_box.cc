@@ -30,9 +30,13 @@
 #include "error.h"
 #include <logging.h>
 #include <cstdint>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <mini.h>
+#include "test_utils.h"
+#include "test-config.h"
+#include <file_layout.h>
 
 TEST_CASE("mini")
 {
@@ -116,4 +120,107 @@ TEST_CASE("mini")
                         "matrix_coefficients: 6\n"
                         "main_item_code_config size: 4\n"
                         "main_item_data offset: 37, size: 53\n");
+}
+
+TEST_CASE("check mini+alpha version")
+{
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/simple_osm_tile_alpha.avif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+  FileLayout file;
+  Error err = file.read(reader, heif_get_global_security_limits());
+  REQUIRE(err.error_code == heif_error_Ok);
+
+  std::shared_ptr<Box_mini> mini = file.get_mini_box();
+  REQUIRE(mini->get_exif_flag() == false);
+  REQUIRE(mini->get_xmp_flag() == false);
+  REQUIRE(mini->get_bit_depth() == 8);
+  REQUIRE(mini->get_colour_primaries() == 2);
+  REQUIRE(mini->get_transfer_characteristics() == 2);
+  REQUIRE(mini->get_matrix_coefficients() == 6);
+  REQUIRE(mini->get_width() == 256);
+  REQUIRE(mini->get_height() == 256);
+  REQUIRE(mini->get_main_item_codec_config().size() == 4);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[0]) == 0x81);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[1]) == 0x20);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[2]) == 0x00);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[3]) == 0x00);
+  Indent indent;
+  std::string dumpResult = mini->dump(indent);
+  REQUIRE(dumpResult == "Box: mini -----\n"
+                        "size: 788   (header size: 8)\n"
+                        "version: 0\n"
+                        "explicit_codec_types_flag: 0\n"
+                        "float_flag: 0\n"
+                        "full_range_flag: 1\n"
+                        "alpha_flag: 1\n"
+                        "explicit_cicp_flag: 0\n"
+                        "hdr_flag: 0\n"
+                        "icc_flag: 1\n"
+                        "exif_flag: 0\n"
+                        "xmp_flag: 0\n"
+                        "chroma_subsampling: 3\n"
+                        "orientation: 1\n"
+                        "width: 256\n"
+                        "height: 256\n"
+                        "bit_depth: 8\n"
+                        "alpha_is_premultiplied: 0\n"
+                        "colour_primaries: 2\n"
+                        "transfer_characteristics: 2\n"
+                        "matrix_coefficients: 6\n"
+                        "alpha_item_code_config size: 4\n"
+                        "main_item_code_config size: 4\n"
+                        "icc_data size: 672\n"
+                        "alpha_item_data offset: 717, size: 34\n"
+                        "main_item_data offset: 751, size: 53\n");
+}
+
+TEST_CASE("check mini+exif+xmp version")
+{
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/simple_osm_tile_meta.avif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+  FileLayout file;
+  Error err = file.read(reader, heif_get_global_security_limits());
+  REQUIRE(err.error_code == heif_error_Ok);
+
+  std::shared_ptr<Box_mini> mini = file.get_mini_box();
+  REQUIRE(mini->get_exif_flag() == true);
+  REQUIRE(mini->get_xmp_flag() == true);
+  REQUIRE(mini->get_bit_depth() == 8);
+  REQUIRE(mini->get_colour_primaries() == 2);
+  REQUIRE(mini->get_transfer_characteristics() == 2);
+  REQUIRE(mini->get_matrix_coefficients() == 6);
+  REQUIRE(mini->get_width() == 256);
+  REQUIRE(mini->get_height() == 256);
+  REQUIRE(mini->get_main_item_codec_config().size() == 4);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[0]) == 0x81);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[1]) == 0x20);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[2]) == 0x00);
+  REQUIRE((int)(mini->get_main_item_codec_config().data()[3]) == 0x00);
+  Indent indent;
+  std::string dumpResult = mini->dump(indent);
+  REQUIRE(dumpResult == "Box: mini -----\n"
+                        "size: 4388   (header size: 8)\n"
+                        "version: 0\n"
+                        "explicit_codec_types_flag: 0\n"
+                        "float_flag: 0\n"
+                        "full_range_flag: 1\n"
+                        "alpha_flag: 0\n"
+                        "explicit_cicp_flag: 0\n"
+                        "hdr_flag: 0\n"
+                        "icc_flag: 1\n"
+                        "exif_flag: 1\n"
+                        "xmp_flag: 1\n"
+                        "chroma_subsampling: 3\n"
+                        "orientation: 1\n"
+                        "width: 256\n"
+                        "height: 256\n"
+                        "bit_depth: 8\n"
+                        "colour_primaries: 2\n"
+                        "transfer_characteristics: 2\n"
+                        "matrix_coefficients: 6\n"
+                        "main_item_code_config size: 4\n"
+                        "icc_data size: 672\n"
+                        "main_item_data offset: 717, size: 53\n"
+                        "exif_data offset: 770, size: 208\n"
+                        "xmp_data offset: 978, size: 3426\n");
 }

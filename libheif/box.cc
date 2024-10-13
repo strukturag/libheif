@@ -672,7 +672,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_tilC>();
       break;
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
     case fourcc("mini"):
       box = std::make_shared<Box_mini>();
       break;

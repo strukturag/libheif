@@ -175,7 +175,7 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
       heif_brand2_miaf,
       heif_brand2_mif1,
       heif_brand2_mif2
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
       , heif_brand2_mif3
 #endif
   };
@@ -472,7 +472,7 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
   else if (mainBrand == heif_brand2_avif) {
     return "image/avif";
   }
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
   else if (mainBrand == heif_brand2_mif3) {
     heif_brand2 minorBrand = heif_read_minor_version_brand(data, len);
     if (minorBrand == heif_brand2_avif) {

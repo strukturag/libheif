@@ -154,7 +154,7 @@ void HeifFile::new_empty_file()
   m_iinf_box = std::make_shared<Box_iinf>();
   m_iprp_box = std::make_shared<Box_iprp>();
   m_pitm_box = std::make_shared<Box_pitm>();
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
   m_mini_box = std::make_shared<Box_mini>();
 #endif
 
@@ -171,7 +171,7 @@ void HeifFile::new_empty_file()
 
   m_top_level_boxes.push_back(m_ftyp_box);
   m_top_level_boxes.push_back(m_meta_box);
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
   m_top_level_boxes.push_back(m_mini_box);
 #endif
 }
@@ -251,7 +251,7 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
 void HeifFile::write(StreamWriter& writer)
 {
   for (auto& box : m_top_level_boxes) {
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
     if (box == nullptr) {
       // Either mini or meta will be null, just ignore that one
       continue;
@@ -272,7 +272,7 @@ std::string HeifFile::debug_dump_boxes() const
   bool first = true;
 
   for (const auto& box : m_top_level_boxes) {
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
     if (box == nullptr) {
       // Either mini or meta will be null, just ignore that one
       continue;
@@ -294,7 +294,7 @@ std::string HeifFile::debug_dump_boxes() const
   return sstr.str();
 }
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
 static uint32_t get_item_type_for_brand(const heif_brand2 brand)
 {
   switch(brand) {
@@ -354,7 +354,7 @@ Error HeifFile::parse_heif_file()
   m_top_level_boxes.push_back(m_meta_box);
   // TODO: we are missing 'mdat' top level boxes
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
   m_mini_box = m_file_layout->get_mini_box();
   m_top_level_boxes.push_back(m_mini_box);
 #endif
@@ -371,7 +371,7 @@ Error HeifFile::parse_heif_file()
       !m_ftyp_box->has_compatible_brand(heif_brand2_mif1) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_avif) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_1pic) &&
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
 #endif
       !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg)) {
@@ -383,7 +383,7 @@ Error HeifFile::parse_heif_file()
                  sstr.str());
   }
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+#if WITH_EXPERIMENTAL_MINI_FORMAT
   if (m_mini_box) {
     m_hdlr_box = std::make_shared<Box_hdlr>();
     m_hdlr_box->set_handler_type(fourcc("pict"));
