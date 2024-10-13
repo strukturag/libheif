@@ -210,7 +210,9 @@ void show_help(const char* argv0)
             << "  --tiled-image-height #    override image height of tiled image\n"
             << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
             << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+#if WITH_EXPERIMENTAL_FEATURES
             << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
+#endif
             ;
 }
 
@@ -767,6 +769,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       return nullptr;
     }
   }
+#if WITH_EXPERIMENTAL_FEATURES
   else if (tiling_method == "tili") {
     heif_tiled_image_parameters tiled_params{};
     tiled_params.version = 1;
@@ -802,6 +805,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       return nullptr;
     }
   }
+#endif
   else {
     assert(false);
     exit(10);
@@ -971,9 +975,11 @@ int main(int argc, char** argv)
         break;
       case OPTION_TILING_METHOD:
         tiling_method = optarg;
-        if (tiling_method != "grid" &&
-            tiling_method != "tili" &&
-            tiling_method != "unci") {
+        if (tiling_method != "grid"
+#if WITH_EXPERIMENTAL_FEATURES
+            && tiling_method != "tili" && tiling_method != "unci"
+#endif
+          ) {
           std::cerr << "Invalid tiling method '" << tiling_method << "'\n";
           exit(5);
         }
