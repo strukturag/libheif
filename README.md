@@ -118,7 +118,7 @@ There is also an experimental Go API, but this is not stable yet.
 
 For very large resolution images, it is not always feasible to process the whole image.
 In this case, `libheif` can process the image tile by tile.
-See [this tutorial](https://github.com/strukturag/libheif/wiki/Read-and-Writing-Tiled-Images) on how to use the API for this.
+See [this tutorial](https://github.com/strukturag/libheif/wiki/Reading-and-Writing-Tiled-Images) on how to use the API for this.
 
 
 ## Compiling
