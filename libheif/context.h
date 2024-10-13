@@ -189,8 +189,7 @@ public:
 
   heif_property_id add_property(heif_item_id targetItem, std::shared_ptr<Box> property, bool essential);
 
-  Result<heif_item_id> add_pyramid_group(uint16_t tile_size_x, uint16_t tile_size_y,
-                                         std::vector<heif_pyramid_layer_info> layers);
+  Result<heif_item_id> add_pyramid_group(const std::vector<heif_item_id>& layers);
 
   // --- region items
 

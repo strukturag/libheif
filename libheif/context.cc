@@ -1326,6 +1326,7 @@ Error HeifContext::add_grid_item(uint32_t output_width,
   out_grid_image = std::make_shared<ImageItem_Grid>(this, grid_id);
   out_grid_image->set_encoding_options(encoding_options);
   out_grid_image->set_grid_spec(grid);
+  out_grid_image->set_resolution(output_width, output_height);
 
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
@@ -1440,6 +1441,11 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 
   if (image->get_width() != header.get_parameters().tile_width ||
       image->get_height() != header.get_parameters().tile_height) {
+
+    std::cout << "tx:" << tile_x << " ty:" << tile_y << "\n";
+    std::cout << image->get_width() << " " << header.get_parameters().tile_width << " | "
+      << image->get_height() << " " << header.get_parameters().tile_height <<"\n";
+
     return {heif_error_Usage_error,
             heif_suberror_Unspecified,
             "Tile image size does not match the specified tile size."};
@@ -1509,6 +1515,8 @@ Error HeifContext::add_grid_image_tile(heif_item_id grid_id, uint32_t tile_x, ui
   // Assign tile to grid
   heif_image_tiling tiling = grid_item->get_heif_image_tiling();
   m_heif_file->set_iref_reference(grid_id, fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
+
+  grid_item->set_grid_tile_id(tile_x, tile_y, encoded_image->get_id());
 
   // Add PIXI property (copy from first tile)
   auto pixi = m_heif_file->get_property<Box_pixi>(encoded_image->get_id());
@@ -1732,34 +1740,84 @@ heif_property_id HeifContext::add_property(heif_item_id targetItem, std::shared_
 }
 
 
-Result<heif_item_id> HeifContext::add_pyramid_group(uint16_t tile_size_x, uint16_t tile_size_y,
-                                                    std::vector<heif_pyramid_layer_info> in_layers)
+Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_id>& layer_item_ids)
 {
+  struct pymd_entry
+  {
+    std::shared_ptr<ImageItem> item;
+    uint32_t width = 0;
+  };
+
+  // --- sort all images by size
+
+  std::vector<pymd_entry> pymd_entries;
+  for (auto id : layer_item_ids) {
+    auto image_item = get_image(id, true);
+    if (auto error = image_item->get_item_error()) {
+      return error;
+    }
+
+    pymd_entry entry;
+    entry.item = image_item;
+    entry.width = image_item->get_width();
+    pymd_entries.emplace_back(entry);
+  }
+
+  std::sort(pymd_entries.begin(), pymd_entries.end(), [](const pymd_entry& a, const pymd_entry& b) {
+    return a.width < b.width;
+  });
+
+
+  // --- generate pymd box
+
   auto pymd = std::make_shared<Box_pymd>();
   std::vector<Box_pymd::LayerInfo> layers;
   std::vector<heif_item_id> ids;
 
-  for (const auto& l : in_layers) {
-    if (l.tiles_in_layer_row==0 || l.tiles_in_layer_column==0 ||
-        l.tiles_in_layer_row - 1 > 0xFFFF || l.tiles_in_layer_column - 1 > 0xFFFF) {
+  auto base_item = pymd_entries.back().item;
 
-      return {Error(heif_error_Invalid_input,
-                    heif_suberror_Invalid_parameter_value,
-                    "Invalid number of tiles in layer.")};
+  uint32_t tile_w=0, tile_h=0;
+  base_item->get_tile_size(tile_w, tile_h);
+
+  uint32_t last_width=0, last_height=0;
+
+  for (const auto& entry : pymd_entries) {
+    auto layer_item = entry.item;
+
+    if (false) {
+      // according to pymd definition, we should check that all layers have the same tile size
+      uint32_t item_tile_w = 0, item_tile_h = 0;
+      base_item->get_tile_size(item_tile_w, item_tile_h);
+      if (item_tile_w != tile_w || item_tile_h != tile_h) {
+        // TODO: add warning that tile sizes are not the same
+      }
     }
 
+    heif_image_tiling tiling = layer_item->get_heif_image_tiling();
+
+    if (tiling.image_width < last_width || tiling.image_height < last_height) {
+      return Error{
+        heif_error_Invalid_input,
+        heif_suberror_Invalid_parameter_value,
+        "Multi-resolution pyramid images have to be provided ordered from smallest to largest."
+      };
+    }
+
+    last_width = tiling.image_width;
+    last_height = tiling.image_height;
+
     Box_pymd::LayerInfo layer{};
-    layer.layer_binning = l.layer_binning;
-    layer.tiles_in_layer_row_minus1 = static_cast<uint16_t>(l.tiles_in_layer_row - 1);
-    layer.tiles_in_layer_column_minus1 = static_cast<uint16_t>(l.tiles_in_layer_column - 1);
+    layer.layer_binning = (uint16_t)(base_item->get_width() / tiling.image_width);
+    layer.tiles_in_layer_row_minus1 = static_cast<uint16_t>(tiling.num_rows - 1);
+    layer.tiles_in_layer_column_minus1 = static_cast<uint16_t>(tiling.num_columns - 1);
     layers.push_back(layer);
-    ids.push_back(l.layer_image_id);
+    ids.push_back(layer_item->get_id());
   }
 
   heif_item_id group_id = m_heif_file->get_unused_item_id();
 
   pymd->set_group_id(group_id);
-  pymd->set_layers(tile_size_x, tile_size_y, layers, ids);
+  pymd->set_layers((uint16_t)tile_w, (uint16_t)tile_h, layers, ids);
 
   m_heif_file->add_entity_group_box(pymd);
 

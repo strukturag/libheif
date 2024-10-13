@@ -65,6 +65,7 @@ int tiled_image_width = 0;
 int tiled_image_height = 0;
 std::string tiling_method = "grid";
 heif_metadata_compression unci_compression = heif_metadata_compression_brotli;
+int add_pyramid_group = 0;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
@@ -147,6 +148,7 @@ static struct option long_options[] = {
     {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
     {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
     {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
+    {(char* const) "add-pyramid-group",           no_argument,       &add_pyramid_group, 1},
     {0, 0,                                                           0,  0},
 };
 
@@ -212,6 +214,7 @@ void show_help(const char* argv0)
             << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
 #if WITH_EXPERIMENTAL_FEATURES
             << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
+            << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
 #endif
             ;
 }
@@ -748,6 +751,7 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   return generator;
 }
 
+#include <libheif/api_structs.h>
 
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
@@ -817,11 +821,20 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
   std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
             << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
 
+  uint32_t tile_width = 0, tile_height = 0;
+
   for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
     for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
       std::string input_filename = tile_generator.filename(tx,ty);
 
       InputImage input_image = load_image(input_filename, output_bit_depth);
+
+      if (tile_width == 0) {
+        tile_width = heif_image_get_primary_width(input_image.image.get());
+        tile_height = heif_image_get_primary_height(input_image.image.get());
+      }
+
+      input_image.image->image->extend_to_size_with_zero(tile_width, tile_height);
 
       std::cout << "encoding tile " << ty+1 << " " << tx+1
                 << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
@@ -1168,6 +1181,8 @@ int main(int argc, char** argv)
 
   bool is_primary_image = true;
 
+  std::vector<heif_item_id> encoded_image_ids;
+
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
@@ -1295,6 +1310,8 @@ int main(int argc, char** argv)
       heif_context_set_primary_image(context.get(), handle);
     }
 
+    encoded_image_ids.push_back(heif_image_handle_get_item_id(handle));
+
     // write EXIF to HEIC
     if (!input_image.exif.empty()) {
       // Note: we do not modify the EXIF Orientation here because we want it to match the HEIF transforms.
@@ -1390,6 +1407,16 @@ int main(int argc, char** argv)
 
     heif_image_handle_release(primary_image_handle);
   }
+
+#if WITH_EXPERIMENTAL_FEATURES
+  if (add_pyramid_group && encoded_image_ids.size() > 1) {
+    error = heif_context_add_pyramid_entity_group(context.get(), encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
+    if (error.code) {
+      std::cerr << "Cannot set multi-resolution pyramid: " << error.message << "\n";
+      return 5;
+    }
+  }
+#endif
 
   error = heif_context_write_to_file(context.get(), output_filename.c_str());
   if (error.code) {

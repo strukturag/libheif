@@ -183,12 +183,11 @@ struct heif_pyramid_layer_info {
 };
 
 #if WITH_EXPERIMENTAL_FEATURES
+// The input images are automatically sorted according to resolution. You can provide them in any order.
 LIBHEIF_API
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
-                                                        uint16_t tile_width,
-                                                        uint16_t tile_height,
-                                                        uint32_t num_layers,
-                                                        const struct heif_pyramid_layer_info* layers,
+                                                        const heif_item_id* layer_item_ids,
+                                                        size_t num_layers,
                                                         heif_item_id* out_group_id);
 
 LIBHEIF_API

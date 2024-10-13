@@ -99,7 +99,7 @@ public:
 
   Error check_resolution(uint32_t w, uint32_t h) const;
 
-  void set_resolution(int w, int h)
+  void set_resolution(uint32_t w, uint32_t h)
   {
     m_width = w;
     m_height = h;

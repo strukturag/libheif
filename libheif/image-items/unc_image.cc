@@ -104,8 +104,11 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
 {
   unciHeaders headers;
 
+  bool uses_tiles = (parameters->tile_width != parameters->image_width ||
+                     parameters->tile_height != parameters->image_height);
+
   std::shared_ptr<Box_uncC> uncC = std::make_shared<Box_uncC>();
-  if (options && options->prefer_uncC_short_form) {
+  if (options && options->prefer_uncC_short_form && !uses_tiles) {
     maybe_make_minimised_uncC(uncC, src_image);
   }
 
@@ -317,6 +320,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   heif_item_id unci_id = ctx->get_heif_file()->add_new_image(fourcc("unci"));
   auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
+  unci_image->set_resolution(parameters->image_width, parameters->image_height);
   ctx->insert_new_image(unci_id, unci_image);
 
 
@@ -400,8 +404,6 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
   uint32_t tile_width = image->get_width();
   uint32_t tile_height = image->get_height();
 
-  uint64_t tile_data_size = uncC->compute_tile_data_size_bytes(tile_width, tile_height);
-
   uint32_t tile_idx = tile_y * uncC->get_number_of_tile_columns() + tile_x;
 
   Result<std::vector<uint8_t>> codedBitstreamResult = encode_image_tile(image);
@@ -417,6 +419,8 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     assert(!cmpC);
 
     // uncompressed
+
+    uint64_t tile_data_size = uncC->compute_tile_data_size_bytes(tile_width, tile_height);
 
     get_file()->replace_iloc_data(get_id(), tile_idx * tile_data_size, *codedBitstreamResult, 0);
   }

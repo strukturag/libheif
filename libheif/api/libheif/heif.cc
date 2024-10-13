@@ -1054,13 +1054,17 @@ void heif_entity_groups_release(struct heif_entity_group* grp, int num_groups)
 
 
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
+                                                        const heif_item_id* layer_item_ids,
+                                                        size_t num_layers,
+                                                        /*
                                                         uint16_t tile_width,
                                                         uint16_t tile_height,
                                                         uint32_t num_layers,
                                                         const heif_pyramid_layer_info* in_layers,
+                                                         */
                                                         heif_item_id* out_group_id)
 {
-  if (!in_layers) {
+  if (!layer_item_ids) {
     return error_null_parameter;
   }
 
@@ -1068,12 +1072,12 @@ struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "Number of layers cannot be 0."};
   }
 
-  std::vector<heif_pyramid_layer_info> layers(num_layers);
-  for (uint32_t i=0;i<num_layers;i++) {
-    layers[i] = in_layers[i];
+  std::vector<heif_item_id> layers(num_layers);
+  for (size_t i = 0; i < num_layers; i++) {
+    layers[i] = layer_item_ids[i];
   }
 
-  Result<heif_item_id> result = ctx->context->add_pyramid_group(tile_width, tile_height, layers);
+  Result<heif_item_id> result = ctx->context->add_pyramid_group(layers);
 
   if (result) {
     if (out_group_id) {

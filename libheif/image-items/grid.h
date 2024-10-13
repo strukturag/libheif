@@ -119,9 +119,11 @@ public:
 
   const ImageGrid& get_grid_spec() const { return m_grid_spec; }
 
-  void set_grid_spec(const ImageGrid& grid) { m_grid_spec = grid; }
+  void set_grid_spec(const ImageGrid& grid) { m_grid_spec = grid; m_grid_tile_ids.resize(grid.get_rows() * grid.get_columns()); }
 
   const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
+
+  void set_grid_tile_id(uint32_t tile_x, uint32_t tile_y, heif_item_id);
 
   heif_image_tiling get_heif_image_tiling() const override;
 

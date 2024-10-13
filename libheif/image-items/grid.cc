@@ -458,6 +458,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
 }
 
 
+void ImageItem_Grid::set_grid_tile_id(uint32_t tile_x, uint32_t tile_y, heif_item_id id)
+{
+  uint32_t idx = tile_y * m_grid_spec.get_columns() + tile_x;
+  m_grid_tile_ids[idx] = id;
+}
+
+
 heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
 {
   heif_image_tiling tiling{};
