@@ -15,9 +15,10 @@ For AVIF, libaom, dav1d, svt-av1, or rav1e are used as codecs.
 
 libheif has support for:
 
-* HEIC, AVIF, VVC, JPEG-in-HEIF, JPEG2000, uncompressed (ISO/IEC 23001-17:2024)
+* HEIC, AVIF, VVC, AVC, JPEG-in-HEIF, JPEG2000, uncompressed (ISO/IEC 23001-17:2024) codecs
 * alpha channels, depth maps, thumbnails, auxiliary images
 * multiple images in a file
+* tiled images with decoding individual tiles and encoding tiled images by adding tiles one after another
 * HDR images, correct color transform according to embedded color profiles
 * image transformations (crop, mirror, rotate), overlay images
 * plugin interface to add alternative codecs
@@ -31,6 +32,7 @@ Supported codecs:
 | HEIC         | libde265, ffmpeg    | x265, kvazaar                |
 | AVIF         | AOM, dav1d          | AOM, rav1e, svt-av1          |
 | VVC          | vvdec               | vvenc, uvg266                |
+| AVC          | openh264            | -                            |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
 | uncompressed | built-in            | built-in                     |
@@ -39,9 +41,9 @@ Supported codecs:
 
 The library has a C API for easy integration and wide language support.
 
-The decoder automatically supports both HEIF and AVIF through the same API. No changes are required to existing code to support AVIF.
+The decoder automatically supports both HEIF and AVIF (and the other compression formats) through the same API. The same code decoding code can be used to decode any of them.
 The encoder can be switched between HEIF and AVIF simply by setting `heif_compression_HEVC` or `heif_compression_AV1`
-to `heif_context_get_encoder_for_format()`.
+to `heif_context_get_encoder_for_format()`, or using any of the other compression formats.
 
 Loading the primary image in an HEIF file is as easy as this:
 
@@ -112,6 +114,13 @@ Code using the C++ API is much less verbose than using the C API directly.
 
 There is also an experimental Go API, but this is not stable yet.
 
+### Reading and Writing Tiled Images
+
+For very large resolution images, it is not always feasible to process the whole image.
+In this case, `libheif` can process the image tile by tile.
+See [this tutorial](https://github.com/strukturag/libheif/wiki/Read-and-Writing-Tiled-Images) on how to use the API for this.
+
+
 ## Compiling
 
 This library uses the CMake build system (the earlier autotools build files have been removed in v1.16.0).
@@ -165,6 +174,9 @@ Further options are:
    Note that header compression is not widely supported yet.
 * `WITH_LIBSHARPYUV`: enables high-quality YCbCr/RGB color space conversion algorithms (requires `libsharpyuv`,
    e.g. from the `third-party` directory).
+* `WITH_EXPERIMENTAL_FEATURES`: enables functions that are currently in development and for which the API is not stable yet.
+   When this is enabled, a header `heif_experimental.h` will be installed that contains this unstable API.
+   Distributions that rely on a stable API should not enable this.
 * `ENABLE_MULTITHREADING_SUPPORT`: can be used to disable any multithreading support, e.g. for embedded platforms.
 * `ENABLE_PARALLEL_TILE_DECODING`: when enabled, libheif will decode tiled images in parallel to speed up compilation.
 * `PLUGIN_DIRECTORY`: the directory where libheif will search for dynamic plugins when the environment
