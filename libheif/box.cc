@@ -1291,7 +1291,7 @@ Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
     item_count = range.read32();
   }
 
-  // Sanity check.
+  // Sanity check. (This might be obsolete now as we check for range.error() below).
   auto max_iloc_items = limits->max_iloc_items;
   if (max_iloc_items && item_count > max_iloc_items) {
     std::stringstream sstr;
@@ -1305,6 +1305,15 @@ Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   for (uint32_t i = 0; i < item_count; i++) {
     Item item;
+
+    if (range.error()) {
+      std::stringstream sstr;
+      sstr << "iloc box should contain " << item_count << " items, but can only read " << i << " items.";
+
+      return Error(heif_error_Invalid_input,
+                   heif_suberror_End_of_data,
+                   sstr.str());
+    }
 
     if (version < 2) {
       item.item_ID = range.read16();
