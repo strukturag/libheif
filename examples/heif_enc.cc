@@ -751,7 +751,6 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   return generator;
 }
 
-#include <libheif/api_structs.h>
 
 heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
                                 int output_bit_depth,
@@ -834,15 +833,19 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
         tile_height = heif_image_get_primary_height(input_image.image.get());
       }
 
-      input_image.image->image->extend_to_size_with_zero(tile_width, tile_height);
+      heif_error error;
+      error = heif_image_extend_to_size_fill_with_zero(input_image.image.get(), tile_width, tile_height);
+      if (error.code) {
+        std::cerr << error.message << "\n";
+      }
 
       std::cout << "encoding tile " << ty+1 << " " << tx+1
                 << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
       std::cout.flush();
 
-      heif_error error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
-                                                     input_image.image.get(),
-                                                     encoder);
+      error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
+                                          input_image.image.get(),
+                                          encoder);
       if (error.code != 0) {
         std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
         return nullptr;

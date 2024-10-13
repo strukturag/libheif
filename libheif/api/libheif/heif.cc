@@ -1970,6 +1970,21 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
   return Error::Ok.error_struct(input->image.get());
 }
 
+
+struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
+                                                           uint32_t width, uint32_t height)
+{
+  bool success = image->image->extend_to_size_with_zero(width, height);
+  if (!success) {
+    return heif_error{heif_error_Memory_allocation_error,
+                      heif_suberror_Unspecified,
+                      "Not enough memory to extend image size."};
+  }
+
+  return heif_error_ok;
+}
+
+
 struct heif_error heif_image_set_raw_color_profile(struct heif_image* image,
                                                    const char* color_profile_type_fourcc,
                                                    const void* profile_data,

@@ -1869,6 +1869,12 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          int width, int height,
                                          const struct heif_scaling_options* options);
 
+// Extends the image size to match the given size by extending the right and bottom borders.
+// The border areas are filled with zero.
+LIBHEIF_API
+struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
+                                                           uint32_t width, uint32_t height);
+
 // The color profile is not attached to the image handle because we might need it
 // for color space transform and encoding.
 LIBHEIF_API
