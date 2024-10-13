@@ -846,6 +846,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
   }
   else {
     assert(false);
+    exit(10);
   }
 
   std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
