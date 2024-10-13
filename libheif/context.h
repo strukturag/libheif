@@ -94,29 +94,20 @@ public:
 
   std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
-  std::vector<std::shared_ptr<ImageItem>> get_top_level_images() { return m_top_level_images; }
+  std::vector<std::shared_ptr<ImageItem>> get_top_level_images(bool return_error_images);
 
   void insert_new_image(heif_item_id id, std::shared_ptr<ImageItem> img) {
     m_all_images.insert(std::make_pair(id, img));
   }
 
-  std::shared_ptr<ImageItem> get_image(heif_item_id id)
+  std::shared_ptr<ImageItem> get_image(heif_item_id id, bool return_error_images);
+
+  std::shared_ptr<const ImageItem> get_image(heif_item_id id, bool return_error_images) const
   {
-    auto iter = m_all_images.find(id);
-    if (iter == m_all_images.end()) {
-      return nullptr;
-    }
-    else {
-      return iter->second;
-    }
+    return const_cast<HeifContext*>(this)->get_image(id, return_error_images);
   }
 
-  std::shared_ptr<const ImageItem> get_image(heif_item_id id) const
-  {
-    return const_cast<HeifContext*>(this)->get_image(id);
-  }
-
-  std::shared_ptr<ImageItem> get_primary_image() { return m_primary_image; }
+  std::shared_ptr<ImageItem> get_primary_image(bool return_error_image);
 
   bool is_image(heif_item_id ID) const;
 

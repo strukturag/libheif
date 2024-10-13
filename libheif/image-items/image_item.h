@@ -74,6 +74,8 @@ public:
 
   virtual bool is_ispe_essential() const { return false; }
 
+  virtual Error get_item_error() const { return Error::Ok; }
+
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 
@@ -421,5 +423,29 @@ protected:
                                 ImageItem::CodedImageData& inout_codedImage);
 };
 
+
+class ImageItem_Error : public ImageItem
+{
+public:
+  // dummy ImageItem class that is a placeholder for unsupported item types
+
+  ImageItem_Error(uint32_t item_type, heif_item_id id, Error err)
+    : ImageItem(nullptr, id), m_item_type(item_type), m_item_error(err) {}
+
+  uint32_t get_infe_type() const override
+  {
+    return m_item_type;
+  }
+
+  Error get_item_error() const override { return m_item_error; }
+
+  [[nodiscard]] int get_luma_bits_per_pixel() const override { return -1; }
+
+  [[nodiscard]] int get_chroma_bits_per_pixel() const override { return -1; }
+
+private:
+  uint32_t m_item_type;
+  Error m_item_error;
+};
 
 #endif //LIBHEIF_IMAGEITEM_H

@@ -279,11 +279,14 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       heif_item_id tileID = image_references[reference_idx];
 
-      std::shared_ptr<const ImageItem> tileImg = get_context()->get_image(tileID);
+      std::shared_ptr<const ImageItem> tileImg = get_context()->get_image(tileID, true);
       if (!tileImg) {
         return Error{heif_error_Invalid_input,
                      heif_suberror_Missing_grid_images,
                      "Nonexistent grid image referenced"};
+      }
+      if (auto error = tileImg->get_item_error()) {
+        return error;
       }
 
       uint32_t src_width = tileImg->get_width();
@@ -384,8 +387,11 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 
-  auto tileItem = get_context()->get_image(tileID);
+  auto tileItem = get_context()->get_image(tileID, true);
   assert(tileItem);
+  if (auto error = tileItem->get_item_error()) {
+    return error;
+  }
 
   auto decodeResult = tileItem->decode_image(options, false, 0, 0);
   if (decodeResult.error) {
@@ -443,7 +449,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_grid_tile(const h
   assert(idx < m_grid_tile_ids.size());
 
   heif_item_id tile_id = m_grid_tile_ids[idx];
-  std::shared_ptr<const ImageItem> tile_item = get_context()->get_image(tile_id);
+  std::shared_ptr<const ImageItem> tile_item = get_context()->get_image(tile_id, true);
+  if (auto error = tile_item->get_item_error()) {
+    return error;
+  }
 
   return tile_item->decode_compressed_image(options, true, tx, ty);
 }
@@ -473,6 +482,15 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
   tiling.image_height = gridspec.get_height();
   tiling.number_of_extra_dimensions = 0;
 
+  heif_item_id tile0_id = get_grid_tiles()[0];
+  auto tile0 = get_context()->get_image(tile0_id, true);
+  if (tile0->get_item_error()) {
+    return tiling;
+  }
+
+  tiling.tile_width = tile0->get_width();
+  tiling.tile_height = tile0->get_height();
+
   return tiling;
 }
 
@@ -480,7 +498,10 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
 void ImageItem_Grid::get_tile_size(uint32_t& w, uint32_t& h) const
 {
   heif_item_id first_tile_id = get_grid_tiles()[0];
-  auto tile = get_context()->get_image(first_tile_id);
+  auto tile = get_context()->get_image(first_tile_id, true);
+  if (tile->get_item_error()) {
+    w = h = 0;
+  }
 
   w = tile->get_width();
   h = tile->get_height();
@@ -496,7 +517,7 @@ int ImageItem_Grid::get_luma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   if (!image) {
     return -1;
   }
@@ -513,7 +534,7 @@ int ImageItem_Grid::get_chroma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   return image->get_chroma_bits_per_pixel();
 }
 
@@ -525,6 +546,10 @@ std::shared_ptr<Decoder> ImageItem_Grid::get_decoder() const
     return nullptr;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
+  if (image->get_item_error()) {
+    return nullptr;
+  }
+
   return image->get_decoder();
 }

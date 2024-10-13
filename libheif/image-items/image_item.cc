@@ -59,12 +59,6 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 }
 
 
-bool HeifContext::is_image(heif_item_id ID) const
-{
-  return m_all_images.find(ID) != m_all_images.end();
-}
-
-
 std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();
@@ -176,7 +170,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_Tiled>(ctx, id);
   }
   else {
-    return nullptr;
+    std::stringstream sstr;
+    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' is not supported.";
+    Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
+    return std::make_shared<ImageItem_Error>(item_type, id, err);
   }
 }
 

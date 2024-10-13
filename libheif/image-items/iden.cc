@@ -67,11 +67,14 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_iden::decode_compressed_image(
                  "'iden' image referring to itself");
   }
 
-  std::shared_ptr<const ImageItem> imgitem = get_context()->get_image(reference_image_id);
+  std::shared_ptr<const ImageItem> imgitem = get_context()->get_image(reference_image_id, true);
   if (!imgitem) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_Unspecified,
                  "'iden' image references unavailable image");
+  }
+  if (auto error = imgitem->get_item_error()) {
+    return error;
   }
 
   return imgitem->decode_compressed_image(options, decode_tile_only, tile_x0, tile_y0);
@@ -86,7 +89,7 @@ int ImageItem_iden::get_luma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   return image->get_luma_bits_per_pixel();
 }
 
@@ -99,6 +102,6 @@ int ImageItem_iden::get_chroma_bits_per_pixel() const
     return -1;
   }
 
-  auto image = get_context()->get_image(child);
+  auto image = get_context()->get_image(child, true);
   return image->get_chroma_bits_per_pixel();
 }

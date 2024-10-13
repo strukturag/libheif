@@ -212,6 +212,56 @@ Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
 }
 
 
+std::vector<std::shared_ptr<ImageItem>> HeifContext::get_top_level_images(bool return_error_images)
+{
+  if (return_error_images) {
+    return m_top_level_images;
+  }
+  else {
+    std::vector<std::shared_ptr<ImageItem>> filtered;
+    for (auto& item : m_top_level_images) {
+      if (!item->get_item_error()) {
+        filtered.push_back(item);
+      }
+    }
+
+    return filtered;
+  }
+}
+
+
+std::shared_ptr<ImageItem> HeifContext::get_image(heif_item_id id, bool return_error_images)
+{
+  auto iter = m_all_images.find(id);
+  if (iter == m_all_images.end()) {
+    return nullptr;
+  }
+  else {
+    if (iter->second->get_item_error() && !return_error_images) {
+      return nullptr;
+    }
+    else {
+      return iter->second;
+    }
+  }
+}
+
+
+std::shared_ptr<ImageItem> HeifContext::get_primary_image(bool return_error_image)
+{
+  if (!return_error_image && m_primary_image->get_item_error())
+    return nullptr;
+  else
+    return m_primary_image;
+}
+
+
+bool HeifContext::is_image(heif_item_id ID) const
+{
+  return m_all_images.find(ID) != m_all_images.end();
+}
+
+
 std::shared_ptr<RegionItem> HeifContext::add_region_item(uint32_t reference_width, uint32_t reference_height)
 {
   std::shared_ptr<Box_infe> box = m_heif_file->add_new_infe_box(fourcc("rgan"));
@@ -315,31 +365,22 @@ Error HeifContext::interpret_heif_file()
     }
 
     auto image = ImageItem::alloc_for_infe_box(this, infe_box);
-    if (image) {
-      m_all_images.insert(std::make_pair(id, image));
+    assert(image);
 
-      if (!infe_box->is_hidden_item()) {
-        if (id == m_heif_file->get_primary_image_ID()) {
-          image->set_primary(true);
-          m_primary_image = image;
-        }
+    m_all_images.insert(std::make_pair(id, image));
 
-        m_top_level_images.push_back(image);
+    if (!infe_box->is_hidden_item()) {
+      if (id == m_heif_file->get_primary_image_ID()) {
+        image->set_primary(true);
+        m_primary_image = image;
       }
 
-      Error err = image->on_load_file();
-      if (err) {
-        return err;
-      }
+      m_top_level_images.push_back(image);
+    }
 
-#if 0
-      if (infe_box->get_item_type() == "grid") {
-        Error err = image->read_grid_spec();
-        if (err) {
-          return err;
-        }
-      }
-#endif
+    Error err = image->on_load_file();
+    if (err) {
+      return err;
     }
   }
 
@@ -354,6 +395,10 @@ Error HeifContext::interpret_heif_file()
 
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
+
+    if (image->get_item_error()) {
+      continue;
+    }
 
     std::vector<std::shared_ptr<Box>> properties;
 
@@ -662,6 +707,10 @@ Error HeifContext::interpret_heif_file()
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
 
+    if (image->get_item_error()) {
+      continue;
+    }
+
     std::shared_ptr<Box_infe> infe = m_heif_file->get_infe_box(image->get_id());
     if (infe->get_item_type_4cc() == fourcc("hvc1")) {
 
@@ -693,6 +742,10 @@ Error HeifContext::interpret_heif_file()
   for (auto& pair : m_all_images) {
     auto& image = pair.second;
     auto id = pair.first;
+
+    if (image->get_item_error()) {
+      continue;
+    }
 
     auto infe_box = m_heif_file->get_infe_box(id);
     if (!infe_box) {
@@ -860,7 +913,11 @@ Error HeifContext::interpret_heif_file()
                              "Region mask referenced item is not an image");
               }
 
-              auto mask_image = m_all_images.find(mask_image_id)->second;
+              auto mask_image = get_image(mask_image_id, true);
+              if (auto error = mask_image->get_item_error()) {
+                return error;
+              }
+
               mask_geometry->referenced_item = mask_image_id;
               if (mask_geometry->width == 0) {
                 mask_geometry->width = mask_image->get_ispe_width();
@@ -1372,11 +1429,12 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
   const int construction_method = 0; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(tild_id, encodeResult.value.bitstream, construction_method);
 
-  auto imgItem = get_image(tild_id);
+  auto imgItem = get_image(tild_id, true);
   auto tildImg = std::dynamic_pointer_cast<ImageItem_Tiled>(imgItem);
   if (!tildImg) {
     return {heif_error_Usage_error, heif_suberror_Invalid_parameter_value, "item ID for add_tiled_image_tile() is no 'tili' image."};
   }
+  assert(!tildImg->get_item_error());
 
   auto& header = tildImg->get_tild_header();
 
