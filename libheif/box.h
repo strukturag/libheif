@@ -932,12 +932,16 @@ public:
 
   void add_references(heif_item_id from_id, uint32_t type, const std::vector<heif_item_id>& to_ids);
 
+  void overwrite_reference(heif_item_id from_id, uint32_t type, uint32_t reference_idx, heif_item_id to_item);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
   Error write(StreamWriter& writer) const override;
 
   void derive_box_version() override;
+
+  Error check_for_double_references() const;
 
 private:
   std::vector<Reference> m_references;

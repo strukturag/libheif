@@ -377,7 +377,9 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     std::vector<uint8_t> dummydata;
     dummydata.resize(tile_size);
 
-    for (uint64_t i = 0; i < tile_size; i++) {
+    uint32_t nTiles = (parameters->image_width / parameters->tile_width) * (parameters->image_height / parameters->tile_height);
+
+    for (uint64_t i = 0; i < nTiles; i++) {
       const int construction_method = 0; // 0=mdat 1=idat
       file->append_iloc_data(unci_id, dummydata, construction_method);
     }

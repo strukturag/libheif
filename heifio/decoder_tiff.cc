@@ -393,7 +393,15 @@ heif_error readBandInterleave(TIFF *tif, uint16_t samplesPerPixel, heif_image **
   }
 }
 
+
+static void suppress_warnings(const char* module, const char* fmt, va_list ap) {
+  // Do nothing
+}
+
+
 heif_error loadTIFF(const char* filename, InputImage *input_image) {
+  TIFFSetWarningHandler(suppress_warnings);
+
   std::unique_ptr<TIFF, void(*)(TIFF*)> tifPtr(TIFFOpen(filename, "r"), [](TIFF* tif) { TIFFClose(tif); });
   if (!tifPtr) {
     struct heif_error err = {

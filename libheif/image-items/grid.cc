@@ -457,10 +457,17 @@ heif_image_tiling ImageItem_Grid::get_heif_image_tiling() const
   tiling.num_columns = gridspec.get_columns();
   tiling.num_rows = gridspec.get_rows();
 
-  heif_item_id tile0_id = get_grid_tiles()[0];
-  auto tile0 = get_context()->get_image(tile0_id);
-  tiling.tile_width = tile0->get_width();
-  tiling.tile_height = tile0->get_height();
+  auto tile_ids = get_grid_tiles();
+  if (!tile_ids.empty() && tile_ids[0] != 0) {
+    heif_item_id tile0_id = tile_ids[0];
+    auto tile0 = get_context()->get_image(tile0_id);
+    tiling.tile_width = tile0->get_width();
+    tiling.tile_height = tile0->get_height();
+  }
+  else {
+    tiling.tile_width = 0;
+    tiling.tile_height = 0;
+  }
 
   tiling.image_width = gridspec.get_width();
   tiling.image_height = gridspec.get_height();
