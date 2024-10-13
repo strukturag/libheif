@@ -1306,13 +1306,13 @@ Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
   for (uint32_t i = 0; i < item_count; i++) {
     Item item;
 
-    if (range.error()) {
+    if (range.eof()) {
       std::stringstream sstr;
-      sstr << "iloc box should contain " << item_count << " items, but can only read " << i << " items.";
+      sstr << "iloc box should contain " << item_count << " items, but we can only read " << i << " items.";
 
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_End_of_data,
-                   sstr.str());
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              sstr.str()};
     }
 
     if (version < 2) {
@@ -1354,6 +1354,15 @@ Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     for (int e = 0; e < extent_count; e++) {
       Extent extent;
+
+      if (range.eof()) {
+        std::stringstream sstr;
+        sstr << "iloc item should contain " << extent_count << " extents, but we can only read " << e << " extents.";
+
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                sstr.str()};
+      }
 
       if ((version == 1 || version == 2) && index_size > 0) {
         if (index_size == 4) {
@@ -3182,20 +3191,32 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
       ref.from_item_ID = range.read16();
       int nRefs = range.read16();
       for (int i = 0; i < nRefs; i++) {
-        ref.to_item_ID.push_back(range.read16());
         if (range.eof()) {
-          break;
+          std::stringstream sstr;
+          sstr << "iref box should contain " << nRefs << " references, but we can only read " << i << " references.";
+
+          return {heif_error_Invalid_input,
+                  heif_suberror_End_of_data,
+                  sstr.str()};
         }
+
+        ref.to_item_ID.push_back(range.read16());
       }
     }
     else {
       ref.from_item_ID = range.read32();
       int nRefs = range.read16();
       for (int i = 0; i < nRefs; i++) {
-        ref.to_item_ID.push_back(range.read32());
         if (range.eof()) {
-          break;
+          std::stringstream sstr;
+          sstr << "iref box should contain " << nRefs << " references, but we can only read " << i << " references.";
+
+          return {heif_error_Invalid_input,
+                  heif_suberror_End_of_data,
+                  sstr.str()};
         }
+
+        ref.to_item_ID.push_back(range.read32());
       }
     }
 
@@ -3533,7 +3554,12 @@ Error Box_EntityToGroup::parse(BitstreamRange& range, const heif_security_limits
   uint32_t nEntities = range.read32();
   for (uint32_t i = 0; i < nEntities; i++) {
     if (range.eof()) {
-      break;
+      std::stringstream sstr;
+      sstr << "entity group box should contain " << nEntities << " entities, but we can only read " << i << " entities.";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              sstr.str()};
     }
 
     entity_ids.push_back(range.read32());
