@@ -344,7 +344,7 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, boo
     }
   }
 
-  // don't modify the logical image size
+  // modify logical image size, if requested
 
   if (adjust_size) {
     m_width = width;
@@ -410,7 +410,7 @@ bool HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height)
     plane->m_height = subsampled_height;
   }
 
-  // don't modify the logical image size
+  // modify the logical image size
 
   m_width = width;
   m_height = height;
