@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -48,6 +49,7 @@
 
 #include "benchmark.h"
 #include "common.h"
+#include "libheif/heif_experimental.h"
 
 int master_alpha = 1;
 int thumb_alpha = 1;
@@ -56,8 +58,13 @@ int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
 int metadata_compression = 0;
+int tiled_input_x_y = 0;
 const char* encoderId = nullptr;
 std::string chroma_downsampling;
+int tiled_image_width = 0;
+int tiled_image_height = 0;
+std::string tiling_method = "grid";
+heif_metadata_compression unci_compression = heif_metadata_compression_brotli;
 
 uint16_t nclx_colour_primaries = 1;
 uint16_t nclx_transfer_characteristic = 13;
@@ -75,6 +82,9 @@ std::string property_pitm_description;
 #if HAVE_GETTIMEOFDAY
 
 #include <sys/time.h>
+#include <regex>
+#include <optional>
+#include <dirent.h>
 
 struct timeval time_encoding_start;
 struct timeval time_encoding_end;
@@ -91,6 +101,10 @@ const int OPTION_USE_JPEG2000_COMPRESSION = 1007;
 const int OPTION_VERBOSE = 1008;
 const int OPTION_USE_HTJ2K_COMPRESSION = 1009;
 const int OPTION_USE_VVC_COMPRESSION = 1010;
+const int OPTION_TILED_IMAGE_WIDTH = 1011;
+const int OPTION_TILED_IMAGE_HEIGHT = 1012;
+const int OPTION_TILING_METHOD = 1013;
+const int OPTION_UNCI_COMPRESSION = 1014;
 
 
 static struct option long_options[] = {
@@ -115,6 +129,7 @@ static struct option long_options[] = {
     {(char* const) "htj2k",                   no_argument,       0,              OPTION_USE_HTJ2K_COMPRESSION},
 #if WITH_UNCOMPRESSED_CODEC
     {(char* const) "uncompressed",                no_argument,       0,                     'U'},
+    {(char* const) "unci-compression-method",     required_argument, nullptr, OPTION_UNCI_COMPRESSION},
 #endif
     {(char* const) "matrix_coefficients",         required_argument, 0,                     OPTION_NCLX_MATRIX_COEFFICIENTS},
     {(char* const) "colour_primaries",            required_argument, 0,                     OPTION_NCLX_COLOUR_PRIMARIES},
@@ -127,6 +142,11 @@ static struct option long_options[] = {
     {(char* const) "enable-metadata-compression", no_argument,       &metadata_compression, 1},
     {(char* const) "pitm-description",            required_argument, 0,                     OPTION_PITM_DESCRIPTION},
     {(char* const) "chroma-downsampling",         required_argument, 0, 'C'},
+    {(char* const) "tiled-input",                 no_argument, 0, 'T'},
+    {(char* const) "tiled-image-width",           required_argument, nullptr, OPTION_TILED_IMAGE_WIDTH},
+    {(char* const) "tiled-image-height",          required_argument, nullptr, OPTION_TILED_IMAGE_HEIGHT},
+    {(char* const) "tiled-input-x-y",             no_argument,       &tiled_input_x_y, 1},
+    {(char* const) "tiling-method",               required_argument, nullptr, OPTION_TILING_METHOD},
     {0, 0,                                                           0,  0},
 };
 
@@ -163,7 +183,8 @@ void show_help(const char* argv0)
             << "      --jpeg2000        encode as JPEG 2000 (experimental)\n"
             << "      --htj2k           encode as High Throughput JPEG 2000 (experimental)\n"
 #if WITH_UNCOMPRESSED_CODEC
-            << "  -U, --uncompressed    encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "  -U, --uncompressed             encode as uncompressed image (according to ISO 23001-17) (EXPERIMENTAL)\n"
+            << "      --unci-compression METHOD  choose one of these methods: none, deflate, zlib, brotli.\n"
 #endif
             << "      --list-encoders         list all available encoders for all compression formats\n"
             << "  -e, --encoder ID            select encoder to use (the IDs can be listed with --list-encoders)\n"
@@ -180,7 +201,19 @@ void show_help(const char* argv0)
             << "  -C,--chroma-downsampling ALGO   force chroma downsampling algorithm (nn = nearest-neighbor / average / sharp-yuv)\n"
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
-            << "  --pitm-description TEXT   (experimental) set user description for primary image\n";
+            << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
+            << "  --tiled-input             input is a set of tile images (only provide one filename with two tile position numbers).\n"
+            << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
+            << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
+            << "                            for the other tiles and determine the range of tiles automatically.\n"
+            << "  --tiled-image-width #     override image width of tiled image\n"
+            << "  --tiled-image-height #    override image height of tiled image\n"
+            << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
+            << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
+#if WITH_EXPERIMENTAL_FEATURES
+            << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
+#endif
+            ;
 }
 
 
@@ -607,6 +640,208 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
 }
 
 
+struct input_tiles_generator
+{
+  uint32_t first_start;
+  uint32_t first_end;
+  uint32_t first_digits;
+  uint32_t second_start;
+  uint32_t second_end;
+  uint32_t second_digits;
+
+  std::string directory;
+  std::string prefix;
+  std::string separator;
+  std::string suffix;
+
+  bool first_is_x = false;
+
+  uint32_t nColumns() const { return first_is_x ? (first_end - first_start + 1) : (second_end - second_start + 1); }
+  uint32_t nRows() const { return first_is_x ? (second_end - second_start + 1) : (first_end - first_start + 1); }
+
+  uint32_t nTiles() const { return (first_end - first_start + 1) * (second_end - second_start + 1); }
+
+  std::string filename(uint32_t tx, uint32_t ty) const
+  {
+    std::stringstream sstr;
+    if (!directory.empty()) {
+      sstr << directory << '/';
+    }
+    sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty) + first_start;
+    sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx) + second_start;
+    sstr << suffix;
+    return sstr.str();
+  }
+};
+
+std::optional<input_tiles_generator> determine_input_images_tiling(const std::string& filename)
+{
+  std::regex pattern(R"((.*\D)?(\d+)(\D+?)(\d+)(\..+)$)");
+  std::smatch match;
+
+  input_tiles_generator generator;
+
+  if (std::regex_match(filename, match, pattern)) {
+    generator.prefix = match[1];
+    generator.separator = match[3];
+    generator.suffix = match[5];
+
+    generator.first_start = 9999;
+    generator.first_end = 0;
+    generator.first_digits = 9;
+
+    generator.second_start = 9999;
+    generator.second_end = 0;
+    generator.second_digits = 9;
+  }
+  else {
+    return std::nullopt;
+  }
+
+  auto p = generator.prefix.find_last_of('/');
+  if (p != std::string::npos) {
+    generator.directory = generator.prefix.substr(0,p);
+    generator.prefix = generator.prefix.substr(p+1);
+  }
+
+  std::string patternString = generator.prefix + "(\\d+)" + generator.separator + "(\\d+)" + generator.suffix + "$";
+  pattern = patternString;
+
+  std::regex dirPattern(R"((.*)/(.*?)$)");
+  std::smatch dirmatch;
+  std::string dirName;
+
+  if (std::regex_match(filename, dirmatch, dirPattern)) {
+    dirName = std::string(dirmatch[1]);
+  }
+  else {
+    dirName = ".";
+  }
+
+  DIR* dir = opendir(dirName.c_str());
+  for (;;) {
+    struct dirent* entry = readdir(dir);
+    if (!entry) {
+      break;
+    }
+
+    if (entry->d_type == DT_REG) {
+      std::string s{entry->d_name};
+
+      if (std::regex_match(s, match, pattern)) {
+        uint32_t first = std::stoi(match[1]);
+        uint32_t second = std::stoi(match[2]);
+
+        generator.first_digits = std::min(generator.first_digits, (uint32_t)match[1].length());
+        generator.second_digits = std::min(generator.second_digits, (uint32_t)match[2].length());
+
+        generator.first_start = std::min(generator.first_start, first);
+        generator.first_end = std::max(generator.first_end, first);
+        generator.second_start = std::min(generator.second_start, second);
+        generator.second_end = std::max(generator.second_end, second);
+      }
+    }
+  }
+
+  closedir(dir);
+
+  return generator;
+}
+
+
+heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_encoding_options* options,
+                                int output_bit_depth,
+                                const input_tiles_generator& tile_generator,
+                                const heif_image_tiling& tiling)
+{
+  heif_image_handle* tiled_image;
+
+
+  // --- create the main grid image
+
+  if (tiling_method == "grid") {
+    heif_error error = heif_context_add_grid_image(ctx, tiling.image_width, tiling.image_height,
+                                                   tiling.num_columns, tiling.num_rows,
+                                                   options,
+                                                   &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate grid image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+#if WITH_EXPERIMENTAL_FEATURES
+  else if (tiling_method == "tili") {
+    heif_tiled_image_parameters tiled_params{};
+    tiled_params.version = 1;
+    tiled_params.image_width = tiling.image_width;
+    tiled_params.image_height = tiling.image_height;
+    tiled_params.tile_width = tiling.tile_width;
+    tiled_params.tile_height = tiling.tile_height;
+    tiled_params.offset_field_length = 32;
+    tiled_params.size_field_length = 24;
+    tiled_params.tiles_are_sequential = 1;
+
+    heif_error error = heif_context_add_tiled_image(ctx, &tiled_params, options, encoder, &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate tili image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+  else if (tiling_method == "unci") {
+    heif_unci_image_parameters params{};
+    params.version = 1;
+    params.image_width = tiling.image_width;
+    params.image_height = tiling.image_height;
+    params.tile_width = tiling.tile_width;
+    params.tile_height = tiling.tile_height;
+    params.compression = unci_compression;
+
+    std::string input_filename = tile_generator.filename(0, 0);
+    InputImage prototype_image = load_image(input_filename, output_bit_depth);
+
+    heif_error error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
+    if (error.code != 0) {
+      std::cerr << "Could not generate unci image: " << error.message << "\n";
+      return nullptr;
+    }
+  }
+#endif
+  else {
+    assert(false);
+    exit(10);
+  }
+
+
+  // --- add all the image tiles
+
+  std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
+            << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
+
+  for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
+    for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
+      std::string input_filename = tile_generator.filename(tx,ty);
+
+      InputImage input_image = load_image(input_filename, output_bit_depth);
+
+      std::cout << "encoding tile " << ty+1 << " " << tx+1
+                << " (of " << tile_generator.nRows() << "x" << tile_generator.nColumns() << ")  \r";
+      std::cout.flush();
+
+      heif_error error = heif_context_add_image_tile(ctx, tiled_image, tx, ty,
+                                                     input_image.image.get(),
+                                                     encoder);
+      if (error.code != 0) {
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return nullptr;
+      }
+    }
+
+  std::cout << "\n";
+
+  return tiled_image;
+}
+
+
 class LibHeifInitializer
 {
 public:
@@ -634,13 +869,14 @@ int main(int argc, char** argv)
   bool force_enc_jpeg = false;
   bool force_enc_jpeg2000 = false;
   bool force_enc_htj2k = false;
+  bool use_tiling = false;
 
   std::vector<std::string> raw_params;
 
 
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:"
+    int c = getopt_long(argc, argv, "hq:Lo:vPp:t:b:Ae:C:T"
 #if WITH_UNCOMPRESSED_CODEC
         "U"
 #endif
@@ -731,6 +967,43 @@ int main(int argc, char** argv)
         }
         break;
       }
+      case OPTION_TILED_IMAGE_WIDTH:
+        tiled_image_width = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILED_IMAGE_HEIGHT:
+        tiled_image_height = (int) strtol(optarg, nullptr, 0);
+        break;
+      case OPTION_TILING_METHOD:
+        tiling_method = optarg;
+        if (tiling_method != "grid"
+#if WITH_EXPERIMENTAL_FEATURES
+            && tiling_method != "tili" && tiling_method != "unci"
+#endif
+          ) {
+          std::cerr << "Invalid tiling method '" << tiling_method << "'\n";
+          exit(5);
+        }
+        break;
+      case OPTION_UNCI_COMPRESSION: {
+        std::string option(optarg);
+        if (option == "none") {
+          unci_compression = heif_metadata_compression_off;
+        }
+        else if (option == "brotli") {
+          unci_compression = heif_metadata_compression_brotli;
+        }
+        else if (option == "deflate") {
+          unci_compression = heif_metadata_compression_deflate;
+        }
+        else if (option == "zlib") {
+          unci_compression = heif_metadata_compression_zlib;
+        }
+        else {
+          std::cerr << "Invalid unci compression method '" << option << "'\n";
+          exit(5);
+        }
+        break;
+      }
       case 'C':
         chroma_downsampling = optarg;
         if (chroma_downsampling != "nn" &&
@@ -749,6 +1022,9 @@ int main(int argc, char** argv)
           return 5;
         }
 #endif
+        break;
+      case 'T':
+        use_tiling = true;
         break;
     }
   }
@@ -890,6 +1166,8 @@ int main(int argc, char** argv)
 
   std::shared_ptr<heif_image> primary_image;
 
+  bool is_primary_image = true;
+
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
@@ -913,6 +1191,33 @@ int main(int argc, char** argv)
     InputImage input_image = load_image(input_filename, output_bit_depth);
 
     std::shared_ptr<heif_image> image = input_image.image;
+
+    heif_image_tiling tiling{};
+    std::optional<input_tiles_generator> tile_generator;
+    if (use_tiling) {
+      tile_generator = determine_input_images_tiling(input_filename);
+      if (tile_generator) {
+        tiling.version = 1;
+
+        if (tiled_input_x_y) tile_generator->first_is_x = true;
+
+        tiling.num_columns = tile_generator->nColumns();
+        tiling.num_rows = tile_generator->nRows();
+        tiling.tile_width = heif_image_get_primary_width(image.get());
+        tiling.tile_height = heif_image_get_primary_height(image.get());
+        tiling.image_width = tiling.num_columns * tiling.tile_width;
+        tiling.image_height = tiling.num_rows * tiling.tile_height;
+        tiling.number_of_extra_dimensions = 0;
+      }
+
+      if (tiled_image_width) tiling.image_width = tiled_image_width;
+      if (tiled_image_height) tiling.image_height = tiled_image_height;
+
+      if (!tile_generator || tile_generator->nTiles()==1) {
+        std::cerr << "Cannot enumerate input tiles. Please use filenames with the two tile coordinates in the name.\n";
+        return 5;
+      }
+    }
 
     if (!primary_image) {
       primary_image = image;
@@ -962,17 +1267,32 @@ int main(int argc, char** argv)
     }
 
     struct heif_image_handle* handle;
-    error = heif_context_encode_image(context.get(),
-                                      image.get(),
-                                      encoder,
-                                      options,
-                                      &handle);
-    if (error.code != 0) {
-      heif_encoding_options_free(options);
-      heif_nclx_color_profile_free(nclx);
-      heif_encoder_release(encoder);
-      std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+
+    if (use_tiling) {
+      handle = encode_tiled(context.get(), encoder, options, output_bit_depth, *tile_generator, tiling);
+    }
+    else {
+      error = heif_context_encode_image(context.get(),
+                                        image.get(),
+                                        encoder,
+                                        options,
+                                        &handle);
+      if (error.code != 0) {
+        heif_encoding_options_free(options);
+        heif_nclx_color_profile_free(nclx);
+        heif_encoder_release(encoder);
+        std::cerr << "Could not encode HEIF/AVIF file: " << error.message << "\n";
+        return 1;
+      }
+    }
+
+    if (handle==nullptr) {
+      std::cerr << "Could not encode image\n";
       return 1;
+    }
+
+    if (is_primary_image) {
+      heif_context_set_primary_image(context.get(), handle);
     }
 
     // write EXIF to HEIC
@@ -1041,6 +1361,8 @@ int main(int argc, char** argv)
     heif_image_handle_release(handle);
     heif_encoding_options_free(options);
     heif_nclx_color_profile_free(nclx);
+
+    is_primary_image = false;
   }
 
   heif_encoder_release(encoder);

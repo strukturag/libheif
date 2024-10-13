@@ -27,6 +27,7 @@
 extern "C" {
 #endif
 
+#if WITH_EXPERIMENTAL_FEATURES
 
   /* ===================================================================================
    *   This file contains candidate APIs that did not make it into the public API yet.
@@ -109,6 +110,7 @@ struct heif_error heif_property_camera_extrinsic_matrix_get_position_vector(cons
 //LIBHEIF_API
 struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_system_id(const struct heif_property_camera_extrinsic_matrix* matrix,
                                                                                        uint32_t* out_wcs_id);
+#endif
 
 // --- Tiled images
 
@@ -123,7 +125,7 @@ struct heif_tiled_image_parameters {
   uint32_t tile_width;
   uint32_t tile_height;
 
-  uint32_t compression_type_fourcc;  // TODO: can this be set automatically ?
+  uint32_t compression_format_fourcc;  // will be set automatically when calling heif_context_add_tiled_image()
 
   uint8_t offset_field_length;   // one of: 32, 40, 48, 64
   uint8_t size_field_length;     // one of:  0, 24, 32, 64
@@ -135,13 +137,14 @@ struct heif_tiled_image_parameters {
   uint8_t tiles_are_sequential;  // TODO: can we derive this automatically
 };
 
-
+#if WITH_EXPERIMENTAL_FEATURES
 LIBHEIF_API
 struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                const struct heif_tiled_image_parameters* parameters,
                                                const struct heif_encoding_options* options, // TODO: do we need this?
+                                               const struct heif_encoder* encoder,
                                                struct heif_image_handle** out_tiled_image_handle);
-
+#endif
 
 // --- 'unci' images
 
@@ -161,14 +164,14 @@ struct heif_unci_image_parameters {
   // TODO: interleave type, padding
 };
 
-
+#if WITH_EXPERIMENTAL_FEATURES
 LIBHEIF_API
 struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
                                               const struct heif_unci_image_parameters* parameters,
                                               const struct heif_encoding_options* encoding_options,
                                               const struct heif_image* prototype,
                                               struct heif_image_handle** out_unci_image_handle);
-
+#endif
 
 // --- 'pymd' entity group (pyramid layers)
 
@@ -179,6 +182,7 @@ struct heif_pyramid_layer_info {
   uint32_t tiles_in_layer_column;
 };
 
+#if WITH_EXPERIMENTAL_FEATURES
 LIBHEIF_API
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
                                                         uint16_t tile_width,
@@ -192,7 +196,7 @@ struct heif_pyramid_layer_info* heif_context_get_pyramid_entity_group_info(struc
 
 LIBHEIF_API
 void heif_pyramid_layer_info_release(struct heif_pyramid_layer_info*);
-
+#endif
 
 // --- other pixel datatype support
 
@@ -205,7 +209,7 @@ enum heif_channel_datatype
   heif_channel_datatype_complex_number = 4
 };
 
-
+#if WITH_EXPERIMENTAL_FEATURES
 LIBHEIF_API
 struct heif_error heif_image_add_channel(struct heif_image* image,
                                          enum heif_channel channel,
@@ -219,7 +223,7 @@ int heif_image_list_channels(struct heif_image*,
 
 LIBHEIF_API
 void heif_channel_release_list(enum heif_channel** channels);
-
+#endif
 
 struct heif_complex32 {
   float real, imaginary;
@@ -229,6 +233,7 @@ struct heif_complex64 {
   double real, imaginary;
 };
 
+#if WITH_EXPERIMENTAL_FEATURES
 LIBHEIF_API
 enum heif_channel_datatype heif_image_get_datatype(const struct heif_image* img, enum heif_channel channel);
 
@@ -333,6 +338,8 @@ LIBHEIF_API
 struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         enum heif_channel channel,
                                                         uint32_t* out_stride);
+
+#endif
 
 #ifdef __cplusplus
 }

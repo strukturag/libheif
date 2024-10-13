@@ -1045,6 +1045,13 @@ void HeifFile::add_iref_reference(heif_item_id from, uint32_t type,
 }
 
 
+void HeifFile::set_iref_reference(heif_item_id from, uint32_t type, int reference_idx, heif_item_id to_item)
+{
+  assert(m_iref_box);
+  m_iref_box->overwrite_reference(from, type, reference_idx, to_item);
+}
+
+
 void HeifFile::add_entity_group_box(const std::shared_ptr<Box>& entity_group_box)
 {
   if (!m_grpl_box) {

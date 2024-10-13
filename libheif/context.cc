@@ -1300,25 +1300,18 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
 }
 
 
-Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
-                               uint32_t output_width,
-                               uint32_t output_height,
-                               uint16_t tile_rows,
-                               uint16_t tile_columns,
-                               std::shared_ptr<ImageItem>& out_grid_image)
+Error HeifContext::add_grid_item(uint32_t output_width,
+                                 uint32_t output_height,
+                                 uint16_t tile_rows,
+                                 uint16_t tile_columns,
+                                 const struct heif_encoding_options* encoding_options,
+                                 std::shared_ptr<ImageItem_Grid>& out_grid_image)
 {
-  if (tile_ids.size() > 0xFFFF) {
+  if (tile_rows > 0xFFFF / tile_columns) {
     return {heif_error_Usage_error,
             heif_suberror_Unspecified,
             "Too many tiles (maximum: 65535)"};
   }
-
-#if 1
-  for (heif_item_id tile_id : tile_ids) {
-    m_heif_file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
-  }
-#endif
-
 
   // Create ImageGrid
 
@@ -1330,10 +1323,17 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   // Create Grid Item
 
   heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
-  out_grid_image = std::make_shared<ImageItem>(this, grid_id);
+  out_grid_image = std::make_shared<ImageItem_Grid>(this, grid_id);
+  out_grid_image->set_encoding_options(encoding_options);
+  out_grid_image->set_grid_spec(grid);
+
   m_all_images.insert(std::make_pair(grid_id, out_grid_image));
   const int construction_method = 1; // 0=mdat 1=idat
   m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
+
+  // generate dummy grid item IDs (0)
+  std::vector<heif_item_id> tile_ids;
+  tile_ids.resize(tile_rows * tile_columns);
 
   // Connect tiles to grid
   m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
@@ -1341,9 +1341,7 @@ Error HeifContext::add_grid_item(const std::vector<heif_item_id>& tile_ids,
   // Add ISPE property
   m_heif_file->add_ispe_property(grid_id, output_width, output_height, false);
 
-  // Add PIXI property (copy from first tile)
-  auto pixi = m_heif_file->get_property<Box_pixi>(tile_ids[0]);
-  m_heif_file->add_property(grid_id, pixi, true);
+  // PIXI property will be added when the first tile is set
 
   // Set Brands
   //m_heif_file->set_brand(encoder->plugin->compression_format,
@@ -1399,9 +1397,10 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 }
 
 
-Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters)
+Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters,
+                                                                     const struct heif_encoder* encoder)
 {
-  return ImageItem_Tiled::add_new_tiled_item(this, parameters);
+  return ImageItem_Tiled::add_new_tiled_item(this, parameters, encoder);
 }
 
 
@@ -1411,7 +1410,7 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 {
   auto item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
-  heif_encoding_options* options = heif_encoding_options_alloc();
+  heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
   if (colorConversionResult.error) {
@@ -1479,6 +1478,37 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 
   m_heif_file->set_brand(encoder->plugin->compression_format,
                          true); // TODO: out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::add_grid_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
+                                       const std::shared_ptr<HeifPixelImage>& image,
+                                       struct heif_encoder* encoder)
+{
+  auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(get_image(grid_id));
+  auto encoding_options = grid_item->get_encoding_options();
+
+  std::shared_ptr<ImageItem> encoded_image;
+  Error error = encode_image(image,
+                             encoder,
+                             *encoding_options,
+                             heif_image_input_class_normal,
+                             encoded_image);
+  if (error != Error::Ok) {
+    return error;
+  }
+
+  m_heif_file->get_infe_box(encoded_image->get_id())->set_hidden_item(true); // grid tiles are hidden items
+
+  // Assign tile to grid
+  heif_image_tiling tiling = grid_item->get_heif_image_tiling();
+  m_heif_file->set_iref_reference(grid_id, fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
+
+  // Add PIXI property (copy from first tile)
+  auto pixi = m_heif_file->get_property<Box_pixi>(encoded_image->get_id());
+  m_heif_file->add_property(grid_id, pixi, true);
 
   return Error::Ok;
 }

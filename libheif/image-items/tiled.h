@@ -59,6 +59,8 @@ public:
 
   void set_parameters(const heif_tiled_image_parameters& params) { m_parameters = params; }
 
+  void set_compression_format(heif_compression_format format) { m_parameters.compression_format_fourcc = ImageItem::compression_format_to_fourcc_infe_type(format); }
+
   const heif_tiled_image_parameters& get_parameters() const { return m_parameters; }
 
   Error write(StreamWriter& writer) const override;
@@ -83,6 +85,8 @@ public:
   Error set_parameters(const heif_tiled_image_parameters& params);
 
   const heif_tiled_image_parameters& get_parameters() const { return m_parameters; }
+
+  void set_compression_format(heif_compression_format format) { m_parameters.compression_format_fourcc = ImageItem::compression_format_to_fourcc_infe_type(format); }
 
   Error read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits);
 
@@ -140,7 +144,8 @@ public:
 
   heif_compression_format get_compression_format() const override;
 
-  static Result<std::shared_ptr<ImageItem_Tiled>> add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters);
+  static Result<std::shared_ptr<ImageItem_Tiled>> add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters,
+                                                                     const heif_encoder* encoder);
 
   Error on_load_file() override;
 

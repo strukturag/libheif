@@ -187,6 +187,8 @@ public:
   void add_iref_reference(heif_item_id from, uint32_t type,
                           const std::vector<heif_item_id>& to);
 
+  void set_iref_reference(heif_item_id from, uint32_t type, int reference_idx, heif_item_id to_item);
+
   void add_entity_group_box(const std::shared_ptr<Box>& entity_group_box);
 
   void set_auxC_property(heif_item_id id, const std::string& type);

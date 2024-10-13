@@ -24,6 +24,7 @@
 #include <algorithm>
 #include "security_limits.h"
 #include "codecs/hevc_dec.h"
+#include "libheif/api_structs.h"
 
 
 static uint64_t readvec(const std::vector<uint8_t>& data, size_t& ptr, int len)
@@ -127,7 +128,7 @@ Error Box_tilC::write(StreamWriter& writer) const
 
   writer.write32(m_parameters.tile_width);
   writer.write32(m_parameters.tile_height);
-  writer.write32(m_parameters.compression_type_fourcc);
+  writer.write32(m_parameters.compression_format_fourcc);
 
   writer.write8(m_parameters.number_of_extra_dimensions);
 
@@ -150,7 +151,7 @@ std::string Box_tilC::dump(Indent& indent) const
   sstr << indent << "version: " << ((int) get_version()) << "\n"
        //<< indent << "image size: " << m_parameters.image_width << "x" << m_parameters.image_height << "\n"
        << indent << "tile size: " << m_parameters.tile_width << "x" << m_parameters.tile_height << "\n"
-       << indent << "compression: " << fourcc_to_string(m_parameters.compression_type_fourcc) << "\n"
+       << indent << "compression: " << fourcc_to_string(m_parameters.compression_format_fourcc) << "\n"
        << indent << "tiles are sequential: " << (m_parameters.tiles_are_sequential ? "yes" : "no") << "\n"
        << indent << "offset field length: " << ((int) m_parameters.offset_field_length) << " bits\n"
        << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"
@@ -213,7 +214,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   m_parameters.tile_width = range.read32();
   m_parameters.tile_height = range.read32();
-  m_parameters.compression_type_fourcc = range.read32();
+  m_parameters.compression_format_fourcc = range.read32();
 
   if (m_parameters.tile_width == 0 || m_parameters.tile_height == 0) {
     return {heif_error_Invalid_input,
@@ -445,7 +446,7 @@ ImageItem_Tiled::ImageItem_Tiled(HeifContext* ctx, heif_item_id id)
 
 heif_compression_format ImageItem_Tiled::get_compression_format() const
 {
-  return compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_type_fourcc);
+  return compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_format_fourcc);
 }
 
 
@@ -481,7 +482,7 @@ Error ImageItem_Tiled::on_load_file()
     return err;
   }
 
-  m_tile_decoder = Decoder::alloc_for_infe_type(get_context(), get_id(), parameters.compression_type_fourcc);
+  m_tile_decoder = Decoder::alloc_for_infe_type(get_context(), get_id(), parameters.compression_format_fourcc);
   if (!m_tile_decoder) {
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_codec,
@@ -499,7 +500,8 @@ Error ImageItem_Tiled::on_load_file()
 
 
 Result<std::shared_ptr<ImageItem_Tiled>>
-ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters)
+ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters,
+                                    const heif_encoder* encoder)
 {
   auto max_tild_tiles = ctx->get_security_limits()->max_number_of_tiles;
   if (max_tild_tiles && number_of_tiles(*parameters) > max_tild_tiles) {
@@ -521,12 +523,14 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
 
   auto tilC_box = std::make_shared<Box_tilC>();
   tilC_box->set_parameters(*parameters);
+  tilC_box->set_compression_format(encoder->plugin->compression_format);
   ctx->get_heif_file()->add_property(tild_id, tilC_box, true);
 
   // Create header + offset table
 
   TildHeader tild_header;
   tild_header.set_parameters(*parameters);
+  tild_header.set_compression_format(encoder->plugin->compression_format);
 
   std::vector<uint8_t> header_data = tild_header.write_offset_table();
 
@@ -616,7 +620,7 @@ Result<std::shared_ptr<HeifPixelImage>>
 ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
 {
   heif_compression_format format = compression_format_from_fourcc_infe_type(
-          m_tild_header.get_parameters().compression_type_fourcc);
+          m_tild_header.get_parameters().compression_format_fourcc);
 
   // --- get compressed data
 

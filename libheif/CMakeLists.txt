@@ -11,12 +11,6 @@ set(libheif_headers
         api/libheif/heif_items.h
         ${CMAKE_CURRENT_BINARY_DIR}/heif_version.h)
 
-option(INSTALL_EXPERIMENTAL_HEADERS "Install headers with unstable API" OFF)
-
-if (INSTALL_EXPERIMENTAL_HEADERS)
-    list(APPEND libheif_headers api/libheif/heif_experimental.h)
-endif()
-
 set(libheif_sources
         bitstream.cc
         bitstream.h
@@ -55,8 +49,6 @@ set(libheif_sources
         api/libheif/heif_plugin.cc
         api/libheif/heif_properties.cc
         api/libheif/heif_items.cc
-        api/libheif/heif_experimental.h
-        api/libheif/heif_experimental.cc
         codecs/decoder.h
         codecs/decoder.cc
         image-items/hevc.cc
@@ -136,6 +128,16 @@ if (ENABLE_PLUGIN_LOADING)
         target_sources(heif PRIVATE plugins_unix.cc plugins_unix.h)
     endif ()
 endif ()
+
+option(WITH_EXPERIMENTAL_FEATURES "Compile experimental features and install headers with unstable API" OFF)
+if (WITH_EXPERIMENTAL_FEATURES)
+    list(APPEND libheif_sources api/libheif/heif_experimental.h
+            api/libheif/heif_experimental.cc)
+
+    list(APPEND libheif_headers api/libheif/heif_experimental.h)
+
+    target_compile_definitions(heif PUBLIC WITH_EXPERIMENTAL_FEATURES)
+endif()
 
 # Needed to find libheif/heif_version.h while compiling the library
 target_include_directories(heif PRIVATE ${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api)
