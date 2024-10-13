@@ -14,7 +14,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_SHARED_LIBS": "ON",
         "BUILD_TESTING" : "ON",
-        "INSTALL_EXPERIMENTAL_HEADERS" : "ON",
+        "WITH_EXPERIMENTAL_FEATURES" : "ON",
 
         "ENABLE_PLUGIN_LOADING" : "OFF",
         "WITH_AOM_DECODER" : "ON",
