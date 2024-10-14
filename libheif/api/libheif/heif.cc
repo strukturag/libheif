@@ -3427,15 +3427,14 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
   }
 
   // Encode Grid
-  Error error;
   std::shared_ptr<ImageItem> out_grid;
-  error = ctx->context->encode_grid(pixel_tiles,
-                                    rows, columns,
-                                    encoder,
-                                    options,
-                                    out_grid);
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
+  auto addGridResult = ImageItem_Grid::add_and_encode_full_grid(ctx->context.get(),
+                                                                pixel_tiles,
+                                                                rows, columns,
+                                                                encoder,
+                                                                options);
+  if (addGridResult.error) {
+    return addGridResult.error.error_struct(ctx->context.get());
   }
 
   // Mark as primary image

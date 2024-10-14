@@ -39,20 +39,13 @@
 
 #include "region.h"
 
-class HeifContext;
-
 class HeifFile;
 
 class HeifPixelImage;
 
 class StreamWriter;
 
-class ImageOverlay;
-
 class ImageItem;
-class ImageItem_Overlay;
-class ImageItem_Tiled;
-class ImageItem_uncompressed;
 
 
 // This is a higher-level view than HeifFile.
@@ -134,13 +127,6 @@ public:
                      const struct heif_encoding_options& options,
                      enum heif_image_input_class input_class,
                      std::shared_ptr<ImageItem>& out_image);
-
-  Error encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
-                    uint16_t rows,
-                    uint16_t columns,
-                    struct heif_encoder* encoder,
-                    const struct heif_encoding_options& options,
-                    std::shared_ptr<ImageItem>& out_image);
 
   Error add_tiled_image_tile(heif_item_id tili_id, uint32_t tile_x, uint32_t tile_y,
                              const std::shared_ptr<HeifPixelImage>& image,

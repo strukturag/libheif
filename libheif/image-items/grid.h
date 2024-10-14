@@ -93,6 +93,14 @@ public:
                        const std::shared_ptr<HeifPixelImage>& image,
                        struct heif_encoder* encoder);
 
+  static Result<std::shared_ptr<ImageItem_Grid>> add_and_encode_full_grid(HeifContext* ctx,
+                                                                          const std::vector<std::shared_ptr<HeifPixelImage>>& tiles,
+                                                                          uint16_t rows,
+                                                                          uint16_t columns,
+                                                                          struct heif_encoder* encoder,
+                                                                          const struct heif_encoding_options& options);
+
+
   // TODO: nclx depends on contained format
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
