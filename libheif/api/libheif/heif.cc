@@ -3553,7 +3553,7 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                struct heif_image_handle** out_grid_image_handle)
 {
   Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
-  gridImageResult = ctx->context->add_tiled_item(parameters, encoder);
+  gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
 
   if (gridImageResult.error != Error::Ok) {
     return gridImageResult.error.error_struct(ctx->context.get());

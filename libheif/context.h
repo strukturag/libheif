@@ -151,9 +151,6 @@ public:
 
   Result<std::shared_ptr<ImageItem_Overlay>> add_iovl_item(const ImageOverlay& overlayspec);
 
-  Result<std::shared_ptr<ImageItem_Tiled>> add_tiled_item(const heif_tiled_image_parameters* parameters,
-                                                          const struct heif_encoder* encoder);
-
   Error add_tiled_image_tile(heif_item_id tili_id, uint32_t tile_x, uint32_t tile_y,
                              const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder);

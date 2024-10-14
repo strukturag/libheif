@@ -1398,13 +1398,6 @@ Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const Imag
 }
 
 
-Result<std::shared_ptr<ImageItem_Tiled>> HeifContext::add_tiled_item(const heif_tiled_image_parameters* parameters,
-                                                                     const struct heif_encoder* encoder)
-{
-  return ImageItem_Tiled::add_new_tiled_item(this, parameters, encoder);
-}
-
-
 Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
                                         const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder)
