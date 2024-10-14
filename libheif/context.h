@@ -146,10 +146,6 @@ public:
                              const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder);
 
-  Error add_grid_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
-                            const std::shared_ptr<HeifPixelImage>& image,
-                            struct heif_encoder* encoder);
-
   Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(const heif_unci_image_parameters* parameters,
                                                                 const struct heif_encoding_options* encoding_options,
                                                                 const std::shared_ptr<const HeifPixelImage>& prototype);

@@ -609,3 +609,36 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
   return grid_image;
 }
+
+
+Error ImageItem_Grid::add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
+                                     const std::shared_ptr<HeifPixelImage>& image,
+                                     struct heif_encoder* encoder)
+{
+  auto encoding_options = get_encoding_options();
+
+  std::shared_ptr<ImageItem> encoded_image;
+  Error error = get_context()->encode_image(image,
+                                            encoder,
+                                            *encoding_options,
+                                            heif_image_input_class_normal,
+                                            encoded_image);
+  if (error != Error::Ok) {
+    return error;
+  }
+
+  auto file = get_file();
+  file->get_infe_box(encoded_image->get_id())->set_hidden_item(true); // grid tiles are hidden items
+
+  // Assign tile to grid
+  heif_image_tiling tiling = get_heif_image_tiling();
+  file->set_iref_reference(grid_id, fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
+
+  set_grid_tile_id(tile_x, tile_y, encoded_image->get_id());
+
+  // Add PIXI property (copy from first tile)
+  auto pixi = file->get_property<Box_pixi>(encoded_image->get_id());
+  file->add_property(grid_id, pixi, true);
+
+  return Error::Ok;
+}

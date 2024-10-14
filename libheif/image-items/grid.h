@@ -89,6 +89,10 @@ public:
                                                                    uint16_t tile_columns,
                                                                    const struct heif_encoding_options* encoding_options);
 
+  Error add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
+                       const std::shared_ptr<HeifPixelImage>& image,
+                       struct heif_encoder* encoder);
+
   // TODO: nclx depends on contained format
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

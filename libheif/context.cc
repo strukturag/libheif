@@ -1384,43 +1384,6 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 }
 
 
-Error HeifContext::add_grid_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
-                                       const std::shared_ptr<HeifPixelImage>& image,
-                                       struct heif_encoder* encoder)
-{
-  auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(get_image(grid_id, true));
-  if (Error error = grid_item->get_item_error()) {
-    return error;
-  }
-
-  auto encoding_options = grid_item->get_encoding_options();
-
-  std::shared_ptr<ImageItem> encoded_image;
-  Error error = encode_image(image,
-                             encoder,
-                             *encoding_options,
-                             heif_image_input_class_normal,
-                             encoded_image);
-  if (error != Error::Ok) {
-    return error;
-  }
-
-  m_heif_file->get_infe_box(encoded_image->get_id())->set_hidden_item(true); // grid tiles are hidden items
-
-  // Assign tile to grid
-  heif_image_tiling tiling = grid_item->get_heif_image_tiling();
-  m_heif_file->set_iref_reference(grid_id, fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
-
-  grid_item->set_grid_tile_id(tile_x, tile_y, encoded_image->get_id());
-
-  // Add PIXI property (copy from first tile)
-  auto pixi = m_heif_file->get_property<Box_pixi>(encoded_image->get_id());
-  m_heif_file->add_property(grid_id, pixi, true);
-
-  return Error::Ok;
-}
-
-
 Result<std::shared_ptr<ImageItem_uncompressed>> HeifContext::add_unci_item(const heif_unci_image_parameters* parameters,
                                                                            const struct heif_encoding_options* encoding_options,
                                                                            const std::shared_ptr<const HeifPixelImage>& prototype)
