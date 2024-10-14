@@ -1300,52 +1300,6 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
 }
 
 
-Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const ImageOverlay& overlayspec)
-{
-  if (overlayspec.get_num_offsets() > 0xFFFF) {
-    return Error{heif_error_Usage_error,
-                 heif_suberror_Unspecified,
-                 "Too many overlay images (maximum: 65535)"};
-  }
-
-  std::vector<heif_item_id> ref_ids;
-
-  for (const auto& overlay : overlayspec.get_overlay_stack()) {
-    m_heif_file->get_infe_box(overlay.image_id)->set_hidden_item(true); // only show the full overlay
-    ref_ids.push_back(overlay.image_id);
-  }
-
-
-  // Create ImageOverlay
-
-  std::vector<uint8_t> iovl_data = overlayspec.write();
-
-  // Create IOVL Item
-
-  heif_item_id iovl_id = m_heif_file->add_new_image(fourcc("iovl"));
-  std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(this, iovl_id);
-  m_all_images.insert(std::make_pair(iovl_id, iovl_image));
-  const int construction_method = 1; // 0=mdat 1=idat
-  m_heif_file->append_iloc_data(iovl_id, iovl_data, construction_method);
-
-  // Connect images to overlay
-  m_heif_file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
-
-  // Add ISPE property
-  m_heif_file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height(), false);
-
-  // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
-  auto pixi = m_heif_file->get_property<Box_pixi>(ref_ids[0]);
-  m_heif_file->add_property(iovl_id, pixi, true);
-
-  // Set Brands
-  //m_heif_file->set_brand(encoder->plugin->compression_format,
-  //                       out_grid_image->is_miaf_compatible());
-
-  return iovl_image;
-}
-
-
 Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, uint32_t tile_y,
                                         const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder)

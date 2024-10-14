@@ -117,29 +117,14 @@ public:
 
 
   // --- iovl specific
-#if 0
-  Error read_grid_spec();
 
-  bool is_grid() const { return m_is_grid; }
-
-  const ImageGrid& get_grid_spec() const { return m_grid_spec; }
-
-  const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
-#endif
+  static Result<std::shared_ptr<ImageItem_Overlay>> add_new_overlay_item(HeifContext* ctx, const ImageOverlay& overlayspec);
 
 private:
   ImageOverlay m_overlay_spec;
   std::vector<heif_item_id> m_overlay_image_ids;
 
   Error read_overlay_spec();
-
-#if 0
-  Result<std::shared_ptr<HeifPixelImage>> decode_full_grid_image(const heif_decoding_options& options) const;
-
-  Error decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
-                                    std::shared_ptr<HeifPixelImage> inout_image,
-                                    const heif_decoding_options& options) const;
-#endif
 
   Result<std::shared_ptr<HeifPixelImage>> decode_overlay_image(const heif_decoding_options& options) const;
 };

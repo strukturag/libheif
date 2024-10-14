@@ -3527,7 +3527,7 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
                              offsets ? offsets[2 * i + 1] : 0);
   }
 
-  Result<std::shared_ptr<ImageItem_Overlay>> addImageResult = ctx->context->add_iovl_item(overlay);
+  Result<std::shared_ptr<ImageItem_Overlay>> addImageResult = ImageItem_Overlay::add_new_overlay_item(ctx->context.get(), overlay);
 
   if (addImageResult.error != Error::Ok) {
     return addImageResult.error.error_struct(ctx->context.get());

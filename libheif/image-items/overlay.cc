@@ -388,3 +388,51 @@ int ImageItem_Overlay::get_chroma_bits_per_pixel() const
   auto image = get_context()->get_image(child, true);
   return image->get_chroma_bits_per_pixel();
 }
+
+
+Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_item(HeifContext* ctx, const ImageOverlay& overlayspec)
+{
+  if (overlayspec.get_num_offsets() > 0xFFFF) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Too many overlay images (maximum: 65535)"};
+  }
+
+  std::vector<heif_item_id> ref_ids;
+
+  auto file = ctx->get_heif_file();
+
+  for (const auto& overlay : overlayspec.get_overlay_stack()) {
+    file->get_infe_box(overlay.image_id)->set_hidden_item(true); // only show the full overlay
+    ref_ids.push_back(overlay.image_id);
+  }
+
+
+  // Create ImageOverlay
+
+  std::vector<uint8_t> iovl_data = overlayspec.write();
+
+  // Create IOVL Item
+
+  heif_item_id iovl_id = file->add_new_image(fourcc("iovl"));
+  std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(ctx, iovl_id);
+  ctx->insert_new_image(iovl_id, iovl_image);
+  const int construction_method = 1; // 0=mdat 1=idat
+  file->append_iloc_data(iovl_id, iovl_data, construction_method);
+
+  // Connect images to overlay
+  file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
+
+  // Add ISPE property
+  file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height(), false);
+
+  // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
+  auto pixi = file->get_property<Box_pixi>(ref_ids[0]);
+  file->add_property(iovl_id, pixi, true);
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       out_grid_image->is_miaf_compatible());
+
+  return iovl_image;
+}
