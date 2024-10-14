@@ -3607,7 +3607,7 @@ struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
 {
 #if WITH_UNCOMPRESSED_CODEC
   Result<std::shared_ptr<ImageItem_uncompressed>> unciImageResult;
-  unciImageResult = ctx->context->add_unci_item(parameters, encoding_options, prototype->image);
+  unciImageResult = ImageItem_uncompressed::add_unci_item(ctx->context.get(), parameters, encoding_options, prototype->image);
 
   if (unciImageResult.error != Error::Ok) {
     return unciImageResult.error.error_struct(ctx->context.get());

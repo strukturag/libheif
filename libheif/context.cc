@@ -1384,20 +1384,6 @@ Error HeifContext::add_tiled_image_tile(heif_item_id tild_id, uint32_t tile_x, u
 }
 
 
-Result<std::shared_ptr<ImageItem_uncompressed>> HeifContext::add_unci_item(const heif_unci_image_parameters* parameters,
-                                                                           const struct heif_encoding_options* encoding_options,
-                                                                           const std::shared_ptr<const HeifPixelImage>& prototype)
-{
-#if WITH_UNCOMPRESSED_CODEC
-  return ImageItem_uncompressed::add_unci_item(this, parameters, encoding_options, prototype);
-#else
-  return Error{heif_error_Unsupported_feature,
-               heif_suberror_Unspecified,
-               "support for uncompressed images has been disabled"};
-#endif
-}
-
-
 void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
 {
   // update heif context

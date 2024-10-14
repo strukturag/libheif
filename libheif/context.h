@@ -146,10 +146,6 @@ public:
                              const std::shared_ptr<HeifPixelImage>& image,
                              struct heif_encoder* encoder);
 
-  Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(const heif_unci_image_parameters* parameters,
-                                                                const struct heif_encoding_options* encoding_options,
-                                                                const std::shared_ptr<const HeifPixelImage>& prototype);
-
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
   bool is_primary_image_set() const { return m_primary_image != nullptr; }
