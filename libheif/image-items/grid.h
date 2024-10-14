@@ -82,6 +82,13 @@ public:
 
   uint32_t get_infe_type() const override { return fourcc("grid"); }
 
+  static Result<std::shared_ptr<ImageItem_Grid>> add_new_grid_item(HeifContext* ctx,
+                                                                   uint32_t output_width,
+                                                                   uint32_t output_height,
+                                                                   uint16_t tile_rows,
+                                                                   uint16_t tile_columns,
+                                                                   const struct heif_encoding_options* encoding_options);
+
   // TODO: nclx depends on contained format
   // const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 

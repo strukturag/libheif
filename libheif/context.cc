@@ -1300,58 +1300,6 @@ Error HeifContext::encode_grid(const std::vector<std::shared_ptr<HeifPixelImage>
 }
 
 
-Error HeifContext::add_grid_item(uint32_t output_width,
-                                 uint32_t output_height,
-                                 uint16_t tile_rows,
-                                 uint16_t tile_columns,
-                                 const struct heif_encoding_options* encoding_options,
-                                 std::shared_ptr<ImageItem_Grid>& out_grid_image)
-{
-  if (tile_rows > 0xFFFF / tile_columns) {
-    return {heif_error_Usage_error,
-            heif_suberror_Unspecified,
-            "Too many tiles (maximum: 65535)"};
-  }
-
-  // Create ImageGrid
-
-  ImageGrid grid;
-  grid.set_num_tiles(tile_columns, tile_rows);
-  grid.set_output_size(output_width, output_height);
-  std::vector<uint8_t> grid_data = grid.write();
-
-  // Create Grid Item
-
-  heif_item_id grid_id = m_heif_file->add_new_image(fourcc("grid"));
-  out_grid_image = std::make_shared<ImageItem_Grid>(this, grid_id);
-  out_grid_image->set_encoding_options(encoding_options);
-  out_grid_image->set_grid_spec(grid);
-  out_grid_image->set_resolution(output_width, output_height);
-
-  m_all_images.insert(std::make_pair(grid_id, out_grid_image));
-  const int construction_method = 1; // 0=mdat 1=idat
-  m_heif_file->append_iloc_data(grid_id, grid_data, construction_method);
-
-  // generate dummy grid item IDs (0)
-  std::vector<heif_item_id> tile_ids;
-  tile_ids.resize(tile_rows * tile_columns);
-
-  // Connect tiles to grid
-  m_heif_file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
-
-  // Add ISPE property
-  m_heif_file->add_ispe_property(grid_id, output_width, output_height, false);
-
-  // PIXI property will be added when the first tile is set
-
-  // Set Brands
-  //m_heif_file->set_brand(encoder->plugin->compression_format,
-  //                       out_grid_image->is_miaf_compatible());
-
-  return Error::Ok;
-}
-
-
 Result<std::shared_ptr<ImageItem_Overlay>> HeifContext::add_iovl_item(const ImageOverlay& overlayspec)
 {
   if (overlayspec.get_num_offsets() > 0xFFFF) {

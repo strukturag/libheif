@@ -142,13 +142,6 @@ public:
                     const struct heif_encoding_options& options,
                     std::shared_ptr<ImageItem>& out_image);
 
-  Error add_grid_item(uint32_t output_width,
-                      uint32_t output_height,
-                      uint16_t tile_rows,
-                      uint16_t tile_columns,
-                      const struct heif_encoding_options* encoding_options,
-                      std::shared_ptr<class ImageItem_Grid>& out_grid_image);
-
   Result<std::shared_ptr<ImageItem_Overlay>> add_iovl_item(const ImageOverlay& overlayspec);
 
   Error add_tiled_image_tile(heif_item_id tili_id, uint32_t tile_x, uint32_t tile_y,

@@ -3472,14 +3472,14 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
   }
 
   std::shared_ptr<ImageItem_Grid> gridimage;
-  Error error = ctx->context->add_grid_item(image_width, image_height,
-                                            static_cast<uint16_t>(tile_rows),
-                                            static_cast<uint16_t>(tile_columns),
-                                            encoding_options,
-                                            gridimage);
-
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
+  auto generateGridItemResult = ImageItem_Grid::add_new_grid_item(ctx->context.get(),
+                                                                  image_width,
+                                                                  image_height,
+                                                                  static_cast<uint16_t>(tile_rows),
+                                                                  static_cast<uint16_t>(tile_columns),
+                                                                  encoding_options);
+  if (generateGridItemResult.error) {
+    return generateGridItemResult.error.error_struct(ctx->context.get());
   }
 
   if (out_grid_image_handle) {

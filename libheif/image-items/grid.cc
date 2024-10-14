@@ -555,3 +555,57 @@ std::shared_ptr<Decoder> ImageItem_Grid::get_decoder() const
 
   return image->get_decoder();
 }
+
+
+Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifContext* ctx,
+                                                                          uint32_t output_width,
+                                                                          uint32_t output_height,
+                                                                          uint16_t tile_rows,
+                                                                          uint16_t tile_columns,
+                                                                          const struct heif_encoding_options* encoding_options)
+{
+  std::shared_ptr<ImageItem_Grid> grid_image;
+  if (tile_rows > 0xFFFF / tile_columns) {
+    return Error{heif_error_Usage_error,
+                 heif_suberror_Unspecified,
+                 "Too many tiles (maximum: 65535)"};
+  }
+
+  // Create ImageGrid
+
+  ImageGrid grid;
+  grid.set_num_tiles(tile_columns, tile_rows);
+  grid.set_output_size(output_width, output_height);
+  std::vector<uint8_t> grid_data = grid.write();
+
+  // Create Grid Item
+
+  std::shared_ptr<HeifFile> file = ctx->get_heif_file();
+  heif_item_id grid_id = file->add_new_image(fourcc("grid"));
+  grid_image = std::make_shared<ImageItem_Grid>(ctx, grid_id);
+  grid_image->set_encoding_options(encoding_options);
+  grid_image->set_grid_spec(grid);
+  grid_image->set_resolution(output_width, output_height);
+
+  ctx->insert_new_image(grid_id, grid_image);
+  const int construction_method = 1; // 0=mdat 1=idat
+  file->append_iloc_data(grid_id, grid_data, construction_method);
+
+  // generate dummy grid item IDs (0)
+  std::vector<heif_item_id> tile_ids;
+  tile_ids.resize(tile_rows * tile_columns);
+
+  // Connect tiles to grid
+  file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
+
+  // Add ISPE property
+  file->add_ispe_property(grid_id, output_width, output_height, false);
+
+  // PIXI property will be added when the first tile is set
+
+  // Set Brands
+  //m_heif_file->set_brand(encoder->plugin->compression_format,
+  //                       grid_image->is_miaf_compatible());
+
+  return grid_image;
+}
