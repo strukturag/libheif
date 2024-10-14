@@ -278,6 +278,26 @@ float BitstreamRange::readFloat32()
     return f;
 }
 
+
+uint64_t BitstreamRange::read_uint(int len)
+{
+  switch (len)
+  {
+    case 8:
+      return read8();
+    case 16:
+      return read16();
+    case 32:
+      return read32();
+    case 64:
+      return read64();
+    default:
+      assert(false);
+      return 0;
+  }
+}
+
+
 uint64_t BitstreamRange::read64()
 {
   if (!prepare_read(8)) {

@@ -1112,16 +1112,17 @@ struct heif_security_limits {
   // Limit on the maximum image size to avoid allocating too much memory.
   // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
   uint64_t max_image_size_pixels;
-  uint32_t max_bayer_pattern_pixels;
-
-  uint32_t max_iref_references;
-  uint32_t max_iloc_items;
-  uint32_t max_iloc_extents_per_item;
-  uint32_t max_children_per_box;
   uint64_t max_number_of_tiles;
+  uint32_t max_bayer_pattern_pixels;
+  uint32_t max_items;
 
   uint32_t max_color_profile_size;
   uint64_t max_memory_block_size;
+
+  uint32_t max_iloc_items;
+  uint32_t max_iloc_extents_per_item;
+
+  uint32_t max_children_per_box; // for all boxes that are not covered by other limits
 };
 
 // The global security limits are the default for new heif_contexts.

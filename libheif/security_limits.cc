@@ -30,16 +30,17 @@ struct heif_security_limits global_security_limits {
     // Artificial limit to avoid allocating too much memory.
     // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
     .max_image_size_pixels = 32768 * 32768,
-    .max_bayer_pattern_pixels = 16*16,
-
-    .max_iref_references = 10000,
-    .max_iloc_items = 20000,
-    .max_iloc_extents_per_item = 32,
-    .max_children_per_box = 20000,
     .max_number_of_tiles = 4096 * 4096,
+    .max_bayer_pattern_pixels = 16*16,
+    .max_items = 1000,
 
     .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
-    .max_memory_block_size = 512 * 1024 * 1024   // 512 MB
+    .max_memory_block_size = 512 * 1024 * 1024,  // 512 MB
+
+    .max_iloc_items = 2000,
+    .max_iloc_extents_per_item = 32,
+
+    .max_children_per_box = 100
 };
 
 

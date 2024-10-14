@@ -265,6 +265,8 @@ public:
 
   uint64_t read64();
 
+  uint64_t read_uint(int len);
+
   /**
    * Read 32 bit floating point value from the bitstream.
    *

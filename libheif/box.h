@@ -262,9 +262,9 @@ protected:
 
   bool m_is_essential = false;
 
-  const static int READ_CHILDREN_ALL = -1;
+  const static uint32_t READ_CHILDREN_ALL = 0xFFFFFFFF;
 
-  Error read_children(BitstreamRange& range, int number /* READ_CHILDREN_ALL */, const heif_security_limits* limits);
+  Error read_children(BitstreamRange& range, uint32_t number /* READ_CHILDREN_ALL */, const heif_security_limits* limits);
 
   Error write_children(StreamWriter& writer) const;
 

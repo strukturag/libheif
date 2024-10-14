@@ -847,9 +847,9 @@ bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& bo
 }
 
 
-Error Box::read_children(BitstreamRange& range, int max_number, const heif_security_limits* limits)
+Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_security_limits* limits)
 {
-  int count = 0;
+  uint32_t count = 0;
 
   while (!range.eof() && !range.error()) {
     std::shared_ptr<Box> box;
@@ -858,10 +858,17 @@ Error Box::read_children(BitstreamRange& range, int max_number, const heif_secur
       return error;
     }
 
-    auto max_children_per_box = limits->max_children_per_box;
-    if (max_children_per_box && m_children.size() > max_children_per_box) {
+    uint32_t max_children;
+    if (get_short_type() == fourcc("iinf")) {
+      max_children = limits->max_items;
+    }
+    else {
+      max_children = limits->max_children_per_box;
+    }
+
+    if (max_children && m_children.size() > max_children) {
       std::stringstream sstr;
-      sstr << "Maximum number of child boxes " << max_children_per_box << " exceeded.";
+      sstr << "Maximum number of child boxes (" << max_children << ") in '" << get_type_string() << "' box exceeded.";
 
       // Sanity check.
       return Error(heif_error_Memory_allocation_error,
@@ -2238,8 +2245,7 @@ Error Box_iinf::parse(BitstreamRange& range, const heif_security_limits* limits)
     return Error::Ok;
   }
 
-  // TODO: Only try to read "item_count" children.
-  return read_children(range, READ_CHILDREN_ALL, limits);
+  return read_children(range, item_count, limits);
 }
 
 
@@ -3198,37 +3204,31 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
       return err;
     }
 
-    if (get_version() == 0) {
-      ref.from_item_ID = range.read16();
-      int nRefs = range.read16();
-      for (int i = 0; i < nRefs; i++) {
-        if (range.eof()) {
-          std::stringstream sstr;
-          sstr << "iref box should contain " << nRefs << " references, but we can only read " << i << " references.";
+    int read_len = (get_version() == 0) ? 16 : 32;
 
-          return {heif_error_Invalid_input,
-                  heif_suberror_End_of_data,
-                  sstr.str()};
-        }
+    ref.from_item_ID = static_cast<uint32_t>(range.read_uint(read_len));
+    uint16_t nRefs = range.read16();
 
-        ref.to_item_ID.push_back(range.read16());
-      }
+    if (nRefs > limits->max_items) {
+      std::stringstream sstr;
+      sstr << "Number of references in iref box (" << nRefs << ") exceeds the security limits of " << limits->max_items << " references.";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
     }
-    else {
-      ref.from_item_ID = range.read32();
-      int nRefs = range.read16();
-      for (int i = 0; i < nRefs; i++) {
-        if (range.eof()) {
-          std::stringstream sstr;
-          sstr << "iref box should contain " << nRefs << " references, but we can only read " << i << " references.";
 
-          return {heif_error_Invalid_input,
-                  heif_suberror_End_of_data,
-                  sstr.str()};
-        }
+    for (int i = 0; i < nRefs; i++) {
+      if (range.eof()) {
+        std::stringstream sstr;
+        sstr << "iref box should contain " << nRefs << " references, but we can only read " << i << " references.";
 
-        ref.to_item_ID.push_back(range.read32());
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                sstr.str()};
       }
+
+      ref.to_item_ID.push_back(static_cast<uint32_t>(range.read_uint(read_len)));
     }
 
     m_references.push_back(ref);
@@ -3242,11 +3242,6 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
     nTotalRefs += ref.to_item_ID.size();
   }
 
-  auto max_iref_references = limits->max_iref_references;
-  if (max_iref_references && nTotalRefs > max_iref_references) {
-    return Error(heif_error_Memory_allocation_error, heif_suberror_Security_limit_exceeded,
-                 "Number of iref references exceeds security limit.");
-  }
 
   // --- check for duplicate references
 

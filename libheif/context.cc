@@ -115,14 +115,16 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
 {
   dst->version = 1;
   dst->max_image_size_pixels = src->max_image_size_pixels;
+  dst->max_number_of_tiles = src->max_number_of_tiles;
   dst->max_bayer_pattern_pixels = src->max_bayer_pattern_pixels;
-  dst->max_iref_references = src->max_iref_references;
+  dst->max_items = src->max_items;
+
+  dst->max_color_profile_size = src->max_color_profile_size;
+  dst->max_memory_block_size = src->max_memory_block_size;
+
   dst->max_iloc_items = src->max_iloc_items;
   dst->max_iloc_extents_per_item = src->max_iloc_extents_per_item;
   dst->max_children_per_box = src->max_children_per_box;
-  dst->max_number_of_tiles = src->max_number_of_tiles;
-  dst->max_color_profile_size = src->max_color_profile_size;
-  dst->max_memory_block_size = src->max_memory_block_size;
 }
 
 
