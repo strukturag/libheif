@@ -68,15 +68,6 @@ public:
 
   [[nodiscard]] const heif_security_limits* get_security_limits() const { return &m_limits; }
 
-  // Sets the maximum size of both width and height of an image. The total limit
-  // of the image size (width * height) will be "maximum_size * maximum_size".
-  void set_maximum_image_size_limit(uint32_t maximum_size);
-
-  uint64_t get_maximum_image_size_limit() const
-  {
-    return get_security_limits()->max_image_size_pixels;
-  }
-
   Error read(const std::shared_ptr<StreamReader>& reader);
 
   Error read_from_file(const char* input_filename);
@@ -85,9 +76,12 @@ public:
 
   std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
+
+  // === image items ===
+
   std::vector<std::shared_ptr<ImageItem>> get_top_level_images(bool return_error_images);
 
-  void insert_image_item(heif_item_id id, std::shared_ptr<ImageItem> img) {
+  void insert_image_item(heif_item_id id, const std::shared_ptr<ImageItem>& img) {
     m_all_images.insert(std::make_pair(id, img));
   }
 
@@ -110,10 +104,14 @@ public:
                                                        const struct heif_decoding_options& options,
                                                        bool decode_only_tile, uint32_t tx, uint32_t ty) const;
 
+  Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
+
   std::string debug_dump_boxes() const;
 
 
   // === writing ===
+
+  void write(StreamWriter& writer);
 
   // Create all boxes necessary for an empty HEIF file.
   // Note that this is no valid HEIF file, since some boxes (e.g. pitm) are generated, but
@@ -171,10 +169,6 @@ public:
   }
 
   void add_region_referenced_mask_ref(heif_item_id region_item_id, heif_item_id mask_item_id);
-
-  void write(StreamWriter& writer);
-
-  Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;

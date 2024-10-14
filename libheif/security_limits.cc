@@ -19,6 +19,7 @@
  */
 
 #include "security_limits.h"
+#include <limits>
 
 
 struct heif_security_limits global_security_limits {

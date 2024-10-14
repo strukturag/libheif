@@ -111,12 +111,6 @@ HeifContext::~HeifContext()
 }
 
 
-void HeifContext::set_maximum_image_size_limit(uint32_t maximum_size)
-{
-  m_limits.max_image_size_pixels = maximum_size;
-}
-
-
 static void copy_security_limits(heif_security_limits* dst, const heif_security_limits* src)
 {
   dst->version = 1;
