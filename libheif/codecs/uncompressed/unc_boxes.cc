@@ -627,17 +627,17 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
   m_pattern_width = range.read16();
   m_pattern_height = range.read16();
 
+  if (m_pattern_width == 0 || m_pattern_height == 0) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Invalid_parameter_value,
+            "Zero Bayer pattern size."};
+  }
+
   auto max_bayer_pattern_size = limits->max_bayer_pattern_pixels;
   if (max_bayer_pattern_size && m_pattern_height > max_bayer_pattern_size / m_pattern_width) {
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
             "Maximum Bayer pattern size exceeded."};
-  }
-
-  if (m_pattern_width == 0 || m_pattern_height == 0) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Invalid_parameter_value,
-            "Zero Bayer pattern size."};
   }
 
   m_components.resize(m_pattern_width * m_pattern_height);
