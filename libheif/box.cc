@@ -3235,14 +3235,6 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
 
-  // --- check number of total refs
-
-  size_t nTotalRefs = 0;
-  for (const auto& ref : m_references) {
-    nTotalRefs += ref.to_item_ID.size();
-  }
-
-
   // --- check for duplicate references
 
   if (auto error = check_for_double_references()) {
