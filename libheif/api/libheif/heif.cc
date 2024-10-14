@@ -68,7 +68,7 @@
 #include <cassert>
 
 
-const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+const struct heif_error heif_error_success = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
 static struct heif_error error_unsupported_parameter = {heif_error_Usage_error,
                                                         heif_suberror_Unsupported_parameter,
                                                         "Unsupported encoder parameter"};

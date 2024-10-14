@@ -35,8 +35,6 @@
 #include "libheif/heif.h"
 #include <cassert>
 
-static constexpr char kSuccess[] = "Success";
-
 
 class ErrorBuffer
 {

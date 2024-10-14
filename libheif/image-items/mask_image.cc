@@ -20,7 +20,6 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
@@ -31,6 +30,8 @@
 #include "logging.h"
 #include "mask_image.h"
 #include "image_item.h"
+#include "security_limits.h"
+
 
 Error Box_mskC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
@@ -71,7 +72,7 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
     width = ispe->get_width();
     height = ispe->get_height();
 
-    Error error = context->check_resolution(width, height);
+    Error error = check_for_valid_image_size(context->get_security_limits(), width, height);
     if (error) {
       return error;
     }

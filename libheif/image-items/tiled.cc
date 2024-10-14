@@ -518,7 +518,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   heif_item_id tild_id = ctx->get_heif_file()->add_new_image(fourcc("tili"));
   auto tild_image = std::make_shared<ImageItem_Tiled>(ctx, tild_id);
   tild_image->set_resolution(parameters->image_width, parameters->image_height);
-  ctx->insert_new_image(tild_id, tild_image);
+  ctx->insert_image_item(tild_id, tild_image);
 
   // Create tilC box
 

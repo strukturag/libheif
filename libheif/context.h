@@ -83,13 +83,11 @@ public:
 
   Error read_from_memory(const void* data, size_t size, bool copy);
 
-  Error check_resolution(uint32_t width, uint32_t height) const;
-
   std::shared_ptr<HeifFile> get_heif_file() const { return m_heif_file; }
 
   std::vector<std::shared_ptr<ImageItem>> get_top_level_images(bool return_error_images);
 
-  void insert_new_image(heif_item_id id, std::shared_ptr<ImageItem> img) {
+  void insert_image_item(heif_item_id id, std::shared_ptr<ImageItem> img) {
     m_all_images.insert(std::make_pair(id, img));
   }
 

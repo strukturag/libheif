@@ -38,6 +38,7 @@
 #include <map>
 #include <iostream>
 #include <cassert>
+#include "security_limits.h"
 
 
 bool isKnownUncompressedFrameConfigurationBoxProfile(const std::shared_ptr<const Box_uncC>& uncC)
@@ -602,7 +603,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   assert(ispe);
   uint32_t width = ispe->get_width();
   uint32_t height = ispe->get_height();
-  error = context->check_resolution(width, height);
+  error = check_for_valid_image_size(context->get_security_limits(), width, height);
   if (error) {
     return error;
   }

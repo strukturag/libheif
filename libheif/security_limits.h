@@ -23,6 +23,8 @@
 #include "libheif/heif.h"
 #include <cinttypes>
 #include <cstddef>
+#include "error.h"
+
 
 extern heif_security_limits global_security_limits;
 
@@ -34,5 +36,8 @@ static const int MAX_BOX_SIZE = 0x7FFFFFFF; // 2 GB
 static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 static const int64_t MAX_FILE_POS = 0x007FFFFFFFFFFFFFLL; // maximum file position
 static const int MAX_FRACTION_VALUE = 0x10000;
+
+
+Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height);
 
 #endif  // LIBHEIF_SECURITY_LIMITS_H

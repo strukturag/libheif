@@ -27,6 +27,7 @@
 #include <set>
 #include <algorithm>
 #include <libheif/api_structs.h>
+#include "security_limits.h"
 
 
 Error ImageGrid::parse(const std::vector<uint8_t>& data)
@@ -247,7 +248,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   const uint32_t w = grid.get_width();
   const uint32_t h = grid.get_height();
 
-  Error err = check_resolution(w, h);
+  Error err = check_for_valid_image_size(get_context()->get_security_limits(), w, h);
   if (err) {
     return err;
   }
@@ -292,7 +293,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       uint32_t src_width = tileImg->get_width();
       uint32_t src_height = tileImg->get_height();
-      err = check_resolution(src_width, src_height);
+      err = check_for_valid_image_size(get_context()->get_security_limits(), src_width, src_height);
       if (err) {
         return err;
       }
@@ -588,7 +589,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
   grid_image->set_grid_spec(grid);
   grid_image->set_resolution(output_width, output_height);
 
-  ctx->insert_new_image(grid_id, grid_image);
+  ctx->insert_image_item(grid_id, grid_image);
   const int construction_method = 1; // 0=mdat 1=idat
   file->append_iloc_data(grid_id, grid_data, construction_method);
 
@@ -682,7 +683,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   // Create Grid Item
   heif_item_id grid_id = file->add_new_image(fourcc("grid"));
   griditem = std::make_shared<ImageItem_Grid>(ctx, grid_id);
-  ctx->insert_new_image(grid_id, griditem);
+  ctx->insert_image_item(grid_id, griditem);
   const int construction_method = 1; // 0=mdat 1=idat
   file->append_iloc_data(grid_id, grid_data, construction_method);
 

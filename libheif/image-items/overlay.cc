@@ -22,6 +22,7 @@
 #include "context.h"
 #include "file.h"
 #include "color-conversion/colorconversion.h"
+#include "security_limits.h"
 
 
 template<typename I>
@@ -287,7 +288,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
   uint32_t w = m_overlay_spec.get_canvas_width();
   uint32_t h = m_overlay_spec.get_canvas_height();
 
-  Error err = check_resolution(w, h);
+  Error err = check_for_valid_image_size(get_context()->get_security_limits(), w, h);
   if (err) {
     return err;
   }
@@ -416,7 +417,7 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
 
   heif_item_id iovl_id = file->add_new_image(fourcc("iovl"));
   std::shared_ptr<ImageItem_Overlay> iovl_image = std::make_shared<ImageItem_Overlay>(ctx, iovl_id);
-  ctx->insert_new_image(iovl_id, iovl_image);
+  ctx->insert_image_item(iovl_id, iovl_image);
   const int construction_method = 1; // 0=mdat 1=idat
   file->append_iloc_data(iovl_id, iovl_data, construction_method);
 

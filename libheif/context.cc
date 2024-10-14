@@ -88,7 +88,7 @@ struct heif_error heif_encoder::alloc()
     return error;
   }
 
-  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, kSuccess};
+  struct heif_error err = {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
   return err;
 }
 
@@ -183,32 +183,6 @@ void HeifContext::reset_to_empty_heif()
   m_all_images.clear();
   m_top_level_images.clear();
   m_primary_image.reset();
-}
-
-Error HeifContext::check_resolution(uint32_t width, uint32_t height) const {
-
-  // TODO: remove this. Has been moved to ImageItem::check_for_valid_image_size()
-
-  // --- check whether the image size is "too large"
-  uint32_t max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
-  if ((width > max_width_height || height > max_width_height) ||
-      (height != 0 && width > get_security_limits()->max_image_size_pixels / height)) {
-    std::stringstream sstr;
-    sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-          << get_security_limits()->max_image_size_pixels << "\n";
-
-    return Error(heif_error_Memory_allocation_error,
-                  heif_suberror_Security_limit_exceeded,
-                  sstr.str());
-  }
-
-  if (width==0 || height==0) {
-    return Error(heif_error_Memory_allocation_error,
-                 heif_suberror_Invalid_image_size,
-                 "zero width or height");
-  }
-
-  return Error::Ok;
 }
 
 
@@ -1201,7 +1175,7 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
   out_image = image_item;
 
-  insert_new_image(image_item->get_id(), image_item);
+  insert_image_item(image_item->get_id(), image_item);
 
 
   // --- if there is an alpha channel, add it as an additional image

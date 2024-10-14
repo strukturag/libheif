@@ -46,7 +46,6 @@ public:
 };
 
 
-
 class ImageItem : public ErrorBuffer
 {
 public:
@@ -96,8 +95,6 @@ public:
   const HeifContext* get_context() const { return m_heif_context; }
 
   std::shared_ptr<class HeifFile> get_file() const;
-
-  Error check_resolution(uint32_t w, uint32_t h) const;
 
   void set_resolution(uint32_t w, uint32_t h)
   {
@@ -274,8 +271,6 @@ public:
                                                                           bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const;
 
   virtual Result<std::vector<uint8_t>> get_compressed_image_data() const;
-
-  Error check_for_valid_image_size(uint32_t width, uint32_t height) const;
 
   Result<std::vector<std::shared_ptr<Box>>> get_properties() const;
 

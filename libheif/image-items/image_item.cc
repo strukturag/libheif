@@ -35,6 +35,8 @@
 #include "color-conversion/colorconversion.h"
 #include "api/libheif/api_structs.h"
 #include "plugin_registry.h"
+#include "security_limits.h"
+
 #include <limits>
 #include <cassert>
 #include <cstring>
@@ -62,12 +64,6 @@ ImageItem::ImageItem(HeifContext* context, heif_item_id id)
 std::shared_ptr<HeifFile> ImageItem::get_file() const
 {
   return m_heif_context->get_heif_file();
-}
-
-
-Error ImageItem::check_resolution(uint32_t w, uint32_t h) const
-{
-  return m_heif_context->check_resolution(w, h);
 }
 
 
@@ -668,35 +664,6 @@ void ImageItem::CodedImageData::append_with_4bytes_size(const uint8_t* data, siz
 }
 
 
-Error ImageItem::check_for_valid_image_size(uint32_t width, uint32_t height) const
-{
-  uint64_t maximum_image_size_limit = m_heif_context->get_maximum_image_size_limit();
-
-  // --- check whether the image size is "too large"
-
-  auto max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
-  if ((width > max_width_height || height > max_width_height) ||
-      (height != 0 && width > maximum_image_size_limit / height)) {
-    std::stringstream sstr;
-    sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-         << maximum_image_size_limit << "\n";
-
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
-  }
-
-  if (width == 0 || height == 0) {
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Invalid_image_size,
-            "zero width or height"};
-  }
-
-  return Error::Ok;
-
-}
-
-
 Error ImageItem::transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const
 {
   Result<std::vector<std::shared_ptr<Box>>> propertiesResult = get_properties();
@@ -764,7 +731,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   if (!decode_tile_only) {
     auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
     if (ispe) {
-      Error err = check_for_valid_image_size(ispe->get_width(), ispe->get_height());
+      Error err = check_for_valid_image_size(get_context()->get_security_limits(), ispe->get_width(), ispe->get_height());
       if (err) {
         return err;
       }

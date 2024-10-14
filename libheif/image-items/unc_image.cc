@@ -321,7 +321,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   heif_item_id unci_id = ctx->get_heif_file()->add_new_image(fourcc("unci"));
   auto unci_image = std::make_shared<ImageItem_uncompressed>(ctx, unci_id);
   unci_image->set_resolution(parameters->image_width, parameters->image_height);
-  ctx->insert_new_image(unci_id, unci_image);
+  ctx->insert_image_item(unci_id, unci_image);
 
 
   // Generate headers
