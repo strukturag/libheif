@@ -569,6 +569,83 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
 }
 
 
+Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
+                                     const std::shared_ptr<HeifPixelImage>& image,
+                                     struct heif_encoder* encoder)
+{
+  auto item = ImageItem::alloc_for_compression_format(get_context(), encoder->plugin->compression_format);
+
+  heif_encoding_options* options = heif_encoding_options_alloc(); // TODO: should this be taken from heif_context_add_tiled_image() ?
+
+  Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
+  if (colorConversionResult.error) {
+    return colorConversionResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = colorConversionResult.value;
+
+  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
+  heif_encoding_options_free(options);
+
+  if (encodeResult.error) {
+    return encodeResult.error;
+  }
+
+  const int construction_method = 0; // 0=mdat 1=idat
+  get_file()->append_iloc_data(get_id(), encodeResult.value.bitstream, construction_method);
+
+  auto& header = m_tild_header;
+
+  if (image->get_width() != header.get_parameters().tile_width ||
+      image->get_height() != header.get_parameters().tile_height) {
+
+    std::cout << "tx:" << tile_x << " ty:" << tile_y << "\n";
+    std::cout << image->get_width() << " " << header.get_parameters().tile_width << " | "
+              << image->get_height() << " " << header.get_parameters().tile_height <<"\n";
+
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "Tile image size does not match the specified tile size."};
+  }
+
+  uint64_t offset = get_next_tild_position();
+  size_t dataSize = encodeResult.value.bitstream.size();
+  if (dataSize > 0xFFFFFFFF) {
+    return {heif_error_Encoding_error, heif_suberror_Unspecified, "Compressed tile size exceeds maximum tile size."};
+  }
+  header.set_tild_tile_range(tile_x, tile_y, offset, static_cast<uint32_t>(dataSize));
+  set_next_tild_position(offset + encodeResult.value.bitstream.size());
+
+  std::vector<std::shared_ptr<Box>> existing_properties;
+  Error err = get_file()->get_properties(get_id(), existing_properties);
+  if (err) {
+    return err;
+  }
+
+  for (auto& propertyBox : encodeResult.value.properties) {
+    if (propertyBox->get_short_type() == fourcc("ispe")) {
+      continue;
+    }
+
+    // skip properties that exist already
+
+    bool exists = std::any_of(existing_properties.begin(),
+                              existing_properties.end(),
+                              [&propertyBox](const std::shared_ptr<Box>& p) { return p->get_short_type() == propertyBox->get_short_type();});
+    if (exists) {
+      continue;
+    }
+
+    get_file()->add_property(get_id(), propertyBox, propertyBox->is_essential());
+  }
+
+  get_file()->set_brand(encoder->plugin->compression_format,
+                        true); // TODO: out_grid_image->is_miaf_compatible());
+
+  return Error::Ok;
+}
+
+
 void ImageItem_Tiled::process_before_write()
 {
   // overwrite offsets

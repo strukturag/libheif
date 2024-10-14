@@ -128,10 +128,6 @@ public:
                      enum heif_image_input_class input_class,
                      std::shared_ptr<ImageItem>& out_image);
 
-  Error add_tiled_image_tile(heif_item_id tili_id, uint32_t tile_x, uint32_t tile_y,
-                             const std::shared_ptr<HeifPixelImage>& image,
-                             struct heif_encoder* encoder);
-
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
   bool is_primary_image_set() const { return m_primary_image != nullptr; }

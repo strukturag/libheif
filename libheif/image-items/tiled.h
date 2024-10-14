@@ -147,6 +147,11 @@ public:
   static Result<std::shared_ptr<ImageItem_Tiled>> add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_parameters* parameters,
                                                                      const heif_encoder* encoder);
 
+  Error add_image_tile(uint32_t tile_x, uint32_t tile_y,
+                       const std::shared_ptr<HeifPixelImage>& image,
+                       struct heif_encoder* encoder);
+
+
   Error on_load_file() override;
 
   void process_before_write() override;
