@@ -566,6 +566,24 @@ int decode_image_tiles(heif_image_handle* handle,
   return 0;
 }
 
+static int max_value_progress = 0;
+
+void start_progress(enum heif_progress_step step, int max_progress, void* progress_user_data)
+{
+  max_value_progress = max_progress;
+}
+
+void on_progress(enum heif_progress_step step, int progress, void* progress_user_data)
+{
+  std::cout << "decoding image... " << progress * 100 / max_value_progress << "%\r";
+  std::cout.flush();
+}
+
+void end_progress(enum heif_progress_step step, void* progress_user_data)
+{
+  std::cout << "\n";
+}
+
 
 class LibHeifInitializer {
 public:
@@ -835,6 +853,9 @@ int main(int argc, char** argv)
 
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
+    decode_options->start_progress = start_progress;
+    decode_options->on_progress = on_progress;
+    decode_options->end_progress = end_progress;
 
     if (chroma_upsampling=="nearest-neighbor") {
       decode_options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_nearest_neighbor;

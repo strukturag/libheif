@@ -274,6 +274,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   uint32_t tile_width = 0;
   uint32_t tile_height = 0;
 
+  if (options.start_progress) {
+    options.start_progress(heif_progress_step_total, grid.get_rows() * grid.get_columns(), options.progress_user_data);
+  }
+  if (options.on_progress) {
+    options.on_progress(heif_progress_step_total, 0, options.progress_user_data);
+  }
+
+  int progress_counter = 0;
+
   for (uint32_t y = 0; y < grid.get_rows(); y++) {
     uint32_t x0 = 0;
 
@@ -324,7 +333,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
         if (1)
 #endif
       {
-        err = decode_and_paste_tile_image(tileID, x0, y0, img, options);
+        err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter);
         if (err) {
           return err;
         }
@@ -364,7 +373,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
       errs.push_back(std::async(std::launch::async,
                                 &ImageItem_Grid::decode_and_paste_tile_image, this,
-                                data.tileID, data.x_origin, data.y_origin, std::ref(img), options));
+                                data.tileID, data.x_origin, data.y_origin, std::ref(img), options,
+                                std::ref(progress_counter)));
     }
 
     // check for decoding errors in remaining tiles
@@ -380,12 +390,17 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   }
 #endif
 
+  if (options.end_progress) {
+    options.end_progress(heif_progress_step_total, options.progress_user_data);
+  }
+
   return img;
 }
 
 Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t x0, uint32_t y0,
                                                   std::shared_ptr<HeifPixelImage>& inout_image,
-                                                  const heif_decoding_options& options) const
+                                                  const heif_decoding_options& options,
+                                                  int& progress_counter) const
 {
   std::shared_ptr<HeifPixelImage> tile_img;
 
@@ -439,6 +454,13 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
 
   inout_image->copy_image_to(tile_img, x0, y0);
+
+  if (options.on_progress) {
+    static std::mutex progressMutex;
+    std::lock_guard<std::mutex> lock(progressMutex);
+
+    options.on_progress(heif_progress_step_total, ++progress_counter, options.progress_user_data);
+  }
 
   return Error::Ok;
 }
