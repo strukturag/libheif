@@ -338,6 +338,74 @@ struct heif_complex64* heif_image_get_channel_complex64(struct heif_image*,
                                                         enum heif_channel channel,
                                                         uint32_t* out_stride);
 
+
+// ========================= Timestamps =========================
+
+LIBHEIF_API extern const uint64_t heif_tai_clock_info_unknown_time_uncertainty;
+LIBHEIF_API extern const int32_t heif_tai_clock_info_unknown_drift_rate;
+LIBHEIF_API extern const uint64_t heif_unknown_tai_timestamp;
+#endif
+
+struct heif_tai_clock_info
+{
+  uint8_t version;
+
+  // version 1
+
+  uint64_t time_uncertainty;
+  uint32_t clock_resolution;
+  int32_t clock_drift_rate;
+  uint8_t clock_type;
+};
+
+
+#if WITH_EXPERIMENTAL_FEATURES
+int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
+
+
+// Creates a new clock info property if it doesn't already exist.
+LIBHEIF_API
+struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               const heif_tai_clock_info* clock,
+                                               heif_property_id* out_propertyId);
+
+// The `out_clock` struct passed in needs to have the `version` field set so that this
+// function knows which fields it is safe to fill.
+// When the read property is a lower version, the version variable of out_clock will be reduced.
+LIBHEIF_API
+struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               heif_tai_clock_info* out_clock);
+#endif
+
+struct heif_tai_timestamp_packet
+{
+  uint8_t version;
+
+  // version 1
+
+  uint64_t tai_timestamp;
+  uint8_t synchronization_state;         // bool
+  uint8_t timestamp_generation_failure;  // bool
+  uint8_t timestamp_is_modified;         // bool
+};
+
+#if WITH_EXPERIMENTAL_FEATURES
+
+// Creates a new TAI timestamp property if one doesn't already exist for itemId.
+// Creates a new clock info property if one doesn't already exist for itemId.
+LIBHEIF_API
+struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  heif_tai_timestamp_packet* timestamp,
+                                                  heif_property_id* out_propertyId);
+
+LIBHEIF_API
+struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
+                                                  heif_item_id itemId,
+                                                  heif_tai_timestamp_packet* out_timestamp);
+
 #endif
 
 #ifdef __cplusplus

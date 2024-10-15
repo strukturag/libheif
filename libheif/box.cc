@@ -4393,7 +4393,7 @@ Error Box_taic::write(StreamWriter& writer) const {
   return Error::Ok;
 }
 
-Error Box_taic::parse(BitstreamRange& range) {
+Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
   m_time_uncertainty = range.read64();
@@ -4428,7 +4428,7 @@ Error Box_itai::write(StreamWriter& writer) const {
   return Error::Ok;
 }
 
-Error Box_itai::parse(BitstreamRange& range) {
+Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
   m_tai_timestamp = range.read64();

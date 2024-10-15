@@ -1533,7 +1533,7 @@ public:
   uint8_t get_clock_type() const { return m_clock_type; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
@@ -1584,7 +1584,7 @@ public:
   bool get_timestamp_is_modified() const { return m_timestamp_is_modified; }
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   uint64_t m_tai_timestamp;
