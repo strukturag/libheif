@@ -282,11 +282,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
   }
 
   int progress_counter = 0;
+  bool cancelled = false;
 
-  for (uint32_t y = 0; y < grid.get_rows(); y++) {
+  for (uint32_t y = 0; y < grid.get_rows() && !cancelled; y++) {
     uint32_t x0 = 0;
 
-    for (uint32_t x = 0; x < grid.get_columns(); x++) {
+    for (uint32_t x = 0; x < grid.get_columns() && !cancelled; x++) {
 
       heif_item_id tileID = image_references[reference_idx];
 
@@ -333,6 +334,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
         if (1)
 #endif
       {
+        if (options.cancel_decoding) {
+          if (options.cancel_decoding(options.progress_user_data)) {
+            cancelled = true;
+          }
+        }
+
         err = decode_and_paste_tile_image(tileID, x0, y0, img, options, progress_counter);
         if (err) {
           return err;
@@ -352,7 +359,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
     // Process all tiles in a set of background threads.
     // Do not start more than the maximum number of threads.
 
-    while (!tiles.empty()) {
+    while (!tiles.empty() && !cancelled) {
 
       // If maximum number of threads running, wait until first thread finishes
 
@@ -363,6 +370,13 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
         }
 
         errs.pop_front();
+      }
+
+
+      if (options.cancel_decoding) {
+        if (options.cancel_decoding(options.progress_user_data)) {
+          cancelled = true;
+        }
       }
 
 
@@ -392,6 +406,10 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
   if (options.end_progress) {
     options.end_progress(heif_progress_step_total, options.progress_user_data);
+  }
+
+  if (cancelled) {
+    return Error{heif_error_Canceled, heif_suberror_Unspecified, "Decoding the image was canceled"};
   }
 
   return img;

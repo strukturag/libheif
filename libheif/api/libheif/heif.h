@@ -53,7 +53,7 @@ extern "C" {
 //  1.15           4            5             1             1            1            1
 //  1.16           5            6             1             1            1            1
 //  1.18           5            7             1             1            1            1
-//  1.19           5            7             2             1            1            1
+//  1.19           6            7             2             1            1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -135,7 +135,10 @@ enum heif_error_code
   heif_error_Color_profile_does_not_exist = 10,
 
   // Error loading a dynamic plugin
-  heif_error_Plugin_loading_error = 11
+  heif_error_Plugin_loading_error = 11,
+
+  // Operation has been canceled
+  heif_error_Canceled = 12
 };
 
 
@@ -1740,10 +1743,13 @@ struct heif_decoding_options
   // The priority is defined in the plugin.
   const char* decoder_id;
 
-
   // version 5 options
 
   struct heif_color_conversion_options color_conversion_options;
+
+  // version 6 options
+
+  int (* cancel_decoding)(void* progress_user_data);
 };
 
 

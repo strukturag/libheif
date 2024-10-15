@@ -1272,7 +1272,7 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
 
 void fill_default_decoding_options(heif_decoding_options& options)
 {
-  options.version = 5;
+  options.version = 6;
 
   options.ignore_transformations = false;
 
@@ -1299,6 +1299,10 @@ void fill_default_decoding_options(heif_decoding_options& options)
   options.color_conversion_options.preferred_chroma_downsampling_algorithm = heif_chroma_downsampling_average;
   options.color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_bilinear;
   options.color_conversion_options.only_use_preferred_chroma_algorithm = false;
+
+  // version 6
+
+  options.cancel_decoding = nullptr;
 }
 
 
@@ -1310,6 +1314,9 @@ static heif_decoding_options normalize_options(const heif_decoding_options* inpu
 
   if (input_options) {
     switch (input_options->version) {
+      case 6:
+        options.cancel_decoding = input_options->cancel_decoding;
+        // fallthrough
       case 5:
         options.color_conversion_options = input_options->color_conversion_options;
         // fallthrough

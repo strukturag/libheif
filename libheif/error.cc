@@ -70,6 +70,8 @@ const char* Error::get_error_string(heif_error_code err)
       return "Color profile does not exist";
     case heif_error_Plugin_loading_error:
       return "Error while loading plugin";
+    case heif_error_Canceled:
+      return "Canceled by user";
   }
 
   assert(false);

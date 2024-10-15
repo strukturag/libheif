@@ -179,6 +179,8 @@ const (
 	ErrorColorProfileDoesNotExist = C.heif_error_Color_profile_does_not_exist
 
 	ErrorPluginLoadingError = C.heif_error_Plugin_loading_error
+
+	ErrorCanceled = C.heif_error_Canceled
 )
 
 type ErrorSubcode C.enum_heif_suberror_code
