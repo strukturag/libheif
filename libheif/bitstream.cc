@@ -271,16 +271,6 @@ uint32_t BitstreamRange::read32()
                      (buf[3]));
 }
 
-float BitstreamRange::read_float32()
-{
-#if __cpp_lib_bit_cast >= 201806L
-  uint32_t i = read32();
-  return std::bit_cast<float>(i); // this works directly on the value layout, thus we do not have to worry about memory layout
-#else
-  assert(false); // compiler too old to support bit_cast
-#endif
-}
-
 
 uint64_t BitstreamRange::read_uint(int len)
 {
@@ -351,6 +341,35 @@ int64_t BitstreamRange::read64s()
   else {
     return static_cast<int64_t >(v);
   }
+}
+
+
+float BitstreamRange::read_float32()
+{
+#if __cpp_lib_bit_cast >= 201806L
+  uint32_t i = read32();
+  return std::bit_cast<float>(i); // this works directly on the value layout, thus we do not have to worry about memory layout
+#else
+  // compiler too old to support bit_cast
+
+  int i = read32();
+  float f;
+  memcpy(&f, &i, sizeof(float));
+  return f;
+#endif
+}
+
+
+void StreamWriter::write_float32(float v)
+{
+#if __cpp_lib_bit_cast >= 201806L
+  write32(std::bit_cast<uint32_t>(v)); // this works directly on the value layout, thus we do not have to worry about memory layout
+#else
+  // compiler too old to support bit_cast
+  uint32_t i;
+  memcpy(&i, &v, sizeof(float));
+  write32(i);
+#endif
 }
 
 
@@ -696,16 +715,6 @@ void StreamWriter::write32(uint32_t v)
   m_data[m_position++] = uint8_t((v >> 16) & 0xFF);
   m_data[m_position++] = uint8_t((v >> 8) & 0xFF);
   m_data[m_position++] = uint8_t(v & 0xFF);
-}
-
-
-void StreamWriter::write_float32(float v)
-{
-#if __cpp_lib_bit_cast >= 201806L
-  write32(std::bit_cast<uint32_t>(v)); // this works directly on the value layout, thus we do not have to worry about memory layout
-#else
-  assert(false); // compiler too old to support bit_cast
-#endif
 }
 
 

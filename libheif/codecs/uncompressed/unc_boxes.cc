@@ -646,7 +646,7 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
     for (uint16_t j = 0; j < m_pattern_width; j++) {
       PatternComponent component{};
       component.component_index = range.read32();
-      component.component_gain = range.readFloat32();
+      component.component_gain = range.read_float32();
       m_components[i] = component;
     }
   }
@@ -686,7 +686,7 @@ Error Box_cpat::write(StreamWriter& writer) const
 
   for (const auto& component : m_components) {
     writer.write32(component.component_index);
-    writer.writeFloat32(component.component_gain);
+    writer.write_float32(component.component_gain);
   }
 
   prepend_header(writer, box_start);
