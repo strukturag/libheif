@@ -335,7 +335,10 @@ Error HeifContext::interpret_heif_file()
     }
 
     auto image = ImageItem::alloc_for_infe_box(this, infe_box);
-    assert(image);
+    if (!image) {
+      // It is no image item, skip it.
+      continue;
+    }
 
     m_all_images.insert(std::make_pair(id, image));
 

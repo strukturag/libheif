@@ -142,11 +142,18 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
   else if (item_type == fourcc("avc1")) {
     return std::make_shared<ImageItem_AVC>(ctx, id);
   }
-#if WITH_UNCOMPRESSED_CODEC
   else if (item_type == fourcc("unci")) {
+#if WITH_UNCOMPRESSED_CODEC
     return std::make_shared<ImageItem_uncompressed>(ctx, id);
-  }
+#else
+    // It is an image item type that we do not support. Thus, generate an ImageItem_Error.
+
+    std::stringstream sstr;
+    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' is not supported.";
+    Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
+    return std::make_shared<ImageItem_Error>(item_type, id, err);
 #endif
+  }
   else if (item_type == fourcc("j2k1")) {
     return std::make_shared<ImageItem_JPEG2000>(ctx, id);
   }
@@ -166,10 +173,10 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_infe_box(HeifContext* ctx, const
     return std::make_shared<ImageItem_Tiled>(ctx, id);
   }
   else {
-    std::stringstream sstr;
-    sstr << "Image item of type '" << fourcc_to_string(item_type) << "' is not supported.";
-    Error err{ heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type, sstr.str() };
-    return std::make_shared<ImageItem_Error>(item_type, id, err);
+    // This item has an unknown type. It could be an image or anything else.
+    // Do not process the item.
+
+    return nullptr;
   }
 }
 
