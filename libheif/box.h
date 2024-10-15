@@ -1478,7 +1478,7 @@ private:
 };
 
 
-
+#if ENABLE_EXPERIMENTAL_FEATURS
 class Box_taic : public FullBox
 {
 public:
@@ -1592,5 +1592,6 @@ private:
   bool m_timestamp_generation_failure;
   bool m_timestamp_is_modified;
 };
+#endif
 
 #endif

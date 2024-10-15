@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 
   /* ===================================================================================
    *   This file contains candidate APIs that did not make it into the public API yet.
@@ -137,7 +137,7 @@ struct heif_tiled_image_parameters {
   uint8_t tiles_are_sequential;  // TODO: can we derive this automatically
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 LIBHEIF_API
 struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                const struct heif_tiled_image_parameters* parameters,
@@ -164,7 +164,7 @@ struct heif_unci_image_parameters {
   // TODO: interleave type, padding
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 LIBHEIF_API
 struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
                                               const struct heif_unci_image_parameters* parameters,
@@ -182,7 +182,7 @@ struct heif_pyramid_layer_info {
   uint32_t tiles_in_layer_column;
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 // The input images are automatically sorted according to resolution. You can provide them in any order.
 LIBHEIF_API
 struct heif_error heif_context_add_pyramid_entity_group(struct heif_context* ctx,
@@ -208,7 +208,7 @@ enum heif_channel_datatype
   heif_channel_datatype_complex_number = 4
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 LIBHEIF_API
 struct heif_error heif_image_add_channel(struct heif_image* image,
                                          enum heif_channel channel,
@@ -232,7 +232,7 @@ struct heif_complex64 {
   double real, imaginary;
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 LIBHEIF_API
 enum heif_channel_datatype heif_image_get_datatype(const struct heif_image* img, enum heif_channel channel);
 
@@ -359,7 +359,7 @@ struct heif_tai_clock_info
 };
 
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
 
 
@@ -391,7 +391,7 @@ struct heif_tai_timestamp_packet
   uint8_t timestamp_is_modified;         // bool
 };
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if ENABLE_EXPERIMENTAL_FEATURS
 
 // Creates a new TAI timestamp property if one doesn't already exist for itemId.
 // Creates a new clock info property if one doesn't already exist for itemId.

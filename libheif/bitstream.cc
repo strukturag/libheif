@@ -23,6 +23,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include <bit>
 
 #define MAX_UVLC_LEADING_ZEROS 20
 

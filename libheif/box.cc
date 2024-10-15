@@ -656,13 +656,20 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_j2kL>();
       break;
 
+#if ENABLE_EXPERIMENTAL_FEATURS
+      case fourcc("tilC"):
+      box = std::make_shared<Box_tilC>();
+      break;
+#endif
+
     // --- mski
       
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
       break;
 
-    // --- TAI timestamps
+#if ENABLE_EXPERIMENTAL_FEATURS
+      // --- TAI timestamps
 
     case fourcc("itai"):
       box = std::make_shared<Box_itai>();
@@ -671,18 +678,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
     case fourcc("taic"):
       box = std::make_shared<Box_taic>();
       break;
+#endif
 
     // --- AVC (H.264)
 
     case fourcc("avcC"):
       box = std::make_shared<Box_avcC>();
       break;
-
-#if WITH_EXPERIMENTAL_FEATURES
-    case fourcc("tilC"):
-      box = std::make_shared<Box_tilC>();
-      break;
-#endif
 
     case fourcc("mdat"):
       // avoid generating a 'Box_other'
@@ -4363,7 +4365,7 @@ Error Box_cmex::write(StreamWriter& writer) const
 }
 
 
-
+#if ENABLE_EXPERIMENTAL_FEATURS
 std::string Box_taic::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
@@ -4441,4 +4443,4 @@ Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
 
   return range.get_error();
 }
-
+#endif

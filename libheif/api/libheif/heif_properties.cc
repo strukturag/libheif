@@ -317,43 +317,6 @@ int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
 }
 
 
-struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
-                                               heif_item_id itemId,
-                                               const heif_tai_clock_info* clock,
-                                               heif_property_id* out_propertyId)
-{
-  if (!ctx || !clock) {
-    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
-  }
-
-  // Check if itemId exists
-  auto file = ctx->context->get_heif_file();
-  if (!file->image_exists(itemId)) {
-    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
-  }
-
-  // Create new taic if one doesn't exist for the itemId.
-  auto taic = ctx->context->get_heif_file()->get_property<Box_taic>(itemId);
-  if (!taic) {
-    taic = std::make_shared<Box_taic>();
-  }
-
-  taic->set_time_uncertainty(clock->time_uncertainty);
-  taic->set_clock_resolution(clock->clock_resolution);
-  taic->set_clock_drift_rate(clock->clock_drift_rate);
-  taic->set_clock_type(clock->clock_type);
-
-  bool essential = false;
-  heif_property_id id = ctx->context->add_property(itemId, taic, essential);
-
-  if (out_propertyId) {
-    *out_propertyId = id;
-  }
-
-  return heif_error_success;
-}
-
-
 struct heif_error heif_item_add_raw_property(const struct heif_context* context,
                                               heif_item_id itemId,
                                               uint32_t short_type,
@@ -406,6 +369,44 @@ struct heif_error find_property(const struct heif_context* context,
 
   auto box = properties[propertyId - 1];
   *box_casted = std::dynamic_pointer_cast<T>(box);
+  return heif_error_success;
+}
+
+
+#if ENABLE_EXPERIMENTAL_FEATURS
+struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
+                                               heif_item_id itemId,
+                                               const heif_tai_clock_info* clock,
+                                               heif_property_id* out_propertyId)
+{
+  if (!ctx || !clock) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "NULL passed"};
+  }
+
+  // Check if itemId exists
+  auto file = ctx->context->get_heif_file();
+  if (!file->image_exists(itemId)) {
+    return {heif_error_Input_does_not_exist, heif_suberror_Invalid_parameter_value, "itemId does not exist"};
+  }
+
+  // Create new taic if one doesn't exist for the itemId.
+  auto taic = ctx->context->get_heif_file()->get_property<Box_taic>(itemId);
+  if (!taic) {
+    taic = std::make_shared<Box_taic>();
+  }
+
+  taic->set_time_uncertainty(clock->time_uncertainty);
+  taic->set_clock_resolution(clock->clock_resolution);
+  taic->set_clock_drift_rate(clock->clock_drift_rate);
+  taic->set_clock_type(clock->clock_type);
+
+  bool essential = false;
+  heif_property_id id = ctx->context->add_property(itemId, taic, essential);
+
+  if (out_propertyId) {
+    *out_propertyId = id;
+  }
+
   return heif_error_success;
 }
 
@@ -521,6 +522,7 @@ struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx
 
   return heif_error_success;
 }
+#endif
 
 
 struct heif_error heif_item_get_property_raw_size(const struct heif_context* context,
