@@ -442,7 +442,7 @@ public:
 
   void write_float32(float);
 
-  void write64(int64_t);
+  void write64s(int64_t);
 
   void write(int size, uint64_t value);
 

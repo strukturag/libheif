@@ -758,7 +758,7 @@ void StreamWriter::write64(uint64_t v)
 }
 
 
-void StreamWriter::write64(int64_t v)
+void StreamWriter::write64s(int64_t v)
 {
   write64(reinterpret_cast<uint64_t&>(v));
 }

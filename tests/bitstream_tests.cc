@@ -81,6 +81,6 @@ TEST_CASE("read float") {
   std::vector<uint8_t> byteArray{0x40, 0x00, 0x00, 0x00};
   std::shared_ptr<StreamReader_memory> stream = std::make_shared<StreamReader_memory>(byteArray.data(), (int)byteArray.size(), false);
   BitstreamRange uut(stream, byteArray.size(), nullptr);
-  float f = uut.readFloat32();
+  float f = uut.read_float32();
   REQUIRE(f == 2.0);
 }
