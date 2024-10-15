@@ -270,12 +270,10 @@ uint32_t BitstreamRange::read32()
                      (buf[3]));
 }
 
-float BitstreamRange::readFloat32()
+float BitstreamRange::read_float32()
 {
-    int i = read32();
-    float f;
-    memcpy(&f, &i, sizeof(float));
-    return f;
+    uint32_t i = read32();
+    return std::bit_cast<float>(i); // this works directly on the value layout, thus we do not have to worry about memory layout
 }
 
 
@@ -348,33 +346,6 @@ int64_t BitstreamRange::read64s()
   else {
     return static_cast<int64_t >(v);
   }
-}
-
-
-float BitstreamRange::read_float32()
-{
-  assert(sizeof(float)==4);
-
-  if (!prepare_read(4)) {
-    return 0;
-  }
-
-  uint8_t buf[4];
-
-  auto istr = get_istream();
-  bool success = istr->read((char*) buf, 4);
-
-  if (!success) {
-    set_eof_while_reading();
-    return 0;
-  }
-
-#if !IS_BIG_ENDIAN
-  std::swap(buf[0],buf[3]);
-  std::swap(buf[1],buf[2]);
-#endif
-
-  return *reinterpret_cast<float*>(buf);
 }
 
 
@@ -723,11 +694,9 @@ void StreamWriter::write32(uint32_t v)
 }
 
 
-void StreamWriter::writeFloat32(float v)
+void StreamWriter::write_float32(float v)
 {
-  uint32_t i;
-  memcpy(&i, &v, sizeof(float));
-  write32(i);
+  write32(std::bit_cast<uint32_t>(v)); // this works directly on the value layout, thus we do not have to worry about memory layout
 }
 
 
@@ -768,30 +737,6 @@ void StreamWriter::write64(int64_t v)
 {
   write64(reinterpret_cast<uint64_t&>(v));
 }
-
-
-void StreamWriter::write_float32(float v)
-{
-  assert(sizeof(float)==4);
-
-  uint8_t buf[4];
-  *reinterpret_cast<float*>(buf) = v;
-
-#if !IS_BIG_ENDIAN
-  std::swap(buf[0], buf[3]);
-  std::swap(buf[1], buf[2]);
-#endif
-
-  if (m_position + 4 > m_data.size()) {
-    m_data.resize(m_position + 4);
-  }
-
-  m_data[m_position++] = buf[0];
-  m_data[m_position++] = buf[1];
-  m_data[m_position++] = buf[2];
-  m_data[m_position++] = buf[3];
-}
-
 
 
 void StreamWriter::write(int size, uint64_t value)

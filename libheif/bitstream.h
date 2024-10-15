@@ -270,13 +270,11 @@ public:
   /**
    * Read 32 bit floating point value from the bitstream.
    *
-   * The data is assumed to be in big endian format.
+   * The file data is assumed to be in big endian format.
    */
-  float readFloat32();
+  float read_float32();
 
   int64_t read64s();
-
-  float read_float32();
 
   std::string read_string();
 
@@ -442,7 +440,7 @@ public:
 
   void write64(uint64_t);
 
-  void writeFloat32(float);
+  void write_float32(float);
 
   void write64(int64_t);
 
@@ -453,8 +451,6 @@ public:
   void write(const std::vector<uint8_t>&);
 
   void write(const StreamWriter&);
-
-  void write_float32(float);
 
   void skip(int n);
 
