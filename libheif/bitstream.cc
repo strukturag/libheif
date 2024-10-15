@@ -273,8 +273,12 @@ uint32_t BitstreamRange::read32()
 
 float BitstreamRange::read_float32()
 {
-    uint32_t i = read32();
-    return std::bit_cast<float>(i); // this works directly on the value layout, thus we do not have to worry about memory layout
+#if __cpp_lib_bit_cast >= 201806L
+  uint32_t i = read32();
+  return std::bit_cast<float>(i); // this works directly on the value layout, thus we do not have to worry about memory layout
+#else
+  assert(false); // compiler too old to support bit_cast
+#endif
 }
 
 
@@ -697,7 +701,11 @@ void StreamWriter::write32(uint32_t v)
 
 void StreamWriter::write_float32(float v)
 {
+#if __cpp_lib_bit_cast >= 201806L
   write32(std::bit_cast<uint32_t>(v)); // this works directly on the value layout, thus we do not have to worry about memory layout
+#else
+  assert(false); // compiler too old to support bit_cast
+#endif
 }
 
 
