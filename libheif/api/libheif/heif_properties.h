@@ -38,7 +38,9 @@ enum heif_item_property_type
   heif_item_property_type_transform_rotation = heif_fourcc('i', 'r', 'o', 't'),
   heif_item_property_type_transform_crop = heif_fourcc('c', 'l', 'a', 'p'),
   heif_item_property_type_image_size = heif_fourcc('i', 's', 'p', 'e'),
-  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd')
+  heif_item_property_type_uuid = heif_fourcc('u', 'u', 'i', 'd'),
+  heif_item_property_type_tai_clock_info = heif_fourcc('t', 'a', 'i', 'c'),
+  heif_item_property_type_tai_timestamp = heif_fourcc('i', 't', 'a', 'i')
 };
 
 // Get the heif_property_id for a heif_item_id.
@@ -132,7 +134,6 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    int image_width, int image_height,
                                                    int* left, int* top, int* right, int* bottom);
 
-
 /**
  * @param context
  * @param itemId      The image item id to which this property belongs.
@@ -185,6 +186,7 @@ struct heif_error heif_item_get_property_uuid_type(const struct heif_context* co
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
                                                    uint8_t extended_type[16]);
+
 #ifdef __cplusplus
 }
 #endif

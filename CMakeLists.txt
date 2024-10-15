@@ -67,6 +67,10 @@ endif()
 
 LIST (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
+# TODO: when our minimum CMake reaches 3.20, replace this with "CMAKE_<LANG>_BYTE_ORDER"
+include (TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+add_compile_definitions(IS_BIG_ENDIAN=${IS_BIG_ENDIAN})
 
 # --- codec plugins
 

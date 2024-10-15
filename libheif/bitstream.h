@@ -274,6 +274,10 @@ public:
    */
   float readFloat32();
 
+  int64_t read64s();
+
+  float read_float32();
+
   std::string read_string();
 
   bool read(uint8_t* data, size_t n);
@@ -440,6 +444,8 @@ public:
 
   void writeFloat32(float);
 
+  void write64(int64_t);
+
   void write(int size, uint64_t value);
 
   void write(const std::string&);
@@ -447,6 +453,8 @@ public:
   void write(const std::vector<uint8_t>&);
 
   void write(const StreamWriter&);
+
+  void write_float32(float);
 
   void skip(int n);
 

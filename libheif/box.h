@@ -1477,4 +1477,120 @@ private:
   std::string m_tags;
 };
 
+
+
+class Box_taic : public FullBox
+{
+public:
+  Box_taic()
+  {
+    set_short_type(fourcc("taic"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * time_uncertainty.
+   * 
+   * The standard deviation measurement uncertainty in nanoseconds
+   * for the timestamp generation process. 
+   */
+  void set_time_uncertainty(uint64_t time_uncertainty) { m_time_uncertainty = time_uncertainty;}
+  
+  /**
+   * clock_resolution.
+   * 
+   * Specifies the resolution of the receptor clock in nanoseconds.
+   * For example, a microsecond clock has a clock_resolution of 1000.
+   */
+  void set_clock_resolution(uint32_t clock_resolution) { m_clock_resolution = clock_resolution; }
+  
+  /**
+   * clock_drift_rate.
+   * 
+   * The difference between the synchronized and unsynchronized
+   * time, over a period of one second. 
+   */
+  void set_clock_drift_rate(int32_t clock_drift_rate) { m_clock_drift_rate = clock_drift_rate; }
+  
+  /**
+   * clock_type.
+   * 
+   * 0 = Clock type is unkown
+   * 1 = The clock does not synchronize to an atomic source of absolute TAI time
+   * 2 = The clock can synchronize to an atomic source of absolute TAI time
+   */
+  void set_clock_type(uint8_t clock_type) { m_clock_type = clock_type; }
+
+  uint64_t get_time_uncertainty() const { return m_time_uncertainty; }
+  
+  uint32_t get_clock_resolution() const { return m_clock_resolution; }
+  
+  int32_t get_clock_drift_rate() const { return m_clock_drift_rate; }
+  
+  uint8_t get_clock_type() const { return m_clock_type; }
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  uint64_t m_time_uncertainty = heif_tai_clock_info_unknown_time_uncertainty;
+  uint32_t m_clock_resolution = 0;
+  int32_t m_clock_drift_rate = heif_tai_clock_info_unknown_drift_rate;
+  uint8_t m_clock_type = 0;
+};
+
+
+class Box_itai : public FullBox 
+{
+public:
+  Box_itai()
+  {
+    set_short_type(fourcc("itai"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  /**
+   * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
+   */
+  void set_tai_timestamp(uint64_t timestamp) { m_tai_timestamp = timestamp; }
+
+  /**
+  * synchronization_state (0=unsynchronized, 1=synchronized)
+  */
+  void set_synchronization_state(bool state) { m_synchronization_state = state; }
+
+  /**
+  * timestamp_generation_failure (0=generated, 1=failed)
+  */
+  void set_timestamp_generation_failure(bool failure) { m_timestamp_generation_failure = failure; }
+
+  /**
+   * timestamp_is_modified (0=original 1=modified)
+   */
+  void set_timestamp_is_modified(bool is_modified) { m_timestamp_is_modified = is_modified; }
+
+  uint64_t get_tai_timestamp() const { return m_tai_timestamp; }
+
+  bool get_synchronization_state() const { return m_synchronization_state; }
+
+  bool get_timestamp_generation_failure() const { return m_timestamp_generation_failure; }
+
+  bool get_timestamp_is_modified() const { return m_timestamp_is_modified; }
+
+protected:
+  Error parse(BitstreamRange& range) override;
+
+private:
+  uint64_t m_tai_timestamp;
+  bool m_synchronization_state;
+  bool m_timestamp_generation_failure;
+  bool m_timestamp_is_modified;
+};
+
 #endif
