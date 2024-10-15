@@ -59,13 +59,13 @@ int heif_context_get_list_of_item_IDs(const struct heif_context* ctx,
 }
 
 
-uint32_t heif_context_get_item_type(const struct heif_context* ctx, heif_item_id item_id)
+uint32_t heif_item_get_item_type(const struct heif_context* ctx, heif_item_id item_id)
 {
   return ctx->context->get_heif_file()->get_item_type_4cc(item_id);
 }
 
 
-int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id)
+int heif_item_is_item_hidden(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (infe == nullptr) {
@@ -77,7 +77,7 @@ int heif_context_is_item_hidden(const struct heif_context* ctx, heif_item_id ite
 }
 
 
-const char* heif_context_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id)
+const char* heif_item_get_mime_item_content_type(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
@@ -89,7 +89,7 @@ const char* heif_context_get_mime_item_content_type(const struct heif_context* c
   return infe->get_content_type().c_str();
 }
 
-const char* heif_context_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id)
+const char* heif_item_get_mime_item_content_encoding(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
@@ -102,7 +102,7 @@ const char* heif_context_get_mime_item_content_encoding(const struct heif_contex
 }
 
 
-const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, heif_item_id item_id)
+const char* heif_item_get_uri_item_uri_type(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
@@ -114,7 +114,7 @@ const char* heif_context_get_uri_item_uri_type(const struct heif_context* ctx, h
   return infe->get_item_uri_type().c_str();
 }
 
-const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item_id item_id)
+const char* heif_item_get_item_name(const struct heif_context* ctx, heif_item_id item_id)
 {
   auto infe = ctx->context->get_heif_file()->get_infe_box(item_id);
   if (!infe) { return nullptr; }
@@ -123,7 +123,7 @@ const char* heif_context_get_item_name(const struct heif_context* ctx, heif_item
 }
 
 
-struct heif_error heif_context_get_item_data(const struct heif_context* ctx,
+struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
                                              heif_item_id item_id,
                                              heif_metadata_compression* out_compression_format,
                                              uint8_t** out_data, size_t* out_data_size)
@@ -166,22 +166,6 @@ void heif_release_item_data(const struct heif_context* ctx, uint8_t** item_data)
   }
 }
 
-
-struct heif_error heif_context_get_item_data(struct heif_context* ctx,
-                                             heif_item_id item_id,
-                                             void* out_data)
-{
-  std::vector<uint8_t> data;
-  Error err = ctx->context->get_heif_file()->get_uncompressed_item_data(item_id, &data);
-
-  if (err) {
-    return err.error_struct(ctx->context.get());
-  }
-  else {
-    memcpy(out_data, data.data(), data.size());
-    return heif_error_success;
-  }
-}
 
 
 size_t heif_context_get_item_references(const struct heif_context* ctx,
@@ -332,7 +316,7 @@ struct heif_error heif_context_add_item_references(struct heif_context* ctx,
   return heif_error_success;
 }
 
-struct heif_error heif_context_set_item_name(struct heif_context* ctx,
+struct heif_error heif_item_set_item_name(struct heif_context* ctx,
                                              heif_item_id item,
                                              const char* item_name)
 {
