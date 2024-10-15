@@ -830,8 +830,8 @@ int main(int argc, char** argv)
       return 1;
     }
 
-    struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
-    encoder->UpdateDecodingOptions(handle, decode_options);
+    std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
+    encoder->UpdateDecodingOptions(handle, decode_options.get());
 
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
@@ -848,13 +848,12 @@ int main(int argc, char** argv)
     int ret;
 
     if (option_output_tiles) {
-      ret = decode_image_tiles(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+      ret = decode_image_tiles(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
     else {
-      ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options, encoder);
+      ret = decode_single_image(handle, numbered_output_filename_stem, output_filename_suffix, decode_options.get(), encoder);
     }
     if (ret) {
-      heif_decoding_options_free(decode_options);
       heif_image_handle_release(handle);
       return ret;
     }
