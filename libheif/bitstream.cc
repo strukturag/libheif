@@ -352,6 +352,9 @@ float BitstreamRange::read_float32()
 #else
   // compiler too old to support bit_cast
 
+  // TODO: I am not sure this works everywhere as there seem to be systems where
+  //       the float byte order is different from the integer endianness
+  //       https://en.wikipedia.org/wiki/Endianness#Floating_point
   int i = read32();
   float f;
   memcpy(&f, &i, sizeof(float));
@@ -366,6 +369,10 @@ void StreamWriter::write_float32(float v)
   write32(std::bit_cast<uint32_t>(v)); // this works directly on the value layout, thus we do not have to worry about memory layout
 #else
   // compiler too old to support bit_cast
+
+  // TODO: I am not sure this works everywhere as there seem to be systems where
+  //       the float byte order is different from the integer endianness
+  //       https://en.wikipedia.org/wiki/Endianness#Floating_point
   uint32_t i;
   memcpy(&i, &v, sizeof(float));
   write32(i);
