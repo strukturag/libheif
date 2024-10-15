@@ -39,3 +39,5 @@ struct heif_image * get_primary_image_ycbcr(heif_image_handle * handle, heif_chr
 void fill_new_plane(heif_image* img, heif_channel channel, int w, int h);
 
 struct heif_image * createImage_RGB_planar();
+
+std::string get_path_for_heifio_test_file(std::string filename);

@@ -484,7 +484,7 @@ RegionCoordinateTransform RegionCoordinateTransform::create(std::shared_ptr<Heif
       case fourcc("irot"): {
         auto irot = std::dynamic_pointer_cast<Box_irot>(property);
         RegionCoordinateTransform tmp;
-        switch (irot->get_rotation()) {
+        switch (irot->get_rotation_ccw()) {
           case 90:
             tmp.a = transform.c;
             tmp.b = transform.d;

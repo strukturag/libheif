@@ -25,7 +25,7 @@
 */
 
 #include "catch.hpp"
-#include "codecs/avc.h"
+#include "codecs/avc_boxes.h"
 #include "error.h"
 #include <cstdint>
 #include <iostream>
@@ -44,7 +44,7 @@ TEST_CASE("avcC") {
 
   BitstreamRange range(reader, byteArray.size());
   std::shared_ptr<Box> box;
-  Error error = Box::read(range, &box);
+  Error error = Box::read(range, &box, heif_get_global_security_limits());
   REQUIRE(error == Error::Ok);
   REQUIRE(range.error() == 0);
 
@@ -68,6 +68,9 @@ TEST_CASE("avcC") {
                         "AVCProfileIndication: 66 (Constrained Baseline)\n"
                         "profile_compatibility: 128\n"
                         "AVCLevelIndication: 30\n"
+                        "Chroma format: 4:2:0\n"
+                        "Bit depth luma: 8\n"
+                        "Bit depth chroma: 8\n"
                         "SPS: 67 64 00 28 ac 72 04 40 40 04 1a 10 00 00 03 00 "
                         "10 00 00 03 03 20 f1 83 18 46 \n"
                         "PPS: 68 e8 43 83 92 c8 b0 \n");

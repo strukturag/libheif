@@ -27,6 +27,8 @@
 #include <cstring>
 #include <cassert>
 #include <cstdio>
+#include <limits>
+#include <utility>
 
 #include <dav1d/version.h>
 #include <dav1d/dav1d.h>
@@ -90,7 +92,13 @@ struct heif_error dav1d_new_decoder(void** dec)
 
   dav1d_default_settings(&decoder->settings);
 
-  decoder->settings.frame_size_limit = MAX_IMAGE_WIDTH * MAX_IMAGE_HEIGHT;
+  if (heif_get_global_security_limits()->max_image_size_pixels > std::numeric_limits<unsigned int>::max()) {
+    decoder->settings.frame_size_limit = 0;
+  }
+  else {
+    decoder->settings.frame_size_limit = static_cast<unsigned int>(heif_get_global_security_limits()->max_image_size_pixels);
+  }
+
   decoder->settings.all_layers = 0;
 
   if (dav1d_open(&decoder->context, &decoder->settings) != 0) {
@@ -260,7 +268,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
     const uint8_t* data = (uint8_t*) frame.data[c];
     int stride = (int) frame.stride[c > 0 ? 1 : 0];
 
-    int w, h;
+    uint32_t w, h;
     get_subsampled_size(frame.p.w, frame.p.h,
                         channel2plane[c], chroma, &w, &h);
 
@@ -275,7 +283,7 @@ struct heif_error dav1d_decode_image(void* decoder_raw, struct heif_image** out_
 
     int bytes_per_pixel = (bpp + 7) / 8;
 
-    for (int y = 0; y < h; y++) {
+    for (uint32_t y = 0; y < h; y++) {
       memcpy(dst_mem + y * dst_stride, data + y * stride, w * bytes_per_pixel);
     }
   }

@@ -84,8 +84,8 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
                  want_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
@@ -95,10 +95,10 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   }
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
+  uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
 
   uint8_t* out_p;
-  int out_p_stride = 0;
+  uint32_t out_p_stride = 0;
 
   in_r = input->get_plane(heif_channel_R, &in_r_stride);
   in_g = input->get_plane(heif_channel_G, &in_g_stride);
@@ -109,7 +109,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
     in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
   }
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
 
     if (has_alpha && want_alpha) {
@@ -152,7 +152,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::state_after_conversion(const ColorState& input_state,
 
   if (input_state.colorspace != heif_colorspace_RGB ||
       input_state.chroma != heif_chroma_444 ||
-      input_state.bits_per_pixel == 8) {
+      input_state.bits_per_pixel <= 8) {
     return {};
   }
 
@@ -192,9 +192,9 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
                                               const ColorState& target_state,
                                               const heif_color_conversion_options& options) const
 {
-  if (input->get_bits_per_pixel(heif_channel_R) == 8 ||
-      input->get_bits_per_pixel(heif_channel_G) == 8 ||
-      input->get_bits_per_pixel(heif_channel_B) == 8) {
+  if (input->get_bits_per_pixel(heif_channel_R) <= 8 ||
+      input->get_bits_per_pixel(heif_channel_G) <= 8 ||
+      input->get_bits_per_pixel(heif_channel_B) <= 8) {
     return nullptr;
   }
 
@@ -202,7 +202,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   bool output_has_alpha = input_has_alpha || target_state.has_alpha;
 
   if (input_has_alpha) {
-    if (input->get_bits_per_pixel(heif_channel_Alpha) == 8) {
+    if (input->get_bits_per_pixel(heif_channel_Alpha) <= 8) {
       return nullptr;
     }
 
@@ -216,8 +216,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
                  output_has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
@@ -226,10 +226,10 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   const uint16_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
+  uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
 
   uint8_t* out_p;
-  int out_p_stride = 0;
+  uint32_t out_p_stride = 0;
 
   in_r = (uint16_t*) input->get_plane(heif_channel_R, &in_r_stride);
   in_g = (uint16_t*) input->get_plane(heif_channel_G, &in_g_stride);
@@ -238,6 +238,12 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   if (input_has_alpha) {
     in_a = (uint16_t*) input->get_plane(heif_channel_Alpha, &in_a_stride);
+    assert(in_a != nullptr);
+
+    // should never happen, but makes clang-tidy happy
+    if (in_a == nullptr) {
+      return nullptr;
+    }
   }
 
   in_r_stride /= 2;
@@ -247,8 +253,8 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   const int pixelsize = (output_has_alpha ? 8 : 6);
 
-  int x, y;
-  uint16_t alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
+  uint32_t x, y;
+  auto alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
   for (y = 0; y < height; y++) {
     for (x = 0; x < width; x++) {
       uint16_t r = in_r[x + y * in_r_stride];
@@ -338,8 +344,8 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB,
                  output_has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
@@ -349,10 +355,10 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
   }
 
   const uint8_t* in_r, * in_g, * in_b, * in_a = nullptr;
-  int in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
+  uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
 
   uint8_t* out_p;
-  int out_p_stride = 0;
+  uint32_t out_p_stride = 0;
 
   in_r = input->get_plane(heif_channel_R, &in_r_stride);
   in_g = input->get_plane(heif_channel_G, &in_g_stride);
@@ -365,7 +371,7 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
 
   const int pixelsize = (output_has_alpha ? 8 : 6);
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
 
     if (input_has_alpha) {
@@ -411,7 +417,7 @@ Op_RRGGBBaa_BE_to_RGB_HDR::state_after_conversion(const ColorState& input_state,
   if (input_state.colorspace != heif_colorspace_RGB ||
       (input_state.chroma != heif_chroma_interleaved_RRGGBB_BE &&
        input_state.chroma != heif_chroma_interleaved_RRGGBBAA_BE) ||
-      input_state.bits_per_pixel == 8) {
+      input_state.bits_per_pixel <= 8) {
     return {};
   }
 
@@ -445,8 +451,8 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
   int bpp = input->get_bits_per_pixel(heif_channel_interleaved);
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
@@ -464,11 +470,11 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
   }
 
   const uint8_t* in_p;
-  int in_p_stride = 0;
+  uint32_t in_p_stride = 0;
   int in_pix_size = has_alpha ? 8 : 6;
 
   uint16_t* out_r, * out_g, * out_b, * out_a = nullptr;
-  int out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
+  uint32_t out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
 
   in_p = input->get_plane(heif_channel_interleaved, &in_p_stride);
 
@@ -485,8 +491,8 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
   out_b_stride /= 2;
   out_a_stride /= 2;
 
-  uint16_t alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
-  int x, y;
+  auto alpha_max = static_cast<uint16_t>((1 << bpp) - 1);
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
 
     for (x = 0; x < width; x++) {
@@ -557,8 +563,8 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
 
@@ -575,11 +581,11 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   }
 
   const uint8_t* in_p;
-  int in_p_stride = 0;
+  uint32_t in_p_stride = 0;
   int in_pix_size = has_alpha ? 4 : 3;
 
   uint8_t* out_r, * out_g, * out_b, * out_a = nullptr;
-  int out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
+  uint32_t out_r_stride = 0, out_g_stride = 0, out_b_stride = 0, out_a_stride = 0;
 
   in_p = input->get_plane(heif_channel_interleaved, &in_p_stride);
 
@@ -591,7 +597,7 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
     out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
 
     for (x = 0; x < width; x++) {
@@ -681,8 +687,8 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   switch (input->get_chroma_format()) {
     case heif_chroma_interleaved_RRGGBB_LE:
@@ -707,17 +713,17 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
   }
 
   const uint8_t* in_p = nullptr;
-  int in_p_stride = 0;
+  uint32_t in_p_stride = 0;
 
   uint8_t* out_p;
-  int out_p_stride = 0;
+  uint32_t out_p_stride = 0;
 
   in_p = input->get_plane(heif_channel_interleaved, &in_p_stride);
   out_p = outimg->get_plane(heif_channel_interleaved, &out_p_stride);
 
-  int n_bytes = std::min(in_p_stride, out_p_stride);
+  uint32_t n_bytes = std::min(in_p_stride, out_p_stride);
 
-  int x, y;
+  uint32_t x, y;
   for (y = 0; y < height; y++) {
     for (x = 0; x < n_bytes; x += 2) {
       out_p[y * out_p_stride + x + 0] = in_p[y * in_p_stride + x + 1];

@@ -22,7 +22,7 @@ macro(plugin_compilation name varName foundName optionName defineName)
             target_link_libraries(heif-${name} PRIVATE ${${varName}_LIBRARIES} heif)
 
             install(TARGETS heif-${name}
-                    LIBRARY DESTINATION ${PLUGIN_DIRECTORY}
+                    LIBRARY DESTINATION ${COMPUTED_PLUGIN_INSTALL_DIRECTORY}
                     )
         else ()
             message("Compiling '" ${name} "' as built-in backend")
@@ -104,13 +104,22 @@ set(VVDEC_sources decoder_vvdec.cc decoder_vvdec.h)
 set(VVDEC_extra_plugin_sources)
 plugin_compilation(vvdec vvdec vvdec_FOUND VVDEC VVDEC)
 
+set(VVENC_sources encoder_vvenc.cc encoder_vvenc.h)
+set(VVENC_extra_plugin_sources)
+plugin_compilation(vvenc vvenc vvenc_FOUND VVENC VVENC)
+
+set(OpenH264_DECODER_sources decoder_openh264.cc decoder_openh264.h)
+set(OpenH264_DECODER_extra_plugin_sources)
+plugin_compilation(openh264dec OpenH264 OpenH264_DECODER_FOUND OpenH264_DECODER OpenH264_DECODER)
+
 target_sources(heif PRIVATE
                encoder_mask.h
-               encoder_mask.cc)
+               encoder_mask.cc
+               nalu_utils.h
+               nalu_utils.cc)
 
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             encoder_uncompressed.h
             encoder_uncompressed.cc)
 endif ()
-

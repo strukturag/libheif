@@ -31,13 +31,13 @@
 #include <string>
 #include <iostream>
 #include <cassert>
+#include <memory>
 #include <libheif/heif.h>
-#include "encoder.h"
+#include "heifio/encoder.h"
 
 #if HAVE_LIBPNG
-#  include "encoder_png.h"
+#  include "heifio/encoder_png.h"
 #include "common.h"
-
 #endif
 
 #if defined(_MSC_VER)

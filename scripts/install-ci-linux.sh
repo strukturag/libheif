@@ -107,6 +107,14 @@ if [ ! -z "$WITH_GRAPHICS" ]; then
         libgdk-pixbuf2.0-dev \
         libjpeg-dev \
         libpng-dev \
+        libtiff-dev \
+        "
+fi
+
+if [ ! -z "$WITH_UNCOMPRESSED_CODEC" ]; then
+    INSTALL_PACKAGES="$INSTALL_PACKAGES \
+        libbrotli-dev \
+        zlib-dev \
         "
 fi
 
@@ -191,7 +199,7 @@ if [ "$WITH_DAV1D" = "1" ]; then
 
     export PATH="$PATH:$HOME/.local/bin"
     cd third-party
-    sh dav1d.cmd # dav1d does not support this option anymore: -Denable_avx512=false
+    sh -e dav1d.cmd # dav1d does not support this option anymore: -Denable_avx512=false
     cd ..
 fi
 
@@ -200,6 +208,6 @@ if [ "$WITH_RAV1E" = "1" ]; then
 
     export PATH="$PATH:$HOME/.cargo/bin"
     cd third-party
-    sh rav1e.cmd
+    sh -e rav1e.cmd
     cd ..
 fi

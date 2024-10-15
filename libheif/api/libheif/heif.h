@@ -52,6 +52,8 @@ extern "C" {
 //  1.14           3            5             1             1            1            1
 //  1.15           4            5             1             1            1            1
 //  1.16           5            6             1             1            1            1
+//  1.18           5            7             1             1            1            1
+//  1.19           5            7             2             1            1            1
 
 #if defined(_MSC_VER) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
@@ -241,6 +243,13 @@ enum heif_suberror_code
 
   heif_suberror_No_vvcC_box = 141,
 
+  // icbr is only needed in some situations, this error is for those cases
+  heif_suberror_No_icbr_box = 142,
+
+  heif_suberror_No_avcC_box = 143,
+
+  // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
+  heif_suberror_Decompression_invalid_data = 150,
 
   // --- Memory_allocation_error ---
 
@@ -249,6 +258,9 @@ enum heif_suberror_code
   // security limits further.
   heif_suberror_Security_limit_exceeded = 1000,
 
+  // There was an error from the underlying compression / decompression library.
+  // One possibility is lack of resources (e.g. memory).
+  heif_suberror_Compression_initialisation_error = 1001,
 
   // --- Usage_error ---
 
@@ -297,6 +309,10 @@ enum heif_suberror_code
 
   heif_suberror_Unsupported_header_compression_method = 3005,
 
+  // Generically compressed data used an unsupported compression method
+  heif_suberror_Unsupported_generic_compression_method = 3006,
+
+  heif_suberror_Unsupported_essential_property = 3007,
 
   // --- Encoder_plugin_error ---
 
@@ -413,7 +429,7 @@ enum heif_compression_format
   /**
    * Uncompressed encoding.
    *
-   * This is defined in ISO/IEC 23001-17:2023 (Final Draft International Standard).
+   * This is defined in ISO/IEC 23001-17:2024.
   */
   heif_compression_uncompressed = 8,
   /**
@@ -472,7 +488,10 @@ enum heif_colorspace
   heif_colorspace_RGB = 1,
 
   // heif_colorspace_monochrome should only be used with heif_chroma = heif_chroma_monochrome
-  heif_colorspace_monochrome = 2
+  heif_colorspace_monochrome = 2,
+
+  // Indicates that this image has no visual channels.
+  heif_colorspace_nonvisual = 3
 };
 
 enum heif_channel
@@ -484,9 +503,21 @@ enum heif_channel
   heif_channel_G = 4,
   heif_channel_B = 5,
   heif_channel_Alpha = 6,
-  heif_channel_interleaved = 10
+  heif_channel_interleaved = 10,
+  heif_channel_filter_array = 11,
+  heif_channel_depth = 12,
+  heif_channel_disparity = 13
 };
 
+enum heif_metadata_compression
+{
+  heif_metadata_compression_off = 0,
+  heif_metadata_compression_auto = 1,
+  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_zlib = 4,    // do not use for header data
+  heif_metadata_compression_brotli = 5
+};
 
 // ========================= library initialization ======================
 
@@ -902,14 +933,32 @@ LIBHEIF_API
 void heif_context_free(struct heif_context*);
 
 
+
 struct heif_reading_options;
 
 enum heif_reader_grow_status
 {
-  heif_reader_grow_status_size_reached,   // requested size has been reached, we can read until this point
-  heif_reader_grow_status_timeout,        // size has not been reached yet, but it may still grow further
-  heif_reader_grow_status_size_beyond_eof // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_size_reached,    // requested size has been reached, we can read until this point
+  heif_reader_grow_status_timeout,         // size has not been reached yet, but it may still grow further (deprecated)
+  heif_reader_grow_status_size_beyond_eof, // size has not been reached and never will. The file has grown to its full size
+  heif_reader_grow_status_error            // an error has occurred
 };
+
+struct heif_reader_range_request_result
+{
+  enum heif_reader_grow_status status; // should not return 'heif_reader_grow_status_timeout'
+
+  // Indicates up to what position the file has been read.
+  // If we cannot read the whole file range (status == 'heif_reader_grow_status_size_beyond_eof'), this is the actual end position.
+  // On the other hand, it may be that the reader was reading more data than requested. In that case, it should indicate the full size here
+  // and libheif may decide to make use of the additional data (e.g. for filling 'tili' offset tables).
+  uint64_t range_end;
+
+  // for status == 'heif_reader_grow_status_error'
+  int reader_error_code;        // a reader specific error code
+  const char* reader_error_msg; // libheif will call heif_reader.release_error_msg on this if it is not NULL
+};
+
 
 struct heif_reader
 {
@@ -919,7 +968,7 @@ struct heif_reader
   // --- version 1 functions ---
   int64_t (* get_position)(void* userdata);
 
-  // The functions read(), and seek() return heif_error_ok on success.
+  // The functions read(), and seek() return 0 on success.
   // Generally, libheif will make sure that we do not read past the file size.
   int (* read)(void* data,
                size_t size,
@@ -937,6 +986,41 @@ struct heif_reader
   // detection whether the target_size is above the (fixed) file length
   // (in this case, return 'size_beyond_eof').
   enum heif_reader_grow_status (* wait_for_file_size)(int64_t target_size, void* userdata);
+
+  // --- version 2 functions ---
+
+  // These two functions are for applications that want to stream HEIF files on demand.
+  // For example, a large HEIF file that is served over HTTPS and we only want to download
+  // it partially to decode individual tiles.
+  // If you do not have this use case, you do not have to implement these functions and
+  // you can set them to NULL. For simple linear loading, you may use the 'wait_for_file_size'
+  // function above instead.
+
+  // If this function is defined, libheif will often request a file range before accessing it.
+  // `end_pos` is one byte after the last position to be read.
+  // You should return
+  // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
+  // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
+  //   (the valid part of the range has been read).
+  struct heif_reader_range_request_result (*request_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+
+  // libheif might issue hints when it assumes that a file range might be needed in the future.
+  // This may happen, for example, when your are doing selective tile accesses and libheif proposes
+  // to preload offset pointer tables.
+  // Another difference to request_file_range() is that this call should be non-blocking.
+  // If you preload any data, do this in a background thread.
+  void (*preload_range_hint)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+
+  // If libheif does not need access to a file range anymore, it may call this function to
+  // give a hint to the reader that it may release the range from a cache.
+  // If you do not maintain a file cache that wants to reduce its size dynamically, you do not
+  // need to implement this function.
+  void (*release_file_range)(uint64_t start_pos, uint64_t end_pos, void* userdata);
+
+  // Release an error message that was returned by heif_reader in an earlier call.
+  // If this function is NULL, the error message string will not be released.
+  // This is a viable option if you are only returning static strings.
+  void (*release_error_msg)(const char* msg);
 };
 
 
@@ -1006,7 +1090,7 @@ void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 
 
 LIBHEIF_API
-void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
+void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_pixels);
 
 // If the maximum threads number is set to 0, the image tiles are decoded in the main thread.
 // This is different from setting it to 1, which will generate a single background thread to decode the tiles.
@@ -1015,6 +1099,46 @@ void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int max
 // to minimize parallelism in each decoder.
 LIBHEIF_API
 void heif_context_set_max_decoding_threads(struct heif_context* ctx, int max_threads);
+
+
+// --- security limits
+
+// If you set a limit to 0, the limit is disabled.
+struct heif_security_limits {
+  uint8_t version;
+
+  // --- version 1
+
+  // Limit on the maximum image size to avoid allocating too much memory.
+  // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
+  uint64_t max_image_size_pixels;
+  uint64_t max_number_of_tiles;
+  uint32_t max_bayer_pattern_pixels;
+  uint32_t max_items;
+
+  uint32_t max_color_profile_size;
+  uint64_t max_memory_block_size;
+
+  uint32_t max_iloc_items;
+  uint32_t max_iloc_extents_per_item;
+
+  uint32_t max_children_per_box; // for all boxes that are not covered by other limits
+};
+
+// The global security limits are the default for new heif_contexts.
+// These global limits cannot be changed, but you can override the limits for a specific heif_context.
+LIBHEIF_API
+const struct heif_security_limits* heif_get_global_security_limits();
+
+// Returns the security limits for a heif_context.
+// By default, the limits are set to the global limits, but you can change them in the returned object.
+LIBHEIF_API
+struct heif_security_limits* heif_context_get_security_limits(const struct heif_context*);
+
+// Overwrites the security limits of a heif_context.
+// This is a convenience function to easily copy limits.
+LIBHEIF_API
+struct heif_error heif_context_set_security_limits(struct heif_context*, const struct heif_security_limits*);
 
 
 // ========================= heif_image_handle =========================
@@ -1052,17 +1176,21 @@ LIBHEIF_API
 int heif_image_handle_is_premultiplied_alpha(const struct heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
+// Only defined for images coded in the YCbCr or monochrome colorspace.
 LIBHEIF_API
 int heif_image_handle_get_luma_bits_per_pixel(const struct heif_image_handle*);
 
 // Returns -1 on error, e.g. if this information is not present in the image.
+// Only defined for images coded in the YCbCr colorspace.
 LIBHEIF_API
 int heif_image_handle_get_chroma_bits_per_pixel(const struct heif_image_handle*);
 
 // Return the colorspace that libheif proposes to use for decoding.
 // Usually, these will be either YCbCr or Monochrome, but it may also propose RGB for images
-// encoded with matrix_coefficients=0.
+// encoded with matrix_coefficients=0 or for images coded natively in RGB.
 // It may also return *_undefined if the file misses relevant information to determine this without decoding.
+// These are only proposed values that avoid colorspace conversions as much as possible.
+// You can still request the output in your preferred colorspace, but this may involve an internal conversion.
 LIBHEIF_API
 struct heif_error heif_image_handle_get_preferred_decoding_colorspace(const struct heif_image_handle* image_handle,
                                                                       enum heif_colorspace* out_colorspace,
@@ -1087,6 +1215,83 @@ int heif_image_handle_get_ispe_height(const struct heif_image_handle* handle);
 // might have acquired from elsewhere.
 LIBHEIF_API
 struct heif_context* heif_image_handle_get_context(const struct heif_image_handle* handle);
+
+
+struct heif_image_tiling
+{
+  int version;
+
+  // --- version 1
+
+  uint32_t num_columns;
+  uint32_t num_rows;
+  uint32_t tile_width;
+  uint32_t tile_height;
+
+  uint32_t image_width;
+  uint32_t image_height;
+
+  // Position of the top left tile.
+  // Usually, this is (0;0), but if a tiled image is rotated or cropped, it may be that the top left tile should be placed at a negative position.
+  // The offsets define this negative shift.
+  uint32_t top_offset;
+  uint32_t left_offset;
+
+  uint8_t number_of_extra_dimensions;  // 0 for normal images, 1 for volumetric (3D), ...
+  uint32_t extra_dimension_size[8];    // size of extra dimensions (first 8 dimensions)
+};
+
+
+// If 'process_image_transformations' is true, this returns modified sizes.
+// If it is false, the top_offset and left_offset will always be (0;0).
+LIBHEIF_API
+struct heif_error heif_image_handle_get_image_tiling(const struct heif_image_handle* handle, int process_image_transformations, struct heif_image_tiling* out_tiling);
+
+
+// For grid images, return the image item ID of a specific grid tile.
+// If 'process_image_transformations' is true, the tile positions are given in the transformed image coordinate system and
+// are internally mapped to the original image tile positions.
+LIBHEIF_API
+struct heif_error heif_image_handle_get_grid_image_tile_id(const struct heif_image_handle* handle,
+                                                           int process_image_transformations,
+                                                           uint32_t tile_x, uint32_t tile_y,
+                                                           heif_item_id* out_tile_item_id);
+
+
+struct heif_decoding_options;
+
+// The tile position is given in tile indices, not in pixel coordinates.
+// If the image transformations are processed (option->ignore_image_transformations==false), the tile position
+// is given in the transformed coordinates.
+LIBHEIF_API
+struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
+                                                      struct heif_image** out_img,
+                                                      enum heif_colorspace colorspace,
+                                                      enum heif_chroma chroma,
+                                                      const struct heif_decoding_options* options,
+                                                      uint32_t tile_x, uint32_t tile_y);
+
+
+// ------------------------- entity groups ------------------------
+
+typedef uint32_t heif_entity_group_id;
+
+struct heif_entity_group
+{
+  heif_entity_group_id entity_group_id;
+  uint32_t entity_group_type;  // this is a FourCC constant
+  heif_item_id* entities;
+  uint32_t num_entities;
+};
+
+// Use 0 for `type_filter` or `item_filter` to disable the filter.
+// Returns an array of heif_entity_group structs with *out_num_groups entries.
+LIBHEIF_API
+struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context*, uint32_t type_filter, uint32_t item_filter, int* out_num_groups);
+
+// Release an array of entity groups returned by heif_context_get_entity_groups().
+LIBHEIF_API
+void heif_entity_groups_release(struct heif_entity_group*, int num_groups);
 
 
 // ------------------------- depth images -------------------------
@@ -1472,8 +1677,10 @@ enum heif_chroma_upsampling_algorithm
   heif_chroma_upsampling_bilinear = 2
 };
 
+
 struct heif_color_conversion_options
 {
+  // 'version' must be 1.
   uint8_t version;
 
   // --- version 1 options
@@ -1488,7 +1695,14 @@ struct heif_color_conversion_options
   // Set this field to 'true' if you want to make sure that the specified algorithm is used even
   // at the cost of slightly higher computation times.
   uint8_t only_use_preferred_chroma_algorithm;
+
+  // --- Note that we cannot extend this struct because it is embedded in
+  //     other structs (heif_decoding_options and heif_encoding_options).
 };
+
+// Assumes that it is a version=1 struct.
+LIBHEIF_API
+void heif_color_conversion_options_set_defaults(struct heif_color_conversion_options*);
 
 
 struct heif_decoding_options
@@ -1619,7 +1833,6 @@ struct heif_error heif_image_crop(struct heif_image* img,
 LIBHEIF_API
 int heif_image_get_bits_per_pixel(const struct heif_image*, enum heif_channel channel);
 
-
 // Get the number of bits per pixel in the given image channel. This function returns
 // the number of bits used for representing the pixel value, which might be smaller
 // than the number of bits used in memory.
@@ -1647,6 +1860,7 @@ uint8_t* heif_image_get_plane(struct heif_image*,
                               int* out_stride);
 
 
+
 struct heif_scaling_options;
 
 // Currently, heif_scaling_options is not defined yet. Pass a NULL pointer.
@@ -1655,6 +1869,12 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
                                          struct heif_image** output,
                                          int width, int height,
                                          const struct heif_scaling_options* options);
+
+// Extends the image size to match the given size by extending the right and bottom borders.
+// The border areas are filled with zero.
+LIBHEIF_API
+struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
+                                                           uint32_t width, uint32_t height);
 
 // The color profile is not attached to the image handle because we might need it
 // for color space transform and encoding.
@@ -1709,6 +1929,10 @@ int heif_image_has_content_light_level(const struct heif_image*);
 LIBHEIF_API
 void heif_image_get_content_light_level(const struct heif_image*, struct heif_content_light_level* out);
 
+// Returns whether the image has 'content light level' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_content_light_level(const struct heif_image_handle*, struct heif_content_light_level* out);
+
 LIBHEIF_API
 void heif_image_set_content_light_level(const struct heif_image*, const struct heif_content_light_level* in);
 
@@ -1741,8 +1965,13 @@ int heif_image_has_mastering_display_colour_volume(const struct heif_image*);
 LIBHEIF_API
 void heif_image_get_mastering_display_colour_volume(const struct heif_image*, struct heif_mastering_display_colour_volume* out);
 
+// Returns whether the image has 'mastering display colour volume' information. If 0 is returned, the output is not filled.
+LIBHEIF_API
+int heif_image_handle_get_mastering_display_colour_volume(const struct heif_image_handle*, struct heif_mastering_display_colour_volume* out);
+
 LIBHEIF_API
 void heif_image_set_mastering_display_colour_volume(const struct heif_image*, const struct heif_mastering_display_colour_volume* in);
+
 
 // Converts the internal numeric representation of heif_mastering_display_colour_volume to the
 // normalized values, collected in heif_decoded_mastering_display_colour_volume.
@@ -1753,6 +1982,10 @@ struct heif_error heif_mastering_display_colour_volume_decode(const struct heif_
 
 LIBHEIF_API
 void heif_image_get_pixel_aspect_ratio(const struct heif_image*, uint32_t* aspect_h, uint32_t* aspect_v);
+
+// Returns whether the image has 'pixel aspect ratio information' information. If 0 is returned, the output is filled with the 1:1 default.
+LIBHEIF_API
+int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle*, uint32_t* aspect_h, uint32_t* aspect_v);
 
 LIBHEIF_API
 void heif_image_set_pixel_aspect_ratio(struct heif_image*, uint32_t aspect_h, uint32_t aspect_v);
@@ -2078,7 +2311,7 @@ struct heif_encoding_options
 
   // Set this to the NCLX parameters to be used in the output image or set to NULL
   // when the same parameters as in the input image should be used.
-  struct heif_color_profile_nclx* output_nclx_profile;
+  const struct heif_color_profile_nclx* output_nclx_profile;
 
   uint8_t macOS_compatibility_workaround_no_nclx_profile;
 
@@ -2093,7 +2326,7 @@ struct heif_encoding_options
 
   // version 7 options
 
-  // Set this to true to use compressed form of uncC where possible
+  // Set this to true to use compressed form of uncC where possible.
   uint8_t prefer_uncC_short_form;
 };
 
@@ -2138,6 +2371,34 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
                                            struct heif_image_handle** out_image_handle);
 
 LIBHEIF_API
+struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
+                                              uint32_t image_width,
+                                              uint32_t image_height,
+                                              uint32_t tile_columns,
+                                              uint32_t tile_rows,
+                                              const struct heif_encoding_options* encoding_options,
+                                              struct heif_image_handle** out_grid_image_handle);
+
+LIBHEIF_API
+struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
+                                              struct heif_image_handle* tiled_image,
+                                              uint32_t tile_x, uint32_t tile_y,
+                                              const struct heif_image* image,
+                                              struct heif_encoder* encoder);
+
+// offsets[] should either be NULL (all offsets==0) or an array of size 2*nImages with x;y offset pairs.
+// If background_rgba is NULL, the background is transparent.
+LIBHEIF_API
+struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
+                                                 uint32_t image_width,
+                                                 uint32_t image_height,
+                                                 uint16_t nImages,
+                                                 const heif_item_id* image_ids,
+                                                 int32_t* offsets,
+                                                 const uint16_t background_rgba[4],
+                                                 struct heif_image_handle** out_iovl_image_handle);
+
+LIBHEIF_API
 struct heif_error heif_context_set_primary_image(struct heif_context*,
                                                  struct heif_image_handle* image_handle);
 
@@ -2156,14 +2417,6 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context*,
                                                 const struct heif_encoding_options* options,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_thumb_image_handle);
-
-enum heif_metadata_compression
-{
-  heif_metadata_compression_off,
-  heif_metadata_compression_auto,
-  heif_metadata_compression_deflate,
-  heif_metadata_compression_unknown
-};
 
 // Assign 'thumbnail_image' as the thumbnail image of 'master_image'.
 LIBHEIF_API

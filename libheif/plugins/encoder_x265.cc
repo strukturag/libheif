@@ -901,11 +901,20 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
 
   encoder->encoder = api->encoder_open(param);
 
+#if X265_BUILD >= 212
+  x265_picture* out_pic = NULL;
+  api->encoder_encode(encoder->encoder,
+                      &encoder->nals,
+                      &encoder->num_nals,
+                      pic,
+                      &out_pic);
+#else
   api->encoder_encode(encoder->encoder,
                       &encoder->nals,
                       &encoder->num_nals,
                       pic,
                       NULL);
+#endif
 
   api->picture_free(pic);
   api->param_free(param);
@@ -967,11 +976,20 @@ static struct heif_error x265_get_compressed_data(void* encoder_raw, uint8_t** d
     encoder->nal_output_counter = 0;
 
 
+#if X265_BUILD >= 212
+    x265_picture* out_pic = NULL;
+    int result = api->encoder_encode(encoder->encoder,
+                                     &encoder->nals,
+                                     &encoder->num_nals,
+                                     NULL,
+                                     &out_pic);
+#else
     int result = api->encoder_encode(encoder->encoder,
                                      &encoder->nals,
                                      &encoder->num_nals,
                                      NULL,
                                      NULL);
+#endif
     if (result <= 0) {
       *data = nullptr;
       *size = 0;

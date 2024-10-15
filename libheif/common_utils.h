@@ -23,6 +23,7 @@
 
 #include <cinttypes>
 #include "libheif/heif.h"
+#include <string>
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED
@@ -31,13 +32,15 @@
 #endif
 
 
-constexpr inline uint32_t fourcc_to_uint32(const char* id)
+constexpr inline uint32_t fourcc(const char* id)
 {
   return (((((uint32_t) id[0])&0xFF) << 24) |
           ((((uint32_t) id[1])&0xFF) << 16) |
           ((((uint32_t) id[2])&0xFF) << 8) |
           ((((uint32_t) id[3])&0xFF) << 0));
 }
+
+std::string fourcc_to_string(uint32_t code);
 
 
 // Functions for common use in libheif and the plugins.
@@ -46,10 +49,10 @@ uint8_t chroma_h_subsampling(heif_chroma c);
 
 uint8_t chroma_v_subsampling(heif_chroma c);
 
-void get_subsampled_size(int width, int height,
+void get_subsampled_size(uint32_t width, uint32_t height,
                          heif_channel channel,
                          heif_chroma chroma,
-                         int* subsampled_width, int* subsampled_height);
+                         uint32_t* subsampled_width, uint32_t* subsampled_height);
 
 uint8_t compute_avif_profile(int bits_per_pixel, heif_chroma chroma);
 

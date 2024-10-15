@@ -58,8 +58,8 @@ Op_drop_alpha_plane::convert_colorspace(const std::shared_ptr<const HeifPixelIma
                                         const ColorState& target_state,
                                         const heif_color_conversion_options& options) const
 {
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   auto outimg = std::make_shared<HeifPixelImage>();
 

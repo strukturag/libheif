@@ -48,7 +48,7 @@ struct encoder_struct_uvg266
   size_t output_idx = 0;
 };
 
-static const int uvg266_PLUGIN_PRIORITY = 100;
+static const int uvg266_PLUGIN_PRIORITY = 50;
 
 #define MAX_PLUGIN_NAME_LENGTH 80
 

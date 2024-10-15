@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3) # Oldest Ubuntu LTS (20.04 currently)
 
-project(libheif LANGUAGES C CXX VERSION 1.18.0)
+project(libheif LANGUAGES C CXX VERSION 1.18.2)
 
 # compatibility_version is never allowed to be decreased for any specific SONAME.
 # Libtool in the libheif-1.15.1 release had set it to 17.0.0, so we have to use this for the v1.x.y versions.
@@ -25,10 +25,15 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON CACHE BOOL "Treat compilation warning as error")
 
 if(NOT MSVC)
+  # cmake 3.24 introduces this variable, but for backward compatibility, we set it explicitly
+  if (CMAKE_COMPILE_WARNING_AS_ERROR)
+      add_definitions(-Werror)
+  endif ()
+
   add_definitions(-Wall)
-  add_definitions(-Werror)
   add_definitions(-Wsign-compare)
   add_definitions(-Wconversion)
   add_definitions(-Wno-sign-conversion)
@@ -41,7 +46,7 @@ if(NOT MSVC)
   endif ()
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -70,11 +75,19 @@ add_compile_definitions(IS_BIG_ENDIAN=${IS_BIG_ENDIAN})
 # --- codec plugins
 
 option(ENABLE_PLUGIN_LOADING "Support loading of plugins" ON)
-set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_FULL_LIBDIR}/libheif" CACHE STRING "Plugin install directory")
+set(PLUGIN_DIRECTORY "${CMAKE_INSTALL_FULL_LIBDIR}/libheif" CACHE STRING "Plugin directory")
+set(PLUGIN_INSTALL_DIRECTORY "" CACHE STRING "Plugin install directory (leaving it empty will use PLUGIN_DIRECTORY)")
 
 if (ENABLE_PLUGIN_LOADING)
     set(PLUGIN_LOADING_SUPPORTED_AND_ENABLED TRUE)
-    install(DIRECTORY DESTINATION ${PLUGIN_DIRECTORY} DIRECTORY_PERMISSIONS
+
+    if (PLUGIN_INSTALL_DIRECTORY STREQUAL "")
+        set(COMPUTED_PLUGIN_INSTALL_DIRECTORY ${PLUGIN_DIRECTORY})
+    else ()
+        set(COMPUTED_PLUGIN_INSTALL_DIRECTORY ${PLUGIN_INSTALL_DIRECTORY})
+    endif ()
+
+    install(DIRECTORY DESTINATION ${COMPUTED_PLUGIN_INSTALL_DIRECTORY} DIRECTORY_PERMISSIONS
         OWNER_WRITE OWNER_READ OWNER_EXECUTE
         GROUP_READ GROUP_EXECUTE
         WORLD_READ WORLD_EXECUTE)
@@ -152,6 +165,37 @@ if (WITH_VVDEC)
         set(vvdec_LIBRARIES vvdec::vvdec)
     endif()
 endif ()
+
+# vvenc
+
+plugin_option(VVENC "vvenc VVC encoder (experimental)" OFF OFF)
+if (WITH_VVENC)
+    # TODO: how to do configure vvenc cleanly?
+    find_package(Threads REQUIRED)
+    find_package(vvenc 1.12.0)
+    if (vvenc_FOUND)
+        set(vvenc_LIBRARIES vvenc::vvenc)
+    endif()
+endif ()
+
+# openh264 decoder
+
+plugin_option(OpenH264_DECODER "OpenH264 decoder" ON OFF)
+# plugin_option(OpenH264_ENCODER "OpenH264 encoder" ON OFF)
+if (WITH_OpenH264_ENCODER OR WITH_OpenH264_DECODER)
+    find_package(OpenH264)
+
+    # When decoding/encoding is disabled, overwrite the *_FOUND variables, because they are used to ultimately decide what to build.
+    # TODO
+    if (OpenH264_FOUND AND WITH_OpenH264_DECODER)
+        set(OpenH264_DECODER_FOUND TRUE)
+    endif()
+#    if (OpenH264_FOUND AND WITH_OpenH264_ENCODER)
+#        set(OpenH264_ENCODER_FOUND TRUE)
+#    endif()
+endif()
+
+
 
 # dav1d
 
@@ -240,11 +284,14 @@ plugin_compilation_info(SvtEnc SvtEnc "SVT AV1 encoder")
 plugin_compilation_info(RAV1E RAV1E "Rav1e AV1 encoder")
 plugin_compilation_info(JPEG_DECODER JPEG "JPEG decoder")
 plugin_compilation_info(JPEG_ENCODER JPEG "JPEG encoder")
+plugin_compilation_info(OpenH264_DECODER OpenH264_DECODER "OpenH264 decoder")
+# plugin_compilation_info(OpenH264_ENCODER OpenH264_ENCODER "OpenH264 encoder")
 plugin_compilation_info(OpenJPEG_DECODER OpenJPEG "OpenJPEG J2K decoder")
 plugin_compilation_info(OpenJPEG_ENCODER OpenJPEG "OpenJPEG J2K encoder")
 # plugin_compilation_info(OPENJPH_DECODER OPENJPH "OpenJPH HT-J2K decoder")
 plugin_compilation_info(OPENJPH_ENCODER OPENJPH "OpenJPH HT-J2K encoder")
 plugin_compilation_info(UVG266_ENCODER UVG266 "uvg266 VVC enc. (experimental)")
+plugin_compilation_info(VVENC vvenc "vvenc VVC enc. (experimental)")
 plugin_compilation_info(VVDEC vvdec "vvdec VVC dec. (experimental)")
 
 # --- show summary which formats are supported
@@ -301,8 +348,17 @@ endif()
 if (OPENJPH_FOUND AND WITH_OPENJPH_DECODER)
     set(SUPPORTS_J2K_HT_ENCODING TRUE)
 endif()
-if (UVG266_FOUND)
+if (UVG266_FOUND OR vvenc_FOUND)
     set(SUPPORTS_VVC_ENCODING TRUE)
+endif()
+if (vvdec_FOUND AND WITH_VVDEC)
+    set(SUPPORTS_VVC_DECODING TRUE)
+endif()
+if (OpenH264_DECODER_FOUND)
+    set(SUPPORTS_AVC_DECODING TRUE)
+endif()
+if (OpenH264_ENCODER_FOUND)
+    set(SUPPORTS_AVC_ENCODING TRUE)
 endif()
 
 if (WITH_UNCOMPRESSED_CODEC)
@@ -312,13 +368,15 @@ endif()
 
 message("\n=== Supported formats ===")
 message("format        decoding   encoding")
-format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
+format_compilation_info("AVC"  SUPPORTS_AVC_DECODING SUPPORTS_AVC_ENCODING)
 format_compilation_info("AVIF" SUPPORTS_AVIF_DECODING SUPPORTS_AVIF_ENCODING)
-format_compilation_info("VVC"  FALSE SUPPORTS_VVC_ENCODING)
+format_compilation_info("HEIC" SUPPORTS_HEIC_DECODING SUPPORTS_HEIC_ENCODING)
 format_compilation_info("JPEG" SUPPORTS_JPEG_DECODING SUPPORTS_JPEG_ENCODING)
 format_compilation_info("JPEG2000" SUPPORTS_J2K_DECODING SUPPORTS_J2K_ENCODING)
 format_compilation_info("JPEG2000-HT" SUPPORTS_J2K_HT_DECODING SUPPORTS_J2K_HT_ENCODING)
 format_compilation_info("Uncompressed" SUPPORTS_UNCOMPRESSED_DECODING SUPPORTS_UNCOMPRESSED_ENCODING)
+format_compilation_info("VVC"  SUPPORTS_VVC_DECODING SUPPORTS_VVC_ENCODING)
+
 message("")
 
 # --- Libsharpyuv color space transforms
@@ -383,8 +441,22 @@ endif()
 if (LIBSHARPYUV_FOUND)
     list(APPEND REQUIRES_PRIVATE "libsharpyuv")
 endif()
-if (WITH_DEFLATE_HEADER_COMPRESSION)
-    list(APPEND REQUIRES_PRIVATE "zlib")
+if (WITH_HEADER_COMPRESSION OR WITH_UNCOMPRESSED_CODEC)
+    find_package(ZLIB)
+    if (ZLIB_FOUND)
+        message("zlib found")
+        list(APPEND REQUIRES_PRIVATE "zlib")
+    else()
+        message("zlib not found")
+    endif()
+
+    find_package(Brotli)
+    if (Brotli_FOUND)
+        message("Brotli found")
+        list(APPEND REQUIRES_PRIVATE "libbrotlidec")
+    else()
+        message("Brotli not found")
+    endif()
 endif()
 
 list(JOIN REQUIRES_PRIVATE " " REQUIRES_PRIVATE)
@@ -409,7 +481,7 @@ option(WITH_GDK_PIXBUF "Build gdk-pixbuf plugin" ON)
 
 option(WITH_REDUCED_VISIBILITY "Reduced symbol visibility in library" ON)
 
-option(WITH_DEFLATE_HEADER_COMPRESSION OFF)
+option(WITH_HEADER_COMPRESSION OFF)
 option(ENABLE_MULTITHREADING_SUPPORT "Switch off for platforms without multithreading support" ON)
 option(ENABLE_PARALLEL_TILE_DECODING "Will launch multiple decoders to decode tiles in parallel (requires ENABLE_MULTITHREADING_SUPPORT)" ON)
 
@@ -418,6 +490,8 @@ if (WITH_REDUCED_VISIBILITY)
 else ()
     set(CMAKE_CXX_VISIBILITY_PRESET default)
 endif ()
+
+add_subdirectory(heifio)
 
 if(WITH_EXAMPLES)
     add_subdirectory (examples)

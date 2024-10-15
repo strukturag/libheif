@@ -62,10 +62,10 @@ uint8_t chroma_v_subsampling(heif_chroma c)
 }
 
 
-void get_subsampled_size(int width, int height,
-                               heif_channel channel,
-                               heif_chroma chroma,
-                               int* subsampled_width, int* subsampled_height)
+void get_subsampled_size(uint32_t width, uint32_t height,
+                         heif_channel channel,
+                         heif_chroma chroma,
+                         uint32_t* subsampled_width, uint32_t* subsampled_height)
 {
   if (channel == heif_channel_Cb ||
       channel == heif_channel_Cr) {
@@ -99,4 +99,16 @@ uint8_t compute_avif_profile(int bits_per_pixel, heif_chroma chroma)
   else {
     return 2;
   }
+}
+
+
+std::string fourcc_to_string(uint32_t code)
+{
+  std::string str("    ");
+  str[0] = static_cast<char>((code >> 24) & 0xFF);
+  str[1] = static_cast<char>((code >> 16) & 0xFF);
+  str[2] = static_cast<char>((code >> 8) & 0xFF);
+  str[3] = static_cast<char>((code >> 0) & 0xFF);
+
+  return str;
 }

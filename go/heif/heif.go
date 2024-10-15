@@ -99,6 +99,7 @@ const (
 	ColorspaceYCbCr      = C.heif_colorspace_YCbCr
 	ColorspaceRGB        = C.heif_colorspace_RGB
 	ColorspaceMonochrome = C.heif_colorspace_monochrome
+	ColorspaceNonvisual  = C.heif_colorspace_nonvisual
 )
 
 type Channel C.enum_heif_channel
@@ -112,6 +113,9 @@ const (
 	ChannelB           = C.heif_channel_B
 	ChannelAlpha       = C.heif_channel_Alpha
 	ChannelInterleaved = C.heif_channel_interleaved
+	ChannelFilterArray = C.heif_channel_filter_array
+	ChannelDepth       = C.heif_channel_depth
+	ChannelDisparity   = C.heif_channel_disparity
 )
 
 type ProgressStep C.enum_heif_progress_step
@@ -235,6 +239,8 @@ const (
 
 	SuberrorNoAV1CBox = C.heif_suberror_No_av1C_box
 
+	SuberrorNoAVCCBox = C.heif_suberror_No_avcC_box
+
 	SuberrorInvalidCleanAperture = C.heif_suberror_Invalid_clean_aperture
 
 	// Invalid specification of overlay image
@@ -269,12 +275,16 @@ const (
 
 	SuberrorCameraExtrinsicMatrixUndefined = C.heif_suberror_Camera_extrinsic_matrix_undefined
 
+	SuberrorDecompressionInvalidData = C.heif_suberror_Decompression_invalid_data
+
 	// --- Memory_allocation_error ---
 
 	// A security limit preventing unreasonable memory allocations was exceeded by the input file.
 	// Please check whether the file is valid. If it is, contact us so that we could increase the
 	// security limits further.
 	SuberrorSecurityLimitExceeded = C.heif_suberror_Security_limit_exceeded
+
+	CompressionInitialisationError = C.heif_suberror_Compression_initialisation_error
 
 	// --- Usage_error ---
 
@@ -321,6 +331,8 @@ const (
 
 	SuberrorNoVcCBox = C.heif_suberror_No_vvcC_box
 
+	SuberrorNoIcbrBox = C.heif_suberror_No_icbr_box
+
 	// --- Unsupported_feature ---
 
 	// Image was coded with an unsupported compression method.
@@ -330,6 +342,10 @@ const (
 	SuberrorUnsupportedImageType = C.heif_suberror_Unsupported_image_type
 
 	SuberrorUnsupportedDataVersion = C.heif_suberror_Unsupported_data_version
+
+	SuberrorUnsupportedGenericCompressionMethod = C.heif_suberror_Unsupported_generic_compression_method
+
+	SuberrorUnsupportedEssentialProperty = C.heif_suberror_Unsupported_essential_property
 
 	// The conversion of the source image to the requested chroma / colorspace is not supported.
 	SuberrorUnsupportedColorConversion = C.heif_suberror_Unsupported_color_conversion

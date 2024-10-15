@@ -283,7 +283,7 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
 
   std::vector<Node> processed_states;
   std::vector<Node> border_states;
-  border_states.push_back({-1, nullptr, input_state, 0});
+  border_states.emplace_back(-1, nullptr, input_state, 0);
 
   while (!border_states.empty()) {
     int minIdx = -1;
@@ -402,10 +402,10 @@ bool ColorConversionPipeline::construct_pipeline(const ColorState& input_state,
           ColorStateWithCost s = out_state;
           s.speed_costs = s.speed_costs + processed_states.back().speed_costs;
 
-          border_states.push_back({(int) (processed_states.size() - 1),
-                                   op_ptr,
-                                   s.color_state,
-                                   s.speed_costs});
+          border_states.emplace_back((int) (processed_states.size() - 1),
+                                     op_ptr,
+                                     s.color_state,
+                                     s.speed_costs);
         }
       }
     }
@@ -488,8 +488,8 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
 {
   // --- check that input image is valid
 
-  int width = input->get_width();
-  int height = input->get_height();
+  uint32_t width = input->get_width();
+  uint32_t height = input->get_height();
 
   // alpha image should have full image resolution
 
@@ -515,7 +515,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   ColorState input_state;
   input_state.colorspace = input->get_colorspace();
   input_state.chroma = input->get_chroma_format();
-  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_chroma_with_alpha(input->get_chroma_format());
+  input_state.has_alpha = input->has_channel(heif_channel_Alpha) || is_interleaved_with_alpha(input->get_chroma_format());
   if (input->get_color_profile_nclx()) {
     input_state.nclx_profile = *input->get_color_profile_nclx();
   }
@@ -552,7 +552,7 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
   // For planar formats, we include an alpha plane when included in the input.
 
   if (num_interleaved_pixels_per_plane(target_chroma) > 1) {
-    output_state.has_alpha = is_chroma_with_alpha(target_chroma);
+    output_state.has_alpha = is_interleaved_with_alpha(target_chroma);
   }
   else {
     output_state.has_alpha = input_state.has_alpha;
@@ -587,5 +587,23 @@ std::shared_ptr<HeifPixelImage> convert_colorspace(const std::shared_ptr<HeifPix
     return nullptr;
   }
 
-  return pipeline.convert_image(input);
+  if (pipeline.is_nop()) {
+    return input;
+  }
+  else {
+    return pipeline.convert_image(input);
+  }
+}
+
+
+std::shared_ptr<const HeifPixelImage> convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
+                                                         heif_colorspace colorspace,
+                                                         heif_chroma chroma,
+                                                         const std::shared_ptr<const color_profile_nclx>& target_profile,
+                                                         int output_bpp,
+                                                         const heif_color_conversion_options& options)
+{
+  std::shared_ptr<HeifPixelImage> non_const_input = std::const_pointer_cast<HeifPixelImage>(input);
+
+  return convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options);
 }

@@ -204,6 +204,12 @@ int main(int argc, char** argv)
         heif_free_list_of_compatible_brands(brands);
       }
     }
+    else {
+      if (errno == ENOENT) {
+        std::cerr << "Input file does not exist.\n";
+        exit(10);
+      }
+    }
   }
 
   // ==============================================================================
@@ -218,14 +224,14 @@ int main(int argc, char** argv)
   struct heif_error err;
   err = heif_context_read_from_file(ctx.get(), input_filename, nullptr);
 
-  if (dump_boxes) {
-    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
-    return 0;
-  }
-
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
+  }
+
+  if (dump_boxes) {
+    heif_context_debug_dump_boxes_to_file(ctx.get(), STDOUT_FILENO); // dump to stdout
+    return 0;
   }
 
 
@@ -253,6 +259,16 @@ int main(int argc, char** argv)
 
     printf("image: %dx%d (id=%d)%s\n", width, height, IDs[i], primary ? ", primary" : "");
 
+    heif_image_tiling tiling;
+    err = heif_image_handle_get_image_tiling(handle, true, &tiling);
+    if (err.code) {
+      std::cerr << err.message << "\n";
+      return 10;
+    }
+    if (tiling.num_columns > 0) {
+      std::cout << "  tiles: " << tiling.num_columns << "x" << tiling.num_rows
+                << ", tile size: " << tiling.tile_width << "x" << tiling.tile_height << "\n";
+    }
 
     heif_colorspace colorspace;
     heif_chroma chroma;
@@ -272,6 +288,9 @@ int main(int argc, char** argv)
         break;
       case heif_colorspace_monochrome:
         printf("monochrome");
+        break;
+      case heif_colorspace_nonvisual:
+        printf("non-visual");
         break;
       default:
         printf("unknown");
@@ -666,53 +685,35 @@ int main(int argc, char** argv)
     }
 
 
-    struct heif_image* image;
-    err = heif_decode_image(handle,
-                            &image,
-                            heif_colorspace_undefined,
-                            heif_chroma_undefined,
-                            nullptr);
-    if (err.code) {
-      heif_image_handle_release(handle);
-      std::cerr << "Could not decode image " << err.message << "\n";
-      return 1;
+    uint32_t aspect_h, aspect_v;
+    int has_pasp = heif_image_handle_get_pixel_aspect_ratio(handle, &aspect_h, &aspect_v);
+    if (has_pasp) {
+      std::cout << "pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
     }
 
-    if (image) {
-      uint32_t aspect_h, aspect_v;
-      heif_image_get_pixel_aspect_ratio(image, &aspect_h, &aspect_v);
-      if (aspect_h != aspect_v) {
-        std::cout << "pixel aspect ratio: " << aspect_h << "/" << aspect_v << "\n";
-      }
-
-      if (heif_image_has_content_light_level(image)) {
-        struct heif_content_light_level clli{};
-        heif_image_get_content_light_level(image, &clli);
-        std::cout << "content light level (clli):\n"
-                  << "  max content light level: " << clli.max_content_light_level << "\n"
-                  << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
-      }
-
-      if (heif_image_has_mastering_display_colour_volume(image)) {
-        struct heif_mastering_display_colour_volume mdcv;
-        heif_image_get_mastering_display_colour_volume(image, &mdcv);
-
-        struct heif_decoded_mastering_display_colour_volume decoded_mdcv;
-        err = heif_mastering_display_colour_volume_decode(&mdcv, &decoded_mdcv);
-
-        std::cout << "mastering display color volume:\n"
-                  << "  display_primaries (x,y): "
-                  << "(" << decoded_mdcv.display_primaries_x[0] << ";" << decoded_mdcv.display_primaries_y[0] << "), "
-                  << "(" << decoded_mdcv.display_primaries_x[1] << ";" << decoded_mdcv.display_primaries_y[1] << "), "
-                  << "(" << decoded_mdcv.display_primaries_x[2] << ";" << decoded_mdcv.display_primaries_y[2] << ")\n";
-
-        std::cout << "  white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
-        std::cout << "  max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
-        std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
-      }
+    struct heif_content_light_level clli{};
+    if (heif_image_handle_get_content_light_level(handle, &clli)) {
+      std::cout << "content light level (clli):\n"
+                << "  max content light level: " << clli.max_content_light_level << "\n"
+                << "  max pic average light level: " << clli.max_pic_average_light_level << "\n";
     }
 
-    heif_image_release(image);
+    struct heif_mastering_display_colour_volume mdcv;
+    if (heif_image_handle_get_mastering_display_colour_volume(handle, &mdcv)) {
+
+      struct heif_decoded_mastering_display_colour_volume decoded_mdcv;
+      err = heif_mastering_display_colour_volume_decode(&mdcv, &decoded_mdcv);
+
+      std::cout << "mastering display color volume:\n"
+                << "  display_primaries (x,y): "
+                << "(" << decoded_mdcv.display_primaries_x[0] << ";" << decoded_mdcv.display_primaries_y[0] << "), "
+                << "(" << decoded_mdcv.display_primaries_x[1] << ";" << decoded_mdcv.display_primaries_y[1] << "), "
+                << "(" << decoded_mdcv.display_primaries_x[2] << ";" << decoded_mdcv.display_primaries_y[2] << ")\n";
+
+      std::cout << "  white point (x,y): (" << decoded_mdcv.white_point_x << ";" << decoded_mdcv.white_point_y << ")\n";
+      std::cout << "  max display mastering luminance: " << decoded_mdcv.max_display_mastering_luminance << "\n";
+      std::cout << "  min display mastering luminance: " << decoded_mdcv.min_display_mastering_luminance << "\n";
+    }
 
     heif_image_handle_release(handle);
   }

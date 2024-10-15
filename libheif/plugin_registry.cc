@@ -46,6 +46,10 @@
 #include "plugins/decoder_vvdec.h"
 #endif
 
+#if HAVE_VVENC
+#include "plugins/encoder_vvenc.h"
+#endif
+
 #if HAVE_AOM_ENCODER
 #include "plugins/encoder_aom.h"
 #endif
@@ -80,6 +84,10 @@
 
 #if HAVE_JPEG_ENCODER
 #include "plugins/encoder_jpeg.h"
+#endif
+
+#if HAVE_OpenH264_DECODER
+#include "plugins/decoder_openh264.h"
 #endif
 
 #if HAVE_OPENJPEG_ENCODER
@@ -147,6 +155,10 @@ void register_default_plugins()
   register_encoder(get_encoder_plugin_uvg266());
 #endif
 
+#if HAVE_VVENC
+  register_encoder(get_encoder_plugin_vvenc());
+#endif
+
 #if HAVE_VVDEC
   register_decoder(get_decoder_plugin_vvdec());
 #endif
@@ -193,6 +205,10 @@ void register_default_plugins()
 
 #if HAVE_OPENJPH_ENCODER
   register_encoder(get_encoder_plugin_openjph());
+#endif
+
+#if HAVE_OpenH264_DECODER
+  register_decoder(get_decoder_plugin_openh264());
 #endif
 
 #if WITH_UNCOMPRESSED_CODEC

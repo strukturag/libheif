@@ -106,6 +106,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "No 'vvcC' box";
     case heif_suberror_No_av1C_box:
       return "No 'av1C' box";
+    case heif_suberror_No_avcC_box:
+      return "No 'avcC' box";
     case heif_suberror_No_pitm_box:
       return "No 'pitm' box";
     case heif_suberror_No_ipco_box:
@@ -168,12 +170,18 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Camera extrinsic matrix undefined";
     case heif_suberror_Invalid_J2K_codestream:
       return "Invalid JPEG 2000 codestream";
+    case heif_suberror_Decompression_invalid_data:
+      return "Invalid data in generic compression inflation";
+    case heif_suberror_No_icbr_box:
+      return "No 'icbr' box";
 
 
       // --- Memory_allocation_error ---
 
     case heif_suberror_Security_limit_exceeded:
       return "Security limit exceeded";
+    case heif_suberror_Compression_initialisation_error:
+      return "Compression initialisation method error";
 
       // --- Usage_error ---
 
@@ -210,6 +218,10 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Unsupported item construction method";
     case heif_suberror_Unsupported_header_compression_method:
       return "Unsupported header compression method";
+    case heif_suberror_Unsupported_generic_compression_method:
+      return "Unsupported generic compression method";
+    case heif_suberror_Unsupported_essential_property:
+      return "Unsupported essential item property";
 
       // --- Encoder_plugin_error --
 

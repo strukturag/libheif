@@ -31,5 +31,6 @@
 
 // Absolute path to the tests/data directory. Can be used by the tests to load input data.
 extern std::string tests_data_directory;
+extern std::string libheifio_tests_data_directory;
 
 #endif //LIBHEIF_TEST_CONFIG_H

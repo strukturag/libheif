@@ -189,7 +189,7 @@ public:
   Error write(StreamWriter& writer) const override;
 
 protected:
-  Error parse(BitstreamRange& range) override;
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
   std::shared_ptr<const color_profile> m_color_profile;

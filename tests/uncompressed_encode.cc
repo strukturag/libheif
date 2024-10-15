@@ -632,6 +632,7 @@ static void do_encode(heif_image* input_image, const char* filename, bool check_
   heif_context_free(ctx);
 }
 
+
 TEST_CASE("Encode RGB")
 {
   heif_image *input_image = createImage_RGB_interleaved();

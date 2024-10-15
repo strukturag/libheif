@@ -21,46 +21,25 @@
 #include "libheif/heif.h"
 #include "libheif/heif_plugin.h"
 #include "decoder_ffmpeg.h"
+#include "nalu_utils.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
 
-#include <map>
+
+#include <memory>
+#include <utility>
 
 extern "C" 
 {
     #include <libavcodec/avcodec.h>
 }
 
-class NalUnit {
-public:
-    NalUnit();
-    ~NalUnit();
-    bool set_data(const unsigned char* in_data, int n);
-    int size() const { return nal_data_size; }
-    int unit_type() const { return nal_unit_type;  }
-    const unsigned char* data() const { return nal_data_ptr; }
-    int bitExtracted(int number, int bits_count, int position_nr)
-    {
-        return (((1 << bits_count) - 1) & (number >> (position_nr - 1)));
-    }
-private:
-    const unsigned char* nal_data_ptr;
-    int nal_unit_type;
-    int nal_data_size;
-};
 
 struct ffmpeg_decoder
 {
-    #define NAL_UNIT_VPS_NUT    32
-    #define NAL_UNIT_SPS_NUT    33
-    #define NAL_UNIT_PPS_NUT    34
-    #define NAL_UNIT_IDR_W_RADL 19
-    #define NAL_UNIT_IDR_N_LP   20
-
-    std::map<int,NalUnit*> NalMap;
-
+    NalMap nalMap;
     bool strict_decoding = false;
 };
 
@@ -126,64 +105,17 @@ void ffmpeg_set_strict_decoding(void* decoder_raw, int flag)
   decoder->strict_decoding = flag;
 }
 
-NalUnit::NalUnit()
-{
-    nal_data_ptr = NULL;
-    nal_unit_type = 0;
-    nal_data_size = 0;
-}
-
-NalUnit::~NalUnit()
-{
-
-}
-
-bool NalUnit::set_data(const unsigned char* in_data, int n)
-{
-    nal_data_ptr = in_data;
-    nal_unit_type = bitExtracted(nal_data_ptr[0], 6, 2);
-    nal_data_size = n;
-    return true;
-}
-
-static struct heif_error ffmpeg_v1_push_data(void* decoder_raw, const void* data, size_t size)
+static struct heif_error ffmpeg_v1_push_data(void *decoder_raw, const void *data, size_t size)
 {
 
   struct ffmpeg_decoder* decoder = (struct ffmpeg_decoder*) decoder_raw;
 
   const uint8_t* cdata = (const uint8_t*) data;
 
-  size_t ptr = 0;
-  while (ptr < size) {
-      if (4 > size - ptr) {
-          struct heif_error err = { heif_error_Decoder_plugin_error,
-                                   heif_suberror_End_of_data,
-                                   "insufficient data" };
-          return err;
-      }
-
-      uint32_t nal_size = (cdata[ptr] << 24) | (cdata[ptr + 1] << 16) | (cdata[ptr + 2] << 8) | (cdata[ptr + 3]);
-      ptr += 4;
-
-      if (nal_size > size - ptr) {
-          struct heif_error err = { heif_error_Decoder_plugin_error,
-                                   heif_suberror_End_of_data,
-                                   "insufficient data" };
-          return err;
-      }
-
-      NalUnit* nal_unit = new NalUnit();
-      nal_unit->set_data(cdata + ptr, nal_size);
-
-      NalUnit* old_nal_unit = decoder->NalMap[nal_unit->unit_type()];
-      decoder->NalMap[nal_unit->unit_type()] = nal_unit;
-      delete old_nal_unit;
-
-      ptr += nal_size;
-  }
-
-  return heif_error_success;
+  return decoder->nalMap.parseHevcNalu(cdata, size);
 }
+
+
 
 static heif_chroma ffmpeg_get_chroma_format(enum AVPixelFormat pix_fmt) {
     if (pix_fmt == AV_PIX_FMT_GRAY8)
@@ -341,19 +273,19 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   const unsigned char* heif_pps_data;
   const unsigned char* heif_idrpic_data;
 
-  if ((decoder->NalMap.count(NAL_UNIT_VPS_NUT) > 0)
-      && (decoder->NalMap.count(NAL_UNIT_SPS_NUT) > 0)
-      && (decoder->NalMap.count(NAL_UNIT_PPS_NUT) > 0)
+  if ((decoder->nalMap.count(NAL_UNIT_VPS_NUT) > 0)
+      && (decoder->nalMap.count(NAL_UNIT_SPS_NUT) > 0)
+      && (decoder->nalMap.count(NAL_UNIT_PPS_NUT) > 0)
       )
   {
-      heif_vps_size = decoder->NalMap[NAL_UNIT_VPS_NUT]->size();
-      heif_vps_data = decoder->NalMap[NAL_UNIT_VPS_NUT]->data();
+      heif_vps_size = decoder->nalMap.size(NAL_UNIT_VPS_NUT);
+      heif_vps_data = decoder->nalMap.data(NAL_UNIT_VPS_NUT);
 
-      heif_sps_size = decoder->NalMap[NAL_UNIT_SPS_NUT]->size();
-      heif_sps_data = decoder->NalMap[NAL_UNIT_SPS_NUT]->data();
+      heif_sps_size = decoder->nalMap.size(NAL_UNIT_SPS_NUT);
+      heif_sps_data = decoder->nalMap.data(NAL_UNIT_SPS_NUT);
 
-      heif_pps_size = decoder->NalMap[NAL_UNIT_PPS_NUT]->size();
-      heif_pps_data = decoder->NalMap[NAL_UNIT_PPS_NUT]->data();
+      heif_pps_size = decoder->nalMap.size(NAL_UNIT_PPS_NUT);
+      heif_pps_data = decoder->nalMap.data(NAL_UNIT_PPS_NUT);
   }
   else
   {
@@ -363,17 +295,17 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
       return err;
   }
 
-  if ((decoder->NalMap.count(NAL_UNIT_IDR_W_RADL) > 0) || (decoder->NalMap.count(NAL_UNIT_IDR_N_LP) > 0))
+  if ((decoder->nalMap.count(NAL_UNIT_IDR_W_RADL) > 0) || (decoder->nalMap.count(NAL_UNIT_IDR_N_LP) > 0))
   {
-      if (decoder->NalMap.count(NAL_UNIT_IDR_W_RADL) > 0)
+      if (decoder->nalMap.count(NAL_UNIT_IDR_W_RADL) > 0)
       {
-          heif_idrpic_data = decoder->NalMap[NAL_UNIT_IDR_W_RADL]->data();
-          heif_idrpic_size = decoder->NalMap[NAL_UNIT_IDR_W_RADL]->size();
+          heif_idrpic_data = decoder->nalMap.data(NAL_UNIT_IDR_W_RADL);
+          heif_idrpic_size = decoder->nalMap.size(NAL_UNIT_IDR_W_RADL);
       }
       else
       {
-          heif_idrpic_data = decoder->NalMap[NAL_UNIT_IDR_N_LP]->data();
-          heif_idrpic_size = decoder->NalMap[NAL_UNIT_IDR_N_LP]->size();
+          heif_idrpic_data = decoder->nalMap.data(NAL_UNIT_IDR_N_LP);
+          heif_idrpic_size = decoder->nalMap.size(NAL_UNIT_IDR_N_LP);
       }
   }
   else
@@ -414,11 +346,8 @@ static struct heif_error ffmpeg_v1_decode_image(void* decoder_raw,
   hevc_data_ptr += hevc_AnnexB_StartCode_size;
   memcpy(hevc_data_ptr, heif_idrpic_data, heif_idrpic_size);
 
-  //decoder->NalMap not needed anymore
-  for (auto current = decoder->NalMap.begin(); current != decoder->NalMap.end(); ++current) {
-      delete current->second;
-  }
-  decoder->NalMap.clear();
+  // decoder->NalMap not needed anymore
+  decoder->nalMap.clear();
 
   const AVCodec* hevc_codec = NULL;
   AVCodecParserContext* hevc_parser = NULL;

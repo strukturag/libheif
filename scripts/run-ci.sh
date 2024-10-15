@@ -145,6 +145,9 @@ echo "install prefix: ${BUILD_ROOT}/dist"
 mkdir ${BUILD_ROOT}/dist
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_INSTALL_PREFIX=${BUILD_ROOT}/dist"
 
+# turn on warnings-as-errors
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_COMPILE_WARNING_AS_ERROR=1"
+
 
 if [ ! -z "$FUZZER" ] && [ "$CURRENT_OS" = "linux" ]; then
     export ASAN_SYMBOLIZER="$BUILD_ROOT/clang/bin/llvm-symbolizer"

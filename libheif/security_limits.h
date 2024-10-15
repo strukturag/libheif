@@ -20,19 +20,13 @@
 #ifndef LIBHEIF_SECURITY_LIMITS_H
 #define LIBHEIF_SECURITY_LIMITS_H
 
+#include "libheif/heif.h"
 #include <cinttypes>
 #include <cstddef>
+#include "error.h"
 
-static const size_t MAX_CHILDREN_PER_BOX = 20000;
-static const int MAX_ILOC_ITEMS = 20000;
-static const int MAX_ILOC_EXTENTS_PER_ITEM = 32;
-static const int MAX_MEMORY_BLOCK_SIZE = 512 * 1024 * 1024; // 512 MB
-static const int MAX_COLOR_PROFILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
-// Artificial limit to avoid allocating too much memory.
-// 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
-static const int MAX_IMAGE_WIDTH = 32768;
-static const int MAX_IMAGE_HEIGHT = 32768;
+extern heif_security_limits global_security_limits;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.
@@ -43,6 +37,7 @@ static const int64_t MAX_LARGE_BOX_SIZE = 0x0FFFFFFFFFFFFFFF;
 static const int64_t MAX_FILE_POS = 0x007FFFFFFFFFFFFFLL; // maximum file position
 static const int MAX_FRACTION_VALUE = 0x10000;
 
-static const int MAX_IREF_REFERENCES = 10000;
+
+Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height);
 
 #endif  // LIBHEIF_SECURITY_LIMITS_H

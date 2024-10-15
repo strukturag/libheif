@@ -153,7 +153,7 @@ getopt2(int nargc, char * nargv, const char *ostr)
  *	Parse argc/argv argument vector.
  */
 int
-getopt_long(int nargc, char ** nargv, char * options, struct option * long_options, int * index)
+getopt_long(int nargc, char ** nargv, const char * options, struct option * long_options, int * index)
 {
 	int retval;
 
