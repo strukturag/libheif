@@ -303,15 +303,6 @@ void heif_property_user_description_release(struct heif_property_user_descriptio
 }
 
 
-int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
-{
-  if (drift_rate == heif_tai_clock_info_unknown_drift_rate) {
-    return 1;
-  }
-  return 0;
-}
-
-
 struct heif_error heif_item_add_raw_property(const struct heif_context* context,
                                               heif_item_id itemId,
                                               uint32_t short_type,
@@ -372,6 +363,16 @@ struct heif_error find_property(const struct heif_context* context,
 const uint64_t heif_tai_clock_info_unknown_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
 const uint64_t heif_unknown_tai_timestamp = 0xFFFFFFFFFFFFFFFF;
 const int32_t heif_tai_clock_info_unknown_drift_rate = 0x7FFFFFFF;
+
+
+int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate)
+{
+  if (drift_rate == heif_tai_clock_info_unknown_drift_rate) {
+    return 1;
+  }
+  return 0;
+}
+
 
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
