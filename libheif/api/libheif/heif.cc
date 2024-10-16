@@ -3477,7 +3477,6 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
                       "Number of tile rows/columns may not exceed 65535"};
   }
 
-  std::shared_ptr<ImageItem_Grid> gridimage;
   auto generateGridItemResult = ImageItem_Grid::add_new_grid_item(ctx->context.get(),
                                                                   image_width,
                                                                   image_height,
@@ -3490,7 +3489,7 @@ struct heif_error heif_context_add_grid_image(struct heif_context* ctx,
 
   if (out_grid_image_handle) {
     *out_grid_image_handle = new heif_image_handle;
-    (*out_grid_image_handle)->image = gridimage;
+    (*out_grid_image_handle)->image = generateGridItemResult.value;
     (*out_grid_image_handle)->context = ctx->context;
   }
 
