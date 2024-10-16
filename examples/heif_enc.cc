@@ -646,8 +646,10 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
 }
 
 
+#if _WIN32
 using convert_type = std::codecvt_utf8<wchar_t>;
 std::wstring_convert<convert_type, wchar_t> converter;
+#endif
 
 
 struct input_tiles_generator
