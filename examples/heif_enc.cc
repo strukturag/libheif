@@ -89,11 +89,6 @@ struct timeval time_encoding_start;
 struct timeval time_encoding_end;
 #endif
 
-#if _WIN32
-#include <locale>
-#include <codecvt>
-#endif
-
 const int OPTION_NCLX_MATRIX_COEFFICIENTS = 1000;
 const int OPTION_NCLX_COLOUR_PRIMARIES = 1001;
 const int OPTION_NCLX_TRANSFER_CHARACTERISTIC = 1002;
@@ -646,12 +641,6 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
 }
 
 
-#if _WIN32
-using convert_type = std::codecvt_utf8<wchar_t>;
-std::wstring_convert<convert_type, wchar_t> converter;
-#endif
-
-
 struct input_tiles_generator
 {
   uint32_t first_start;
@@ -698,11 +687,7 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
 
     auto p = std::filesystem::absolute(std::filesystem::path(prefix));
     generator.directory = p.parent_path();
-#if _WIN32
-    generator.prefix = converter.to_bytes(p.filename());
-#else
-    generator.prefix = p.filename();
-#endif
+    generator.prefix = p.filename().string(); // TODO: we could also use u8string(), but it is not well supported in C++20
 
     generator.separator = match[3];
     generator.suffix = match[5];
@@ -725,11 +710,7 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   for (const auto& dirEntry : std::filesystem::directory_iterator(generator.directory))
   {
     if (dirEntry.is_regular_file()) {
-#if _WIN32
-      std::string s = converter.to_bytes(dirEntry.path().filename());
-#else
-      std::string s{dirEntry.path().filename()};
-#endif
+      std::string s{dirEntry.path().filename().string()};
 
       if (std::regex_match(s, match, pattern)) {
         uint32_t first = std::stoi(match[1]);
@@ -822,11 +803,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
 
   for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
     for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
-#if _WIN32
-      std::string input_filename = converter.to_bytes(tile_generator.filename(tx,ty));
-#else
-      std::string input_filename = tile_generator.filename(tx,ty);
-#endif
+      std::string input_filename = tile_generator.filename(tx,ty).string();
 
       InputImage input_image = load_image(input_filename, output_bit_depth);
 
