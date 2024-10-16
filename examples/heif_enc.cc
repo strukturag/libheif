@@ -37,6 +37,9 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <filesystem>
+#include <regex>
+#include <optional>
 
 #include <libheif/heif.h>
 #include <libheif/heif_properties.h>
@@ -83,10 +86,6 @@ std::string property_pitm_description;
 #if HAVE_GETTIMEOFDAY
 
 #include <sys/time.h>
-#include <regex>
-#include <optional>
-#include <dirent.h>
-
 struct timeval time_encoding_start;
 struct timeval time_encoding_end;
 #endif
@@ -204,7 +203,7 @@ void show_help(const char* argv0)
             << "                                  (sharp-yuv makes edges look sharper when using YUV420 with bilinear chroma upsampling)\n"
             << "  --benchmark               measure encoding time, PSNR, and output file size\n"
             << "  --pitm-description TEXT   (experimental) set user description for primary image\n"
-            << "  --tiled-input             input is a set of tile images (only provide one filename with two tile position numbers).\n"
+            << "  -T,--tiled-input          input is a set of tile images (only provide one filename with two tile position numbers).\n"
             << "                            For example, 'tile-01-05.jpg' would be a valid input filename.\n"
             << "                            You only have to provide the filename of one tile as input, heif-enc will scan the directory\n"
             << "                            for the other tiles and determine the range of tiles automatically.\n"
@@ -652,7 +651,7 @@ struct input_tiles_generator
   uint32_t second_end;
   uint32_t second_digits;
 
-  std::string directory;
+  std::filesystem::path directory;
   std::string prefix;
   std::string separator;
   std::string suffix;
@@ -664,16 +663,16 @@ struct input_tiles_generator
 
   uint32_t nTiles() const { return (first_end - first_start + 1) * (second_end - second_start + 1); }
 
-  std::string filename(uint32_t tx, uint32_t ty) const
+  std::filesystem::path filename(uint32_t tx, uint32_t ty) const
   {
     std::stringstream sstr;
-    if (!directory.empty()) {
-      sstr << directory << '/';
-    }
+
     sstr << prefix << std::setw(first_digits) << std::setfill('0') << (first_is_x ? tx : ty) + first_start;
     sstr << separator << std::setw(second_digits) << std::setfill('0') << (first_is_x ? ty : tx) + second_start;
     sstr << suffix;
-    return sstr.str();
+
+    std::filesystem::path p = directory / sstr.str();
+    return p;
   }
 };
 
@@ -685,7 +684,12 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
   input_tiles_generator generator;
 
   if (std::regex_match(filename, match, pattern)) {
-    generator.prefix = match[1];
+    std::string prefix = match[1];
+
+    auto p = std::filesystem::absolute(std::filesystem::path(prefix));
+    generator.directory = p.parent_path();
+    generator.prefix = p.filename();
+
     generator.separator = match[3];
     generator.suffix = match[5];
 
@@ -701,35 +705,13 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
     return std::nullopt;
   }
 
-  auto p = generator.prefix.find_last_of('/');
-  if (p != std::string::npos) {
-    generator.directory = generator.prefix.substr(0,p);
-    generator.prefix = generator.prefix.substr(p+1);
-  }
-
   std::string patternString = generator.prefix + "(\\d+)" + generator.separator + "(\\d+)" + generator.suffix + "$";
   pattern = patternString;
 
-  std::regex dirPattern(R"((.*)/(.*?)$)");
-  std::smatch dirmatch;
-  std::string dirName;
-
-  if (std::regex_match(filename, dirmatch, dirPattern)) {
-    dirName = std::string(dirmatch[1]);
-  }
-  else {
-    dirName = ".";
-  }
-
-  DIR* dir = opendir(dirName.c_str());
-  for (;;) {
-    struct dirent* entry = readdir(dir);
-    if (!entry) {
-      break;
-    }
-
-    if (entry->d_type == DT_REG) {
-      std::string s{entry->d_name};
+  for (const auto& dirEntry : std::filesystem::directory_iterator(generator.directory))
+  {
+    if (dirEntry.is_regular_file()) {
+      std::string s{dirEntry.path().filename()};
 
       if (std::regex_match(s, match, pattern)) {
         uint32_t first = std::stoi(match[1]);
@@ -745,8 +727,6 @@ std::optional<input_tiles_generator> determine_input_images_tiling(const std::st
       }
     }
   }
-
-  closedir(dir);
 
   return generator;
 }
