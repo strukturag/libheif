@@ -1718,6 +1718,7 @@ struct heif_decoding_options
   // Default: false (do not ignore).
   uint8_t ignore_transformations;
 
+  // Any of the progress functions may be called from background threads.
   void (* start_progress)(enum heif_progress_step step, int max_progress, void* progress_user_data);
 
   void (* on_progress)(enum heif_progress_step step, int progress, void* progress_user_data);
