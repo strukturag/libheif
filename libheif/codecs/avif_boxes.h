@@ -35,6 +35,10 @@
 
 class Box_av1C : public Box
 {
+
+// allow access to protected parse() method
+friend class HeifFile;
+
 public:
   Box_av1C()
   {

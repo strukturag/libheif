@@ -175,6 +175,9 @@ heif_error heif_has_compatible_filetype(const uint8_t* data, int len)
       heif_brand2_miaf,
       heif_brand2_mif1,
       heif_brand2_mif2
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+      , heif_brand2_mif3
+#endif
   };
 
   auto it = supported_brands.find(main_brand);
@@ -302,6 +305,13 @@ heif_brand2 heif_fourcc_to_brand(const char* fourcc_string)
   return fourcc(fourcc_string);
 }
 
+heif_brand2 heif_read_minor_version_brand(const uint8_t* data, int len)
+{
+  if (len < 16) {
+    return heif_unknown_brand;
+  }
+  return heif_fourcc_to_brand((char*) (data + 12));
+}
 
 void heif_brand_to_fourcc(heif_brand2 brand, char* out_fourcc)
 {
@@ -462,6 +472,22 @@ const char* heif_get_file_mime_type(const uint8_t* data, int len)
   else if (mainBrand == heif_avis) {
     return "image/avif-sequence";
   }
+#if ENABLE_EXPERIMENTAL_MINI_FORMAT
+  else if (mainBrand == heif_brand2_mif3) {
+    heif_brand2 minorBrand = heif_read_minor_version_brand(data, len);
+    if (minorBrand == heif_brand2_avif) {
+      return "image/avif";
+    }
+    if (minorBrand == heif_brand2_heic ||
+        minorBrand == heif_brand2_heix ||
+        minorBrand == heif_brand2_heim ||
+        minorBrand == heif_brand2_heis) {
+      return "image/heic";
+    }
+    // There could be other options in here, like VVC or J2K
+    return "image/heif";
+  }
+#endif
   else if (mainBrand == heif_j2ki) {
     return "image/hej2k";
   }

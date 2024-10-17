@@ -386,7 +386,11 @@ public:
 
   std::vector<uint32_t> list_brands() const { return m_compatible_brands; }
 
+  uint32_t get_major_brand() const { return m_major_brand; }
+
   void set_major_brand(heif_brand2 major_brand) { m_major_brand = major_brand; }
+
+  uint32_t get_minor_version() const { return m_minor_version; }
 
   void set_minor_version(uint32_t minor_version) { m_minor_version = minor_version; }
 
@@ -550,6 +554,8 @@ public:
   Error write(StreamWriter& writer) const override;
 
   Error write_mdat_after_iloc(StreamWriter& writer);
+
+  void append_item(Item &item) { m_items.push_back(item); }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -1230,6 +1236,72 @@ public:
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
+};
+
+
+class Box_amve : public Box
+{
+public:
+  Box_amve();
+
+  heif_ambient_viewing_environment amve;
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+};
+
+
+class Box_cclv : public Box
+{
+public:
+  Box_cclv();
+
+  bool ccv_primaries_are_valid() const { return m_ccv_primaries_valid; }
+  int32_t get_ccv_primary_x0() const { return m_ccv_primaries_x[0]; }
+  int32_t get_ccv_primary_y0() const { return m_ccv_primaries_y[0]; }
+  int32_t get_ccv_primary_x1() const { return m_ccv_primaries_x[1]; }
+  int32_t get_ccv_primary_y1() const { return m_ccv_primaries_y[1]; }
+  int32_t get_ccv_primary_x2() const { return m_ccv_primaries_x[2]; }
+  int32_t get_ccv_primary_y2() const { return m_ccv_primaries_y[2]; }
+  void set_primaries(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+
+  bool min_luminance_is_valid() const { return m_ccv_min_luminance_valid; }
+  uint32_t get_min_luminance() const { return m_ccv_min_luminance_value; }
+  void set_min_luminance(uint32_t luminance) { m_ccv_min_luminance_valid = true; m_ccv_min_luminance_value = luminance; }
+
+  bool max_luminance_is_valid() const { return m_ccv_max_luminance_valid; }
+  uint32_t get_max_luminance() const { return m_ccv_max_luminance_value; }
+  void set_max_luminance(uint32_t luminance) { m_ccv_max_luminance_valid = true; m_ccv_max_luminance_value = luminance; }
+
+  bool avg_luminance_is_valid() const { return m_ccv_avg_luminance_valid; }
+  uint32_t get_avg_luminance() const { return m_ccv_avg_luminance_value; }
+  void set_avg_luminance(uint32_t luminance) { m_ccv_avg_luminance_valid = true; m_ccv_avg_luminance_value = luminance; }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  [[nodiscard]] parse_error_fatality get_parse_error_fatality() const override { return parse_error_fatality::optional; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  bool m_ccv_primaries_valid;
+  int32_t m_ccv_primaries_x[3];
+  int32_t m_ccv_primaries_y[3];
+  bool m_ccv_min_luminance_valid;
+  uint32_t m_ccv_min_luminance_value;
+  bool m_ccv_max_luminance_valid;
+  uint32_t m_ccv_max_luminance_value;
+  bool m_ccv_avg_luminance_valid;
+  uint32_t m_ccv_avg_luminance_value;
 };
 
 
