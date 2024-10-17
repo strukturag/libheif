@@ -45,8 +45,6 @@ enum parameter_type
 
 struct parameter
 {
-
-
   parameter_type type = UndefinedType;
   std::string name;
 
@@ -85,6 +83,8 @@ struct encoder_struct_x265
   std::string tune;
 
   int logLevel = X265_LOG_NONE;
+
+  std::string last_error_message;
 };
 
 
@@ -860,15 +860,13 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     else if (strncmp(p.name.c_str(), "x265:", 5) == 0) {
       std::string x265p = p.name.substr(5);
       if (api->param_parse(param, x265p.c_str(), p.value_string.c_str()) < 0) {
-        char error_message[1024];
-        strcpy(error_message, "Unsupported internal encoder parameter: ");
-        strcat(error_message, p.name.c_str());
-        struct heif_error err = {
+        encoder->last_error_message = std::string{"Unsupported x265 encoder parameter: "} + x265p;
+
+        return {
           .code = heif_error_Usage_error,
           .subcode = heif_suberror_Unsupported_parameter,
-          .message = error_message
+          .message = encoder->last_error_message.c_str()
         };
-        return err;
       }
     }
   }
