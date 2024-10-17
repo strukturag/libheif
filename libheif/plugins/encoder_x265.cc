@@ -859,7 +859,17 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
     }
     else if (strncmp(p.name.c_str(), "x265:", 5) == 0) {
       std::string x265p = p.name.substr(5);
-      api->param_parse(param, x265p.c_str(), p.value_string.c_str());
+      if (api->param_parse(param, x265p.c_str(), p.value_string.c_str()) < 0) {
+        char error_message[1024];
+        strcpy(error_message, "Unsupported internal encoder parameter: ");
+        strcat(error_message, p.name.c_str());
+        struct heif_error err = {
+          .code = heif_error_Usage_error,
+          .subcode = heif_suberror_Unsupported_parameter,
+          .message = error_message
+        };
+        return err;
+      }
     }
   }
 
