@@ -422,16 +422,6 @@ public:
     return ((int64_t) bytes_remaining) * 8 + nextbits_cnt;
   }
 
-  void set_start_offset(uint64_t offset)
-  {
-    start_offset = offset;
-  }
-
-  uint64_t get_file_offset() const
-  {
-    return start_offset + (data_length - bytes_remaining - (nextbits_cnt / 8));
-  }
-
 private:
   const uint8_t* data;
   int data_length;

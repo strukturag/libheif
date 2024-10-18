@@ -33,7 +33,6 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
   std::vector<uint8_t> mini_data(length);
   range.read(mini_data.data(), mini_data.size());
   BitReader bits(mini_data.data(), (int)(mini_data.size()));
-  bits.set_start_offset(start_offset);
   m_version = bits.get_bits8(2);
   m_explicit_codec_types_flag = bits.get_flag();
   m_float_flag = bits.get_flag();
@@ -417,26 +416,26 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
 
   if (m_alpha_flag && (m_alpha_item_data_size > 0))
   {
-    m_alpha_item_data_offset = bits.get_file_offset();
+    m_alpha_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bytes(m_alpha_item_data_size);
   }
   if (m_alpha_flag && m_gainmap_flag && (m_gainmap_item_data_size > 0))
   {
-    m_gainmap_item_data_offset = bits.get_file_offset();
+    m_gainmap_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bits(m_gainmap_item_data_size);
   }
 
-  m_main_item_data_offset = bits.get_file_offset();
+  m_main_item_data_offset = bits.get_current_byte_index() + start_offset;
   bits.skip_bytes(m_main_item_data_size);
 
   if (m_exif_flag)
   {
-    m_exif_item_data_offset = bits.get_file_offset();
+    m_exif_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bytes(m_exif_item_data_size);
   }
   if (m_xmp_flag)
   {
-    m_xmp_item_data_offset = bits.get_file_offset();
+    m_xmp_item_data_offset = bits.get_current_byte_index() + start_offset;
     bits.skip_bytes(m_xmp_item_data_size);
   }
   return range.get_error();
