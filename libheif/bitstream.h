@@ -426,7 +426,6 @@ private:
   const uint8_t* data;
   int data_length;
   int bytes_remaining;
-  uint64_t start_offset = 0;
 
   uint64_t nextbits; // left-aligned bits
   int nextbits_cnt;
