@@ -335,7 +335,7 @@ const (
 
 	SuberrorNoIcbrBox = C.heif_suberror_No_icbr_box
 
-	SuberrorNoMiniBox = C.heif_suberror_No_mini_box
+	SuberrorInvalidMiniBox = C.heif_suberror_Invalid_mini_box
 
 	// --- Unsupported_feature ---
 
