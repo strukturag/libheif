@@ -252,7 +252,7 @@ enum heif_suberror_code
   heif_suberror_No_avcC_box = 143,
 
   // we got a mini box, but could not read it properly
-  heif_suberror_No_mini_box = 149,
+  heif_suberror_Invalid_mini_box = 149,
 
   // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
   heif_suberror_Decompression_invalid_data = 150,

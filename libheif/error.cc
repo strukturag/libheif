@@ -176,8 +176,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Invalid data in generic compression inflation";
     case heif_suberror_No_icbr_box:
       return "No 'icbr' box";
-    case heif_suberror_No_mini_box:
-      return "No 'mini' box";
+    case heif_suberror_Invalid_mini_box:
+      return "Unsupported or invalid 'mini' box";
 
 
       // --- Memory_allocation_error ---
