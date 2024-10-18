@@ -383,7 +383,18 @@ public:
 
   uint8_t get_bits8(int n);
 
+  uint16_t get_bits16(int n);
+
   uint32_t get_bits32(int n);
+
+  /**
+   * Get a one-bit flag value.
+   *
+   * @returns true if the next bit value is 1, otherwise false
+   */
+  bool get_flag();
+
+  std::vector<uint8_t> read_bytes(uint32_t n);
 
   int get_bits_fast(int n);
 
