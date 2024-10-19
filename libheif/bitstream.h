@@ -387,6 +387,8 @@ public:
 
   uint32_t get_bits32(int n);
 
+  int32_t get_bits32s();
+
   /**
    * Get a one-bit flag value.
    *

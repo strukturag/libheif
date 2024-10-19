@@ -275,7 +275,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       if (m_tmap_cclv_flag)
       {
         m_tmap_cclv = std::make_shared<Box_cclv>();
-        bits.skip_bits(2);
+        bits.skip_bits(2); // skip ccv_cancel_flag and ccv_persistence_flag
         bool ccv_primaries_present_flag = bits.get_flag();
         bool ccv_min_luminance_value_present_flag = bits.get_flag();
         bool ccv_max_luminance_value_present_flag = bits.get_flag();
@@ -283,12 +283,12 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         bits.skip_bits(2);
         if (ccv_primaries_present_flag)
         {
-          int32_t x0 = bits.get_bits32(32);
-          int32_t y0 = bits.get_bits32(32);
-          int32_t x1 = bits.get_bits32(32);
-          int32_t y1 = bits.get_bits32(32);
-          int32_t x2 = bits.get_bits32(32);
-          int32_t y2 = bits.get_bits32(32);
+          int32_t x0 = bits.get_bits32s();
+          int32_t y0 = bits.get_bits32s();
+          int32_t x1 = bits.get_bits32s();
+          int32_t y1 = bits.get_bits32s();
+          int32_t x2 = bits.get_bits32s();
+          int32_t y2 = bits.get_bits32s();
           m_tmap_cclv->set_primaries(x0, y0, x1, y1, x2, y2);
         }
         if (ccv_min_luminance_value_present_flag)

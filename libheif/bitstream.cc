@@ -532,6 +532,13 @@ uint32_t BitReader::get_bits32(int n)
   return static_cast<uint32_t>(get_bits(n));
 }
 
+int32_t BitReader::get_bits32s()
+{
+  uint32_t bits = get_bits(32);
+  return static_cast<int32_t>(bits);
+}
+
+
 bool BitReader::get_flag()
 {
   return (get_bits(1) == 0x01);
