@@ -35,7 +35,7 @@ static const char* kParam_interleave = "interleave";
 
 static const int PLUGIN_PRIORITY = 60;
 
-static const char* plugin_name = "uncompressed";
+static const char* plugin_name = "builtin";
 
 
 static void uncompressed_set_default_parameters(void* encoder);

@@ -417,12 +417,7 @@ static void show_list_of_all_encoders()
         std::cout << "JPEG 2000 (HT)";
         break;
       case heif_compression_uncompressed:
-#if WITH_UNCOMPRESSED_CODEC
-        std::cout << "Uncompressed: yes\n";
-#else
-        std::cout << "Uncompressed: no\n";
-#endif
-        continue; // special handling of this case because it is built in without plugin
+        std::cout << "Uncompressed";
         break;
       case heif_compression_VVC:
         std::cout << "VVIC";
