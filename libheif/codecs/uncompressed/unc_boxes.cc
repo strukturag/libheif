@@ -411,7 +411,16 @@ Error Box_cmpC::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   m_compression_type = range.read32();
-  m_compressed_unit_type = range.read8();
+
+  uint8_t unit_type = range.read8();
+  if (unit_type > heif_cmpC_compressed_unit_type_image_pixel) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unsupported_parameter,
+            "Unsupported cmpC compressed unit type"};
+  };
+
+  m_compressed_unit_type = static_cast<heif_cmpC_compressed_unit_type>(unit_type);
+
   return range.get_error();
 }
 

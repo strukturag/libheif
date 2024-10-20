@@ -252,7 +252,7 @@ public:
 
   uint32_t get_compression_type() const { return m_compression_type; }
 
-  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return (heif_cmpC_compressed_unit_type) m_compressed_unit_type; }
+  heif_cmpC_compressed_unit_type get_compressed_unit_type() const { return m_compressed_unit_type; }
 
   void set_compression_type(uint32_t type) { m_compression_type = type; }
 
@@ -264,7 +264,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
   uint32_t m_compression_type = 0;
-  uint8_t m_compressed_unit_type = 0;
+  heif_cmpC_compressed_unit_type m_compressed_unit_type = heif_cmpC_compressed_unit_type_full_item;
 };
 
 /**
