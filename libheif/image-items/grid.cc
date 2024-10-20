@@ -266,7 +266,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
   std::deque<tile_data> tiles;
   if (get_context()->get_max_decoding_threads() > 0)
-    tiles.resize(static_cast<size_t>(grid.get_rows()) * static_cast<size-t>(grid.get_columns()));
+    tiles.resize(static_cast<size_t>(grid.get_rows()) * static_cast<size_t>(grid.get_columns()));
 
   std::deque<std::future<Error> > errs;
 #endif
