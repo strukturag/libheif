@@ -512,6 +512,12 @@ const struct heif_security_limits* heif_get_global_security_limits()
 }
 
 
+const struct heif_security_limits* heif_get_disabled_security_limits()
+{
+  return &disabled_security_limits;
+}
+
+
 struct heif_security_limits* heif_context_get_security_limits(const struct heif_context* ctx)
 {
   if (!ctx) {

@@ -280,6 +280,8 @@ uint64_t BitstreamRange::read_uint(int len)
       return read8();
     case 16:
       return read16();
+    case 24:
+      return read24();
     case 32:
       return read32();
     case 64:

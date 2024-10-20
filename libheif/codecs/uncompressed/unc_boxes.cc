@@ -487,8 +487,8 @@ Error Box_cmpC::write(StreamWriter& writer) const
 }
 
 
-static uint8_t unit_offset_length_table[] = { 0,2,3,4,8 };
-static uint8_t unit_size_length_table[] = { 1,2,3,4,8 };
+static uint8_t unit_offset_bits_table[] = {0, 16, 24, 32, 64 };
+static uint8_t unit_size_bits_table[] = {8, 16, 24, 32, 64 };
 
 Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
@@ -513,14 +513,14 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // --- precompute fields lengths
 
-  uint8_t unit_offset_length = unit_offset_length_table[unit_offset_code];
-  uint8_t unit_size_length = unit_size_length_table[unit_size_code];
+  uint8_t unit_offset_bits = unit_offset_bits_table[unit_offset_code];
+  uint8_t unit_size_bits = unit_size_bits_table[unit_size_code];
 
   // --- check if box is large enough for all the data
 
-  uint64_t data_size = num_compressed_units * (unit_offset_length + unit_size_length);
-  if (data_size > range.get_remaining_bytes()) {
-    uint64_t contained_units = range.get_remaining_bytes() / (unit_offset_length + unit_size_length);
+  uint64_t data_size_bytes = num_compressed_units * (unit_offset_bits + unit_size_bits) / 8;
+  if (data_size_bytes > range.get_remaining_bytes()) {
+    uint64_t contained_units = range.get_remaining_bytes() / ((unit_offset_bits + unit_size_bits) * 8);
     std::stringstream sstr;
     sstr << "icef box declares " << num_compressed_units << " units, but only " << contained_units
          << " were contained in the file";
@@ -540,10 +540,10 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
     if (unit_offset_code == 0) {
       unitInfo.unit_offset = implied_offset;
     } else {
-      unitInfo.unit_offset = range.read_uint(unit_offset_length);
+      unitInfo.unit_offset = range.read_uint(unit_offset_bits);
     }
 
-    unitInfo.unit_size = range.read_uint(unit_size_length);
+    unitInfo.unit_size = range.read_uint(unit_size_bits);
 
     if (unitInfo.unit_size >= UINT64_MAX - implied_offset) {
       return {heif_error_Invalid_input,

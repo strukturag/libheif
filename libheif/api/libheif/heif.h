@@ -1149,6 +1149,10 @@ struct heif_security_limits {
 LIBHEIF_API
 const struct heif_security_limits* heif_get_global_security_limits();
 
+// Returns a set of fully disabled security limits. Use with care and only after user confirmation.
+LIBHEIF_API
+const struct heif_security_limits* heif_get_disabled_security_limits();
+
 // Returns the security limits for a heif_context.
 // By default, the limits are set to the global limits, but you can change them in the returned object.
 LIBHEIF_API

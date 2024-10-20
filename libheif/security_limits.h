@@ -27,6 +27,7 @@
 
 
 extern heif_security_limits global_security_limits;
+extern heif_security_limits disabled_security_limits;
 
 // Maximum nesting level of boxes in input files.
 // We put a limit on this to avoid unlimited stack usage by malicious input files.

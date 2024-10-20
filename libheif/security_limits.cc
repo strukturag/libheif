@@ -45,6 +45,11 @@ struct heif_security_limits global_security_limits {
 };
 
 
+struct heif_security_limits disabled_security_limits{
+        .version = 1
+};
+
+
 Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t width, uint32_t height)
 {
   uint64_t maximum_image_size_limit = limits->max_image_size_pixels;
