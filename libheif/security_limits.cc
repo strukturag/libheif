@@ -39,6 +39,7 @@ struct heif_security_limits global_security_limits {
 
     .max_iloc_items = 2000,
     .max_iloc_extents_per_item = 32,
+    .max_size_entity_group = 64,
 
     .max_children_per_box = 100
 };

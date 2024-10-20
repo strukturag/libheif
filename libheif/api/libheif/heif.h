@@ -1138,6 +1138,7 @@ struct heif_security_limits {
 
   uint32_t max_iloc_items;
   uint32_t max_iloc_extents_per_item;
+  uint32_t max_size_entity_group;
 
   uint32_t max_children_per_box; // for all boxes that are not covered by other limits
 };

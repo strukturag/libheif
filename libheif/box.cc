@@ -3767,17 +3767,26 @@ Error Box_EntityToGroup::parse(BitstreamRange& range, const heif_security_limits
 
   group_id = range.read32();
   uint32_t nEntities = range.read32();
+
+  if (nEntities > range.get_remaining_bytes() / 4) {
+    std::stringstream sstr;
+    size_t maxEntries = range.get_remaining_bytes() / 4;
+    sstr << "entity group box should contain " << nEntities << " entities, but we can only read " << maxEntries << " entities.";
+
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            sstr.str()};
+  }
+
+  if (limits->max_size_entity_group && nEntities > limits->max_size_entity_group) {
+    std::stringstream sstr;
+    sstr << "entity group box contains " << nEntities << " entities, but the security limit is set to " << limits->max_size_entity_group << " entities.";
+
+  }
+
+  entity_ids.resize(nEntities);
   for (uint32_t i = 0; i < nEntities; i++) {
-    if (range.eof()) {
-      std::stringstream sstr;
-      sstr << "entity group box should contain " << nEntities << " entities, but we can only read " << i << " entities.";
-
-      return {heif_error_Invalid_input,
-              heif_suberror_End_of_data,
-              sstr.str()};
-    }
-
-    entity_ids.push_back(range.read32());
+    entity_ids[i] = range.read32();
   }
 
   return Error::Ok;
