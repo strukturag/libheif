@@ -3711,14 +3711,9 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
 
 
   if (out_image_handle) {
-    if (thumbnail_image) {
-      *out_image_handle = new heif_image_handle;
-      (*out_image_handle)->image = thumbnail_image;
-      (*out_image_handle)->context = ctx->context;
-    }
-    else {
-      *out_image_handle = nullptr;
-    }
+    *out_image_handle = new heif_image_handle;
+    (*out_image_handle)->image = thumbnail_image;
+    (*out_image_handle)->context = ctx->context;
   }
 
   return heif_error_success;
