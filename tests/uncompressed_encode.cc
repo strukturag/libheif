@@ -41,7 +41,7 @@ TEST_CASE("check have uncompressed")
   REQUIRE(err.code == heif_error_Ok);
 
   const char *name = heif_encoder_get_name(enc);
-  REQUIRE(strcmp(name, "uncompressed") == 0);
+  REQUIRE(strcmp(name, "builtin") == 0);
 
   heif_encoder_release(enc);
 
