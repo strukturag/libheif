@@ -31,14 +31,34 @@ static const uint16_t JPEG2000_SOC_MARKER = 0xFF4F;
 
 Error Box_cdef::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  int channel_count = range.read16();
+  uint16_t channel_count = range.read16();
 
-  for (int i = 0; i < channel_count && !range.error() && !range.eof(); i++) {
+  if (limits->max_components && channel_count > limits->max_components) {
+    std::stringstream sstr;
+    sstr << "cdef box wants to define " << channel_count << " JPEG-2000 channels, but the security limit is set to "
+         << limits->max_components << " components";
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
+  if (channel_count > range.get_remaining_bytes() / 6) {
+    std::stringstream sstr;
+    sstr << "cdef box wants to define " << channel_count << " JPEG-2000 channels, but file only contains "
+         << range.get_remaining_bytes() / 6 << " components";
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            sstr.str()};
+  }
+
+  m_channels.resize(channel_count);
+
+  for (uint16_t i = 0; i < channel_count && !range.error() && !range.eof(); i++) {
     Channel channel;
     channel.channel_index = range.read16();
     channel.channel_type = range.read16();
     channel.channel_association = range.read16();
-    m_channels.push_back(channel);
+    m_channels[i] = channel;
   }
 
   return range.get_error();

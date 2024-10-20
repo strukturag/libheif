@@ -1136,7 +1136,7 @@ struct heif_security_limits {
   uint32_t max_color_profile_size;
   uint64_t max_memory_block_size;
 
-  uint32_t max_uncompressed_components;
+  uint32_t max_components;
 
   uint32_t max_iloc_extents_per_item;
   uint32_t max_size_entity_group;

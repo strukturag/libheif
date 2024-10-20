@@ -133,10 +133,10 @@ Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint32_t component_count = range.read32();
 
-  if (limits->max_uncompressed_components && component_count > limits->max_uncompressed_components) {
+  if (limits->max_components && component_count > limits->max_components) {
     std::stringstream sstr;
     sstr << "cmpd box should countain " << component_count << " components, but security limit is set to "
-         << limits->max_uncompressed_components << " components";
+         << limits->max_components << " components";
 
     return {heif_error_Invalid_input,
             heif_suberror_Security_limit_exceeded,
@@ -250,10 +250,10 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     uint32_t component_count = range.read32();
 
-    if (limits->max_uncompressed_components && component_count > limits->max_uncompressed_components) {
+    if (limits->max_components && component_count > limits->max_components) {
       std::stringstream sstr;
       sstr << "Number of image components (" << component_count << ") exceeds security limit ("
-           << limits->max_uncompressed_components << ")";
+           << limits->max_components << ")";
 
       return {heif_error_Invalid_input,
               heif_suberror_Security_limit_exceeded,
