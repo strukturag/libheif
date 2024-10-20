@@ -123,7 +123,6 @@ static void copy_security_limits(heif_security_limits* dst, const heif_security_
   dst->max_memory_block_size = src->max_memory_block_size;
 
   dst->max_uncompressed_components = src->max_uncompressed_components;
-  dst->max_iloc_items = src->max_iloc_items;
   dst->max_iloc_extents_per_item = src->max_iloc_extents_per_item;
   dst->max_size_entity_group = src->max_size_entity_group;
 

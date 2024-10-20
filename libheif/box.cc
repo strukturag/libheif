@@ -1336,11 +1336,10 @@ Error Box_iloc::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   // Sanity check. (This might be obsolete now as we check for range.error() below).
-  auto max_iloc_items = limits->max_iloc_items;
-  if (max_iloc_items && item_count > max_iloc_items) {
+  if (limits->max_items && item_count > limits->max_items) {
     std::stringstream sstr;
     sstr << "iloc box contains " << item_count << " items, which exceeds the security limit of "
-         << max_iloc_items << " items.";
+         << limits->max_items << " items.";
 
     return Error(heif_error_Memory_allocation_error,
                  heif_suberror_Security_limit_exceeded,
@@ -2900,6 +2899,16 @@ Error Box_ipma::parse(BitstreamRange& range, const heif_security_limits* limits)
   }
 
   uint32_t entry_cnt = range.read32();
+
+  if (limits->max_items && entry_cnt > limits->max_items) {
+    std::stringstream sstr;
+    sstr << "ipma box wants to define properties for " << entry_cnt
+         << " items, but the security limit has been set to " << limits->max_items << " items";
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
+  }
+
   for (uint32_t i = 0; i < entry_cnt && !range.error() && !range.eof(); i++) {
     Entry entry;
     if (get_version() < 1) {

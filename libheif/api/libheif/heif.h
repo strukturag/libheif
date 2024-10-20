@@ -1138,7 +1138,6 @@ struct heif_security_limits {
 
   uint32_t max_uncompressed_components;
 
-  uint32_t max_iloc_items;
   uint32_t max_iloc_extents_per_item;
   uint32_t max_size_entity_group;
 
