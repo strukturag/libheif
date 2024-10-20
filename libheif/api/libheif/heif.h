@@ -410,7 +410,7 @@ enum heif_compression_format
    */
   heif_compression_AV1 = 4,
   /**
-   * VVC compression. (Currently unused in libheif.)
+   * VVC compression.
    *
    * The compression format is defined in ISO/IEC 23090-3. This is equivalent to H.266.
    *
