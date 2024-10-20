@@ -131,9 +131,31 @@ template <typename T> const char* get_name(T val, const std::map<T, const char*>
 
 Error Box_cmpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  unsigned int component_count = range.read32();
+  uint32_t component_count = range.read32();
 
-  for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
+  if (limits->max_uncompressed_components && component_count > limits->max_uncompressed_components) {
+    std::stringstream sstr;
+    sstr << "cmpd box should countain " << component_count << " components, but security limit is set to "
+         << limits->max_uncompressed_components << " components";
+
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()
+    };
+  }
+
+  for (unsigned int i = 0; i < component_count ; i++) {
+    if (range.eof()) {
+      std::stringstream sstr;
+      sstr << "cmpd box should countain " << component_count << " components, but box only contained "
+           << i << " components";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_End_of_data,
+              sstr.str()
+      };
+    }
+
     Component component;
     component.component_type = range.read16();
     if (component.component_type >= 0x8000) {

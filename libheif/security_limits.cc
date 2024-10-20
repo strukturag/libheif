@@ -37,6 +37,7 @@ struct heif_security_limits global_security_limits {
     .max_color_profile_size = 100 * 1024 * 1024, // 100 MB
     .max_memory_block_size = 512 * 1024 * 1024,  // 512 MB
 
+    .max_uncompressed_components = 256,
     .max_iloc_items = 2000,
     .max_iloc_extents_per_item = 32,
     .max_size_entity_group = 64,
