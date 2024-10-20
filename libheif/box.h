@@ -223,7 +223,7 @@ public:
 
   const std::vector<std::shared_ptr<Box>>& get_all_child_boxes() const { return m_children; }
 
-  int append_child_box(const std::shared_ptr<Box>& box)
+  uint32_t append_child_box(const std::shared_ptr<Box>& box)
   {
     m_children.push_back(box);
     return (int) m_children.size() - 1;
@@ -685,7 +685,7 @@ public:
     set_short_type(fourcc("ipco"));
   }
 
-  int find_or_append_child_box(const std::shared_ptr<Box>& box);
+  uint32_t find_or_append_child_box(const std::shared_ptr<Box>& box);
 
   Error get_properties_for_item_ID(heif_item_id itemID,
                                    const std::shared_ptr<class Box_ipma>&,

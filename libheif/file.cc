@@ -1018,7 +1018,7 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
   auto ispe = std::make_shared<Box_ispe>();
   ispe->set_size(width, height);
 
-  int index = m_ipco_box->find_or_append_child_box(ispe);
+  uint32_t index = m_ipco_box->find_or_append_child_box(ispe);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 }
@@ -1027,7 +1027,7 @@ void HeifFile::add_ispe_property(heif_item_id id, uint32_t width, uint32_t heigh
 
 heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
-  int index = m_ipco_box->find_or_append_child_box(property);
+  uint32_t index = m_ipco_box->find_or_append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 
@@ -1037,7 +1037,7 @@ heif_property_id HeifFile::add_property(heif_item_id id, const std::shared_ptr<B
 
 heif_property_id HeifFile::add_property_without_deduplication(heif_item_id id, const std::shared_ptr<Box>& property, bool essential)
 {
-  int index = m_ipco_box->append_child_box(property);
+  uint32_t index = m_ipco_box->append_child_box(property);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{essential, uint16_t(index + 1)});
 
@@ -1091,7 +1091,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto irot = std::make_shared<Box_irot>();
     irot->set_rotation_ccw(rotation_ccw);
 
-    int index = m_ipco_box->find_or_append_child_box(irot);
+    uint32_t index = m_ipco_box->find_or_append_child_box(irot);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1100,7 +1100,7 @@ void HeifFile::add_orientation_properties(heif_item_id id, heif_orientation orie
     auto imir = std::make_shared<Box_imir>();
     imir->set_mirror_direction(mirror);
 
-    int index = m_ipco_box->find_or_append_child_box(imir);
+    uint32_t index = m_ipco_box->find_or_append_child_box(imir);
 
     m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{false, uint16_t(index + 1)});
   }
@@ -1327,7 +1327,7 @@ void HeifFile::set_auxC_property(heif_item_id id, const std::string& type)
   auto auxC = std::make_shared<Box_auxC>();
   auxC->set_aux_type(type);
 
-  int index = m_ipco_box->find_or_append_child_box(auxC);
+  uint32_t index = m_ipco_box->find_or_append_child_box(auxC);
 
   m_ipma_box->add_property_for_item_ID(id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
 }

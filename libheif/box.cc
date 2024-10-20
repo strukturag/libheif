@@ -2342,9 +2342,9 @@ std::string Box_iprp::dump(Indent& indent) const
 }
 
 
-int Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
+uint32_t Box_ipco::find_or_append_child_box(const std::shared_ptr<Box>& box)
 {
-  for (int i = 0; i < (int) m_children.size(); i++) {
+  for (uint32_t i = 0; i < (uint32_t) m_children.size(); i++) {
     if (Box::equal(m_children[i], box)) {
       return i;
     }
