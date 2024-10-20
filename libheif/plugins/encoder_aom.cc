@@ -1004,7 +1004,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   struct heif_color_profile_nclx* nclx = nullptr;
   err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
-    nclx = nullptr;
+    assert(nclx == nullptr);
   }
 
   // make sure NCLX profile is deleted at end of function

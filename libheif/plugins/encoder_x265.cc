@@ -790,7 +790,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
   struct heif_color_profile_nclx* nclx = nullptr;
   heif_error err = heif_image_get_nclx_color_profile(image, &nclx);
   if (err.code != heif_error_Ok) {
-    nclx = nullptr;
+    assert(nclx == nullptr);
   }
 
   // make sure NCLX profile is deleted at end of function
