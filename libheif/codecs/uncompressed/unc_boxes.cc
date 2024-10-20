@@ -221,7 +221,9 @@ Error Box_cmpd::write(StreamWriter& writer) const
 Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
+
   m_profile = range.read32();
+
   if (get_version() == 1) {
     if (m_profile == fourcc("rgb3")) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
@@ -230,7 +232,8 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
       add_component(component1);
       Box_uncC::Component component2 = {2, 8, component_format_unsigned, 0};
       add_component(component2);
-    } else if ((m_profile == fourcc("rgba")) || (m_profile == fourcc("abgr"))) {
+    }
+    else if ((m_profile == fourcc("rgba")) || (m_profile == fourcc("abgr"))) {
       Box_uncC::Component component0 = {0, 8, component_format_unsigned, 0};
       add_component(component0);
       Box_uncC::Component component1 = {1, 8, component_format_unsigned, 0};
@@ -239,14 +242,25 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
       add_component(component2);
       Box_uncC::Component component3 = {3, 8, component_format_unsigned, 0};
       add_component(component3);
-    } else {
+    }
+    else {
         return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
     }
   } else if (get_version() == 0) {
 
-    unsigned int component_count = range.read32();
+    uint32_t component_count = range.read32();
 
-    for (unsigned int i = 0; i < component_count && !range.error() && !range.eof(); i++) {
+    if (limits->max_uncompressed_components && component_count > limits->max_uncompressed_components) {
+      std::stringstream sstr;
+      sstr << "Number of image components (" << component_count << ") exceeds security limit ("
+           << limits->max_uncompressed_components << ")";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
+    for (uint32_t i = 0; i < component_count && !range.error() && !range.eof(); i++) {
       Component component;
       component.component_index = range.read16();
       component.component_bit_depth = uint16_t(range.read8() + 1);
@@ -255,18 +269,18 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
       m_components.push_back(component);
 
       if (!is_valid_component_format(component.component_format)) {
-        return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
+        return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid component format"};
       }
     }
 
     m_sampling_type = range.read8();
     if (!is_valid_sampling_mode(m_sampling_type)) {
-      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling mode"};
+      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid sampling mode"};
     }
 
     m_interleave_type = range.read8();
     if (!is_valid_interleave_mode(m_interleave_type)) {
-      return Error{heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave mode"};
+      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "Invalid interleave mode"};
     }
 
     m_block_size = range.read8();
@@ -286,18 +300,22 @@ Error Box_uncC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
     uint32_t num_tile_cols_minus_one = range.read32();
     uint32_t num_tile_rows_minus_one = range.read32();
-    if ((num_tile_cols_minus_one >= UINT32_MAX) || (num_tile_rows_minus_one >= UINT32_MAX)) {
-      std::stringstream sstr;
-      sstr << "Tiling size " << ((uint64_t)num_tile_cols_minus_one + 1) << " x " << ((uint64_t)num_tile_rows_minus_one + 1) << " exceeds the maximum allowed size "
-           << UINT32_MAX << " x " << UINT32_MAX;
-      return Error(heif_error_Memory_allocation_error,
-                   heif_suberror_Security_limit_exceeded,
-                   sstr.str());
-    }
-    m_num_tile_cols = num_tile_cols_minus_one + 1;
 
+    if (limits->max_number_of_tiles &&
+        static_cast<uint64_t>(num_tile_cols_minus_one) + 1 > limits->max_number_of_tiles / (static_cast<uint64_t>(num_tile_rows_minus_one) + 1)) {
+      std::stringstream sstr;
+      sstr << "Tiling size "
+           << ((uint64_t)num_tile_cols_minus_one + 1) << " x " << ((uint64_t)num_tile_rows_minus_one + 1)
+           << " exceeds the maximum allowed number " << limits->max_number_of_tiles << " set as security limit";
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
+    m_num_tile_cols = num_tile_cols_minus_one + 1;
     m_num_tile_rows = num_tile_rows_minus_one + 1;
   }
+
   return range.get_error();
 }
 
