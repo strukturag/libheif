@@ -126,7 +126,7 @@ enum heif_item_property_type heif_item_get_property_type(const struct heif_conte
     return heif_item_property_type_invalid;
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return heif_item_property_type_invalid;
   }
 
@@ -160,7 +160,7 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
     return err.error_struct(context->context.get());
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
   }
 
@@ -220,7 +220,7 @@ enum heif_transform_mirror_direction heif_item_get_property_transform_mirror(con
     return heif_transform_mirror_direction_invalid;
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return heif_transform_mirror_direction_invalid;
   }
 
@@ -245,7 +245,7 @@ int heif_item_get_property_transform_rotation_ccw(const struct heif_context* con
     return -1;
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return -1;
   }
 
@@ -272,7 +272,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
     return;
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return;
   }
 
