@@ -26,8 +26,6 @@ struct uncompressed_decoder
 {
 };
 
-static const char kSuccess[] = "Success";
-
 static const int UNCOMPRESSED_PLUGIN_PRIORITY = 100;
 
 
