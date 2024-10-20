@@ -82,6 +82,7 @@ struct heif_error encode_image(struct heif_image* img) {
     return err;
   }
 
+  heif_encoder_release(enc);
   heif_image_handle_release(hdl);
   heif_context_free(ctx);
   return err;
