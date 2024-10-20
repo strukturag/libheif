@@ -263,8 +263,8 @@ public:
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
-  uint32_t m_compression_type;
-  uint8_t m_compressed_unit_type;
+  uint32_t m_compression_type = 0;
+  uint8_t m_compressed_unit_type = 0;
 };
 
 /**
