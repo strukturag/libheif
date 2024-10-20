@@ -37,11 +37,11 @@ public:
   bool is_essential() const override { return true; }
 
   struct configuration {
-    uint8_t configuration_version;
-    uint8_t AVCProfileIndication; // profile_idc
-    uint8_t profile_compatibility; // constraint set flags
-    uint8_t AVCLevelIndication; // level_idc
-    uint8_t lengthSize;
+    uint8_t configuration_version = 0;
+    uint8_t AVCProfileIndication = 0; // profile_idc
+    uint8_t profile_compatibility = 0; // constraint set flags
+    uint8_t AVCLevelIndication = 0; // level_idc
+    uint8_t lengthSize = 0;
     heif_chroma chroma_format = heif_chroma_420; // Note: avcC integer value can be cast to heif_chroma enum
     uint8_t bit_depth_luma = 8;
     uint8_t bit_depth_chroma = 8;
