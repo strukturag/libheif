@@ -185,6 +185,11 @@ int main(int argc, char** argv)
       thumbnail_width = thumbnail_height = 0;
     }
 
+    if (thumbnail_width == 0 || thumbnail_height == 0) {
+      std::cerr << "Zero thumbnail output size\n";
+      return 1;
+    }
+
 
     // --- output thumbnail smaller than HEIF thumbnail -> scale down
 
