@@ -95,7 +95,7 @@ bool is_predefined_component_type(uint16_t type)
 {
   // check whether the component type can be mapped to heif_uncompressed_component_type and we have a name defined for
   // it in sNames_uncompressed_component_type.
-  return (type >= 0 && type <= component_type_max_valid);
+  return type <= component_type_max_valid;
 }
 
 static std::map<heif_uncompressed_component_type, const char*> sNames_uncompressed_component_type{
