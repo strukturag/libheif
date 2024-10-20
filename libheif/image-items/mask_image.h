@@ -66,7 +66,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
 private:
-  uint8_t m_bits_per_pixel;
+  uint8_t m_bits_per_pixel = 0;
 };
 
 class MaskImageCodec
