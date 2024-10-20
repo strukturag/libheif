@@ -469,6 +469,9 @@ Error Box_cmpC::write(StreamWriter& writer) const
 }
 
 
+static uint8_t unit_offset_length_table[] = { 0,2,3,4,8 };
+static uint8_t unit_size_length_table[] = { 1,2,3,4,8 };
+
 Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
@@ -481,43 +484,64 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
   uint8_t unit_size_code = (codes & 0b00011100) >> 2;
   uint32_t num_compressed_units = range.read32();
   uint64_t implied_offset = 0;
+
+  if (unit_offset_code > 4) {
+    return {heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit offset code"};
+  }
+
+  if (unit_size_code > 4) {
+    return {heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit size code"};
+  }
+
+  // --- precompute fields lengths
+
+  uint8_t unit_offset_length = unit_offset_length_table[unit_offset_code];
+  uint8_t unit_size_length = unit_size_length_table[unit_size_code];
+
+  // --- check if box is large enough for all the data
+
+  uint64_t data_size = num_compressed_units * (unit_offset_length + unit_size_length);
+  if (data_size > range.get_remaining_bytes()) {
+    uint64_t contained_units = range.get_remaining_bytes() / (unit_offset_length + unit_size_length);
+    std::stringstream sstr;
+    sstr << "icef box declares " << num_compressed_units << " units, but only " << contained_units
+         << " were contained in the file";
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            sstr.str()};
+  }
+
+  // TODO: should we impose some security limit?
+
+  // --- read box content
+
+  m_unit_infos.resize(num_compressed_units);
+
   for (uint32_t r = 0; r < num_compressed_units; r++) {
     struct CompressedUnitInfo unitInfo;
     if (unit_offset_code == 0) {
       unitInfo.unit_offset = implied_offset;
-    } else if (unit_offset_code == 1) {
-      unitInfo.unit_offset = range.read16();
-    } else if (unit_offset_code == 2) {
-      unitInfo.unit_offset = range.read24();
-    } else if (unit_offset_code == 3) {
-      unitInfo.unit_offset = range.read32();
-    } else if (unit_offset_code == 4) {
-      unitInfo.unit_offset = range.read64();
     } else {
-      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit offset code");
+      unitInfo.unit_offset = range.read_uint(unit_offset_length);
     }
-    if (unit_size_code == 0) {
-      unitInfo.unit_size = range.read8();
-    } else if (unit_size_code == 1) {
-      unitInfo.unit_size = range.read16();
-    } else if (unit_size_code == 2) {
-      unitInfo.unit_size = range.read24();
-    } else if (unit_size_code == 3) {
-      unitInfo.unit_size = range.read32();
-    } else if (unit_size_code == 4) {
-      unitInfo.unit_size = range.read64();
-    } else {
-      return Error(heif_error_Usage_error, heif_suberror_Unsupported_parameter, "Unsupported icef unit size code");
-    }
+
+    unitInfo.unit_size = range.read_uint(unit_size_length);
+
     if (unitInfo.unit_size >= UINT64_MAX - implied_offset) {
-      return {heif_error_Invalid_input, heif_suberror_Invalid_parameter_value, "cumulative offsets too large for 64 bit file size"};
+      return {heif_error_Invalid_input,
+              heif_suberror_Invalid_parameter_value,
+              "cumulative offsets too large for 64 bit file size"};
     }
+
     implied_offset += unitInfo.unit_size;
+
     if (range.get_error() != Error::Ok) {
       return range.get_error();
     }
-    m_unit_infos.push_back(unitInfo);
+
+    m_unit_infos[r] = unitInfo;
   }
+
   return range.get_error();
 }
 
