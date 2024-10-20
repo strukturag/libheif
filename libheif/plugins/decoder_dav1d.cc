@@ -102,6 +102,7 @@ struct heif_error dav1d_new_decoder(void** dec)
   decoder->settings.all_layers = 0;
 
   if (dav1d_open(&decoder->context, &decoder->settings) != 0) {
+    delete decoder;
     struct heif_error err = {heif_error_Decoder_plugin_error, heif_suberror_Unspecified, kSuccess};
     return err;
   }
