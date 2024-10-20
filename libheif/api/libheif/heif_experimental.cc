@@ -52,7 +52,7 @@ struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct he
     return err.error_struct(context->context.get());
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
   }
 
@@ -213,7 +213,7 @@ struct heif_error heif_item_get_property_camera_extrinsic_matrix(const struct he
     return err.error_struct(context->context.get());
   }
 
-  if (propertyId - 1 < 0 || propertyId - 1 >= properties.size()) {
+  if (propertyId < 1 || propertyId - 1 >= properties.size()) {
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "property index out of range"};
   }
 
