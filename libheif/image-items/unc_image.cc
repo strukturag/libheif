@@ -167,7 +167,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
       {
         uint32_t src_stride;
         const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-        uint64_t out_size = src_image->get_height() * src_image->get_width();
+        uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width();
 
         data.resize(data.size() + out_size);
         for (uint32_t y = 0; y < src_image->get_height(); y++) {
@@ -208,7 +208,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
 
       uint32_t src_stride;
       const uint8_t* src_data = src_image->get_plane(heif_channel_interleaved, &src_stride);
-      uint64_t out_size = src_image->get_height() * src_image->get_width() * bytes_per_pixel;
+      uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_image->get_width() * bytes_per_pixel;
       data.resize(out_size);
       for (uint32_t y = 0; y < src_image->get_height(); y++) {
         memcpy(data.data() + y * src_image->get_width() * bytes_per_pixel, src_data + src_stride * y, src_image->get_width() * bytes_per_pixel);
@@ -239,7 +239,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
     {
       uint32_t src_stride;
       const uint8_t* src_data = src_image->get_plane(channel, &src_stride);
-      uint64_t out_size = src_image->get_height() * src_stride;
+      uint64_t out_size = static_cast<uint64_t>(src_image->get_height()) * src_stride;
       data.resize(data.size() + out_size);
       memcpy(data.data() + offset, src_data, out_size);
       offset += out_size;
