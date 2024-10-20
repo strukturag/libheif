@@ -251,14 +251,29 @@ void Box_pclr::set_columns(uint8_t num_columns, uint8_t bit_depth)
 
 Error Box_j2kL::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  int layer_count = range.read16();
+  uint16_t layer_count = range.read16();
+
+  if (layer_count > range.get_remaining_bytes() / (2+1+2)) {
+    std::stringstream sstr;
+    sstr << "j2kL box wants to define " << layer_count << "JPEG-2000 layers, but the box only contains "
+         << range.get_remaining_bytes() / (2 + 1 + 2) << " layers entries";
+    return {heif_error_Invalid_input,
+            heif_suberror_End_of_data,
+            sstr.str()};
+  }
+
+  m_layers.resize(layer_count);
 
   for (int i = 0; i < layer_count && !range.error() && !range.eof(); i++) {
     Layer layer;
     layer.layer_id = range.read16();
     layer.discard_levels = range.read8();
     layer.decode_layers = range.read16();
-    m_layers.push_back(layer);
+    m_layers[i] = layer;
+  }
+
+  if (range.get_error()) {
+    m_layers.clear();
   }
 
   return range.get_error();
