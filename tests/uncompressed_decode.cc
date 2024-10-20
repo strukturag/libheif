@@ -165,6 +165,6 @@ TEST_CASE("check image handle no metadata blocks") {
 }
 
 TEST_CASE("check uncompressed is advertised") {
-  REQUIRE(heif_have_decoder_for_format(heif_compression_uncompressed) == true);
+  REQUIRE(heif_have_decoder_for_format(heif_compression_uncompressed) == (int)true);
 }
 
