@@ -916,8 +916,12 @@ Error HeifContext::interpret_heif_file()
 
 bool HeifContext::has_alpha(heif_item_id ID) const
 {
-  assert(is_image(ID));
-  auto img = m_all_images.find(ID)->second;
+  auto imgIter = m_all_images.find(ID);
+  if (imgIter == m_all_images.end()) {
+    return false;
+  }
+
+  auto img = imgIter->second;
 
   // --- has the image an auxiliary alpha image?
 
