@@ -512,7 +512,7 @@ private:
     }
 
     std::vector<uint8_t> headerData;
-    size_t cursor;
+    size_t cursor = 0;
 };
 
 #endif // LIBHEIF_JPEG2000_BOXES_H
