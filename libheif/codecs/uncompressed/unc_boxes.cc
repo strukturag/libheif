@@ -518,7 +518,7 @@ Error Box_icef::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // --- check if box is large enough for all the data
 
-  uint64_t data_size_bytes = num_compressed_units * (unit_offset_bits + unit_size_bits) / 8;
+  uint64_t data_size_bytes = static_cast<uint64_t>(num_compressed_units) * (unit_offset_bits + unit_size_bits) / 8;
   if (data_size_bytes > range.get_remaining_bytes()) {
     uint64_t contained_units = range.get_remaining_bytes() / ((unit_offset_bits + unit_size_bits) * 8);
     std::stringstream sstr;
