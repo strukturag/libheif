@@ -58,7 +58,7 @@ void AbstractDecoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
 
 void AbstractDecoder::processComponentSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_row_offset, uint32_t tile_column, uint32_t tile_x)
 {
-  uint64_t dst_col_number = tile_column * entry.tile_width + tile_x;
+  uint64_t dst_col_number = static_cast<uint64_t>(tile_column) * entry.tile_width + tile_x;
   uint64_t dst_column_offset = dst_col_number * entry.bytes_per_component_sample;
   int val = srcBits.get_bits(entry.bits_per_component_sample);
   memcpy(entry.dst_plane + dst_row_offset + dst_column_offset, &val, entry.bytes_per_component_sample);

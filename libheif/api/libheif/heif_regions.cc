@@ -333,8 +333,8 @@ struct heif_error heif_region_item_add_region_inline_mask(struct heif_region_ite
   region->mask_data.resize((width * height + 7) / 8);
   memset(region->mask_data.data(), 0, region->mask_data.size());
 
-  uint32_t mask_height = (uint32_t)heif_image_get_height(mask_image, heif_channel_Y);
-  uint32_t mask_width = (uint32_t)heif_image_get_width(mask_image, heif_channel_Y);
+  uint32_t mask_height = mask_image->image->get_height();
+  uint32_t mask_width = mask_image->image->get_width();
   int stride;
   uint8_t* p = heif_image_get_plane(mask_image, heif_channel_Y, &stride);
   uint64_t pixel_index = 0;

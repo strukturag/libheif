@@ -266,7 +266,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Grid::decode_full_grid_image(c
 
   std::deque<tile_data> tiles;
   if (get_context()->get_max_decoding_threads() > 0)
-    tiles.resize(grid.get_rows() * grid.get_columns());
+    tiles.resize(static_cast<size_t>(grid.get_rows()) * static_cast<size-t>(grid.get_columns()));
 
   std::deque<std::future<Error> > errs;
 #endif
@@ -635,7 +635,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 
   // generate dummy grid item IDs (0)
   std::vector<heif_item_id> tile_ids;
-  tile_ids.resize(tile_rows * tile_columns);
+  tile_ids.resize(static_cast<size_t>(tile_rows) * static_cast<size_t>(tile_columns));
 
   // Connect tiles to grid
   file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
