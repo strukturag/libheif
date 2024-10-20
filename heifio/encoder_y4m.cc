@@ -64,6 +64,10 @@ bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
   int cw = heif_image_get_width(image, heif_channel_Cb);
   int ch = heif_image_get_height(image, heif_channel_Cb);
 
+  if (yw < 0 || cw < 0) {
+    return false;
+  }
+
   fprintf(fp, "YUV4MPEG2 W%d H%d F30:1\nFRAME\n", yw, yh);
 
   for (int y = 0; y < yh; y++) {
