@@ -96,9 +96,9 @@ public:
   }
 
 private:
-  int m_pixelStartOffset;
-  int m_rowStartOffset;
-  int m_tileStartOffset;
+  int m_pixelStartOffset = 0;
+  int m_rowStartOffset = 0;
+  int m_tileStartOffset = 0;
 };
 
 
