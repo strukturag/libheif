@@ -76,6 +76,7 @@
 
 #if WITH_UNCOMPRESSED_CODEC
 #include "plugins/encoder_uncompressed.h"
+#include "plugins/decoder_uncompressed.h"
 #endif
 
 #if HAVE_JPEG_DECODER
@@ -213,9 +214,10 @@ void register_default_plugins()
 
 #if WITH_UNCOMPRESSED_CODEC
   register_encoder(get_encoder_plugin_uncompressed());
+  register_decoder(get_decoder_plugin_uncompressed());
 #endif
 
-register_encoder(get_encoder_plugin_mask());
+  register_encoder(get_encoder_plugin_mask());
 }
 
 

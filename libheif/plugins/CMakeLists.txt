@@ -121,5 +121,7 @@ target_sources(heif PRIVATE
 if (WITH_UNCOMPRESSED_CODEC)
     target_sources(heif PRIVATE
             encoder_uncompressed.h
-            encoder_uncompressed.cc)
+            encoder_uncompressed.cc
+            decoder_uncompressed.h
+            decoder_uncompressed.cc)
 endif ()

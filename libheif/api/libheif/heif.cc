@@ -2832,13 +2832,6 @@ struct heif_error heif_context_get_encoder(struct heif_context* context,
 
 int heif_have_decoder_for_format(enum heif_compression_format format)
 {
-  if (format == heif_compression_uncompressed) {
-#if WITH_UNCOMPRESSED_CODEC
-    return true;
-#else
-    return false;
-#endif
-  }
   auto plugin = get_decoder(format, nullptr);
   return plugin != nullptr;
 }

@@ -188,11 +188,8 @@ void list_all_decoders()
   std::cout << "JPEG 2000 (HT) decoders:\n";
   list_decoders(heif_compression_HTJ2K);
 
-#if WITH_UNCOMPRESSED_CODEC
-  std::cout << "uncompressed: yes\n";
-#else
-  std::cout << "uncompressed: no\n";
-#endif
+  std::cout << "uncompressed:\n";
+  list_decoders(heif_compression_uncompressed);
 
   std::cout << "VVIC decoders:\n";
   list_decoders(heif_compression_VVC);
