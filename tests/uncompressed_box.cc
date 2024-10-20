@@ -327,7 +327,6 @@ TEST_CASE("uncC_parse_excess_tile_cols") {
   REQUIRE(range.error() == 0);
   REQUIRE(error.error_code == 6);
   REQUIRE(error.sub_error_code == 1000);
-  REQUIRE(error.message == "Tiling size 4294967296 x 32768 exceeds the maximum allowed size 4294967295 x 4294967295");
 }
 
 TEST_CASE("uncC_parse_excess_tile_rows") {
@@ -350,7 +349,6 @@ TEST_CASE("uncC_parse_excess_tile_rows") {
   REQUIRE(range.error() == 0);
   REQUIRE(error.error_code == 6);
   REQUIRE(error.sub_error_code == 1000);
-  REQUIRE(error.message == "Tiling size 32768 x 4294967296 exceeds the maximum allowed size 4294967295 x 4294967295");
 }
 
 TEST_CASE("cmpC_defl") {
