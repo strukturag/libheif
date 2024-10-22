@@ -106,7 +106,7 @@ Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, s
   err = inflateInit2(&strm, windowSize);
   if (err != Z_OK) {
     std::stringstream sstr;
-    sstr << "Error initialising zlib inflate: " << strm.msg << " (" << err << ")\n";
+    sstr << "Error initialising zlib inflate: " << (strm.msg ? strm.msg : "NULL") << " (" << err << ")\n";
     return Error(heif_error_Memory_allocation_error, heif_suberror_Compression_initialisation_error, sstr.str());
   }
 
@@ -122,7 +122,7 @@ Error do_inflate(const std::vector<uint8_t>& compressed_input, int windowSize, s
     else if (err == Z_NEED_DICT || err == Z_DATA_ERROR || err == Z_STREAM_ERROR) {
       inflateEnd(&strm);
       std::stringstream sstr;
-      sstr << "Error performing zlib inflate: " << strm.msg << " (" << err << ")\n";
+      sstr << "Error performing zlib inflate: " << (strm.msg ? strm.msg : "NULL") << " (" << err << ")\n";
       return Error(heif_error_Invalid_input, heif_suberror_Decompression_invalid_data, sstr.str());
     }
 
