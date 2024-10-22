@@ -82,6 +82,7 @@ TEST_CASE("check image size mono") {
 
 void check_image_content_mono(struct heif_context *&context) {
   heif_image_handle *handle = get_primary_image_handle(context);
+  REQUIRE(handle != nullptr);
   heif_image *img = get_primary_image_mono(handle);
 
   int stride;
@@ -183,6 +184,8 @@ void check_image_content_mono(struct heif_context *&context) {
     REQUIRE(((int)(img_plane[stride * row + 28])) == 0);
     REQUIRE(((int)(img_plane[stride * row + 29])) == 0);
   }
+
+  heif_image_handle_release(handle);
 }
 
 TEST_CASE("check image content mono") {

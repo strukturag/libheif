@@ -58,7 +58,7 @@ struct heif_image* createImage_RRGGBB_BE() {
 struct heif_error encode_image(struct heif_image* img) {
   struct heif_context* ctx = heif_context_alloc();
 
-  struct heif_encoder* enc;
+  struct heif_encoder* enc = nullptr;
   struct heif_error err { heif_error_Ok };
 
   err = heif_context_get_encoder_for_format(ctx,

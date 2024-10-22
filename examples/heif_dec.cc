@@ -284,7 +284,7 @@ int decode_single_image(heif_image_handle* handle,
         assert(nDepthImages == 1);
         (void) nDepthImages;
 
-        struct heif_image_handle* depth_handle;
+        struct heif_image_handle* depth_handle = nullptr;
         err = heif_image_handle_get_depth_image_handle(handle, depth_id, &depth_handle);
         if (err.code) {
           std::cerr << "Could not read depth channel\n";
@@ -339,7 +339,7 @@ int decode_single_image(heif_image_handle* handle,
 
         for (heif_item_id auxId : auxIDs) {
 
-          struct heif_image_handle* aux_handle;
+          struct heif_image_handle* aux_handle = nullptr;
           err = heif_image_handle_get_auxiliary_image_handle(handle, auxId, &aux_handle);
           if (err.code) {
             std::cerr << "Could not read auxiliary image\n";
@@ -348,7 +348,7 @@ int decode_single_image(heif_image_handle* handle,
 
           int aux_bit_depth = heif_image_handle_get_luma_bits_per_pixel(aux_handle);
 
-          struct heif_image* aux_image;
+          struct heif_image* aux_image = nullptr;
           err = heif_decode_image(aux_handle,
                                   &aux_image,
                                   encoder->colorspace(false),

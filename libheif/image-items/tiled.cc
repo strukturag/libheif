@@ -579,6 +579,7 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
   if (colorConversionResult.error) {
+    heif_encoding_options_free(options);
     return colorConversionResult.error;
   }
 

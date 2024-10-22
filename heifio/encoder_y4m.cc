@@ -65,6 +65,7 @@ bool Y4MEncoder::Encode(const struct heif_image_handle* handle,
   int ch = heif_image_get_height(image, heif_channel_Cb);
 
   if (yw < 0 || cw < 0) {
+    fclose(fp);
     return false;
   }
 
