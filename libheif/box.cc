@@ -2732,10 +2732,10 @@ Error Box_cclv::write(StreamWriter& writer) const
   size_t box_start = reserve_box_header_space(writer);
 
   uint8_t flags = 0;
-  flags |= m_ccv_primaries_valid     ? 0b00100000 : 0;
-  flags |= m_ccv_min_luminance_valid ? 0b00010000 : 0;
-  flags |= m_ccv_max_luminance_valid ? 0b00001000 : 0;
-  flags |= m_ccv_avg_luminance_valid ? 0b00000100 : 0;
+  flags |= m_ccv_primaries_valid     ? uint8_t{0b00100000} : uint8_t{0};
+  flags |= m_ccv_min_luminance_valid ? uint8_t{0b00010000} : uint8_t{0};
+  flags |= m_ccv_max_luminance_valid ? uint8_t{0b00001000} : uint8_t{0};
+  flags |= m_ccv_avg_luminance_valid ? uint8_t{0b00000100} : uint8_t{0};
   writer.write8(flags);
   if (m_ccv_primaries_valid) {
     for (int c = 0; c < 3; c++) {
