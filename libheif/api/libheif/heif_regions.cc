@@ -29,6 +29,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include <algorithm>
 
 
 int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
