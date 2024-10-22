@@ -186,6 +186,7 @@ void check_image_content_mono(struct heif_context *&context) {
   }
 
   heif_image_handle_release(handle);
+  heif_image_release(img);
 }
 
 TEST_CASE("check image content mono") {
