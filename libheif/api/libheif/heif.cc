@@ -3496,6 +3496,8 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
     return addGridResult.error.error_struct(ctx->context.get());
   }
 
+  out_grid = addGridResult.value;
+
   // Mark as primary image
   if (ctx->context->is_primary_image_set() == false) {
     ctx->context->set_primary_image(out_grid);
