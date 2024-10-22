@@ -806,8 +806,6 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
           uint32_t img_width = img->get_width();
           uint32_t img_height = img->get_height();
-          assert(img_width >= 0);
-          assert(img_height >= 0);
 
           int left = clap->left_rounded(img_width);
           int right = clap->right_rounded(img_width);
