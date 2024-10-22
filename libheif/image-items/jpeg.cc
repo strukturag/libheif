@@ -25,6 +25,7 @@
 #include "pixelimage.h"
 #include "api/libheif/api_structs.h"
 #include <cstring>
+#include <utility>
 
 
 static uint8_t JPEG_SOS = 0xDA;

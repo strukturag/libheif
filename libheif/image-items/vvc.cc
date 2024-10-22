@@ -25,6 +25,7 @@
 #include <string>
 #include <cassert>
 #include "api/libheif/api_structs.h"
+#include <utility>
 
 
 Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,
