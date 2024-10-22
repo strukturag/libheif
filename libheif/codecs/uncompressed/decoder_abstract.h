@@ -154,7 +154,7 @@ protected:
 
     inline uint64_t getDestinationRowOffset(uint32_t tile_row, uint32_t tile_y) const
     {
-      uint64_t dst_row_number = tile_row * tile_height + tile_y;
+      uint64_t dst_row_number = uint64_t{tile_row} * tile_height + tile_y;
       return dst_row_number * dst_plane_stride;
     }
 
