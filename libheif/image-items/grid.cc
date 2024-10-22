@@ -664,15 +664,15 @@ Error ImageItem_Grid::add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint
 {
   auto encoding_options = get_encoding_options();
 
-  std::shared_ptr<ImageItem> encoded_image;
-  Error error = get_context()->encode_image(image,
+  auto encodingResult = get_context()->encode_image(image,
                                             encoder,
                                             *encoding_options,
-                                            heif_image_input_class_normal,
-                                            encoded_image);
-  if (error != Error::Ok) {
-    return error;
+                                            heif_image_input_class_normal);
+  if (encodingResult.error != Error::Ok) {
+    return encodingResult.error;
   }
+
+  std::shared_ptr<ImageItem> encoded_image = *encodingResult;
 
   auto file = get_file();
   file->get_infe_box(encoded_image->get_id())->set_hidden_item(true); // grid tiles are hidden items
@@ -701,6 +701,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   std::shared_ptr<ImageItem_Grid> griditem;
 
   // Create ImageGrid
+
   ImageGrid grid;
   grid.set_num_tiles(columns, rows);
   uint32_t tile_width = tiles[0]->get_width(heif_channel_interleaved);
@@ -711,21 +712,26 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   auto file = ctx->get_heif_file();
 
   // Encode Tiles
-  Error error;
+
   std::vector<heif_item_id> tile_ids;
+
   for (int i=0; i<rows*columns; i++) {
     std::shared_ptr<ImageItem> out_tile;
-    error = ctx->encode_image(tiles[i],
-                              encoder,
-                              options,
-                              heif_image_input_class_normal,
-                              out_tile);
+    auto encodingResult = ctx->encode_image(tiles[i],
+                                            encoder,
+                                            options,
+                                            heif_image_input_class_normal);
+    if (encodingResult.error) {
+      return encodingResult.error;
+    }
+
     heif_item_id tile_id = out_tile->get_id();
     file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
     tile_ids.push_back(out_tile->get_id());
   }
 
   // Create Grid Item
+
   heif_item_id grid_id = file->add_new_image(fourcc("grid"));
   griditem = std::make_shared<ImageItem_Grid>(ctx, grid_id);
   ctx->insert_image_item(grid_id, griditem);
@@ -733,20 +739,24 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
   file->append_iloc_data(grid_id, grid_data, construction_method);
 
   // Connect tiles to grid
+
   file->add_iref_reference(grid_id, fourcc("dimg"), tile_ids);
 
   // Add ISPE property
+
   uint32_t image_width = tile_width * columns;
   uint32_t image_height = tile_height * rows;
   file->add_ispe_property(grid_id, image_width, image_height, false);
 
   // Add PIXI property (copy from first tile)
+
   auto pixi = file->get_property<Box_pixi>(tile_ids[0]);
   file->add_property(grid_id, pixi, true);
 
   // Set Brands
+
   file->set_brand(encoder->plugin->compression_format,
                   griditem->is_miaf_compatible());
 
-  return error;
+  return griditem;
 }

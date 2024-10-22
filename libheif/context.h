@@ -118,11 +118,10 @@ public:
   // contain no valid data yet.
   void reset_to_empty_heif();
 
-  Error encode_image(const std::shared_ptr<HeifPixelImage>& image,
-                     struct heif_encoder* encoder,
-                     const struct heif_encoding_options& options,
-                     enum heif_image_input_class input_class,
-                     std::shared_ptr<ImageItem>& out_image);
+  Result<std::shared_ptr<ImageItem>> encode_image(const std::shared_ptr<HeifPixelImage>& image,
+                                                  struct heif_encoder* encoder,
+                                                  const struct heif_encoding_options& options,
+                                                  enum heif_image_input_class input_class);
 
   void set_primary_image(const std::shared_ptr<ImageItem>& image);
 
@@ -131,11 +130,10 @@ public:
   Error assign_thumbnail(const std::shared_ptr<ImageItem>& master_image,
                          const std::shared_ptr<ImageItem>& thumbnail_image);
 
-  Error encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                         struct heif_encoder* encoder,
-                         const struct heif_encoding_options& options,
-                         int bbox_size,
-                         std::shared_ptr<ImageItem>& out_image_handle);
+  Result<std::shared_ptr<ImageItem>> encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
+                                                      struct heif_encoder* encoder,
+                                                      const struct heif_encoding_options& options,
+                                                      int bbox_size);
 
   Error add_exif_metadata(const std::shared_ptr<ImageItem>& master_image, const void* data, int size);
 

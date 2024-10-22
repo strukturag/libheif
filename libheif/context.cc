@@ -1122,16 +1122,12 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
 }
 
 
-Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
+Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_image,
                                 struct heif_encoder* encoder,
                                 const struct heif_encoding_options& in_options,
-                                enum heif_image_input_class input_class,
-                                std::shared_ptr<ImageItem>& out_image)
+                                enum heif_image_input_class input_class)
 {
-  Error error;
-
-
-  std::shared_ptr<ImageItem> image_item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
+  std::shared_ptr<ImageItem> output_image_item = ImageItem::alloc_for_compression_format(this, encoder->plugin->compression_format);
 
 
 #if 0
@@ -1160,13 +1156,13 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
   heif_encoding_options options = in_options;
 
-  if (const auto* nclx = image_item->get_forced_output_nclx()) {
+  if (const auto* nclx = output_image_item->get_forced_output_nclx()) {
     options.output_nclx_profile = nclx;
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = image_item->convert_colorspace_for_encoding(pixel_image,
-                                                                                                       encoder,
-                                                                                                       options);
+  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = output_image_item->convert_colorspace_for_encoding(pixel_image,
+                                                                                                              encoder,
+                                                                                                              options);
   if (srcImageResult.error) {
     return srcImageResult.error;
   }
@@ -1174,23 +1170,21 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
   std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
 
 
-  Error err = image_item->encode_to_item(this,
-                                         colorConvertedImage,
-                                         encoder, options, input_class);
+  Error err = output_image_item->encode_to_item(this,
+                                                colorConvertedImage,
+                                                encoder, options, input_class);
   if (err) {
     return err;
   }
 
-  out_image = image_item;
-
-  insert_image_item(image_item->get_id(), image_item);
+  insert_image_item(output_image_item->get_id(), output_image_item);
 
 
   // --- if there is an alpha channel, add it as an additional image
 
   if (options.save_alpha_channel &&
       colorConvertedImage->has_alpha() &&
-      image_item->get_auxC_alpha_channel_type() != nullptr) { // does not need a separate alpha aux image
+      output_image_item->get_auxC_alpha_channel_type() != nullptr) { // does not need a separate alpha aux image
 
     // --- generate alpha image
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
@@ -1201,29 +1195,29 @@ Error HeifContext::encode_image(const std::shared_ptr<HeifPixelImage>& pixel_ima
 
     // --- encode the alpha image
 
-    std::shared_ptr<ImageItem> heif_alpha_image;
-
-    error = encode_image(alpha_image, encoder, options,
-                         heif_image_input_class_alpha,
-                         heif_alpha_image);
-    if (error) {
-      return error;
+    auto alphaEncodingResult = encode_image(alpha_image, encoder, options,
+                         heif_image_input_class_alpha);
+    if (alphaEncodingResult.error) {
+      return alphaEncodingResult.error;
     }
 
-    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {out_image->get_id()});
-    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), out_image->get_auxC_alpha_channel_type());
+    std::shared_ptr<ImageItem> heif_alpha_image = *alphaEncodingResult;
+
+    m_heif_file->add_iref_reference(heif_alpha_image->get_id(), fourcc("auxl"), {output_image_item->get_id()});
+    m_heif_file->set_auxC_property(heif_alpha_image->get_id(), output_image_item->get_auxC_alpha_channel_type());
 
     if (pixel_image->is_premultiplied_alpha()) {
-      m_heif_file->add_iref_reference(out_image->get_id(), fourcc("prem"), {heif_alpha_image->get_id()});
+      m_heif_file->add_iref_reference(output_image_item->get_id(), fourcc("prem"), {heif_alpha_image->get_id()});
     }
   }
 
 
   m_heif_file->set_brand(encoder->plugin->compression_format,
-                         out_image->is_miaf_compatible());
+                         output_image_item->is_miaf_compatible());
 
-  return error;
+  return output_image_item;
 }
+
 
 void HeifContext::set_primary_image(const std::shared_ptr<ImageItem>& image)
 {
@@ -1253,14 +1247,11 @@ Error HeifContext::assign_thumbnail(const std::shared_ptr<ImageItem>& master_ima
 }
 
 
-Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
-                                    struct heif_encoder* encoder,
-                                    const struct heif_encoding_options& options,
-                                    int bbox_size,
-                                    std::shared_ptr<ImageItem>& out_thumbnail_handle)
+Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image,
+                                                                 struct heif_encoder* encoder,
+                                                                 const struct heif_encoding_options& options,
+                                                                 int bbox_size)
 {
-  Error error;
-
   int orig_width = image->get_width();
   int orig_height = image->get_height();
 
@@ -1269,7 +1260,6 @@ Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image
   if (orig_width <= bbox_size && orig_height <= bbox_size) {
     // original image is smaller than thumbnail size -> do not encode any thumbnail
 
-    out_thumbnail_handle.reset();
     return Error::Ok;
   }
   else if (orig_width > orig_height) {
@@ -1289,20 +1279,19 @@ Error HeifContext::encode_thumbnail(const std::shared_ptr<HeifPixelImage>& image
 
 
   std::shared_ptr<HeifPixelImage> thumbnail_image;
-  error = image->scale_nearest_neighbor(thumbnail_image, thumb_width, thumb_height);
+  Error error = image->scale_nearest_neighbor(thumbnail_image, thumb_width, thumb_height);
   if (error) {
     return error;
   }
 
-  error = encode_image(thumbnail_image,
+  auto encodingResult = encode_image(thumbnail_image,
                        encoder, options,
-                       heif_image_input_class_thumbnail,
-                       out_thumbnail_handle);
-  if (error) {
-    return error;
+                       heif_image_input_class_thumbnail);
+  if (encodingResult.error) {
+    return encodingResult.error;
   }
 
-  return error;
+  return *encodingResult;
 }
 
 

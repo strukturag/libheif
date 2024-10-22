@@ -1451,7 +1451,6 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
 }
 
 
-// TODO: move this into the Context. But first, we also have to move heif_decode_image() into Context.
 struct heif_error heif_image_handle_decode_image_tile(const struct heif_image_handle* in_handle,
                                                       struct heif_image** out_img,
                                                       enum heif_colorspace colorspace,
@@ -3413,18 +3412,15 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
     }
   }
 
-  std::shared_ptr<ImageItem> image;
-  Error error;
-
-
-  error = ctx->context->encode_image(input_image->image,
+  auto encodingResult = ctx->context->encode_image(input_image->image,
                                      encoder,
                                      options,
-                                     heif_image_input_class_normal,
-                                     image);
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
+                                     heif_image_input_class_normal);
+  if (encodingResult.error != Error::Ok) {
+    return encodingResult.error.error_struct(ctx->context.get());
   }
+
+  std::shared_ptr<ImageItem> image = *encodingResult;
 
   // mark the new image as primary image
 
@@ -3709,8 +3705,6 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
                                                 int bbox_size,
                                                 struct heif_image_handle** out_image_handle)
 {
-  std::shared_ptr<ImageItem> thumbnail_image;
-
   heif_encoding_options options;
   set_default_encoding_options(options);
 
@@ -3718,22 +3712,24 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
     copy_options(options, *input_options);
   }
 
-  Error error = ctx->context->encode_thumbnail(image->image,
+  auto encodingResult = ctx->context->encode_thumbnail(image->image,
                                                encoder,
                                                options,
-                                               bbox_size,
-                                               thumbnail_image);
-  if (error != Error::Ok) {
-    return error.error_struct(ctx->context.get());
+                                               bbox_size);
+  if (encodingResult.error != Error::Ok) {
+    return encodingResult.error.error_struct(ctx->context.get());
   }
-  else if (!thumbnail_image) {
+
+  std::shared_ptr<ImageItem> thumbnail_image = *encodingResult;
+
+  if (!thumbnail_image) {
     Error err(heif_error_Usage_error,
               heif_suberror_Invalid_parameter_value,
               "Thumbnail images must be smaller than the original image.");
     return err.error_struct(ctx->context.get());
   }
 
-  error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
+  Error error = ctx->context->assign_thumbnail(image_handle->image, thumbnail_image);
   if (error != Error::Ok) {
     return error.error_struct(ctx->context.get());
   }
