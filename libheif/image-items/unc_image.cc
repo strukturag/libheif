@@ -333,6 +333,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   const unciHeaders& headers = *genHeadersResult;
 
+  assert(headers.uncC);
+
   if (headers.uncC) {
     file->add_property(unci_id, headers.uncC, true);
   }

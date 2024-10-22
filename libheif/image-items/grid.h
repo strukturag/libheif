@@ -138,7 +138,7 @@ public:
 
   const ImageGrid& get_grid_spec() const { return m_grid_spec; }
 
-  void set_grid_spec(const ImageGrid& grid) { m_grid_spec = grid; m_grid_tile_ids.resize(grid.get_rows() * grid.get_columns()); }
+  void set_grid_spec(const ImageGrid& grid) { m_grid_spec = grid; m_grid_tile_ids.resize(size_t{grid.get_rows()} * grid.get_columns()); }
 
   const std::vector<heif_item_id>& get_grid_tiles() const { return m_grid_tile_ids; }
 

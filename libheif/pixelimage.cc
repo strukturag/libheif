@@ -232,8 +232,6 @@ bool HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t 
 bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
                                        int num_interleaved_components) // heif_chroma chroma)
 {
-  assert(width >= 0);
-  assert(height >= 0);
   assert(bit_depth >= 1);
   assert(bit_depth <= 128);
 
@@ -788,7 +786,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
 
     out_img->add_channel(channel, out_plane_width, out_plane_height, plane.m_datatype, plane.m_bit_depth);
 
-    ImagePlane& out_plane = out_img->m_planes.find(channel)->second;
+    auto out_plane_iter = out_img->m_planes.find(channel);
+    assert(out_plane_iter != out_img->m_planes.end());
+    ImagePlane& out_plane = out_plane_iter->second;
 
     if (plane.m_bit_depth <= 8) {
       plane.rotate_ccw<uint8_t>(angle_degrees, out_plane);
@@ -994,7 +994,9 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
                          plane.m_datatype,
                          plane.m_bit_depth);
 
-    ImagePlane& out_plane = out_img->m_planes.find(channel)->second;
+    auto out_plane_iter = out_img->m_planes.find(channel);
+    assert(out_plane_iter != out_img->m_planes.end());
+    ImagePlane& out_plane = out_plane_iter->second;
 
     int bytes_per_pixel = plane.get_bytes_per_pixel();
     plane.crop(plane_left, plane_right, plane_top, plane_bottom, bytes_per_pixel, out_plane);

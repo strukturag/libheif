@@ -1293,15 +1293,15 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  bool m_ccv_primaries_valid;
-  int32_t m_ccv_primaries_x[3];
-  int32_t m_ccv_primaries_y[3];
-  bool m_ccv_min_luminance_valid;
-  uint32_t m_ccv_min_luminance_value;
-  bool m_ccv_max_luminance_valid;
-  uint32_t m_ccv_max_luminance_value;
-  bool m_ccv_avg_luminance_valid;
-  uint32_t m_ccv_avg_luminance_value;
+  bool m_ccv_primaries_valid = false;
+  int32_t m_ccv_primaries_x[3] {};
+  int32_t m_ccv_primaries_y[3] {};
+  bool m_ccv_min_luminance_valid = false;
+  uint32_t m_ccv_min_luminance_value = 0;
+  bool m_ccv_max_luminance_valid = false;
+  uint32_t m_ccv_max_luminance_value = 0;
+  bool m_ccv_avg_luminance_valid = false;
+  uint32_t m_ccv_avg_luminance_value = 0;
 };
 
 

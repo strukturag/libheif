@@ -122,6 +122,10 @@ double GetPsnr(const HeifPixelImage& original, const HeifPixelImage& compressed,
   uint32_t h = original.get_height(channel);
   heif_chroma chroma = original.get_chroma_format();
 
+  if (w == 0 || h == 0) {
+    return 0;
+  }
+
   uint32_t orig_stride;
   uint32_t compressed_stride;
   const T* orig_p = (T*)original.get_plane(channel, &orig_stride);

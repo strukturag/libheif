@@ -3317,7 +3317,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 }
 
 
-static void set_default_options(heif_encoding_options& options)
+void set_default_encoding_options(heif_encoding_options& options)
 {
   options.version = 7;
 
@@ -3368,7 +3368,7 @@ heif_encoding_options* heif_encoding_options_alloc()
 {
   auto options = new heif_encoding_options;
 
-  set_default_options(*options);
+  set_default_encoding_options(*options);
 
   return options;
 }
@@ -3396,7 +3396,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  set_default_options(options);
+  set_default_encoding_options(options);
   if (input_options) {
     copy_options(options, *input_options);
 
@@ -3462,7 +3462,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
   // TODO: Don't repeat this code from heif_context_encode_image()
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  set_default_options(options);
+  set_default_encoding_options(options);
   if (input_options) {
     copy_options(options, *input_options);
 
@@ -3710,7 +3710,7 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
   std::shared_ptr<ImageItem> thumbnail_image;
 
   heif_encoding_options options;
-  set_default_options(options);
+  set_default_encoding_options(options);
 
   if (input_options != nullptr) {
     copy_options(options, *input_options);

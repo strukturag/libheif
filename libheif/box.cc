@@ -1051,9 +1051,9 @@ std::string Box_Error::dump(Indent& indent) const
   sstr << indent << '\'' << fourcc_to_string(m_box_type_with_parse_error) << "' parse error: " << m_error.message << "\n";
   sstr << indent << "fatality: ";
   switch (m_fatality) {
-    case parse_error_fatality::fatal: sstr << "fatal\n";
-    case parse_error_fatality::ignorable: sstr << "ignorable\n";
-    case parse_error_fatality::optional: sstr << "optional\n";
+    case parse_error_fatality::fatal: sstr << "fatal\n"; break;
+    case parse_error_fatality::ignorable: sstr << "ignorable\n"; break;
+    case parse_error_fatality::optional: sstr << "optional\n"; break;
   }
 
   return sstr.str();
@@ -3643,7 +3643,7 @@ void Box_iref::overwrite_reference(heif_item_id from_id, uint32_t type, uint32_t
 {
   for (auto& ref : m_references) {
     if (ref.from_item_ID == from_id && ref.header.get_short_type() == type) {
-      assert(reference_idx >= 0 && reference_idx < ref.to_item_ID.size());
+      assert(reference_idx < ref.to_item_ID.size());
 
       ref.to_item_ID[reference_idx] = to_item;
       return;

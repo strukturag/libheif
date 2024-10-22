@@ -412,10 +412,10 @@ uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t ti
   if (m_profile != 0) {
     switch (m_profile) {
       case fourcc("rgba"):
-        return 4 * tile_width * tile_height;
+        return 4 * uint64_t{tile_width} * tile_height;
 
       case fourcc("rgb3"):
-        return 3 * tile_width * tile_height;
+        return 3 * uint64_t{tile_width} * tile_height;
 
       default:
         assert(false);
@@ -433,7 +433,7 @@ uint64_t Box_uncC::compute_tile_data_size_bytes(uint32_t tile_width, uint32_t ti
         bytes_per_pixel += comp.component_bit_depth / 8;
       }
 
-      return bytes_per_pixel * tile_width * tile_height;
+      return bytes_per_pixel * uint64_t{tile_width} * tile_height;
     }
     default:
       assert(false);
@@ -713,7 +713,7 @@ Error Box_cpat::parse(BitstreamRange& range, const heif_security_limits* limits)
             "Maximum Bayer pattern size exceeded."};
   }
 
-  m_components.resize(m_pattern_width * m_pattern_height);
+  m_components.resize(size_t{m_pattern_width} * m_pattern_height);
 
   for (uint16_t i = 0; i < m_pattern_height; i++) {
     for (uint16_t j = 0; j < m_pattern_width; j++) {
@@ -747,7 +747,7 @@ Error Box_cpat::write(StreamWriter& writer) const
 {
   size_t box_start = reserve_box_header_space(writer);
 
-  if (m_pattern_width * m_pattern_height != m_components.size()) {
+  if (m_pattern_width * size_t{m_pattern_height} != m_components.size()) {
     // needs to be rectangular
     return {heif_error_Usage_error,
             heif_suberror_Invalid_parameter_value,

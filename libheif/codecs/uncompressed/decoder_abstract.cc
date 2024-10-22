@@ -83,7 +83,7 @@ void AbstractDecoder::processComponentRow(ChannelListEntry& entry, UncompressedB
 
 void AbstractDecoder::processComponentTileSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_offset, uint32_t tile_x)
 {
-  uint64_t dst_sample_offset = tile_x * entry.bytes_per_component_sample;
+  uint64_t dst_sample_offset = uint64_t{tile_x} * entry.bytes_per_component_sample;
   int val = srcBits.get_bits(entry.bits_per_component_sample);
   memcpy(entry.dst_plane + dst_offset + dst_sample_offset, &val, entry.bytes_per_component_sample);
 }
