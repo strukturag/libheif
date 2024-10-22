@@ -2655,9 +2655,6 @@ Box_cclv::Box_cclv()
   set_short_type(fourcc("cclv"));
 
   m_ccv_primaries_valid = false;
-  m_ccv_min_luminance_valid = false;
-  m_ccv_max_luminance_valid = false;
-  m_ccv_avg_luminance_valid = false;
 }
 
 
@@ -2676,26 +2673,45 @@ void Box_cclv::set_primaries(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int
 Error Box_cclv::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   uint8_t flags = range.read8();
+
   m_ccv_primaries_valid = (flags & 0b00100000);
-  m_ccv_min_luminance_valid = (flags & 0b00010000);
-  m_ccv_max_luminance_valid = (flags & 0b00001000);
-  m_ccv_avg_luminance_valid = (flags & 0b00000100);
+  bool ccv_min_luminance_valid = (flags & 0b00010000);
+  bool ccv_max_luminance_valid = (flags & 0b00001000);
+  bool ccv_avg_luminance_valid = (flags & 0b00000100);
+
   if (m_ccv_primaries_valid) {
     for (int c = 0; c < 3; c++) {
       m_ccv_primaries_x[c] = range.read32s();
       m_ccv_primaries_y[c] = range.read32s();
     }
   }
-  if (m_ccv_min_luminance_valid) {
+
+  if (ccv_min_luminance_valid) {
     m_ccv_min_luminance_value = range.read32();
   }
-  if (m_ccv_max_luminance_valid) {
+
+  if (ccv_max_luminance_valid) {
     m_ccv_max_luminance_value = range.read32();
   }
-  if (m_ccv_avg_luminance_valid) {
+
+  if (ccv_avg_luminance_valid) {
     m_ccv_avg_luminance_value = range.read32();
   }
+
   return range.get_error();
+}
+
+
+template <typename T> std::ostream& operator<<(std::ostream& ostr, const std::optional<T>& value)
+{
+  if (value) {
+    ostr << *value;
+  }
+  else {
+    ostr << "-";
+  }
+
+  return ostr;
 }
 
 
@@ -2705,24 +2721,17 @@ std::string Box_cclv::dump(Indent& indent) const
   sstr << Box::dump(indent);
 
   sstr << indent << "ccv_primaries_present_flag: " << m_ccv_primaries_valid << "\n";
-  sstr << indent << "ccv_min_luminance_value_present_flag: " << m_ccv_min_luminance_valid << "\n";
-  sstr << indent << "ccv_max_luminance_value_present_flag: " << m_ccv_max_luminance_valid << "\n";
-  sstr << indent << "ccv_avg_luminance_value_present_flag: " << m_ccv_avg_luminance_valid << "\n";
   if (m_ccv_primaries_valid) {
     sstr << indent << "ccv_primaries (x,y): ";
     sstr << "(" << m_ccv_primaries_x[0] << ";" << m_ccv_primaries_y[0] << "), ";
     sstr << "(" << m_ccv_primaries_x[1] << ";" << m_ccv_primaries_y[1] << "), ";
     sstr << "(" << m_ccv_primaries_x[2] << ";" << m_ccv_primaries_y[2] << ")\n";
   }
-  if (m_ccv_min_luminance_valid) {
-    sstr << indent << "ccv_min_luminance_value: " << m_ccv_min_luminance_value << "\n";
-  }
-  if (m_ccv_max_luminance_valid) {
-    sstr << indent << "ccv_max_luminance_value: " << m_ccv_max_luminance_value << "\n";
-  }
-  if (m_ccv_avg_luminance_valid) {
-    sstr << indent << "ccv_avg_luminance_value: " << m_ccv_avg_luminance_value << "\n";
-  }
+
+  sstr << indent << "ccv_min_luminance_value: " << m_ccv_min_luminance_value << "\n";
+  sstr << indent << "ccv_max_luminance_value: " << m_ccv_max_luminance_value << "\n";
+  sstr << indent << "ccv_avg_luminance_value: " << m_ccv_avg_luminance_value << "\n";
+
   return sstr.str();
 }
 
@@ -2733,25 +2742,30 @@ Error Box_cclv::write(StreamWriter& writer) const
 
   uint8_t flags = 0;
   flags |= m_ccv_primaries_valid     ? uint8_t{0b00100000} : uint8_t{0};
-  flags |= m_ccv_min_luminance_valid ? uint8_t{0b00010000} : uint8_t{0};
-  flags |= m_ccv_max_luminance_valid ? uint8_t{0b00001000} : uint8_t{0};
-  flags |= m_ccv_avg_luminance_valid ? uint8_t{0b00000100} : uint8_t{0};
+  flags |= m_ccv_min_luminance_value ? uint8_t{0b00010000} : uint8_t{0};
+  flags |= m_ccv_max_luminance_value ? uint8_t{0b00001000} : uint8_t{0};
+  flags |= m_ccv_avg_luminance_value ? uint8_t{0b00000100} : uint8_t{0};
   writer.write8(flags);
+
   if (m_ccv_primaries_valid) {
     for (int c = 0; c < 3; c++) {
       writer.write32s(m_ccv_primaries_x[c]);
       writer.write32s(m_ccv_primaries_y[c]);
     }
   }
-  if (m_ccv_min_luminance_valid) {
-    writer.write32(m_ccv_min_luminance_value);
+
+  if (m_ccv_min_luminance_value) {
+    writer.write32(*m_ccv_min_luminance_value);
   }
-  if (m_ccv_max_luminance_valid) {
-    writer.write32(m_ccv_max_luminance_value);
+
+  if (m_ccv_max_luminance_value) {
+    writer.write32(*m_ccv_max_luminance_value);
   }
-  if (m_ccv_avg_luminance_valid) {
-    writer.write32(m_ccv_avg_luminance_value);
+
+  if (m_ccv_avg_luminance_value) {
+    writer.write32(*m_ccv_avg_luminance_value);
   }
+
   prepend_header(writer, box_start);
 
   return Error::Ok;

@@ -36,6 +36,7 @@
 #include <istream>
 #include <bitset>
 #include <utility>
+#include <optional>
 
 #include "error.h"
 #include "logging.h"
@@ -1271,17 +1272,17 @@ public:
   int32_t get_ccv_primary_y2() const { return m_ccv_primaries_y[2]; }
   void set_primaries(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
-  bool min_luminance_is_valid() const { return m_ccv_min_luminance_valid; }
-  uint32_t get_min_luminance() const { return m_ccv_min_luminance_value; }
-  void set_min_luminance(uint32_t luminance) { m_ccv_min_luminance_valid = true; m_ccv_min_luminance_value = luminance; }
+  bool min_luminance_is_valid() const { return m_ccv_min_luminance_value.has_value(); }
+  uint32_t get_min_luminance() const { return *m_ccv_min_luminance_value; }
+  void set_min_luminance(uint32_t luminance) { m_ccv_min_luminance_value = luminance; }
 
-  bool max_luminance_is_valid() const { return m_ccv_max_luminance_valid; }
-  uint32_t get_max_luminance() const { return m_ccv_max_luminance_value; }
-  void set_max_luminance(uint32_t luminance) { m_ccv_max_luminance_valid = true; m_ccv_max_luminance_value = luminance; }
+  bool max_luminance_is_valid() const { return m_ccv_max_luminance_value.has_value(); }
+  uint32_t get_max_luminance() const { return *m_ccv_max_luminance_value; }
+  void set_max_luminance(uint32_t luminance) { m_ccv_max_luminance_value = luminance; }
 
-  bool avg_luminance_is_valid() const { return m_ccv_avg_luminance_valid; }
-  uint32_t get_avg_luminance() const { return m_ccv_avg_luminance_value; }
-  void set_avg_luminance(uint32_t luminance) { m_ccv_avg_luminance_valid = true; m_ccv_avg_luminance_value = luminance; }
+  bool avg_luminance_is_valid() const { return m_ccv_avg_luminance_value.has_value(); }
+  uint32_t get_avg_luminance() const { return *m_ccv_avg_luminance_value; }
+  void set_avg_luminance(uint32_t luminance) { m_ccv_avg_luminance_value = luminance; }
 
   std::string dump(Indent&) const override;
 
@@ -1296,12 +1297,10 @@ private:
   bool m_ccv_primaries_valid = false;
   int32_t m_ccv_primaries_x[3] {};
   int32_t m_ccv_primaries_y[3] {};
-  bool m_ccv_min_luminance_valid = false;
-  uint32_t m_ccv_min_luminance_value = 0;
-  bool m_ccv_max_luminance_valid = false;
-  uint32_t m_ccv_max_luminance_value = 0;
-  bool m_ccv_avg_luminance_valid = false;
-  uint32_t m_ccv_avg_luminance_value = 0;
+
+  std::optional<uint32_t> m_ccv_min_luminance_value;
+  std::optional<uint32_t> m_ccv_max_luminance_value;
+  std::optional<uint32_t> m_ccv_avg_luminance_value;
 };
 
 
