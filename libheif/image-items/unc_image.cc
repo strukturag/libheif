@@ -333,6 +333,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   const unciHeaders& headers = *genHeadersResult;
 
+  assert(headers.uncC);
+
   if (headers.uncC) {
     file->add_property(unci_id, headers.uncC, true);
   }
@@ -466,11 +468,12 @@ void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
   auto uncC = get_file()->get_property<Box_uncC>(get_id());
 
   if (!ispe || !uncC) {
-    w=h=0;
+    w = h = 0;
   }
-
-  w = ispe->get_width() / uncC->get_number_of_tile_columns();
-  h = ispe->get_height() / uncC->get_number_of_tile_rows();
+  else {
+    w = ispe->get_width() / uncC->get_number_of_tile_columns();
+    h = ispe->get_height() / uncC->get_number_of_tile_rows();
+  }
 }
 
 

@@ -116,7 +116,7 @@ bool StreamReader_memory::read(void* data, size_t size)
 
 bool StreamReader_memory::seek(uint64_t position)
 {
-  if (position > m_length || position < 0)
+  if (position > m_length)
     return false;
 
   m_position = position;

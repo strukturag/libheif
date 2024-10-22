@@ -51,6 +51,8 @@ public:
   Box_tilC()
   {
     set_short_type(fourcc("tilC"));
+
+    init_heif_tiled_image_parameters(m_parameters);
   }
 
   bool is_essential() const override { return true; }
@@ -72,6 +74,8 @@ protected:
 
 private:
   heif_tiled_image_parameters m_parameters;
+
+  static void init_heif_tiled_image_parameters(heif_tiled_image_parameters& params);
 };
 
 
@@ -79,7 +83,7 @@ private:
 #define TILD_OFFSET_SEE_LOWER_RESOLUTION_LAYER 1
 #define TILD_OFFSET_NOT_LOADED 10
 
-class TildHeader
+class TiledHeader
 {
 public:
   Error set_parameters(const heif_tiled_image_parameters& params);
@@ -175,9 +179,9 @@ public:
 
   // --- tild
 
-  void set_tild_header(const TildHeader& header) { m_tild_header = header; }
+  void set_tild_header(const TiledHeader& header) { m_tild_header = header; }
 
-  TildHeader& get_tild_header() { return m_tild_header; }
+  TiledHeader& get_tild_header() { return m_tild_header; }
 
   uint64_t get_next_tild_position() const { return m_next_tild_position; }
 
@@ -188,7 +192,7 @@ public:
   void get_tile_size(uint32_t& w, uint32_t& h) const override;
 
 private:
-  TildHeader m_tild_header;
+  TiledHeader m_tild_header;
   uint64_t m_next_tild_position = 0;
 
   uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB

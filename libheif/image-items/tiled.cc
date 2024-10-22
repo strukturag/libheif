@@ -68,6 +68,27 @@ uint32_t nTiles_v(const heif_tiled_image_parameters& params)
 }
 
 
+void Box_tilC::init_heif_tiled_image_parameters(heif_tiled_image_parameters& params)
+{
+  params.version = 1;
+
+  params.image_width = 0;
+  params.image_height = 0;
+  params.tile_width = 0;
+  params.tile_height = 0;
+  params.compression_format_fourcc = 0;
+  params.offset_field_length = 40;
+  params.size_field_length = 24;
+  params.number_of_extra_dimensions = 0;
+
+  for (uint32_t& dim : params.extra_dimensions) {
+    dim = 0;
+  }
+
+  params.tiles_are_sequential = false;
+}
+
+
 void Box_tilC::derive_box_version()
 {
   set_version(1);
@@ -204,7 +225,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
     case 0x08:
       m_parameters.size_field_length = 32;
       break;
-    case 0xc0:
+    case 0x0c:
       m_parameters.size_field_length = 64;
       break;
   }
@@ -249,7 +270,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 }
 
 
-Error TildHeader::set_parameters(const heif_tiled_image_parameters& params)
+Error TiledHeader::set_parameters(const heif_tiled_image_parameters& params)
 {
   m_parameters = params;
 
@@ -271,7 +292,7 @@ Error TildHeader::set_parameters(const heif_tiled_image_parameters& params)
 }
 
 
-Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits)
+Error TiledHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id, const heif_security_limits* limits)
 {
   auto max_tiles = heif_get_global_security_limits()->max_number_of_tiles;
 
@@ -286,8 +307,8 @@ Error TildHeader::read_full_offset_table(const std::shared_ptr<HeifFile>& file, 
 }
 
 
-Error TildHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
-                                          uint64_t start, uint64_t end)
+Error TiledHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file, heif_item_id tild_id,
+                                           uint64_t start, uint64_t end)
 {
   const Error eofError(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
@@ -328,20 +349,20 @@ Error TildHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file,
 }
 
 
-size_t TildHeader::get_header_size() const
+size_t TiledHeader::get_header_size() const
 {
   assert(m_header_size);
   return m_header_size;
 }
 
 
-uint32_t TildHeader::get_offset_table_entry_size() const
+uint32_t TiledHeader::get_offset_table_entry_size() const
 {
   return (m_parameters.offset_field_length + m_parameters.size_field_length) / 8;
 }
 
 
-std::pair<uint32_t, uint32_t> TildHeader::get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const
+std::pair<uint32_t, uint32_t> TiledHeader::get_tile_offset_table_range_to_read(uint32_t idx, uint32_t nEntries) const
 {
   uint32_t start = idx;
   uint32_t end = idx+1;
@@ -369,9 +390,9 @@ std::pair<uint32_t, uint32_t> TildHeader::get_tile_offset_table_range_to_read(ui
 }
 
 
-void TildHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
+void TiledHeader::set_tild_tile_range(uint32_t tile_x, uint32_t tile_y, uint64_t offset, uint32_t size)
 {
-  uint64_t idx = tile_y * nTiles_h(m_parameters) + tile_x;
+  uint64_t idx = uint64_t{tile_y} * nTiles_h(m_parameters) + tile_x;
   m_offsets[idx].offset = offset;
   m_offsets[idx].size = size;
 }
@@ -388,7 +409,7 @@ void writevec(uint8_t* data, size_t& idx, I value, int len)
 }
 
 
-std::vector<uint8_t> TildHeader::write_offset_table()
+std::vector<uint8_t> TiledHeader::write_offset_table()
 {
   uint64_t nTiles = number_of_tiles(m_parameters);
 
@@ -416,7 +437,7 @@ std::vector<uint8_t> TildHeader::write_offset_table()
 }
 
 
-std::string TildHeader::dump() const
+std::string TiledHeader::dump() const
 {
   std::stringstream sstr;
 
@@ -529,7 +550,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
 
   // Create header + offset table
 
-  TildHeader tild_header;
+  TiledHeader tild_header;
   tild_header.set_parameters(*parameters);
   tild_header.set_compression_format(encoder->plugin->compression_format);
 
@@ -579,6 +600,7 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   Result<std::shared_ptr<HeifPixelImage>> colorConversionResult = item->convert_colorspace_for_encoding(image, encoder, *options);
   if (colorConversionResult.error) {
+    heif_encoding_options_free(options);
     return colorConversionResult.error;
   }
 

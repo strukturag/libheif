@@ -51,7 +51,7 @@ Error ComponentInterleaveDecoder::decode_tile(const HeifContext* context,
 
     uint32_t bytes_per_tile_row = (bits_per_component * entry.tile_width + 7) / 8;
     skip_to_alignment(bytes_per_tile_row, m_uncC->get_row_align_size());
-    uint64_t bytes_per_tile = bytes_per_tile_row * entry.tile_height;
+    uint64_t bytes_per_tile = uint64_t{bytes_per_tile_row} * entry.tile_height;
     total_tile_size += bytes_per_tile;
   }
 
@@ -82,7 +82,7 @@ Error ComponentInterleaveDecoder::decode_tile(const HeifContext* context,
     for (uint32_t y = 0; y < entry.tile_height; y++) {
       srcBits.markRowStart();
       if (entry.use_channel) {
-        uint64_t dst_row_offset = (out_y0 + y) * entry.dst_plane_stride;
+        uint64_t dst_row_offset = uint64_t{(out_y0 + y)} * entry.dst_plane_stride;
         processComponentTileRow(entry, srcBits, dst_row_offset + out_x0 * entry.bytes_per_component_sample);
       }
       else {

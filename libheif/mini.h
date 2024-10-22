@@ -113,10 +113,6 @@ private:
   uint16_t m_tmap_matrix_coefficients;
   bool m_tmap_full_range_flag;
 
-  bool m_clli_flag = false;
-  bool m_mdcv_flag = false;
-  bool m_cclv_flag = false;
-  bool m_amve_flag = false;
   bool m_reve_flag = false;
   bool m_ndwt_flag = false;
   std::shared_ptr<Box_clli> m_clli;
@@ -126,10 +122,6 @@ private:
   // std::shared_ptr<Box_reve> m_reve;
   // std::shared_ptr<Box_ndwt> m_ndwt;
 
-  bool m_tmap_clli_flag = false;
-  bool m_tmap_mdcv_flag = false;
-  bool m_tmap_cclv_flag = false;
-  bool m_tmap_amve_flag = false;
   bool m_tmap_reve_flag = false;
   bool m_tmap_ndwt_flag = false;
   std::shared_ptr<Box_clli> m_tmap_clli;

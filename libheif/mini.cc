@@ -163,19 +163,22 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         m_tmap_full_range_flag = true;
       }
     }
-    m_clli_flag = bits.get_flag();
-    m_mdcv_flag = bits.get_flag();
-    m_cclv_flag = bits.get_flag();
-    m_amve_flag = bits.get_flag();
+
+    bool clli_flag = bits.get_flag();
+    bool mdcv_flag = bits.get_flag();
+    bool cclv_flag = bits.get_flag();
+    bool amve_flag = bits.get_flag();
     m_reve_flag = bits.get_flag();
     m_ndwt_flag = bits.get_flag();
-    if (m_clli_flag)
+
+    if (clli_flag)
     {
       m_clli = std::make_shared<Box_clli>();
       m_clli->clli.max_content_light_level = bits.get_bits16(16);
       m_clli->clli.max_pic_average_light_level = bits.get_bits16(16);
     }
-    if (m_mdcv_flag)
+
+    if (mdcv_flag)
     {
       m_mdcv = std::make_shared<Box_mdcv>();
       for (int c = 0; c < 3; c++)
@@ -189,7 +192,8 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       m_mdcv->mdcv.max_display_mastering_luminance = bits.get_bits32(32);
       m_mdcv->mdcv.min_display_mastering_luminance = bits.get_bits32(32);
     }
-    if (m_cclv_flag)
+
+    if (cclv_flag)
     {
       m_cclv = std::make_shared<Box_cclv>();
       bits.skip_bits(2);
@@ -200,12 +204,12 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       bits.skip_bits(2);
       if (ccv_primaries_present_flag)
       {
-        int32_t x0 = bits.get_bits32(32);
-        int32_t y0 = bits.get_bits32(32);
-        int32_t x1 = bits.get_bits32(32);
-        int32_t y1 = bits.get_bits32(32);
-        int32_t x2 = bits.get_bits32(32);
-        int32_t y2 = bits.get_bits32(32);
+        int32_t x0 = bits.get_bits32s();
+        int32_t y0 = bits.get_bits32s();
+        int32_t x1 = bits.get_bits32s();
+        int32_t y1 = bits.get_bits32s();
+        int32_t x2 = bits.get_bits32s();
+        int32_t y2 = bits.get_bits32s();
         m_cclv->set_primaries(x0, y0, x1, y1, x2, y2);
       }
       if (ccv_min_luminance_value_present_flag)
@@ -221,13 +225,15 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         m_cclv->set_avg_luminance(bits.get_bits32(32));
       }
     }
-    if (m_amve_flag)
+
+    if (amve_flag)
     {
       m_amve = std::make_shared<Box_amve>();
       m_amve->amve.ambient_illumination = bits.get_bits32(32);
       m_amve->amve.ambient_light_x = bits.get_bits16(16);
       m_amve->amve.ambient_light_y = bits.get_bits16(16);
     }
+
     if (m_reve_flag)
     {
       // TODO: ReferenceViewingEnvironment isn't published yet
@@ -238,27 +244,30 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
       bits.skip_bits(16);
       bits.skip_bits(16);
     }
+
     if (m_ndwt_flag)
     {
       // TODO: NominalDiffuseWhite isn't published yet
       bits.skip_bits(32);
     }
+
     if (m_gainmap_flag)
     {
-      m_tmap_clli_flag = bits.get_flag();
-      m_mdcv_flag = bits.get_flag();
-      m_tmap_cclv_flag = bits.get_flag();
-      m_tmap_amve_flag = bits.get_flag();
+      bool tmap_clli_flag = bits.get_flag();
+      bool tmap_mdcv_flag = bits.get_flag();
+      bool tmap_cclv_flag = bits.get_flag();
+      bool tmap_amve_flag = bits.get_flag();
       m_tmap_reve_flag = bits.get_flag();
       m_tmap_ndwt_flag = bits.get_flag();
 
-      if (m_tmap_clli_flag)
+      if (tmap_clli_flag)
       {
         m_tmap_clli = std::make_shared<Box_clli>();
         m_tmap_clli->clli.max_content_light_level = (uint16_t)bits.get_bits32(16);
         m_tmap_clli->clli.max_pic_average_light_level = (uint16_t)bits.get_bits32(16);
       }
-      if (m_tmap_mdcv_flag)
+
+      if (tmap_mdcv_flag)
       {
         m_tmap_mdcv = std::make_shared<Box_mdcv>();
         for (int c = 0; c < 3; c++)
@@ -272,7 +281,8 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         m_tmap_mdcv->mdcv.max_display_mastering_luminance = bits.get_bits32(32);
         m_tmap_mdcv->mdcv.min_display_mastering_luminance = bits.get_bits32(32);
       }
-      if (m_tmap_cclv_flag)
+
+      if (tmap_cclv_flag)
       {
         m_tmap_cclv = std::make_shared<Box_cclv>();
         bits.skip_bits(2); // skip ccv_cancel_flag and ccv_persistence_flag
@@ -304,13 +314,15 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
           m_tmap_cclv->set_avg_luminance(bits.get_bits32(32));
         }
       }
-      if (m_tmap_amve_flag)
+
+      if (tmap_amve_flag)
       {
         m_tmap_amve = std::make_shared<Box_amve>();
         m_tmap_amve->amve.ambient_illumination = bits.get_bits32(32);
         m_tmap_amve->amve.ambient_light_x = bits.get_bits16(16);
         m_tmap_amve->amve.ambient_light_y = bits.get_bits16(16);
       }
+
       if (m_tmap_reve_flag)
       {
         // TODO: ReferenceViewingEnvironment isn't published yet
@@ -321,6 +333,7 @@ Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
         bits.skip_bits(16);
         bits.skip_bits(16);
       }
+
       if (m_tmap_ndwt_flag)
       {
         // TODO: NominalDiffuseWhite isn't published yet
@@ -519,18 +532,17 @@ std::string Box_mini::dump(Indent &indent) const
         sstr << "tmap_full_range_flag: " << m_tmap_full_range_flag << "\n";
       }
     }
-    sstr << indent << "clli_flag: " << m_clli_flag << "\n";
-    sstr << indent << "mdcv_flag: " << m_mdcv_flag << "\n";
-    sstr << indent << "cclv_flag: " << m_cclv_flag << "\n";
-    sstr << indent << "amve_flag: " << m_amve_flag << "\n";
-    sstr << indent << "reve_flag: " << m_reve_flag << "\n";
-    sstr << indent << "ndwt_flag: " << m_ndwt_flag << "\n";
-    if (m_clli_flag)
+
+    if (m_clli)
     {
       sstr << indent << "ccli.max_content_light_level: " << m_clli->clli.max_content_light_level << "\n";
       sstr << indent << "ccli.max_pic_average_light_level: " << m_clli->clli.max_pic_average_light_level << "\n";
     }
-    if (m_mdcv_flag)
+    else {
+      sstr << indent << "clli: ---\n";
+    }
+
+    if (m_mdcv)
     {
       sstr << indent << "mdcv.display_primaries (x,y): ";
       sstr << "(" << m_mdcv->mdcv.display_primaries_x[0] << ";" << m_mdcv->mdcv.display_primaries_y[0] << "), ";
@@ -541,7 +553,11 @@ std::string Box_mini::dump(Indent &indent) const
       sstr << indent << "mdcv.max display mastering luminance: " << m_mdcv->mdcv.max_display_mastering_luminance << "\n";
       sstr << indent << "mdcv.min display mastering luminance: " << m_mdcv->mdcv.min_display_mastering_luminance << "\n";
     }
-    if (m_cclv_flag)
+    else {
+      sstr << indent << "mdcv: ---\n";
+    }
+
+    if (m_cclv)
     {
       sstr << indent << "cclv.ccv_primaries_present_flag: " << m_cclv->ccv_primaries_are_valid() << "\n";
       sstr << indent << "cclv.ccv_min_luminance_value_present_flag: " << m_cclv->min_luminance_is_valid() << "\n";
@@ -567,12 +583,23 @@ std::string Box_mini::dump(Indent &indent) const
         sstr << indent << "cclv.ccv_avg_luminance_value: " << m_cclv->get_avg_luminance() << "\n";
       }
     }
-    if (m_amve_flag)
+    else {
+      sstr << indent << "cclv: ---\n";
+    }
+
+    if (m_amve)
     {
       sstr << indent << "amve.ambient_illumination: " << m_amve->amve.ambient_illumination << "\n";
       sstr << indent << "amve.ambient_light_x: " << m_amve->amve.ambient_light_x << "\n";
       sstr << indent << "amve.ambient_light_y: " << m_amve->amve.ambient_light_y << "\n";
     }
+    else {
+      sstr << indent << "amve: ---\n";
+    }
+
+    sstr << indent << "reve_flag: " << m_reve_flag << "\n";
+    sstr << indent << "ndwt_flag: " << m_ndwt_flag << "\n";
+
     if (m_reve_flag)
     {
       // TODO - this isn't published yet
@@ -581,20 +608,19 @@ std::string Box_mini::dump(Indent &indent) const
     {
       // TODO - this isn't published yet
     }
+
     if (m_gainmap_flag)
     {
-      sstr << indent << "tmap_clli_flag: " << m_tmap_clli_flag << "\n";
-      sstr << indent << "tmap_mdcv_flag: " << m_tmap_mdcv_flag << "\n";
-      sstr << indent << "tmap_cclv_flag: " << m_tmap_cclv_flag << "\n";
-      sstr << indent << "tmap_amve_flag: " << m_tmap_amve_flag << "\n";
-      sstr << indent << "tmap_reve_flag: " << m_tmap_reve_flag << "\n";
-      sstr << indent << "tmap_ndwt_flag: " << m_tmap_ndwt_flag << "\n";
-      if (m_tmap_clli_flag)
+      if (m_tmap_clli)
       {
-        sstr << indent << "tmap_ccli.max_content_light_level: " << m_tmap_clli->clli.max_content_light_level << "\n";
-        sstr << indent << "tmap_ccli.max_pic_average_light_level: " << m_tmap_clli->clli.max_pic_average_light_level << "\n";
+        sstr << indent << "tmap_clli.max_content_light_level: " << m_tmap_clli->clli.max_content_light_level << "\n";
+        sstr << indent << "tmap_clli.max_pic_average_light_level: " << m_tmap_clli->clli.max_pic_average_light_level << "\n";
       }
-      if (m_tmap_mdcv_flag)
+      else {
+        sstr << indent << "tmap_clli: ---\n";
+      }
+
+      if (m_tmap_mdcv)
       {
         sstr << indent << "tmap_mdcv.display_primaries (x,y): ";
         sstr << "(" << m_tmap_mdcv->mdcv.display_primaries_x[0] << ";" << m_tmap_mdcv->mdcv.display_primaries_y[0] << "), ";
@@ -605,7 +631,11 @@ std::string Box_mini::dump(Indent &indent) const
         sstr << indent << "tmap_mdcv.max display mastering luminance: " << m_tmap_mdcv->mdcv.max_display_mastering_luminance << "\n";
         sstr << indent << "tmap_mdcv.min display mastering luminance: " << m_tmap_mdcv->mdcv.min_display_mastering_luminance << "\n";
       }
-      if (m_tmap_cclv_flag)
+      else {
+        sstr << indent << "tmap_mdcv: ---\n";
+      }
+
+      if (m_tmap_cclv)
       {
         sstr << indent << "tmap_cclv.ccv_primaries_present_flag: " << m_tmap_cclv->ccv_primaries_are_valid() << "\n";
         sstr << indent << "tmap_cclv.ccv_min_luminance_value_present_flag: " << m_tmap_cclv->min_luminance_is_valid() << "\n";
@@ -631,12 +661,23 @@ std::string Box_mini::dump(Indent &indent) const
           sstr << indent << "tmap_cclv.ccv_avg_luminance_value: " << m_tmap_cclv->get_avg_luminance() << "\n";
         }
       }
-      if (m_tmap_amve_flag)
+      else {
+        sstr << indent << "tmap_cclv: ---\n";
+      }
+
+      if (m_tmap_amve)
       {
         sstr << indent << "tmap_amve.ambient_illumination: " << m_tmap_amve->amve.ambient_illumination << "\n";
         sstr << indent << "tmap_amve.ambient_light_x: " << m_tmap_amve->amve.ambient_light_x << "\n";
         sstr << indent << "tmap_amve.ambient_light_y: " << m_tmap_amve->amve.ambient_light_y << "\n";
       }
+      else {
+        sstr << indent << "tmap_amve: ---\n";
+      }
+
+      sstr << indent << "tmap_reve_flag: " << m_tmap_reve_flag << "\n";
+      sstr << indent << "tmap_ndwt_flag: " << m_tmap_ndwt_flag << "\n";
+
       if (m_tmap_reve_flag)
       {
         // TODO - this isn't published yet

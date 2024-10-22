@@ -822,6 +822,8 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
                  heif_suberror_Null_pointer_argument).error_struct(handle->image.get());
   }
 
+  *out_type = nullptr;
+
   auto auxType = handle->image->get_aux_type();
 
   char* buf = (char*) malloc(auxType.length() + 1);
@@ -864,6 +866,8 @@ struct heif_error heif_image_handle_get_auxiliary_image_handle(const struct heif
     return Error(heif_error_Usage_error,
                  heif_suberror_Null_pointer_argument).error_struct(main_image_handle->image.get());
   }
+
+  *out_auxiliary_handle = nullptr;
 
   auto auxImages = main_image_handle->image->get_aux_images();
   for (const auto& aux : auxImages) {
@@ -1285,6 +1289,12 @@ struct heif_error heif_image_handle_get_depth_image_handle(const struct heif_ima
                                                            heif_item_id depth_id,
                                                            struct heif_image_handle** out_depth_handle)
 {
+  if (out_depth_handle == nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL out_depth_handle passed to heif_image_handle_get_depth_image_handle()"};
+  }
+
   auto depth_image = handle->image->get_depth_channel();
 
   if (depth_image->get_id() != depth_id) {
@@ -1411,6 +1421,14 @@ struct heif_error heif_decode_image(const struct heif_image_handle* in_handle,
                                     heif_chroma chroma,
                                     const struct heif_decoding_options* input_options)
 {
+  if (out_img == nullptr) {
+    return {heif_error_Usage_error,
+            heif_suberror_Null_pointer_argument,
+            "NULL out_img passed to heif_decode_image()"};
+  }
+
+  *out_img = nullptr;
+
   heif_item_id id = in_handle->image->get_id();
 
   heif_decoding_options dec_options = normalize_options(input_options);
@@ -2867,6 +2885,7 @@ struct heif_error heif_context_get_encoder_for_format(struct heif_context* conte
     return (*encoder)->alloc();
   }
   else {
+    *encoder = nullptr;
     Error err(heif_error_Unsupported_filetype, // TODO: is this the right error code?
               heif_suberror_Unspecified);
     return err.error_struct(context ? context->context.get() : nullptr);
@@ -3298,7 +3317,7 @@ int heif_encoder_has_default(struct heif_encoder* encoder,
 }
 
 
-static void set_default_options(heif_encoding_options& options)
+void set_default_encoding_options(heif_encoding_options& options)
 {
   options.version = 7;
 
@@ -3349,7 +3368,7 @@ heif_encoding_options* heif_encoding_options_alloc()
 {
   auto options = new heif_encoding_options;
 
-  set_default_options(*options);
+  set_default_encoding_options(*options);
 
   return options;
 }
@@ -3371,9 +3390,13 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
                  heif_suberror_Null_pointer_argument).error_struct(ctx->context.get());
   }
 
+  if (out_image_handle) {
+    *out_image_handle = nullptr;
+  }
+
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  set_default_options(options);
+  set_default_encoding_options(options);
   if (input_options) {
     copy_options(options, *input_options);
 
@@ -3439,7 +3462,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
   // TODO: Don't repeat this code from heif_context_encode_image()
   heif_encoding_options options;
   heif_color_profile_nclx nclx;
-  set_default_options(options);
+  set_default_encoding_options(options);
   if (input_options) {
     copy_options(options, *input_options);
 
@@ -3472,6 +3495,8 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
   if (addGridResult.error) {
     return addGridResult.error.error_struct(ctx->context.get());
   }
+
+  out_grid = addGridResult.value;
 
   // Mark as primary image
   if (ctx->context->is_primary_image_set() == false) {
@@ -3586,6 +3611,10 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
                                                const struct heif_encoder* encoder,
                                                struct heif_image_handle** out_grid_image_handle)
 {
+  if (out_grid_image_handle) {
+    *out_grid_image_handle = nullptr;
+  }
+
   Result<std::shared_ptr<ImageItem_Tiled>> gridImageResult;
   gridImageResult = ImageItem_Tiled::add_new_tiled_item(ctx->context.get(), parameters, encoder);
 
@@ -3683,7 +3712,7 @@ struct heif_error heif_context_encode_thumbnail(struct heif_context* ctx,
   std::shared_ptr<ImageItem> thumbnail_image;
 
   heif_encoding_options options;
-  set_default_options(options);
+  set_default_encoding_options(options);
 
   if (input_options != nullptr) {
     copy_options(options, *input_options);

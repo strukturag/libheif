@@ -571,7 +571,7 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
         }
       }
       else {
-        heif_color_profile_nclx* input_nclx;
+        heif_color_profile_nclx* input_nclx = nullptr;
 
         heif_error error = heif_image_get_nclx_color_profile(input_image.get(), &input_nclx);
         if (error.code == heif_error_Color_profile_does_not_exist) {
@@ -588,7 +588,10 @@ heif_error create_output_nclx_profile_and_configure_encoder(heif_encoder* encode
           nclx->full_range_flag = input_nclx->full_range_flag;
 
           heif_nclx_color_profile_free(input_nclx);
+          input_nclx = nullptr;
         }
+
+        assert(!input_nclx);
 
         // TODO: this assumes that the encoder plugin has a 'chroma' parameter. Currently, they do, but there should be a better way to set this.
         switch (heif_image_get_chroma_format(input_image.get())) {
@@ -731,7 +734,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
                                 const input_tiles_generator& tile_generator,
                                 const heif_image_tiling& tiling)
 {
-  heif_image_handle* tiled_image;
+  heif_image_handle* tiled_image = nullptr;
 
 
   // --- create the main grid image
@@ -794,7 +797,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
   std::cout << "encoding tiled image, tile size: " << tiling.tile_width << "x" << tiling.tile_height
             << " image size: " << tiling.image_width << "x" << tiling.image_height << "\n";
 
-  uint32_t tile_width = 0, tile_height = 0;
+  int tile_width = 0, tile_height = 0;
 
   for (uint32_t ty = 0; ty < tile_generator.nRows(); ty++)
     for (uint32_t tx = 0; tx < tile_generator.nColumns(); tx++) {
@@ -805,6 +808,11 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       if (tile_width == 0) {
         tile_width = heif_image_get_primary_width(input_image.image.get());
         tile_height = heif_image_get_primary_height(input_image.image.get());
+
+        if (tile_width <= 0 || tile_height <= 0) {
+          std::cerr << "Could not read input image size correctly\n";
+          return nullptr;
+        }
       }
 
       heif_error error;

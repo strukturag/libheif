@@ -119,7 +119,7 @@ public:
     return value;
   }
 
-  T value;
+  T value{};
   Error error;
 };
 
