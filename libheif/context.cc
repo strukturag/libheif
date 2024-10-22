@@ -627,10 +627,13 @@ Error HeifContext::interpret_heif_file()
               }
               master_iter->second->set_depth_channel(image);
 
-              auto subtypes = auxC_property->get_subtypes();
+              const auto& subtypes = auxC_property->get_subtypes();
 
               std::vector<std::shared_ptr<SEIMessage>> sei_messages;
               err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+              if (err) {
+                return err;
+              }
 
               for (auto& msg : sei_messages) {
                 auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
