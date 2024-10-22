@@ -28,6 +28,7 @@
 #include <string>
 #include <thread>
 #include <memory>
+#include <utility>
 #include "encoder_aom.h"
 
 #include <aom/aom_encoder.h>
@@ -125,8 +126,8 @@ void encoder_struct_aom::add_custom_option(const custom_option& p)
 void encoder_struct_aom::add_custom_option(std::string name, std::string value)
 {
   custom_option p;
-  p.name = name;
-  p.value = value;
+  p.name = std::move(name);
+  p.value = std::move(value);
   add_custom_option(p);
 }
 

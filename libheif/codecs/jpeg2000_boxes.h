@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <utility>
 
 /**
  * JPEG 2000 Channel Definition box.
@@ -446,7 +447,7 @@ public:
     Error doParse();
     void setHeaderData(std::vector<uint8_t> data)
     {
-        headerData = data;
+        headerData = std::move(data);
     }
 
     heif_chroma get_chroma_format() const;

@@ -544,7 +544,7 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
     return {heif_error_Usage_error, heif_suberror_Invalid_property, "this property is not read as a raw box"};
   }
 
-  auto data = box_other->get_raw_data();
+  const auto& data = box_other->get_raw_data();
 
   *size_out = data.size();
 

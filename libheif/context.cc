@@ -314,7 +314,7 @@ void HeifContext::remove_top_level_image(const std::shared_ptr<ImageItem>& image
     }
   }
 
-  m_top_level_images = new_list;
+  m_top_level_images = std::move(new_list);
 }
 
 
@@ -545,20 +545,7 @@ Error HeifContext::interpret_heif_file()
           // --- this is an auxiliary image
           //     check whether it is an alpha channel and attach to the main image if yes
 
-          std::vector<std::shared_ptr<Box>> properties;
-          Error err = m_heif_file->get_properties(image->get_id(), properties);
-          if (err) {
-            return err;
-          }
-
-          std::shared_ptr<Box_auxC> auxC_property;
-          for (const auto& property : properties) {
-            auto auxC = std::dynamic_pointer_cast<Box_auxC>(property);
-            if (auxC) {
-              auxC_property = auxC;
-            }
-          }
-
+          std::shared_ptr<Box_auxC> auxC_property = m_heif_file->get_property<Box_auxC>(image->get_id());
           if (!auxC_property) {
             std::stringstream sstr;
             sstr << "No auxC property for image " << image->get_id();
@@ -630,7 +617,7 @@ Error HeifContext::interpret_heif_file()
               const auto& subtypes = auxC_property->get_subtypes();
 
               std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-              err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+              Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
               if (err) {
                 return err;
               }

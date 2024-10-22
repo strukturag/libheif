@@ -29,6 +29,7 @@
 #include <cinttypes>
 #include <cstddef>
 
+#include <utility>
 #include <vector>
 #include <string>
 #include <memory>
@@ -350,7 +351,7 @@ public:
     set_short_type(fourcc("ERR "));
 
     m_box_type_with_parse_error = box4cc;
-    m_error = err;
+    m_error = std::move(err);
     m_fatality = fatality;
   }
 

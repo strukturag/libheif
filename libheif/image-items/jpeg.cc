@@ -102,7 +102,7 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
 #endif
   (void) JPEG_SOS;
 
-  codedImage.bitstream = vec;
+  codedImage.bitstream = std::move(vec);
 
 #if 0
   // TODO: extract 'jpgC' header data

@@ -1157,7 +1157,7 @@ Result<heif_item_id> HeifFile::add_precompressed_infe_mime(const char* content_t
   heif_item_id metadata_id = infe_box->get_item_ID();
   result.value = metadata_id;
 
-  set_precompressed_item_data(infe_box, data, size, content_encoding);
+  set_precompressed_item_data(infe_box, data, size, std::move(content_encoding));
 
   return result;
 }

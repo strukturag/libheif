@@ -28,7 +28,7 @@
 #include <cstring>
 #include <memory>
 #include <vector>
-#include <algorithm>
+#include <utility>
 
 
 int heif_image_handle_get_number_of_region_items(const struct heif_image_handle* handle)
@@ -65,7 +65,7 @@ struct heif_error heif_context_get_region_item(const struct heif_context* contex
 
   heif_region_item* item = new heif_region_item();
   item->context = context->context;
-  item->region_item = r;
+  item->region_item = std::move(r);
   *out = item;
 
   return heif_error_success;
@@ -133,7 +133,7 @@ struct heif_error heif_image_handle_add_region_item(struct heif_image_handle* im
   if (out_region_item) {
     heif_region_item* item = new heif_region_item();
     item->context = image_handle->context;
-    item->region_item = regionItem;
+    item->region_item = std::move(regionItem);
 
     *out_region_item = item;
   }

@@ -720,7 +720,7 @@ struct heif_error heif_context_get_image_handle(struct heif_context* ctx,
   }
 
   *imgHdl = new heif_image_handle();
-  (*imgHdl)->image = image;
+  (*imgHdl)->image = std::move(image);
   (*imgHdl)->context = ctx->context;
 
   return heif_error_success;
@@ -824,7 +824,7 @@ struct heif_error heif_image_handle_get_auxiliary_type(const struct heif_image_h
 
   *out_type = nullptr;
 
-  auto auxType = handle->image->get_aux_type();
+  const auto& auxType = handle->image->get_aux_type();
 
   char* buf = (char*) malloc(auxType.length() + 1);
 
@@ -2021,7 +2021,7 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
   }
 
   *output = new heif_image;
-  (*output)->image = out_img;
+  (*output)->image = std::move(out_img);
 
   return Error::Ok.error_struct(input->image.get());
 }
@@ -2501,7 +2501,7 @@ struct heif_error heif_image_handle_get_camera_intrinsic_matrix(const struct hei
     return err.error_struct(handle->image.get());
   }
 
-  auto m = handle->image->get_intrinsic_matrix();
+  const auto& m = handle->image->get_intrinsic_matrix();
   out_matrix->focal_length_x = m.focal_length_x;
   out_matrix->focal_length_y = m.focal_length_y;
   out_matrix->principal_point_x = m.principal_point_x;
@@ -3430,7 +3430,7 @@ struct heif_error heif_context_encode_image(struct heif_context* ctx,
 
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;
-    (*out_image_handle)->image = image;
+    (*out_image_handle)->image = std::move(image);
     (*out_image_handle)->context = ctx->context;
   }
 
@@ -3501,7 +3501,7 @@ struct heif_error heif_context_encode_grid(struct heif_context* ctx,
 
   if (out_image_handle) {
     *out_image_handle = new heif_image_handle;
-    (*out_image_handle)->image = out_grid;
+    (*out_image_handle)->image = std::move(out_grid);
     (*out_image_handle)->context = ctx->context;
   }
 
@@ -3593,7 +3593,7 @@ struct heif_error heif_context_add_overlay_image(struct heif_context* ctx,
 
   if (out_iovl_image_handle) {
     *out_iovl_image_handle = new heif_image_handle;
-    (*out_iovl_image_handle)->image = iovlimage;
+    (*out_iovl_image_handle)->image = std::move(iovlimage);
     (*out_iovl_image_handle)->context = ctx->context;
   }
 

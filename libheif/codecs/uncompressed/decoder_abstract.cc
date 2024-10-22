@@ -191,7 +191,7 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const HeifCo
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
       std::vector<uint8_t> uncompressed_unit_data;
-      err = do_decompress_data(cmpC_box, compressed_unit_data, &uncompressed_unit_data);
+      err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
       if (err) {
         return err;
       }

@@ -19,6 +19,8 @@
  */
 
 #include "codecs/decoder.h"
+
+#include <utility>
 #include "error.h"
 #include "context.h"
 #include "plugin_registry.h"
@@ -41,7 +43,7 @@
 
 void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item)
 {
-  m_file = file;
+  m_file = std::move(file);
   m_item_id = item;
   m_source = Source::Image;
 }
