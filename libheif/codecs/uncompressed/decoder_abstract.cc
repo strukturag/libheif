@@ -114,6 +114,7 @@ AbstractDecoder::ChannelListEntry AbstractDecoder::buildChannelListEntry(Box_unc
   entry.dst_plane = img->get_plane(entry.channel, &(entry.dst_plane_stride));
   entry.tile_width = m_tile_width;
   entry.tile_height = m_tile_height;
+  entry.other_chroma_dst_plane_stride = 0; // will be overwritten below if used
   if ((entry.channel == heif_channel_Cb) || (entry.channel == heif_channel_Cr)) {
     if (m_uncC->get_sampling_type() == sampling_mode_422) {
       entry.tile_width /= 2;
