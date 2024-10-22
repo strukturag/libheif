@@ -1658,10 +1658,10 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_tai_timestamp;
-  bool m_synchronization_state;
-  bool m_timestamp_generation_failure;
-  bool m_timestamp_is_modified;
+  uint64_t m_tai_timestamp = 0;
+  bool m_synchronization_state = false;
+  bool m_timestamp_generation_failure = false;
+  bool m_timestamp_is_modified = false;
 };
 #endif
 
