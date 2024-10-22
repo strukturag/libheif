@@ -113,7 +113,7 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
   }
 
   if (uncC->get_version() == 1) {
-    headers.uncC = uncC;
+    headers.uncC = std::move(uncC);
   } else {
     std::shared_ptr<Box_cmpd> cmpd = std::make_shared<Box_cmpd>();
 
@@ -122,8 +122,8 @@ static Result<unciHeaders> generate_headers(const std::shared_ptr<const HeifPixe
       return error;
     }
 
-    headers.cmpd = cmpd;
-    headers.uncC = uncC;
+    headers.cmpd = std::move(cmpd);
+    headers.uncC = std::move(uncC);
   }
 
   return headers;
@@ -519,7 +519,7 @@ Error ImageItem_uncompressed::on_load_file()
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
-  m_decoder->set_data_extent(extent);
+  m_decoder->set_data_extent(std::move(extent));
 
   return Error::Ok;
 }

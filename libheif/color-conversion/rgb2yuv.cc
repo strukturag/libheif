@@ -72,7 +72,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.bits_per_pixel = input_state.bits_per_pixel;
     output_state.nclx_profile = target_state.nclx_profile;
 
-    states.push_back({output_state, SpeedCosts_Unoptimized});
+    states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
   else {
     // --- convert to YCbCr 4:4:4
@@ -83,7 +83,7 @@ Op_RGB_to_YCbCr<Pixel>::state_after_conversion(const ColorState& input_state,
     output_state.bits_per_pixel = input_state.bits_per_pixel;
     output_state.nclx_profile = target_state.nclx_profile;
 
-    states.push_back({output_state, SpeedCosts_Unoptimized});
+    states.emplace_back(output_state, SpeedCosts_Unoptimized);
   }
 
   return states;
@@ -330,7 +330,7 @@ Op_RRGGBBxx_HDR_to_YCbCr420::state_after_conversion(const ColorState& input_stat
   output_state.bits_per_pixel = input_state.bits_per_pixel;
   output_state.nclx_profile = target_state.nclx_profile;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -517,7 +517,7 @@ Op_RGB24_32_to_YCbCr::state_after_conversion(const ColorState& input_state,
   output_state.bits_per_pixel = 8;
   output_state.nclx_profile = target_state.nclx_profile;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -808,7 +808,7 @@ Op_RGB24_32_to_YCbCr444_GBR::state_after_conversion(const ColorState& input_stat
   output_state.bits_per_pixel = 8;
   output_state.nclx_profile = target_state.nclx_profile;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }

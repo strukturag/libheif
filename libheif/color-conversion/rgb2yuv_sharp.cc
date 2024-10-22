@@ -113,7 +113,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
   output_state.has_alpha = target_state.has_alpha;
   output_state.bits_per_pixel = target_state.bits_per_pixel;
   output_state.nclx_profile = target_state.nclx_profile;
-  states.push_back({output_state, SpeedCosts_Slow});
+  states.emplace_back(output_state, SpeedCosts_Slow);
 
   return states;
 #else

@@ -800,7 +800,7 @@ int ImageItem_Tiled::get_luma_bits_per_pixel() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
-  m_tile_decoder->set_data_extent(any_tile_extent);
+  m_tile_decoder->set_data_extent(std::move(any_tile_extent));
 
   return m_tile_decoder->get_luma_bits_per_pixel();
 }
@@ -809,7 +809,7 @@ int ImageItem_Tiled::get_chroma_bits_per_pixel() const
 {
   DataExtent any_tile_extent;
   append_compressed_tile_data(any_tile_extent.m_raw, 0,0); // TODO: use tile that is already loaded
-  m_tile_decoder->set_data_extent(any_tile_extent);
+  m_tile_decoder->set_data_extent(std::move(any_tile_extent));
 
   return m_tile_decoder->get_chroma_bits_per_pixel();
 }

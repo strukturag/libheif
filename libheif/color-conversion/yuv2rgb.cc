@@ -75,7 +75,7 @@ Op_YCbCr_to_RGB<Pixel>::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;  // we simply keep the old alpha plane
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -302,7 +302,7 @@ Op_YCbCr420_to_RGB24::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = false;
   output_state.bits_per_pixel = 8;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -412,7 +412,7 @@ Op_YCbCr420_to_RGB32::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = true;
   output_state.bits_per_pixel = 8;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -537,7 +537,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
 
   output_state.colorspace = heif_colorspace_RGB;
@@ -546,7 +546,7 @@ Op_YCbCr420_to_RRGGBBaa::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }

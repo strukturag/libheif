@@ -24,6 +24,7 @@
 #include "pixelimage.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 
@@ -62,6 +63,8 @@ enum SpeedCosts
 
 struct ColorStateWithCost
 {
+  ColorStateWithCost(ColorState c, int s) : color_state(std::move(c)), speed_costs(s) {}
+
   ColorState color_state;
 
   int speed_costs;

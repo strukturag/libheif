@@ -30,6 +30,7 @@
 #include <limits>
 #include <string>
 #include <cstring>
+#include <utility>
 
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
@@ -48,7 +49,7 @@ Error ImageItem_AVIF::on_load_file()
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());
 
-  m_decoder->set_data_extent(extent);
+  m_decoder->set_data_extent(std::move(extent));
 
   return Error::Ok;
 }

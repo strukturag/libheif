@@ -627,10 +627,13 @@ Error HeifContext::interpret_heif_file()
               }
               master_iter->second->set_depth_channel(image);
 
-              auto subtypes = auxC_property->get_subtypes();
+              const auto& subtypes = auxC_property->get_subtypes();
 
               std::vector<std::shared_ptr<SEIMessage>> sei_messages;
               err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+              if (err) {
+                return err;
+              }
 
               for (auto& msg : sei_messages) {
                 auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
@@ -777,7 +780,7 @@ Error HeifContext::interpret_heif_file()
     metadata->item_id = id;
     metadata->item_type = fourcc_to_string(item_type);
     metadata->content_type = content_type;
-    metadata->item_uri_type = item_uri_type;
+    metadata->item_uri_type = std::move(item_uri_type);
 
     Error err = m_heif_file->get_uncompressed_item_data(id, &(metadata->m_data));
     if (err) {
