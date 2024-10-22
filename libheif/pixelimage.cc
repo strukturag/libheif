@@ -529,12 +529,15 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
                                          heif_channel src_channel,
                                          heif_channel dst_channel)
 {
+  assert(src_image->has_channel(src_channel));
+  assert(!has_channel(dst_channel));
+
   uint32_t width = src_image->get_width(src_channel);
   uint32_t height = src_image->get_height(src_channel);
 
-  assert(!has_channel(dst_channel));
-
-  const auto& src_plane = src_image->m_planes.find(src_channel)->second;
+  auto src_plane_iter = src_image->m_planes.find(src_channel);
+  assert(src_plane_iter != src_image->m_planes.end());
+  const auto& src_plane = src_plane_iter->second;
 
   add_channel(dst_channel, width, height,
               src_plane.m_datatype,
