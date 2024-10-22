@@ -69,49 +69,49 @@ protected:
   Error parse(BitstreamRange &range, const heif_security_limits *limits) override;
 
 private:
-  uint8_t m_version;
-  bool m_explicit_codec_types_flag;
-  bool m_float_flag;
-  bool m_full_range_flag;
-  bool m_alpha_flag;
-  bool m_explicit_cicp_flag;
-  bool m_hdr_flag;
-  bool m_icc_flag;
-  bool m_exif_flag;
-  bool m_xmp_flag;
-  uint8_t m_chroma_subsampling;
-  uint8_t m_orientation;
+  uint8_t m_version = 0;
+  bool m_explicit_codec_types_flag = false;
+  bool m_float_flag = false;
+  bool m_full_range_flag = false;
+  bool m_alpha_flag = false;
+  bool m_explicit_cicp_flag = false;
+  bool m_hdr_flag = false;
+  bool m_icc_flag = false;
+  bool m_exif_flag = false;
+  bool m_xmp_flag = false;
+  uint8_t m_chroma_subsampling = 0;
+  uint8_t m_orientation = 0;
 
-  uint32_t m_width;
-  uint32_t m_height;
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
   uint8_t m_bit_depth = 8;
   bool m_chroma_is_horizontally_centred = false;
   bool m_chroma_is_vertically_centred = false;
   bool m_alpha_is_premultiplied = false;
-  uint16_t m_colour_primaries;
-  uint16_t m_transfer_characteristics;
-  uint16_t m_matrix_coefficients;
+  uint16_t m_colour_primaries = 0;
+  uint16_t m_transfer_characteristics = 0;
+  uint16_t m_matrix_coefficients = 0;
 
-  uint32_t m_infe_type;
-  uint32_t m_codec_config_type;
+  uint32_t m_infe_type = 0;
+  uint32_t m_codec_config_type = 0;
 
   bool m_gainmap_flag = false;
 
-  uint32_t m_gainmap_width;
-  uint32_t m_gainmap_height;
-  uint8_t m_gainmap_matrix_coefficients;
-  bool m_gainmap_full_range_flag;
-  uint8_t m_gainmap_chroma_subsampling;
+  uint32_t m_gainmap_width = 0;
+  uint32_t m_gainmap_height = 0;
+  uint8_t m_gainmap_matrix_coefficients = 0;
+  bool m_gainmap_full_range_flag = false;
+  uint8_t m_gainmap_chroma_subsampling = 0;
   bool m_gainmap_chroma_is_horizontally_centred = false;
   bool m_gainmap_chroma_is_vertically_centred = false;
-  bool m_gainmap_float_flag;
+  bool m_gainmap_float_flag = false;
   uint8_t m_gainmap_bit_depth = 8;
   bool m_tmap_icc_flag = false;
   bool m_tmap_explicit_cicp_flag = false;
-  uint16_t m_tmap_colour_primaries;
-  uint16_t m_tmap_transfer_characteristics;
-  uint16_t m_tmap_matrix_coefficients;
-  bool m_tmap_full_range_flag;
+  uint16_t m_tmap_colour_primaries = 0;
+  uint16_t m_tmap_transfer_characteristics = 0;
+  uint16_t m_tmap_matrix_coefficients = 0;
+  bool m_tmap_full_range_flag = false;
 
   bool m_reve_flag = false;
   bool m_ndwt_flag = false;
@@ -138,15 +138,15 @@ private:
   std::vector<uint8_t> m_tmap_icc_data;
   std::vector<uint8_t> m_gainmap_metadata;
 
-  uint64_t m_alpha_item_data_offset;
+  uint64_t m_alpha_item_data_offset = 0;
   uint32_t m_alpha_item_data_size = 0;
-  uint64_t m_main_item_data_offset;
+  uint64_t m_main_item_data_offset = 0;
   uint32_t m_main_item_data_size = 0;
-  uint64_t m_gainmap_item_data_offset;
+  uint64_t m_gainmap_item_data_offset = 0;
   uint32_t m_gainmap_item_data_size = 0;
-  uint64_t m_exif_item_data_offset;
+  uint64_t m_exif_item_data_offset = 0;
   uint32_t m_exif_item_data_size = 0;
-  uint64_t m_xmp_item_data_offset;
+  uint64_t m_xmp_item_data_offset = 0;
   uint32_t m_xmp_item_data_size = 0;
 };
 

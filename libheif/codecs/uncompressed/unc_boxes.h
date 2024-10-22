@@ -359,8 +359,8 @@ public:
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 
-  uint16_t m_pattern_width;
-  uint16_t m_pattern_height;
+  uint16_t m_pattern_width = 0;
+  uint16_t m_pattern_height = 0;
   std::vector<PatternComponent> m_components;
 };
 
