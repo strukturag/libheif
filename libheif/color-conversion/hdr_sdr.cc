@@ -44,7 +44,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
   output_state = input_state;
   output_state.bits_per_pixel = target_state.bits_per_pixel;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }
@@ -131,7 +131,7 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
   output_state = input_state;
   output_state.bits_per_pixel = 8;
 
-  states.push_back({output_state, SpeedCosts_Unoptimized});
+  states.emplace_back(output_state, SpeedCosts_Unoptimized);
 
   return states;
 }

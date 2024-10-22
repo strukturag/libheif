@@ -46,7 +46,7 @@ Op_drop_alpha_plane::state_after_conversion(const ColorState& input_state,
   output_state = input_state;
   output_state.has_alpha = false;
 
-  states.push_back({output_state, SpeedCosts_Trivial});
+  states.emplace_back(output_state, SpeedCosts_Trivial);
 
   return states;
 }
