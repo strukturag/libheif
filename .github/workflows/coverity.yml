@@ -13,7 +13,7 @@ jobs:
       WITH_DAV1D: 1
       WITH_GRAPHICS: 1
       WITH_LIBDE265: 1
-      WITH_RAV1E: 1
+      WITH_RAV1E: 0
       WITH_X265: 1
     steps:
     - uses: actions/checkout@v4
