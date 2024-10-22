@@ -562,6 +562,8 @@ struct heif_error heif_init(struct heif_init_params*);
  *
  * You should call heif_init() when you start using libheif and heif_deinit() when you are finished.
  * These calls are reference counted. Each call to heif_init() should be matched by one call to heif_deinit().
+ * Note: heif_deinit() must not be called after exit(), for example in a global C++ object's destructor, otherwise
+ * global variables in libheif might have already been released during this function call.
  *
  * \sa heif_init()
  */
