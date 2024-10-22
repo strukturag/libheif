@@ -43,7 +43,7 @@ Op_mono_to_YCbCr420::state_after_conversion(const ColorState& input_state,
   output_state.has_alpha = input_state.has_alpha;
   output_state.bits_per_pixel = input_state.bits_per_pixel;
 
-  states.emplace_back(std::move(output_state), SpeedCosts_OptimizedSoftware);
+  states.emplace_back(output_state, SpeedCosts_OptimizedSoftware);
 
   return states;
 }
