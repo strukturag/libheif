@@ -225,7 +225,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
     case 0x08:
       m_parameters.size_field_length = 32;
       break;
-    case 0xc0:
+    case 0x0c:
       m_parameters.size_field_length = 64;
       break;
   }
