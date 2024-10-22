@@ -41,8 +41,6 @@ public:
 
   heif_compression_format get_compression_format() const override { return heif_compression_JPEG2000; }
 
-  void set_data_extent(DataExtent extent) { m_data_extent = std::move(extent); }
-
   int get_luma_bits_per_pixel() const override;
 
   int get_chroma_bits_per_pixel() const override;
@@ -53,7 +51,6 @@ public:
 
 private:
   const std::shared_ptr<const Box_j2kH> m_j2kH;
-  DataExtent m_data_extent;
 };
 
 #endif
