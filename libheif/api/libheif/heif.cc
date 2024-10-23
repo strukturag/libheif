@@ -2439,6 +2439,11 @@ struct heif_error heif_image_get_raw_color_profile(const struct heif_image* imag
            raw_profile->get_data().data(),
            raw_profile->get_data().size());
   }
+  else {
+    Error err(heif_error_Color_profile_does_not_exist,
+              heif_suberror_Unspecified);
+    return err.error_struct(image->image.get());
+  }
 
   return Error::Ok.error_struct(image->image.get());
 }

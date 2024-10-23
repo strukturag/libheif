@@ -1616,13 +1616,17 @@ struct heif_color_profile_nclx* heif_nclx_color_profile_alloc(void);
 LIBHEIF_API
 void heif_nclx_color_profile_free(struct heif_color_profile_nclx* nclx_profile);
 
-
+// Note: in early versions of HEIF, there could only be one color profile per image. However, this has been changed.
+// This function will now return ICC if one is present and NCLX only if there is no ICC.
+// You may better avoid this function and simply query for NCLX and ICC directly.
 LIBHEIF_API
 enum heif_color_profile_type heif_image_get_color_profile_type(const struct heif_image* image);
 
+// Returns the size of the ICC profile if one is assigned to the image. Otherwise, it returns 0.
 LIBHEIF_API
 size_t heif_image_get_raw_color_profile_size(const struct heif_image* image);
 
+// Returns the ICC profile if one is assigned to the image. Otherwise, it returns an error.
 LIBHEIF_API
 struct heif_error heif_image_get_raw_color_profile(const struct heif_image* image,
                                                    void* out_data);
