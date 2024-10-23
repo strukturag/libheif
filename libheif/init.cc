@@ -131,8 +131,8 @@ struct heif_error heif_init(struct heif_init_params*)
 #endif
   }
 
-  // Note: it is important that we increase the counter AFTER initialization such that 'load_plugins_if_not_initialized_yet()' can check this
-  // without having to lock the mutex.
+  // Note: it is important that we increase the counter AFTER initialization such that
+  // 'load_plugins_if_not_initialized_yet()' can check this without having to lock the mutex.
   heif_library_initialization_count++;
 
   return {heif_error_Ok, heif_suberror_Unspecified, Error::kSuccess};
@@ -146,7 +146,7 @@ void heif_deinit()
 #endif
 
   if (heif_library_initialization_count == 0) {
-    // This case should never happen (heif_deinit() is called more often then heif_init()).
+    // This case should never happen (heif_deinit() is called more often than heif_init()).
     return;
   }
 
