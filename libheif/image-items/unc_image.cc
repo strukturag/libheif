@@ -355,12 +355,14 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     auto cmpC = std::make_shared<Box_cmpC>();
     cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
 
+#if HAVE_ZLIB
     if (parameters->compression == heif_metadata_compression_deflate) {
       cmpC->set_compression_type(fourcc("defl"));
     }
     else if (parameters->compression == heif_metadata_compression_zlib) {
       cmpC->set_compression_type(fourcc("zlib"));
     }
+#endif
 #if HAVE_BROTLI
     else if (parameters->compression == heif_metadata_compression_brotli) {
       cmpC->set_compression_type(fourcc("brot"));
@@ -432,12 +434,14 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
     uint32_t compr = cmpC->get_compression_type();
     switch (compr) {
+#if HAVE_ZLIB
       case fourcc("defl"):
         compressed_data = compress_deflate(raw_data.data(), raw_data.size());
         break;
       case fourcc("zlib"):
         compressed_data = compress_zlib(raw_data.data(), raw_data.size());
         break;
+#endif
 #if HAVE_BROTLI
       case fourcc("brot"):
         compressed_data = compress_brotli(raw_data.data(), raw_data.size());
