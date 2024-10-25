@@ -355,8 +355,10 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     auto cmpC = std::make_shared<Box_cmpC>();
     cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
 
+    if (false) {
+    }
 #if HAVE_ZLIB
-    if (parameters->compression == heif_metadata_compression_deflate) {
+    else if (parameters->compression == heif_metadata_compression_deflate) {
       cmpC->set_compression_type(fourcc("defl"));
     }
     else if (parameters->compression == heif_metadata_compression_zlib) {
