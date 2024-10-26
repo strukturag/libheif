@@ -433,6 +433,7 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
   else {
     std::vector<uint8_t> compressed_data;
     const std::vector<uint8_t>& raw_data = codedBitstreamResult.value;
+    (void)raw_data;
 
     uint32_t compr = cmpC->get_compression_type();
     switch (compr) {
