@@ -1052,15 +1052,16 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
 
   // Prevent divide by zero.
 
-  if (tiling.tile_width == 0 || tiling.tile_height == 0) {
-    return {heif_error_Invalid_input, heif_suberror_Invalid_image_size,
-            "Zero image size (maybe there is no 'ispe' property in the image)."};
-  }
-
   uint32_t left_excess = 0;
   uint32_t top_excess = 0;
-  uint32_t right_excess = tiling.image_width % tiling.tile_width;
-  uint32_t bottom_excess = tiling.image_height % tiling.tile_height;
+  uint32_t right_excess = 0;
+  uint32_t bottom_excess = 0;
+
+  if (tiling.tile_width != 0 && tiling.tile_height != 0) {
+    right_excess = tiling.image_width % tiling.tile_width;
+    bottom_excess = tiling.image_height % tiling.tile_height;
+  }
+
 
   for (const auto& property : properties) {
 
