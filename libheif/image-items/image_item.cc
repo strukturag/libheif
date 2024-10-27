@@ -405,6 +405,10 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   return Error::Ok;
 }
 
+bool ImageItem::has_ispe_resolution() const
+{
+  return m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id) != nullptr;
+}
 
 uint32_t ImageItem::get_ispe_width() const
 {
@@ -1045,6 +1049,13 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
   }
 
   const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
+
+  // Prevent divide by zero.
+
+  if (tiling.tile_width == 0 || tiling.tile_height == 0) {
+    return {heif_error_Invalid_input, heif_suberror_Invalid_image_size,
+            "Zero image size (maybe there is no 'ispe' property in the image)."};
+  }
 
   uint32_t left_excess = 0;
   uint32_t top_excess = 0;

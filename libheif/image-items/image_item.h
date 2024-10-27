@@ -115,6 +115,8 @@ public:
 
   uint32_t get_height() const { return m_height; }
 
+  bool has_ispe_resolution() const;
+
   uint32_t get_ispe_width() const;
 
   uint32_t get_ispe_height() const;

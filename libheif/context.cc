@@ -440,11 +440,14 @@ Error HeifContext::interpret_heif_file()
       }
     }
 
+    // Note: usually, we would like to check here if an `ispe` property exists as this is mandatory.
+    // We want to do this if decoding_options.strict_decoding is set, but we cannot because we have no decoding_options
+    // when parsing the file structure.
+
     if (!ispe_read) {
-      return Error(heif_error_Invalid_input,
-                   heif_suberror_No_ispe_property,
-                   "Image has no 'ispe' property");
+      image->add_decoding_warning({heif_error_Invalid_input, heif_suberror_No_ispe_property});
     }
+
 
     for (const auto& prop : properties) {
       auto colr = std::dynamic_pointer_cast<Box_colr>(prop);
@@ -456,6 +459,10 @@ Error HeifContext::interpret_heif_file()
 
       auto cmin = std::dynamic_pointer_cast<Box_cmin>(prop);
       if (cmin) {
+        if (!ispe_read) {
+          return {heif_error_Invalid_input, heif_suberror_No_ispe_property};
+        }
+
         image->set_intrinsic_matrix(cmin->get_intrinsic_matrix());
       }
 
@@ -479,6 +486,10 @@ Error HeifContext::interpret_heif_file()
 
       auto imir = std::dynamic_pointer_cast<Box_imir>(prop);
       if (imir) {
+        if (!ispe_read) {
+          return {heif_error_Invalid_input, heif_suberror_No_ispe_property};
+        }
+
         image->get_intrinsic_matrix().apply_imir(imir.get(), image->get_width(), image->get_height());
       }
 
@@ -486,6 +497,10 @@ Error HeifContext::interpret_heif_file()
       if (irot) {
         if (irot->get_rotation_ccw() == 90 ||
             irot->get_rotation_ccw() == 270) {
+          if (!ispe_read) {
+            return {heif_error_Invalid_input, heif_suberror_No_ispe_property};
+          }
+
           // swap width and height
           image->set_resolution(image->get_height(),
                                 image->get_width());
