@@ -1050,16 +1050,20 @@ Error ImageItem::process_image_transformations_on_tiling(heif_image_tiling& tili
 
   const std::vector<std::shared_ptr<Box>>& properties = *propertiesResult;
 
-  // Prevent divide by zero.
-
   uint32_t left_excess = 0;
   uint32_t top_excess = 0;
-  uint32_t right_excess = 0;
-  uint32_t bottom_excess = 0;
+  uint32_t right_excess;
+  uint32_t bottom_excess;
+
+  // Prevent divide by zero.
 
   if (tiling.tile_width != 0 && tiling.tile_height != 0) {
     right_excess = tiling.image_width % tiling.tile_width;
     bottom_excess = tiling.image_height % tiling.tile_height;
+  }
+  else {
+    right_excess = 0;
+    bottom_excess = 0;
   }
 
 
