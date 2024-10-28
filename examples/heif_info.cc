@@ -65,10 +65,13 @@ info -w 20012 -o out.265 *file
 info -d // dump
  */
 
+int option_disable_limits = 0;
+
 static struct option long_options[] = {
     //{"write-raw", required_argument, 0, 'w' },
     //{"output",    required_argument, 0, 'o' },
     {(char* const) "dump-boxes", no_argument, 0, 'd'},
+    {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
     {(char* const) "help",       no_argument, 0, 'h'},
     {(char* const) "version",    no_argument, 0, 'v'},
     {0, 0,                                    0, 0}
@@ -95,6 +98,7 @@ void show_help(const char* argv0)
   //fprintf(stderr,"  -w, --write-raw ID   write raw compressed data of image 'ID'\n");
   //fprintf(stderr,"  -o, --output NAME    output file name for image selected by -w\n");
   fprintf(stderr, "  -d, --dump-boxes     show a low-level dump of all MP4 file boxes\n");
+  fprintf(stderr, "      --disable-limits disable all security limits (do not use in production environment)\n");
   fprintf(stderr, "  -h, --help           show help\n");
   fprintf(stderr, "  -v, --version        show version\n");
 }
@@ -219,6 +223,10 @@ int main(int argc, char** argv)
   if (!ctx) {
     fprintf(stderr, "Could not create context object\n");
     return 1;
+  }
+
+  if (option_disable_limits) {
+    heif_context_set_security_limits(ctx.get(), heif_get_disabled_security_limits());
   }
 
   struct heif_error err;
