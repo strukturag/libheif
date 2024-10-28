@@ -94,7 +94,8 @@ static void show_help(const char* argv0)
                "      --tiles                    output all image tiles as separate images\n"
                "      --quiet                    do not output status messages to console\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
-               "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n";
+               "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
+               "      --disable-limits           disable all security limits (do not use in production environment)\n";
 }
 
 
@@ -123,6 +124,7 @@ int option_skip_exif_offset = 0;
 int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
 int option_output_tiles = 0;
+int option_disable_limits = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -147,6 +149,7 @@ static struct option long_options[] = {
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
     {(char* const) "version",          no_argument,       0,                        'v'},
+    {(char* const) "disable-limits", no_argument, &option_disable_limits, 1},
     {nullptr, no_argument, nullptr, 0}
 };
 
@@ -792,6 +795,10 @@ int main(int argc, char** argv)
   if (!ctx) {
     fprintf(stderr, "Could not create context object\n");
     return 1;
+  }
+
+  if (option_disable_limits) {
+    heif_context_set_security_limits(ctx, heif_get_disabled_security_limits());
   }
 
   ContextReleaser cr(ctx);
