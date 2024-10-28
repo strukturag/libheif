@@ -146,7 +146,8 @@ static struct option long_options[] = {
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
-    {(char* const) "version",          no_argument,       0,                        'v'}
+    {(char* const) "version",          no_argument,       0,                        'v'},
+    {nullptr, no_argument, nullptr, 0}
 };
 
 
