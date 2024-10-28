@@ -3421,7 +3421,13 @@ Error Box_iref::parse(BitstreamRange& range, const heif_security_limits* limits)
     ref.from_item_ID = static_cast<uint32_t>(range.read_uint(read_len));
     uint16_t nRefs = range.read16();
 
-    if (nRefs > limits->max_items) {
+    if (nRefs==0) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Input file has an 'iref' box with no references."};
+    }
+
+    if (limits->max_items && nRefs > limits->max_items) {
       std::stringstream sstr;
       sstr << "Number of references in iref box (" << nRefs << ") exceeds the security limits of " << limits->max_items << " references.";
 
