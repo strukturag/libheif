@@ -106,9 +106,9 @@ void MixedInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_
               uint64_t dst_column_number = out_x0 + tile_x;
               uint64_t dst_column_offset = dst_column_number * entry.bytes_per_component_sample;
               int val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
-              memcpy(entry.dst_plane + dst_row_offset + dst_column_offset, &val, entry.bytes_per_component_sample);
+              memcpy_to_native_endian(entry.dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
               val = srcBits.get_bits(entry.bytes_per_component_sample * 8);
-              memcpy(entry.other_chroma_dst_plane + dst_row_offset + dst_column_offset, &val, entry.bytes_per_component_sample);
+              memcpy_to_native_endian(entry.other_chroma_dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
             }
             haveProcessedChromaForThisTile = true;
           }
