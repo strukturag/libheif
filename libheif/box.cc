@@ -690,7 +690,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_avcC>();
       break;
 
-#if WITH_EXPERIMENTAL_FEATURES
+#if WITH_EXPERIMENTAL_FEATURS
     case fourcc("tilC"):
       box = std::make_shared<Box_tilC>();
       break;
