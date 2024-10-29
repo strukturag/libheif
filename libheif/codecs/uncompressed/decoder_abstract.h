@@ -201,6 +201,9 @@ protected:
                                  std::vector<uint8_t> compressed_data,
                                  std::vector<uint8_t>* data) const;
 
+protected:
+  void memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample);
+
 private:
   ChannelListEntry buildChannelListEntry(Box_uncC::Component component, std::shared_ptr<HeifPixelImage>& img);
 };

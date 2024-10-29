@@ -56,12 +56,32 @@ void AbstractDecoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
   }
 }
 
+void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample)
+{
+  // TODO: this assumes that the file endianness is always big-endian. The endianness flags in the uncC header are not taken into account yet.
+
+  if (bytes_per_sample==1) {
+    *dst = static_cast<uint8_t>(value);
+    return;
+  }
+  else if (std::endian::native == std::endian::big) {
+    for (uint32_t i = 0; i < bytes_per_sample; i++) {
+      dst[bytes_per_sample - 1 - i] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
+    }
+  }
+  else {
+    for (uint32_t i = 0; i < bytes_per_sample; i++) {
+      dst[i] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
+    }
+  }
+}
+
 void AbstractDecoder::processComponentSample(UncompressedBitReader& srcBits, const ChannelListEntry& entry, uint64_t dst_row_offset, uint32_t tile_column, uint32_t tile_x)
 {
   uint64_t dst_col_number = static_cast<uint64_t>(tile_column) * entry.tile_width + tile_x;
   uint64_t dst_column_offset = dst_col_number * entry.bytes_per_component_sample;
-  int val = srcBits.get_bits(entry.bits_per_component_sample);
-  memcpy(entry.dst_plane + dst_row_offset + dst_column_offset, &val, entry.bytes_per_component_sample);
+  int val = srcBits.get_bits(entry.bits_per_component_sample); // get_bits() reads input in big-endian order
+  memcpy_to_native_endian(entry.dst_plane + dst_row_offset + dst_column_offset, val, entry.bytes_per_component_sample);
 }
 
 // Handles the case where a row consists of a single component type
@@ -85,7 +105,7 @@ void AbstractDecoder::processComponentTileSample(UncompressedBitReader& srcBits,
 {
   uint64_t dst_sample_offset = uint64_t{tile_x} * entry.bytes_per_component_sample;
   int val = srcBits.get_bits(entry.bits_per_component_sample);
-  memcpy(entry.dst_plane + dst_offset + dst_sample_offset, &val, entry.bytes_per_component_sample);
+  memcpy_to_native_endian(entry.dst_plane + dst_offset + dst_sample_offset, val, entry.bytes_per_component_sample);
 }
 
 // Handles the case where a row consists of a single component type
