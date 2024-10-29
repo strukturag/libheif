@@ -31,6 +31,7 @@
 #include "codecs/avc_boxes.h"
 #include "codecs/avif_boxes.h"
 #include "image-items/tiled.h"
+#include "codecs/evc_boxes.h"
 
 #include <iomanip>
 #include <utility>
@@ -691,6 +692,13 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       break;
 
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+    // --- EVC (ISO/IEC 23094-1)
+
+    case fourcc("evcC"):
+      box = std::make_shared<Box_evcC>();
+      break;
+
+    // --- Low overhead tiling
     case fourcc("tilC"):
       box = std::make_shared<Box_tilC>();
       break;
