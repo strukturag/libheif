@@ -88,9 +88,8 @@ set(KVAZAAR_extra_plugin_sources)
 plugin_compilation(kvazaar KVAZAAR KVAZAAR_FOUND KVAZAAR KVAZAAR)
 
 set(FFMPEG_DECODER_sources decoder_ffmpeg.cc decoder_ffmpeg.h)
-set(FFMPEG_DECODER_extra_plugin_sources ../error.cc)
+set(FFMPEG_DECODER_extra_plugin_sources ../error.cc nalu_utils.cc)
 plugin_compilation(ffmpegdec FFMPEG FFMPEG_FOUND FFMPEG_DECODER FFMPEG_DECODER)
-
 
 set(OPENJPH_ENCODER_sources encoder_openjph.cc encoder_openjph.h)
 set(OPENJPH_ENCODER_extra_plugin_sources)
