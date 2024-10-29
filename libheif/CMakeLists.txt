@@ -129,14 +129,14 @@ if (ENABLE_PLUGIN_LOADING)
     endif ()
 endif ()
 
-option(ENABLE_EXPERIMENTAL_FEATURS "Compile experimental features and install headers with unstable API" OFF)
-if (ENABLE_EXPERIMENTAL_FEATURS)
+option(ENABLE_EXPERIMENTAL_FEATURES "Compile experimental features and install headers with unstable API" OFF)
+if (ENABLE_EXPERIMENTAL_FEATURES)
     list(APPEND libheif_sources api/libheif/heif_experimental.h
             api/libheif/heif_experimental.cc)
 
     list(APPEND libheif_headers api/libheif/heif_experimental.h)
 
-    target_compile_definitions(heif PUBLIC ENABLE_EXPERIMENTAL_FEATURS)
+    target_compile_definitions(heif PUBLIC ENABLE_EXPERIMENTAL_FEATURES)
 endif()
 
 # Needed to find libheif/heif_version.h while compiling the library

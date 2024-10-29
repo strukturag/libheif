@@ -36,7 +36,7 @@ else()
     add_libheif_test(file_layout)
 endif()
 
-if (WITH_EXPERIMENTAL_FEATURS AND WITH_REDUCED_VISIBILITY)
+if (ENABLE_EXPERIMENTAL_FEATURES AND WITH_REDUCED_VISIBILITY)
     add_libheif_test(pixel_data_types)
 endif()
 

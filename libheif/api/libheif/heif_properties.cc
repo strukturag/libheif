@@ -359,7 +359,7 @@ struct heif_error find_property(const struct heif_context* context,
 }
 
 
-#if ENABLE_EXPERIMENTAL_FEATURS
+#if ENABLE_EXPERIMENTAL_FEATURES
 const uint64_t heif_tai_clock_info_unknown_time_uncertainty = 0xFFFFFFFFFFFFFFFF;
 const uint64_t heif_unknown_tai_timestamp = 0xFFFFFFFFFFFFFFFF;
 const int32_t heif_tai_clock_info_unknown_drift_rate = 0x7FFFFFFF;

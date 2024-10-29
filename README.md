@@ -174,7 +174,7 @@ Further options are:
    Note that header compression is not widely supported yet.
 * `WITH_LIBSHARPYUV`: enables high-quality YCbCr/RGB color space conversion algorithms (requires `libsharpyuv`,
    e.g. from the `third-party` directory).
-* `ENABLE_EXPERIMENTAL_FEATURS`: enables functions that are currently in development and for which the API is not stable yet.
+* `ENABLE_EXPERIMENTAL_FEATURES`: enables functions that are currently in development and for which the API is not stable yet.
    When this is enabled, a header `heif_experimental.h` will be installed that contains this unstable API.
    Distributions that rely on a stable API should not enable this.
 * `ENABLE_MULTITHREADING_SUPPORT`: can be used to disable any multithreading support, e.g. for embedded platforms.
