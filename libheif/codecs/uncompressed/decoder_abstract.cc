@@ -69,7 +69,7 @@ void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint
   }
   else {
     for (uint32_t i = 0; i < bytes_per_sample; i++) {
-      dst[bytes_per_sample] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
+      dst[i] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
     }
   }
 }
