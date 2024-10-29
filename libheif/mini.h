@@ -45,6 +45,8 @@ public:
 
   uint8_t get_bit_depth() const { return m_bit_depth; }
 
+  uint8_t get_orientation() const { return m_orientation; }
+
   std::vector<uint8_t> get_main_item_codec_config() const { return m_main_item_codec_config; }
   std::vector<uint8_t> get_alpha_item_codec_config() const { return m_alpha_item_codec_config; }
   std::vector<uint8_t> get_icc_data() const { return m_icc_data; }

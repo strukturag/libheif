@@ -412,6 +412,23 @@ private:
 };
 
 
+class Box_free : public Box
+{
+public:
+  Box_free()
+  {
+    set_short_type(fourcc("free"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+};
+
+
 class Box_meta : public FullBox
 {
 public:

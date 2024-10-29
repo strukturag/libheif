@@ -224,3 +224,51 @@ TEST_CASE("check mini+exif+xmp version")
                         "exif_data offset: 770, size: 208\n"
                         "xmp_data offset: 978, size: 3426\n");
 }
+
+
+TEST_CASE("check heif mini")
+{
+  auto istr = std::unique_ptr<std::istream>(new std::ifstream(tests_data_directory + "/lightning_mini.heif", std::ios::binary));
+  auto reader = std::make_shared<StreamReader_istream>(std::move(istr));
+  FileLayout file;
+  Error err = file.read(reader, heif_get_global_security_limits());
+  REQUIRE(err.error_code == heif_error_Ok);
+
+  std::shared_ptr<Box_mini> mini = file.get_mini_box();
+  REQUIRE(mini->get_exif_flag() == false);
+  REQUIRE(mini->get_xmp_flag() == false);
+  REQUIRE(mini->get_bit_depth() == 8);
+  REQUIRE(mini->get_colour_primaries() == 1);
+  REQUIRE(mini->get_transfer_characteristics() == 13);
+  REQUIRE(mini->get_matrix_coefficients() == 6);
+  REQUIRE(mini->get_width() == 128);
+  REQUIRE(mini->get_height() == 128);
+  REQUIRE(mini->get_main_item_codec_config().size() == 112);
+  Indent indent;
+  std::string dumpResult = mini->dump(indent);
+  REQUIRE(dumpResult == "Box: mini -----\n"
+                        "size: 4710   (header size: 8)\n"
+                        "version: 0\n"
+                        "explicit_codec_types_flag: 0\n"
+                        "float_flag: 0\n"
+                        "full_range_flag: 1\n"
+                        "alpha_flag: 0\n"
+                        "explicit_cicp_flag: 0\n"
+                        "hdr_flag: 0\n"
+                        "icc_flag: 0\n"
+                        "exif_flag: 0\n"
+                        "xmp_flag: 0\n"
+                        "chroma_subsampling: 1\n"
+                        "orientation: 1\n"
+                        "width: 128\n"
+                        "height: 128\n"
+                        "chroma_is_horizontally_centered: 0\n"
+                        "chroma_is_vertically_centered: 0\n"
+                        "bit_depth: 8\n"
+                        "colour_primaries: 1\n"
+                        "transfer_characteristics: 13\n"
+                        "matrix_coefficients: 6\n"
+                        "main_item_code_config size: 112\n"
+                        "main_item_data offset: 144, size: 4582\n");
+}
+
