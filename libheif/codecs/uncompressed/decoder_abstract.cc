@@ -58,6 +58,8 @@ void AbstractDecoder::buildChannelList(std::shared_ptr<HeifPixelImage>& img)
 
 void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint32_t bytes_per_sample)
 {
+  // TODO: this assumes that the file endianness is always big-endian. The endianness flags in the uncC header are not taken into account yet.
+
   if (bytes_per_sample==1) {
     *dst = static_cast<uint8_t>(value);
     return;
