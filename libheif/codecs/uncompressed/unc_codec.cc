@@ -201,13 +201,18 @@ static Error uncompressed_image_type_is_supported(const std::shared_ptr<const Bo
                  heif_suberror_Unsupported_data_version,
                  sstr.str());
   }
-/*
-  // TODO: check if this really works...  if (uncC->is_components_little_endian()) {
-    return Error(heif_error_Unsupported_feature,
-                 heif_suberror_Unsupported_data_version,
-                 "Uncompressed components_little_endian == 1 is not implemented yet");
+
+  if (uncC->is_components_little_endian()) {
+    const auto& comps = uncC->get_components();
+    bool all_8_bit = std::all_of(comps.begin(), comps.end(),
+                                 [](const Box_uncC::Component& c) { return c.component_bit_depth==8; });
+    if (!all_8_bit) {
+      return Error(heif_error_Unsupported_feature,
+                   heif_suberror_Unsupported_data_version,
+                   "Uncompressed components_little_endian == 1 is not implemented yet");
+    }
   }
-  */
+
   if (uncC->is_block_pad_lsb()) {
     return Error(heif_error_Unsupported_feature,
                  heif_suberror_Unsupported_data_version,
