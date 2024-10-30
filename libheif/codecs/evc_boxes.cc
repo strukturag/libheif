@@ -146,8 +146,8 @@ Error Box_evcC::write(StreamWriter& writer) const
   writer.write32(m_configuration.toolset_idc_h);
   writer.write32(m_configuration.toolset_idc_l);
   uint8_t chroma_format_idc_bits = m_configuration.chroma_format_idc << 6;
-  uint8_t bit_depth_luma_minus8_bits = ((m_configuration.bit_depth_luma - 8) & 0b111) << 3;
-  uint8_t bit_depth_chroma_minus8_bits = ((m_configuration.bit_depth_chroma - 8) & 0b111);
+  uint8_t bit_depth_luma_minus8_bits = (uint8_t)((m_configuration.bit_depth_luma - 8) & 0b111) << 3;
+  uint8_t bit_depth_chroma_minus8_bits = (uint8_t)((m_configuration.bit_depth_chroma - 8) & 0b111);
   writer.write8(chroma_format_idc_bits | bit_depth_luma_minus8_bits | bit_depth_chroma_minus8_bits);
   writer.write16(m_configuration.pic_width_in_luma_samples);
   writer.write16(m_configuration.pic_height_in_luma_samples);
