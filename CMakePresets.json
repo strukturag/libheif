@@ -15,6 +15,7 @@
         "BUILD_SHARED_LIBS": "ON",
         "BUILD_TESTING" : "ON",
         "ENABLE_EXPERIMENTAL_FEATURES" : "ON",
+        "CMAKE_COMPILE_WARNING_AS_ERROR" : "OFF",
 
         "ENABLE_PLUGIN_LOADING" : "OFF",
         "WITH_AOM_DECODER" : "ON",
