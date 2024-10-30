@@ -420,7 +420,7 @@ enum heif_compression_format
   /**
    * EVC compression. (Currently unused in libheif.)
    *
-   * The compression format is defined in ISO/IEC 23094-1. This is equivalent to H.266.
+   * The compression format is defined in ISO/IEC 23094-1.
    *
    * The encapsulation is defined in ISO/IEC 23008-12:2022 Annex M.
    */
