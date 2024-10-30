@@ -178,8 +178,8 @@ struct heif_error heif_context_add_unci_image(struct heif_context* ctx,
 struct heif_pyramid_layer_info {
   heif_item_id layer_image_id;
   uint16_t layer_binning;
-  uint32_t tiles_in_layer_row;
-  uint32_t tiles_in_layer_column;
+  uint32_t tile_rows_in_layer;
+  uint32_t tile_columns_in_layer;
 };
 
 #if ENABLE_EXPERIMENTAL_FEATURES

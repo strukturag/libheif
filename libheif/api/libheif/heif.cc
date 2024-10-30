@@ -1155,8 +1155,8 @@ struct heif_pyramid_layer_info* heif_context_get_pyramid_entity_group_info(struc
   for (size_t i=0; i<pymd_layers.size(); i++) {
     layerInfo[i].layer_image_id = items[i];
     layerInfo[i].layer_binning = pymd_layers[i].layer_binning;
-    layerInfo[i].tiles_in_layer_row = pymd_layers[i].tiles_in_layer_row_minus1 + 1;
-    layerInfo[i].tiles_in_layer_column = pymd_layers[i].tiles_in_layer_column_minus1 + 1;
+    layerInfo[i].tile_rows_in_layer = pymd_layers[i].tiles_in_layer_row_minus1 + 1;
+    layerInfo[i].tile_columns_in_layer = pymd_layers[i].tiles_in_layer_column_minus1 + 1;
   }
 
   *out_num_layers = static_cast<int>(pymd_layers.size());
