@@ -23,10 +23,9 @@
 
 #include "box.h"
 #include "error.h"
-// #include <cstdint>
-// #include <vector>
-// #include <string>
-// #include <memory>
+#include <string>
+#include <vector>
+
 // #include "image-items/image_item.h"
 
 
