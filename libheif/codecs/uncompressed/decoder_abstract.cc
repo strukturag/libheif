@@ -23,6 +23,7 @@
 #include <iostream>
 #include <cassert>
 #include <utility>
+#include <bit>
 
 #include "common_utils.h"
 #include "context.h"
