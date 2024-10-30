@@ -123,13 +123,13 @@ std::string Box_evcC::get_chroma_format_as_text() const
 {
   switch (m_configuration.chroma_format_idc)
   {
-  case 0:
+  case CHROMA_FORMAT_MONOCHROME:
     return std::string("Monochrome");
-  case 1:
+  case CHROMA_FORMAT_420:
     return std::string("4:2:0");
-  case 2:
+  case CHROMA_FORMAT_422:
     return std::string("4:2:2");
-  case 3:
+  case CHROMA_FORMAT_444:
     return std::string("4:4:4");
   default:
     return std::string("Invalid");
@@ -168,4 +168,17 @@ Error Box_evcC::write(StreamWriter& writer) const
   prepend_header(writer, box_start);
 
   return Error::Ok;
+}
+
+void Box_evcC::get_header_nals(std::vector<uint8_t>& data) const
+{
+  for (const auto& array : m_nal_array) {
+    for (const auto& nalu : array.nal_units) {
+      data.push_back((nalu.size() >> 24) & 0xFF);
+      data.push_back((nalu.size() >> 16) & 0xFF);
+      data.push_back((nalu.size() >> 8) & 0xFF);
+      data.push_back((nalu.size() >> 0) & 0xFF);
+      data.insert(data.end(), nalu.begin(), nalu.end());
+    }
+  }
 }

@@ -89,6 +89,8 @@ set(libheif_sources
         codecs/avc_dec.cc
         codecs/evc_boxes.cc
         codecs/evc_boxes.h
+        codecs/evc_dec.h
+        codecs/evc_dec.cc
         image-items/mask_image.h
         image-items/mask_image.cc
         image-items/image_item.h

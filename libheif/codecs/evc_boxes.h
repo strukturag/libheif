@@ -26,14 +26,16 @@
 #include <string>
 #include <vector>
 
-// #include "image-items/image_item.h"
-
-
 class Box_evcC : public Box {
 public:
   Box_evcC() { set_short_type(fourcc("evcC")); }
 
   bool is_essential() const override { return true; }
+
+  static const uint8_t CHROMA_FORMAT_MONOCHROME = 0;
+  static const uint8_t CHROMA_FORMAT_420 = 1;
+  static const uint8_t CHROMA_FORMAT_422 = 2;
+  static const uint8_t CHROMA_FORMAT_444 = 3;
 
   struct configuration {
     uint8_t configurationVersion = 1;
@@ -62,6 +64,8 @@ public:
   std::string dump(Indent &) const override;
 
   Error write(StreamWriter &writer) const override;
+
+  void get_header_nals(std::vector<uint8_t>& data) const;
 
 protected:
   Error parse(BitstreamRange &range, const heif_security_limits* limits) override;
