@@ -51,7 +51,7 @@
         "WITH_VVDEC" : "ON",
         "WITH_VVDEC_PLUGIN" : "OFF",
         "WITH_VVENC" : "ON",
-        "WITH_VVENC_PLUGIN" : "OFF"
+        "WITH_VVENC_PLUGIN" : "OFF",
 
         "WITH_REDUCED_VISIBILITY" : "OFF",
         "WITH_HEADER_COMPRESSION" : "ON",
@@ -105,7 +105,7 @@
         "WITH_VVDEC" : "ON",
         "WITH_VVDEC_PLUGIN" : "ON",
         "WITH_VVENC" : "ON",
-        "WITH_VVENC_PLUGIN" : "ON"
+        "WITH_VVENC_PLUGIN" : "ON",
 
         "WITH_REDUCED_VISIBILITY" : "ON",
         "WITH_HEADER_COMPRESSION" : "ON",
