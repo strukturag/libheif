@@ -1018,7 +1018,13 @@ struct heif_reader
   // function above instead.
 
   // If this function is defined, libheif will often request a file range before accessing it.
-  // `end_pos` is one byte after the last position to be read.
+  // The purpose of this function is that libheif will usually read very small chunks of data with the
+  // read() callback above. However, it is inefficient to request such a small chunk of data over a network
+  // and the network delay will significantly increase the decoding time.
+  // Thus, libheif will call request_range() with a larger block of data that should be preloaded and the
+  // subsequent read() calls will work within the requested ranges.
+  //
+  // Note: `end_pos` is one byte after the last position to be read.
   // You should return
   // - 'heif_reader_grow_status_size_reached' if the requested range is available, or
   // - 'heif_reader_grow_status_size_beyond_eof' if the requested range exceeds the file size
