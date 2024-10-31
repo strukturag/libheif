@@ -350,7 +350,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
                           static_cast<uint32_t>(parameters->image_height),
                           true);
 
-  if (parameters->compression != heif_metadata_compression_off) {
+  if (parameters->compression != heif_unci_compression_off) {
     auto icef = std::make_shared<Box_icef>();
     auto cmpC = std::make_shared<Box_cmpC>();
     cmpC->set_compressed_unit_type(heif_cmpC_compressed_unit_type_image_tile);
@@ -358,15 +358,15 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
     if (false) {
     }
 #if HAVE_ZLIB
-    else if (parameters->compression == heif_metadata_compression_deflate) {
+    else if (parameters->compression == heif_unci_compression_deflate) {
       cmpC->set_compression_type(fourcc("defl"));
     }
-    else if (parameters->compression == heif_metadata_compression_zlib) {
+    else if (parameters->compression == heif_unci_compression_zlib) {
       cmpC->set_compression_type(fourcc("zlib"));
     }
 #endif
 #if HAVE_BROTLI
-    else if (parameters->compression == heif_metadata_compression_brotli) {
+    else if (parameters->compression == heif_unci_compression_brotli) {
       cmpC->set_compression_type(fourcc("brot"));
     }
 #endif
@@ -380,7 +380,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
   // Create empty image. If we use compression, we append the data piece by piece.
 
-  if (parameters->compression == heif_metadata_compression_off) {
+  if (parameters->compression == heif_unci_compression_off) {
     uint64_t tile_size = headers.uncC->compute_tile_data_size_bytes(parameters->image_width / headers.uncC->get_number_of_tile_columns(),
                                                                     parameters->image_height / headers.uncC->get_number_of_tile_rows());
 

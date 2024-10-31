@@ -67,7 +67,7 @@ std::string chroma_downsampling;
 int tiled_image_width = 0;
 int tiled_image_height = 0;
 std::string tiling_method = "grid";
-heif_metadata_compression unci_compression = heif_metadata_compression_brotli;
+heif_unci_compression unci_compression = heif_unci_compression_brotli;
 int add_pyramid_group = 0;
 
 uint16_t nclx_colour_primaries = 1;
@@ -985,16 +985,16 @@ int main(int argc, char** argv)
       case OPTION_UNCI_COMPRESSION: {
         std::string option(optarg);
         if (option == "none") {
-          unci_compression = heif_metadata_compression_off;
+          unci_compression = heif_unci_compression_off;
         }
         else if (option == "brotli") {
-          unci_compression = heif_metadata_compression_brotli;
+          unci_compression = heif_unci_compression_brotli;
         }
         else if (option == "deflate") {
-          unci_compression = heif_metadata_compression_deflate;
+          unci_compression = heif_unci_compression_deflate;
         }
         else if (option == "zlib") {
-          unci_compression = heif_metadata_compression_zlib;
+          unci_compression = heif_unci_compression_zlib;
         }
         else {
           std::cerr << "Invalid unci compression method '" << option << "'\n";

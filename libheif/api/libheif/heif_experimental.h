@@ -148,6 +148,19 @@ struct heif_error heif_context_add_tiled_image(struct heif_context* ctx,
 
 // --- 'unci' images
 
+// This is similar to heif_metadata_compression. We should try to keep the integers compatible, but each enum will just
+// contain the allowed values.
+enum heif_unci_compression
+{
+  heif_unci_compression_off = 0,
+  //heif_unci_compression_auto = 1,
+  //heif_unci_compression_unknown = 2, // only used when reading unknown method from input file
+  heif_unci_compression_deflate = 3,
+  heif_unci_compression_zlib = 4,
+  heif_unci_compression_brotli = 5
+};
+
+
 struct heif_unci_image_parameters {
   int version;
 
@@ -159,7 +172,7 @@ struct heif_unci_image_parameters {
   uint32_t tile_width;
   uint32_t tile_height;
 
-  enum heif_metadata_compression compression; // TODO
+  enum heif_unci_compression compression; // TODO
 
   // TODO: interleave type, padding
 };
