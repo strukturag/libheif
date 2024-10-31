@@ -1137,7 +1137,8 @@ struct heif_security_limits {
   // --- version 1
 
   // Limit on the maximum image size to avoid allocating too much memory.
-  // 32768^2 = 1.5 GB as YUV-4:2:0 or 4 GB as RGB32
+  // For example, setting this to 32768^2 pixels = 1 Gigapixels results
+  // in 1.5 GB memory need for YUV-4:2:0 or 4 GB for RGB32.
   uint64_t max_image_size_pixels;
   uint64_t max_number_of_tiles;
   uint32_t max_bayer_pattern_pixels;
