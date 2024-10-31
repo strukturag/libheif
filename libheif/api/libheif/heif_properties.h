@@ -185,7 +185,7 @@ LIBHEIF_API
 struct heif_error heif_item_get_property_uuid_type(const struct heif_context* context,
                                                    heif_item_id itemId,
                                                    heif_property_id propertyId,
-                                                   uint8_t extended_type[16]);
+                                                   uint8_t out_extended_type[16]);
 
 #ifdef __cplusplus
 }
