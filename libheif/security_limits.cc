@@ -56,16 +56,18 @@ Error check_for_valid_image_size(const heif_security_limits* limits, uint32_t wi
 
   // --- check whether the image size is "too large"
 
-  auto max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
-  if ((width > max_width_height || height > max_width_height) ||
-      (height != 0 && width > maximum_image_size_limit / height)) {
-    std::stringstream sstr;
-    sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
-         << maximum_image_size_limit << "\n";
+  if (maximum_image_size_limit > 0) {
+    auto max_width_height = static_cast<uint32_t>(std::numeric_limits<int>::max());
+    if ((width > max_width_height || height > max_width_height) ||
+        (height != 0 && width > maximum_image_size_limit / height)) {
+      std::stringstream sstr;
+      sstr << "Image size " << width << "x" << height << " exceeds the maximum image size "
+           << maximum_image_size_limit << "\n";
 
-    return {heif_error_Memory_allocation_error,
-            heif_suberror_Security_limit_exceeded,
-            sstr.str()};
+      return {heif_error_Memory_allocation_error,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
   }
 
   if (width == 0 || height == 0) {
