@@ -1116,8 +1116,11 @@ LIBHEIF_API
 void heif_context_debug_dump_boxes_to_file(struct heif_context* ctx, int fd);
 
 
+// Set the maximum image size security limit. This function will set the maximum image area (number of pixels)
+// to maximum_width ^ 2. Alternatively to using this function, you can also set the maximum image area
+// in the security limits structure returned by heif_context_get_security_limits().
 LIBHEIF_API
-void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_pixels);
+void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width);
 
 // If the maximum threads number is set to 0, the image tiles are decoded in the main thread.
 // This is different from setting it to 1, which will generate a single background thread to decode the tiles.

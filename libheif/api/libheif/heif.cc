@@ -3836,9 +3836,9 @@ struct heif_error heif_context_add_generic_uri_metadata(struct heif_context* ctx
 }
 
 
-void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_pixels)
+void heif_context_set_maximum_image_size_limit(struct heif_context* ctx, int maximum_width)
 {
-  ctx->context->get_security_limits()->max_image_size_pixels = maximum_pixels;
+  ctx->context->get_security_limits()->max_image_size_pixels = static_cast<uint64_t>(maximum_width) * maximum_width;
 }
 
 
