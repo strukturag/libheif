@@ -91,3 +91,8 @@ else()
 endif ()
 
 add_heifio_test(tiffdecode)
+
+if (ENABLE_PLUGIN_LOADING)
+    get_directory_property(ALL_TESTS TESTS)
+    set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT "LIBHEIF_PLUGIN_PATH=${CMAKE_BINARY_DIR}/libheif/plugins")
+endif ()
