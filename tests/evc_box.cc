@@ -57,6 +57,7 @@ TEST_CASE("evcC") {
   Box_evcC::configuration configuration = evcC->get_configuration();
   REQUIRE(configuration.configurationVersion == 1);
   REQUIRE(configuration.profile_idc == 2);
+  // TODO: this value looks off
   REQUIRE(configuration.level_idc == 215);
   REQUIRE(configuration.toolset_idc_h == 0);
   REQUIRE(configuration.toolset_idc_l == 0);
