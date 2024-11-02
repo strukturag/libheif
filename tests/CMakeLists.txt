@@ -47,8 +47,11 @@ endif()
 # --- tests that only access the public API
 
 add_libheif_test(encode)
-add_libheif_test(extended_type)
 add_libheif_test(region)
+
+if (NOT WITH_UNCOMPRESSED_CODEC)
+    add_libheif_test(extended_type)
+endif()
 
 if (WITH_OPENJPH_ENCODER AND SUPPORTS_J2K_HT_ENCODING)
     add_libheif_test(encode_htj2k)
