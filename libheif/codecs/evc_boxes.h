@@ -82,7 +82,9 @@ private:
 
   std::vector<NalArray> m_nal_array;
 
+  std::string get_profile_as_text() const;
   std::string get_chroma_format_as_text() const;
+  std::string get_NAL_unit_type_as_text(uint8_t nal_unit_type) const;
 };
 
 #endif

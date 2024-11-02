@@ -34,7 +34,7 @@
 TEST_CASE("evcC") {
   std::vector<uint8_t> byteArray{
       0x00, 0x00, 0x00, 0x3d, 0x65, 0x76, 0x63, 0x43,
-      0x01, 0x00, 0xd7, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0xd7, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x52, 0x01, 0x40, 0x00, 0xf0,
       0x03, 0x02, 0x98, 0x00, 0x01, 0x00, 0x15, 0x32,
       0x00, 0x80, 0x6b, 0x80, 0x00, 0x00, 0x00, 0x00,
@@ -56,7 +56,7 @@ TEST_CASE("evcC") {
   std::shared_ptr<Box_evcC> evcC = std::dynamic_pointer_cast<Box_evcC>(box);
   Box_evcC::configuration configuration = evcC->get_configuration();
   REQUIRE(configuration.configurationVersion == 1);
-  REQUIRE(configuration.profile_idc == 0);
+  REQUIRE(configuration.profile_idc == 2);
   REQUIRE(configuration.level_idc == 215);
   REQUIRE(configuration.toolset_idc_h == 0);
   REQUIRE(configuration.toolset_idc_l == 0);
@@ -71,7 +71,7 @@ TEST_CASE("evcC") {
   REQUIRE(dumpResult == "Box: evcC -----\n"
                         "size: 61   (header size: 8)\n"
                         "configurationVersion: 1\n"
-                        "profile_idc: 0\n"
+                        "profile_idc: 2 (Baseline Still)\n"
                         "level_idc: 215\n"
                         "toolset_idc_h: 0\n"
                         "toolset_idc_l: 0\n"
@@ -83,11 +83,11 @@ TEST_CASE("evcC") {
                         "length_size: 4\n"
                         "<array>\n"
                         "| array_completeness: true\n"
-                        "| NAL_unit_type: 24\n"
+                        "| NAL_unit_type: 24 (SPS_NUT)\n"
                         "| 32 00 80 6b 80 00 00 00 00 00 00 00 20 0a 08 0f 16 c0 00 54 00 \n"
                         "<array>\n"
                         "| array_completeness: true\n"
-                        "| NAL_unit_type: 25\n"
+                        "| NAL_unit_type: 25 (PPS_NUT)\n"
                         "| 34 00 fb 00 \n");
 
   StreamWriter writer;

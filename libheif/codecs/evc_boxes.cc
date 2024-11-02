@@ -86,7 +86,8 @@ std::string Box_evcC::dump(Indent& indent) const
   sstr << Box::dump(indent);
   // TODO: decode more of this
   sstr << indent << "configurationVersion: " << ((int)m_configuration.configurationVersion) << "\n";
-  sstr << indent << "profile_idc: " << ((int)m_configuration.profile_idc) << "\n";
+  sstr << indent << "profile_idc: " << ((int)m_configuration.profile_idc)
+       << " (" << get_profile_as_text() << ")" << "\n";
   sstr << indent << "level_idc: " << ((int)m_configuration.level_idc) << "\n";
   sstr << indent << "toolset_idc_h: " << m_configuration.toolset_idc_h << "\n";
   sstr << indent << "toolset_idc_l: " << m_configuration.toolset_idc_l << "\n";
@@ -103,7 +104,8 @@ std::string Box_evcC::dump(Indent& indent) const
 
     indent++;
     sstr << indent << "array_completeness: " << (array.array_completeness  ? "true" : "false") << "\n"
-         << indent << "NAL_unit_type: " << ((int) array.NAL_unit_type) << "\n";
+         << indent << "NAL_unit_type: " << ((int) array.NAL_unit_type) << " ("
+         << get_NAL_unit_type_as_text(array.NAL_unit_type) << ")" << "\n";
 
     for (const auto& unit : array.nal_units) {
       sstr << indent;
@@ -117,6 +119,23 @@ std::string Box_evcC::dump(Indent& indent) const
     indent--;
   }
   return sstr.str();
+}
+
+std::string Box_evcC::get_profile_as_text() const
+{
+  switch (m_configuration.profile_idc)
+  {
+  case 0:
+    return "Baseline";
+  case 1:
+    return "Main";
+  case 2:
+    return "Baseline Still";
+  case 3:
+    return "Main Still";
+  default:
+    return std::string("Unknown");
+  }
 }
 
 std::string Box_evcC::get_chroma_format_as_text() const
@@ -133,6 +152,29 @@ std::string Box_evcC::get_chroma_format_as_text() const
     return std::string("4:4:4");
   default:
     return std::string("Invalid");
+  }
+}
+
+std::string Box_evcC::get_NAL_unit_type_as_text(uint8_t nal_unit_type) const
+{
+  switch (nal_unit_type)
+  {
+  case 0:
+    return "NONIDR_NUT";
+  case 1:
+    return "IDR_NUT";
+  case 24:
+    return "SPS_NUT";
+  case 25:
+    return "PPS_NUT";
+  case 26:
+    return "APS_NUT";
+  case 27:
+    return "FD_NUT";
+  case 28:
+    return "SEI_NUT";
+  default:
+    return std::string("Unknown");
   }
 }
 
