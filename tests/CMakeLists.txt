@@ -25,6 +25,7 @@ macro(add_libheif_test TEST_FILE)
     add_executable(${TEST_NAME} ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
     target_link_libraries(${TEST_NAME} PRIVATE heif Catch2::Catch2WithMain)
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES SKIP_REGULAR_EXPRESSION "[1-9][0-9]* skipped")
 endmacro()
 
 macro(add_heifio_test TEST_FILE)
@@ -33,6 +34,7 @@ macro(add_heifio_test TEST_FILE)
     target_link_libraries(${TEST_NAME} PRIVATE heif heifio Catch2::Catch2WithMain)
     target_include_directories(${TEST_NAME} PRIVATE ${libheif_SOURCE_DIR})
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES SKIP_REGULAR_EXPRESSION "[1-9][0-9]* skipped")
 endmacro()
 
 # --- tests that require access to internal symbols
