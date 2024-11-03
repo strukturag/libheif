@@ -543,6 +543,7 @@ if(ENABLE_COVERAGE)
 endif()
 
 option(BUILD_TESTING "" ON)
+set(CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 include(CTest)
 if(BUILD_TESTING)
     # TODO: fix tests on windows.
