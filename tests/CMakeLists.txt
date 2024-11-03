@@ -2,6 +2,7 @@
 include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api)
 
 Include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE)
 
 FetchContent_Declare(
         Catch2
