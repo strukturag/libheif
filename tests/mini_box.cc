@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include <bitstream.h>
 #include <box.h>
 #include "error.h"

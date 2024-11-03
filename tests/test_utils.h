@@ -41,3 +41,5 @@ void fill_new_plane(heif_image* img, heif_channel channel, int w, int h);
 struct heif_image * createImage_RGB_planar();
 
 std::string get_path_for_heifio_test_file(std::string filename);
+
+heif_encoder* get_encoder_or_skip_test(heif_compression_format format);
