@@ -77,7 +77,8 @@ static struct option long_options[] = {
     {0, 0,                                    0, 0}
 };
 
-const char* fourcc_to_string(uint32_t fourcc)
+// Note: the same function is also exists in common_utils.h, but is not in the public API.
+static const char* fourcc_to_string(uint32_t fourcc)
 {
   static char fcc[5];
   fcc[0] = (char) ((fourcc >> 24) & 0xFF);
