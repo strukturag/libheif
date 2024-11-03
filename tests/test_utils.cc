@@ -28,7 +28,7 @@
 #include "libheif/heif.h"
 #include "test-config.h"
 #include <cstring>
-#include "catch_amalgamated.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 struct heif_context * get_context_for_test_file(std::string filename)
 {

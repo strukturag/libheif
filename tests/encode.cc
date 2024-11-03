@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch_amalgamated.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "libheif/heif.h"
 #include "pixelimage.h"
 #include "libheif/api_structs.h"

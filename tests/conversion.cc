@@ -25,9 +25,12 @@
 */
 
 #include <iomanip>
-#include "catch_amalgamated.hpp"
+#include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
+#include "catch2/generators/catch_generators_range.hpp"
 #include "color-conversion/colorconversion.h"
 #include "pixelimage.h"
+#include <cmath>
 
 // Enable for more verbose test output.
 constexpr bool kEnableDebugOutput = false;
