@@ -139,5 +139,8 @@ TEST_CASE("rgba_planar") {
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
 }
-
+#else
+TEST_CASE("no_tiff dummy") {
+  // Dummy test if we don't have the TIFF library, so that testing does not fail with "No test ran".
+}
 #endif // HAVE_LIBTIFF
