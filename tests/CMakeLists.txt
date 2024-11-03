@@ -6,10 +6,11 @@ include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libhei
 set(TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data")
 set(LIBHEIFIO_TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data/heifio")
 configure_file(test-config.cc.in ${CMAKE_BINARY_DIR}/generated/test-config.cc)
+add_compile_options("-std=c++14")
 
 macro(add_libheif_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
-    add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
+    add_executable(${TEST_NAME} catch_amalgamated.cc ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
     target_link_libraries(${TEST_NAME} PRIVATE heif)
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
 endmacro()
