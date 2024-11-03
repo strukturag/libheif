@@ -30,6 +30,7 @@ before_build:
   - dir
 
 build:
+  project: libheif.sln
   parallel: true
   verbosity: normal
 
