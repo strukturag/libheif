@@ -533,7 +533,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   }
 
 
-  // Create 'tild' Item
+  // Create 'tili' Item
 
   auto file = ctx->get_heif_file();
 
@@ -689,7 +689,7 @@ ImageItem_Tiled::decode_compressed_image(const struct heif_decoding_options& opt
   }
   else {
     return Error{heif_error_Unsupported_feature, heif_suberror_Unspecified,
-                 "'tild' images can only be access per tile"};
+                 "'tili' images can only be access per tile"};
   }
 }
 
