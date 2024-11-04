@@ -3055,7 +3055,7 @@ heif_encoder_parameter_get_valid_integer_range(const struct heif_encoder_paramet
   return heif_error_success;
 }
 
-LIBHEIF_API
+
 struct heif_error heif_encoder_parameter_get_valid_integer_values(const struct heif_encoder_parameter* param,
                                                                   int* have_minimum, int* have_maximum,
                                                                   int* minimum, int* maximum,

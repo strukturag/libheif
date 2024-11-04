@@ -182,7 +182,6 @@ struct heif_error heif_item_get_property_user_description(const struct heif_cont
 }
 
 
-LIBHEIF_API
 struct heif_error heif_item_add_property_user_description(const struct heif_context* context,
                                                           heif_item_id itemId,
                                                           const struct heif_property_user_description* description,

@@ -256,7 +256,7 @@ struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
   }
 }
 
-LIBHEIF_API
+
 struct heif_error heif_context_add_precompressed_mime_item(struct heif_context* ctx,
                                                            const char* content_type,
                                                            const char* content_encoding,
