@@ -55,7 +55,7 @@ extern "C" {
 //  1.18           5            7             1             1            1            1
 //  1.19           6            7             2             1            1            1
 
-#if defined(_WIN32) && !defined(LIBHEIF_STATIC_BUILD)
+#if (defined(_WIN32) || defined __CYGWIN__) && !defined(LIBHEIF_STATIC_BUILD)
 #ifdef LIBHEIF_EXPORTS
 #define LIBHEIF_API __declspec(dllexport)
 #else
