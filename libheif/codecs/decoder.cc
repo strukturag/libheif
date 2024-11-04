@@ -178,6 +178,11 @@ Decoder::decode_single_frame_from_compressed_data(const struct heif_decoding_opt
 
   // --- decode image with the plugin
 
+  if (decoder_plugin->new_decoder == nullptr) {
+    return Error(heif_error_Plugin_loading_error, heif_suberror_No_matching_decoder_installed,
+                 "Cannot decode with a dummy decoder plugins.");
+  }
+
   void* decoder;
   struct heif_error err = decoder_plugin->new_decoder(&decoder);
   if (err.code != heif_error_Ok) {
