@@ -189,7 +189,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   if (get_version() != 1) {
     std::stringstream sstr;
-    sstr << "'tild' image version " << ((int) get_version()) << " is not implemented yet";
+    sstr << "'tili' image version " << ((int) get_version()) << " is not implemented yet";
 
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_data_version,
@@ -254,7 +254,7 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
     if (size == 0) {
       return {heif_error_Invalid_input,
               heif_suberror_Unspecified,
-              "'tild' extra dimension may not be zero."};
+              "'tili' extra dimension may not be zero."};
     }
 
     if (i < 8) {
@@ -312,7 +312,7 @@ Error TiledHeader::read_offset_table_range(const std::shared_ptr<HeifFile>& file
 {
   const Error eofError(heif_error_Invalid_input,
                        heif_suberror_Unspecified,
-                       "Tild header data incomplete");
+                       "Tili header data incomplete");
 
   std::vector<uint8_t> data;
 
@@ -496,7 +496,7 @@ Error ImageItem_Tiled::on_load_file()
   if (parameters.image_width == 0 || parameters.image_height == 0) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
-            "'tild' image with zero width or height."};
+            "'tili' image with zero width or height."};
   }
 
   if (Error err = m_tild_header.set_parameters(parameters)) {
@@ -507,7 +507,7 @@ Error ImageItem_Tiled::on_load_file()
   if (!m_tile_decoder) {
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_codec,
-            "'tild' image with unsupported compression format."};
+            "'tili' image with unsupported compression format."};
   }
 
   if (m_preload_offset_table) {
