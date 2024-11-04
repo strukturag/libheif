@@ -35,7 +35,7 @@ class Box_hvcC : public Box
 {
 
 // allow access to protected parse() method
-friend class HeifFile;
+friend class Box_mini;
 
 public:
   Box_hvcC()

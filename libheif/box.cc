@@ -858,6 +858,19 @@ bool Box::operator==(const Box& other) const
 }
 
 
+bool Box::remove_child_box(const std::shared_ptr<const Box>& box)
+{
+  for (int i=0; i<(int)m_children.size(); i++) {
+    if (m_children[i].get() == box.get()) {
+      m_children.erase(m_children.begin() + i);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 bool Box::equal(const std::shared_ptr<Box>& box1, const std::shared_ptr<Box>& box2)
 {
     if (!box1 || !box2) {

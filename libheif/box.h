@@ -208,7 +208,18 @@ public:
     return nullptr;
   }
 
+  template<typename T> bool replace_child_box(const std::shared_ptr<T>& box)
+  {
+    for (auto & b : m_children) {
+      if (std::dynamic_pointer_cast<T>(b) != nullptr) {
+        b = box;
+        return true;
+      }
+    }
 
+    append_child_box(box);
+    return false;
+  }
 
   template<typename T>
   std::vector<std::shared_ptr<T>> get_child_boxes() const
@@ -232,6 +243,8 @@ public:
   }
 
   bool has_child_boxes() const { return !m_children.empty(); }
+
+  bool remove_child_box(const std::shared_ptr<const Box>& box);
 
   virtual bool operator==(const Box& other) const;
 

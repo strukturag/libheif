@@ -294,19 +294,6 @@ std::string HeifFile::debug_dump_boxes() const
   return sstr.str();
 }
 
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
-static uint32_t get_item_type_for_brand(const heif_brand2 brand)
-{
-  switch(brand) {
-  case heif_brand2_avif:
-    return fourcc("av01");
-  case heif_brand2_heic:
-    return fourcc("hvc1");
-  default:
-    return 0;
-  }
-}
-#endif
 
 Error HeifFile::parse_heif_file()
 {
@@ -348,16 +335,7 @@ Error HeifFile::parse_heif_file()
 #endif
 
   m_ftyp_box = m_file_layout->get_ftyp_box();
-  m_meta_box = m_file_layout->get_meta_box();
-
   m_top_level_boxes.push_back(m_ftyp_box);
-  m_top_level_boxes.push_back(m_meta_box);
-  // TODO: we are missing 'mdat' top level boxes
-
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
-  m_mini_box = m_file_layout->get_mini_box();
-  m_top_level_boxes.push_back(m_mini_box);
-#endif
 
   // --- check whether this is a HEIF file and its structural format
 
@@ -384,271 +362,20 @@ Error HeifFile::parse_heif_file()
   }
 
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
+  m_mini_box = m_file_layout->get_mini_box();
+  m_top_level_boxes.push_back(m_mini_box);
+
   if (m_mini_box) {
-    m_hdlr_box = std::make_shared<Box_hdlr>();
-    m_hdlr_box->set_handler_type(fourcc("pict"));
-
-    m_pitm_box = std::make_shared<Box_pitm>();
-    m_pitm_box->set_item_ID(1);
-
-    std::shared_ptr<Box_infe> primary_infe_box = std::make_shared<Box_infe>();
-    primary_infe_box->set_version(2);
-    primary_infe_box->set_item_ID(1);
-    // TODO: check explicit codec flag
-    uint32_t minor_version = m_ftyp_box->get_minor_version();
-    heif_brand2 mini_brand = minor_version;
-    uint32_t infe_type = get_item_type_for_brand(mini_brand);
-    if (infe_type == 0) {
-      // not found
-      std::stringstream sstr;
-      sstr << "Minimised file requires brand " << fourcc_to_string(mini_brand) << " but this is not yet supported.";
-      return Error(heif_error_Unsupported_filetype,
-                   heif_suberror_Unspecified,
-                   sstr.str());
-    }
-    primary_infe_box->set_item_type_4cc(infe_type);
-    m_infe_boxes.insert(std::make_pair(1, primary_infe_box));
-
-    if (m_mini_box->get_alpha_item_data_size() != 0) {
-      std::shared_ptr<Box_infe> alpha_infe_box = std::make_shared<Box_infe>();
-      alpha_infe_box->set_version(2);
-      alpha_infe_box->set_flags(1);
-      alpha_infe_box->set_item_ID(2);
-      alpha_infe_box->set_item_type_4cc(infe_type);
-      m_infe_boxes.insert(std::make_pair(2, alpha_infe_box));
-    }
-
-    if (m_mini_box->get_exif_flag()) {
-      std::shared_ptr<Box_infe> exif_infe_box = std::make_shared<Box_infe>();
-      exif_infe_box->set_version(2);
-      exif_infe_box->set_flags(1);
-      exif_infe_box->set_item_ID(6);
-      exif_infe_box->set_item_type_4cc(fourcc("Exif"));
-      m_infe_boxes.insert(std::make_pair(6, exif_infe_box));
-    }
-
-    if (m_mini_box->get_xmp_flag()) {
-      std::shared_ptr<Box_infe> xmp_infe_box = std::make_shared<Box_infe>();
-      xmp_infe_box->set_version(2);
-      xmp_infe_box->set_flags(1);
-      xmp_infe_box->set_item_ID(7);
-      xmp_infe_box->set_item_type_4cc(fourcc("mime"));
-      xmp_infe_box->set_content_type("application/rdf+xml");
-      m_infe_boxes.insert(std::make_pair(7, xmp_infe_box));
-    }
-
-    m_ipco_box = std::make_shared<Box_ipco>();
-
-    if (m_mini_box->get_main_item_codec_config().size() != 0) {
-      std::shared_ptr<StreamReader> istr = std::make_shared<StreamReader_memory>(
-          m_mini_box->get_main_item_codec_config().data(),
-          m_mini_box->get_main_item_codec_config().size(),
-          false
-      );
-      BitstreamRange codec_range(istr, m_mini_box->get_main_item_codec_config().size(), nullptr);
-
-      std::shared_ptr<Box> main_item_codec_prop;
-      if (infe_type == fourcc("av01")) {
-        std::shared_ptr<Box_av1C> codec_prop = std::make_shared<Box_av1C>();
-        codec_prop->parse(codec_range, heif_get_global_security_limits());
-        main_item_codec_prop = std::move(codec_prop);
-      } else if (infe_type == fourcc("hvc1")) {
-        std::shared_ptr<Box_hvcC> codec_prop = std::make_shared<Box_hvcC>();
-        codec_prop->parse(codec_range, heif_get_global_security_limits());
-        main_item_codec_prop = std::move(codec_prop);
-      } else {
-        // not found
-        std::stringstream sstr;
-        sstr << "Minimised file requires infe support for " << fourcc_to_string(infe_type) << " but this is not yet supported.";
-        return Error(heif_error_Unsupported_filetype,
-                    heif_suberror_Unspecified,
-                    sstr.str());
-      }
-      m_ipco_box->append_child_box(main_item_codec_prop); // entry 1
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 1
-    }
-
-    std::shared_ptr<Box_ispe> ispe = std::make_shared<Box_ispe>();
-    ispe->set_size(m_mini_box->get_width(), m_mini_box->get_height());
-    m_ipco_box->append_child_box(ispe); // entry 2
-
-    std::shared_ptr<Box_pixi> pixi = std::make_shared<Box_pixi>();
-    pixi->set_version(0);
-    // pixi->set_version(1); // TODO: when we support version 1
-    // TODO: there is more when we do version 1, and anything other than RGB
-    pixi->add_channel_bits(m_mini_box->get_bit_depth());
-    pixi->add_channel_bits(m_mini_box->get_bit_depth());
-    pixi->add_channel_bits(m_mini_box->get_bit_depth());
-    m_ipco_box->append_child_box(pixi); // entry 3
-
-    std::shared_ptr<Box_colr> colr = std::make_shared<Box_colr>();
-    std::shared_ptr<color_profile_nclx> nclx = std::make_shared<color_profile_nclx>();
-    nclx->set_colour_primaries(m_mini_box->get_colour_primaries());
-    nclx->set_transfer_characteristics(m_mini_box->get_transfer_characteristics());
-    nclx->set_matrix_coefficients(m_mini_box->get_matrix_coefficients());
-    nclx->set_full_range_flag(m_mini_box->get_full_range_flag());
-    colr->set_color_profile(nclx);
-    m_ipco_box->append_child_box(colr); // entry 4
-
-    if (m_mini_box->get_icc_flag()) {
-      std::shared_ptr<Box_colr> colr_icc = std::make_shared<Box_colr>();
-      std::shared_ptr<color_profile_raw> icc = std::make_shared<color_profile_raw>(fourcc("prof"), m_mini_box->get_icc_data());
-      colr_icc->set_color_profile(icc);
-      m_ipco_box->append_child_box(colr_icc); // entry 5
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 5
-    }
-
-    if (m_mini_box->get_alpha_item_codec_config().size() != 0) {
-      std::shared_ptr<StreamReader> istr = std::make_shared<StreamReader_memory>(
-        m_mini_box->get_alpha_item_codec_config().data(),
-        m_mini_box->get_alpha_item_codec_config().size(),
-        false
-      );
-      BitstreamRange alpha_codec_range(istr, m_mini_box->get_alpha_item_codec_config().size(), nullptr);
-      std::shared_ptr<Box> alpha_item_codec_prop;
-      if (infe_type == fourcc("av01")) {
-        std::shared_ptr<Box_av1C> codec_prop = std::make_shared<Box_av1C>();
-        codec_prop->parse(alpha_codec_range, heif_get_global_security_limits());
-        alpha_item_codec_prop = std::move(codec_prop);
-      } else if (infe_type == fourcc("hvc1")) {
-        std::shared_ptr<Box_hvcC> codec_prop = std::make_shared<Box_hvcC>();
-        codec_prop->parse(alpha_codec_range, heif_get_global_security_limits());
-        alpha_item_codec_prop = std::move(codec_prop);
-      } else {
-        // not found
-        std::stringstream sstr;
-        sstr << "Minimised file requires infe support for " << fourcc_to_string(infe_type) << " but this is not yet supported.";
-        return Error(heif_error_Unsupported_filetype,
-                    heif_suberror_Unspecified,
-                    sstr.str());
-      }
-      m_ipco_box->append_child_box(alpha_item_codec_prop); // entry 6
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 6
-    }
-
-    if (m_mini_box->get_alpha_item_data_size() != 0) {
-      std::shared_ptr<Box_auxC> aux_type = std::make_shared<Box_auxC>();
-      aux_type->set_aux_type("urn:mpeg:mpegB:cicp:systems:auxiliary:alpha");
-      m_ipco_box->append_child_box(aux_type); // entry 7
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 7
-    }
-
-    // TODO: replace this placeholder with pixi box version 1 once that is supported
-    m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 8
-
-    if (m_mini_box->get_orientation() == 2) {
-      std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-      irot->set_rotation_ccw(2 * 90);
-      m_ipco_box->append_child_box(irot); // entry 9
-    } else if ((m_mini_box->get_orientation() == 4) || (m_mini_box->get_orientation() == 6) || (m_mini_box->get_orientation() == 7)) {
-      std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-      irot->set_rotation_ccw(1 * 90);
-      m_ipco_box->append_child_box(irot); // entry 9
-    } else if (m_mini_box->get_orientation() == 5) {
-      std::shared_ptr<Box_irot> irot = std::make_shared<Box_irot>();
-      irot->set_rotation_ccw(3 * 90);
-      m_ipco_box->append_child_box(irot); // entry 9
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 9
-    }
-
-    if ((m_mini_box->get_orientation() == 1) || (m_mini_box->get_orientation() == 6)) {
-      std::shared_ptr<Box_imir> imir = std::make_shared<Box_imir>();
-      imir->set_mirror_direction(heif_transform_mirror_direction_horizontal);
-      m_ipco_box->append_child_box(imir); // entry 10
-    } else if ((m_mini_box->get_orientation() == 3) || (m_mini_box->get_orientation() == 4)) {
-      std::shared_ptr<Box_imir> imir = std::make_shared<Box_imir>();
-      imir->set_mirror_direction(heif_transform_mirror_direction_vertical);
-      m_ipco_box->append_child_box(imir); // entry 10
-    } else {
-      m_ipco_box->append_child_box(std::make_shared<Box_free>()); // placeholder for entry 10
-    }
-
-    m_ipma_box = std::make_shared<Box_ipma>();
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(1)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, uint16_t(2)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{false, uint16_t(3)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(4)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(5)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(9)});
-    m_ipma_box->add_property_for_item_ID(1, Box_ipma::PropertyAssociation{true, uint16_t(10)});
-
-    if (m_mini_box->get_alpha_item_data_size() != 0) {
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(6)});
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(2)});
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(7)});
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{false, uint16_t(8)});
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(9)});
-      m_ipma_box->add_property_for_item_ID(2, Box_ipma::PropertyAssociation{true, uint16_t(10)});
-    }
-    // TODO: will need more once we support HDR / gainmap representation
-
-    m_iloc_box = std::make_shared<Box_iloc>();
-    Box_iloc::Item main_item;
-    main_item.item_ID = 1;
-    main_item.construction_method = 0;
-    main_item.base_offset = 0;
-    main_item.data_reference_index = 0;
-    Box_iloc::Extent main_item_extent;
-    main_item_extent.offset = m_mini_box->get_main_item_data_offset();
-    main_item_extent.length = m_mini_box->get_main_item_data_size();
-    main_item.extents.push_back(main_item_extent);
-    m_iloc_box->append_item(main_item);
-
-    if (m_mini_box->get_alpha_item_data_size() != 0) {
-      Box_iloc::Item alpha_item;
-      alpha_item.item_ID = 2;
-      alpha_item.base_offset = 0;
-      alpha_item.data_reference_index = 0;
-      Box_iloc::Extent alpha_item_extent;
-      alpha_item_extent.offset = m_mini_box->get_alpha_item_data_offset();
-      alpha_item_extent.length = m_mini_box->get_alpha_item_data_size();
-      alpha_item.extents.push_back(alpha_item_extent);
-      m_iloc_box->append_item(alpha_item);
-    }
-    if (m_mini_box->get_exif_flag()) {
-      Box_iloc::Item exif_item;
-      exif_item.item_ID = 6;
-      exif_item.base_offset = 0;
-      exif_item.data_reference_index = 0;
-      Box_iloc::Extent exif_item_extent;
-      exif_item_extent.offset = m_mini_box->get_exif_item_data_offset();
-      exif_item_extent.length = m_mini_box->get_exif_item_data_size();
-      exif_item.extents.push_back(exif_item_extent);
-      m_iloc_box->append_item(exif_item);
-    }
-    if (m_mini_box->get_xmp_flag()) {
-      Box_iloc::Item xmp_item;
-      xmp_item.item_ID = 7;
-      xmp_item.base_offset = 0;
-      xmp_item.data_reference_index = 0;
-      Box_iloc::Extent xmp_item_extent;
-      xmp_item_extent.offset = m_mini_box->get_xmp_item_data_offset();
-      xmp_item_extent.length = m_mini_box->get_xmp_item_data_size();
-      xmp_item.extents.push_back(xmp_item_extent);
-      m_iloc_box->append_item(xmp_item);
-    }
-
-    m_iref_box = std::make_shared<Box_iref>();
-    std::vector<uint32_t> to_items = {1};
-    if (m_mini_box->get_alpha_item_data_size() != 0) {
-      m_iref_box->add_references(2, fourcc("auxl"), to_items);
-    }
-    // TODO: if alpha prem
-    // TODO: if gainmap flag && item 4
-    // TODO: if gainmap flag && !item 4 
-    if (m_mini_box->get_exif_flag()) {
-      m_iref_box->add_references(6, fourcc("cdsc"), to_items);
-    }
-    if (m_mini_box->get_xmp_flag()) {
-      m_iref_box->add_references(7, fourcc("cdsc"), to_items);
+    Error err = m_mini_box->create_expanded_boxes(this);
+    if (err) {
+      return err;
     }
     return Error::Ok;
   }
+
+  m_meta_box = m_file_layout->get_meta_box();
+  m_top_level_boxes.push_back(m_meta_box);
+  // TODO: we are missing 'mdat' top level boxes
 
   // if we didn't find the mini box, meta is required
 #endif
@@ -1194,6 +921,12 @@ Result<heif_item_id> HeifFile::add_infe(uint32_t item_type, const uint8_t* data,
 }
 
 
+void HeifFile::add_infe_box(heif_item_id id, std::shared_ptr<Box_infe> infe)
+{
+  m_infe_boxes.insert(std::make_pair(id, std::move(infe)));
+}
+
+
 Result<heif_item_id> HeifFile::add_infe_mime(const char* content_type, heif_metadata_compression content_encoding, const uint8_t* data, size_t size)
 {
   Result<heif_item_id> result;
@@ -1338,8 +1071,42 @@ void HeifFile::replace_iloc_data(heif_item_id id, uint64_t offset, const std::ve
 
 void HeifFile::set_primary_item_id(heif_item_id id)
 {
+  if (!m_pitm_box) {
+    m_pitm_box = std::make_shared<Box_pitm>();
+    m_meta_box->replace_child_box(m_pitm_box);
+  }
+
   m_pitm_box->set_item_ID(id);
 }
+
+
+void HeifFile::set_ipco_box(std::shared_ptr<Box_ipco> ipco)
+{
+  m_ipco_box = ipco;
+  m_meta_box->replace_child_box(ipco);
+}
+
+
+void HeifFile::set_ipma_box(std::shared_ptr<Box_ipma> ipma)
+{
+  m_ipma_box = ipma;
+  m_meta_box->replace_child_box(ipma);
+}
+
+
+void HeifFile::set_iloc_box(std::shared_ptr<Box_iloc> iloc)
+{
+  m_iloc_box = iloc;
+  m_meta_box->replace_child_box(iloc);
+}
+
+
+void HeifFile::set_iref_box(std::shared_ptr<Box_iref> iref)
+{
+  m_iref_box = iref;
+  m_meta_box->replace_child_box(iref);
+}
+
 
 void HeifFile::add_iref_reference(heif_item_id from, uint32_t type,
                                   const std::vector<heif_item_id>& to)

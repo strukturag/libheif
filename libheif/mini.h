@@ -36,6 +36,8 @@ public:
     set_short_type(fourcc("mini"));
   }
 
+  Error create_expanded_boxes(class HeifFile* file);
+
   bool get_icc_flag() const { return m_icc_flag; }
   bool get_exif_flag() const { return m_exif_flag; }
   bool get_xmp_flag() const { return m_xmp_flag; }
