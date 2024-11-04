@@ -91,7 +91,7 @@ void Box_tilC::init_heif_tiled_image_parameters(heif_tiled_image_parameters& par
 
 void Box_tilC::derive_box_version()
 {
-  set_version(1);
+  set_version(0);
 
   uint8_t flags = 0;
 
@@ -187,7 +187,8 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
 
-  if (get_version() != 1) {
+  // Note: actually, we should allow 0 only, but there are a few images around that use version 1.
+  if (get_version() > 1) {
     std::stringstream sstr;
     sstr << "'tili' image version " << ((int) get_version()) << " is not implemented yet";
 
