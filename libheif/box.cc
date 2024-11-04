@@ -461,6 +461,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       break;
 
     case fourcc("free"):
+    case fourcc("skip"):
       box = std::make_shared<Box_free>();
       break;
 
