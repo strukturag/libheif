@@ -372,13 +372,14 @@ Error HeifFile::parse_heif_file()
     }
     return Error::Ok;
   }
+#endif
 
   m_meta_box = m_file_layout->get_meta_box();
   m_top_level_boxes.push_back(m_meta_box);
   // TODO: we are missing 'mdat' top level boxes
 
   // if we didn't find the mini box, meta is required
-#endif
+
   if (!m_meta_box) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_meta_box);
