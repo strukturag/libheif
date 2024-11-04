@@ -36,6 +36,7 @@
 #include <vector>
 #include <unordered_set>
 #include <limits>
+#include <utility>
 
 #if ENABLE_PARALLEL_TILE_DECODING
 

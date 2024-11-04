@@ -28,6 +28,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 
 Error Box_mini::parse(BitstreamRange &range, const heif_security_limits *limits)
