@@ -460,6 +460,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_ftyp>();
       break;
 
+    case fourcc("free"):
+      box = std::make_shared<Box_free>();
+      break;
+
     case fourcc("meta"):
       box = std::make_shared<Box_meta>();
       break;
@@ -1143,6 +1147,29 @@ Error Box_ftyp::write(StreamWriter& writer) const
 
   prepend_header(writer, box_start);
 
+  return Error::Ok;
+}
+
+
+Error Box_free::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  range.skip_to_end_of_box();
+  return range.get_error();
+}
+
+
+std::string Box_free::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << BoxHeader::dump(indent);
+  return sstr.str();
+}
+
+
+Error Box_free::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+  prepend_header(writer, box_start);
   return Error::Ok;
 }
 

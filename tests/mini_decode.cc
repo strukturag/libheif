@@ -57,3 +57,54 @@ TEST_CASE("check image handle size") {
   heif_context_free(context);
 }
 
+void check_image_size_heif_mini(struct heif_context *&context) {
+  heif_image_handle *handle = get_primary_image_handle(context);
+  heif_image *img = get_primary_image_ycbcr(handle, heif_chroma_444);
+
+  REQUIRE(heif_image_has_channel(img, heif_channel_Y) == 1);
+  REQUIRE(heif_image_has_channel(img, heif_channel_Cb) == 1);
+  REQUIRE(heif_image_has_channel(img, heif_channel_Cr) == 1);
+  REQUIRE(heif_image_has_channel(img, heif_channel_R) == 0);
+  REQUIRE(heif_image_has_channel(img, heif_channel_G) == 0);
+  REQUIRE(heif_image_has_channel(img, heif_channel_B) == 0);
+  REQUIRE(heif_image_has_channel(img, heif_channel_Alpha) == 0);
+  REQUIRE(heif_image_has_channel(img, heif_channel_interleaved) == 0);
+  int width = heif_image_get_primary_width(img);
+  REQUIRE(width == 128);
+  int height = heif_image_get_primary_height(img);
+  REQUIRE(height == 128);
+  width = heif_image_get_width(img, heif_channel_Y);
+  REQUIRE(width == 128);
+  height = heif_image_get_height(img, heif_channel_Y);
+  REQUIRE(height == 128);
+  width = heif_image_get_width(img, heif_channel_Cb);
+  REQUIRE(width == 128);
+  height = heif_image_get_height(img, heif_channel_Cr);
+  REQUIRE(height == 128);
+  width = heif_image_get_width(img, heif_channel_Cr);
+  REQUIRE(width == 128);
+  height = heif_image_get_height(img, heif_channel_Cr);
+  REQUIRE(height == 128);
+
+  int pixel_depth = heif_image_get_bits_per_pixel(img, heif_channel_Y);
+  REQUIRE(pixel_depth == 8);
+  pixel_depth = heif_image_get_bits_per_pixel(img, heif_channel_Cb);
+  REQUIRE(pixel_depth == 8);
+  pixel_depth = heif_image_get_bits_per_pixel(img, heif_channel_Cr);
+  REQUIRE(pixel_depth == 8);
+  int pixel_range = heif_image_get_bits_per_pixel_range(img, heif_channel_Y);
+  REQUIRE(pixel_range == 8);
+  pixel_range = heif_image_get_bits_per_pixel_range(img, heif_channel_Cb);
+  REQUIRE(pixel_range == 8);
+  pixel_range = heif_image_get_bits_per_pixel_range(img, heif_channel_Cr);
+  REQUIRE(pixel_range == 8);
+
+  heif_image_release(img);
+  heif_image_handle_release(handle);
+}
+
+TEST_CASE("check image size HEIF mini") {
+  auto context = get_context_for_test_file("lightning_mini.heif");
+  check_image_size_heif_mini(context);
+  heif_context_free(context);
+}
