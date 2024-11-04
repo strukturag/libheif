@@ -24,10 +24,11 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "libheif/heif.h"
 #include "pixelimage.h"
 #include "libheif/api_structs.h"
+#include "test_utils.h"
 
 #include <string.h>
 
@@ -61,14 +62,7 @@ struct heif_error encode_image(struct heif_image* img) {
   struct heif_encoder* enc = nullptr;
   struct heif_error err { heif_error_Ok };
 
-  err = heif_context_get_encoder_for_format(ctx,
-                                            heif_compression_HEVC,
-                                            &enc);
-  if (err.code) {
-    heif_context_free(ctx);
-    return err;
-  }
-
+  enc = get_encoder_or_skip_test(heif_compression_HEVC);
 
   struct heif_image_handle* hdl;
   err = heif_context_encode_image(ctx,
@@ -109,28 +103,11 @@ TEST_CASE( "Encode HDR", "[heif_encoder]" ) {
 }
 #endif
 
-static void fill_new_plane(heif_image* img, heif_channel channel, int w, int h)
-{
-  struct heif_error err;
-
-  err = heif_image_add_plane(img, channel, w, h, 8);
-  REQUIRE(err.code == heif_error_Ok);
-
-  int stride;
-  uint8_t* p = heif_image_get_plane(img, channel, &stride);
-
-  for (int y = 0; y < h; y++) {
-    memset(p + y * stride, 128, w);
-  }
-}
-
 static void test_ispe_size(heif_compression_format compression,
                            heif_orientation orientation,
                            int input_width, int input_height,
                            int expected_minimum_ispe_width, int expected_minimum_ispe_height)
 {
-  struct heif_error err;
-
   heif_image* img;
   heif_image_create(input_width,input_height, heif_colorspace_YCbCr, heif_chroma_420, &img);
   fill_new_plane(img, heif_channel_Y, input_width, input_height);
@@ -138,9 +115,7 @@ static void test_ispe_size(heif_compression_format compression,
   fill_new_plane(img, heif_channel_Cr, (input_width+1)/2, (input_height+1)/2);
 
   heif_context* ctx = heif_context_alloc();
-  heif_encoder* enc;
-  err = heif_context_get_encoder_for_format(ctx, compression, &enc);
-  REQUIRE(err.code == heif_error_Ok);
+  heif_encoder* enc = get_encoder_or_skip_test(compression);
 
   struct heif_encoding_options* options;
   options = heif_encoding_options_alloc();

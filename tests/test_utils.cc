@@ -28,7 +28,7 @@
 #include "libheif/heif.h"
 #include "test-config.h"
 #include <cstring>
-#include "catch.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 struct heif_context * get_context_for_test_file(std::string filename)
 {
@@ -173,4 +173,24 @@ struct heif_image * createImage_RGB_planar()
 std::string get_path_for_heifio_test_file(std::string filename)
 {
   return libheifio_tests_data_directory + "/" + filename;
+}
+
+
+heif_encoder* get_encoder_or_skip_test(heif_compression_format format)
+{
+  heif_encoder* encoder = nullptr;
+  heif_error err = heif_context_get_encoder_for_format(nullptr, format, &encoder);
+  if (err.code != heif_error_Ok) {
+    if (format == heif_compression_HEVC) {
+      SKIP("Encoder for HEVC not found, skipping test");
+    }
+    else if (format == heif_compression_AV1) {
+      SKIP("Encoder for AV1 not found, skipping test");
+    }
+    else {
+      SKIP("Encoder not found, skipping test");
+    }
+  }
+
+  return encoder;
 }

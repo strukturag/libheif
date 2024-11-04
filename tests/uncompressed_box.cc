@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "box.h"
 #include "libheif/heif.h"
 #include "codecs/uncompressed/unc_types.h"

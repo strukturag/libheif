@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include <cstdint>
 #include <iostream>
 #include "heifio/decoder.h"
@@ -139,5 +139,8 @@ TEST_CASE("rgba_planar") {
   REQUIRE(err.code == heif_error_Ok);
   checkRGBA(input_image);
 }
-
+#else
+TEST_CASE("no_tiff dummy") {
+  // Dummy test if we don't have the TIFF library, so that testing does not fail with "No test ran".
+}
 #endif // HAVE_LIBTIFF

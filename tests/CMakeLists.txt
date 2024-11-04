@@ -1,6 +1,19 @@
 # Needed to find libheif/heif_version.h while compiling the library
 include_directories(${libheif_BINARY_DIR} ${libheif_SOURCE_DIR}/libheif ${libheif_SOURCE_DIR}/libheif/api)
 
+Include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE)
+
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.7.1
+        GIT_PROGRESS   TRUE
+)
+
+FetchContent_MakeAvailable(Catch2)
+
+
 # prepare C++ configuration file (test-config.cc)
 
 set(TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data")
@@ -9,17 +22,19 @@ configure_file(test-config.cc.in ${CMAKE_BINARY_DIR}/generated/test-config.cc)
 
 macro(add_libheif_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
-    add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
-    target_link_libraries(${TEST_NAME} PRIVATE heif)
+    add_executable(${TEST_NAME} ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
+    target_link_libraries(${TEST_NAME} PRIVATE heif Catch2::Catch2WithMain)
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES SKIP_REGULAR_EXPRESSION "[1-9][0-9]* skipped")
 endmacro()
 
 macro(add_heifio_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
-    add_executable(${TEST_NAME} main.cc catch.hpp ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
-    target_link_libraries(${TEST_NAME} PRIVATE heif heifio)
+    add_executable(${TEST_NAME} main.cc ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc ${TEST_FILE}.cc)
+    target_link_libraries(${TEST_NAME} PRIVATE heif heifio Catch2::Catch2WithMain)
     target_include_directories(${TEST_NAME} PRIVATE ${libheif_SOURCE_DIR})
     add_test(NAME ${TEST_NAME} COMMAND ./${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES SKIP_REGULAR_EXPRESSION "[1-9][0-9]* skipped")
 endmacro()
 
 # --- tests that require access to internal symbols
@@ -96,3 +111,6 @@ if (ENABLE_PLUGIN_LOADING)
     get_directory_property(ALL_TESTS TESTS)
     set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT "LIBHEIF_PLUGIN_PATH=${CMAKE_BINARY_DIR}/libheif/plugins")
 endif ()
+
+set_source_files_properties(catch_amalgamated.cc PROPERTIES COMPILE_FLAGS -Wno-conversion)
+
