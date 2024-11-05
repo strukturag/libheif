@@ -770,12 +770,9 @@ Error ImageItem_Tiled::append_compressed_tile_data(std::vector<uint8_t>& data, u
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+Result<DataExtent>
+ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
 {
-//  heif_compression_format format = compression_format_from_fourcc_infe_type(
-//          m_tild_header.get_parameters().compression_format_fourcc);
-
   // --- get compressed data
 
   Error err = m_tile_item->init_decoder_from_item(0);
@@ -799,7 +796,19 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
   DataExtent extent;
   extent.m_raw = data;
 
-  m_tile_decoder->set_data_extent(std::move(extent));
+  return extent;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+{
+  Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
+  if (extentResult.error) {
+    return extentResult.error;
+  }
+
+  m_tile_decoder->set_data_extent(std::move(*extentResult));
 
   return m_tile_decoder->decode_single_frame_from_compressed_data(options);
 }
@@ -844,6 +853,15 @@ void ImageItem_Tiled::get_tile_size(uint32_t& w, uint32_t& h) const
 
 Error ImageItem_Tiled::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
+  uint32_t tx=0, ty=0; // TODO: find a tile that is defined.
+
+  Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
+  if (extentResult.error) {
+    return extentResult.error;
+  }
+
+  m_tile_decoder->set_data_extent(std::move(*extentResult));
+
   Error err = m_tile_decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
     return err;

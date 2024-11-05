@@ -23,6 +23,7 @@
 
 
 #include "image_item.h"
+#include "codecs/decoder.h"
 #include "box.h"
 #include <vector>
 #include <string>
@@ -204,6 +205,9 @@ private:
 
   std::shared_ptr<ImageItem> m_tile_item;
   std::shared_ptr<class Decoder> m_tile_decoder;
+
+  Result<DataExtent>
+  get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
 
