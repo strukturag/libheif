@@ -166,10 +166,16 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const HeifCo
                                                                     uint32_t tile_idx,
                                                                     const Box_iloc::Item* item) const
 {
+  auto image = context->get_image(ID, false);
+  if (!image) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
   // --- get codec configuration
 
-  std::shared_ptr<const Box_cmpC> cmpC_box = context->get_heif_file()->get_property<const Box_cmpC>(ID);
-  std::shared_ptr<const Box_icef> icef_box = context->get_heif_file()->get_property<const Box_icef>(ID);
+  std::shared_ptr<const Box_cmpC> cmpC_box = image->get_property<const Box_cmpC>();
+  std::shared_ptr<const Box_icef> icef_box = image->get_property<const Box_icef>();
 
   if (!cmpC_box) {
     // assume no generic compression

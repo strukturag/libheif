@@ -36,7 +36,7 @@
 
 Error ImageItem_HEVC::on_load_file()
 {
-  auto hvcC_box = get_file()->get_property<Box_hvcC>(get_id());
+  auto hvcC_box = get_property<Box_hvcC>();
   if (!hvcC_box) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_hvcC_box};
@@ -139,7 +139,7 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data(heif_item_id itemId) const
+Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();
 }

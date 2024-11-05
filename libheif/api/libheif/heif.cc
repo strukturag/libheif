@@ -1557,7 +1557,7 @@ void heif_image_get_content_light_level(const struct heif_image* image, struct h
 
 int heif_image_handle_get_content_light_level(const struct heif_image_handle* handle, struct heif_content_light_level* out)
 {
-  auto clli = handle->image->get_file()->get_property<Box_clli>(handle->image->get_id());
+  auto clli = handle->image->get_property<Box_clli>();
   if (out && clli) {
     *out = clli->clli;
   }
@@ -1587,7 +1587,7 @@ void heif_image_get_mastering_display_colour_volume(const struct heif_image* ima
 
 int heif_image_handle_get_mastering_display_colour_volume(const struct heif_image_handle* handle, struct heif_mastering_display_colour_volume* out)
 {
-  auto mdcv = handle->image->get_file()->get_property<Box_mdcv>(handle->image->get_id());
+  auto mdcv = handle->image->get_property<Box_mdcv>();
   if (out && mdcv) {
     *out = mdcv->mdcv;
   }
@@ -1664,7 +1664,7 @@ void heif_image_get_pixel_aspect_ratio(const struct heif_image* image, uint32_t*
 
 int heif_image_handle_get_pixel_aspect_ratio(const struct heif_image_handle* handle, uint32_t* aspect_h, uint32_t* aspect_v)
 {
-  auto pasp = handle->image->get_file()->get_property<Box_pasp>(handle->image->get_id());
+  auto pasp = handle->image->get_property<Box_pasp>();
   if (pasp) {
     *aspect_h = pasp->hSpacing;
     *aspect_v = pasp->vSpacing;

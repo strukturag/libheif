@@ -684,7 +684,7 @@ Error ImageItem_Grid::add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint
   set_grid_tile_id(tile_x, tile_y, encoded_image->get_id());
 
   // Add PIXI property (copy from first tile)
-  auto pixi = file->get_property<Box_pixi>(encoded_image->get_id());
+  auto pixi = encoded_image->get_property<Box_pixi>();
   file->add_property(grid_id, pixi, true);
 
   return Error::Ok;
@@ -715,6 +715,8 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   std::vector<heif_item_id> tile_ids;
 
+  std::shared_ptr<Box_pixi> pixi_property;
+
   for (int i=0; i<rows*columns; i++) {
     std::shared_ptr<ImageItem> out_tile;
     auto encodingResult = ctx->encode_image(tiles[i],
@@ -728,6 +730,10 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
     heif_item_id tile_id = out_tile->get_id();
     file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
     tile_ids.push_back(out_tile->get_id());
+
+    if (!pixi_property) {
+      pixi_property = out_tile->get_property<Box_pixi>();
+    }
   }
 
   // Create Grid Item
@@ -750,8 +756,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   // Add PIXI property (copy from first tile)
 
-  auto pixi = file->get_property<Box_pixi>(tile_ids[0]);
-  file->add_property(grid_id, pixi, true);
+  file->add_property(grid_id, pixi_property, true);
 
   // Set Brands
 

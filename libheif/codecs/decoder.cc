@@ -98,37 +98,39 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
 }
 
 
-std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const HeifContext* ctx, heif_item_id id, uint32_t format_4cc)
+std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
 {
+  uint32_t format_4cc = item->get_infe_type();
+
   switch (format_4cc) {
     case fourcc("hvc1"): {
-      auto hvcC = ctx->get_heif_file()->get_property<Box_hvcC>(id);
+      auto hvcC = item->get_property<Box_hvcC>();
       return std::make_shared<Decoder_HEVC>(hvcC);
     }
     case fourcc("av01"): {
-      auto av1C = ctx->get_heif_file()->get_property<Box_av1C>(id);
+      auto av1C = item->get_property<Box_av1C>();
       return std::make_shared<Decoder_AVIF>(av1C);
     }
     case fourcc("avc1"): {
-      auto avcC = ctx->get_heif_file()->get_property<Box_avcC>(id);
+      auto avcC = item->get_property<Box_avcC>();
       return std::make_shared<Decoder_AVC>(avcC);
     }
     case fourcc("j2k1"): {
-      auto j2kH = ctx->get_heif_file()->get_property<Box_j2kH>(id);
+      auto j2kH = item->get_property<Box_j2kH>();
       return std::make_shared<Decoder_JPEG2000>(j2kH);
     }
     case fourcc("vvc1"): {
-      auto vvcC = ctx->get_heif_file()->get_property<Box_vvcC>(id);
+      auto vvcC = item->get_property<Box_vvcC>();
       return std::make_shared<Decoder_VVC>(vvcC);
     }
     case fourcc("jpeg"): {
-      auto jpgC = ctx->get_heif_file()->get_property<Box_jpgC>(id);
+      auto jpgC = item->get_property<Box_jpgC>();
       return std::make_shared<Decoder_JPEG>(jpgC);
     }
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("unci"): {
-      auto uncC = ctx->get_heif_file()->get_property<Box_uncC>(id);
-      auto cmpd = ctx->get_heif_file()->get_property<Box_cmpd>(id);
+      auto uncC = item->get_property<Box_uncC>();
+      auto cmpd = item->get_property<Box_cmpd>();
       return std::make_shared<Decoder_uncompressed>(uncC,cmpd);
     }
 #endif

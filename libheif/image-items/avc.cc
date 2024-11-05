@@ -128,7 +128,7 @@ std::shared_ptr<Decoder> ImageItem_AVC::get_decoder() const
 
 Error ImageItem_AVC::on_load_file()
 {
-  auto avcC_box = get_file()->get_property<Box_avcC>(get_id());
+  auto avcC_box = get_property<Box_avcC>();
   if (!avcC_box) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_av1C_box};

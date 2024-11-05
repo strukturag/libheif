@@ -157,6 +157,18 @@ Error Box_tilC::write(StreamWriter& writer) const
     writer.write32(m_parameters.extra_dimensions[i]);
   }
 
+  auto& tile_properties = m_children;
+  if (tile_properties.size() > 255) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Unspecified,
+            "Cannot write more than 255 tile properties in tilC header"};
+  }
+
+  writer.write8(static_cast<uint8_t>(tile_properties.size()));
+  for (const auto& property : tile_properties) {
+    property->write(writer);
+  }
+
   prepend_header(writer, box_start);
 
   return Error::Ok;
@@ -177,6 +189,9 @@ std::string Box_tilC::dump(Indent& indent) const
        << indent << "offset field length: " << ((int) m_parameters.offset_field_length) << " bits\n"
        << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"
        << indent << "number of extra dimensions: " << ((int) m_parameters.number_of_extra_dimensions) << "\n";
+
+  sstr << indent << "tile properties:\n"
+       << dump_children(indent, true);
 
   return sstr.str();
 
@@ -266,6 +281,18 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
   }
 
+  // --- read tile properties
+
+  // Check version for backwards compatibility with old format.
+  // TODO: remove when spec is final and old test images have been converted
+  if (get_version() == 0) {
+    uint8_t num_properties = range.read8();
+
+    Error error = read_children(range, num_properties, limits);
+    if (error) {
+      return error;
+    }
+  }
 
   return range.get_error();
 }
@@ -476,14 +503,14 @@ Error ImageItem_Tiled::on_load_file()
 {
   auto heif_file = get_context()->get_heif_file();
 
-  auto tilC_box = heif_file->get_property<Box_tilC>(get_id());
+  auto tilC_box = get_property<Box_tilC>();
   if (!tilC_box) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
             "Tiled image without 'tilC' property box."};
   }
 
-  auto ispe_box = heif_file->get_property<Box_ispe>(get_id());
+  auto ispe_box = get_property<Box_ispe>();
   if (!ispe_box) {
     return {heif_error_Invalid_input,
             heif_suberror_Unspecified,
@@ -504,7 +531,29 @@ Error ImageItem_Tiled::on_load_file()
     return err;
   }
 
-  m_tile_decoder = Decoder::alloc_for_infe_type(get_context(), get_id(), parameters.compression_format_fourcc);
+
+  // --- create a dummy image item for decoding tiles
+
+  heif_compression_format format = compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_format_fourcc);
+  m_tile_item = ImageItem::alloc_for_compression_format(get_context(), format);
+
+  // For backwards compatibility: copy over properties from `tili` item.
+  // TODO: remove when spec is final and old test images have been converted
+  if (tilC_box->get_version() == 1) {
+    auto propertiesResult = get_properties();
+    if (propertiesResult.error) {
+      return propertiesResult.error;
+    }
+
+    m_tile_item->set_properties(*propertiesResult);
+  }
+  else {
+    // This is the new method
+
+    m_tile_item->set_properties(tilC_box->get_all_child_boxes());
+  }
+
+  m_tile_decoder = Decoder::alloc_for_infe_type(m_tile_item.get());
   if (!m_tile_decoder) {
     return {heif_error_Unsupported_feature,
             heif_suberror_Unsupported_codec,
@@ -516,6 +565,7 @@ Error ImageItem_Tiled::on_load_file()
       return err;
     }
   }
+
 
   return Error::Ok;
 }
@@ -639,27 +689,30 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   header.set_tild_tile_range(tile_x, tile_y, offset, static_cast<uint32_t>(dataSize));
   set_next_tild_position(offset + encodeResult.value.bitstream.size());
 
-  std::vector<std::shared_ptr<Box>> existing_properties;
-  Error err = get_file()->get_properties(get_id(), existing_properties);
-  if (err) {
-    return err;
-  }
+  auto tilC = get_property<Box_tilC>();
+  assert(tilC);
+
+  std::vector<std::shared_ptr<Box>>& tile_properties = tilC->get_tile_properties();
 
   for (auto& propertyBox : encodeResult.value.properties) {
-    if (propertyBox->get_short_type() == fourcc("ispe")) {
-      continue;
-    }
-
     // skip properties that exist already
 
-    bool exists = std::any_of(existing_properties.begin(),
-                              existing_properties.end(),
+    bool exists = std::any_of(tile_properties.begin(),
+                              tile_properties.end(),
                               [&propertyBox](const std::shared_ptr<Box>& p) { return p->get_short_type() == propertyBox->get_short_type();});
     if (exists) {
       continue;
     }
 
-    get_file()->add_property(get_id(), propertyBox, propertyBox->is_essential());
+    tile_properties.emplace_back(propertyBox);
+
+    // some tile properties are also added to the tili image
+
+    switch (propertyBox->get_short_type()) {
+      case fourcc("pixi"):
+        get_file()->add_property(get_id(), propertyBox, propertyBox->is_essential());
+        break;
+    }
   }
 
   get_file()->set_brand(encoder->plugin->compression_format,
@@ -717,21 +770,23 @@ Error ImageItem_Tiled::append_compressed_tile_data(std::vector<uint8_t>& data, u
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>>
-ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+Result<DataExtent>
+ImageItem_Tiled::get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const
 {
-  heif_compression_format format = compression_format_from_fourcc_infe_type(
-          m_tild_header.get_parameters().compression_format_fourcc);
-
   // --- get compressed data
 
-  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(get_id(), format);
+  Error err = m_tile_item->init_decoder_from_item(0);
+  if (err) {
+    return err;
+  }
+
+  Result<std::vector<uint8_t>> dataResult = m_tile_item->read_bitstream_configuration_data();
   if (dataResult.error) {
     return dataResult.error;
   }
 
   std::vector<uint8_t>& data = dataResult.value;
-  Error err = append_compressed_tile_data(data, tx, ty);
+  err = append_compressed_tile_data(data, tx, ty);
   if (err) {
     return err;
   }
@@ -741,7 +796,19 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
   DataExtent extent;
   extent.m_raw = data;
 
-  m_tile_decoder->set_data_extent(std::move(extent));
+  return extent;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const
+{
+  Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
+  if (extentResult.error) {
+    return extentResult.error;
+  }
+
+  m_tile_decoder->set_data_extent(std::move(*extentResult));
 
   return m_tile_decoder->decode_single_frame_from_compressed_data(options);
 }
@@ -786,6 +853,15 @@ void ImageItem_Tiled::get_tile_size(uint32_t& w, uint32_t& h) const
 
 Error ImageItem_Tiled::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
 {
+  uint32_t tx=0, ty=0; // TODO: find a tile that is defined.
+
+  Result<DataExtent> extentResult = get_compressed_data_for_tile(tx, ty);
+  if (extentResult.error) {
+    return extentResult.error;
+  }
+
+  m_tile_decoder->set_data_extent(std::move(*extentResult));
+
   Error err = m_tile_decoder->get_coded_image_colorspace(out_colorspace, out_chroma);
   if (err) {
     return err;

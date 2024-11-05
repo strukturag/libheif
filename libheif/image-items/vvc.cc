@@ -94,11 +94,11 @@ Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<He
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data(heif_item_id itemId) const
+Result<std::vector<uint8_t>> ImageItem_VVC::read_bitstream_configuration_data() const
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_vvcC> vvcC_box = get_file()->get_property<Box_vvcC>(itemId);
+  std::shared_ptr<Box_vvcC> vvcC_box = get_property<Box_vvcC>();
   if (!vvcC_box)
   {
     assert(false);
@@ -124,7 +124,7 @@ std::shared_ptr<Decoder> ImageItem_VVC::get_decoder() const
 
 Error ImageItem_VVC::on_load_file()
 {
-  auto vvcC_box = get_file()->get_property<Box_vvcC>(get_id());
+  auto vvcC_box = get_property<Box_vvcC>();
   if (!vvcC_box) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_av1C_box};

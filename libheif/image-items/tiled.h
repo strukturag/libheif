@@ -23,6 +23,7 @@
 
 
 #include "image_item.h"
+#include "codecs/decoder.h"
 #include "box.h"
 #include <vector>
 #include <string>
@@ -68,6 +69,10 @@ public:
   Error write(StreamWriter& writer) const override;
 
   std::string dump(Indent&) const override;
+
+  std::vector<std::shared_ptr<Box>>& get_tile_properties() { return m_children; }
+
+  const std::vector<std::shared_ptr<Box>>& get_tile_properties() const { return m_children; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
@@ -198,7 +203,11 @@ private:
   uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB
   bool m_preload_offset_table = false;
 
+  std::shared_ptr<ImageItem> m_tile_item;
   std::shared_ptr<class Decoder> m_tile_decoder;
+
+  Result<DataExtent>
+  get_compressed_data_for_tile(uint32_t tx, uint32_t ty) const;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;
 

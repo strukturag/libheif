@@ -427,7 +427,7 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
   file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height(), false);
 
   // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
-  auto pixi = file->get_property<Box_pixi>(ref_ids[0]);
+  auto pixi = file->get_property_for_item<Box_pixi>(ref_ids[0]);
   file->add_property(iovl_id, pixi, true);
 
   // Set Brands

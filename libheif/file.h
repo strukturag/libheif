@@ -139,7 +139,7 @@ public:
                        std::vector<std::shared_ptr<Box>>& properties) const;
 
   template<class BoxType>
-  std::shared_ptr<BoxType> get_property(heif_item_id imageID) const
+  std::shared_ptr<BoxType> get_property_for_item(heif_item_id imageID) const
   {
     std::vector<std::shared_ptr<Box>> properties;
     Error err = get_properties(imageID, properties);

@@ -69,11 +69,11 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_p
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_data(heif_item_id itemId) const
+Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_data() const
 {
   // --- get codec configuration
 
-  std::shared_ptr<Box_j2kH> j2kH_box = get_file()->get_property<Box_j2kH>(itemId);
+  std::shared_ptr<Box_j2kH> j2kH_box = get_property<Box_j2kH>();
   if (!j2kH_box)
   {
     // TODO - Correctly Find the j2kH box
@@ -95,7 +95,7 @@ std::shared_ptr<Decoder> ImageItem_JPEG2000::get_decoder() const
 
 Error ImageItem_JPEG2000::on_load_file()
 {
-  auto j2kH = get_file()->get_property<Box_j2kH>(get_id());
+  auto j2kH = get_property<Box_j2kH>();
   if (!j2kH) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_Unspecified,
