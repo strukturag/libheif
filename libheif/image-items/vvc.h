@@ -53,7 +53,7 @@ public:
 protected:
   std::shared_ptr<Decoder> get_decoder() const override;
 
-  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
 private:
   std::shared_ptr<class Decoder_VVC> m_decoder;

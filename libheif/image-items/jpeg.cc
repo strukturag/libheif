@@ -112,7 +112,7 @@ Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<H
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data(heif_item_id itemId) const
+Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();
 }
@@ -126,7 +126,7 @@ std::shared_ptr<Decoder> ImageItem_JPEG::get_decoder() const
 Error ImageItem_JPEG::on_load_file()
 {
   // Note: jpgC box is optional. NULL is a valid value.
-  auto jpgC_box = get_file()->get_property<Box_jpgC>(get_id());
+  auto jpgC_box = get_property<Box_jpgC>();
 
   m_decoder = std::make_shared<Decoder_JPEG>(jpgC_box);
 

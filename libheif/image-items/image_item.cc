@@ -407,12 +407,12 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
 bool ImageItem::has_ispe_resolution() const
 {
-  return m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id) != nullptr;
+  return get_property<Box_ispe>() != nullptr;
 }
 
 uint32_t ImageItem::get_ispe_width() const
 {
-  auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
+  auto ispe = get_property<Box_ispe>();
   if (!ispe) {
     return 0;
   }
@@ -424,7 +424,7 @@ uint32_t ImageItem::get_ispe_width() const
 
 uint32_t ImageItem::get_ispe_height() const
 {
-  auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
+  auto ispe = get_property<Box_ispe>();
   if (!ispe) {
     return 0;
   }
@@ -740,7 +740,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   // --- check whether image size (according to 'ispe') exceeds maximum
 
   if (!decode_tile_only) {
-    auto ispe = m_heif_context->get_heif_file()->get_property<Box_ispe>(m_id);
+    auto ispe = get_property<Box_ispe>();
     if (ispe) {
       Error err = check_for_valid_image_size(get_context()->get_security_limits(), ispe->get_width(), ispe->get_height());
       if (err) {
@@ -921,21 +921,21 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     // CLLI
 
-    auto clli = get_file()->get_property<Box_clli>(m_id);
+    auto clli = get_property<Box_clli>();
     if (clli) {
       img->set_clli(clli->clli);
     }
 
     // MDCV
 
-    auto mdcv = get_file()->get_property<Box_mdcv>(m_id);
+    auto mdcv = get_property<Box_mdcv>();
     if (mdcv) {
       img->set_mdcv(mdcv->mdcv);
     }
 
     // PASP
 
-    auto pasp = get_file()->get_property<Box_pasp>(m_id);
+    auto pasp = get_property<Box_pasp>();
     if (pasp) {
       img->set_pixel_ratio(pasp->hSpacing, pasp->vSpacing);
     }
@@ -944,7 +944,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
   return img;
 }
 
-
+#if 0
 Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const
 {
   auto item_codec = ImageItem::alloc_for_compression_format(const_cast<HeifContext*>(get_context()), format);
@@ -957,7 +957,7 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 
   return item_codec->read_bitstream_configuration_data(itemId);
 }
-
+#endif
 
 Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 {
@@ -967,7 +967,7 @@ Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
 
   // data from configuration blocks
 
-  Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data(get_id());
+  Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data();
   if (confData.error) {
     return confData.error;
   }

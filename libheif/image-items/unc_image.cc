@@ -404,7 +404,7 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
 
 Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image)
 {
-  std::shared_ptr<Box_uncC> uncC = get_file()->get_property<Box_uncC>(get_id());
+  std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
   assert(uncC);
 
   uint32_t tile_width = image->get_width();
@@ -417,8 +417,8 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
     return codedBitstreamResult.error;
   }
 
-  std::shared_ptr<Box_cmpC> cmpC = get_file()->get_property<Box_cmpC>(get_id());
-  std::shared_ptr<Box_icef> icef = get_file()->get_property<Box_icef>(get_id());
+  std::shared_ptr<Box_cmpC> cmpC = get_property<Box_cmpC>();
+  std::shared_ptr<Box_icef> icef = get_property<Box_icef>();
 
   if (!icef || !cmpC) {
     assert(!icef);
@@ -471,8 +471,8 @@ Error ImageItem_uncompressed::add_image_tile(uint32_t tile_x, uint32_t tile_y, c
 
 void ImageItem_uncompressed::get_tile_size(uint32_t& w, uint32_t& h) const
 {
-  auto ispe = get_file()->get_property<Box_ispe>(get_id());
-  auto uncC = get_file()->get_property<Box_uncC>(get_id());
+  auto ispe = get_property<Box_ispe>();
+  auto uncC = get_property<Box_uncC>();
 
   if (!ispe || !uncC) {
     w = h = 0;
@@ -488,8 +488,8 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
 {
   heif_image_tiling tiling{};
 
-  auto ispe = get_file()->get_property<Box_ispe>(get_id());
-  auto uncC = get_file()->get_property<Box_uncC>(get_id());
+  auto ispe = get_property<Box_ispe>();
+  auto uncC = get_property<Box_uncC>();
   assert(ispe && uncC);
 
   tiling.num_columns = uncC->get_number_of_tile_columns();
@@ -512,8 +512,8 @@ std::shared_ptr<Decoder> ImageItem_uncompressed::get_decoder() const
 
 Error ImageItem_uncompressed::on_load_file()
 {
-  std::shared_ptr<Box_cmpd> cmpd = get_file()->get_property<Box_cmpd>(get_id());
-  std::shared_ptr<Box_uncC> uncC = get_file()->get_property<Box_uncC>(get_id());
+  std::shared_ptr<Box_cmpd> cmpd = get_property<Box_cmpd>();
+  std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
 
   if (!uncC) {
     return Error{heif_error_Invalid_input,

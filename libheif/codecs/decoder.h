@@ -61,7 +61,7 @@ struct DataExtent
 class Decoder
 {
 public:
-  static std::shared_ptr<Decoder> alloc_for_infe_type(const HeifContext* ctx, heif_item_id, uint32_t format_4cc);
+  static std::shared_ptr<Decoder> alloc_for_infe_type(const ImageItem* item);
 
 
   virtual ~Decoder() = default;

@@ -483,9 +483,15 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
                                                              uint32_t tile_x0, uint32_t tile_y0)
 {
   auto file = context->get_heif_file();
-  std::shared_ptr<Box_ispe> ispe = file->get_property<Box_ispe>(ID);
-  std::shared_ptr<Box_cmpd> cmpd = file->get_property<Box_cmpd>(ID);
-  std::shared_ptr<Box_uncC> uncC = file->get_property<Box_uncC>(ID);
+  auto image = context->get_image(ID, false);
+  if (!image) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
+  std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
+  std::shared_ptr<Box_cmpd> cmpd = image->get_property<Box_cmpd>();
+  std::shared_ptr<Box_uncC> uncC = image->get_property<Box_uncC>();
 
   Error error = check_header_validity(ispe, cmpd, uncC);
   if (error) {
@@ -589,9 +595,15 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  std::shared_ptr<Box_ispe> ispe = context->get_heif_file()->get_property<Box_ispe>(ID);
-  std::shared_ptr<Box_cmpd> cmpd = context->get_heif_file()->get_property<Box_cmpd>(ID);
-  std::shared_ptr<Box_uncC> uncC = context->get_heif_file()->get_property<Box_uncC>(ID);
+  auto image = context->get_image(ID, false);
+  if (!image) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
+  std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
+  std::shared_ptr<Box_cmpd> cmpd = image->get_property<Box_cmpd>();
+  std::shared_ptr<Box_uncC> uncC = image->get_property<Box_uncC>();
 
   error = check_header_validity(ispe, cmpd, uncC);
   if (error) {

@@ -202,7 +202,7 @@ private:
   uint32_t mReadChunkSize_bytes = 64*1024; // 64 kiB
   bool m_preload_offset_table = false;
 
-  uint32_t m_dummy_tile_item_id = 0;
+  std::shared_ptr<ImageItem> m_tile_item;
   std::shared_ptr<class Decoder> m_tile_decoder;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_grid_tile(const heif_decoding_options& options, uint32_t tx, uint32_t ty) const;

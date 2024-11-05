@@ -354,7 +354,15 @@ Error HeifContext::interpret_heif_file()
       m_top_level_images.push_back(image);
     }
 
-    Error err = image->on_load_file();
+    std::vector<std::shared_ptr<Box>> properties;
+    Error err = m_heif_file->get_properties(id, properties);
+    if (err) {
+      return err;
+    }
+
+    image->set_properties(properties);
+
+    err = image->on_load_file();
     if (err) {
       return err;
     }
@@ -555,7 +563,7 @@ Error HeifContext::interpret_heif_file()
           // --- this is an auxiliary image
           //     check whether it is an alpha channel and attach to the main image if yes
 
-          std::shared_ptr<Box_auxC> auxC_property = m_heif_file->get_property<Box_auxC>(image->get_id());
+          std::shared_ptr<Box_auxC> auxC_property = image->get_property<Box_auxC>();
           if (!auxC_property) {
             std::stringstream sstr;
             sstr << "No auxC property for image " << image->get_id();

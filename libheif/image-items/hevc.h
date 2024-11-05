@@ -58,7 +58,7 @@ public:
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
 protected:
-  Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const override;
+  Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
   std::shared_ptr<class Decoder> get_decoder() const override;
 

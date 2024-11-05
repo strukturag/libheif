@@ -80,7 +80,7 @@ public:
 
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
 
-  virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data(heif_item_id itemId) const { return std::vector<uint8_t>{}; }
+  virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const { return std::vector<uint8_t>{}; }
 
   void clear()
   {
@@ -95,6 +95,22 @@ public:
   const HeifContext* get_context() const { return m_heif_context; }
 
   std::shared_ptr<class HeifFile> get_file() const;
+
+  void set_properties(std::vector<std::shared_ptr<Box>> properties) {
+    m_properties = std::move(properties);
+  }
+
+  template<class BoxType>
+  std::shared_ptr<BoxType> get_property() const
+  {
+    for (auto& property : m_properties) {
+      if (auto box = std::dynamic_pointer_cast<BoxType>(property)) {
+        return box;
+      }
+    }
+
+    return nullptr;
+  }
 
   void set_resolution(uint32_t w, uint32_t h)
   {
@@ -363,6 +379,7 @@ public:
 
 private:
   HeifContext* m_heif_context;
+  std::vector<std::shared_ptr<Box>> m_properties;
 
   heif_item_id m_id = 0;
   uint32_t m_width = 0, m_height = 0;  // after all transformations have been applied
@@ -404,7 +421,7 @@ private:
   std::vector<Error> m_decoding_warnings;
 
 protected:
-  Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
+  // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,

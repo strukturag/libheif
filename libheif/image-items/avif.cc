@@ -38,7 +38,7 @@
 
 Error ImageItem_AVIF::on_load_file()
 {
-  auto av1C_box = get_file()->get_property<Box_av1C>(get_id());
+  auto av1C_box = get_property<Box_av1C>();
   if (!av1C_box) {
     return Error{heif_error_Invalid_input,
                  heif_suberror_No_av1C_box};
@@ -102,7 +102,7 @@ Result<ImageItem::CodedImageData> ImageItem_AVIF::encode(const std::shared_ptr<H
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data(heif_item_id itemId) const
+Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data() const
 {
   return m_decoder->read_bitstream_configuration_data();
 }

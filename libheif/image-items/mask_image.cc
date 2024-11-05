@@ -62,8 +62,14 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
                                         std::shared_ptr<HeifPixelImage>& img,
                                         const std::vector<uint8_t>& data)
 {
-  std::shared_ptr<Box_ispe> ispe = context->get_heif_file()->get_property<Box_ispe>(ID);
-  std::shared_ptr<Box_mskC> mskC = context->get_heif_file()->get_property<Box_mskC>(ID);
+  auto image = context->get_image(ID, false);
+  if (!image) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Nonexisting_item_referenced};
+  }
+
+  std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
+  std::shared_ptr<Box_mskC> mskC = image->get_property<Box_mskC>();
 
   uint32_t width = 0;
   uint32_t height = 0;
@@ -193,7 +199,7 @@ Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<H
 
 int ImageItem_mask::get_luma_bits_per_pixel() const
 {
-  auto mskC = get_file()->get_property<Box_mskC>(get_id());
+  auto mskC = get_property<Box_mskC>();
   if (!mskC) {
     return -1;
   }
