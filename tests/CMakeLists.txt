@@ -7,7 +7,9 @@ set(TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data")
 set(LIBHEIFIO_TESTING_DATA_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data/heifio")
 configure_file(test-config.cc.in ${CMAKE_BINARY_DIR}/generated/test-config.cc)
 
-set_source_files_properties(catch_amalgamated.cpp PROPERTIES COMPILE_FLAGS -Wno-conversion)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(catch_amalgamated.cpp PROPERTIES COMPILE_FLAGS -Wno-conversion)
+endif()
 
 add_library(testframework STATIC ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc catch_amalgamated.cpp)
 
