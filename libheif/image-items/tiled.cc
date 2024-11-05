@@ -283,11 +283,15 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   // --- read tile properties
 
-  uint8_t num_properties = range.read8();
+  // Check version for backwards compatibility with old format.
+  // TODO: remove when spec is final and old test images have been converted
+  if (get_version() == 0) {
+    uint8_t num_properties = range.read8();
 
-  Error error = read_children(range, num_properties, limits);
-  if (error) {
-    return error;
+    Error error = read_children(range, num_properties, limits);
+    if (error) {
+      return error;
+    }
   }
 
   return range.get_error();
@@ -532,7 +536,22 @@ Error ImageItem_Tiled::on_load_file()
 
   heif_compression_format format = compression_format_from_fourcc_infe_type(m_tild_header.get_parameters().compression_format_fourcc);
   m_tile_item = ImageItem::alloc_for_compression_format(get_context(), format);
-  m_tile_item->set_properties(tilC_box->get_all_child_boxes());
+
+  // For backwards compatibility: copy over properties from `tili` item.
+  // TODO: remove when spec is final and old test images have been converted
+  if (tilC_box->get_version() == 1) {
+    auto propertiesResult = get_properties();
+    if (propertiesResult.error) {
+      return propertiesResult.error;
+    }
+
+    m_tile_item->set_properties(*propertiesResult);
+  }
+  else {
+    // This is the new method
+
+    m_tile_item->set_properties(tilC_box->get_all_child_boxes());
+  }
 
   m_tile_decoder = Decoder::alloc_for_infe_type(m_tile_item.get());
   if (!m_tile_decoder) {
@@ -546,6 +565,7 @@ Error ImageItem_Tiled::on_load_file()
       return err;
     }
   }
+
 
   return Error::Ok;
 }
