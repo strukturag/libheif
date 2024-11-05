@@ -658,7 +658,7 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_new_grid_item(HeifCo
 }
 
 
-Error ImageItem_Grid::add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint32_t tile_y,
+Error ImageItem_Grid::add_image_tile(uint32_t tile_x, uint32_t tile_y,
                                      const std::shared_ptr<HeifPixelImage>& image,
                                      struct heif_encoder* encoder)
 {
@@ -679,13 +679,13 @@ Error ImageItem_Grid::add_image_tile(heif_item_id grid_id, uint32_t tile_x, uint
 
   // Assign tile to grid
   heif_image_tiling tiling = get_heif_image_tiling();
-  file->set_iref_reference(grid_id, fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
+  file->set_iref_reference(get_id(), fourcc("dimg"), tile_y * tiling.num_columns + tile_x, encoded_image->get_id());
 
   set_grid_tile_id(tile_x, tile_y, encoded_image->get_id());
 
   // Add PIXI property (copy from first tile)
   auto pixi = encoded_image->get_property<Box_pixi>();
-  file->add_property(grid_id, pixi, true);
+  add_property(pixi, true);
 
   return Error::Ok;
 }
@@ -752,11 +752,14 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
 
   uint32_t image_width = tile_width * columns;
   uint32_t image_height = tile_height * rows;
-  file->add_ispe_property(grid_id, image_width, image_height, false);
+
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(image_width, image_height);
+  griditem->add_property(ispe, false);
 
   // Add PIXI property (copy from first tile)
 
-  file->add_property(grid_id, pixi_property, true);
+  griditem->add_property(pixi_property, true);
 
   // Set Brands
 

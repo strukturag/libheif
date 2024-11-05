@@ -3650,7 +3650,7 @@ struct heif_error heif_context_add_image_tile(struct heif_context* ctx,
   }
 #endif
   else if (auto grid_item = std::dynamic_pointer_cast<ImageItem_Grid>(tiled_image->image)) {
-    Error err = grid_item->add_image_tile(tiled_image->image->get_id(), tile_x, tile_y, image->image, encoder);
+    Error err = grid_item->add_image_tile(tile_x, tile_y, image->image, encoder);
     return err.error_struct(ctx->context.get());
   }
   else {
