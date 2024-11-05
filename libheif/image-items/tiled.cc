@@ -540,6 +540,16 @@ Error ImageItem_Tiled::on_load_file()
     }
   }
 
+
+  // --- create a dummy image item for decoding tiles
+
+  auto infe_box = get_file()->add_new_infe_box(m_tild_header.get_parameters().compression_format_fourcc);
+  m_dummy_tile_item_id = infe_box->get_item_ID();
+
+  for (auto& tile_property : tilC_box->get_all_child_boxes()) {
+    get_file()->add_property(m_dummy_tile_item_id, tile_property, true);
+  }
+
   return Error::Ok;
 }
 
@@ -751,7 +761,7 @@ ImageItem_Tiled::decode_grid_tile(const heif_decoding_options& options, uint32_t
 
   // --- get compressed data
 
-  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(get_id(), format);
+  Result<std::vector<uint8_t>> dataResult = read_bitstream_configuration_data_override(m_dummy_tile_item_id, format);
   if (dataResult.error) {
     return dataResult.error;
   }
