@@ -548,9 +548,27 @@ Error ImageItem_Tiled::on_load_file()
     m_tile_item->set_properties(*propertiesResult);
   }
   else {
-    // This is the new method
+    // --- This is the new method
 
-    m_tile_item->set_properties(tilC_box->get_all_child_boxes());
+    // Synthesize an ispe box if there was none in the file
+
+    auto tile_properties = tilC_box->get_all_child_boxes();
+
+    bool have_ispe = false;
+    for (const auto& property : tile_properties) {
+      if (property->get_short_type() == fourcc("ispe")) {
+        have_ispe = true;
+        break;
+      }
+    }
+
+    if (!have_ispe) {
+      auto ispe = std::make_shared<Box_ispe>();
+      ispe->set_size(parameters.tile_width, parameters.tile_height);
+      tile_properties.emplace_back(std::move(ispe));
+    }
+
+    m_tile_item->set_properties(tile_properties);
   }
 
   m_tile_decoder = Decoder::alloc_for_infe_type(m_tile_item.get());
@@ -695,6 +713,13 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   std::vector<std::shared_ptr<Box>>& tile_properties = tilC->get_tile_properties();
 
   for (auto& propertyBox : encodeResult.value.properties) {
+
+    // we do not have to save ispe boxes in the tile properties as this is automatically synthesized
+
+    if (propertyBox->get_short_type() == fourcc("ispe")) {
+      continue;
+    }
+
     // skip properties that exist already
 
     bool exists = std::any_of(tile_properties.begin(),
