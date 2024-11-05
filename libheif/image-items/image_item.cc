@@ -67,6 +67,13 @@ std::shared_ptr<HeifFile> ImageItem::get_file() const
 }
 
 
+heif_property_id ImageItem::add_property(std::shared_ptr<Box> property, bool essential)
+{
+  m_properties.push_back(property);
+  return get_file()->add_property(get_id(), property, essential);
+}
+
+
 Error ImageItem::init_decoder_from_item(heif_item_id id)
 {
   m_id = id;

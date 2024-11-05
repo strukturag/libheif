@@ -597,7 +597,7 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   auto tilC_box = std::make_shared<Box_tilC>();
   tilC_box->set_parameters(*parameters);
   tilC_box->set_compression_format(encoder->plugin->compression_format);
-  ctx->get_heif_file()->add_property(tild_id, tilC_box, true);
+  tild_image->add_property(tilC_box, true);
 
   // Create header + offset table
 
@@ -617,10 +617,10 @@ ImageItem_Tiled::add_new_tiled_item(HeifContext* ctx, const heif_tiled_image_par
   }
 
   // Add ISPE property
-  file->add_ispe_property(tild_id,
-                          static_cast<uint32_t>(parameters->image_width),
-                          static_cast<uint32_t>(parameters->image_height),
-                          true);
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(static_cast<uint32_t>(parameters->image_width),
+                 static_cast<uint32_t>(parameters->image_height));
+  tild_image->add_property(ispe, true);
 
 #if 0
   // TODO
