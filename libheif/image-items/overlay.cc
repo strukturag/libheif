@@ -47,13 +47,12 @@ static int32_t readvec_signed(const std::vector<uint8_t>& data, int& ptr, int le
   }
 
   bool negative = (val & high_bit) != 0;
-  val &= ~high_bit;
 
   if (negative) {
-    return -(high_bit - val);
+    return -static_cast<int32_t>((~val) & 0x7fffffff) -1;
   }
   else {
-    return val;
+    return static_cast<int32_t>(val);
   }
 
   return val;
