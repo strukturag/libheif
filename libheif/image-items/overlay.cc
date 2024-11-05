@@ -424,11 +424,13 @@ Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_it
   file->add_iref_reference(iovl_id, fourcc("dimg"), ref_ids);
 
   // Add ISPE property
-  file->add_ispe_property(iovl_id, overlayspec.get_canvas_width(), overlayspec.get_canvas_height(), false);
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(overlayspec.get_canvas_width(), overlayspec.get_canvas_height());
+  iovl_image->add_property(ispe, false);
 
   // Add PIXI property (copy from first image) - According to MIAF, all images shall have the same color information.
   auto pixi = file->get_property_for_item<Box_pixi>(ref_ids[0]);
-  file->add_property(iovl_id, pixi, true);
+  iovl_image->add_property(pixi, true);
 
   // Set Brands
   //m_heif_file->set_brand(encoder->plugin->compression_format,
