@@ -157,6 +157,18 @@ Error Box_tilC::write(StreamWriter& writer) const
     writer.write32(m_parameters.extra_dimensions[i]);
   }
 
+  auto& tile_properties = m_children;
+  if (tile_properties.size() > 255) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Unspecified,
+            "Cannot write more than 255 tile properties in tilC header"};
+  }
+
+  writer.write8(static_cast<uint8_t>(tile_properties.size()));
+  for (const auto& property : tile_properties) {
+    property->write(writer);
+  }
+
   prepend_header(writer, box_start);
 
   return Error::Ok;
@@ -177,6 +189,9 @@ std::string Box_tilC::dump(Indent& indent) const
        << indent << "offset field length: " << ((int) m_parameters.offset_field_length) << " bits\n"
        << indent << "size field length: " << ((int) m_parameters.size_field_length) << " bits\n"
        << indent << "number of extra dimensions: " << ((int) m_parameters.number_of_extra_dimensions) << "\n";
+
+  sstr << indent << "tile properties:\n"
+       << dump_children(indent, true);
 
   return sstr.str();
 
@@ -266,6 +281,14 @@ Error Box_tilC::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
   }
 
+  // --- read tile properties
+
+  uint8_t num_properties = range.read8();
+
+  Error error = read_children(range, num_properties, limits);
+  if (error) {
+    return error;
+  }
 
   return range.get_error();
 }
@@ -639,27 +662,30 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
   header.set_tild_tile_range(tile_x, tile_y, offset, static_cast<uint32_t>(dataSize));
   set_next_tild_position(offset + encodeResult.value.bitstream.size());
 
-  std::vector<std::shared_ptr<Box>> existing_properties;
-  Error err = get_file()->get_properties(get_id(), existing_properties);
-  if (err) {
-    return err;
-  }
+  auto tilC = get_file()->get_property<Box_tilC>(get_id());
+  assert(tilC);
+
+  std::vector<std::shared_ptr<Box>>& tile_properties = tilC->get_tile_properties();
 
   for (auto& propertyBox : encodeResult.value.properties) {
-    if (propertyBox->get_short_type() == fourcc("ispe")) {
-      continue;
-    }
-
     // skip properties that exist already
 
-    bool exists = std::any_of(existing_properties.begin(),
-                              existing_properties.end(),
+    bool exists = std::any_of(tile_properties.begin(),
+                              tile_properties.end(),
                               [&propertyBox](const std::shared_ptr<Box>& p) { return p->get_short_type() == propertyBox->get_short_type();});
     if (exists) {
       continue;
     }
 
-    get_file()->add_property(get_id(), propertyBox, propertyBox->is_essential());
+    tile_properties.emplace_back(propertyBox);
+
+    // some tile properties are also added to the tili image
+
+    switch (propertyBox->get_short_type()) {
+      case fourcc("pixi"):
+        get_file()->add_property(get_id(), propertyBox, propertyBox->is_essential());
+        break;
+    }
   }
 
   get_file()->set_brand(encoder->plugin->compression_format,

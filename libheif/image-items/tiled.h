@@ -69,6 +69,10 @@ public:
 
   std::string dump(Indent&) const override;
 
+  std::vector<std::shared_ptr<Box>>& get_tile_properties() { return m_children; }
+
+  const std::vector<std::shared_ptr<Box>>& get_tile_properties() const { return m_children; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 

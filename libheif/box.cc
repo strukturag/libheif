@@ -899,22 +899,24 @@ Error Box::read_children(BitstreamRange& range, uint32_t max_number, const heif_
       return error;
     }
 
-    uint32_t max_children;
-    if (get_short_type() == fourcc("iinf")) {
-      max_children = limits->max_items;
-    }
-    else {
-      max_children = limits->max_children_per_box;
-    }
+    if (max_number == READ_CHILDREN_ALL) {
+      uint32_t max_children;
+      if (get_short_type() == fourcc("iinf")) {
+        max_children = limits->max_items;
+      }
+      else {
+        max_children = limits->max_children_per_box;
+      }
 
-    if (max_children && m_children.size() > max_children) {
-      std::stringstream sstr;
-      sstr << "Maximum number of child boxes (" << max_children << ") in '" << get_type_string() << "' box exceeded.";
+      if (max_children && m_children.size() > max_children) {
+        std::stringstream sstr;
+        sstr << "Maximum number of child boxes (" << max_children << ") in '" << get_type_string() << "' box exceeded.";
 
-      // Sanity check.
-      return Error(heif_error_Memory_allocation_error,
-                   heif_suberror_Security_limit_exceeded,
-                   sstr.str());
+        // Sanity check.
+        return Error(heif_error_Memory_allocation_error,
+                     heif_suberror_Security_limit_exceeded,
+                     sstr.str());
+      }
     }
 
     m_children.push_back(std::move(box));
