@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch2/catch_test_macros.hpp"
+#include "catch_amalgamated.hpp"
 #include "codecs/avc_boxes.h"
 #include "error.h"
 #include <cstdint>

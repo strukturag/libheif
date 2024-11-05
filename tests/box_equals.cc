@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch2/catch_test_macros.hpp"
+#include "catch_amalgamated.hpp"
 #include "box.h"
 
 TEST_CASE("box equals") {

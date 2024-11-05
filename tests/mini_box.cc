@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch2/catch_test_macros.hpp"
+#include "catch_amalgamated.hpp"
 #include <bitstream.h>
 #include <box.h>
 #include "error.h"

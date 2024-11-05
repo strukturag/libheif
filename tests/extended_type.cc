@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch2/catch_test_macros.hpp"
+#include "catch_amalgamated.hpp"
 #include "libheif/api_structs.h"
 #include "libheif/heif.h"
 #include "test-config.h"
