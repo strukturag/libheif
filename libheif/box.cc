@@ -4632,7 +4632,7 @@ std::string Box_taic::dump(Indent& indent) const {
     sstr << m_clock_drift_rate << "\n";
   }
 
-  sstr << indent << "clock_type: " << m_clock_type << "\n";
+  sstr << indent << "clock_type: " << static_cast<int>(m_clock_type) << "\n";
   return sstr.str();
 }
 
