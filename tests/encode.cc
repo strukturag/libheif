@@ -124,7 +124,9 @@ static void test_ispe_size(heif_compression_format compression,
   options->image_orientation = orientation;
 
   heif_image_handle* handle;
-  heif_context_encode_image(ctx, img, enc, options, &handle);
+  heif_error err = heif_context_encode_image(ctx, img, enc, options, &handle);
+  UNSCOPED_INFO("heif_context_encode_image: " << err.message);
+  REQUIRE(err.code == heif_error_Ok);
 
   int ispe_width = heif_image_handle_get_ispe_width(handle);
   int ispe_height = heif_image_handle_get_ispe_height(handle);
