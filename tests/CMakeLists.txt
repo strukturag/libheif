@@ -12,6 +12,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GN
 endif()
 
 add_library(testframework STATIC ${CMAKE_BINARY_DIR}/generated/test-config.cc test_utils.cc catch_amalgamated.cpp)
+target_link_libraries(testframework PRIVATE heif)
 
 macro(add_libheif_test TEST_FILE)
     set(TEST_NAME ${TEST_FILE})
