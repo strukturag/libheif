@@ -47,6 +47,7 @@ TEST_CASE("make extended type") {
   heif_image_handle *output_image_handle;
 
   err = heif_context_encode_image(ctx, input_image, encoder, nullptr, &output_image_handle);
+  if (err.message) { INFO("error message: " << err.message); }
   REQUIRE(err.code == heif_error_Ok);
 
   heif_item_id itemId;
