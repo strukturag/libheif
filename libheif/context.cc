@@ -1162,7 +1162,7 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
   heif_encoding_options options = in_options;
 
   if (const auto* nclx = output_image_item->get_forced_output_nclx()) {
-    options.output_nclx_profile = nclx;
+    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
   }
 
   Result<std::shared_ptr<HeifPixelImage>> srcImageResult = output_image_item->convert_colorspace_for_encoding(pixel_image,
