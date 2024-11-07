@@ -36,6 +36,7 @@ extern "C" {
 
 static const char* kError_unsupported_bit_depth = "Bit depth not supported by x265";
 static const char* kError_unsupported_image_size = "Images smaller than 16 pixels are not supported";
+static const char* kError_unsupported_ctu_size = "Unsupported CTU size";
 
 
 enum parameter_type
@@ -738,7 +739,7 @@ static struct heif_error x265_encode_image(void* encoder_raw, const struct heif_
       struct heif_error err = {
           heif_error_Encoder_plugin_error,
           heif_suberror_Invalid_parameter_value,
-          kError_unsupported_image_size
+          kError_unsupported_ctu_size
       };
       return err;
   }
