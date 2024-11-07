@@ -390,6 +390,15 @@ int ImageItem_Overlay::get_chroma_bits_per_pixel() const
 }
 
 
+Error ImageItem_Overlay::get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const
+{
+  *out_colorspace = heif_colorspace_RGB;
+  *out_chroma = heif_chroma_444;
+
+  return Error::Ok;
+}
+
+
 Result<std::shared_ptr<ImageItem_Overlay>> ImageItem_Overlay::add_new_overlay_item(HeifContext* ctx, const ImageOverlay& overlayspec)
 {
   if (overlayspec.get_num_offsets() > 0xFFFF) {
