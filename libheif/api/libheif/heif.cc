@@ -1020,7 +1020,8 @@ struct heif_error heif_image_handle_get_tile_size(const struct heif_image_handle
 
 
 struct heif_entity_group* heif_context_get_entity_groups(const struct heif_context* ctx,
-                                                         uint32_t type_filter, uint32_t item_filter,
+                                                         uint32_t type_filter,
+                                                         heif_item_id item_filter,
                                                          int* out_num_groups)
 {
   std::shared_ptr<Box_grpl> grplBox = ctx->context->get_heif_file()->get_grpl_box();
