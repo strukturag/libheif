@@ -446,7 +446,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   // --- generate the image canvas for combining all the tiles
 
   if (!inout_image) { // this avoids that we normally have to lock a mutex
-#if ENABLE_MULTITHREADING_SUPPORT
+#if ENABLE_PARALLEL_TILE_DECODING
     static std::mutex createImageMutex;
     std::lock_guard<std::mutex> lock(createImageMutex);
 #endif
@@ -481,7 +481,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
   inout_image->copy_image_to(tile_img, x0, y0);
 
   if (options.on_progress) {
-#if ENABLE_MULTITHREADING_SUPPORT
+#if ENABLE_PARALLEL_TILE_DECODING
     static std::mutex progressMutex;
     std::lock_guard<std::mutex> lock(progressMutex);
 #endif
