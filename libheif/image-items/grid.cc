@@ -452,18 +452,20 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 #endif
 
     if (!inout_image) {
-      inout_image = std::make_shared<HeifPixelImage>();
-      inout_image->create_clone_image_at_new_size(tile_img, w, h);
+      auto grid_image = std::make_shared<HeifPixelImage>();
+      grid_image->create_clone_image_at_new_size(tile_img, w, h);
 
       // Fill alpha plane with opaque in case not all tiles have alpha planes
 
-      if (inout_image->has_channel(heif_channel_Alpha)) {
-        uint16_t alpha_bpp = inout_image->get_bits_per_pixel(heif_channel_Alpha);
+      if (grid_image->has_channel(heif_channel_Alpha)) {
+        uint16_t alpha_bpp = grid_image->get_bits_per_pixel(heif_channel_Alpha);
         assert(alpha_bpp <= 16);
 
         auto alpha_default_value = static_cast<uint16_t>((1UL << alpha_bpp) - 1UL);
-        inout_image->fill_plane(heif_channel_Alpha, alpha_default_value);
+        grid_image->fill_plane(heif_channel_Alpha, alpha_default_value);
       }
+
+      inout_image = grid_image; // We have to set this at the very end because of the unlocked check to `inout_image` above.
     }
   }
 
