@@ -304,9 +304,8 @@ static void kvazaar_query_input_colorspace2(void* encoder_raw, heif_colorspace* 
   }
   else {
     *colorspace = heif_colorspace_YCbCr;
-    if (*chroma != heif_chroma_420 &&
-        *chroma != heif_chroma_422 &&
-        *chroma != heif_chroma_444) {
+    if (*chroma != heif_chroma_420) {
+      // Encoding to 4:2:2 and 4:4:4 currently does not work with Kvazaar (https://github.com/ultravideo/kvazaar/issues/418).
       *chroma = heif_chroma_420;
     }
   }
