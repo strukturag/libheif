@@ -858,9 +858,12 @@ int main(int argc, char** argv)
 
     decode_options->strict_decoding = strict_decoding;
     decode_options->decoder_id = decoder_id;
-    decode_options->start_progress = start_progress;
-    decode_options->on_progress = on_progress;
-    decode_options->end_progress = end_progress;
+
+    if (!option_quiet) {
+      decode_options->start_progress = start_progress;
+      decode_options->on_progress = on_progress;
+      decode_options->end_progress = end_progress;
+    }
 
     if (chroma_upsampling=="nearest-neighbor") {
       decode_options->color_conversion_options.preferred_chroma_upsampling_algorithm = heif_chroma_upsampling_nearest_neighbor;
