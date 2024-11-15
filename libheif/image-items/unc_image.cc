@@ -336,19 +336,19 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
   assert(headers.uncC);
 
   if (headers.uncC) {
-    file->add_property(unci_id, headers.uncC, true);
+    unci_image->add_property(headers.uncC, true);
   }
 
   if (headers.cmpd) {
-    file->add_property(unci_id, headers.cmpd, true);
+    unci_image->add_property(headers.cmpd, true);
   }
 
   // Add `ispe` property
 
-  file->add_ispe_property(unci_id,
-                          static_cast<uint32_t>(parameters->image_width),
-                          static_cast<uint32_t>(parameters->image_height),
-                          true);
+  auto ispe = std::make_shared<Box_ispe>();
+  ispe->set_size(static_cast<uint32_t>(parameters->image_width),
+                 static_cast<uint32_t>(parameters->image_height));
+  unci_image->add_property(ispe, true);
 
   if (parameters->compression != heif_unci_compression_off) {
     auto icef = std::make_shared<Box_icef>();
@@ -374,8 +374,8 @@ Result<std::shared_ptr<ImageItem_uncompressed>> ImageItem_uncompressed::add_unci
       assert(false);
     }
 
-    file->add_property(unci_id, cmpC, true);
-    file->add_property_without_deduplication(unci_id, icef, true); // icef is empty. A normal add_property() would lead to a wrong deduplication.
+    unci_image->add_property(cmpC, true);
+    unci_image->add_property_without_deduplication(icef, true); // icef is empty. A normal add_property() would lead to a wrong deduplication.
   }
 
   // Create empty image. If we use compression, we append the data piece by piece.

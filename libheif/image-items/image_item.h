@@ -114,6 +114,8 @@ public:
 
   heif_property_id add_property(std::shared_ptr<Box> property, bool essential);
 
+  heif_property_id add_property_without_deduplication(std::shared_ptr<Box> property, bool essential);
+
   void set_resolution(uint32_t w, uint32_t h)
   {
     m_width = w;
