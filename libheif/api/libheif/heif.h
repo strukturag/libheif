@@ -519,8 +519,8 @@ enum heif_metadata_compression
 {
   heif_metadata_compression_off = 0,
   heif_metadata_compression_auto = 1,
-  heif_metadata_compression_unknown = 2, // only used when reading unknown method from input file
-  heif_metadata_compression_deflate = 3,
+  heif_metadata_compression_deflate = 2,
+  heif_metadata_compression_unknown = 3, // only used when reading unknown method from input file
   heif_metadata_compression_zlib = 4,    // do not use for header data
   heif_metadata_compression_brotli = 5
 };
