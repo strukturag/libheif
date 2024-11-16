@@ -79,11 +79,22 @@ public:
 
   static const Error Ok;
 
+  static const Error InternalError;
+
   static const char kSuccess[];
 
   bool operator==(const Error& other) const { return error_code == other.error_code; }
 
   bool operator!=(const Error& other) const { return !(*this == other); }
+
+  Error operator||(const Error& other) const {
+    if (error_code != heif_error_Ok) {
+      return *this;
+    }
+    else {
+      return other;
+    }
+  }
 
   operator bool() const { return error_code != heif_error_Ok; }
 

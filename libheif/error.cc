@@ -29,6 +29,10 @@ const char* cUnknownError = "Unknown error";
 
 const Error Error::Ok(heif_error_Ok);
 
+const Error Error::InternalError{heif_error_Unsupported_feature, // TODO: use better value
+                                 heif_suberror_Unspecified,
+                                 "Internal error"};
+
 
 Error::Error() = default;
 
