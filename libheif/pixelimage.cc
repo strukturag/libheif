@@ -316,6 +316,11 @@ Error HeifPixelImage::extend_padding_to_size2(uint32_t width, uint32_t height, b
         return err;
       }
 
+      // This is not needed, but we have to silence the clang-tidy false positive.
+      if (!newPlane.mem) {
+        return Error::InternalError;
+      }
+
       // copy the visible part of the old plane into the new plane
 
       for (uint32_t y = 0; y < plane->m_height; y++) {
