@@ -1774,7 +1774,7 @@ heif_error heif_image_crop(struct heif_image* img,
                       "Image size exceeds maximum supported size"};
   }
 
-  auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom);
+  auto cropResult = img->image->crop(left, static_cast<int>(w) - 1 - right, top, static_cast<int>(h) - 1 - bottom, nullptr);
   if (cropResult.error) {
     return cropResult.error.error_struct(img->image.get());
   }
@@ -1806,7 +1806,8 @@ int heif_image_has_channel(const struct heif_image* img, enum heif_channel chann
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        heif_channel channel, int width, int height, int bit_depth)
 {
-  if (auto err = image->image->add_plane2(channel, width, height, bit_depth)) {
+  // Note: no security limit, because this is explicitly requested by the user.
+  if (auto err = image->image->add_plane(channel, width, height, bit_depth, nullptr)) {
     return err.error_struct(image->image.get());
   }
   else {
@@ -1820,7 +1821,7 @@ struct heif_error heif_image_add_channel(struct heif_image* image,
                                          int width, int height,
                                          heif_channel_datatype datatype, int bit_depth)
 {
-  if (!image->image->add_channel(channel, width, height, datatype, bit_depth)) {
+  if (!image->image->add_channel(channel, width, height, datatype, bit_depth, nullptr)) {
     struct heif_error err = {heif_error_Memory_allocation_error,
                              heif_suberror_Unspecified,
                              "Cannot allocate memory for image plane"};
@@ -1994,7 +1995,7 @@ int heif_image_is_premultiplied_alpha(struct heif_image* image)
 
 struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height)
 {
-  Error err = image->image->extend_padding_to_size2(min_physical_width, min_physical_height);
+  Error err = image->image->extend_padding_to_size(min_physical_width, min_physical_height, false, nullptr);
   if (err) {
     return err.error_struct(image->image.get());
   }
@@ -2011,7 +2012,7 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 {
   std::shared_ptr<HeifPixelImage> out_img;
 
-  Error err = input->image->scale_nearest_neighbor(out_img, width, height);
+  Error err = input->image->scale_nearest_neighbor(out_img, width, height, nullptr);
   if (err) {
     return err.error_struct(input->image.get());
   }
@@ -2026,7 +2027,7 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
                                                            uint32_t width, uint32_t height)
 {
-  Error err = image->image->extend_to_size_with_zero2(width, height);
+  Error err = image->image->extend_to_size_with_zero(width, height, nullptr);
   if (err) {
     return err.error_struct(image->image.get());
   }

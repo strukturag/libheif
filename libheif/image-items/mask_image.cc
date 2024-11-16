@@ -105,7 +105,8 @@ Error MaskImageCodec::decode_mask_image(const HeifContext* context,
 
   img = std::make_shared<HeifPixelImage>();
   img->create(width, height, heif_colorspace_monochrome, heif_chroma_monochrome);
-  auto err = img->add_plane2(heif_channel_Y, width, height, mskC->get_bits_per_pixel());
+  auto err = img->add_plane(heif_channel_Y, width, height, mskC->get_bits_per_pixel(),
+                            context->get_security_limits());
   if (err) {
     return err;
   }

@@ -441,7 +441,8 @@ static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::
 Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(const std::shared_ptr<const Box_cmpd> cmpd,
                                                                              const std::shared_ptr<const Box_uncC> uncC,
                                                                              uint32_t width,
-                                                                             uint32_t height)
+                                                                             uint32_t height,
+                                                                             const heif_security_limits* limits)
 {
   auto img = std::make_shared<HeifPixelImage>();
   heif_chroma chroma = heif_chroma_undefined;
@@ -465,12 +466,13 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       }
 
       if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
-        if (auto err = img->add_plane2(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth)) {
+        if (auto err = img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth,
+                                      limits)) {
           return err;
         }
       }
       else {
-        if (auto err = img->add_plane2(channel, width, height, component.component_bit_depth)) {
+        if (auto err = img->add_plane(channel, width, height, component.component_bit_depth, limits)) {
           return err;
         }
       }
@@ -505,7 +507,7 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
   uint32_t tile_width = ispe->get_width() / uncC->get_number_of_tile_columns();
   uint32_t tile_height = ispe->get_height() / uncC->get_number_of_tile_rows();
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, tile_width, tile_height);
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, tile_width, tile_height, context->get_security_limits());
   if (createImgResult.error) {
     return createImgResult.error;
   }
@@ -629,7 +631,7 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
     return error;
   }
 
-  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height);
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, context->get_security_limits());
   if (createImgResult.error) {
     return createImgResult.error;
   }

@@ -453,7 +453,7 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
     if (!inout_image) {
       auto grid_image = std::make_shared<HeifPixelImage>();
-      auto err = grid_image->create_clone_image_at_new_size2(tile_img, w, h);
+      auto err = grid_image->create_clone_image_at_new_size(tile_img, w, h, get_context()->get_security_limits());
       if (err) {
         return err;
       }

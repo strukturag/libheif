@@ -67,7 +67,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                        const ColorState& input_state,
                                        const ColorState& target_state,
-                                       const heif_color_conversion_options& options) const
+                                       const heif_color_conversion_options& options,
+                                       const heif_security_limits* limits) const
 {
   bool has_alpha = input->has_channel(heif_channel_Alpha);
   bool want_alpha = target_state.has_alpha;
@@ -90,7 +91,7 @@ Op_RGB_to_RGB24_32::convert_colorspace(const std::shared_ptr<const HeifPixelImag
   outimg->create(width, height, heif_colorspace_RGB,
                  want_alpha ? heif_chroma_interleaved_32bit : heif_chroma_interleaved_24bit);
 
-  if (auto err = outimg->add_plane2(heif_channel_interleaved, width, height, 8)) {
+  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, 8, limits)) {
     return err;
   }
 
@@ -190,7 +191,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                               const ColorState& input_state,
                                               const ColorState& target_state,
-                                              const heif_color_conversion_options& options) const
+                                              const heif_color_conversion_options& options,
+                                              const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_R) <= 8 ||
       input->get_bits_per_pixel(heif_channel_G) <= 8 ||
@@ -221,7 +223,7 @@ Op_RGB_HDR_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPi
 
   outimg->create(width, height, heif_colorspace_RGB,
                  output_has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
-  if (auto err = outimg->add_plane2(heif_channel_interleaved, width, height, bpp)) {
+  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, bpp, limits)) {
     return err;
   }
 
@@ -324,7 +326,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                           const ColorState& input_state,
                                           const ColorState& target_state,
-                                          const heif_color_conversion_options& options) const
+                                          const heif_color_conversion_options& options,
+                                          const heif_security_limits* limits) const
 {
   if (input->get_bits_per_pixel(heif_channel_R) != 8 ||
       input->get_bits_per_pixel(heif_channel_G) != 8 ||
@@ -349,7 +352,7 @@ Op_RGB_to_RRGGBBaa_BE::convert_colorspace(const std::shared_ptr<const HeifPixelI
   outimg->create(width, height, heif_colorspace_RGB,
                  output_has_alpha ? heif_chroma_interleaved_RRGGBBAA_BE : heif_chroma_interleaved_RRGGBB_BE);
 
-  if (auto err = outimg->add_plane2(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R))) {
+  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height, input->get_bits_per_pixel(heif_channel_R), limits)) {
     return err;
   }
 
@@ -441,7 +444,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                               const ColorState& input_state,
                                               const ColorState& target_state,
-                                              const heif_color_conversion_options& options) const
+                                              const heif_color_conversion_options& options,
+                                              const heif_security_limits* limits) const
 {
   bool has_alpha = (input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_LE ||
                     input->get_chroma_format() == heif_chroma_interleaved_RRGGBBAA_BE);
@@ -455,14 +459,14 @@ Op_RRGGBBaa_BE_to_RGB_HDR::convert_colorspace(const std::shared_ptr<const HeifPi
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
 
-  if (auto err = outimg->add_plane2(heif_channel_R, width, height, bpp) ||
-                 outimg->add_plane2(heif_channel_G, width, height, bpp) ||
-                 outimg->add_plane2(heif_channel_B, width, height, bpp)) {
+  if (auto err = outimg->add_plane(heif_channel_R, width, height, bpp, limits) ||
+                 outimg->add_plane(heif_channel_G, width, height, bpp, limits) ||
+                 outimg->add_plane(heif_channel_B, width, height, bpp, limits)) {
     return err;
   }
 
   if (want_alpha) {
-    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, bpp)) {
+    if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, bpp, limits)) {
       return err;
     }
   }
@@ -553,8 +557,9 @@ Op_RGB24_32_to_RGB::state_after_conversion(const ColorState& input_state,
 Result<std::shared_ptr<HeifPixelImage>>
 Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                        const ColorState& input_state,
-                                              const ColorState& target_state,
-                                              const heif_color_conversion_options& options) const
+                                       const ColorState& target_state,
+                                       const heif_color_conversion_options& options,
+                                       const heif_security_limits* limits) const
 {
   bool has_alpha = input->get_chroma_format() == heif_chroma_interleaved_RGBA;
   bool want_alpha = target_state.has_alpha;
@@ -566,14 +571,14 @@ Op_RGB24_32_to_RGB::convert_colorspace(const std::shared_ptr<const HeifPixelImag
 
   outimg->create(width, height, heif_colorspace_RGB, heif_chroma_444);
 
-  if (auto err = outimg->add_plane2(heif_channel_R, width, height, 8) ||
-                 outimg->add_plane2(heif_channel_G, width, height, 8) ||
-                 outimg->add_plane2(heif_channel_B, width, height, 8)) {
+  if (auto err = outimg->add_plane(heif_channel_R, width, height, 8, limits) ||
+                 outimg->add_plane(heif_channel_G, width, height, 8, limits) ||
+                 outimg->add_plane(heif_channel_B, width, height, 8, limits)) {
     return err;
   }
 
   if (want_alpha) {
-    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, 8)) {
+    if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, 8, limits)) {
       return err;
     }
   }
@@ -680,7 +685,8 @@ Result<std::shared_ptr<HeifPixelImage>>
 Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                 const ColorState& input_state,
                                                 const ColorState& target_state,
-                                                const heif_color_conversion_options& options) const
+                                                const heif_color_conversion_options& options,
+                                                const heif_security_limits* limits) const
 {
   auto outimg = std::make_shared<HeifPixelImage>();
 
@@ -704,8 +710,8 @@ Op_RRGGBBaa_swap_endianness::convert_colorspace(const std::shared_ptr<const Heif
       return Error::InternalError;
   }
 
-  if (auto err = outimg->add_plane2(heif_channel_interleaved, width, height,
-                                    input->get_bits_per_pixel(heif_channel_interleaved))) {
+  if (auto err = outimg->add_plane(heif_channel_interleaved, width, height,
+                                   input->get_bits_per_pixel(heif_channel_interleaved), limits)) {
     return err;
   }
 

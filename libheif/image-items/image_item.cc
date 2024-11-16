@@ -618,7 +618,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
   //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
 
   auto output_image_result = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                                output_bpp, options.color_conversion_options);
+                                                output_bpp, options.color_conversion_options,
+                                                get_context()->get_security_limits());
   if (output_image_result.error) {
     return output_image_result.error;
   }
@@ -799,7 +800,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     for (const auto& property : properties) {
       if (auto rot = std::dynamic_pointer_cast<Box_irot>(property)) {
-        auto rotateResult = img->rotate_ccw(rot->get_rotation_ccw());
+        auto rotateResult = img->rotate_ccw(rot->get_rotation_ccw(), m_heif_context->get_security_limits());
         if (rotateResult.error) {
           return error;
         }
@@ -809,7 +810,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
 
       if (auto mirror = std::dynamic_pointer_cast<Box_imir>(property)) {
-        auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction());
+        auto mirrorResult = img->mirror_inplace(mirror->get_mirror_direction(),
+                                                get_context()->get_security_limits());
         if (mirrorResult.error) {
           return error;
         }
@@ -843,7 +845,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
                          heif_suberror_Invalid_clean_aperture);
           }
 
-          auto cropResult = img->crop(left, right, top, bottom);
+          auto cropResult = img->crop(left, right, top, bottom, m_heif_context->get_security_limits());
           if (error) {
             return error;
           }
@@ -898,7 +900,7 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
 
     if ((alpha_image->get_width() != img->get_width()) || (alpha_image->get_height() != img->get_height())) {
       std::shared_ptr<HeifPixelImage> scaled_alpha;
-      Error err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height());
+      Error err = alpha->scale_nearest_neighbor(scaled_alpha, img->get_width(), img->get_height(), m_heif_context->get_security_limits());
       if (err) {
         return err;
       }

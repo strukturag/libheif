@@ -427,7 +427,8 @@ std::string ColorConversionPipeline::debug_dump_pipeline() const
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(const std::shared_ptr<HeifPixelImage>& input)
+Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(const std::shared_ptr<HeifPixelImage>& input,
+                                                                               const heif_security_limits* limits)
 {
   std::shared_ptr<HeifPixelImage> in = input;
   std::shared_ptr<HeifPixelImage> out = in;
@@ -439,7 +440,7 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
     print_spec(std::cerr, in);
 #endif
 
-    auto outResult = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options);
+    auto outResult = step.operation->convert_colorspace(in, step.input_state, step.output_state, m_options, limits);
     if (outResult.error) {
       return outResult.error;
     }
@@ -487,7 +488,8 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
                                                            heif_chroma target_chroma,
                                                            const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                            int output_bpp,
-                                                           const heif_color_conversion_options& options)
+                                                           const heif_color_conversion_options& options,
+                                                           const heif_security_limits* limits)
 {
   // --- check that input image is valid
 
@@ -595,7 +597,7 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
     return input;
   }
   else {
-    return pipeline.convert_image(input);
+    return pipeline.convert_image(input, limits);
   }
 }
 
@@ -605,11 +607,12 @@ Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shar
                                                                  heif_chroma chroma,
                                                                  const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                                  int output_bpp,
-                                                                 const heif_color_conversion_options& options)
+                                                                 const heif_color_conversion_options& options,
+                                                                 const heif_security_limits* limits)
 {
   std::shared_ptr<HeifPixelImage> non_const_input = std::const_pointer_cast<HeifPixelImage>(input);
 
-  auto result = convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options);
+  auto result = convert_colorspace(non_const_input, colorspace, chroma, target_profile, output_bpp, options, limits);
   if (result.error) {
     return result.error;
   }

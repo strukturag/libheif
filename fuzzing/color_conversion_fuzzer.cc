@@ -70,7 +70,7 @@ static bool read_plane(BitstreamRange* range,
   if (!range->prepare_read(static_cast<size_t>(width) * height)) {
     return false;
   }
-  if (auto err = image->add_plane2(channel, width, height, bit_depth)) {
+  if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
   uint32_t stride;
@@ -96,7 +96,7 @@ static bool read_plane_interleaved(BitstreamRange* range,
   if (!range->prepare_read(static_cast<size_t>(width) * height * comps)) {
     return false;
   }
-  if (auto err = image->add_plane2(channel, width, height, bit_depth)) {
+  if (auto err = image->add_plane(channel, width, height, bit_depth, heif_get_disabled_security_limits())) {
     return false;
   }
   uint32_t stride;
@@ -255,7 +255,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
                                              static_cast<heif_chroma>(out_chroma),
                                              nullptr,
                                              output_bpp,
-                                             options->color_conversion_options);
+                                             options->color_conversion_options,
+                                             heif_get_disabled_security_limits());
 
   heif_encoding_options_free(options);
 

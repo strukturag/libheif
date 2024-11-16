@@ -237,8 +237,8 @@ bool MakeTestImage(const ColorState& state, int width, int height,
     int half_max = (1 << (plane.bit_depth -1));
     uint16_t value = SwapBytesIfNeeded(
         static_cast<uint16_t>(half_max + i * 10 + i), state.chroma);
-    auto err = image->fill_new_plane2(plane.channel, value, plane.width, plane.height,
-                                      plane.bit_depth);
+    auto err = image->fill_new_plane(plane.channel, value, plane.width, plane.height,
+                                     plane.bit_depth, nullptr);
     if (err) {
       return false;
     }
@@ -291,7 +291,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   int height = 8;
   REQUIRE(MakeTestImage(input_state, width, height, in_image.get()));
 
-  auto out_image_result = pipeline.convert_image(in_image);
+  auto out_image_result = pipeline.convert_image(in_image, nullptr);
   REQUIRE(out_image_result);
   std::shared_ptr<HeifPixelImage> out_image = *out_image_result;
 
@@ -319,7 +319,7 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   ColorConversionPipeline reverse_pipeline;
   if (reverse_pipeline.construct_pipeline(target_state, input_state, options)) {
     INFO("reverse pipeline: " << reverse_pipeline.debug_dump_pipeline());
-    auto recovered_image_result =reverse_pipeline.convert_image(out_image);
+    auto recovered_image_result =reverse_pipeline.convert_image(out_image, heif_get_disabled_security_limits());
     REQUIRE(recovered_image_result);
     std::shared_ptr<HeifPixelImage> recovered_image = *recovered_image_result;
     // If the alpha plane was lost in the target state, it should come back
@@ -609,7 +609,7 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
 
 static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint8_t>& pixels)
 {
-  auto error = img->add_plane2(channel, w, h, 8);
+  auto error = img->add_plane(channel, w, h, 8, nullptr);
   REQUIRE(!error);
 
   uint32_t stride;
@@ -651,7 +651,7 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
   std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
   img->create(4, 4, heif_colorspace_YCbCr, heif_chroma_420);
 
-  auto error = img->fill_new_plane2(heif_channel_Y, 128, 4,4, 8);
+  auto error = img->fill_new_plane(heif_channel_Y, 128, 4,4, 8, nullptr);
   REQUIRE(!error);
 
   fill_plane(img, heif_channel_Cb, 2,2,
@@ -661,7 +661,7 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
              {255, 200,
               50, 0});
 
-  auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444, nullptr, 8, options);
+  auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444, nullptr, 8, options, heif_get_disabled_security_limits());
   REQUIRE(conversionResult);
   std::shared_ptr<HeifPixelImage> out = *conversionResult;
 
@@ -692,13 +692,13 @@ TEST_CASE("RGB 5-6-5 to RGB")
   const uint32_t height = 2;
   img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
   Error err;
-  err = img->add_plane2(heif_channel_R, width, height, 5);
+  err = img->add_plane(heif_channel_R, width, height, 5, heif_get_disabled_security_limits());
   REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_R) == 5);
-  err = img->add_plane2(heif_channel_G, width, height, 6);
+  err = img->add_plane(heif_channel_G, width, height, 6, heif_get_disabled_security_limits());
   REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_G) == 6);
-  err = img->add_plane2(heif_channel_B, width, height, 5);
+  err = img->add_plane(heif_channel_B, width, height, 5, heif_get_disabled_security_limits());
   REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_B) == 5);
 
@@ -714,7 +714,7 @@ TEST_CASE("RGB 5-6-5 to RGB")
     }
   }
 
-  auto conversionResult = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options);
+  auto conversionResult = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options, heif_get_disabled_security_limits());
   REQUIRE(conversionResult);
   std::shared_ptr<HeifPixelImage> out = *conversionResult;
 

@@ -81,11 +81,13 @@ public:
 
   void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
 
-  Error create_clone_image_at_new_size2(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h);
+  Error create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h,
+                                       const heif_security_limits* limits);
 
-  Error add_plane2(heif_channel channel, uint32_t width, uint32_t height, int bit_depth);
+  Error add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth, const heif_security_limits* limits);
 
-  bool add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth);
+  Error add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+                    const heif_security_limits* limits);
 
   bool has_channel(heif_channel channel) const;
 
@@ -152,15 +154,16 @@ public:
     return const_cast<HeifPixelImage*>(this)->get_channel<T>(channel, out_stride);
   }
 
-  void copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
-                           heif_channel src_channel,
-                           heif_channel dst_channel);
+  Error copy_new_plane_from(const std::shared_ptr<const HeifPixelImage>& src_image,
+                            heif_channel src_channel,
+                            heif_channel dst_channel,
+                            const heif_security_limits* limits);
 
-  Error extract_alpha_from_RGBA2(const std::shared_ptr<const HeifPixelImage>& srcimage);
+  Error extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage, const heif_security_limits* limits);
 
   void fill_plane(heif_channel dst_channel, uint16_t value);
 
-  Error fill_new_plane2(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
+  Error fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp, const heif_security_limits* limits);
 
   void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                     heif_channel src_channel,
@@ -168,17 +171,19 @@ public:
 
   Error copy_image_to(const std::shared_ptr<const HeifPixelImage>& source, uint32_t x0, uint32_t y0);
 
-  Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees);
+  Result<std::shared_ptr<HeifPixelImage>> rotate_ccw(int angle_degrees, const heif_security_limits* limits);
 
-  Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction);
+  Result<std::shared_ptr<HeifPixelImage>> mirror_inplace(heif_transform_mirror_direction, const heif_security_limits* limits);
 
-  Result<std::shared_ptr<HeifPixelImage>> crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom) const;
+  Result<std::shared_ptr<HeifPixelImage>> crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
+                                               const heif_security_limits* limits) const;
 
   Error fill_RGB_16bit(uint16_t r, uint16_t g, uint16_t b, uint16_t a);
 
   Error overlay(std::shared_ptr<HeifPixelImage>& overlay, int32_t dx, int32_t dy);
 
-  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height) const;
+  Error scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& output, uint32_t width, uint32_t height,
+                               const heif_security_limits* limits) const;
 
   void set_color_profile_nclx(const std::shared_ptr<const color_profile_nclx>& profile) { m_color_profile_nclx = profile; }
 
@@ -190,9 +195,10 @@ public:
 
   void debug_dump() const;
 
-  Error extend_padding_to_size2(uint32_t width, uint32_t height, bool adjust_size = false);
+  Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,
+                               const heif_security_limits* limits);
 
-  Error extend_to_size_with_zero2(uint32_t width, uint32_t height);
+  Error extend_to_size_with_zero(uint32_t width, uint32_t height, const heif_security_limits* limits);
 
   // --- pixel aspect ratio
 
@@ -243,7 +249,9 @@ public:
 private:
   struct ImagePlane
   {
-    Error alloc2(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
+    // limits=nullptr disables the limits
+    Error alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components,
+                const heif_security_limits* limits);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;

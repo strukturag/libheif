@@ -126,7 +126,8 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const std::shared_ptr<const HeifPixelImage>& input,
     const ColorState& input_state,
     const ColorState& target_state,
-    const heif_color_conversion_options& options) const
+    const heif_color_conversion_options& options,
+    const heif_security_limits* limits) const
 {
 #ifdef HAVE_LIBSHARPYUV
   uint32_t width = input->get_width();
@@ -154,14 +155,14 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   bool want_alpha = target_state.has_alpha;
 
   int output_bits = target_state.bits_per_pixel;
-  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, output_bits) ||
-                 outimg->add_plane2(heif_channel_Cb, chroma_width, chroma_height, output_bits) ||
-                 outimg->add_plane2(heif_channel_Cr, chroma_width, chroma_height, output_bits)) {
+  if (auto err = outimg->add_plane(heif_channel_Y, width, height, output_bits, limits) ||
+                 outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, output_bits, limits) ||
+                 outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, output_bits, limits)) {
     return err;
   }
 
   if (want_alpha) {
-    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, output_bits)) {
+    if (auto err = outimg->add_plane(heif_channel_Alpha, width, height, output_bits, limits)) {
       return err;
     }
   }

@@ -1087,7 +1087,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   // TODO: check BPP changed
   if (different_chroma || different_colorspace) {
 
-    auto img_result = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options);
+    auto img_result = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options, get_security_limits());
     if (img_result.error) {
       return img_result.error;
     }
@@ -1103,7 +1103,8 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 
 
 static Result<std::shared_ptr<HeifPixelImage>>
-create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image)
+create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image,
+                                            const heif_security_limits* limits)
 {
   // --- generate alpha image
 
@@ -1112,10 +1113,10 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
                       heif_colorspace_monochrome, heif_chroma_monochrome);
 
   if (image->has_channel(heif_channel_Alpha)) {
-    alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
+    alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y, limits);
   }
   else if (image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
-    if (auto err = alpha_image->extract_alpha_from_RGBA2(image)) {
+    if (auto err = alpha_image->extract_alpha_from_RGBA(image, limits)) {
       return err;
     }
   }
@@ -1200,7 +1201,7 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
 
     std::shared_ptr<HeifPixelImage> alpha_image;
-    auto alpha_image_result = create_alpha_image_from_image_alpha_channel(colorConvertedImage);
+    auto alpha_image_result = create_alpha_image_from_image_alpha_channel(colorConvertedImage, get_security_limits());
     if (!alpha_image_result) {
       return alpha_image_result.error;
     }
@@ -1300,7 +1301,7 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_thumbnail(const std::shar
 
 
   std::shared_ptr<HeifPixelImage> thumbnail_image;
-  Error error = image->scale_nearest_neighbor(thumbnail_image, thumb_width, thumb_height);
+  Error error = image->scale_nearest_neighbor(thumbnail_image, thumb_width, thumb_height, get_security_limits());
   if (error) {
     return error;
   }

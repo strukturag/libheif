@@ -89,7 +89,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const = 0;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const = 0;
 };
 
 
@@ -105,7 +106,8 @@ public:
                           const ColorState& target_state,
                           const heif_color_conversion_options& options);
 
-  Result<std::shared_ptr<HeifPixelImage>> convert_image(const std::shared_ptr<HeifPixelImage>& input);
+  Result<std::shared_ptr<HeifPixelImage>> convert_image(const std::shared_ptr<HeifPixelImage>& input,
+                                                        const heif_security_limits* limits);
 
   std::string debug_dump_pipeline() const;
 
@@ -131,13 +133,15 @@ Result<std::shared_ptr<HeifPixelImage>> convert_colorspace(const std::shared_ptr
                                                            heif_chroma chroma,
                                                            const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                            int output_bpp,
-                                                           const heif_color_conversion_options& options);
+                                                           const heif_color_conversion_options& options,
+                                                           const heif_security_limits* limits);
 
 Result<std::shared_ptr<const HeifPixelImage>> convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                                  heif_colorspace colorspace,
                                                                  heif_chroma chroma,
                                                                  const std::shared_ptr<const color_profile_nclx>& target_profile,
                                                                  int output_bpp,
-                                                                 const heif_color_conversion_options& options);
+                                                                 const heif_color_conversion_options& options,
+                                                                 const heif_security_limits* limits);
 
 #endif

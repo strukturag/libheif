@@ -38,7 +38,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
@@ -54,7 +55,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
@@ -70,7 +72,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
@@ -86,7 +89,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
@@ -102,7 +106,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
@@ -118,7 +123,8 @@ public:
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,
-                     const heif_color_conversion_options& options) const override;
+                     const heif_color_conversion_options& options,
+                     const heif_security_limits* limits) const override;
 };
 
 
