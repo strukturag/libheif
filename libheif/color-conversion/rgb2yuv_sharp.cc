@@ -273,6 +273,6 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
 
   return outimg;
 #else
-  return nullptr;
+  return Error::InternalError;
 #endif
 }
