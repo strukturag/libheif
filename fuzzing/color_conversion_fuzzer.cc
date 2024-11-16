@@ -256,15 +256,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
                                              nullptr,
                                              output_bpp,
                                              options->color_conversion_options);
-  assert(out_image_result);
-  auto out_image = *out_image_result;
-
-  heif_encoding_options_free(options);
-
-  if (!out_image) {
+  if (out_image_result.error) {
     // Conversion is not supported.
     return 0;
   }
+
+  auto out_image = *out_image_result;
+
+  heif_encoding_options_free(options);
 
   assert(out_image->get_width() == width);
   assert(out_image->get_height() == height);
