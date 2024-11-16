@@ -672,7 +672,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_mskC>();
       break;
 
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
       // --- TAI timestamps
 
     case fourcc("itai"):
@@ -690,7 +690,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_avcC>();
       break;
 
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     case fourcc("tilC"):
       box = std::make_shared<Box_tilC>();
       break;
@@ -4618,7 +4618,7 @@ Error Box_cmex::write(StreamWriter& writer) const
 }
 
 
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 std::string Box_taic::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);

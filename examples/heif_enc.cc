@@ -210,7 +210,7 @@ void show_help(const char* argv0)
             << "  --tiled-image-height #    override image height of tiled image\n"
             << "  --tiled-input-x-y         usually, the first number in the input tile filename should be the y position.\n"
             << "                            With this option, this can be swapped so that the first number is x, the second number y.\n"
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             << "  --tiling-method METHOD    choose one of these methods: grid, tili, unci. The default is 'grid'.\n"
             << "  --add-pyramid-group       when several images are given, put them into a multi-resolution pyramid group.\n"
 #endif
@@ -749,7 +749,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
       return nullptr;
     }
   }
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   else if (tiling_method == "tili") {
     heif_tiled_image_parameters tiled_params{};
     tiled_params.version = 1;
@@ -974,7 +974,7 @@ int main(int argc, char** argv)
       case OPTION_TILING_METHOD:
         tiling_method = optarg;
         if (tiling_method != "grid"
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
             && tiling_method != "tili" && tiling_method != "unci"
 #endif
           ) {
@@ -1393,7 +1393,7 @@ int main(int argc, char** argv)
     heif_image_handle_release(primary_image_handle);
   }
 
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
   if (add_pyramid_group && encoded_image_ids.size() > 1) {
     error = heif_context_add_pyramid_entity_group(context.get(), encoded_image_ids.data(), encoded_image_ids.size(), nullptr);
     if (error.code) {

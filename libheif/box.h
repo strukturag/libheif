@@ -1580,7 +1580,7 @@ private:
 };
 
 
-#if ENABLE_EXPERIMENTAL_FEATURES
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
 class Box_taic : public FullBox
 {
 public:

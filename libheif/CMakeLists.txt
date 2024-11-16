@@ -136,7 +136,7 @@ if (ENABLE_EXPERIMENTAL_FEATURES)
 
     list(APPEND libheif_headers api/libheif/heif_experimental.h)
 
-    target_compile_definitions(heif PUBLIC ENABLE_EXPERIMENTAL_FEATURES)
+    target_compile_definitions(heif PUBLIC HEIF_ENABLE_EXPERIMENTAL_FEATURES)
 endif()
 
 # Needed to find libheif/heif_version.h while compiling the library
