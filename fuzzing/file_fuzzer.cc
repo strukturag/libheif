@@ -51,7 +51,11 @@ static void TestDecodeImage(struct heif_context* ctx,
     heif_image_handle_get_metadata_type(handle, metadata_ids[i]);
     heif_image_handle_get_metadata_content_type(handle, metadata_ids[i]);
     size_t metadata_size = heif_image_handle_get_metadata_size(handle, metadata_ids[i]);
-    assert(metadata_size < filesize);
+
+    // This assertion is invalid. Metadata can in fact be larger than the file if there are several
+    // overlapping iloc extents. Does not make much sense, but it is technically valid.
+    //assert(metadata_size < filesize);
+
     uint8_t* metadata_data = static_cast<uint8_t*>(malloc(metadata_size));
     assert(metadata_data);
     heif_image_handle_get_metadata(handle, metadata_ids[i], metadata_data);
