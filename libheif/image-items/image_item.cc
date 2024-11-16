@@ -604,26 +604,26 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
 
   std::shared_ptr<HeifPixelImage> output_image;
 
-  if (colorspace != image->get_colorspace() ||
-      chroma != image->get_chroma_format() ||
-      !nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), output_nclx_profile)) {
-    // @TODO: use color profile when converting
-    int output_bpp = 0; // same as input
-
-    //auto target_nclx = std::make_shared<color_profile_nclx>();
-    //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
-
-    output_image = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                      output_bpp, options.color_conversion_options);
-    if (!output_image) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
-    }
-  }
-  else {
-    output_image = image;
+  if (colorspace == image->get_colorspace() &&
+      chroma == image->get_chroma_format() &&
+      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), output_nclx_profile)) {
+    return image;
   }
 
-  return output_image;
+
+  // @TODO: use color profile when converting
+  int output_bpp = 0; // same as input
+
+  //auto target_nclx = std::make_shared<color_profile_nclx>();
+  //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
+
+  auto output_image_result = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
+                                                output_bpp, options.color_conversion_options);
+  if (output_image_result.error) {
+    return output_image_result.error;
+  }
+
+  return *output_image_result;
 }
 
 

@@ -75,7 +75,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::state_after_conversion(const ColorState&
 
 
 template<class Pixel>
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                            const ColorState& input_state,
                                                            const ColorState& target_state,
@@ -98,14 +98,14 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
     if (bpp_y > 8 ||
         bpp_cb > 8 ||
         bpp_cr > 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
   else {
     if (bpp_y <= 8 ||
         bpp_cb <= 8 ||
         bpp_cr <= 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
 
@@ -113,7 +113,7 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   if (bpp_y != bpp_cb ||
       bpp_y != bpp_cr) {
     // TODO: test with varying bit depths when we have a test image
-    return nullptr;
+    return Error::InternalError;
   }
 
 
@@ -129,15 +129,15 @@ Op_YCbCr444_to_YCbCr420_average<Pixel>::convert_colorspace(const std::shared_ptr
   uint32_t cwidth = (width + 1) / 2;
   uint32_t cheight = (height + 1) / 2;
 
-  if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
-      !outimg->add_plane(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
-      !outimg->add_plane(heif_channel_Cr, cwidth, cheight, bpp_cr)) {
-    return nullptr;
+  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, bpp_y) ||
+                 outimg->add_plane2(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
+                 outimg->add_plane2(heif_channel_Cr, cwidth, cheight, bpp_cr)) {
+    return err;
   }
 
   if (has_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, bpp_a)) {
-      return nullptr;
+    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, bpp_a)) {
+      return err;
     }
   }
 
@@ -293,7 +293,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::state_after_conversion(const ColorState&
 
 
 template<class Pixel>
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                            const ColorState& input_state,
                                                            const ColorState& target_state,
@@ -316,14 +316,14 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
     if (bpp_y > 8 ||
         bpp_cb > 8 ||
         bpp_cr > 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
   else {
     if (bpp_y <= 8 ||
         bpp_cb <= 8 ||
         bpp_cr <= 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
 
@@ -331,7 +331,7 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   if (bpp_y != bpp_cb ||
       bpp_y != bpp_cr) {
     // TODO: test with varying bit depths when we have a test image
-    return nullptr;
+    return Error::InternalError;
   }
 
 
@@ -347,15 +347,15 @@ Op_YCbCr444_to_YCbCr422_average<Pixel>::convert_colorspace(const std::shared_ptr
   uint32_t cwidth = (width + 1) / 2;
   uint32_t cheight = height;
 
-  if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
-      !outimg->add_plane(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
-      !outimg->add_plane(heif_channel_Cr, cwidth, cheight, bpp_cr)) {
-    return nullptr;
+  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, bpp_y) ||
+                 outimg->add_plane2(heif_channel_Cb, cwidth, cheight, bpp_cb) ||
+                 outimg->add_plane2(heif_channel_Cr, cwidth, cheight, bpp_cr)) {
+    return err;
   }
 
   if (has_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, bpp_a)) {
-      return nullptr;
+    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, bpp_a)) {
+      return err;
     }
   }
 
@@ -487,7 +487,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
 
 template<class Pixel>
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                             const ColorState& input_state,
                                                             const ColorState& target_state,
@@ -510,14 +510,14 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     if (bpp_y > 8 ||
         bpp_cb > 8 ||
         bpp_cr > 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
   else {
     if (bpp_y <= 8 ||
         bpp_cb <= 8 ||
         bpp_cr <= 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
 
@@ -525,7 +525,7 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   if (bpp_y != bpp_cb ||
       bpp_y != bpp_cr) {
     // TODO: test with varying bit depths when we have a test image
-    return nullptr;
+    return Error::InternalError;
   }
 
 
@@ -538,15 +538,15 @@ Op_YCbCr420_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
 
-  if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
-      !outimg->add_plane(heif_channel_Cb, width, height, bpp_cb) ||
-      !outimg->add_plane(heif_channel_Cr, width, height, bpp_cr)) {
-    return nullptr;
+  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, bpp_y) ||
+                 outimg->add_plane2(heif_channel_Cb, width, height, bpp_cb) ||
+                 outimg->add_plane2(heif_channel_Cr, width, height, bpp_cr)) {
+    return err;
   }
 
   if (has_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, bpp_a)) {
-      return nullptr;
+    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, bpp_a)) {
+      return err;
     }
   }
 
@@ -764,7 +764,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::state_after_conversion(const ColorState
 
 
 template<class Pixel>
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                                             const ColorState& input_state,
                                                             const ColorState& target_state,
@@ -787,14 +787,14 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
     if (bpp_y > 8 ||
         bpp_cb > 8 ||
         bpp_cr > 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
   else {
     if (bpp_y <= 8 ||
         bpp_cb <= 8 ||
         bpp_cr <= 8) {
-      return nullptr;
+      return Error::InternalError;
     }
   }
 
@@ -802,7 +802,7 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
   if (bpp_y != bpp_cb ||
       bpp_y != bpp_cr) {
     // TODO: test with varying bit depths when we have a test image
-    return nullptr;
+    return Error::InternalError;
   }
 
 
@@ -815,15 +815,15 @@ Op_YCbCr422_bilinear_to_YCbCr444<Pixel>::convert_colorspace(const std::shared_pt
 
   outimg->create(width, height, heif_colorspace_YCbCr, heif_chroma_444);
 
-  if (!outimg->add_plane(heif_channel_Y, width, height, bpp_y) ||
-      !outimg->add_plane(heif_channel_Cb, width, height, bpp_cb) ||
-      !outimg->add_plane(heif_channel_Cr, width, height, bpp_cr)) {
-    return nullptr;
+  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, bpp_y) ||
+                 outimg->add_plane2(heif_channel_Cb, width, height, bpp_cb) ||
+                 outimg->add_plane2(heif_channel_Cr, width, height, bpp_cr)) {
+    return err;
   }
 
   if (has_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, bpp_a)) {
-      return nullptr;
+    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, bpp_a)) {
+      return err;
     }
   }
 

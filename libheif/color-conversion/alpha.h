@@ -34,7 +34,7 @@ public:
                          const ColorState& target_state,
                          const heif_color_conversion_options& options) const override;
 
-  std::shared_ptr<HeifPixelImage>
+  Result<std::shared_ptr<HeifPixelImage>>
   convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                      const ColorState& input_state,
                      const ColorState& target_state,

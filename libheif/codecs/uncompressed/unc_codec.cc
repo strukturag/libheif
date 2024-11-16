@@ -465,10 +465,14 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
       }
 
       if ((channel == heif_channel_Cb) || (channel == heif_channel_Cr)) {
-        img->add_plane(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth);
+        if (auto err = img->add_plane2(channel, (width / chroma_h_subsampling(chroma)), (height / chroma_v_subsampling(chroma)), component.component_bit_depth)) {
+          return err;
+        }
       }
       else {
-        img->add_plane(channel, width, height, component.component_bit_depth);
+        if (auto err = img->add_plane2(channel, width, height, component.component_bit_depth)) {
+          return err;
+        }
       }
     }
   }

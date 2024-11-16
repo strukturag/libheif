@@ -121,7 +121,7 @@ Op_Any_RGB_to_YCbCr_420_Sharp::state_after_conversion(
 #endif
 }
 
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     const std::shared_ptr<const HeifPixelImage>& input,
     const ColorState& input_state,
@@ -154,15 +154,15 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
   bool want_alpha = target_state.has_alpha;
 
   int output_bits = target_state.bits_per_pixel;
-  if (!outimg->add_plane(heif_channel_Y, width, height, output_bits) ||
-      !outimg->add_plane(heif_channel_Cb, chroma_width, chroma_height, output_bits) ||
-      !outimg->add_plane(heif_channel_Cr, chroma_width, chroma_height, output_bits)) {
-    return nullptr;
+  if (auto err = outimg->add_plane2(heif_channel_Y, width, height, output_bits) ||
+                 outimg->add_plane2(heif_channel_Cb, chroma_width, chroma_height, output_bits) ||
+                 outimg->add_plane2(heif_channel_Cr, chroma_width, chroma_height, output_bits)) {
+    return err;
   }
 
   if (want_alpha) {
-    if (!outimg->add_plane(heif_channel_Alpha, width, height, output_bits)) {
-      return nullptr;
+    if (auto err = outimg->add_plane2(heif_channel_Alpha, width, height, output_bits)) {
+      return err;
     }
   }
 
@@ -186,14 +186,14 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
     in_b = input->get_plane(heif_channel_B, &in_b_stride);
     // The stride must be the same for all channels.
     if (in_r_stride != in_g_stride || in_r_stride != in_b_stride) {
-      return nullptr;
+      return Error::InternalError;
     }
     in_stride = in_r_stride;
     // Bpp must also be the same.
     input_bits = input->get_bits_per_pixel(heif_channel_R);
     if (input_bits != input->get_bits_per_pixel(heif_channel_G) ||
         input_bits != input->get_bits_per_pixel(heif_channel_B)) {
-      return nullptr;
+      return Error::InternalError;
     }
     if (has_alpha) {
       in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
@@ -237,7 +237,9 @@ Op_Any_RGB_to_YCbCr_420_Sharp::convert_colorspace(
                       out_cr, out_cr_stride, output_bits,
                       input->get_width(), input->get_height(), &yuv_matrix);
   if (!sharpyuv_ok) {
-    return nullptr;
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_color_conversion,
+                 "SharpYuv color convertion failed"};
   }
 
   if (want_alpha) {

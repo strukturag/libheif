@@ -453,7 +453,10 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
 
     if (!inout_image) {
       auto grid_image = std::make_shared<HeifPixelImage>();
-      grid_image->create_clone_image_at_new_size(tile_img, w, h);
+      auto err = grid_image->create_clone_image_at_new_size2(tile_img, w, h);
+      if (err) {
+        return err;
+      }
 
       // Fill alpha plane with opaque in case not all tiles have alpha planes
 

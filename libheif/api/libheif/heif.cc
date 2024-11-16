@@ -1806,11 +1806,8 @@ int heif_image_has_channel(const struct heif_image* img, enum heif_channel chann
 struct heif_error heif_image_add_plane(struct heif_image* image,
                                        heif_channel channel, int width, int height, int bit_depth)
 {
-  if (!image->image->add_plane(channel, width, height, bit_depth)) {
-    struct heif_error err = {heif_error_Memory_allocation_error,
-                             heif_suberror_Unspecified,
-                             "Cannot allocate memory for image plane"};
-    return err;
+  if (auto err = image->image->add_plane2(channel, width, height, bit_depth)) {
+    return err.error_struct(image->image.get());
   }
   else {
     return heif_error_success;
@@ -1997,11 +1994,9 @@ int heif_image_is_premultiplied_alpha(struct heif_image* image)
 
 struct heif_error heif_image_extend_padding_to_size(struct heif_image* image, int min_physical_width, int min_physical_height)
 {
-  bool mem_alloc_success = image->image->extend_padding_to_size(min_physical_width, min_physical_height);
-  if (!mem_alloc_success) {
-    return heif_error{heif_error_Memory_allocation_error,
-                      heif_suberror_Unspecified,
-                      "Cannot allocate image memory."};
+  Error err = image->image->extend_padding_to_size2(min_physical_width, min_physical_height);
+  if (err) {
+    return err.error_struct(image->image.get());
   }
   else {
     return heif_error_success;
@@ -2031,11 +2026,9 @@ struct heif_error heif_image_scale_image(const struct heif_image* input,
 struct heif_error heif_image_extend_to_size_fill_with_zero(struct heif_image* image,
                                                            uint32_t width, uint32_t height)
 {
-  bool success = image->image->extend_to_size_with_zero(width, height);
-  if (!success) {
-    return heif_error{heif_error_Memory_allocation_error,
-                      heif_suberror_Unspecified,
-                      "Not enough memory to extend image size."};
+  Error err = image->image->extend_to_size_with_zero2(width, height);
+  if (err) {
+    return err.error_struct(image->image.get());
   }
 
   return heif_error_ok;

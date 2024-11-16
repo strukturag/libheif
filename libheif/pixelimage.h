@@ -81,9 +81,9 @@ public:
 
   void create(uint32_t width, uint32_t height, heif_colorspace colorspace, heif_chroma chroma);
 
-  void create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h);
+  Error create_clone_image_at_new_size2(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h);
 
-  bool add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth);
+  Error add_plane2(heif_channel channel, uint32_t width, uint32_t height, int bit_depth);
 
   bool add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth);
 
@@ -156,11 +156,11 @@ public:
                            heif_channel src_channel,
                            heif_channel dst_channel);
 
-  void extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& srcimage);
+  Error extract_alpha_from_RGBA2(const std::shared_ptr<const HeifPixelImage>& srcimage);
 
   void fill_plane(heif_channel dst_channel, uint16_t value);
 
-  void fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
+  Error fill_new_plane2(heif_channel dst_channel, uint16_t value, int width, int height, int bpp);
 
   void transfer_plane_from_image_as(const std::shared_ptr<HeifPixelImage>& source,
                                     heif_channel src_channel,
@@ -190,9 +190,9 @@ public:
 
   void debug_dump() const;
 
-  bool extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size = false);
+  Error extend_padding_to_size2(uint32_t width, uint32_t height, bool adjust_size = false);
 
-  bool extend_to_size_with_zero(uint32_t width, uint32_t height);
+  Error extend_to_size_with_zero2(uint32_t width, uint32_t height);
 
   // --- pixel aspect ratio
 
@@ -243,7 +243,7 @@ public:
 private:
   struct ImagePlane
   {
-    bool alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
+    Error alloc2(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth, int num_interleaved_components);
 
     heif_channel_datatype m_datatype = heif_channel_datatype_unsigned_integer;
     uint8_t m_bit_depth = 0;

@@ -50,7 +50,7 @@ Op_to_hdr_planes::state_after_conversion(const ColorState& input_state,
 }
 
 
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                      const ColorState& input_state,
                                      const ColorState& target_state,
@@ -73,8 +73,8 @@ Op_to_hdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
     if (input->has_channel(channel)) {
       uint32_t width = input->get_width(channel);
       uint32_t height = input->get_height(channel);
-      if (!outimg->add_plane(channel, width, height, target_state.bits_per_pixel)) {
-        return nullptr;
+      if (auto err = outimg->add_plane2(channel, width, height, target_state.bits_per_pixel)) {
+        return err;
       }
 
       int input_bits = input->get_bits_per_pixel(channel);
@@ -137,7 +137,7 @@ Op_to_sdr_planes::state_after_conversion(const ColorState& input_state,
 }
 
 
-std::shared_ptr<HeifPixelImage>
+Result<std::shared_ptr<HeifPixelImage>>
 Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>& input,
                                      const ColorState& input_state,
                                      const ColorState& target_state,
@@ -164,8 +164,8 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       if (input_bits > 8) {
         uint32_t width = input->get_width(channel);
         uint32_t height = input->get_height(channel);
-        if (!outimg->add_plane(channel, width, height, 8)) {
-          return nullptr;
+        if (auto err = outimg->add_plane2(channel, width, height, 8)) {
+          return err;
         }
 
         int shift = input_bits - 8;
@@ -187,8 +187,8 @@ Op_to_sdr_planes::convert_colorspace(const std::shared_ptr<const HeifPixelImage>
       } else if (input_bits < 8) {
         uint32_t width = input->get_width(channel);
         uint32_t height = input->get_height(channel);
-        if (!outimg->add_plane(channel, width, height, 8)) {
-          return nullptr;
+        if (auto err = outimg->add_plane2(channel, width, height, 8)) {
+          return err;
         }
 
         // We also want to support converting inputs with < 4 bits per pixel covering the whole output range.

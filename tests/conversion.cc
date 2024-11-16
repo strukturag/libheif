@@ -237,8 +237,11 @@ bool MakeTestImage(const ColorState& state, int width, int height,
     int half_max = (1 << (plane.bit_depth -1));
     uint16_t value = SwapBytesIfNeeded(
         static_cast<uint16_t>(half_max + i * 10 + i), state.chroma);
-    image->fill_new_plane(plane.channel, value, plane.width, plane.height,
-                          plane.bit_depth);
+    auto err = image->fill_new_plane2(plane.channel, value, plane.width, plane.height,
+                                      plane.bit_depth);
+    if (err) {
+      return false;
+    }
   }
   return true;
 }
@@ -288,8 +291,9 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   int height = 8;
   REQUIRE(MakeTestImage(input_state, width, height, in_image.get()));
 
-  std::shared_ptr<HeifPixelImage> out_image;
-  out_image = pipeline.convert_image(in_image);
+  auto out_image_result = pipeline.convert_image(in_image);
+  REQUIRE(out_image_result);
+  std::shared_ptr<HeifPixelImage> out_image = *out_image_result;
 
   REQUIRE(out_image != nullptr);
   CHECK(out_image->get_colorspace() == target_state.colorspace);
@@ -315,9 +319,9 @@ void TestConversion(const std::string& test_name, const ColorState& input_state,
   ColorConversionPipeline reverse_pipeline;
   if (reverse_pipeline.construct_pipeline(target_state, input_state, options)) {
     INFO("reverse pipeline: " << reverse_pipeline.debug_dump_pipeline());
-    std::shared_ptr<HeifPixelImage> recovered_image =
-        reverse_pipeline.convert_image(out_image);
-    REQUIRE(recovered_image != nullptr);
+    auto recovered_image_result =reverse_pipeline.convert_image(out_image);
+    REQUIRE(recovered_image_result);
+    std::shared_ptr<HeifPixelImage> recovered_image = *recovered_image_result;
     // If the alpha plane was lost in the target state, it should come back
     // as the max value for the given bpp, i.e. (1<<bpp)-1
     bool expect_alpha_max = !target_state.has_alpha;
@@ -605,7 +609,8 @@ TEST_CASE("Sharp yuv conversion", "[heif_image]") {
 
 static void fill_plane(std::shared_ptr<HeifPixelImage>& img, heif_channel channel, int w, int h, const std::vector<uint8_t>& pixels)
 {
-  img->add_plane(channel, w, h, 8);
+  auto error = img->add_plane2(channel, w, h, 8);
+  REQUIRE(!error);
 
   uint32_t stride;
   uint8_t* p = img->get_plane(channel, &stride);
@@ -646,7 +651,9 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
   std::shared_ptr<HeifPixelImage> img = std::make_shared<HeifPixelImage>();
   img->create(4, 4, heif_colorspace_YCbCr, heif_chroma_420);
 
-  img->fill_new_plane(heif_channel_Y, 128, 4,4, 8);
+  auto error = img->fill_new_plane2(heif_channel_Y, 128, 4,4, 8);
+  REQUIRE(!error);
+
   fill_plane(img, heif_channel_Cb, 2,2,
              {10, 40,
               100, 240});
@@ -654,7 +661,9 @@ TEST_CASE("Bilinear upsampling", "[heif_image]")
              {255, 200,
               50, 0});
 
-  std::shared_ptr<HeifPixelImage> out = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444, nullptr, 8, options);
+  auto conversionResult = convert_colorspace(img, heif_colorspace_YCbCr, heif_chroma_444, nullptr, 8, options);
+  REQUIRE(conversionResult);
+  std::shared_ptr<HeifPixelImage> out = *conversionResult;
 
   assert_plane(out, heif_channel_Cb,
                {
@@ -682,11 +691,15 @@ TEST_CASE("RGB 5-6-5 to RGB")
   const uint32_t width = 3;
   const uint32_t height = 2;
   img->create(width, height, heif_colorspace_RGB, heif_chroma_444);
-  img->add_plane(heif_channel_R, width, height, 5);
+  Error err;
+  err = img->add_plane2(heif_channel_R, width, height, 5);
+  REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_R) == 5);
-  img->add_plane(heif_channel_G, width, height, 6);
+  err = img->add_plane2(heif_channel_G, width, height, 6);
+  REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_G) == 6);
-  img->add_plane(heif_channel_B, width, height, 5);
+  err = img->add_plane2(heif_channel_B, width, height, 5);
+  REQUIRE(!err);
   REQUIRE(img->get_bits_per_pixel(heif_channel_B) == 5);
 
   uint8_t v = 1;
@@ -701,7 +714,9 @@ TEST_CASE("RGB 5-6-5 to RGB")
     }
   }
 
-  std::shared_ptr<HeifPixelImage> out = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options);
+  auto conversionResult = convert_colorspace(img, heif_colorspace_RGB, heif_chroma_444, nullptr, 8, options);
+  REQUIRE(conversionResult);
+  std::shared_ptr<HeifPixelImage> out = *conversionResult;
 
   assert_plane(out, heif_channel_R, {8, 16, 24, 33, 41, 49});
   assert_plane(out, heif_channel_G, {28, 32, 36, 40, 44, 48});

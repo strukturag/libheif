@@ -297,9 +297,15 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
   img->create(w, h,
               heif_colorspace_RGB,
               heif_chroma_444);
-  img->add_plane(heif_channel_R, w, h, 8); // TODO: other bit depths
-  img->add_plane(heif_channel_G, w, h, 8); // TODO: other bit depths
-  img->add_plane(heif_channel_B, w, h, 8); // TODO: other bit depths
+  if (auto error = img->add_plane2(heif_channel_R, w, h, 8)) { // TODO: other bit depths
+    return error;
+  }
+  if (auto error = img->add_plane2(heif_channel_G, w, h, 8)) { // TODO: other bit depths
+    return error;
+  }
+  if (auto error = img->add_plane2(heif_channel_B, w, h, 8)) { // TODO: other bit depths
+    return error;
+  }
 
   uint16_t bkg_color[4];
   m_overlay_spec.get_background_color(bkg_color);
@@ -339,9 +345,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_Overlay::decode_overlay_image(
 
     if (overlay_img->get_colorspace() != heif_colorspace_RGB ||
         overlay_img->get_chroma_format() != heif_chroma_444) {
-      overlay_img = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options);
-      if (!overlay_img) {
-        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+      auto overlay_img_result = convert_colorspace(overlay_img, heif_colorspace_RGB, heif_chroma_444, nullptr, 0, options.color_conversion_options);
+      if (overlay_img_result.error) {
+        return overlay_img_result.error;
+      }
+      else {
+        overlay_img = *overlay_img_result;
       }
     }
 

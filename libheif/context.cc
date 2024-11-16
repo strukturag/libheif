@@ -1087,9 +1087,12 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   // TODO: check BPP changed
   if (different_chroma || different_colorspace) {
 
-    img = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options);
-    if (!img) {
-      return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_color_conversion);
+    auto img_result = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options);
+    if (img_result.error) {
+      return img_result.error;
+    }
+    else {
+      img = *img_result;
     }
   }
 
@@ -1099,7 +1102,7 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 }
 
 
-static std::shared_ptr<HeifPixelImage>
+static Result<std::shared_ptr<HeifPixelImage>>
 create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage>& image)
 {
   // --- generate alpha image
@@ -1112,7 +1115,9 @@ create_alpha_image_from_image_alpha_channel(const std::shared_ptr<HeifPixelImage
     alpha_image->copy_new_plane_from(image, heif_channel_Alpha, heif_channel_Y);
   }
   else if (image->get_chroma_format() == heif_chroma_interleaved_RGBA) {
-    alpha_image->extract_alpha_from_RGBA(image);
+    if (auto err = alpha_image->extract_alpha_from_RGBA2(image)) {
+      return err;
+    }
   }
   // TODO: 16 bit
 
@@ -1195,7 +1200,12 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
     // TODO: can we directly code a monochrome image instead of the dummy color channels?
 
     std::shared_ptr<HeifPixelImage> alpha_image;
-    alpha_image = create_alpha_image_from_image_alpha_channel(colorConvertedImage);
+    auto alpha_image_result = create_alpha_image_from_image_alpha_channel(colorConvertedImage);
+    if (!alpha_image_result) {
+      return alpha_image_result.error;
+    }
+
+    alpha_image = *alpha_image_result;
 
 
     // --- encode the alpha image

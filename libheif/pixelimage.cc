@@ -189,7 +189,7 @@ static uint32_t rounded_size(uint32_t s)
   return s;
 }
 
-bool HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t height, int bit_depth)
+Error HeifPixelImage::add_plane2(heif_channel channel, uint32_t width, uint32_t height, int bit_depth)
 {
   assert(!has_channel(channel));
 
@@ -206,12 +206,12 @@ bool HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t he
     bit_depth = 8;
   }
 
-  if (plane.alloc(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels)) {
-    m_planes.insert(std::make_pair(channel, plane));
-    return true;
+  if (auto err = plane.alloc2(width, height, heif_channel_datatype_unsigned_integer, bit_depth, num_interleaved_pixels)) {
+    return err;
   }
   else {
-    return false;
+    m_planes.insert(std::make_pair(channel, plane));
+    return Error::Ok;
   }
 }
 
@@ -219,18 +219,18 @@ bool HeifPixelImage::add_plane(heif_channel channel, uint32_t width, uint32_t he
 bool HeifPixelImage::add_channel(heif_channel channel, uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth)
 {
   ImagePlane plane;
-  if (plane.alloc(width, height, datatype, bit_depth, 1)) {
-    m_planes.insert(std::make_pair(channel, plane));
-    return true;
+  if (Error err = plane.alloc2(width, height, datatype, bit_depth, 1)) {
+    return err;
   }
   else {
-    return false;
+    m_planes.insert(std::make_pair(channel, plane));
+    return Error::Ok;
   }
 }
 
 
-bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
-                                       int num_interleaved_components) // heif_chroma chroma)
+Error HeifPixelImage::ImagePlane::alloc2(uint32_t width, uint32_t height, heif_channel_datatype datatype, int bit_depth,
+                                         int num_interleaved_components) // heif_chroma chroma)
 {
   assert(bit_depth >= 1);
   assert(bit_depth <= 128);
@@ -257,8 +257,14 @@ bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_cha
   stride = m_mem_width * bytes_per_pixel;
   stride = (stride + alignment - 1U) & ~(alignment - 1U);
 
-  if ((heif_get_global_security_limits()->max_memory_block_size - (alignment + 1)) / stride < m_mem_height) {
-    return false;
+  if ((heif_get_global_security_limits()->max_memory_block_size - (alignment - 1)) / stride < m_mem_height) {
+    std::stringstream sstr;
+    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " exceeds the security limit of "
+         << heif_get_global_security_limits()->max_memory_block_size << " bytes";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
   }
 
   try {
@@ -275,15 +281,20 @@ bool HeifPixelImage::ImagePlane::alloc(uint32_t width, uint32_t height, heif_cha
 
     mem = mem_8;
 
-    return true;
+    return Error::Ok;
   }
   catch (const std::bad_alloc& excpt) {
-    return false;
+    std::stringstream sstr;
+    sstr << "Allocating " << static_cast<size_t>(m_mem_height) * stride + alignment - 1 << " bytes failed";
+
+    return {heif_error_Memory_allocation_error,
+            heif_suberror_Unspecified,
+            sstr.str()};
   }
 }
 
 
-bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size)
+Error HeifPixelImage::extend_padding_to_size2(uint32_t width, uint32_t height, bool adjust_size)
 {
   for (auto& planeIter : m_planes) {
     auto* plane = &planeIter.second;
@@ -301,8 +312,8 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, boo
         plane->m_mem_height < subsampled_height) {
 
       ImagePlane newPlane;
-      if (!newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
-        return false;
+      if (auto err = newPlane.alloc2(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
+        return err;
       }
 
       // copy the visible part of the old plane into the new plane
@@ -349,11 +360,11 @@ bool HeifPixelImage::extend_padding_to_size(uint32_t width, uint32_t height, boo
     m_height = height;
   }
 
-  return true;
+  return Error::Ok;
 }
 
 
-bool HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height)
+Error HeifPixelImage::extend_to_size_with_zero2(uint32_t width, uint32_t height)
 {
   for (auto& planeIter : m_planes) {
     auto* plane = &planeIter.second;
@@ -371,8 +382,8 @@ bool HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height)
         plane->m_mem_height < subsampled_height) {
 
       ImagePlane newPlane;
-      if (!newPlane.alloc(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
-        return false;
+      if (auto err = newPlane.alloc2(subsampled_width, subsampled_height, plane->m_datatype, plane->m_bit_depth, num_interleaved_pixels_per_plane(m_chroma))) {
+        return err;
       }
 
       // copy the visible part of the old plane into the new plane
@@ -413,7 +424,7 @@ bool HeifPixelImage::extend_to_size_with_zero(uint32_t width, uint32_t height)
   m_width = width;
   m_height = height;
 
-  return true;
+  return Error::Ok;
 }
 
 bool HeifPixelImage::has_channel(heif_channel channel) const
@@ -560,12 +571,14 @@ void HeifPixelImage::copy_new_plane_from(const std::shared_ptr<const HeifPixelIm
 }
 
 
-void HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPixelImage>& src_image)
+Error HeifPixelImage::extract_alpha_from_RGBA2(const std::shared_ptr<const HeifPixelImage>& src_image)
 {
   uint32_t width = src_image->get_width();
   uint32_t height = src_image->get_height();
 
-  add_plane(heif_channel_Y, width, height, src_image->get_bits_per_pixel(heif_channel_interleaved));
+  if (Error err = add_plane2(heif_channel_Y, width, height, src_image->get_bits_per_pixel(heif_channel_interleaved))) {
+    return err;
+  }
 
   uint8_t* dst;
   uint32_t dst_stride = 0;
@@ -583,13 +596,20 @@ void HeifPixelImage::extract_alpha_from_RGBA(const std::shared_ptr<const HeifPix
       dst[y * dst_stride + x] = src[y * src_stride + 4 * x + 3];
     }
   }
+
+  return Error::Ok;
 }
 
 
-void HeifPixelImage::fill_new_plane(heif_channel dst_channel, uint16_t value, int width, int height, int bpp)
+Error HeifPixelImage::fill_new_plane2(heif_channel dst_channel, uint16_t value, int width, int height, int bpp)
 {
-  add_plane(dst_channel, width, height, bpp);
+  if (Error err = add_plane2(dst_channel, width, height, bpp)) {
+    return err;
+  }
+
   fill_plane(dst_channel, value);
+
+  return Error::Ok;
 }
 
 
@@ -744,8 +764,12 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::rotate_ccw(int angle_deg
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
-    return converted_image->rotate_ccw(angle_degrees);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    if (converted_image_result.error) {
+      return converted_image_result.error;
+    }
+
+    return (*converted_image_result)->rotate_ccw(angle_degrees);
   }
 
 
@@ -892,8 +916,12 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::mirror_inplace(heif_tran
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
-    return converted_image->mirror_inplace(direction);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    if (converted_image_result.error) {
+      return converted_image_result.error;
+    }
+
+    return (*converted_image_result)->mirror_inplace(direction);
   }
 
 
@@ -967,8 +995,12 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_color_conversion_options options{};
     heif_color_conversion_options_set_defaults(&options);
 
-    auto converted_image = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
-    return converted_image->crop(left, right, top, bottom);
+    auto converted_image_result = convert_colorspace(shared_from_this(), heif_colorspace_YCbCr, heif_chroma_444, nullptr, get_bits_per_pixel(heif_channel_Y), options);
+    if (converted_image_result.error) {
+      return converted_image_result.error;
+    }
+
+    return (*converted_image_result)->crop(left, right, top, bottom);
   }
 
 
@@ -1250,7 +1282,9 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
   // --- create output image with scaled planes
 
   if (has_channel(heif_channel_interleaved)) {
-    out_img->add_plane(heif_channel_interleaved, width, height, get_bits_per_pixel(heif_channel_interleaved));
+    if (auto err = out_img->add_plane2(heif_channel_interleaved, width, height, get_bits_per_pixel(heif_channel_interleaved))) {
+      return err;
+    }
   }
   else {
     if (get_colorspace() == heif_colorspace_RGB) {
@@ -1260,16 +1294,24 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "RGB input without R,G,B, planes"};
       }
 
-      out_img->add_plane(heif_channel_R, width, height, get_bits_per_pixel(heif_channel_R));
-      out_img->add_plane(heif_channel_G, width, height, get_bits_per_pixel(heif_channel_G));
-      out_img->add_plane(heif_channel_B, width, height, get_bits_per_pixel(heif_channel_B));
+      if (auto err = out_img->add_plane2(heif_channel_R, width, height, get_bits_per_pixel(heif_channel_R))) {
+        return err;
+      }
+      if (auto err = out_img->add_plane2(heif_channel_G, width, height, get_bits_per_pixel(heif_channel_G))) {
+        return err;
+      }
+      if (auto err = out_img->add_plane2(heif_channel_B, width, height, get_bits_per_pixel(heif_channel_B))) {
+        return err;
+      }
     }
     else if (get_colorspace() == heif_colorspace_monochrome) {
       if (!has_channel(heif_channel_Y)) {
         return {heif_error_Invalid_input, heif_suberror_Unspecified, "monochrome input with no Y plane"};
       }
 
-      out_img->add_plane(heif_channel_Y, width, height, get_bits_per_pixel(heif_channel_Y));
+      if (auto err = out_img->add_plane2(heif_channel_Y, width, height, get_bits_per_pixel(heif_channel_Y))) {
+        return err;
+      }
     }
     else if (get_colorspace() == heif_colorspace_YCbCr) {
       if (!has_channel(heif_channel_Y) ||
@@ -1280,16 +1322,24 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 
       uint32_t cw, ch;
       get_subsampled_size(width, height, heif_channel_Cb, get_chroma_format(), &cw, &ch);
-      out_img->add_plane(heif_channel_Y, width, height, get_bits_per_pixel(heif_channel_Y));
-      out_img->add_plane(heif_channel_Cb, cw, ch, get_bits_per_pixel(heif_channel_Cb));
-      out_img->add_plane(heif_channel_Cr, cw, ch, get_bits_per_pixel(heif_channel_Cr));
+      if (auto err = out_img->add_plane2(heif_channel_Y, width, height, get_bits_per_pixel(heif_channel_Y))) {
+        return err;
+      }
+      if (auto err = out_img->add_plane2(heif_channel_Cb, cw, ch, get_bits_per_pixel(heif_channel_Cb))) {
+        return err;
+      }
+      if (auto err = out_img->add_plane2(heif_channel_Cr, cw, ch, get_bits_per_pixel(heif_channel_Cr))) {
+        return err;
+      }
     }
     else {
       return {heif_error_Invalid_input, heif_suberror_Unspecified, "unknown color configuration"};
     }
 
     if (has_channel(heif_channel_Alpha)) {
-      out_img->add_plane(heif_channel_Alpha, width, height, get_bits_per_pixel(heif_channel_Alpha));
+      if (auto err = out_img->add_plane2(heif_channel_Alpha, width, height, get_bits_per_pixel(heif_channel_Alpha))) {
+        return err;
+      }
     }
   }
 
@@ -1365,7 +1415,7 @@ void HeifPixelImage::debug_dump() const
   }
 }
 
-void HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h)
+Error HeifPixelImage::create_clone_image_at_new_size2(const std::shared_ptr<const HeifPixelImage>& source, uint32_t w, uint32_t h)
 {
   heif_colorspace colorspace = source->get_colorspace();
   heif_chroma chroma = source->get_chroma_format();
@@ -1374,17 +1424,31 @@ void HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const 
 
   switch (colorspace) {
     case heif_colorspace_monochrome:
-      add_plane(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y));
+      if (auto err = add_plane2(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y))) {
+        return err;
+      }
       break;
     case heif_colorspace_YCbCr:
-      add_plane(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y));
-      add_plane(heif_channel_Cb, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cb));
-      add_plane(heif_channel_Cr, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cr));
+      if (auto err = add_plane2(heif_channel_Y, w, h, source->get_bits_per_pixel(heif_channel_Y))) {
+        return err;
+      }
+      if (auto err = add_plane2(heif_channel_Cb, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cb))) {
+        return err;
+      }
+      if (auto err = add_plane2(heif_channel_Cr, chroma_width(w, chroma), chroma_height(h, chroma), source->get_bits_per_pixel(heif_channel_Cr))) {
+        return err;
+      }
       break;
     case heif_colorspace_RGB:
-      add_plane(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R));
-      add_plane(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G));
-      add_plane(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B));
+      if (auto err = add_plane2(heif_channel_R, w, h, source->get_bits_per_pixel(heif_channel_R))) {
+        return err;
+      }
+      if (auto err = add_plane2(heif_channel_G, w, h, source->get_bits_per_pixel(heif_channel_G))) {
+        return err;
+      }
+      if (auto err = add_plane2(heif_channel_B, w, h, source->get_bits_per_pixel(heif_channel_B))) {
+        return err;
+      }
       break;
     default:
       assert(false);
@@ -1392,6 +1456,10 @@ void HeifPixelImage::create_clone_image_at_new_size(const std::shared_ptr<const 
   }
 
   if (source->has_alpha()) {
-      add_plane(heif_channel_Alpha, w, h, source->get_bits_per_pixel(heif_channel_Alpha));
+      if (auto err = add_plane2(heif_channel_Alpha, w, h, source->get_bits_per_pixel(heif_channel_Alpha))) {
+        return err;
+      }
   }
+
+  return Error::Ok;
 }
