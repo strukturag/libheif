@@ -735,6 +735,9 @@ Result<std::shared_ptr<ImageItem_Grid>> ImageItem_Grid::add_and_encode_full_grid
     if (encodingResult.error) {
       return encodingResult.error;
     }
+    else {
+      out_tile = *encodingResult;
+    }
 
     heif_item_id tile_id = out_tile->get_id();
     file->get_infe_box(tile_id)->set_hidden_item(true); // only show the full grid
