@@ -124,6 +124,7 @@ std::string Box_av1C::dump(Indent& indent) const
        << indent << "seq_level_idx_0: " << ((int) c.seq_level_idx_0) << "\n"
        << indent << "high_bitdepth: " << ((int) c.high_bitdepth) << "\n"
        << indent << "twelve_bit: " << ((int) c.twelve_bit) << "\n"
+       << indent << "monochrome: " << ((int) c.monochrome) << "\n"
        << indent << "chroma_subsampling_x: " << ((int) c.chroma_subsampling_x) << "\n"
        << indent << "chroma_subsampling_y: " << ((int) c.chroma_subsampling_y) << "\n"
        << indent << "chroma_sample_position: " << ((int) c.chroma_sample_position) << "\n"

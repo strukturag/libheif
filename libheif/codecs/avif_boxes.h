@@ -68,7 +68,10 @@ public:
     //unsigned int (8)[] configOBUs;
 
     heif_chroma get_heif_chroma() const {
-      if (chroma_subsampling_x==1 && chroma_subsampling_y==1) {
+      if (monochrome) {
+        return heif_chroma_monochrome;
+      }
+      else if (chroma_subsampling_x==1 && chroma_subsampling_y==1) {
         return heif_chroma_420;
       }
       else if (chroma_subsampling_x==1 && chroma_subsampling_y==0) {
