@@ -135,7 +135,7 @@ void heif_item_get_property_transform_crop_borders(const struct heif_context* co
                                                    int* left, int* top, int* right, int* bottom);
 
 /**
- * @param context
+ * @param context     The heif_context for the file
  * @param itemId      The image item id to which this property belongs.
  * @param fourcc_type The short four-cc type of the property to add.
  * @param uuid_type   If fourcc_type=='uuid', this should point to a 16-byte UUID type. It is ignored otherwise and can be NULL.
@@ -160,7 +160,7 @@ struct heif_error heif_item_get_property_raw_size(const struct heif_context* con
                                                   size_t* out_size);
 
 /**
- * @param data_out User-supplied array to write the property data to. The required size of the output array is given by heif_item_get_property_raw_size().
+ * @param out_data User-supplied array to write the property data to. The required size of the output array is given by heif_item_get_property_raw_size().
 */
 LIBHEIF_API
 struct heif_error heif_item_get_property_raw_data(const struct heif_context* context,
@@ -177,8 +177,8 @@ struct heif_error heif_item_get_property_raw_data(const struct heif_context* con
  *
  * @param context the heif_context containing the HEIF file
  * @param itemId the image item id to which this property belongs.
- * @param propertyID the property index (1-based) to get the extended type for
- * @param extended_type output of the call, must be a pointer to at least 16-bytes.
+ * @param propertyId the property index (1-based) to get the extended type for
+ * @param out_extended_type output of the call, must be a pointer to at least 16-bytes.
  * @return heif_error_success or an error indicating the failure
  */
 LIBHEIF_API
