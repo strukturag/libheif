@@ -273,7 +273,7 @@ int main(int argc, char** argv)
     if (err.code) {
       std::cerr << "Error while trying to get image tiling information: " << err.message << "\n";
     }
-    else if (tiling.num_columns > 0) {
+    else if (tiling.num_columns != 1 || tiling.num_rows != 1) {
       std::cout << "  tiles: " << tiling.num_columns << "x" << tiling.num_rows
                 << ", tile size: " << tiling.tile_width << "x" << tiling.tile_height << "\n";
     }
