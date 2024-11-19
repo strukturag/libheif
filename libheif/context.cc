@@ -803,26 +803,19 @@ Error HeifContext::interpret_heif_file()
     // --- assign metadata to the image
 
     if (iref_box) {
-      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
-      for (const auto& ref : references) {
-        if (ref.header.get_short_type() == fourcc("cdsc")) {
-          std::vector<uint32_t> refs = ref.to_item_ID;
-
-          for(uint32_t ref: refs) {
-            uint32_t exif_image_id = ref;
-            auto img_iter = m_all_images.find(exif_image_id);
-            if (img_iter == m_all_images.end()) {
-              if (!m_heif_file->has_item_with_id(exif_image_id)) {
-                return Error(heif_error_Invalid_input,
-                             heif_suberror_Nonexisting_item_referenced,
-                             "Metadata assigned to non-existing image");
-              }
-
-              continue;
-            }
-            img_iter->second->add_metadata(metadata);
+      std::vector<heif_item_id> references = iref_box->get_references(id, fourcc("cdsc"));
+      for (heif_item_id exif_image_id : references) {
+        auto img_iter = m_all_images.find(exif_image_id);
+        if (img_iter == m_all_images.end()) {
+          if (!m_heif_file->has_item_with_id(exif_image_id)) {
+            return Error(heif_error_Invalid_input,
+                         heif_suberror_Nonexisting_item_referenced,
+                         "Metadata assigned to non-existing image");
           }
+
+          continue;
         }
+        img_iter->second->add_metadata(metadata);
       }
     }
   }
@@ -831,19 +824,19 @@ Error HeifContext::interpret_heif_file()
 
   for (heif_item_id id : image_IDs) {
     if (iref_box) {
-      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
-      for (const auto& ref : references) {
-        if (ref.header.get_short_type() == fourcc("prem")) {
-          uint32_t color_image_id = ref.from_item_ID;
-          auto img_iter = m_all_images.find(color_image_id);
-          if (img_iter == m_all_images.end()) {
-            return Error(heif_error_Invalid_input,
-                         heif_suberror_Nonexisting_item_referenced,
-                         "`prem` link assigned to non-existing image");
-          }
+      std::vector<heif_item_id> references = iref_box->get_references(id, fourcc("prem"));
+      for (heif_item_id ref : references) {
+        (void)ref;
 
-          img_iter->second->set_is_premultiplied_alpha(true);
+        heif_item_id color_image_id = id;
+        auto img_iter = m_all_images.find(color_image_id);
+        if (img_iter == m_all_images.end()) {
+          return Error(heif_error_Invalid_input,
+                       heif_suberror_Nonexisting_item_referenced,
+                       "`prem` link assigned to non-existing image");
         }
+
+        img_iter->second->set_is_premultiplied_alpha(true);
       }
     }
   }
