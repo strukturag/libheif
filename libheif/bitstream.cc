@@ -23,7 +23,12 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
+
+#if defined(GNUC) && GNUC < 9
+#include <type_traits>
+#else
 #include <bit>
+#endif
 
 #define MAX_UVLC_LEADING_ZEROS 20
 

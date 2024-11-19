@@ -23,7 +23,12 @@
 #include <iostream>
 #include <cassert>
 #include <utility>
+
+#if defined(GNUC) && GNUC < 9
+#include <type_traits>
+#else
 #include <bit>
+#endif
 
 #include "common_utils.h"
 #include "context.h"
