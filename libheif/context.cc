@@ -823,7 +823,17 @@ Error HeifContext::interpret_heif_file()
             img_iter->second->add_metadata(metadata);
           }
         }
-        else if (ref.header.get_short_type() == fourcc("prem")) {
+      }
+    }
+  }
+
+  // --- set premultiplied alpha flag
+
+  for (heif_item_id id : image_IDs) {
+    if (iref_box) {
+      std::vector<Box_iref::Reference> references = iref_box->get_references_from(id);
+      for (const auto& ref : references) {
+        if (ref.header.get_short_type() == fourcc("prem")) {
           uint32_t color_image_id = ref.from_item_ID;
           auto img_iter = m_all_images.find(color_image_id);
           if (img_iter == m_all_images.end()) {
@@ -832,7 +842,7 @@ Error HeifContext::interpret_heif_file()
                          "`prem` link assigned to non-existing image");
           }
 
-          img_iter->second->set_is_premultiplied_alpha(true);;
+          img_iter->second->set_is_premultiplied_alpha(true);
         }
       }
     }
