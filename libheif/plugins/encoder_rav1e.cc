@@ -81,7 +81,7 @@ static void rav1e_set_default_parameters(void* encoder);
 
 static const char* rav1e_plugin_name()
 {
-  strcpy(plugin_name, "Rav1e encoder");
+  snprintf(plugin_name, MAX_PLUGIN_NAME_LENGTH, "Rav1e encoder v%s", rav1e_version_short());
 
   return plugin_name;
 }
