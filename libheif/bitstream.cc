@@ -24,7 +24,7 @@
 #include <cstring>
 #include <cassert>
 
-#if defined(GNUC) && GNUC < 9
+#if (defined(__GNUC__) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
 #include <type_traits>
 #else
 #include <bit>
