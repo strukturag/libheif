@@ -776,7 +776,7 @@ heif_image_handle* encode_tiled(heif_context* ctx, heif_encoder* encoder, heif_e
     params.tile_height = tiling.tile_height;
     params.compression = unci_compression;
 
-    std::string input_filename = tile_generator.filename(0, 0);
+    std::string input_filename = tile_generator.filename(0, 0).string();
     InputImage prototype_image = load_image(input_filename, output_bit_depth);
 
     heif_error error = heif_context_add_unci_image(ctx, &params, options, prototype_image.image.get(), &tiled_image);
