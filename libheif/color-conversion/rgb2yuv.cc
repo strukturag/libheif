@@ -136,10 +136,10 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     }
   }
 
-  const Pixel* in_r, * in_g, * in_b, * in_a;
+  const Pixel* in_r, * in_g, * in_b;
   uint32_t in_r_stride = 0, in_g_stride = 0, in_b_stride = 0, in_a_stride = 0;
 
-  Pixel* out_y, * out_cb, * out_cr, * out_a;
+  Pixel* out_y, * out_cb, * out_cr;
   uint32_t out_y_stride = 0, out_cb_stride = 0, out_cr_stride = 0, out_a_stride = 0;
 
   in_r = (const Pixel*) input->get_plane(heif_channel_R, &in_r_stride);
@@ -149,9 +149,12 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
   out_cb = (Pixel*) outimg->get_plane(heif_channel_Cb, &out_cb_stride);
   out_cr = (Pixel*) outimg->get_plane(heif_channel_Cr, &out_cr_stride);
 
+  const uint8_t* in_a;
+  uint8_t* out_a;
+
   if (has_alpha) {
-    in_a = (const Pixel*) input->get_plane(heif_channel_Alpha, &in_a_stride);
-    out_a = (Pixel*) outimg->get_plane(heif_channel_Alpha, &out_a_stride);
+    in_a = input->get_plane(heif_channel_Alpha, &in_a_stride);
+    out_a = outimg->get_plane(heif_channel_Alpha, &out_a_stride);
   }
   else {
     in_a = nullptr;
@@ -162,11 +165,9 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
     in_r_stride /= 2;
     in_g_stride /= 2;
     in_b_stride /= 2;
-    in_a_stride /= 2;
     out_y_stride /= 2;
     out_cb_stride /= 2;
     out_cr_stride /= 2;
-    out_a_stride /= 2;
   }
 
   uint16_t halfRange = (uint16_t) (1 << (bpp - 1));
@@ -269,9 +270,11 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
 
 
   if (has_alpha) {
-    int copyWidth = (hdr ? width * 2 : width);
+    int bpp_a = input->get_bits_per_pixel(heif_channel_Alpha);
+    int alphaCopyWidth = (bpp_a > 8 ? width * 2 : width);
+
     for (y = 0; y < height; y++) {
-      memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], copyWidth);
+      memcpy(&out_a[y * out_a_stride], &in_a[y * in_a_stride], alphaCopyWidth);
     }
   }
 
