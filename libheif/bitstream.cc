@@ -24,7 +24,8 @@
 #include <cstring>
 #include <cassert>
 
-#if (defined(__GNUC__) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
+#define GCC_COMPILER (defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__PGI))
+#if (defined(GCC_COMPILER) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
 #include <type_traits>
 #else
 #include <bit>
