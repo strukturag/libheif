@@ -24,7 +24,7 @@
   SOFTWARE.
 */
 
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "codecs/evc_boxes.h"
 #include "error.h"
 #include <cstdint>

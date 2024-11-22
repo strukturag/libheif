@@ -136,7 +136,7 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     }
 #endif
     case fourcc("evc1"): {
-      auto evcC = ctx->get_heif_file()->get_property<Box_evcC>(id);
+      auto evcC = item->get_property<Box_evcC>();
       return std::make_shared<Decoder_EVC>(evcC);
     }
     case fourcc("mski"): {
