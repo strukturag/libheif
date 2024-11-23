@@ -18,6 +18,8 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+__GNUC__ __GNUC__ __GNUC__ test ---
+
 #include "bitstream.h"
 
 #include <utility>
