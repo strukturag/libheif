@@ -18,41 +18,16 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(__GNUC__)
-test1 test1 ...
-#endif
-
 #include "bitstream.h"
-
-#if defined(__GNUC__)
-test2 test2 ...
-#endif
-
 #include <utility>
-
-#if defined(__GNUC__)
-test3 test3 ...
-#endif
-
 #include <cstring>
-
-#if defined(__GNUC__)
-test4 test4 ...
-#endif
-
 #include <cassert>
-
-#if defined(__GNUC__)
-test5 test5 ...
-#endif
 
 
 #define GCC_COMPILER (defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__PGI))
-#if (defined(GCC_COMPILER) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
-__GNUC__ aaa bbb ...
+#if ((GCC_COMPILER) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
 #include <type_traits>
 #else
-__clang__ ccc ddd ...
 #include <bit>
 #endif
 
