@@ -258,7 +258,11 @@ const char* Error::get_error_string(heif_suberror_code err)
     case heif_suberror_Cannot_read_plugin_directory:
       return "Error while scanning the directory for plugins";
     case heif_suberror_No_matching_decoder_installed:
+#if ENABLE_PLUGIN_LOADING
       return "No decoding plugin installed for this compression format";
+#else
+      return "Support for this compression format has not been built in";
+#endif
   }
 
   assert(false);
