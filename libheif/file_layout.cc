@@ -19,6 +19,7 @@
  */
 
 #include "file_layout.h"
+#include "sequences/seq_boxes.h"
 
 
 FileLayout::FileLayout()

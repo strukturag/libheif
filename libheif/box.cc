@@ -758,6 +758,30 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_stbl>();
       break;
 
+    case fourcc("stsd"):
+      box = std::make_shared<Box_stsd>();
+      break;
+
+    case fourcc("stts"):
+      box = std::make_shared<Box_stts>();
+      break;
+
+    case fourcc("stsc"):
+      box = std::make_shared<Box_stsc>();
+      break;
+
+    case fourcc("stco"):
+      box = std::make_shared<Box_stco>();
+      break;
+
+    case fourcc("stsz"):
+      box = std::make_shared<Box_stsz>();
+      break;
+
+    case fourcc("stss"):
+      box = std::make_shared<Box_stss>();
+      break;
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;

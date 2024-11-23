@@ -418,3 +418,305 @@ Error Box_vmhd::write(StreamWriter& writer) const
 
   return Error::Ok;
 }
+
+
+Error Box_stsd::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stsd");
+  }
+
+  uint32_t entry_count = range.read32();
+  for (uint32_t i = 0; i < entry_count; i++) {
+    std::shared_ptr<Box> entrybox;
+    Error err = Box::read(range, &entrybox, limits);
+    if (err) {
+      return err;
+    }
+
+    m_sample_entries.push_back(entrybox);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stsd::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  for (size_t i = 0; i < m_sample_entries.size(); i++) {
+    sstr << indent << "[" << i << "]\n";
+    indent++;
+    sstr << m_sample_entries[i]->dump(indent);
+    indent--;
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stsd::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_sample_entries.size()));
+  for (const auto& sample : m_sample_entries) {
+    sample->write(writer);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_stts::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stts");
+  }
+
+  uint32_t entry_count = range.read32();
+  for (uint32_t i = 0; i < entry_count; i++) {
+    TimeToSample entry;
+    entry.sample_count = range.read32();
+    entry.sample_delta = range.read32();
+    m_entries.push_back(entry);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stts::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  for (size_t i = 0; i < m_entries.size(); i++) {
+    sstr << indent << "[" << i << "] : cnt=" << m_entries[i].sample_count << ", delta=" << m_entries[i].sample_delta << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stts::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_entries.size()));
+  for (const auto& sample : m_entries) {
+    writer.write32(sample.sample_count);
+    writer.write32(sample.sample_delta);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stsc");
+  }
+
+  uint32_t entry_count = range.read32();
+  for (uint32_t i = 0; i < entry_count; i++) {
+    SampleToChunk entry;
+    entry.first_chunk = range.read32();
+    entry.samples_per_chunk = range.read32();
+    entry.sample_description_index = range.read32();
+    m_entries.push_back(entry);
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stsc::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  for (size_t i = 0; i < m_entries.size(); i++) {
+    sstr << indent << "[" << i << "]\n"
+        << indent << "  first chunk: " << m_entries[i].first_chunk << "\n"
+        << indent << "  samples per chunk: " << m_entries[i].samples_per_chunk << "\n"
+        << indent << "  sample description index: " << m_entries[i].sample_description_index << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stsc::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_entries.size()));
+  for (const auto& sample : m_entries) {
+    writer.write32(sample.first_chunk);
+    writer.write32(sample.samples_per_chunk);
+    writer.write32(sample.sample_description_index);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stco");
+  }
+
+  uint32_t entry_count = range.read32();
+  for (uint32_t i = 0; i < entry_count; i++) {
+    m_offsets.push_back(range.read32());
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stco::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  for (size_t i = 0; i < m_offsets.size(); i++) {
+    sstr << indent << "[" << i << "] : " << m_offsets[i] << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stco::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_offsets.size()));
+  for (uint32_t offset : m_offsets) {
+    writer.write32(offset);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stsz");
+  }
+
+  m_fixed_sample_size = range.read32();
+  m_sample_count = range.read32();
+
+  if (m_fixed_sample_size == 0) {
+    for (uint32_t i = 0; i < m_sample_count; i++) {
+      m_sample_sizes.push_back(range.read32());
+    }
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stsz::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "sample count: " << m_sample_count << "\n";
+  if (m_fixed_sample_size == 0) {
+    for (size_t i = 0; i < m_sample_sizes.size(); i++) {
+      sstr << indent << "[" << i << "] : " << m_sample_sizes[i] << "\n";
+    }
+  }
+  else {
+    sstr << indent << "fixed sample size: " << m_fixed_sample_size << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stsz::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_fixed_sample_size);
+  writer.write32(m_sample_count);
+  if (m_fixed_sample_size == 0) {
+    assert(m_sample_count == m_sample_sizes.size());
+
+    for (uint32_t size : m_sample_sizes) {
+      writer.write32(size);
+    }
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("stss");
+  }
+
+  uint32_t sample_count = range.read32();
+
+  for (uint32_t i = 0; i < sample_count; i++) {
+    m_sync_samples.push_back(range.read32());
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_stss::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  for (size_t i = 0; i < m_sync_samples.size(); i++) {
+    sstr << indent << "[" << i << "] : " << m_sync_samples[i] << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_stss::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(static_cast<uint32_t>(m_sync_samples.size()));
+  for (uint32_t sample : m_sync_samples) {
+    writer.write32(sample);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}

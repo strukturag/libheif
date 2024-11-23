@@ -26,7 +26,6 @@
 #include "image-items/avif.h"
 #include "image-items/hevc.h"
 #include "image-items/vvc.h"
-#include "sequences/seq_boxes.h"
 #include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
@@ -49,6 +48,8 @@
 class HeifPixelImage;
 
 class Box_j2kH;
+
+class Box_movv;
 
 
 class HeifFile

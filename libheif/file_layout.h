@@ -27,10 +27,11 @@
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
 #include "mini.h"
 #endif
-#include "sequences/seq_boxes.h"
 
 #include <memory>
 #include <vector>
+
+class Box_moov;
 
 
 class FileLayout

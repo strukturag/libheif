@@ -38,6 +38,7 @@ protected:
 };
 
 
+// Movie Box
 class Box_moov : public Box_container
 {
 public:
@@ -45,6 +46,7 @@ public:
 };
 
 
+// Movie Header Box
 class Box_mvhd : public FullBox
 {
 public:
@@ -81,6 +83,7 @@ private:
 };
 
 
+// Track Box
 class Box_trak : public Box_container
 {
 public:
@@ -88,6 +91,7 @@ public:
 };
 
 
+// Track Header Box
 class Box_tkhd : public FullBox
 {
 public:
@@ -126,6 +130,7 @@ private:
 };
 
 
+// Media Box
 class Box_mdia : public Box_container
 {
 public:
@@ -133,6 +138,7 @@ public:
 };
 
 
+// Media Header Box
 class Box_mdhd : public FullBox
 {
 public:
@@ -162,6 +168,7 @@ private:
 };
 
 
+// Media Information Box (container)
 class Box_minf : public Box_container
 {
 public:
@@ -169,6 +176,7 @@ public:
 };
 
 
+// Video Media Header
 class Box_vmhd : public FullBox
 {
 public:
@@ -191,10 +199,152 @@ private:
 };
 
 
+// Sample Table Box (container)
 class Box_stbl : public Box_container
 {
 public:
   Box_stbl() : Box_container("stbl") {}
+};
+
+
+// Sample Description Box
+class Box_stsd : public FullBox
+{
+public:
+  Box_stsd()
+  {
+    set_short_type(fourcc("stsd"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<std::shared_ptr<Box>> m_sample_entries;
+};
+
+
+// Decoding Time to Sample Box
+class Box_stts : public FullBox
+{
+public:
+  Box_stts()
+  {
+    set_short_type(fourcc("stts"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  struct TimeToSample
+  {
+    uint32_t sample_count;
+    uint32_t sample_delta;
+  };
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<TimeToSample> m_entries;
+};
+
+
+// Sample to Chunk Box
+class Box_stsc : public FullBox
+{
+public:
+  Box_stsc()
+  {
+    set_short_type(fourcc("stsc"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  struct SampleToChunk
+  {
+    uint32_t first_chunk;
+    uint32_t samples_per_chunk;
+    uint32_t sample_description_index;
+  };
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<SampleToChunk> m_entries;
+};
+
+
+// Chunk Offset Box
+class Box_stco : public FullBox
+{
+public:
+  Box_stco()
+  {
+    set_short_type(fourcc("stco"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<uint32_t> m_offsets;
+};
+
+
+// Sample Size Box
+class Box_stsz : public FullBox
+{
+public:
+  Box_stsz()
+  {
+    set_short_type(fourcc("stsz"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_fixed_sample_size;
+  uint32_t m_sample_count;
+  std::vector<uint32_t> m_sample_sizes;
+};
+
+
+// Sync Sample Box
+class Box_stss : public FullBox
+{
+public:
+  Box_stss()
+  {
+    set_short_type(fourcc("stss"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  std::vector<uint32_t> m_sync_samples;
 };
 
 
