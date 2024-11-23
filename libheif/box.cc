@@ -645,7 +645,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
 #endif
 
     // --- JPEG 2000
-      
+
     case fourcc("j2kH"):
       box = std::make_shared<Box_j2kH>();
       break;
@@ -668,7 +668,7 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
 
 
     // --- mski
-      
+
     case fourcc("mskC"):
       box = std::make_shared<Box_mskC>();
       break;
@@ -732,6 +732,30 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
 
     case fourcc("trak"):
       box = std::make_shared<Box_trak>();
+      break;
+
+    case fourcc("tkhd"):
+      box = std::make_shared<Box_tkhd>();
+      break;
+
+    case fourcc("mdia"):
+      box = std::make_shared<Box_mdia>();
+      break;
+
+    case fourcc("mdhd"):
+      box = std::make_shared<Box_mdhd>();
+      break;
+
+    case fourcc("minf"):
+      box = std::make_shared<Box_minf>();
+      break;
+
+    case fourcc("vmhd"):
+      box = std::make_shared<Box_vmhd>();
+      break;
+
+    case fourcc("stbl"):
+      box = std::make_shared<Box_stbl>();
       break;
 
     default:
@@ -2595,7 +2619,7 @@ Error Box_clli::write(StreamWriter& writer) const
 Box_mdcv::Box_mdcv()
 {
   set_short_type(fourcc("mdcv"));
-  
+
   memset(&mdcv, 0, sizeof(heif_mastering_display_colour_volume));
 }
 
