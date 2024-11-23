@@ -321,6 +321,26 @@ void HeifContext::remove_top_level_image(const std::shared_ptr<ImageItem>& image
 
 Error HeifContext::interpret_heif_file()
 {
+  if (m_heif_file->has_images()) {
+    Error err = interpret_heif_file_images();
+    if (err) {
+      return err;
+    }
+  }
+
+  if (m_heif_file->has_sequences()) {
+    Error err = interpret_heif_file_sequences();
+    if (err) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+Error HeifContext::interpret_heif_file_images()
+{
   m_all_images.clear();
   m_top_level_images.clear();
   m_primary_image.reset();
@@ -1527,4 +1547,10 @@ Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_
   }
 
   return {group_id};
+}
+
+
+Error HeifContext::interpret_heif_file_sequences()
+{
+  return Error::Ok;
 }

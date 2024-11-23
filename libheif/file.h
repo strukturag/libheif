@@ -26,6 +26,7 @@
 #include "image-items/avif.h"
 #include "image-items/hevc.h"
 #include "image-items/vvc.h"
+#include "sequences/seq_boxes.h"
 #include "codecs/uncompressed/unc_boxes.h"
 #include "file_layout.h"
 
@@ -66,6 +67,10 @@ public:
   Error read_from_file(const char* input_filename);
 
   Error read_from_memory(const void* data, size_t size, bool copy);
+
+  bool has_images() const { return m_meta_box != nullptr; }
+
+  bool has_sequences() const { return m_moov_box != nullptr; }
 
   std::shared_ptr<StreamReader> get_reader() { return m_input_stream; }
 
@@ -245,9 +250,18 @@ private:
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
 
+  // --- sequences
+
+  std::shared_ptr<Box_moov> m_moov_box;
+
+
   const heif_security_limits* m_limits = nullptr;
 
   Error parse_heif_file();
+
+  Error parse_heif_images();
+
+  Error parse_heif_sequences();
 
   Error check_for_ref_cycle(heif_item_id ID,
                             const std::shared_ptr<Box_iref>& iref_box) const;

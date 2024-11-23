@@ -257,6 +257,8 @@ enum heif_suberror_code
   // Decompressing generic compression or header compression data failed (e.g. bitstream corruption)
   heif_suberror_Decompression_invalid_data = 150,
 
+  heif_suberror_No_moov_box = 151,
+
   // --- Memory_allocation_error ---
 
   // A security limit preventing unreasonable memory allocations was exceeded by the input file.

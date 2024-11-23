@@ -39,6 +39,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include "libheif/heif_cxx.h"
+
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
 
 #ifndef NOMINMAX
@@ -344,6 +346,8 @@ Error HeifFile::parse_heif_file()
                  heif_suberror_No_ftyp_box);
   }
 
+  bool is_brand_msf1 = m_ftyp_box->has_compatible_brand(heif_brand2_msf1);
+
   if (!m_ftyp_box->has_compatible_brand(heif_brand2_heic) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_heix) &&
       !m_ftyp_box->has_compatible_brand(heif_brand2_mif1) &&
@@ -352,14 +356,15 @@ Error HeifFile::parse_heif_file()
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
       !(m_ftyp_box->get_major_brand() == heif_brand2_mif3) &&
 #endif
-      !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg)) {
+      !m_ftyp_box->has_compatible_brand(heif_brand2_jpeg) &&
+      !is_brand_msf1) {
     std::stringstream sstr;
     sstr << "File does not include any supported brands.\n";
 
     return Error(heif_error_Unsupported_filetype,
                  heif_suberror_Unspecified,
                  sstr.str());
-  }
+      }
 
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
   m_mini_box = m_file_layout->get_mini_box();
@@ -378,14 +383,41 @@ Error HeifFile::parse_heif_file()
   m_top_level_boxes.push_back(m_meta_box);
   // TODO: we are missing 'mdat' top level boxes
 
+  m_moov_box = m_file_layout->get_moov_box();
+  m_top_level_boxes.push_back(m_moov_box);
+
   // if we didn't find the mini box, meta is required
 
-  if (!m_meta_box) {
+  if (!m_meta_box && !is_brand_msf1) {
     return Error(heif_error_Invalid_input,
                  heif_suberror_No_meta_box);
   }
 
+  if (!m_moov_box && is_brand_msf1) {
+    return Error(heif_error_Invalid_input,
+                 heif_suberror_No_moov_box);
+  }
 
+  if (m_meta_box) {
+    auto err = parse_heif_images();
+    if (err) {
+      return err;
+    }
+  }
+
+  if (m_moov_box) {
+    auto err = parse_heif_sequences();
+    if (err) {
+      return err;
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+Error HeifFile::parse_heif_images()
+{
   m_hdlr_box = m_meta_box->get_child_box<Box_hdlr>();
   if (STRICT_PARSING && !m_hdlr_box) {
     return Error(heif_error_Invalid_input,
@@ -467,6 +499,12 @@ Error HeifFile::parse_heif_file()
     m_infe_boxes.insert(std::make_pair(infe_box->get_item_ID(), infe_box));
   }
 
+  return Error::Ok;
+}
+
+
+Error HeifFile::parse_heif_sequences()
+{
   return Error::Ok;
 }
 

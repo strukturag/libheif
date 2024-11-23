@@ -31,6 +31,7 @@
 #include "codecs/avc_boxes.h"
 #include "codecs/avif_boxes.h"
 #include "image-items/tiled.h"
+#include "sequences/seq_boxes.h"
 
 #include <iomanip>
 #include <utility>
@@ -717,6 +718,20 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       else {
         box = std::make_shared<Box_other>(hdr.get_short_type());
       }
+      break;
+
+    // --- sequences
+
+    case fourcc("moov"):
+      box = std::make_shared<Box_moov>();
+      break;
+
+    case fourcc("mvhd"):
+      box = std::make_shared<Box_mvhd>();
+      break;
+
+    case fourcc("trak"):
+      box = std::make_shared<Box_trak>();
       break;
 
     default:

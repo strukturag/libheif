@@ -178,6 +178,8 @@ const char* Error::get_error_string(heif_suberror_code err)
       return "Invalid JPEG 2000 codestream";
     case heif_suberror_Decompression_invalid_data:
       return "Invalid data in generic compression inflation";
+    case heif_suberror_No_moov_box:
+      return "No 'moov' box";
     case heif_suberror_No_icbr_box:
       return "No 'icbr' box";
     case heif_suberror_Invalid_mini_box:

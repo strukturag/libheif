@@ -185,6 +185,40 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
     }
 #endif
 
+    if (box_header.get_short_type() == fourcc("moov")) {
+      const uint64_t moov_box_start = next_box_start;
+      if (box_header.get_box_size() == 0) {
+        // TODO: get file-size from stream and compute box size
+        return {heif_error_Invalid_input,
+                heif_suberror_No_moov_box,
+                "Cannot read moov box with unspecified size"};
+      }
+
+      // TODO: overflow
+      uint64_t end_of_moov_box = moov_box_start + box_header.get_box_size();
+      if (m_max_length < end_of_moov_box) {
+        m_max_length = m_stream_reader->request_range(moov_box_start, end_of_moov_box);
+      }
+
+      if (m_max_length < end_of_moov_box) {
+        return {heif_error_Invalid_input,
+                heif_suberror_No_moov_box,
+                "Cannot read full moov box"};
+      }
+
+      BitstreamRange moov_box_range(m_stream_reader, moov_box_start, end_of_moov_box);
+      std::shared_ptr<Box> moov_box;
+      err = Box::read(moov_box_range, &moov_box, limits);
+      if (err) {
+        return err;
+      }
+
+      m_boxes.push_back(moov_box);
+      m_moov_box = std::dynamic_pointer_cast<Box_moov>(moov_box);
+      break;
+    }
+
+
     if (box_header.get_box_size() == 0) {
       return {heif_error_Invalid_input,
               heif_suberror_No_meta_box,

@@ -187,6 +187,10 @@ private:
 
   Error interpret_heif_file();
 
+  Error interpret_heif_file_images();
+
+  Error interpret_heif_file_sequences();
+
   void remove_top_level_image(const std::shared_ptr<ImageItem>& image);
 };
 
