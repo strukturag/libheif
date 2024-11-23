@@ -223,8 +223,8 @@ std::string Box_tkhd::dump(Indent& indent) const
     sstr << indent << "  [" << i << "] = " << get_matrix_element(i) << "\n";
   }
 
-  sstr << indent << "width: " << m_width << "\n"
-      << indent << "height: " << m_height << "\n";
+  sstr << indent << "width: " << get_width() << "\n"
+      << indent << "height: " << get_height() << "\n";
 
   return sstr.str();
 }
@@ -596,7 +596,7 @@ std::string Box_stco::dump(Indent& indent) const
   std::ostringstream sstr;
   sstr << Box::dump(indent);
   for (size_t i = 0; i < m_offsets.size(); i++) {
-    sstr << indent << "[" << i << "] : " << m_offsets[i] << "\n";
+    sstr << indent << "[" << i << "] : 0x" << std::hex << m_offsets[i] << std::dec << "\n";
   }
 
   return sstr.str();

@@ -110,6 +110,10 @@ public:
 
   double get_matrix_element(int idx) const;
 
+  double get_width() const { return float(m_width) / double(0x10000); }
+
+  double get_height() const { return float(m_height) / double(0x10000); }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
