@@ -26,8 +26,10 @@
 
 #define GCC_COMPILER (defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__PGI))
 #if (defined(GCC_COMPILER) && __GNUC__ < 9) || (defined(__clang__) && __clang_major__ < 10)
+__GNUC__ aaa bbb ...
 #include <type_traits>
 #else
+__clang__ ccc ddd ...
 #include <bit>
 #endif
 
