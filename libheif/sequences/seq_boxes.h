@@ -352,6 +352,29 @@ private:
 };
 
 
+// Coding Constraints Box
+class Box_ccst : public FullBox
+{
+public:
+  Box_ccst()
+  {
+    set_short_type(fourcc("ccst"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  bool all_ref_pics_intra;
+  bool intra_pred_used;
+  uint8_t max_ref_per_pic; // 4 bit
+};
+
+
 struct VisualSampleEntry
 {
   // from SampleEntry

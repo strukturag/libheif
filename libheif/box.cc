@@ -786,6 +786,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_stss>();
       break;
 
+    case fourcc("ccst"):
+      box = std::make_shared<Box_ccst>();
+      break;
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;

@@ -772,3 +772,57 @@ std::string VisualSampleEntry::dump(Indent& indent) const
 
   return sstr.str();
 }
+
+
+Error Box_ccst::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("ccst");
+  }
+
+  uint32_t bits = range.read32();
+
+  all_ref_pics_intra = (bits & 0x80000000) != 0;
+  intra_pred_used = (bits & 0x40000000) != 0;
+  max_ref_per_pic = (bits >> 26) & 0x0F;
+
+  return range.get_error();
+}
+
+
+std::string Box_ccst::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "all ref pics intra: " << std::boolalpha << all_ref_pics_intra << "\n"
+       << indent << "intra pred used: " << intra_pred_used << "\n"
+       << indent << "max ref per pic: " << ((int) max_ref_per_pic) << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_ccst::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  uint32_t bits = 0;
+
+  if (all_ref_pics_intra) {
+    bits |= 0x80000000;
+  }
+
+  if (intra_pred_used) {
+    bits |= 0x40000000;
+  }
+
+  bits |= max_ref_per_pic << 26;
+
+  writer.write32(bits);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
