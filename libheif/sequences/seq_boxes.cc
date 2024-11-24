@@ -97,8 +97,12 @@ std::string Box_mvhd::dump(Indent& indent) const
   sstr << indent << "rate: " << get_rate() << "\n"
       << indent << "volume: " << get_volume() << "\n"
       << indent << "matrix:\n";
-  for (int i = 0; i < 9; i++) {
-    sstr << indent << "  [" << i << "] = " << get_matrix_element(i) << "\n";
+  for (int y = 0; y < 3; y++) {
+    sstr << indent << "  ";
+    for (int i = 0; i < 3; i++) {
+      sstr << get_matrix_element(i + 3 * y) << " ";
+    }
+    sstr << "\n";
   }
   sstr << indent << "next_track_ID: " << m_next_track_ID << "\n";
 
@@ -219,8 +223,12 @@ std::string Box_tkhd::dump(Indent& indent) const
       << indent << "alternate_group: " << m_alternate_group << "\n"
       << indent << "volume: " << get_volume() << "\n"
       << indent << "matrix:\n";
-  for (int i = 0; i < 9; i++) {
-    sstr << indent << "  [" << i << "] = " << get_matrix_element(i) << "\n";
+  for (int y = 0; y < 3; y++) {
+    sstr << indent << "  ";
+    for (int i = 0; i < 3; i++) {
+      sstr << get_matrix_element(i + 3 * y) << " ";
+    }
+    sstr << "\n";
   }
 
   sstr << indent << "width: " << get_width() << "\n"

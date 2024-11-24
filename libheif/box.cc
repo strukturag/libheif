@@ -1120,8 +1120,8 @@ std::string Box_other::dump(Indent& indent) const
   }
 
   sstr << write_raw_data_as_hex(m_data.data(), len,
-                                "data: ",
-                                "      ");
+                                indent.get_string() + "data: ",
+                                indent.get_string() + "      ");
 
   return sstr.str();
 }
