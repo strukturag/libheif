@@ -33,42 +33,38 @@
 #include <libheif/api_structs.h>
 
 
-Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
+Error HEVCDecoderConfigurationRecord::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
-  //parse_full_box_header(range);
-
   uint8_t byte;
 
-  auto& c = m_configuration; // abbreviation
-
-  c.configuration_version = range.read8();
+  configuration_version = range.read8();
   byte = range.read8();
-  c.general_profile_space = (byte >> 6) & 3;
-  c.general_tier_flag = (byte >> 5) & 1;
-  c.general_profile_idc = (byte & 0x1F);
+  general_profile_space = (byte >> 6) & 3;
+  general_tier_flag = (byte >> 5) & 1;
+  general_profile_idc = (byte & 0x1F);
 
-  c.general_profile_compatibility_flags = range.read32();
+  general_profile_compatibility_flags = range.read32();
 
   for (int i = 0; i < 6; i++) {
     byte = range.read8();
 
     for (int b = 0; b < 8; b++) {
-      c.general_constraint_indicator_flags[i * 8 + b] = (byte >> (7 - b)) & 1;
+      general_constraint_indicator_flags[i * 8 + b] = (byte >> (7 - b)) & 1;
     }
   }
 
-  c.general_level_idc = range.read8();
-  c.min_spatial_segmentation_idc = range.read16() & 0x0FFF;
-  c.parallelism_type = range.read8() & 0x03;
-  c.chroma_format = range.read8() & 0x03;
-  c.bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  c.bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
-  c.avg_frame_rate = range.read16();
+  general_level_idc = range.read8();
+  min_spatial_segmentation_idc = range.read16() & 0x0FFF;
+  parallelism_type = range.read8() & 0x03;
+  chroma_format = range.read8() & 0x03;
+  bit_depth_luma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  bit_depth_chroma = static_cast<uint8_t>((range.read8() & 0x07) + 8);
+  avg_frame_rate = range.read16();
 
   byte = range.read8();
-  c.constant_frame_rate = (byte >> 6) & 0x03;
-  c.num_temporal_layers = (byte >> 3) & 0x07;
-  c.temporal_id_nested = (byte >> 2) & 1;
+  constant_frame_rate = (byte >> 6) & 0x03;
+  num_temporal_layers = (byte >> 3) & 0x07;
+  temporal_id_nested = (byte >> 2) & 1;
 
   m_length_size = static_cast<uint8_t>((byte & 0x03) + 1);
 
@@ -109,6 +105,15 @@ Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
   range.skip_to_end_of_box();
 
   return range.get_error();
+
+}
+
+
+Error Box_hvcC::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  //parse_full_box_header(range);
+
+  return m_configuration.parse(range, limits);
 }
 
 
@@ -134,7 +139,7 @@ std::string Box_hvcC::dump(Indent& indent) const
 
   sstr << indent << "general_constraint_indicator_flags: ";
   int cnt = 0;
-  for (int i = 0; i < configuration::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
+  for (int i = 0; i < HEVCDecoderConfigurationRecord::NUM_CONSTRAINT_INDICATOR_FLAGS; i++) {
     bool b = c.general_constraint_indicator_flags[i];
 
     sstr << (b ? 1 : 0);
@@ -171,9 +176,9 @@ std::string Box_hvcC::dump(Indent& indent) const
        << indent << "constant_frame_rate: " << ((int) c.constant_frame_rate) << "\n"
        << indent << "num_temporal_layers: " << ((int) c.num_temporal_layers) << "\n"
        << indent << "temporal_id_nested: " << ((int) c.temporal_id_nested) << "\n"
-       << indent << "length_size: " << ((int) m_length_size) << "\n";
+       << indent << "length_size: " << ((int) c.m_length_size) << "\n";
 
-  for (const auto& array : m_nal_array) {
+  for (const auto& array : c.m_nal_array) {
     sstr << indent << "<array>\n";
 
     indent++;
@@ -199,7 +204,7 @@ std::string Box_hvcC::dump(Indent& indent) const
 
 bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 {
-  for (const auto& array : m_nal_array) {
+  for (const auto& array : m_configuration.m_nal_array) {
     for (const auto& unit : array.m_nal_units) {
 
       dest->push_back((unit.size() >> 24) & 0xFF);
@@ -223,12 +228,12 @@ bool Box_hvcC::get_headers(std::vector<uint8_t>* dest) const
 
 void Box_hvcC::append_nal_data(const std::vector<uint8_t>& nal)
 {
-  NalArray array;
+  HEVCDecoderConfigurationRecord::NalArray array;
   array.m_array_completeness = 0;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
   array.m_nal_units.push_back(nal);
 
-  m_nal_array.push_back(array);
+  m_configuration.m_nal_array.push_back(array);
 }
 
 void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
@@ -237,12 +242,12 @@ void Box_hvcC::append_nal_data(const uint8_t* data, size_t size)
   nal.resize(size);
   memcpy(nal.data(), data, size);
 
-  NalArray array;
+  HEVCDecoderConfigurationRecord::NalArray array;
   array.m_array_completeness = 0;
   array.m_NAL_unit_type = uint8_t(nal[0] >> 1);
   array.m_nal_units.push_back(std::move(nal));
 
-  m_nal_array.push_back(array);
+  m_configuration.m_nal_array.push_back(array);
 }
 
 
@@ -285,16 +290,16 @@ Error Box_hvcC::write(StreamWriter& writer) const
   writer.write8((uint8_t) (((c.constant_frame_rate & 0x03) << 6) |
                            ((c.num_temporal_layers & 0x07) << 3) |
                            ((c.temporal_id_nested & 1) << 2) |
-                           ((m_length_size - 1) & 0x03)));
+                           ((c.m_length_size - 1) & 0x03)));
 
-  size_t nArrays = m_nal_array.size();
+  size_t nArrays = c.m_nal_array.size();
   if (nArrays > 0xFF) {
     // TODO: error: too many NAL units
   }
 
   writer.write8((uint8_t) nArrays);
 
-  for (const NalArray& array : m_nal_array) {
+  for (const HEVCDecoderConfigurationRecord::NalArray& array : c.m_nal_array) {
 
     writer.write8((uint8_t) (((array.m_array_completeness & 1) << 6) |
                              (array.m_NAL_unit_type & 0x3F)));
@@ -519,7 +524,7 @@ static std::vector<uint8_t> remove_start_code_emulation(const uint8_t* sps, size
 
 
 Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
-                                       Box_hvcC::configuration* config,
+                                       HEVCDecoderConfigurationRecord* config,
                                        int* width, int* height)
 {
   // remove start-code emulation bytes from SPS header stream
@@ -634,6 +639,32 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
   config->avg_frame_rate = 0; // makes no sense for HEIF
   config->constant_frame_rate = 0; // makes no sense for HEIF
   config->num_temporal_layers = 1; // makes no sense for HEIF
+
+  return Error::Ok;
+}
+
+
+std::string Box_hvc1::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << m_visualSampleEntry.dump(indent);
+  sstr << dump_children(indent);
+  return sstr.str();
+}
+
+
+Error Box_hvc1::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  auto err = m_visualSampleEntry.parse(range, limits);
+  if (err) {
+    return err;
+  }
+
+  err = read_children(range, READ_CHILDREN_ALL, limits);
+  if (err) {
+    return err;
+  }
 
   return Error::Ok;
 }

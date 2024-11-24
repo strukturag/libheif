@@ -278,6 +278,10 @@ public:
 
   std::string read_string();
 
+  // A string stored with a fixed number of bytes. The first byte contains the string length and the extra bytes
+  // are filled with a padding 0.
+  std::string read_fixed_string(int len);
+
   bool read(uint8_t* data, size_t n);
 
   bool prepare_read(size_t nBytes);

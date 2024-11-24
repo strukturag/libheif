@@ -352,4 +352,37 @@ private:
 };
 
 
+struct VisualSampleEntry
+{
+  // from SampleEntry
+  //const unsigned int(8)[6] reserved = 0;
+  uint16_t data_reference_index;
+
+  // VisualSampleEntry
+
+  uint16_t pre_defined = 0;
+  //uint16_t reserved = 0;
+  uint32_t pre_defined2[3] = {0,0,0};
+  uint16_t width;
+  uint16_t height;
+  uint32_t horizresolution = 0x00480000; // 72 dpi
+  uint32_t vertresolution = 0x00480000; // 72 dpi
+  //uint32_t reserved = 0;
+  uint16_t frame_count = 1;
+  std::string compressorname; // max 32 characters
+  uint16_t depth = 0x0018;
+  int16_t pre_defined3 = -1;
+  // other boxes from derived specifications
+  //std::shared_ptr<Box_clap> clap; // optional
+  //std::shared_ptr<Box_pixi> pixi; // optional
+
+  double get_horizontal_resolution() const { return horizresolution / double(0x10000); }
+
+  double get_vertical_resolution() const { return vertresolution / double(0x10000); }
+
+  Error parse(BitstreamRange& range, const heif_security_limits*);
+
+  std::string dump(Indent&) const;
+};
+
 #endif //SEQ_BOXES_H

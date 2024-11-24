@@ -397,12 +397,13 @@ std::string BitstreamRange::read_string()
     return std::string();
   }
 
+  auto istr = get_istream();
+
   for (;;) {
     if (!prepare_read(1)) {
       return std::string();
     }
 
-    auto istr = get_istream();
     char c;
     bool success = istr->read(&c, 1);
 
@@ -418,6 +419,40 @@ std::string BitstreamRange::read_string()
       str += (char) c;
     }
   }
+
+  return str;
+}
+
+
+std::string BitstreamRange::read_fixed_string(int len)
+{
+  std::string str;
+
+  if (!prepare_read(len)) {
+    return std::string();
+  }
+
+  auto istr = get_istream();
+
+  uint8_t n;
+  bool success = istr->read(&n, 1);
+  if (!success || n > len - 1) {
+    return {};
+  }
+
+  for (int i = 0; i < n; i++) {
+    char c;
+    success = istr->read(&c, 1);
+
+    if (!success) {
+      set_eof_while_reading();
+      return std::string();
+    }
+
+    str += (char) c;
+  }
+
+  istr->seek_cur(len-n-1);
 
   return str;
 }

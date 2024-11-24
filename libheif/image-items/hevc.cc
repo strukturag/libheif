@@ -89,7 +89,7 @@ Result<ImageItem::CodedImageData> ImageItem_HEVC::encode(const std::shared_ptr<H
     const uint8_t NAL_SPS = 33;
 
     if ((data[0] >> 1) == NAL_SPS) {
-      Box_hvcC::configuration config;
+      HEVCDecoderConfigurationRecord config;
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 

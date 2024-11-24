@@ -720,3 +720,47 @@ Error Box_stss::write(StreamWriter& writer) const
 
   return Error::Ok;
 }
+
+
+Error VisualSampleEntry::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  range.skip(6);
+  data_reference_index = range.read16();
+
+  pre_defined = range.read16();
+  range.skip(2);
+  for (int i=0;i<3;i++) {
+    pre_defined2[i] = range.read32();
+  }
+  width = range.read16();
+  height = range.read16();
+  horizresolution = range.read32();
+  vertresolution = range.read32();
+  range.skip(4);
+  frame_count = range.read16();
+  compressorname = range.read_fixed_string(32);
+  depth = range.read16();
+  pre_defined3 = range.read16();
+
+  // other boxes from derived specifications
+  //std::shared_ptr<Box_clap> clap; // optional // TODO
+  //std::shared_ptr<Box_pixi> pixi; // optional // TODO
+
+  return Error::Ok;
+}
+
+
+std::string VisualSampleEntry::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << indent << "data reference index: " << data_reference_index << "\n"
+       << indent << "width: " << width << "\n"
+       << indent << "height: " << height << "\n"
+       << indent << "horiz. resolution: " << get_horizontal_resolution() << "\n"
+       << indent << "vert. resolution: " << get_vertical_resolution() << "\n"
+       << indent << "frame count: " << frame_count << "\n"
+       << indent << "compressorname: " << compressorname << "\n"
+       << indent << "depth: " << depth << "\n";
+
+  return sstr.str();
+}
