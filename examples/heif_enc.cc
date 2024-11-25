@@ -57,7 +57,6 @@
 int master_alpha = 1;
 int thumb_alpha = 1;
 int list_encoders = 0;
-int bit_depth = 10;
 int two_colr_boxes = 0;
 int premultiplied_alpha = 0;
 int run_benchmark = 0;
@@ -120,7 +119,7 @@ static struct option long_options[] = {
     {(char* const) "no-thumb-alpha",          no_argument,       &thumb_alpha,   0},
     {(char* const) "list-encoders",           no_argument,       &list_encoders, 1},
     {(char* const) "encoder",                 required_argument, 0,              'e'},
-    {(char* const) "bit-depth",               required_argument, &bit_depth,     'b'},
+    {(char* const) "bit-depth",               required_argument, 0,              'b'},
     {(char* const) "even-size",               no_argument,       0,              'E'},
     {(char* const) "avif",                    no_argument,       0,              'A'},
     {(char* const) "vvc",                     no_argument,       0,              OPTION_USE_VVC_COMPRESSION},
@@ -861,7 +860,7 @@ int main(int argc, char** argv)
   int logging_level = 0;
   bool option_show_parameters = false;
   int thumbnail_bbox_size = 0;
-  int output_bit_depth = bit_depth;
+  int output_bit_depth = 10;
   bool force_enc_av1f = false;
   bool force_enc_vvc = false;
   bool force_enc_uncompressed = false;
@@ -1189,36 +1188,36 @@ int main(int argc, char** argv)
 
     // ==============================================================================
 
-#if (UVG_BIT_DEPTH == 10) || (KVZ_BIT_DEPTH == 10) || HAVE_VVENC
+//#if (UVG_BIT_DEPTH == 10) || (KVZ_BIT_DEPTH == 10) || HAVE_VVENC
   if ((output_bit_depth == 10) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
      (encoderId[0] == 'u' && encoderId[1] == 'v') ||
      (encoderId[0] == 'v' && encoderId[1] == 'v'))) {
      int output_bit_depth = 10;
      heif_encoder_set_parameter(encoder, "chroma", "420");
-     printf("Warming: For kvazaar, uvg266, vvenc is always output yuv420p10le");
+     printf("Warming: For kvazaar, uvg266, vvenc is always output yuv420p10le\n");
   }
-#else
+/*#else
   if ((output_bit_depth == 8) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
      (encoderId[0] == 'u' && encoderId[1] == 'v'))) {
      int output_bit_depth = 10;
      heif_encoder_set_parameter(encoder, "chroma", "420");
-     printf("Warming: For kvazaar, uvg266 is always output yuv420p");
+     printf("Warming: For kvazaar, uvg266 is always output yuv420p\n");
   }
-#endif
+#endif*/
 //#if HAVE_OPENJPEG_ENCODER || HAVE_OPENJPH_ENCODER
-  if ((output_bit_depth == 16) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
+  if ((output_bit_depth > 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
      (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
      int output_bit_depth = 16;
      heif_encoder_set_parameter(encoder, "chroma", "444");
-     printf("Warming: Don't use jpeg image 8bit. openjpeg is always output rgb48(a)\n"
+     printf("Warming: Don't use jpeg image 8bit only image rgb48(a). openjpeg is always output rgb48(a)\n"
             "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
   }
 //#else
   if ((output_bit_depth == 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
      (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
-     int output_bit_depth = 10;
+     int output_bit_depth = 8;
      heif_encoder_set_parameter(encoder, "chroma", "444");
-     printf("Warming: openjpeg is always output rgb24(a)\n"
+     printf("Warming: Use image rgb24(a). openjpeg is always output rgb24(a)\n"
             "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
   }
 //#endif
