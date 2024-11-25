@@ -860,7 +860,11 @@ int main(int argc, char** argv)
   int logging_level = 0;
   bool option_show_parameters = false;
   int thumbnail_bbox_size = 0;
+#if (UVG_BIT_DEPTH == 10) || (KVZ_BIT_DEPTH == 10) || HAVE_VVENC
   int output_bit_depth = 10;
+#else
+  int output_bit_depth = 8;
+#endif
   bool force_enc_av1f = false;
   bool force_enc_vvc = false;
   bool force_enc_uncompressed = false;
