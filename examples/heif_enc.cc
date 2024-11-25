@@ -1192,14 +1192,14 @@ int main(int argc, char** argv)
   if ((output_bit_depth == 10) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
      (encoderId[0] == 'u' && encoderId[1] == 'v') ||
      (encoderId[0] == 'v' && encoderId[1] == 'v'))) {
-     int output_bit_depth = 10;
+     output_bit_depth = 10;
      heif_encoder_set_parameter(encoder, "chroma", "420");
      printf("Warming: For kvazaar, uvg266, vvenc is always output yuv420p10le\n");
   }
 /*#else
   if ((output_bit_depth == 8) && ((encoderId[0] == 'k' && encoderId[1] == 'v') ||
      (encoderId[0] == 'u' && encoderId[1] == 'v'))) {
-     int output_bit_depth = 10;
+     output_bit_depth = 10;
      heif_encoder_set_parameter(encoder, "chroma", "420");
      printf("Warming: For kvazaar, uvg266 is always output yuv420p\n");
   }
@@ -1207,7 +1207,7 @@ int main(int argc, char** argv)
 //#if HAVE_OPENJPEG_ENCODER || HAVE_OPENJPH_ENCODER
   if ((output_bit_depth > 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
      (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
-     int output_bit_depth = 16;
+     output_bit_depth = 16;
      heif_encoder_set_parameter(encoder, "chroma", "444");
      printf("Warming: Don't use jpeg image 8bit only image rgb48(a). openjpeg is always output rgb48(a)\n"
             "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
@@ -1215,7 +1215,7 @@ int main(int argc, char** argv)
 //#else
   if ((output_bit_depth == 8) && ((encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'e') ||
      (encoderId[4] == 'j' && encoderId[5] == 'p' && encoderId[6] == 'h'))) {
-     int output_bit_depth = 8;
+     output_bit_depth = 8;
      heif_encoder_set_parameter(encoder, "chroma", "444");
      printf("Warming: Use image rgb24(a). openjpeg is always output rgb24(a)\n"
             "libheif has no added functions openjpeg2000 in yuv420/422/444 10/12bit\n");
