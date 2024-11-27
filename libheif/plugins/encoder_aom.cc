@@ -619,6 +619,7 @@ struct heif_error aom_get_parameter_boolean(void* encoder_raw, const char* name,
 
   get_value(kParam_realtime, realtime_mode);
   get_value(kParam_lossless_alpha, lossless_alpha);
+  get_value(kParam_enable_intra_block_copy, enable_intra_block_copy);
 
   return heif_error_unsupported_parameter;
 }
