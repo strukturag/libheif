@@ -375,7 +375,6 @@ static void aom_init_parameters()
   p->has_default = true;
   d[i++] = p++;
 
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_enable_intra_block_copy;
@@ -383,7 +382,6 @@ static void aom_init_parameters()
   p->boolean.default_value = true;
   p->has_default = true;
   d[i++] = p++;
-#endif
 
   assert(i < MAX_NPARAMETERS + 1);
   d[i++] = nullptr;
@@ -597,11 +595,9 @@ struct heif_error aom_set_parameter_boolean(void* encoder_raw, const char* name,
   } else if (strcmp(name, kParam_auto_tiles) == 0) {
       encoder->auto_tiles = value;
       return heif_error_ok;
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
   } else if (strcmp(name, kParam_enable_intra_block_copy) == 0) {
       encoder->enable_intra_block_copy = value;
       return heif_error_ok;
-#endif
   }
 
   set_value(kParam_realtime, realtime_mode);
@@ -1056,9 +1052,7 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   }
 #endif
 
-#if defined(AOM_CTRL_AV1E_SET_ENABLE_INTRABC)
   aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy);
-#endif
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   // Apply the custom AOM encoder options.
