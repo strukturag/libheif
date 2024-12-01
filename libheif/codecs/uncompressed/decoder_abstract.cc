@@ -70,11 +70,13 @@ void AbstractDecoder::memcpy_to_native_endian(uint8_t* dst, uint32_t value, uint
     *dst = static_cast<uint8_t>(value);
     return;
   }
+#if (__cplusplus > 201907L)
   else if (std::endian::native == std::endian::big) {
     for (uint32_t i = 0; i < bytes_per_sample; i++) {
       dst[bytes_per_sample - 1 - i] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
     }
   }
+#endif
   else {
     for (uint32_t i = 0; i < bytes_per_sample; i++) {
       dst[i] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
