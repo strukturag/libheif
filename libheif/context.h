@@ -47,6 +47,8 @@ class StreamWriter;
 
 class ImageItem;
 
+class Track;
+
 
 // This is a higher-level view than HeifFile.
 // Images are grouped logically into main images and their thumbnails.
@@ -184,6 +186,10 @@ private:
   heif_security_limits m_limits;
 
   std::vector<std::shared_ptr<RegionItem>> m_region_items;
+
+  // --- sequences
+
+  std::map<uint32_t, std::shared_ptr<Track>> m_tracks;
 
   Error interpret_heif_file();
 

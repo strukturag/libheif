@@ -117,6 +117,8 @@ public:
 
   std::string dump(Indent&) const override;
 
+  const VisualSampleEntry& get_VisualSampleEntry() const { return m_visualSampleEntry; }
+
   // TODO Error write(StreamWriter& writer) const override;
 
 protected:

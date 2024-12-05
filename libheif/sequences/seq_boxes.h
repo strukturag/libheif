@@ -114,6 +114,8 @@ public:
 
   double get_height() const { return float(m_height) / double(0x10000); }
 
+  uint32_t get_track_id() const { return m_track_id; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -224,6 +226,15 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  std::shared_ptr<const Box> get_sample_entry(size_t idx) const {
+    if (idx >= m_sample_entries.size()) {
+      return nullptr;
+    }
+    else {
+      return m_sample_entries[idx];
+    }
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -279,6 +290,11 @@ public:
     uint32_t sample_description_index;
   };
 
+  const std::vector<SampleToChunk>& get_chunks() const { return m_entries; }
+
+  // idx counting starts at 1
+  const SampleToChunk* get_chunk(uint32_t idx) const;
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -299,6 +315,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  const std::vector<uint32_t>& get_offsets() const { return m_offsets; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;

@@ -119,6 +119,10 @@ set(libheif_sources
         color-conversion/chroma_sampling.h
         sequences/seq_boxes.h
         sequences/seq_boxes.cc
+        sequences/chunk.h
+        sequences/chunk.cc
+        sequences/track.h
+        sequences/track.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})

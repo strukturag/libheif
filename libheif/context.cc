@@ -32,6 +32,7 @@
 #include <deque>
 #include "image-items/image_item.h"
 #include <codecs/hevc_boxes.h>
+#include "sequences/track.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -1552,5 +1553,24 @@ Result<heif_item_id> HeifContext::add_pyramid_group(const std::vector<heif_item_
 
 Error HeifContext::interpret_heif_file_sequences()
 {
+  m_tracks.clear();
+
+
+  // --- reference all non-hidden images
+
+  auto moov = m_heif_file->get_moov_box();
+  assert(moov);
+
+  auto mvhd = moov->get_child_box<Box_mvhd>();
+  if (!mvhd) {
+    assert(false); // TODO
+  }
+
+  auto tracks = moov->get_child_boxes<Box_trak>();
+  for (const auto& track_box : tracks) {
+    auto track = std::make_shared<Track>(this, track_box);
+    m_tracks.insert({track->get_id(), track});
+  }
+
   return Error::Ok;
 }

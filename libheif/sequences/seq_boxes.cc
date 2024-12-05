@@ -582,6 +582,19 @@ Error Box_stsc::write(StreamWriter& writer) const
 }
 
 
+const Box_stsc::SampleToChunk* Box_stsc::get_chunk(uint32_t idx) const
+{
+  assert(idx>=1);
+  for (size_t i = 0 ; i < m_entries.size();i++) {
+    if (idx >= m_entries[i].first_chunk && (i==m_entries.size()-1 || idx < m_entries[i+1].first_chunk)) {
+      return &m_entries[i];
+    }
+  }
+
+  return nullptr;
+}
+
+
 Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

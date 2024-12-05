@@ -220,6 +220,11 @@ public:
   static std::wstring convert_utf8_path_to_utf16(std::string pathutf8);
 #endif
 
+
+  // --- sequences
+
+  std::shared_ptr<Box_moov> get_moov_box() { return m_moov_box; }
+
 private:
 #if ENABLE_PARALLEL_TILE_DECODING
   mutable std::mutex m_read_mutex;

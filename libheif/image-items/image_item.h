@@ -49,9 +49,9 @@ public:
 class ImageItem : public ErrorBuffer
 {
 public:
-  ImageItem(HeifContext* file);
+  ImageItem(HeifContext* ctx);
 
-  ImageItem(HeifContext* file, heif_item_id id);
+  ImageItem(HeifContext* ctx, heif_item_id id);
 
   virtual ~ImageItem() = default;
 
