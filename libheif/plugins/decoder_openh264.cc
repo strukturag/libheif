@@ -162,7 +162,7 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
           scdata.push_back(0);
           scdata.push_back(3);
 
-          scdata.insert(scdata.end(), &indata[idx + 2], &indata[idx + i + 2]);
+          scdata.insert(scdata.end(), &indata[idx + 2], indata.data() + idx + i + 2);
           idx += i + 2;
           size -= (uint32_t)(i + 2);
           found_start_code_emulation = true;
@@ -174,7 +174,8 @@ struct heif_error openh264_decode_image(void* decoder_raw, struct heif_image** o
     }
 
     assert(size > 0);
-    scdata.insert(scdata.end(), &indata[idx], &indata[idx + size]);
+    // Note: we cannot write &indata[idx + size] since that would use the operator[] on an element beyond the vector range.
+    scdata.insert(scdata.end(), &indata[idx], indata.data() + idx + size);
 
     idx += size;
   }
