@@ -1694,6 +1694,5 @@ private:
   bool m_timestamp_generation_failure = false;
   bool m_timestamp_is_modified = false;
 };
-#endif
 
 #endif
