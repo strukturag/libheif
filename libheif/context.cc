@@ -1097,6 +1097,25 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
 
   // --- convert to output chroma format
 
+  auto img_result = convert_to_output_colorspace(img, out_colorspace, out_chroma, options);
+  if (img_result.error) {
+    return img_result.error;
+  }
+  else {
+    img = *img_result;
+  }
+
+  img->add_warnings(imgitem->get_decoding_warnings());
+
+  return img;
+}
+
+
+Result<std::shared_ptr<HeifPixelImage>> HeifContext::convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
+                                                                                  heif_colorspace out_colorspace,
+                                                                                  heif_chroma out_chroma,
+                                                                                  const struct heif_decoding_options& options) const
+{
   heif_colorspace target_colorspace = (out_colorspace == heif_colorspace_undefined ?
                                        img->get_colorspace() :
                                        out_colorspace);
@@ -1108,21 +1127,15 @@ Result<std::shared_ptr<HeifPixelImage>> HeifContext::decode_image(heif_item_id I
   bool different_colorspace = (target_colorspace != img->get_colorspace());
 
   int bpp = options.convert_hdr_to_8bit ? 8 : 0;
-  // TODO: check BPP changed
+// TODO: check BPP changed
   if (different_chroma || different_colorspace) {
 
-    auto img_result = convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp, options.color_conversion_options, get_security_limits());
-    if (img_result.error) {
-      return img_result.error;
-    }
-    else {
-      img = *img_result;
-    }
+    return convert_colorspace(img, target_colorspace, target_chroma, nullptr, bpp,
+                              options.color_conversion_options, get_security_limits());
   }
-
-  img->add_warnings(imgitem->get_decoding_warnings());
-
-  return img;
+  else {
+    return img;
+  }
 }
 
 

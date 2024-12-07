@@ -59,6 +59,7 @@ private:
   uint32_t m_id = 0;
 
   uint32_t m_num_samples = 0;
+  uint32_t m_current_chunk = 0;
   uint32_t m_next_sample_to_be_decoded = 0;
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;

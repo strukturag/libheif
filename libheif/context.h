@@ -106,6 +106,11 @@ public:
                                                        const struct heif_decoding_options& options,
                                                        bool decode_only_tile, uint32_t tx, uint32_t ty) const;
 
+  Result<std::shared_ptr<HeifPixelImage>> convert_to_output_colorspace(std::shared_ptr<HeifPixelImage> img,
+                                                                       heif_colorspace out_colorspace,
+                                                                       heif_chroma out_chroma,
+                                                                       const struct heif_decoding_options& options) const;
+
   Error get_id_of_non_virtual_child_image(heif_item_id in, heif_item_id& out) const;
 
   std::string debug_dump_boxes() const;

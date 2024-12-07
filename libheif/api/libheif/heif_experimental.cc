@@ -286,6 +286,9 @@ int heif_context_has_sequence(heif_context* ctx)
 }
 
 
+extern void fill_default_decoding_options(heif_decoding_options& options);
+
+
 struct heif_error heif_context_decode_next_sequence_image(const struct heif_context* ctx,
                                                           uint32_t track_id, // use 0 for first visual track
                                                           struct heif_image** out_img,
@@ -293,30 +296,54 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
                                                           enum heif_chroma chroma,
                                                           const struct heif_decoding_options* options)
 {
+  if (out_img == nullptr) {
+    return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "Output image pointer is NULL."};
+  }
+
+  // --- get the visual track
+
   auto track = ctx->context->get_visual_track(track_id);
   if (!track) {
     // TODO: error
   }
 
+  // --- reached end of sequence ?
+
   if (track->end_of_sequence_reached()) {
-    out_img = nullptr;
-    return {};
+    *out_img = nullptr;
+    return {heif_error_End_of_sequence, heif_suberror_Unspecified, "End of sequence"};
   }
 
+  // --- decode next sequence image
+
   const heif_decoding_options* opts = options;
-  heif_decoding_options* default_options = nullptr;
+  heif_decoding_options default_options;
+
   if (!opts) {
-    opts = default_options = heif_decoding_options_alloc();
+    fill_default_decoding_options(default_options);
+    opts = &default_options;
   }
 
   auto decodingResult = track->decode_next_image_sample(*opts);
+  if (!decodingResult) {
+    return decodingResult.error.error_struct(ctx->context.get());
+  }
 
-  if (opts != options) {
-    heif_decoding_options_free(default_options);
+  std::shared_ptr<HeifPixelImage> img = *decodingResult;
+
+
+  // --- convert to output colorspace
+
+  auto conversion_result = ctx->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
+  if (conversion_result.error) {
+    return conversion_result.error.error_struct(ctx->context.get());
+  }
+  else {
+    img = *conversion_result;
   }
 
   *out_img = new heif_image();
-  (*out_img)->image = std::move(decodingResult.value);
+  (*out_img)->image = std::move(img);
 
   return {};
 }

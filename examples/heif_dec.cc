@@ -823,12 +823,20 @@ int main(int argc, char** argv)
       return 1;
     }
 
+    std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
+    encoder->UpdateDecodingOptions(nullptr, decode_options.get());
+
     for (int i=0; ;i++) {
       heif_image* out_image = nullptr;
+      int bit_depth = 8; // TODO
       err = heif_context_decode_next_sequence_image(ctx, 0, &out_image,
-                                                    heif_colorspace_undefined,
-                                                    heif_chroma_undefined,
-                                                    nullptr);
+                                                    encoder->colorspace(false),
+                                                    encoder->chroma(false, bit_depth),
+                                                    decode_options.get());
+      if (err.code) {
+        std::cerr << err.message << "\n";
+        return 1;
+      }
 
       if (out_image == nullptr) {
         return 0;

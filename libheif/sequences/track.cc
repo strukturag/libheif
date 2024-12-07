@@ -116,10 +116,33 @@ bool Track::end_of_sequence_reached() const
 
 Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const struct heif_decoding_options& options)
 {
-  auto decoder = m_chunks[0]->get_decoder();
+  if (m_current_chunk > m_chunks.size()) {
+    return Error{heif_error_End_of_sequence,
+                 heif_suberror_Unspecified,
+                 "End of sequence"};
+  }
+
+  while (m_next_sample_to_be_decoded > m_chunks[m_current_chunk]->last_sample_number()) {
+    m_current_chunk++;
+
+    if (m_current_chunk > m_chunks.size()) {
+      return Error{heif_error_End_of_sequence,
+                   heif_suberror_Unspecified,
+                   "End of sequence"};
+    }
+  }
+
+  const std::shared_ptr<Chunk>& chunk = m_chunks[m_current_chunk];
+
+  if (!chunk) {
+    assert(false);
+    // TODO: end of sequence reached
+  }
+
+  auto decoder = chunk->get_decoder();
   assert(decoder);
 
-  decoder->set_data_extent(m_chunks[0]->get_data_extent_for_sample(m_next_sample_to_be_decoded));
+  decoder->set_data_extent(chunk->get_data_extent_for_sample(m_next_sample_to_be_decoded));
   m_next_sample_to_be_decoded++;
 
   return decoder->decode_single_frame_from_compressed_data(options);

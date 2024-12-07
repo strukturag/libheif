@@ -76,6 +76,8 @@ const char* Error::get_error_string(heif_error_code err)
       return "Error while loading plugin";
     case heif_error_Canceled:
       return "Canceled by user";
+    case heif_error_End_of_sequence:
+      return "End of sequence";
   }
 
   assert(false);
