@@ -108,6 +108,12 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
+bool Track::end_of_sequence_reached() const
+{
+  return (m_next_sample_to_be_decoded > m_chunks.back()->last_sample_number());
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const struct heif_decoding_options& options)
 {
   auto decoder = m_chunks[0]->get_decoder();

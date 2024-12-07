@@ -298,6 +298,11 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
     // TODO: error
   }
 
+  if (track->end_of_sequence_reached()) {
+    out_img = nullptr;
+    return {};
+  }
+
   const heif_decoding_options* opts = options;
   heif_decoding_options* default_options = nullptr;
   if (!opts) {

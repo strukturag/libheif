@@ -823,22 +823,34 @@ int main(int argc, char** argv)
       return 1;
     }
 
-    heif_image* out_image = nullptr;
-    err = heif_context_decode_next_sequence_image(ctx, 0, &out_image,
-                                                  heif_colorspace_undefined,
-                                                  heif_chroma_undefined,
-                                                  nullptr);
+    for (int i=0; ;i++) {
+      heif_image* out_image = nullptr;
+      err = heif_context_decode_next_sequence_image(ctx, 0, &out_image,
+                                                    heif_colorspace_undefined,
+                                                    heif_chroma_undefined,
+                                                    nullptr);
 
-    bool written = encoder->Encode(nullptr, out_image, output_filename);
-    if (!written) {
-      fprintf(stderr, "could not write image\n");
-    }
-    else {
-      if (!option_quiet) {
-        std::cout << "Written to " << output_filename << "\n";
+      if (out_image == nullptr) {
+        return 0;
       }
+
+      std::ostringstream s;
+      s << output_filename_stem;
+      s << "-" << i+1;
+      s << "." << output_filename_suffix;
+      std::string numbered_filename = s.str();
+
+      bool written = encoder->Encode(nullptr, out_image, numbered_filename);
+      if (!written) {
+        fprintf(stderr, "could not write image\n");
+      }
+      else {
+        if (!option_quiet) {
+          std::cout << "Written to " << numbered_filename << "\n";
+        }
+      }
+      heif_image_release(out_image);
     }
-    heif_image_release(out_image);
 
     return 0;
   }

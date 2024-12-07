@@ -50,6 +50,8 @@ public:
 
   bool is_visual_track() const;
 
+  bool end_of_sequence_reached() const;
+
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
 
 private:
