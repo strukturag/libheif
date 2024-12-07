@@ -101,12 +101,14 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
                                          stco->get_offsets()[chunk_idx],
                                          stsz->get_sample_sizes().data() + current_sample_idx);
 
+    m_chunks.push_back(chunk);
+
     current_sample_idx += sampleToChunk.samples_per_chunk;
   }
 }
 
 
-Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_compressed_image_sample(const struct heif_decoding_options& options)
+Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const struct heif_decoding_options& options)
 {
   auto decoder = m_chunks[0]->get_decoder();
   assert(decoder);

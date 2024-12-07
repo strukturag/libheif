@@ -28,6 +28,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include "sequences/track.h"
 
 
 struct heif_property_camera_intrinsic_matrix
@@ -276,4 +277,41 @@ struct heif_error heif_property_camera_extrinsic_matrix_get_world_coordinate_sys
   *out_wcs_id = matrix->matrix.world_coordinate_system_id;
 
   return heif_error_success;
+}
+
+
+int heif_context_has_sequence(heif_context* ctx)
+{
+  return ctx->context->has_sequence();
+}
+
+
+struct heif_error heif_context_decode_next_sequence_image(const struct heif_context* ctx,
+                                                          uint32_t track_id, // use 0 for first visual track
+                                                          struct heif_image** out_img,
+                                                          enum heif_colorspace colorspace,
+                                                          enum heif_chroma chroma,
+                                                          const struct heif_decoding_options* options)
+{
+  auto track = ctx->context->get_visual_track(track_id);
+  if (!track) {
+    // TODO: error
+  }
+
+  const heif_decoding_options* opts = options;
+  heif_decoding_options* default_options = nullptr;
+  if (!opts) {
+    opts = default_options = heif_decoding_options_alloc();
+  }
+
+  auto decodingResult = track->decode_next_image_sample(*opts);
+
+  if (opts != options) {
+    heif_decoding_options_free(default_options);
+  }
+
+  *out_img = new heif_image();
+  (*out_img)->image = std::move(decodingResult.value);
+
+  return {};
 }

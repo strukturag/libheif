@@ -421,6 +421,19 @@ struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx
 
 #endif
 
+// --- sequences
+
+LIBHEIF_API
+int heif_context_has_sequence(heif_context*);
+
+LIBHEIF_API
+struct heif_error heif_context_decode_next_sequence_image(const struct heif_context*,
+                                                          uint32_t track_id, // use 0 for first visual track
+                                                          struct heif_image** out_img,
+                                                          enum heif_colorspace colorspace,
+                                                          enum heif_chroma chroma,
+                                                          const struct heif_decoding_options* options);
+
 #ifdef __cplusplus
 }
 #endif

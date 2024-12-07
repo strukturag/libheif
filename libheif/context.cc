@@ -1574,3 +1574,20 @@ Error HeifContext::interpret_heif_file_sequences()
 
   return Error::Ok;
 }
+
+
+std::shared_ptr<Track> HeifContext::get_visual_track(uint32_t track_id)
+{
+  assert(has_sequence());
+
+  if (track_id != 0) {
+    auto iter = m_tracks.find(track_id);
+    if (iter == m_tracks.end()) {
+      // TODO
+    }
+
+    return iter->second;
+  }
+
+  return m_tracks.begin()->second;
+}

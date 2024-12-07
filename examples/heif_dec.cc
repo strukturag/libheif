@@ -28,6 +28,7 @@
 #include <cstring>
 #include <getopt.h>
 #include "libheif/heif_items.h"
+#include "libheif/heif_experimental.h"
 
 #if defined(HAVE_UNISTD_H)
 
@@ -93,6 +94,7 @@ static void show_help(const char* argv0)
                "      --list-decoders            list all available decoders (built-in and plugins)\n"
                "      --tiles                    output all image tiles as separate images\n"
                "      --quiet                    do not output status messages to console\n"
+               "  -S, --sequence                 decode image sequence instead of still image\n"
                "  -C, --chroma-upsampling ALGO   Force chroma upsampling algorithm (nn = nearest-neighbor / bilinear)\n"
                "      --png-compression-level #  Set to integer between 0 (fastest) and 9 (best). Use -1 for default.\n"
                "      --disable-limits           disable all security limits (do not use in production environment)\n";
@@ -125,6 +127,7 @@ int option_list_decoders = 0;
 int option_png_compression_level = -1; // use zlib default
 int option_output_tiles = 0;
 int option_disable_limits = 0;
+int option_sequence = 0;
 std::string output_filename;
 
 std::string chroma_upsampling;
@@ -145,6 +148,7 @@ static struct option long_options[] = {
     {(char* const) "no-colons",        no_argument,       &option_no_colons,        1},
     {(char* const) "list-decoders",    no_argument,       &option_list_decoders,    1},
     {(char* const) "tiles",            no_argument,       &option_output_tiles,     1},
+    {(char* const) "sequence",            no_argument,       &option_sequence,     1},
     {(char* const) "help",             no_argument,       0,                        'h'},
     {(char* const) "chroma-upsampling", required_argument, 0,                     'C'},
     {(char* const) "png-compression-level", required_argument, 0,  OPTION_PNG_COMPRESSION_LEVEL},
@@ -606,7 +610,7 @@ int main(int argc, char** argv)
   //while ((opt = getopt(argc, argv, "q:s")) != -1) {
   while (true) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hq:sd:C:vo:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "hq:sd:C:vo:S", long_options, &option_index);
     if (c == -1) {
       break;
     }
@@ -655,6 +659,9 @@ int main(int argc, char** argv)
         return 0;
       case 'o':
         output_filename = optarg;
+        break;
+      case 'S':
+        option_sequence = 1;
         break;
     }
   }
@@ -807,6 +814,33 @@ int main(int argc, char** argv)
   if (err.code != 0) {
     std::cerr << "Could not read HEIF/AVIF file: " << err.message << "\n";
     return 1;
+  }
+
+
+  if (option_sequence) {
+    if (!heif_context_has_sequence(ctx)) {
+      std::cerr << "File contains no image sequence\n";
+      return 1;
+    }
+
+    heif_image* out_image = nullptr;
+    err = heif_context_decode_next_sequence_image(ctx, 0, &out_image,
+                                                  heif_colorspace_undefined,
+                                                  heif_chroma_undefined,
+                                                  nullptr);
+
+    bool written = encoder->Encode(nullptr, out_image, output_filename);
+    if (!written) {
+      fprintf(stderr, "could not write image\n");
+    }
+    else {
+      if (!option_quiet) {
+        std::cout << "Written to " << output_filename << "\n";
+      }
+    }
+    heif_image_release(out_image);
+
+    return 0;
   }
 
 

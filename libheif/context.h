@@ -170,6 +170,13 @@ public:
 
   void add_region_referenced_mask_ref(heif_item_id region_item_id, heif_item_id mask_item_id);
 
+
+  // === sequences ==
+
+  bool has_sequence() const { return !m_tracks.empty(); }
+
+  std::shared_ptr<Track> get_visual_track(uint32_t track_id);
+
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;
 
