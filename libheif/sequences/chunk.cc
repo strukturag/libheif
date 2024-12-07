@@ -26,8 +26,40 @@ Chunk::Chunk(HeifContext* ctx)
 {
 }
 
-Chunk::Chunk(HeifContext* ctx, uint32_t track_id,
+Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
              uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const uint32_t* sample_sizes)
 {
-  
+  m_ctx = ctx;
+  m_track_id = track_id;
+
+  m_first_sample = first_sample;
+  m_last_sample = first_sample + num_samples - 1;
+
+  // m_sample_description_index = sample_description_index;
+
+  m_next_sample_to_be_decoded = first_sample;
+
+  for (uint32_t i=0;i<num_samples;i++) {
+    SampleFileRange range;
+    range.offset = file_offset;
+    range.size = sample_sizes[i];
+    m_sample_ranges.push_back(range);
+
+    file_offset += range.size;
+  }
+
+  m_decoder = Decoder::alloc_for_sequence_sample_description_box(sample_description_box);
+}
+
+
+DataExtent Chunk::get_data_extent_for_sample(uint32_t n) const
+{
+  assert(n>= m_first_sample);
+  assert(n<= m_last_sample);
+
+  DataExtent extent;
+  extent.set_file_range(m_ctx->get_heif_file(),
+                        m_sample_ranges[n - m_first_sample].offset,
+                        m_sample_ranges[n - m_first_sample].size);
+  return extent;
 }

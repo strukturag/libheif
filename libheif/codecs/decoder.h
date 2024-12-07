@@ -39,7 +39,7 @@
 struct DataExtent
 {
   std::shared_ptr<HeifFile> m_file;
-  enum class Source : uint8_t { Raw, Image, Sequence } m_source = Source::Raw;
+  enum class Source : uint8_t { Raw, Image, FileRange } m_source = Source::Raw;
 
   // --- raw data
   mutable std::vector<uint8_t> m_raw; // also for cached data
@@ -47,10 +47,13 @@ struct DataExtent
   // --- image
   heif_item_id m_item_id = 0;
 
-  // --- sequence
-  // TODO
+  // --- file range
+  uint64_t m_offset = 0;
+  uint32_t m_size;
 
   void set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item);
+
+  void set_file_range(std::shared_ptr<HeifFile> file, uint64_t offset, uint32_t size);
 
   Result<std::vector<uint8_t>*> read_data() const;
 
@@ -62,6 +65,8 @@ class Decoder
 {
 public:
   static std::shared_ptr<Decoder> alloc_for_infe_type(const ImageItem* item);
+
+  static std::shared_ptr<Decoder> alloc_for_sequence_sample_description_box(std::shared_ptr<const class Box_VisualSampleEntry> sample_description_box);
 
 
   virtual ~Decoder() = default;

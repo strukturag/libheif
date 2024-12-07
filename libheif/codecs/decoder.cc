@@ -49,6 +49,15 @@ void DataExtent::set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_i
 }
 
 
+void DataExtent::set_file_range(std::shared_ptr<HeifFile> file, uint64_t offset, uint32_t size)
+{
+  m_file = std::move(file);
+  m_source = Source::FileRange;
+  m_offset = offset;
+  m_size = size;
+}
+
+
 Result<std::vector<uint8_t>*> DataExtent::read_data() const
 {
   if (!m_raw.empty()) {
@@ -64,8 +73,11 @@ Result<std::vector<uint8_t>*> DataExtent::read_data() const
     }
   }
   else {
-    // sequence
-    assert(false); // TODO
+    // file range
+    Error err = m_file->append_data_from_file_range(m_raw, m_offset, m_size);
+    if (err) {
+      return err;
+    }
   }
 
   return &m_raw;
@@ -137,6 +149,23 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     case fourcc("mski"): {
       return nullptr; // do we need a decoder for this?
     }
+    default:
+      return nullptr;
+  }
+}
+
+
+std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std::shared_ptr<const Box_VisualSampleEntry> sample_description_box)
+{
+  std::string compressor = sample_description_box->get_VisualSampleEntry().compressorname;
+  uint32_t sampleType = sample_description_box->get_short_type();
+
+  switch (sampleType) {
+    case fourcc("hvc1"): {
+      auto hvcC = sample_description_box->get_child_box<Box_hvcC>();
+      return std::make_shared<Decoder_HEVC>(hvcC);
+    }
+
     default:
       return nullptr;
   }

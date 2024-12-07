@@ -26,20 +26,30 @@
 
 class HeifContext;
 
+class Box_VisualSampleEntry;
 
-class Chunk {
+
+class Chunk
+{
+public:
   Chunk(HeifContext* ctx);
 
-  Chunk(HeifContext* ctx, uint32_t track_id,
+  Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
         uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const uint32_t* sample_sizes);
 
   virtual ~Chunk() = default;
 
-  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
+  virtual std::shared_ptr<class Decoder> get_decoder() const { return m_decoder; }
+
+  uint32_t first_sample_number() const { return m_first_sample; }
+
+  uint32_t last_sample_number() const { return m_last_sample; }
+
+  DataExtent get_data_extent_for_sample(uint32_t n) const;
 
 private:
   HeifContext* m_ctx;
-  uint32_t track_id;
+  uint32_t m_track_id;
 
   uint32_t m_first_sample;
   uint32_t m_last_sample;
@@ -48,14 +58,15 @@ private:
 
   uint32_t m_next_sample_to_be_decoded = 0;
 
-  struct SampleRange {
-    uint64_t offset;
-    uint32_t size;
+  struct SampleFileRange
+  {
+    uint64_t offset = 0;
+    uint32_t size = 0;
   };
 
-  std::vector<SampleRange> m_sample_ranges;
+  std::vector<SampleFileRange> m_sample_ranges;
 
-  //std::shared_ptr<class Decoder> decoder;
+  std::shared_ptr<class Decoder> m_decoder;
 };
 
 

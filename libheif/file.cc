@@ -696,6 +696,25 @@ Error HeifFile::get_uncompressed_item_data(heif_item_id ID, std::vector<uint8_t>
 }
 
 
+Error HeifFile::append_data_from_file_range(std::vector<uint8_t>& out_data, uint64_t offset, uint32_t size) const
+{
+  bool success = m_input_stream->seek(offset);
+  if (!success) {
+    // TODO: error
+  }
+
+  auto old_size = out_data.size();
+  out_data.resize(old_size + size);
+
+  success = m_input_stream->read(out_data.data() + old_size, size);
+  if (!success) {
+    // TODO: error
+  }
+
+  return {};
+}
+
+
 Error HeifFile::append_data_from_iloc(heif_item_id ID, std::vector<uint8_t>& out_data, uint64_t offset, uint64_t size) const
 {
   const auto& items = m_iloc_box->get_items();

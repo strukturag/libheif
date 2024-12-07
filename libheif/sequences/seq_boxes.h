@@ -226,7 +226,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::shared_ptr<const Box> get_sample_entry(size_t idx) const {
+  std::shared_ptr<const class Box_VisualSampleEntry> get_sample_entry(size_t idx) const {
     if (idx >= m_sample_entries.size()) {
       return nullptr;
     }
@@ -239,7 +239,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  std::vector<std::shared_ptr<Box>> m_sample_entries;
+  std::vector<std::shared_ptr<class Box_VisualSampleEntry>> m_sample_entries;
 };
 
 
@@ -339,6 +339,8 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  const std::vector<uint32_t>& get_sample_sizes() const { return m_sample_sizes; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -424,6 +426,13 @@ struct VisualSampleEntry
   Error parse(BitstreamRange& range, const heif_security_limits*);
 
   std::string dump(Indent&) const;
+};
+
+
+class Box_VisualSampleEntry : public Box
+{
+public:
+  virtual const VisualSampleEntry& get_VisualSampleEntry() const = 0;
 };
 
 #endif //SEQ_BOXES_H

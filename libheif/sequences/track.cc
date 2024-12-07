@@ -22,6 +22,7 @@
 #include "context.h"
 #include "codecs/decoder.h"
 #include "sequences/seq_boxes.h"
+#include "sequences/chunk.h"
 #include "codecs/hevc_boxes.h"
 
 
@@ -72,6 +73,11 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
+  auto stsz = stbl->get_child_box<Box_stsz>();
+  if (!stsz) {
+    return;
+  }
+
   const std::vector<uint32_t>& chunk_offsets = stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 
@@ -90,38 +96,23 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       return;
     }
 
-    //auto chunk = std::make_shared<Chunk>(ctx, m_id,
-    //uint32_t first_sample, uint32_t
-    //num_samples, uint64_t
-    //file_offset,
-    //const uint32_t* sample_sizes);
+    auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
+                                         current_sample_idx, sampleToChunk.samples_per_chunk,
+                                         stco->get_offsets()[chunk_idx],
+                                         stsz->get_sample_sizes().data() + current_sample_idx);
 
     current_sample_idx += sampleToChunk.samples_per_chunk;
   }
-
-#if 0
-  for (const auto& sample_entry : stsd->get_all_child_boxes()) {
-    if (auto hvc1 = std::dynamic_pointer_cast<Box_hvc1>(sample_entry)) {
-      auto chunk_hvc1 =
-    }
-  }
-#endif
 }
 
 
 Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_compressed_image_sample(const struct heif_decoding_options& options)
 {
-#if 0
-  DataExtent extent;
-  extent.set_from_image_item(get_file(), get_id());
-
-  auto decoder = get_decoder();
+  auto decoder = m_chunks[0]->get_decoder();
   assert(decoder);
 
-  decoder->set_data_extent(std::move(extent));
+  decoder->set_data_extent(m_chunks[0]->get_data_extent_for_sample(m_next_sample_to_be_decoded));
+  m_next_sample_to_be_decoded++;
 
   return decoder->decode_single_frame_from_compressed_data(options);
-#else
-  return {};
-#endif
 }

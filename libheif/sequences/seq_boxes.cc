@@ -444,7 +444,14 @@ Error Box_stsd::parse(BitstreamRange& range, const heif_security_limits* limits)
       return err;
     }
 
-    m_sample_entries.push_back(entrybox);
+    auto visualSampleEntry_box = std::dynamic_pointer_cast<Box_VisualSampleEntry>(entrybox);
+    if (!visualSampleEntry_box) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "Invalid or unknown VisualSampleEntry in stsd box."};
+    }
+
+    m_sample_entries.push_back(visualSampleEntry_box);
   }
 
   return range.get_error();
