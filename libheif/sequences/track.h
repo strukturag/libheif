@@ -63,8 +63,6 @@ private:
   uint32_t m_next_sample_to_be_decoded = 0;
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
-
-  Result<std::shared_ptr<HeifPixelImage>> decode_next_compressed_image_sample(const struct heif_decoding_options& options);
 };
 
 

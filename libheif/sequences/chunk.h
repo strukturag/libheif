@@ -48,13 +48,13 @@ public:
   DataExtent get_data_extent_for_sample(uint32_t n) const;
 
 private:
-  HeifContext* m_ctx;
-  uint32_t m_track_id;
+  HeifContext* m_ctx = nullptr;
+  uint32_t m_track_id = 0;
 
-  uint32_t m_first_sample;
-  uint32_t m_last_sample;
+  uint32_t m_first_sample = 0;
+  uint32_t m_last_sample = 0;
 
-  uint32_t m_sample_description_index;
+  uint32_t m_sample_description_index = 0;
 
   uint32_t m_next_sample_to_be_decoded = 0;
 

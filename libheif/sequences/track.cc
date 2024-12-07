@@ -108,6 +108,12 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
+bool Track::is_visual_track() const
+{
+  return true; // TODO
+}
+
+
 bool Track::end_of_sequence_reached() const
 {
   return (m_next_sample_to_be_decoded > m_chunks.back()->last_sample_number());
@@ -133,11 +139,6 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
   }
 
   const std::shared_ptr<Chunk>& chunk = m_chunks[m_current_chunk];
-
-  if (!chunk) {
-    assert(false);
-    // TODO: end of sequence reached
-  }
 
   auto decoder = chunk->get_decoder();
   assert(decoder);

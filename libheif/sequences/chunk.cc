@@ -35,8 +35,6 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_Visu
   m_first_sample = first_sample;
   m_last_sample = first_sample + num_samples - 1;
 
-  // m_sample_description_index = sample_description_index;
-
   m_next_sample_to_be_decoded = first_sample;
 
   for (uint32_t i=0;i<num_samples;i++) {
