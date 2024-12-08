@@ -66,6 +66,10 @@ public:
 
   double get_matrix_element(int idx) const;
 
+  uint64_t get_time_scale() const { return m_timescale; }
+
+  uint64_t get_duration() const { return m_duration; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

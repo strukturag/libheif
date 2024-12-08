@@ -49,7 +49,9 @@ class HeifPixelImage;
 
 class Box_j2kH;
 
-class Box_movv;
+class Box_moov;
+
+class Box_mvhd;
 
 
 class HeifFile
@@ -227,6 +229,8 @@ public:
 
   std::shared_ptr<Box_moov> get_moov_box() { return m_moov_box; }
 
+  std::shared_ptr<Box_mvhd> get_mvhd_box() { return m_mvhd_box; }
+
 private:
 #if ENABLE_PARALLEL_TILE_DECODING
   mutable std::mutex m_read_mutex;
@@ -261,7 +265,7 @@ private:
   // --- sequences
 
   std::shared_ptr<Box_moov> m_moov_box;
-
+  std::shared_ptr<Box_mvhd> m_mvhd_box;
 
   const heif_security_limits* m_limits = nullptr;
 

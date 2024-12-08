@@ -506,6 +506,13 @@ Error HeifFile::parse_heif_images()
 
 Error HeifFile::parse_heif_sequences()
 {
+  m_mvhd_box = m_moov_box->get_child_box<Box_mvhd>();
+  if (!m_mvhd_box) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "No mvhd box in image sequence."};
+  }
+
   return Error::Ok;
 }
 

@@ -355,3 +355,29 @@ uint32_t heif_image_get_sample_duration(heif_image* img)
 {
   return img->image->get_sample_duration();
 }
+
+
+uint64_t heif_context_get_sequence_time_scale(heif_context* ctx)
+{
+  return ctx->context->get_sequence_time_scale();
+}
+
+uint64_t heif_context_get_sequence_duration(heif_context* ctx)
+{
+  return ctx->context->get_sequence_duration();
+}
+
+struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32_t trackId, uint16_t* out_width, uint16_t* out_height)
+{
+  auto trackResult = ctx->context->get_visual_track(trackId);
+  if (trackResult.error) {
+    return trackResult.error.error_struct(ctx->context.get());
+  }
+
+  auto track = *trackResult;
+
+  if (out_width) *out_width = track->get_width();
+  if (out_height) *out_height = track->get_height();
+
+  return heif_error_ok;
+}

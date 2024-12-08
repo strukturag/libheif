@@ -437,6 +437,15 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 LIBHEIF_API
 uint32_t heif_image_get_sample_duration(heif_image*);
 
+LIBHEIF_API
+uint64_t heif_context_get_sequence_time_scale(heif_context*);
+
+LIBHEIF_API
+uint64_t heif_context_get_sequence_duration(heif_context*);
+
+LIBHEIF_API
+struct heif_error heif_context_get_sequence_resolution(heif_context*, uint32_t track_id, uint16_t* out_width, uint16_t* out_height);
+
 #ifdef __cplusplus
 }
 #endif

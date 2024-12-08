@@ -1614,3 +1614,25 @@ Result<std::shared_ptr<Track>> HeifContext::get_visual_track(uint32_t track_id)
 
   return m_tracks.begin()->second;
 }
+
+
+uint64_t HeifContext::get_sequence_time_scale() const
+{
+  auto mvhd = m_heif_file->get_mvhd_box();
+  if (!mvhd) {
+    return 0;
+  }
+
+  return mvhd->get_time_scale();
+}
+
+
+uint64_t HeifContext::get_sequence_duration() const
+{
+  auto mvhd = m_heif_file->get_mvhd_box();
+  if (!mvhd) {
+    return 0;
+  }
+
+  return mvhd->get_duration();
+}

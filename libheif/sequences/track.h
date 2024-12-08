@@ -50,6 +50,10 @@ public:
 
   bool is_visual_track() const;
 
+  uint16_t get_width() const { return m_width; }
+
+  uint16_t get_height() const { return m_height; }
+
   bool end_of_sequence_reached() const;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
@@ -58,6 +62,8 @@ private:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
   uint32_t m_handler_type = 0;
+  uint16_t m_width = 0;
+  uint16_t m_height = 0;
 
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
