@@ -78,6 +78,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
+  m_stts = stbl->get_child_box<Box_stts>();
+
   const std::vector<uint32_t>& chunk_offsets = stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 
@@ -144,7 +146,18 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
   assert(decoder);
 
   decoder->set_data_extent(chunk->get_data_extent_for_sample(m_next_sample_to_be_decoded));
+
+  Result<std::shared_ptr<HeifPixelImage>> decodingResult = decoder->decode_single_frame_from_compressed_data(options);
+  if (decodingResult.error) {
+    m_next_sample_to_be_decoded++;
+    return decodingResult.error;
+  }
+
+  if (m_stts) {
+    decodingResult.value->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_decoded));
+  }
+
   m_next_sample_to_be_decoded++;
 
-  return decoder->decode_single_frame_from_compressed_data(options);
+  return decodingResult;
 }

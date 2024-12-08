@@ -471,6 +471,8 @@ Result<std::shared_ptr<HeifPixelImage>> ColorConversionPipeline::convert_image(c
       out->set_pixel_ratio(h, v);
     }
 
+    out->set_sample_duration(in->get_sample_duration());
+
     const auto& warnings = in->get_warnings();
     for (const auto& warning : warnings) {
       out->add_warning(warning);

@@ -238,6 +238,12 @@ public:
 
   void unset_mdcv() { m_mdcv_set = false; }
 
+  // --- sequences
+
+  void set_sample_duration(uint32_t d) { m_sample_duration = d; }
+
+  uint32_t get_sample_duration() const { return m_sample_duration; }
+
   // --- warnings
 
   void add_warning(Error warning) { m_warnings.emplace_back(std::move(warning)); }
@@ -294,6 +300,8 @@ private:
   heif_content_light_level m_clli{};
   heif_mastering_display_colour_volume m_mdcv{};
   bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17
+
+  uint32_t m_sample_duration = 0; // duration of a sequence frame
 
   std::vector<Error> m_warnings;
 };

@@ -347,3 +347,9 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   return {};
 }
+
+
+uint32_t heif_image_get_sample_duration(heif_image* img)
+{
+  return img->image->get_sample_duration();
+}

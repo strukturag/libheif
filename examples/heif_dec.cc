@@ -842,6 +842,8 @@ int main(int argc, char** argv)
         return 0;
       }
 
+      std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
+
       std::ostringstream s;
       s << output_filename_stem;
       s << "-" << i+1;

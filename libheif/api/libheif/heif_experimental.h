@@ -434,6 +434,9 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
                                                           enum heif_chroma chroma,
                                                           const struct heif_decoding_options* options);
 
+LIBHEIF_API
+uint32_t heif_image_get_sample_duration(heif_image*);
+
 #ifdef __cplusplus
 }
 #endif

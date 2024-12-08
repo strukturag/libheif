@@ -262,6 +262,8 @@ public:
     uint32_t sample_delta;
   };
 
+  uint32_t get_sample_duration(uint32_t sample_idx);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

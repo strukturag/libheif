@@ -536,6 +536,22 @@ Error Box_stts::write(StreamWriter& writer) const
 }
 
 
+uint32_t Box_stts::get_sample_duration(uint32_t sample_idx)
+{
+  size_t i = 0;
+  while (i < m_entries.size()) {
+    if (sample_idx < m_entries[i].sample_count) {
+      return m_entries[i].sample_delta;
+    }
+    else {
+      sample_idx -= m_entries[i].sample_count;
+    }
+  }
+
+  return 0;
+}
+
+
 Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
