@@ -202,6 +202,7 @@ private:
   // --- sequences
 
   std::map<uint32_t, std::shared_ptr<Track>> m_tracks;
+  uint32_t m_visual_track_id = 0;
 
   Error interpret_heif_file();
 

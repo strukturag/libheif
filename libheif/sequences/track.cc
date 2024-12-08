@@ -48,6 +48,13 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
+  auto hdlr = mdia->get_child_box<Box_hdlr>();
+  if (!hdlr) {
+    return;
+  }
+
+  m_handler_type = hdlr->get_handler_type();
+
   auto minf = mdia->get_child_box<Box_minf>();
   if (!minf) {
     return;
@@ -112,7 +119,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
 bool Track::is_visual_track() const
 {
-  return true; // TODO
+  return m_handler_type == fourcc("pict");
 }
 
 

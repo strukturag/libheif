@@ -1583,6 +1583,10 @@ Error HeifContext::interpret_heif_file_sequences()
   for (const auto& track_box : tracks) {
     auto track = std::make_shared<Track>(this, track_box);
     m_tracks.insert({track->get_id(), track});
+
+    if (track->is_visual_track()) {
+      m_visual_track_id = track->get_id();
+    }
   }
 
   return Error::Ok;
@@ -1600,6 +1604,10 @@ std::shared_ptr<Track> HeifContext::get_visual_track(uint32_t track_id)
     }
 
     return iter->second;
+  }
+
+  if (m_visual_track_id != 0) {
+    return m_tracks[m_visual_track_id];
   }
 
   return m_tracks.begin()->second;

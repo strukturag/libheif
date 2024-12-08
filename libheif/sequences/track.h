@@ -46,7 +46,7 @@ public:
 
   std::shared_ptr<class HeifFile> get_file() const;
 
-  //uint32_t get_handler() const;
+  uint32_t get_handler() const { return m_handler_type; }
 
   bool is_visual_track() const;
 
@@ -57,6 +57,7 @@ public:
 private:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
+  uint32_t m_handler_type = 0;
 
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
