@@ -1593,14 +1593,16 @@ Error HeifContext::interpret_heif_file_sequences()
 }
 
 
-std::shared_ptr<Track> HeifContext::get_visual_track(uint32_t track_id)
+Result<std::shared_ptr<Track>> HeifContext::get_visual_track(uint32_t track_id)
 {
   assert(has_sequence());
 
   if (track_id != 0) {
     auto iter = m_tracks.find(track_id);
     if (iter == m_tracks.end()) {
-      // TODO
+      return Error{heif_error_Usage_error,
+                   heif_suberror_Unspecified,
+                   "Invalid track id"};
     }
 
     return iter->second;

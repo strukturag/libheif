@@ -302,10 +302,12 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   // --- get the visual track
 
-  auto track = ctx->context->get_visual_track(track_id);
-  if (!track) {
-    // TODO: error
+  auto trackResult = ctx->context->get_visual_track(track_id);
+  if (trackResult.error) {
+    return trackResult.error.error_struct(ctx->context.get());
   }
+
+  auto track = *trackResult;
 
   // --- reached end of sequence ?
 
