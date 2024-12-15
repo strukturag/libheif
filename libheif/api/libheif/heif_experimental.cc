@@ -381,3 +381,17 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
 
   return heif_error_ok;
 }
+
+struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height, uint32_t* out_track_id)
+{
+  Result<uint32_t> addResult = ctx->context->add_sequence_track(width,height);
+  if (addResult.error) {
+    return addResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_track_id) {
+    *out_track_id = addResult.value;
+  }
+
+  return heif_error_ok;
+}

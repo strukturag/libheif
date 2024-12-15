@@ -79,7 +79,13 @@ public:
 
   void new_empty_file();
 
+  void init_for_image();
+
+  void init_for_sequence();
+
   void set_brand(heif_compression_format format, bool miaf_compatible);
+
+  void set_sequence_brand(heif_compression_format format);
 
   void set_hdlr_box(std::shared_ptr<Box_hdlr> box) { m_hdlr_box = std::move(box); }
 

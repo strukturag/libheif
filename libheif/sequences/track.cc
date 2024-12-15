@@ -120,6 +120,73 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
+Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height)
+{
+  auto moov = ctx->get_heif_file()->get_moov_box();
+  assert(moov);
+
+  // --- find next free track ID
+
+  if (track_id == 0) {
+    track_id = 1; // minimum track ID
+    
+    for (const auto& track : moov->get_child_boxes<Box_trak>()) {
+      auto tkhd = track->get_child_box<Box_tkhd>();
+
+      if (tkhd->get_track_id() >= track_id) {
+        track_id = tkhd->get_track_id() + 1;
+      }
+    }
+
+    auto mvhd = moov->get_child_box<Box_mvhd>();
+    mvhd->set_next_track_id(track_id + 1);
+  }
+
+  auto trak = std::make_shared<Box_trak>();
+  moov->append_child_box(trak);
+
+  auto tkhd = std::make_shared<Box_tkhd>();
+  trak->append_child_box(tkhd);
+  tkhd->set_track_id(track_id);
+  tkhd->set_resolution(width, height);
+
+  auto mdia = std::make_shared<Box_mdia>();
+  trak->append_child_box(mdia);
+
+  auto mdhd = std::make_shared<Box_mdhd>();
+  mdia->append_child_box(mdhd);
+
+  auto hdlr = std::make_shared<Box_hdlr>();
+  mdia->append_child_box(hdlr);
+  hdlr->set_handler_type(fourcc("pict"));
+
+  auto minf = std::make_shared<Box_minf>();
+  mdia->append_child_box(minf);
+
+  auto vmhd = std::make_shared<Box_vmhd>();
+  minf->append_child_box(vmhd);
+
+  auto stbl = std::make_shared<Box_stbl>();
+  minf->append_child_box(stbl);
+
+  auto stsd = std::make_shared<Box_stsd>();
+  stbl->append_child_box(stsd);
+
+  auto stts = std::make_shared<Box_stts>();
+  stbl->append_child_box(stts);
+  m_stts = stts;
+
+  auto stsc = std::make_shared<Box_stsc>();
+  stbl->append_child_box(stsc);
+
+  auto stsz = std::make_shared<Box_stsz>();
+  stbl->append_child_box(stsz);
+
+  auto stco = std::make_shared<Box_stco>();
+  stbl->append_child_box(stco);
+}
+
+
 bool Track::is_visual_track() const
 {
   return m_handler_type == fourcc("pict");

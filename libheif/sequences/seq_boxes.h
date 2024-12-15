@@ -70,20 +70,22 @@ public:
 
   uint64_t get_duration() const { return m_duration; }
 
+  void set_next_track_id(uint32_t next_id) { m_next_track_ID = next_id; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_creation_time;
-  uint64_t m_modification_time;
-  uint64_t m_timescale;
-  uint64_t m_duration;
+  uint64_t m_creation_time = 0;
+  uint64_t m_modification_time = 0;
+  uint64_t m_timescale = 0;
+  uint64_t m_duration = 0;
 
   uint32_t m_rate = 0x00010000; // typically 1.0
   uint16_t m_volume = 0x0100; // typically, full volume
 
   uint32_t m_matrix[9] = {0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000};
-  uint32_t m_next_track_ID;
+  uint32_t m_next_track_ID = 0;
 };
 
 
@@ -120,23 +122,30 @@ public:
 
   uint32_t get_track_id() const { return m_track_id; }
 
+  void set_track_id(uint32_t track_id) { m_track_id = track_id; }
+
+  void set_resolution(double width, double height) {
+    m_width = (uint32_t)(width * 0x10000);
+    m_height = (uint32_t)(height * 0x10000);
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_creation_time;
-  uint64_t m_modification_time;
-  uint32_t m_track_id;
-  uint64_t m_duration;
+  uint64_t m_creation_time = 0;
+  uint64_t m_modification_time = 0;
+  uint32_t m_track_id = 0;
+  uint64_t m_duration = 0;
 
-  uint16_t m_layer;
-  uint16_t m_alternate_group;
+  uint16_t m_layer = 0;
+  uint16_t m_alternate_group = 0;
   uint16_t m_volume = 0x0100; // typically, full volume
 
   uint32_t m_matrix[9] = {0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000};
 
-  uint32_t m_width;
-  uint32_t m_height;
+  uint32_t m_width = 0;
+  uint32_t m_height = 0;
 };
 
 
@@ -169,12 +178,12 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint64_t m_creation_time;
-  uint64_t m_modification_time;
-  uint32_t m_timescale;
-  uint64_t m_duration;
+  uint64_t m_creation_time = 0;
+  uint64_t m_modification_time = 0;
+  uint32_t m_timescale = 0;
+  uint64_t m_duration = 0;
 
-  char m_language[4];
+  char m_language[4] = { 'u','n','k',0 };
 };
 
 
@@ -355,8 +364,8 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint32_t m_fixed_sample_size;
-  uint32_t m_sample_count;
+  uint32_t m_fixed_sample_size = 0;
+  uint32_t m_sample_count = 0;
   std::vector<uint32_t> m_sample_sizes;
 };
 
@@ -399,9 +408,9 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  bool all_ref_pics_intra;
-  bool intra_pred_used;
-  uint8_t max_ref_per_pic; // 4 bit
+  bool all_ref_pics_intra = false;
+  bool intra_pred_used = false;
+  uint8_t max_ref_per_pic = 0; // 4 bit
 };
 
 
@@ -416,8 +425,8 @@ struct VisualSampleEntry
   uint16_t pre_defined = 0;
   //uint16_t reserved = 0;
   uint32_t pre_defined2[3] = {0,0,0};
-  uint16_t width;
-  uint16_t height;
+  uint16_t width = 0;
+  uint16_t height = 0;
   uint32_t horizresolution = 0x00480000; // 72 dpi
   uint32_t vertresolution = 0x00480000; // 72 dpi
   //uint32_t reserved = 0;

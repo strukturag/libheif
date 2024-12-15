@@ -34,9 +34,9 @@ class Box_trak;
 
 class Track : public ErrorBuffer {
 public:
-  Track(HeifContext* ctx);
+  //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id);
+  Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 

@@ -150,6 +150,16 @@ void HeifFile::new_empty_file()
   m_top_level_boxes.clear();
 
   m_ftyp_box = std::make_shared<Box_ftyp>();
+  m_top_level_boxes.push_back(m_ftyp_box);
+}
+
+
+void HeifFile::init_for_image()
+{
+  if (m_meta_box) {
+    return;
+  }
+
   m_hdlr_box = std::make_shared<Box_hdlr>();
   m_meta_box = std::make_shared<Box_meta>();
   m_ipco_box = std::make_shared<Box_ipco>();
@@ -172,11 +182,26 @@ void HeifFile::new_empty_file()
 
   m_infe_boxes.clear();
 
-  m_top_level_boxes.push_back(m_ftyp_box);
   m_top_level_boxes.push_back(m_meta_box);
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
   m_top_level_boxes.push_back(m_mini_box);
 #endif
+}
+
+
+void HeifFile::init_for_sequence()
+{
+  if (m_moov_box) {
+    return;
+  }
+
+  m_moov_box = std::make_shared<Box_moov>();
+  m_top_level_boxes.push_back(m_moov_box);
+
+  m_mvhd_box = std::make_shared<Box_mvhd>();
+  m_moov_box->append_child_box(m_mvhd_box);
+
+  set_sequence_brand(heif_compression_HEVC);
 }
 
 
@@ -251,6 +276,15 @@ void HeifFile::set_brand(heif_compression_format format, bool miaf_compatible)
 }
 
 
+void HeifFile::set_sequence_brand(heif_compression_format format)
+{
+  // TODO
+  m_ftyp_box->set_major_brand(heif_brand2_heic);
+  m_ftyp_box->set_minor_version(0);
+  m_ftyp_box->add_compatible_brand(heif_brand2_msf1);
+}
+
+
 void HeifFile::write(StreamWriter& writer)
 {
   for (auto& box : m_top_level_boxes) {
@@ -264,7 +298,10 @@ void HeifFile::write(StreamWriter& writer)
     box->write(writer);
   }
 
-  m_iloc_box->write_mdat_after_iloc(writer);
+  // TODO: write mdat with sequence data
+  if (m_iloc_box) {
+    m_iloc_box->write_mdat_after_iloc(writer);
+  }
 }
 
 
@@ -861,6 +898,8 @@ heif_item_id HeifFile::add_new_image(uint32_t item_type)
 
 std::shared_ptr<Box_infe> HeifFile::add_new_infe_box(uint32_t item_type)
 {
+  init_for_image();
+
   heif_item_id id = get_unused_item_id();
 
   auto infe = std::make_shared<Box_infe>();

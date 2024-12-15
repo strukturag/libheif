@@ -446,6 +446,9 @@ uint64_t heif_context_get_sequence_duration(heif_context*);
 LIBHEIF_API
 struct heif_error heif_context_get_sequence_resolution(heif_context*, uint32_t track_id, uint16_t* out_width, uint16_t* out_height);
 
+LIBHEIF_API
+struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height, uint32_t* out_track_id);
+
 #ifdef __cplusplus
 }
 #endif
