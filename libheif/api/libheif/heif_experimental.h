@@ -446,8 +446,25 @@ uint64_t heif_context_get_sequence_duration(heif_context*);
 LIBHEIF_API
 struct heif_error heif_context_get_sequence_resolution(heif_context*, uint32_t track_id, uint16_t* out_width, uint16_t* out_height);
 
+struct heif_track;
+
 LIBHEIF_API
-struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height, uint32_t* out_track_id);
+struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height, heif_track** out_track);
+
+LIBHEIF_API
+void heif_track_release(heif_track*);
+
+LIBHEIF_API
+uint32_t heif_context_get_image_duration(heif_image*);
+
+LIBHEIF_API
+void heif_context_set_sequence_duration(heif_image*, uint32_t duration);
+
+LIBHEIF_API
+struct heif_error heif_track_encode_sequence_image(struct heif_track*,
+                                                   const struct heif_image* image,
+                                                   struct heif_encoder* encoder,
+                                                   const struct heif_encoding_options* options);
 
 #ifdef __cplusplus
 }

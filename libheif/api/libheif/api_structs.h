@@ -36,6 +36,15 @@ struct heif_image_handle
 };
 
 
+struct heif_track
+{
+  std::shared_ptr<Track> track;
+
+  // store reference to keep the context alive while we are using the handle (issue #147)
+  std::shared_ptr<HeifContext> context;
+};
+
+
 struct heif_image
 {
   std::shared_ptr<HeifPixelImage> image;

@@ -129,7 +129,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
 
   if (track_id == 0) {
     track_id = 1; // minimum track ID
-    
+
     for (const auto& track : moov->get_child_boxes<Box_trak>()) {
       auto tkhd = track->get_child_box<Box_tkhd>();
 

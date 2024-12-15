@@ -382,16 +382,44 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
   return heif_error_ok;
 }
 
-struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height, uint32_t* out_track_id)
+struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height, heif_track** out_track)
 {
-  Result<uint32_t> addResult = ctx->context->add_sequence_track(width,height);
+  Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }
 
-  if (out_track_id) {
-    *out_track_id = addResult.value;
+  if (out_track) {
+    auto* track = new heif_track;
+    track->track = *addResult;
+    track->context = ctx->context;
+
+    *out_track = track;
   }
 
   return heif_error_ok;
+}
+
+void heif_track_release(heif_track* track)
+{
+  delete track;
+}
+
+
+uint32_t heif_context_get_image_duration(heif_image* img)
+{
+  return img->image->get_sample_duration();
+}
+
+void heif_context_set_sequence_duration(heif_image* img, uint32_t duration)
+{
+  img->image->set_sample_duration(duration);
+}
+
+struct heif_error heif_context_encode_sequence_image(struct heif_track* track,
+                                                     const struct heif_image* image,
+                                                     struct heif_encoder* encoder,
+                                                     const struct heif_encoding_options* options)
+{
+
 }

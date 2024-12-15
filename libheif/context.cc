@@ -1638,12 +1638,12 @@ uint64_t HeifContext::get_sequence_duration() const
 }
 
 
-Result<uint32_t> HeifContext::add_sequence_track(uint16_t width, uint16_t height)
+Result<std::shared_ptr<Track>> HeifContext::add_sequence_track(uint16_t width, uint16_t height)
 {
   m_heif_file->init_for_sequence();
 
   auto trak = std::make_shared<Track>(this, 0, width, height);
   m_tracks.insert({trak->get_id(), trak});
 
-  return trak->get_id();
+  return trak;
 }

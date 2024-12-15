@@ -1164,6 +1164,8 @@ int main(int argc, char** argv)
 
   bool first_image = true;
 
+  heif_track* track = nullptr;
+
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
 
@@ -1194,13 +1196,11 @@ int main(int argc, char** argv)
     }
 #endif
 
-    uint32_t track_id = 0;
-
     if (first_image) {
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
                                       heif_image_get_primary_height(image.get()),
-                                      &track_id);
+                                      &track);
       first_image = false;
     }
 
@@ -1368,6 +1368,8 @@ int main(int argc, char** argv)
     std::cerr << error.message << "\n";
     return 5;
   }
+
+  heif_track_release(track);
 
   return 0;
 }
