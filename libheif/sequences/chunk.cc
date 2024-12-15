@@ -27,7 +27,7 @@ Chunk::Chunk(HeifContext* ctx)
 }
 
 Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
-             uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const uint32_t* sample_sizes)
+             uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& stsz)
 {
   m_ctx = ctx;
   m_track_id = track_id;
@@ -40,7 +40,13 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_Visu
   for (uint32_t i=0;i<num_samples;i++) {
     SampleFileRange range;
     range.offset = file_offset;
-    range.size = sample_sizes[i];
+    if (stsz->has_fixed_sample_size()) {
+      range.size = stsz->get_fixed_sample_size();
+    }
+    else {
+      range.size = stsz->get_sample_sizes()[first_sample + i];
+    }
+
     m_sample_ranges.push_back(range);
 
     file_offset += range.size;

@@ -166,6 +166,12 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
       return std::make_shared<Decoder_HEVC>(hvcC);
     }
 
+    case fourcc("uncv"): {
+      auto uncC = sample_description_box->get_child_box<Box_uncC>();
+      auto cmpd = sample_description_box->get_child_box<Box_cmpd>();
+      return std::make_shared<Decoder_uncompressed>(uncC, cmpd);
+    }
+
     default:
       return nullptr;
   }

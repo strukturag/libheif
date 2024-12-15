@@ -345,6 +345,10 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  bool has_fixed_sample_size() const { return m_fixed_sample_size != 0; }
+
+  uint32_t get_fixed_sample_size() const { return m_fixed_sample_size; }
+
   const std::vector<uint32_t>& get_sample_sizes() const { return m_sample_sizes; }
 
 protected:

@@ -25,6 +25,7 @@
 #include "box.h"
 #include "bitstream.h"
 #include "unc_types.h"
+#include "sequences/seq_boxes.h"
 
 #include <cstdint>
 #include <string>
@@ -363,5 +364,28 @@ protected:
   uint16_t m_pattern_height = 0;
   std::vector<PatternComponent> m_components;
 };
+
+
+class Box_uncv : public Box_VisualSampleEntry
+{
+public:
+  Box_uncv()
+  {
+    set_short_type(fourcc("uncv"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const VisualSampleEntry& get_VisualSampleEntry() const override { return m_visualSampleEntry; }
+
+  // TODO Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+private:
+  VisualSampleEntry m_visualSampleEntry;
+};
+
 
 #endif //LIBHEIF_UNC_BOXES_H

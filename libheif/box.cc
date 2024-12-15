@@ -646,6 +646,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
     case fourcc("cpat"):
       box = std::make_shared<Box_cpat>();
       break;
+
+    case fourcc("uncv"):
+      box = std::make_shared<Box_uncv>();
+      break;
 #endif
 
     // --- JPEG 2000
