@@ -617,14 +617,9 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
   //auto target_nclx = std::make_shared<color_profile_nclx>();
   //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
 
-  auto output_image_result = convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                                                output_bpp, options.color_conversion_options,
-                                                get_context()->get_security_limits());
-  if (output_image_result.error) {
-    return output_image_result.error;
-  }
-
-  return *output_image_result;
+  return convert_colorspace(image, colorspace, chroma, target_nclx_profile,
+                            output_bpp, options.color_conversion_options,
+                            get_context()->get_security_limits());
 }
 
 

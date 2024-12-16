@@ -48,6 +48,8 @@ public:
     uint32_t encoded_image_width = 0;
     uint32_t encoded_image_height = 0;
 
+    bool is_sync_frame = true; // TODO: set in encoder
+
     void append(const uint8_t* data, size_t size);
 
     void append_with_4bytes_size(const uint8_t* data, size_t size);

@@ -721,6 +721,34 @@ Error Box_stsz::write(StreamWriter& writer) const
 }
 
 
+void Box_stsz::append_sample_size(uint32_t size)
+{
+  if (m_sample_count == 0) {
+    m_fixed_sample_size = size;
+    m_sample_count = 1;
+    return;
+  }
+
+  if (m_fixed_sample_size == size) {
+    m_sample_count++;
+    return;
+  }
+
+  if (m_fixed_sample_size != 0) {
+    for (uint32_t i = 0; i < m_sample_count; i++) {
+      m_sample_sizes.push_back(m_fixed_sample_size);
+    }
+
+    m_fixed_sample_size = 0;
+  }
+
+  m_sample_sizes.push_back(size);
+  m_sample_count++;
+
+  assert(m_sample_count == m_sample_sizes.size());
+}
+
+
 Error Box_stss::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

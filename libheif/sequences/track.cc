@@ -21,9 +21,11 @@
 #include "track.h"
 #include "context.h"
 #include "codecs/decoder.h"
+#include "codecs/encoder.h"
 #include "sequences/seq_boxes.h"
 #include "sequences/chunk.h"
 #include "codecs/hevc_boxes.h"
+#include "libheif/api_structs.h"
 
 
 std::shared_ptr<class HeifFile> Track::get_file() const
@@ -80,8 +82,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
-  auto stsz = stbl->get_child_box<Box_stsz>();
-  if (!stsz) {
+  m_stsz = stbl->get_child_box<Box_stsz>();
+  if (!m_stsz) {
     return;
   }
 
@@ -111,7 +113,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
                                          stco->get_offsets()[chunk_idx],
-                                         stsz);
+                                         m_stsz);
 
     m_chunks.push_back(chunk);
 
@@ -122,15 +124,15 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
 Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height)
 {
-  auto moov = ctx->get_heif_file()->get_moov_box();
-  assert(moov);
+  m_moov = ctx->get_heif_file()->get_moov_box();
+  assert(m_moov);
 
   // --- find next free track ID
 
   if (track_id == 0) {
     track_id = 1; // minimum track ID
 
-    for (const auto& track : moov->get_child_boxes<Box_trak>()) {
+    for (const auto& track : m_moov->get_child_boxes<Box_trak>()) {
       auto tkhd = track->get_child_box<Box_tkhd>();
 
       if (tkhd->get_track_id() >= track_id) {
@@ -138,12 +140,12 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
       }
     }
 
-    auto mvhd = moov->get_child_box<Box_mvhd>();
+    auto mvhd = m_moov->get_child_box<Box_mvhd>();
     mvhd->set_next_track_id(track_id + 1);
   }
 
   auto trak = std::make_shared<Box_trak>();
-  moov->append_child_box(trak);
+  m_moov->append_child_box(trak);
 
   auto tkhd = std::make_shared<Box_tkhd>();
   trak->append_child_box(tkhd);
@@ -179,11 +181,14 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   auto stsc = std::make_shared<Box_stsc>();
   stbl->append_child_box(stsc);
 
-  auto stsz = std::make_shared<Box_stsz>();
-  stbl->append_child_box(stsz);
+  m_stsz = std::make_shared<Box_stsz>();
+  stbl->append_child_box(m_stsz);
 
   auto stco = std::make_shared<Box_stco>();
   stbl->append_child_box(stco);
+
+  m_stss = std::make_shared<Box_stss>();
+  stbl->append_child_box(m_stss);
 }
 
 
@@ -237,4 +242,66 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
   m_next_sample_to_be_decoded++;
 
   return decodingResult;
+}
+
+
+Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
+                          struct heif_encoder* h_encoder,
+                          const struct heif_encoding_options& options,
+                          heif_image_input_class input_class)
+{
+#if 0 // TODO
+
+  // --- check whether we have to convert the image color space
+
+  // The reason for doing the color conversion here is that the input might be an RGBA image and the color conversion
+  // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
+
+  heif_encoding_options options = in_options;
+
+  if (const auto* nclx = output_image_item->get_forced_output_nclx()) {
+    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+  }
+
+  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = output_image_item->convert_colorspace_for_encoding(pixel_image,
+                                                                                                              encoder,
+                                                                                                              options);
+  if (srcImageResult.error) {
+    return srcImageResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
+#endif
+
+  // === generate compressed image bitstream
+
+  // generate new chunk for first image or when compression formats don't match
+
+  if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
+    auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, h_encoder->plugin->compression_format);
+    m_chunks.push_back(chunk);
+  }
+
+  auto encoder = m_chunks.back()->get_encoder();
+
+  Result<Encoder::CodedImageData> encodeResult = encoder->encode(image, h_encoder, options, input_class);
+  if (encodeResult.error) {
+    return encodeResult.error;
+  }
+
+  const Encoder::CodedImageData& data = encodeResult.value;
+
+  m_video_data.insert(m_video_data.end(),
+                      data.bitstream.begin(),
+                      data.bitstream.end());
+
+  m_stsz->append_sample_size((uint32_t)data.bitstream.size());
+
+  if (data.is_sync_frame) {
+    m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
+  }
+
+  m_next_sample_to_be_decoded++;
+
+  return Error::Ok;
 }

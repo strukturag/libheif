@@ -3336,7 +3336,7 @@ void set_default_encoding_options(heif_encoding_options& options)
   options.prefer_uncC_short_form = true;
 }
 
-static void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
+void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options)
 {
   switch (input_options.version) {
     case 7:

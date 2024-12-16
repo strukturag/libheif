@@ -32,14 +32,18 @@ class Box_VisualSampleEntry;
 class Chunk
 {
 public:
-  Chunk(HeifContext* ctx);
+  Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format);
 
   Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
         uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& sample_sizes);
 
   virtual ~Chunk() = default;
 
+  heif_compression_format get_compression_format() const { return m_compression_format; }
+
   virtual std::shared_ptr<class Decoder> get_decoder() const { return m_decoder; }
+
+  virtual std::shared_ptr<class Encoder> get_encoder() const { return m_encoder; }
 
   uint32_t first_sample_number() const { return m_first_sample; }
 
@@ -50,6 +54,8 @@ public:
 private:
   HeifContext* m_ctx = nullptr;
   uint32_t m_track_id = 0;
+
+  heif_compression_format m_compression_format = heif_compression_undefined;
 
   uint32_t m_first_sample = 0;
   uint32_t m_last_sample = 0;
@@ -67,6 +73,7 @@ private:
   std::vector<SampleFileRange> m_sample_ranges;
 
   std::shared_ptr<class Decoder> m_decoder;
+  std::shared_ptr<class Encoder> m_encoder;
 };
 
 

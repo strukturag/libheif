@@ -382,6 +382,7 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
   return heif_error_ok;
 }
 
+
 struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height, heif_track** out_track)
 {
   Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height);
@@ -411,15 +412,48 @@ uint32_t heif_context_get_image_duration(heif_image* img)
   return img->image->get_sample_duration();
 }
 
+
 void heif_context_set_sequence_duration(heif_image* img, uint32_t duration)
 {
   img->image->set_sample_duration(duration);
 }
 
-struct heif_error heif_context_encode_sequence_image(struct heif_track* track,
-                                                     const struct heif_image* image,
-                                                     struct heif_encoder* encoder,
-                                                     const struct heif_encoding_options* options)
-{
 
+extern void set_default_encoding_options(heif_encoding_options& options);
+extern void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options);
+
+
+struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
+                                                   const struct heif_image* input_image,
+                                                   struct heif_encoder* encoder,
+                                                   const struct heif_encoding_options* input_options)
+{
+  heif_encoding_options options;
+  heif_color_profile_nclx nclx;
+  set_default_encoding_options(options);
+  if (input_options) {
+    copy_options(options, *input_options);
+
+    if (options.output_nclx_profile == nullptr) {
+      auto input_nclx = input_image->image->get_color_profile_nclx();
+      if (input_nclx) {
+        options.output_nclx_profile = &nclx;
+        nclx.version = 1;
+        nclx.color_primaries = (enum heif_color_primaries) input_nclx->get_colour_primaries();
+        nclx.transfer_characteristics = (enum heif_transfer_characteristics) input_nclx->get_transfer_characteristics();
+        nclx.matrix_coefficients = (enum heif_matrix_coefficients) input_nclx->get_matrix_coefficients();
+        nclx.full_range_flag = input_nclx->get_full_range_flag();
+      }
+    }
+  }
+
+  auto error = track->track->encode_image(input_image->image,
+                                                   encoder,
+                                                   options,
+                                                   heif_image_input_class_normal);
+  if (error.error_code) {
+    return error.error_struct(track->context.get());
+  }
+
+  return heif_error_ok;
 }

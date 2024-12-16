@@ -360,6 +360,8 @@ public:
 
   const std::vector<uint32_t>& get_sample_sizes() const { return m_sample_sizes; }
 
+  void append_sample_size(uint32_t size);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -382,6 +384,8 @@ public:
   std::string dump(Indent&) const override;
 
   Error write(StreamWriter& writer) const override;
+
+  void add_sync_sample(uint32_t sample_idx) { m_sync_samples.push_back(sample_idx); }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;

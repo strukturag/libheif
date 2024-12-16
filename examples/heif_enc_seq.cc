@@ -1241,6 +1241,8 @@ int main(int argc, char** argv)
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
+    heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
+
 #if 0
     struct heif_image_handle* handle;
 

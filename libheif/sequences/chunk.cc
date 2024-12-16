@@ -20,11 +20,24 @@
 
 #include "chunk.h"
 #include "context.h"
+#include "codecs/hevc_enc.h"
 
-Chunk::Chunk(HeifContext* ctx)
-    : m_ctx(ctx)
+
+Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format)
+    : m_ctx(ctx),
+      m_track_id(track_id),
+      m_compression_format(format)
 {
+  switch (format) {
+    case heif_compression_HEVC:
+      m_encoder = std::make_shared<Encoder_HEVC>();
+      break;
+    default:
+      assert(false);
+      break;
+  }
 }
+
 
 Chunk::Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
              uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& stsz)

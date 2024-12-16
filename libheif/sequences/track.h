@@ -22,6 +22,7 @@
 #define LIBHEIF_TRACK_H
 
 #include "error.h"
+#include "libheif/heif_plugin.h"
 
 class HeifContext;
 
@@ -58,6 +59,11 @@ public:
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
 
+  Error encode_image(std::shared_ptr<HeifPixelImage> image,
+                     struct heif_encoder* encoder,
+                     const struct heif_encoding_options& options,
+                     heif_image_input_class image_class);
+
 private:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
@@ -71,7 +77,12 @@ private:
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
+  std::shared_ptr<class Box_moov> m_moov;
   std::shared_ptr<class Box_stts> m_stts;
+  std::shared_ptr<class Box_stss> m_stss;
+  std::shared_ptr<class Box_stsz> m_stsz;
+
+  std::vector<uint8_t> m_video_data; // TODO: do this at a central place and optionally write to temp file
 };
 
 
