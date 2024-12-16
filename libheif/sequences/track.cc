@@ -178,8 +178,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   stbl->append_child_box(stts);
   m_stts = stts;
 
-  auto stsc = std::make_shared<Box_stsc>();
-  stbl->append_child_box(stsc);
+  m_stsc = std::make_shared<Box_stsc>();
+  stbl->append_child_box(m_stsc);
 
   m_stsz = std::make_shared<Box_stsz>();
   stbl->append_child_box(m_stsz);
@@ -280,7 +280,11 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
     auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, h_encoder->plugin->compression_format);
     m_chunks.push_back(chunk);
+
+    m_stsc->add_chunk((uint32_t)m_chunks.size());
   }
+
+  m_stsc->increase_samples_in_chunk(1);
 
   auto encoder = m_chunks.back()->get_encoder();
 

@@ -312,6 +312,10 @@ public:
   // idx counting starts at 1
   const SampleToChunk* get_chunk(uint32_t idx) const;
 
+  void add_chunk(uint32_t description_index);
+
+  void increase_samples_in_chunk(uint32_t nFrames);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

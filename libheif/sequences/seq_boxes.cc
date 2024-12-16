@@ -632,6 +632,24 @@ const Box_stsc::SampleToChunk* Box_stsc::get_chunk(uint32_t idx) const
 }
 
 
+void Box_stsc::add_chunk(uint32_t description_index)
+{
+  SampleToChunk entry;
+  entry.first_chunk = 1; // TODO
+  entry.samples_per_chunk = 0;
+  entry.sample_description_index = description_index;
+  m_entries.push_back(entry);
+}
+
+
+void Box_stsc::increase_samples_in_chunk(uint32_t nFrames)
+{
+  assert(!m_entries.empty());
+
+  m_entries.back().samples_per_chunk += nFrames;
+}
+
+
 Error Box_stco::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
