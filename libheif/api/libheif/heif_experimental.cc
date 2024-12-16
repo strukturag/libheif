@@ -407,13 +407,13 @@ void heif_track_release(heif_track* track)
 }
 
 
-uint32_t heif_context_get_image_duration(heif_image* img)
+uint32_t heif_image_get_duration(heif_image* img)
 {
   return img->image->get_sample_duration();
 }
 
 
-void heif_context_set_sequence_duration(heif_image* img, uint32_t duration)
+void heif_image_set_duration(heif_image* img, uint32_t duration)
 {
   img->image->set_sample_duration(duration);
 }

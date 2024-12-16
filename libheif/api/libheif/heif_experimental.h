@@ -455,10 +455,10 @@ LIBHEIF_API
 void heif_track_release(heif_track*);
 
 LIBHEIF_API
-uint32_t heif_context_get_image_duration(heif_image*);
+uint32_t heif_image_get_duration(heif_image*);
 
 LIBHEIF_API
-void heif_context_set_sequence_duration(heif_image*, uint32_t duration);
+void heif_image_set_duration(heif_image*, uint32_t duration);
 
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,

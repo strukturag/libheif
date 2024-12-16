@@ -301,6 +301,8 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
   }
 
+  m_stts->append_sample_duration(image->get_sample_duration());
+
   m_next_sample_to_be_decoded++;
 
   return Error::Ok;

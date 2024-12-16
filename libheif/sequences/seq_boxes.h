@@ -277,6 +277,8 @@ public:
 
   uint32_t get_sample_duration(uint32_t sample_idx);
 
+  void append_sample_duration(uint32_t duration);
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

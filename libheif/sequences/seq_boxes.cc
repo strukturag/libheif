@@ -552,6 +552,20 @@ uint32_t Box_stts::get_sample_duration(uint32_t sample_idx)
 }
 
 
+void Box_stts::append_sample_duration(uint32_t duration)
+{
+  if (m_entries.empty() || m_entries.back().sample_delta != duration) {
+    TimeToSample entry;
+    entry.sample_delta = duration;
+    entry.sample_count = 1;
+    m_entries.push_back(entry);
+    return;
+  }
+
+  m_entries.back().sample_count++;
+}
+
+
 Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

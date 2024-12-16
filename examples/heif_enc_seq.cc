@@ -1241,6 +1241,9 @@ int main(int argc, char** argv)
       heif_image_set_premultiplied_alpha(image.get(), premultiplied_alpha);
     }
 
+
+    heif_image_set_duration(image.get(), 3000); // TODO
+
     heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
 
 #if 0
