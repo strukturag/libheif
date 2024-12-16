@@ -376,7 +376,9 @@ public:
 
   std::string dump(Indent&) const override;
 
-  const VisualSampleEntry& get_VisualSampleEntry() const override { return m_visualSampleEntry; }
+  const VisualSampleEntry& get_VisualSampleEntry_const() const override { return m_visualSampleEntry; }
+
+  VisualSampleEntry& get_VisualSampleEntry() override { return m_visualSampleEntry; }
 
   // TODO Error write(StreamWriter& writer) const override;
 

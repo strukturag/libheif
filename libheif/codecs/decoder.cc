@@ -157,7 +157,7 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
 
 std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std::shared_ptr<const Box_VisualSampleEntry> sample_description_box)
 {
-  std::string compressor = sample_description_box->get_VisualSampleEntry().compressorname;
+  std::string compressor = sample_description_box->get_VisualSampleEntry_const().compressorname;
   uint32_t sampleType = sample_description_box->get_short_type();
 
   switch (sampleType) {

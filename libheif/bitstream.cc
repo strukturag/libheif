@@ -871,6 +871,24 @@ void StreamWriter::write(const std::string& str)
 }
 
 
+void StreamWriter::write_fixed_string(std::string s, size_t len)
+{
+  size_t required_size = m_position + len;
+
+  if (required_size > m_data.size()) {
+    m_data.resize(required_size);
+  }
+
+  for (size_t i = 0; i < s.size() && i < len; i++) {
+    m_data[m_position++] = s[i];
+  }
+
+  for (size_t i = s.size(); i < len; i++) {
+    m_data[m_position++] = 0;
+  }
+}
+
+
 void StreamWriter::write(const std::vector<uint8_t>& vec)
 {
   size_t required_size = m_position + vec.size();

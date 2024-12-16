@@ -107,8 +107,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       return;
     }
 
-    m_width = sample_description->get_VisualSampleEntry().width;
-    m_height = sample_description->get_VisualSampleEntry().height;
+    m_width = sample_description->get_VisualSampleEntry_const().width;
+    m_height = sample_description->get_VisualSampleEntry_const().height;
 
     auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
@@ -171,8 +171,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   auto stbl = std::make_shared<Box_stbl>();
   minf->append_child_box(stbl);
 
-  auto stsd = std::make_shared<Box_stsd>();
-  stbl->append_child_box(stsd);
+  m_stsd = std::make_shared<Box_stsd>();
+  stbl->append_child_box(m_stsd);
 
   auto stts = std::make_shared<Box_stts>();
   stbl->append_child_box(stts);
@@ -277,14 +277,13 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   // generate new chunk for first image or when compression formats don't match
 
+  bool add_sample_description = false;
+
   if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
     auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, h_encoder->plugin->compression_format);
     m_chunks.push_back(chunk);
-
-    m_stsc->add_chunk((uint32_t)m_chunks.size());
+    add_sample_description = true;
   }
-
-  m_stsc->increase_samples_in_chunk(1);
 
   auto encoder = m_chunks.back()->get_encoder();
 
@@ -294,6 +293,20 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   }
 
   const Encoder::CodedImageData& data = encodeResult.value;
+
+  if (add_sample_description) {
+    auto props = data.properties;
+
+    auto sample_description_box = encoder->get_sample_description_box(data);
+    VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
+    visualSampleEntry.width = image->get_width();
+    visualSampleEntry.height = image->get_height();
+    m_stsd->add_sample_entry(sample_description_box);
+
+    m_stsc->add_chunk((uint32_t) m_chunks.size());
+  }
+
+  m_stsc->increase_samples_in_chunk(1);
 
   m_video_data.insert(m_video_data.end(),
                       data.bitstream.begin(),

@@ -854,6 +854,32 @@ Error VisualSampleEntry::parse(BitstreamRange& range, const heif_security_limits
 }
 
 
+Error VisualSampleEntry::write(StreamWriter& writer) const
+{
+  writer.write32(0);
+  writer.write16(0);
+  writer.write16(data_reference_index);
+
+  writer.write16(pre_defined);
+  writer.write16(0);
+  for (int i=0;i<3;i++) {
+    writer.write32(pre_defined2[i]);
+  }
+
+  writer.write16(width);
+  writer.write16(height);
+  writer.write32(horizresolution);
+  writer.write32(vertresolution);
+  writer.write32(0);
+  writer.write16(frame_count);
+  writer.write_fixed_string(compressorname, 32);
+  writer.write16(depth);
+  writer.write16(pre_defined3);
+
+  return Error::Ok;
+}
+
+
 std::string VisualSampleEntry::dump(Indent& indent) const
 {
   std::stringstream sstr;

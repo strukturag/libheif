@@ -33,13 +33,14 @@
 #include "codecs/encoder.h"
 
 
-class Encoder_HEVC : public Encoder
-{
+class Encoder_HEVC : public Encoder {
 public:
-  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class);
+  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                struct heif_encoder* encoder,
+                                const struct heif_encoding_options& options,
+                                enum heif_image_input_class input_class) override;
+
+  std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
 };
 
 

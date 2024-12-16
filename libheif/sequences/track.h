@@ -78,6 +78,7 @@ private:
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
   std::shared_ptr<class Box_moov> m_moov;
+  std::shared_ptr<class Box_stsd> m_stsd;
   std::shared_ptr<class Box_stsc> m_stsc;
   std::shared_ptr<class Box_stts> m_stts;
   std::shared_ptr<class Box_stss> m_stss;

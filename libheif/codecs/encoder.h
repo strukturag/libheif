@@ -31,16 +31,15 @@
 #include <vector>
 
 class HeifPixelImage;
+
 class Box;
 
 
-class Encoder
-{
+class Encoder {
 public:
-  virtual ~Encoder() { }
+  virtual ~Encoder() {}
 
-  struct CodedImageData
-  {
+  struct CodedImageData {
     std::vector<std::shared_ptr<Box>> properties;
     std::vector<uint8_t> bitstream;
 
@@ -60,6 +59,8 @@ public:
                                         struct heif_encoder* encoder,
                                         const struct heif_encoding_options& options,
                                         enum heif_image_input_class input_class) { return {}; }
+
+  virtual std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const { return {}; }
 };
 
 

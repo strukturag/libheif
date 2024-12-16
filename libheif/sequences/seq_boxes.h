@@ -248,6 +248,10 @@ public:
     }
   }
 
+  void add_sample_entry(std::shared_ptr<class Box_VisualSampleEntry> entry) {
+    m_sample_entries.push_back(entry);
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -454,6 +458,8 @@ struct VisualSampleEntry
 
   Error parse(BitstreamRange& range, const heif_security_limits*);
 
+  Error write(StreamWriter& writer) const;
+
   std::string dump(Indent&) const;
 };
 
@@ -461,7 +467,11 @@ struct VisualSampleEntry
 class Box_VisualSampleEntry : public Box
 {
 public:
-  virtual const VisualSampleEntry& get_VisualSampleEntry() const = 0;
+  virtual const VisualSampleEntry& get_VisualSampleEntry_const() const = 0;
+
+  virtual VisualSampleEntry& get_VisualSampleEntry() = 0;
+
+  virtual void set_VisualSampleEntry(const VisualSampleEntry&) { } // TODO: make pure
 };
 
 #endif //SEQ_BOXES_H

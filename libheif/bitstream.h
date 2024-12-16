@@ -465,6 +465,8 @@ public:
 
   void write(const std::string&);
 
+  void write_fixed_string(std::string s, size_t len);
+
   void write(const std::vector<uint8_t>&);
 
   void write(const StreamWriter&);
