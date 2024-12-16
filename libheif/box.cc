@@ -674,6 +674,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_j2kL>();
       break;
 
+    case fourcc("j2ki"):
+      box = std::make_shared<Box_j2ki>();
+      break;
+
 
     // --- mski
 

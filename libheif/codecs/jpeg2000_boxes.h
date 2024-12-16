@@ -516,4 +516,26 @@ private:
     size_t cursor = 0;
 };
 
+
+class Box_j2ki : public Box_VisualSampleEntry
+{
+public:
+  Box_j2ki()
+  {
+    set_short_type(fourcc("j2ki"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  const VisualSampleEntry& get_VisualSampleEntry() const override { return m_visualSampleEntry; }
+
+  // TODO Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+private:
+  VisualSampleEntry m_visualSampleEntry;
+};
+
 #endif // LIBHEIF_JPEG2000_BOXES_H

@@ -172,6 +172,11 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
       return std::make_shared<Decoder_uncompressed>(uncC, cmpd);
     }
 
+    case fourcc("j2ki"): {
+      auto j2kH = sample_description_box->get_child_box<Box_j2kH>();
+      return std::make_shared<Decoder_JPEG2000>(j2kH);
+    }
+
     default:
       return nullptr;
   }
