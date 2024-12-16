@@ -34,9 +34,9 @@
 class ImageItem_HEVC : public ImageItem
 {
 public:
-  ImageItem_HEVC(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_HEVC(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_HEVC(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_HEVC(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("hvc1"); }
 
@@ -49,11 +49,6 @@ public:
 
   Error on_load_file() override;
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
-
   // currently not used
   void set_preencoded_hevc_image(const std::vector<uint8_t>& data);
 
@@ -62,8 +57,11 @@ protected:
 
   std::shared_ptr<class Decoder> get_decoder() const override;
 
+  std::shared_ptr<class Encoder> get_encoder() const override;
+
 private:
   std::shared_ptr<class Decoder_HEVC> m_decoder;
+  std::shared_ptr<class Encoder_HEVC> m_encoder;
 };
 
 #endif

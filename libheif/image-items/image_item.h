@@ -29,6 +29,8 @@
 #include <memory>
 #include <utility>
 #include "api/libheif/heif_plugin.h"
+#include "codecs/encoder.h"
+
 
 class HeifContext;
 
@@ -298,24 +300,10 @@ public:
 
   // === encoding ===
 
-  struct CodedImageData
-  {
-    std::vector<std::shared_ptr<Box>> properties;
-    std::vector<uint8_t> bitstream;
-
-    // If 0, the encoded size is equal to the input size.
-    uint32_t encoded_image_width = 0;
-    uint32_t encoded_image_height = 0;
-
-    void append(const uint8_t* data, size_t size);
-
-    void append_with_4bytes_size(const uint8_t* data, size_t size);
-  };
-
-  Result<CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
-                                                       struct heif_encoder* encoder,
-                                                       const struct heif_encoding_options& options,
-                                                       enum heif_image_input_class input_class);
+  Result<Encoder::CodedImageData> encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+                                                                struct heif_encoder* encoder,
+                                                                const struct heif_encoding_options& options,
+                                                                enum heif_image_input_class input_class);
 
   Error encode_to_item(HeifContext* ctx,
                        const std::shared_ptr<HeifPixelImage>& image,
@@ -381,6 +369,8 @@ public:
 
   virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
 
+  virtual std::shared_ptr<class Encoder> get_encoder() const { return nullptr; }
+
 private:
   HeifContext* m_heif_context;
   std::vector<std::shared_ptr<Box>> m_properties;
@@ -427,10 +417,10 @@ private:
 protected:
   // Result<std::vector<uint8_t>> read_bitstream_configuration_data_override(heif_item_id itemId, heif_compression_format format) const;
 
-  virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                        struct heif_encoder* encoder,
-                                        const struct heif_encoding_options& options,
-                                        enum heif_image_input_class input_class) { return {}; }
+  virtual Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                 struct heif_encoder* encoder,
+                                                 const struct heif_encoding_options& options,
+                                                 enum heif_image_input_class input_class);
 
   // --- encoding utility functions
 
@@ -438,7 +428,7 @@ protected:
                                 const struct heif_encoding_options& options,
                                 enum heif_image_input_class input_class,
                                 const heif_color_profile_nclx* target_heif_nclx,
-                                ImageItem::CodedImageData& inout_codedImage);
+                                Encoder::CodedImageData& inout_codedImage);
 };
 
 

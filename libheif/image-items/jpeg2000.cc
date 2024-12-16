@@ -29,12 +29,12 @@
 
 
 
-Result<ImageItem::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_ptr<HeifPixelImage>& image,
+Result<Encoder::CodedImageData> ImageItem_JPEG2000::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                              struct heif_encoder* encoder,
                                                              const struct heif_encoding_options& options,
                                                              enum heif_image_input_class input_class)
 {
-  CodedImageData codedImageData;
+  Encoder::CodedImageData codedImageData;
 
   heif_image c_api_image;
   c_api_image.image = image;

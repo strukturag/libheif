@@ -67,10 +67,10 @@ public:
 
   // --- encoding
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override;
 
   static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
                                                                 const heif_unci_image_parameters* parameters,

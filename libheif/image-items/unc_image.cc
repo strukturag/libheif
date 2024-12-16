@@ -257,7 +257,7 @@ Result<std::vector<uint8_t>> encode_image_tile(const std::shared_ptr<const HeifP
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
+Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared_ptr<HeifPixelImage>& src_image,
                                                                  struct heif_encoder* encoder,
                                                                  const struct heif_encoding_options& options,
                                                                  enum heif_image_input_class input_class)
@@ -278,7 +278,7 @@ Result<ImageItem::CodedImageData> ImageItem_uncompressed::encode(const std::shar
 
   const unciHeaders& headers = *genHeadersResult;
 
-  CodedImageData codedImageData;
+  Encoder::CodedImageData codedImageData;
   if (headers.uncC) {
     codedImageData.properties.push_back(headers.uncC);
   }

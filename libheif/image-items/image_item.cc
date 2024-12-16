@@ -223,19 +223,19 @@ std::shared_ptr<ImageItem> ImageItem::alloc_for_compression_format(HeifContext* 
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
+Result<Encoder::CodedImageData> ImageItem::encode_to_bitstream_and_boxes(const std::shared_ptr<HeifPixelImage>& image,
                                                                            struct heif_encoder* encoder,
                                                                            const struct heif_encoding_options& options,
                                                                            enum heif_image_input_class input_class)
 {
   // === generate compressed image bitstream
 
-  Result<ImageItem::CodedImageData> encodeResult = encode(image, encoder, options, input_class);
+  Result<Encoder::CodedImageData> encodeResult = encode(image, encoder, options, input_class);
   if (encodeResult.error) {
     return encodeResult;
   }
 
-  CodedImageData& codedImage = encodeResult.value;
+  Encoder::CodedImageData& codedImage = encodeResult.value;
 
   // === generate properties
 
@@ -376,12 +376,12 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
 
   // compress image and assign data to item
 
-  Result<CodedImageData> codingResult = encode_to_bitstream_and_boxes(image, encoder, options, input_class);
+  Result<Encoder::CodedImageData> codingResult = encode_to_bitstream_and_boxes(image, encoder, options, input_class);
   if (codingResult.error) {
     return codingResult.error;
   }
 
-  CodedImageData& codedImage = codingResult.value;
+  Encoder::CodedImageData& codedImage = codingResult.value;
 
   auto infe_box = ctx->get_heif_file()->add_new_infe_box(get_infe_type());
   heif_item_id image_id = infe_box->get_item_ID();
@@ -628,11 +628,21 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
 }
 
 
+Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                  struct heif_encoder* h_encoder,
+                                                  const struct heif_encoding_options& options,
+                                                  enum heif_image_input_class input_class)
+{
+  auto encoder = get_encoder();
+  return encoder->encode(image, h_encoder, options, input_class);
+}
+
+
 void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
                                   const struct heif_encoding_options& options,
                                   enum heif_image_input_class input_class,
                                   const heif_color_profile_nclx* target_heif_nclx,
-                                  ImageItem::CodedImageData& inout_codedImage)
+                                  Encoder::CodedImageData& inout_codedImage)
 {
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
     auto icc_profile = image->get_color_profile_icc();
@@ -667,27 +677,6 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
       inout_codedImage.properties.push_back(colr);
     }
   }
-}
-
-
-void ImageItem::CodedImageData::append(const uint8_t* data, size_t size)
-{
-  bitstream.insert(bitstream.end(), data, data + size);
-}
-
-
-void ImageItem::CodedImageData::append_with_4bytes_size(const uint8_t* data, size_t size)
-{
-  assert(size <= 0xFFFFFFFF);
-
-  uint8_t size_field[4];
-  size_field[0] = (uint8_t) ((size >> 24) & 0xFF);
-  size_field[1] = (uint8_t) ((size >> 16) & 0xFF);
-  size_field[2] = (uint8_t) ((size >> 8) & 0xFF);
-  size_field[3] = (uint8_t) ((size >> 0) & 0xFF);
-
-  bitstream.insert(bitstream.end(), size_field, size_field + 4);
-  bitstream.insert(bitstream.end(), data, data + size);
 }
 
 

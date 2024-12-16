@@ -51,10 +51,10 @@ public:
   Error on_load_file() override;
 
 public:
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override;
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override;
 
 protected:
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;

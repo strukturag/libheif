@@ -46,12 +46,12 @@ const heif_color_profile_nclx* ImageItem_JPEG::get_forced_output_nclx() const
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
+Result<Encoder::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                          struct heif_encoder* encoder,
                                                          const struct heif_encoding_options& options,
                                                          enum heif_image_input_class input_class)
 {
-  CodedImageData codedImage;
+  Encoder::CodedImageData codedImage;
 
 
   heif_image c_api_image;

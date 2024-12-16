@@ -171,10 +171,11 @@ public:
 
   int get_chroma_bits_per_pixel() const override;
 
-  Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
-                                struct heif_encoder* encoder,
-                                const struct heif_encoding_options& options,
-                                enum heif_image_input_class input_class) override {
+  Result<Encoder::CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
+                                         struct heif_encoder* encoder,
+                                         const struct heif_encoding_options& options,
+                                         enum heif_image_input_class input_class) override
+  {
     return Error{heif_error_Unsupported_feature,
                  heif_suberror_Unspecified, "Cannot encode image to 'tild'"};
   }

@@ -51,12 +51,16 @@ set(libheif_sources
         api/libheif/heif_items.cc
         codecs/decoder.h
         codecs/decoder.cc
+        codecs/encoder.h
+        codecs/encoder.cc
         image-items/hevc.cc
         image-items/hevc.h
         codecs/hevc_boxes.cc
         codecs/hevc_boxes.h
         codecs/hevc_dec.cc
         codecs/hevc_dec.h
+        codecs/hevc_enc.cc
+        codecs/hevc_enc.h
         image-items/avif.cc
         image-items/avif.h
         codecs/avif_dec.cc

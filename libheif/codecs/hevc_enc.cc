@@ -1,6 +1,6 @@
 /*
- * HEIF AVC codec.
- * Copyright (c) 2023 Brad Hards <bradh@frogmouth.net>
+ * HEIF codec.
+ * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,24 +18,20 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "avc.h"
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <vector>
-#include "file.h"
+#include "hevc_enc.h"
+#include "hevc_boxes.h"
+#include "error.h"
 #include "context.h"
-#include "codecs/avc_dec.h"
-#include "codecs/avc_boxes.h"
-#include <utility>
+#include "libheif/api_structs.h"
+
+#include <string>
 
 
-Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                        struct heif_encoder* encoder,
-                                                        const struct heif_encoding_options& options,
-                                                        enum heif_image_input_class input_class)
+Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                     struct heif_encoder* encoder,
+                                                     const struct heif_encoding_options& options,
+                                                     enum heif_image_input_class input_class)
 {
-#if 0
   CodedImageData codedImage;
 
   auto hvcC = std::make_shared<Box_hvcC>();
@@ -67,7 +63,7 @@ Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<Heif
     const uint8_t NAL_SPS = 33;
 
     if ((data[0] >> 1) == NAL_SPS) {
-      Box_hvcC::configuration config;
+      HEVCDecoderConfigurationRecord config;
 
       parse_sps_for_hvcC_configuration(data, size, &config, &encoded_width, &encoded_height);
 
@@ -114,32 +110,4 @@ Result<Encoder::CodedImageData> ImageItem_AVC::encode(const std::shared_ptr<Heif
   }
 
   return codedImage;
-#endif
-  assert(false); // TODO
-  return {};
-}
-
-
-std::shared_ptr<Decoder> ImageItem_AVC::get_decoder() const
-{
-  return m_decoder;
-}
-
-
-Error ImageItem_AVC::on_load_file()
-{
-  auto avcC_box = get_property<Box_avcC>();
-  if (!avcC_box) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_No_av1C_box};
-  }
-
-  m_decoder = std::make_shared<Decoder_AVC>(avcC_box);
-
-  DataExtent extent;
-  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
-
-  m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
 }

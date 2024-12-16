@@ -675,7 +675,7 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   std::shared_ptr<HeifPixelImage> colorConvertedImage = colorConversionResult.value;
 
-  Result<ImageItem::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
+  Result<Encoder::CodedImageData> encodeResult = item->encode_to_bitstream_and_boxes(colorConvertedImage, encoder, *options, heif_image_input_class_normal); // TODO (other than JPEG)
   heif_encoding_options_free(options);
 
   if (encodeResult.error) {

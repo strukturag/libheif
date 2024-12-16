@@ -28,12 +28,12 @@
 #include <utility>
 
 
-Result<ImageItem::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                        struct heif_encoder* encoder,
-                                                        const struct heif_encoding_options& options,
-                                                        enum heif_image_input_class input_class)
+Result<Encoder::CodedImageData> ImageItem_VVC::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                      struct heif_encoder* encoder,
+                                                      const struct heif_encoding_options& options,
+                                                      enum heif_image_input_class input_class)
 {
-  CodedImageData codedImage;
+  Encoder::CodedImageData codedImage;
 
   auto vvcC = std::make_shared<Box_vvcC>();
   codedImage.properties.push_back(vvcC);

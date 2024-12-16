@@ -154,12 +154,12 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem_mask::decode_compressed_image(
 }
 
 
-Result<ImageItem::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
+Result<Encoder::CodedImageData> ImageItem_mask::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                       struct heif_encoder* encoder,
+                                                       const struct heif_encoding_options& options,
+                                                       enum heif_image_input_class input_class)
 {
-  CodedImageData codedImageData;
+  Encoder::CodedImageData codedImageData;
 
   if (image->get_colorspace() != heif_colorspace_monochrome)
   {
