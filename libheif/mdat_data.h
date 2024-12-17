@@ -44,13 +44,13 @@ public:
 class MdatData_Memory : public MdatData
 {
 public:
-  size_t append_data(const std::vector<uint8_t>& data) {
+  size_t append_data(const std::vector<uint8_t>& data) override {
     size_t startPos = m_data.size();
     m_data.insert(m_data.end(), data.begin(), data.end());
     return startPos;
   }
 
-  size_t get_data_size() const { return m_data.size(); }
+  size_t get_data_size() const override { return m_data.size(); }
 
   Error write(StreamWriter& writer) override
   {
