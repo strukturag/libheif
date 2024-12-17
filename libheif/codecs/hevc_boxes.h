@@ -125,8 +125,6 @@ public:
 
   void set_VisualSampleEntry(const VisualSampleEntry& entry) override { m_visualSampleEntry = entry; }
 
-  Error write(StreamWriter& writer) const;
-
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 

@@ -531,8 +531,6 @@ public:
 
   VisualSampleEntry& get_VisualSampleEntry() override { return m_visualSampleEntry; }
 
-  // TODO Error write(StreamWriter& writer) const override;
-
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
 

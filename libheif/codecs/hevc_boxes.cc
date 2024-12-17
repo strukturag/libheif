@@ -679,20 +679,3 @@ Error Box_hvc1::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   return Error::Ok;
 }
-
-
-Error Box_hvc1::write(StreamWriter& writer) const
-{
-  size_t box_start = reserve_box_header_space(writer);
-
-  Error err = m_visualSampleEntry.write(writer);
-  if (err) {
-    return err;
-  }
-
-  write_children(writer);
-
-  prepend_header(writer, box_start);
-
-  return Error::Ok;
-}

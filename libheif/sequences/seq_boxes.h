@@ -490,6 +490,8 @@ public:
   virtual VisualSampleEntry& get_VisualSampleEntry() = 0;
 
   virtual void set_VisualSampleEntry(const VisualSampleEntry&) { } // TODO: make pure
+
+  Error write(StreamWriter& writer) const override;
 };
 
 #endif //SEQ_BOXES_H
