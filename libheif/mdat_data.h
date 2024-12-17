@@ -37,12 +37,7 @@ public:
 
   virtual size_t get_data_size() const = 0;
 
-  virtual void seek(size_t pos) = 0;
-
-  virtual std::vector<uint8_t> get_data(size_t len) = 0;
-
-  // Number of bytes that have not been extracted with get_data().
-  virtual size_t get_remaining_data_size() const = 0;
+  virtual Error write(StreamWriter&) = 0;
 };
 
 
@@ -57,30 +52,14 @@ public:
 
   size_t get_data_size() const { return m_data.size(); }
 
-  void seek(size_t pos) { assert(pos <= m_data.size()); m_read_pos = pos; }
-
-  std::vector<uint8_t> get_data(size_t len)  {
-    if (len==0) {
-      return m_data;
-    }
-
-    std::vector<uint8_t> out;
-    size_t maxCopy = m_data.size() - m_read_pos;
-    size_t nCopy = std::min(len, maxCopy);
-
-    out.insert(out.begin(), m_data.data() + m_read_pos, m_data.data() + m_read_pos + nCopy);
-    m_read_pos += nCopy;
-
-    return out;
-  }
-
-  size_t get_remaining_data_size() const override {
-    return m_data.size() - m_read_pos;
+  Error write(StreamWriter& writer) override
+  {
+    writer.write(m_data);
+    return Error::Ok;
   }
 
 private:
   std::vector<uint8_t> m_data;
-  size_t m_read_pos = 0;
 };
 
 #endif //LIBHEIF_MDAT_DATA_H

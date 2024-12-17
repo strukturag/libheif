@@ -1331,10 +1331,7 @@ Result<size_t> HeifFile::write_mdat(StreamWriter& writer)
 
   size_t dataStartPos = writer.get_position();
 
-  while (m_mdat_data->get_remaining_data_size() > 0) {
-    auto data = m_mdat_data->get_data(1024*1024*16); // write in chunks of 16 MBs
-    writer.write(data);
-  }
+  m_mdat_data->write(writer);
 
   return dataStartPos;
 }
