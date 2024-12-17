@@ -285,6 +285,16 @@ void HeifFile::set_sequence_brand(heif_compression_format format)
 }
 
 
+size_t HeifFile::append_mdat_data(const std::vector<uint8_t>& data)
+{
+  if (!m_mdat_data) {
+    m_mdat_data = std::make_unique<MdatData_Memory>();
+  }
+
+  return m_mdat_data->append_data(data);
+}
+
+
 void HeifFile::write(StreamWriter& writer)
 {
   for (auto& box : m_top_level_boxes) {
@@ -295,12 +305,25 @@ void HeifFile::write(StreamWriter& writer)
     }
 #endif
     box->derive_box_version_recursive();
-    box->write(writer);
+    Error err = box->write(writer);
+    (void)err; // TODO: error ?
   }
 
   // TODO: write mdat with sequence data
   if (m_iloc_box) {
-    m_iloc_box->write_mdat_after_iloc(writer);
+    Error err = m_iloc_box->write_mdat_after_iloc(writer);
+    (void)err; // TODO: error ?
+  }
+
+  if (m_mdat_data) {
+    Result<size_t> mdatResult = write_mdat(writer);
+    if (mdatResult.error) {
+      return; // TODO: error ?
+    }
+
+    for (auto& box : m_top_level_boxes) {
+      box->patch_file_pointers_recursively(writer, mdatResult.value);
+    }
   }
 }
 
@@ -1286,3 +1309,32 @@ std::wstring HeifFile::convert_utf8_path_to_utf16(std::string str)
   return ret;
 }
 #endif
+
+
+Result<size_t> HeifFile::write_mdat(StreamWriter& writer)
+{
+  // --- write mdat box
+
+  size_t mdatSize = m_mdat_data->get_data_size();
+
+  if (mdatSize <= 0xFFFFFFFF - 8) {
+    writer.write32((uint32_t) (mdatSize + 8));
+    writer.write32(fourcc("mdat"));
+  }
+  else {
+    // box size > 4 GB
+
+    writer.write32(1);
+    writer.write32(fourcc("mdat"));
+    writer.write64(mdatSize+8+8);
+  }
+
+  size_t dataStartPos = writer.get_position();
+
+  while (m_mdat_data->get_remaining_data_size() > 0) {
+    auto data = m_mdat_data->get_data(1024*1024*16); // write in chunks of 16 MBs
+    writer.write(data);
+  }
+
+  return dataStartPos;
+}

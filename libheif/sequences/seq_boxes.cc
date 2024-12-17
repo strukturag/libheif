@@ -684,6 +684,9 @@ Error Box_stco::write(StreamWriter& writer) const
   size_t box_start = reserve_box_header_space(writer);
 
   writer.write32(static_cast<uint32_t>(m_offsets.size()));
+
+  m_offset_start_pos = writer.get_position();
+
   for (uint32_t offset : m_offsets) {
     writer.write32(offset);
   }
@@ -692,6 +695,26 @@ Error Box_stco::write(StreamWriter& writer) const
 
   return Error::Ok;
 }
+
+
+void Box_stco::patch_file_pointers(StreamWriter& writer, size_t offset)
+{
+  size_t oldPosition = writer.get_position();
+
+  writer.set_position(m_offset_start_pos);
+
+  for (uint32_t chunk_offset : m_offsets) {
+    if (chunk_offset + offset > std::numeric_limits<uint32_t>::max()) {
+      writer.write32(0); // TODO: error
+    }
+    else {
+      writer.write32(static_cast<uint32_t>(chunk_offset + offset));
+    }
+  }
+
+  writer.set_position(oldPosition);
+}
+
 
 
 Error Box_stsz::parse(BitstreamRange& range, const heif_security_limits* limits)

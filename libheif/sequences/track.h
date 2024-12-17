@@ -80,11 +80,10 @@ private:
   std::shared_ptr<class Box_moov> m_moov;
   std::shared_ptr<class Box_stsd> m_stsd;
   std::shared_ptr<class Box_stsc> m_stsc;
+  std::shared_ptr<class Box_stco> m_stco;
   std::shared_ptr<class Box_stts> m_stts;
   std::shared_ptr<class Box_stss> m_stss;
   std::shared_ptr<class Box_stsz> m_stsz;
-
-  std::vector<uint8_t> m_video_data; // TODO: do this at a central place and optionally write to temp file
 };
 
 

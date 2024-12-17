@@ -124,6 +124,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
 Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height)
 {
+  m_heif_context = ctx;
+
   m_moov = ctx->get_heif_file()->get_moov_box();
   assert(m_moov);
 
@@ -184,8 +186,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   m_stsz = std::make_shared<Box_stsz>();
   stbl->append_child_box(m_stsz);
 
-  auto stco = std::make_shared<Box_stco>();
-  stbl->append_child_box(stco);
+  m_stco = std::make_shared<Box_stco>();
+  stbl->append_child_box(m_stco);
 
   m_stss = std::make_shared<Box_stss>();
   stbl->append_child_box(m_stss);
@@ -278,11 +280,13 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   // generate new chunk for first image or when compression formats don't match
 
   bool add_sample_description = false;
+  bool new_chunk = false;
 
   if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
     auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, h_encoder->plugin->compression_format);
     m_chunks.push_back(chunk);
     add_sample_description = true;
+    new_chunk = true;
   }
 
   auto encoder = m_chunks.back()->get_encoder();
@@ -308,9 +312,13 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   m_stsc->increase_samples_in_chunk(1);
 
-  m_video_data.insert(m_video_data.end(),
-                      data.bitstream.begin(),
-                      data.bitstream.end());
+  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(data.bitstream);
+
+  if (new_chunk) {
+    // TODO
+    assert(data_start < 0xFF000000); // add some headroom for header data
+    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
+  }
 
   m_stsz->append_sample_size((uint32_t)data.bitstream.size());
 

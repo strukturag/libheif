@@ -193,6 +193,10 @@ public:
 
   void derive_box_version_recursive();
 
+  virtual void patch_file_pointers(StreamWriter&, size_t offset) {}
+
+  void patch_file_pointers_recursively(StreamWriter&, size_t offset);
+
   std::string dump(Indent&) const override;
 
   template<typename T> [[nodiscard]] std::shared_ptr<T> get_child_box() const

@@ -1067,6 +1067,16 @@ void Box::derive_box_version_recursive()
 }
 
 
+void Box::patch_file_pointers_recursively(StreamWriter& writer, size_t offset)
+{
+  patch_file_pointers(writer, offset);
+
+  for (auto& child : m_children) {
+    child->patch_file_pointers_recursively(writer, offset);
+  }
+}
+
+
 Error Box_other::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   if (has_fixed_box_size()) {

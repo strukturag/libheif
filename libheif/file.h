@@ -37,6 +37,7 @@
 #include <unordered_set>
 #include <limits>
 #include <utility>
+#include "mdat_data.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 
@@ -52,6 +53,7 @@ class Box_j2kH;
 class Box_moov;
 
 class Box_mvhd;
+
 
 
 class HeifFile
@@ -88,6 +90,8 @@ public:
   void set_sequence_brand(heif_compression_format format);
 
   void set_hdlr_box(std::shared_ptr<Box_hdlr> box) { m_hdlr_box = std::move(box); }
+
+  size_t append_mdat_data(const std::vector<uint8_t>& data);
 
   void write(StreamWriter& writer);
 
@@ -267,6 +271,11 @@ private:
   std::shared_ptr<Box_iprp> m_iprp_box;
 
   std::map<heif_item_id, std::shared_ptr<Box_infe> > m_infe_boxes;
+
+  std::unique_ptr<MdatData> m_mdat_data;
+
+  // returns the position of the first data byte in the file
+  Result<size_t> write_mdat(StreamWriter& writer);
 
   // --- sequences
 

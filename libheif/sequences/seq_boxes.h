@@ -341,13 +341,19 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  void add_chunk_offset(uint32_t offset) { m_offsets.push_back(offset); }
+
   const std::vector<uint32_t>& get_offsets() const { return m_offsets; }
+
+  void patch_file_pointers(StreamWriter&, size_t offset) override;
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
   std::vector<uint32_t> m_offsets;
+
+  mutable size_t m_offset_start_pos = 0;
 };
 
 
