@@ -275,6 +275,14 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
 #endif
 
+
+  if (image->get_width() > 0xFFFF ||
+      image->get_height() > 0xFFFF) {
+    return {heif_error_Invalid_input,
+            heif_suberror_Unspecified,
+            "Input image resolution too high"};
+  }
+
   // === generate compressed image bitstream
 
   // generate new chunk for first image or when compression formats don't match
@@ -303,8 +311,8 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
     auto sample_description_box = encoder->get_sample_description_box(data);
     VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
-    visualSampleEntry.width = image->get_width();
-    visualSampleEntry.height = image->get_height();
+    visualSampleEntry.width = static_cast<uint16_t>(image->get_width());
+    visualSampleEntry.height = static_cast<uint16_t>(image->get_height());
     m_stsd->add_sample_entry(sample_description_box);
 
     m_stsc->add_chunk((uint32_t) m_chunks.size());
