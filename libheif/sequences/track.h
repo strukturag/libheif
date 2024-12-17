@@ -55,6 +55,8 @@ public:
 
   uint16_t get_height() const { return m_height; }
 
+  uint64_t get_duration() const;
+
   bool end_of_sequence_reached() const;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
@@ -63,6 +65,9 @@ public:
                      struct heif_encoder* encoder,
                      const struct heif_encoding_options& options,
                      heif_image_input_class image_class);
+
+  // Compute some parameters after all frames have been encoded (for example: track duration).
+  void finalize_track();
 
 private:
   HeifContext* m_heif_context = nullptr;
@@ -78,6 +83,8 @@ private:
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
   std::shared_ptr<class Box_moov> m_moov;
+  std::shared_ptr<class Box_tkhd> m_tkhd;
+  std::shared_ptr<class Box_mdhd> m_mdhd;
   std::shared_ptr<class Box_stsd> m_stsd;
   std::shared_ptr<class Box_stsc> m_stsc;
   std::shared_ptr<class Box_stco> m_stco;

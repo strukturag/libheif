@@ -149,16 +149,16 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   auto trak = std::make_shared<Box_trak>();
   m_moov->append_child_box(trak);
 
-  auto tkhd = std::make_shared<Box_tkhd>();
-  trak->append_child_box(tkhd);
-  tkhd->set_track_id(track_id);
-  tkhd->set_resolution(width, height);
+  m_tkhd = std::make_shared<Box_tkhd>();
+  trak->append_child_box(m_tkhd);
+  m_tkhd->set_track_id(track_id);
+  m_tkhd->set_resolution(width, height);
 
   auto mdia = std::make_shared<Box_mdia>();
   trak->append_child_box(mdia);
 
-  auto mdhd = std::make_shared<Box_mdhd>();
-  mdia->append_child_box(mdhd);
+  m_mdhd = std::make_shared<Box_mdhd>();
+  mdia->append_child_box(m_mdhd);
 
   auto hdlr = std::make_shared<Box_hdlr>();
   mdia->append_child_box(hdlr);
@@ -331,4 +331,18 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   m_next_sample_to_be_decoded++;
 
   return Error::Ok;
+}
+
+
+void Track::finalize_track()
+{
+  uint64_t duration = m_stts->get_total_duration(false);
+  m_tkhd->set_duration(duration);
+  m_mdhd->set_duration(duration);
+}
+
+
+uint64_t Track::get_duration() const
+{
+  return m_tkhd->get_duration();
 }

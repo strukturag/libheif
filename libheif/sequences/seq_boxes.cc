@@ -566,6 +566,22 @@ void Box_stts::append_sample_duration(uint32_t duration)
 }
 
 
+uint64_t Box_stts::get_total_duration(bool include_last_frame_duration)
+{
+  uint64_t total = 0;
+
+  for (const auto& entry : m_entries) {
+    total += entry.sample_count * uint64_t(entry.sample_delta);
+  }
+
+  if (!include_last_frame_duration && !m_entries.empty()) {
+    total -= m_entries.back().sample_delta;
+  }
+
+  return total;
+}
+
+
 Error Box_stsc::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);

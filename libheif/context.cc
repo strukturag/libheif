@@ -254,6 +254,19 @@ void HeifContext::add_region_referenced_mask_ref(heif_item_id region_item_id, he
 
 void HeifContext::write(StreamWriter& writer)
 {
+  // --- finalize some parameters
+
+  uint64_t max_sequence_duration = 0;
+  if (auto mvhd = m_heif_file->get_mvhd_box()) {
+    for (const auto& track : m_tracks) {
+      track.second->finalize_track();
+
+      max_sequence_duration = std::max(max_sequence_duration, track.second->get_duration());
+    }
+
+    mvhd->set_duration(max_sequence_duration);
+  }
+
   // --- serialize regions
 
   for (auto& image : m_all_images) {

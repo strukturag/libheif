@@ -309,8 +309,8 @@ void HeifFile::write(StreamWriter& writer)
     (void)err; // TODO: error ?
   }
 
-  // TODO: write mdat with sequence data
   if (m_iloc_box) {
+    // TODO: rewrite to use MdatData class
     Error err = m_iloc_box->write_mdat_after_iloc(writer);
     (void)err; // TODO: error ?
   }

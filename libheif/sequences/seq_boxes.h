@@ -70,6 +70,8 @@ public:
 
   uint64_t get_duration() const { return m_duration; }
 
+  void set_duration(uint64_t duration) { m_duration = duration; }
+
   void set_next_track_id(uint32_t next_id) { m_next_track_ID = next_id; }
 
 protected:
@@ -129,6 +131,10 @@ public:
     m_height = (uint32_t)(height * 0x10000);
   }
 
+  uint64_t get_duration() const { return m_duration; }
+
+  void set_duration(uint64_t duration) { m_duration = duration; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
@@ -173,6 +179,10 @@ public:
   void derive_box_version() override;
 
   double get_matrix_element(int idx) const;
+
+  uint64_t get_duration() const { return m_duration; }
+
+  void set_duration(uint64_t duration) { m_duration = duration; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -282,6 +292,8 @@ public:
   uint32_t get_sample_duration(uint32_t sample_idx);
 
   void append_sample_duration(uint32_t duration);
+
+  uint64_t get_total_duration(bool include_last_frame_duration);
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
