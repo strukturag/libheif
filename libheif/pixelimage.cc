@@ -1050,10 +1050,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    uint32_t plane_left = get_subsampled_size_h(left, channel, m_chroma, false); // is always divisible
-    uint32_t plane_right = get_subsampled_size_h(right, channel, m_chroma, true); // keep more chroma
-    uint32_t plane_top = get_subsampled_size_v(top, channel, m_chroma, false); // is always divisible
-    uint32_t plane_bottom = get_subsampled_size_v(bottom, channel, m_chroma, true); // keep more chroma
+    uint32_t plane_left = get_subsampled_size_h(left, channel, m_chroma, scaling_mode::is_divisible);
+    uint32_t plane_right = get_subsampled_size_h(right, channel, m_chroma, scaling_mode::round_up); // keep more chroma
+    uint32_t plane_top = get_subsampled_size_v(top, channel, m_chroma, scaling_mode::is_divisible); // is always divisible
+    uint32_t plane_bottom = get_subsampled_size_v(bottom, channel, m_chroma, scaling_mode::round_up); // keep more chroma
 
     auto err = out_img->add_channel(channel,
                                     plane_right - plane_left + 1,
