@@ -846,8 +846,8 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_image(const struct hei
           }
 
           auto cropResult = img->crop(left, right, top, bottom, m_heif_context->get_security_limits());
-          if (error) {
-            return error;
+          if (cropResult.error) {
+            return cropResult.error;
           }
 
           img = cropResult.value;
