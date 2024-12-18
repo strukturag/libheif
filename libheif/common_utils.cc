@@ -81,6 +81,9 @@ uint32_t get_subsampled_size_h(uint32_t width,
       case scaling_mode::is_divisible:
         assert(width % chromaSubH == 0);
         return width / chromaSubH;
+      default:
+        assert(false);
+        return 0;
     }
   } else {
     return width;
@@ -107,6 +110,9 @@ uint32_t get_subsampled_size_v(uint32_t height,
       case scaling_mode::is_divisible:
         assert(height % chromaSubV == 0);
         return height / chromaSubV;
+      default:
+        assert(false);
+        return 0;
     }
   } else {
     return height;
