@@ -62,6 +62,38 @@ uint8_t chroma_v_subsampling(heif_chroma c)
 }
 
 
+uint32_t get_subsampled_size_h(uint32_t width,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               bool round_up)
+{
+  if (channel == heif_channel_Cb ||
+      channel == heif_channel_Cr) {
+    uint8_t chromaSubH = chroma_h_subsampling(chroma);
+
+    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+    return (width + (round_up ? chromaSubH - 1 : 0)) / chromaSubH;
+  } else {
+    return width;
+  }
+}
+
+uint32_t get_subsampled_size_v(uint32_t height,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               bool round_up)
+{
+  if (channel == heif_channel_Cb ||
+      channel == heif_channel_Cr) {
+    uint8_t chromaSubV = chroma_v_subsampling(chroma);
+
+    // NOLINTNEXTLINE(clang-analyzer-core.DivideZero)
+    return (height + (round_up ? chromaSubV - 1 : 0)) / chromaSubV;
+  } else {
+    return height;
+  }
+}
+
 void get_subsampled_size(uint32_t width, uint32_t height,
                          heif_channel channel,
                          heif_chroma chroma,
