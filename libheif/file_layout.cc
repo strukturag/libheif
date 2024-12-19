@@ -96,6 +96,10 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
 
   uint64_t next_box_start = ftyp_size;
 
+  bool meta_found = false;
+  bool mini_found = false;
+  bool moov_found = false;
+
   for (;;) {
     // TODO: overflow
     uint64_t next_box_header_end = next_box_start + MAXIMUM_BOX_HEADER_SIZE;
@@ -103,10 +107,15 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       m_max_length = stream->request_range(next_box_start, next_box_header_end);
     }
 
-    if (next_box_header_end > m_max_length) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "Insufficient input data"};
+    if (next_box_header_end >= m_max_length) {
+      if (meta_found || mini_found || moov_found) {
+        return Error::Ok;
+      }
+      else {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "Insufficient input data"};
+      }
     }
 
     BitstreamRange box_range(m_stream_reader, next_box_start, m_max_length);
@@ -146,7 +155,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
 
       m_boxes.push_back(meta_box);
       m_meta_box = std::dynamic_pointer_cast<Box_meta>(meta_box);
-      break;
+      meta_found = true;
     }
 
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
@@ -182,7 +191,8 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       if (m_mini_box == nullptr) {
         std::cout << "error casting mini box" << std::endl;
       }
-      return Error::Ok;
+
+      mini_found = true;
     }
 #endif
 
@@ -216,11 +226,12 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
 
       m_boxes.push_back(moov_box);
       m_moov_box = std::dynamic_pointer_cast<Box_moov>(moov_box);
-      break;
+
+      moov_found = true;
     }
 
 
-    if (box_header.get_box_size() == 0) {
+    if (!meta_found && !mini_found && !moov_found && box_header.get_box_size() == 0) {
       return {heif_error_Invalid_input,
               heif_suberror_No_meta_box,
               "No meta box found"};
