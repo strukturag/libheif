@@ -580,7 +580,11 @@ Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encodi
 {
   const heif_color_profile_nclx* output_nclx_profile;
 
-  if (const auto* nclx = get_forced_output_nclx()) {
+  if (get_encoder() == nullptr) {
+    // TODO: this case can be removed later, after we switched completely to the Encoder class
+    output_nclx_profile = options.output_nclx_profile;
+  }
+  else if (const auto* nclx = get_encoder()->get_forced_output_nclx()) {
     output_nclx_profile = nclx;
   }
   else {

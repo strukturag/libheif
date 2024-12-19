@@ -89,8 +89,6 @@ public:
 
   uint32_t get_infe_type() const override { return fourcc("mski"); }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
-
   heif_compression_format get_compression_format() const override { return heif_compression_mask; }
 
   bool is_ispe_essential() const override { return true; }

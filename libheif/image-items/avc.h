@@ -41,8 +41,6 @@ public:
 
   const char* get_auxC_alpha_channel_type() const override { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }
 
-  const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
-
   heif_compression_format get_compression_format() const override { return heif_compression_AVC; }
 
   Error on_load_file() override;

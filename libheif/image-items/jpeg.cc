@@ -20,6 +20,7 @@
 
 #include "jpeg.h"
 #include "codecs/jpeg_dec.h"
+#include "codecs/jpeg_enc.h"
 #include "codecs/jpeg_boxes.h"
 #include "security_limits.h"
 #include "pixelimage.h"
@@ -28,90 +29,16 @@
 #include <utility>
 
 
-// TODO: remove. Now in jpeg_enc.cc
-static uint8_t JPEG_SOS = 0xDA;
-
-
-// TODO: remove. Now in jpeg_enc.cc
-const heif_color_profile_nclx* ImageItem_JPEG::get_forced_output_nclx() const
+ImageItem_JPEG::ImageItem_JPEG(HeifContext* ctx, heif_item_id id)
+    : ImageItem(ctx, id)
 {
-  // JPEG always uses CCIR-601
-
-  static heif_color_profile_nclx target_heif_nclx;
-  target_heif_nclx.version = 1;
-  target_heif_nclx.matrix_coefficients = heif_matrix_coefficients_ITU_R_BT_601_6;
-  target_heif_nclx.color_primaries = heif_color_primaries_ITU_R_BT_601_6;
-  target_heif_nclx.transfer_characteristics = heif_transfer_characteristic_ITU_R_BT_601_6;
-  target_heif_nclx.full_range_flag = true;
-
-  return &target_heif_nclx;
+  m_encoder = std::make_shared<Encoder_JPEG>();
 }
 
-
-// TODO: remove. Now in jpeg_enc.cc
-Result<Encoder::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
+ImageItem_JPEG::ImageItem_JPEG(HeifContext* ctx)
+    : ImageItem(ctx)
 {
-  Encoder::CodedImageData codedImage;
-
-
-  heif_image c_api_image;
-  c_api_image.image = image;
-
-  struct heif_error err = encoder->plugin->encode_image(encoder->encoder, &c_api_image, input_class);
-  if (err.code) {
-    return Error(err.code,
-                 err.subcode,
-                 err.message);
-  }
-
-  std::vector<uint8_t> vec;
-
-  for (;;) {
-    uint8_t* data;
-    int size;
-
-    encoder->plugin->get_compressed_data(encoder->encoder, &data, &size, nullptr);
-
-    if (data == nullptr) {
-      break;
-    }
-
-    size_t oldsize = vec.size();
-    vec.resize(oldsize + size);
-    memcpy(vec.data() + oldsize, data, size);
-  }
-
-#if 0
-  // Optional: split the JPEG data into a jpgC box and the actual image data.
-  // Currently disabled because not supported yet in other decoders.
-  if (false) {
-    size_t pos = find_jpeg_marker_start(vec, JPEG_SOS);
-    if (pos > 0) {
-      std::vector<uint8_t> jpgC_data(vec.begin(), vec.begin() + pos);
-      auto jpgC = std::make_shared<Box_jpgC>();
-      jpgC->set_data(jpgC_data);
-
-      auto ipma_box = m_heif_file->get_ipma_box();
-      int index = m_heif_file->get_ipco_box()->find_or_append_child_box(jpgC);
-      ipma_box->add_property_for_item_ID(image_id, Box_ipma::PropertyAssociation{true, uint16_t(index + 1)});
-
-      std::vector<uint8_t> image_data(vec.begin() + pos, vec.end());
-      vec = std::mo ve(image_data);
-    }
-  }
-#endif
-  (void) JPEG_SOS;
-
-  codedImage.bitstream = std::move(vec);
-
-#if 0
-  // TODO: extract 'jpgC' header data
-#endif
-
-  return {codedImage};
+  m_encoder = std::make_shared<Encoder_JPEG>();
 }
 
 
@@ -125,6 +52,13 @@ std::shared_ptr<Decoder> ImageItem_JPEG::get_decoder() const
 {
   return m_decoder;
 }
+
+
+std::shared_ptr<Encoder> ImageItem_JPEG::get_encoder() const
+{
+  return m_encoder;
+}
+
 
 Error ImageItem_JPEG::on_load_file()
 {

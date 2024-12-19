@@ -77,10 +77,6 @@ public:
 
   virtual Error get_item_error() const { return Error::Ok; }
 
-  // TODO: remove me, use get_encoder()->get_forced_output_nclx() instead.
-  // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
-  virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
-
   virtual heif_compression_format get_compression_format() const { return heif_compression_undefined; }
 
   virtual Result<std::vector<uint8_t>> read_bitstream_configuration_data() const { return std::vector<uint8_t>{}; }
