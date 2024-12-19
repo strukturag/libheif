@@ -54,6 +54,13 @@ public:
     void append_with_4bytes_size(const uint8_t* data, size_t size);
   };
 
+  // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
+  virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
+
+  Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
+                                                                          struct heif_encoder* encoder,
+                                                                          const struct heif_encoding_options& options,
+                                                                          const heif_security_limits* security_limits);
 
   virtual Result<CodedImageData> encode(const std::shared_ptr<HeifPixelImage>& image,
                                         struct heif_encoder* encoder,

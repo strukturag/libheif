@@ -512,6 +512,7 @@ int ImageItem::get_chroma_bits_per_pixel() const
 }
 
 
+// TODO: remove me, moved to encoder.cc
 static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
 {
   auto target_nclx_profile = std::make_shared<color_profile_nclx>();
@@ -535,6 +536,7 @@ static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std
 }
 
 
+// TODO: remove me, moved to encoder.cc
 static bool nclx_profile_matches_spec(heif_colorspace colorspace,
                                       std::shared_ptr<const color_profile_nclx> image_nclx,
                                       const struct heif_color_profile_nclx* spec_nclx)
@@ -571,6 +573,7 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
+// TODO: remove me (use get_encoder()->convert_colorspace_for_encoding() instead.
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
                                                                                    struct heif_encoder* encoder,
                                                                                    const struct heif_encoding_options& options)

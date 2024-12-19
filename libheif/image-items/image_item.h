@@ -77,6 +77,7 @@ public:
 
   virtual Error get_item_error() const { return Error::Ok; }
 
+  // TODO: remove me, use get_encoder()->get_forced_output_nclx() instead.
   // If the output format requires a specific nclx (like JPEG), return this. Otherwise, return NULL.
   virtual const heif_color_profile_nclx* get_forced_output_nclx() const { return nullptr; }
 

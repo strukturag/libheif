@@ -249,33 +249,9 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
 
 Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
                           struct heif_encoder* h_encoder,
-                          const struct heif_encoding_options& options,
+                          const struct heif_encoding_options& in_options,
                           heif_image_input_class input_class)
 {
-#if 0 // TODO
-
-  // --- check whether we have to convert the image color space
-
-  // The reason for doing the color conversion here is that the input might be an RGBA image and the color conversion
-  // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
-
-  heif_encoding_options options = in_options;
-
-  if (const auto* nclx = output_image_item->get_forced_output_nclx()) {
-    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
-  }
-
-  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = output_image_item->convert_colorspace_for_encoding(pixel_image,
-                                                                                                              encoder,
-                                                                                                              options);
-  if (srcImageResult.error) {
-    return srcImageResult.error;
-  }
-
-  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
-#endif
-
-
   if (image->get_width() > 0xFFFF ||
       image->get_height() > 0xFFFF) {
     return {heif_error_Invalid_input,
@@ -299,7 +275,30 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   auto encoder = m_chunks.back()->get_encoder();
 
-  Result<Encoder::CodedImageData> encodeResult = encoder->encode(image, h_encoder, options, input_class);
+  // --- check whether we have to convert the image color space
+
+  // The reason for doing the color conversion here is that the input might be an RGBA image and the color conversion
+  // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
+
+  heif_encoding_options options = in_options;
+
+  if (const auto* nclx = encoder->get_forced_output_nclx()) {
+    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+  }
+
+  Result<std::shared_ptr<HeifPixelImage>> srcImageResult = encoder->convert_colorspace_for_encoding(image,
+                                                                                                    h_encoder,
+                                                                                                    options,
+                                                                                                    m_heif_context->get_security_limits());
+  if (srcImageResult.error) {
+    return srcImageResult.error;
+  }
+
+  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
+
+  // --- encode image
+
+  Result<Encoder::CodedImageData> encodeResult = encoder->encode(colorConvertedImage, h_encoder, options, input_class);
   if (encodeResult.error) {
     return encodeResult.error;
   }
@@ -311,8 +310,8 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
     auto sample_description_box = encoder->get_sample_description_box(data);
     VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
-    visualSampleEntry.width = static_cast<uint16_t>(image->get_width());
-    visualSampleEntry.height = static_cast<uint16_t>(image->get_height());
+    visualSampleEntry.width = static_cast<uint16_t>(colorConvertedImage->get_width());
+    visualSampleEntry.height = static_cast<uint16_t>(colorConvertedImage->get_height());
     m_stsd->add_sample_entry(sample_description_box);
 
     m_stsc->add_chunk((uint32_t) m_chunks.size());
@@ -334,7 +333,7 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
   }
 
-  m_stts->append_sample_duration(image->get_sample_duration());
+  m_stts->append_sample_duration(colorConvertedImage->get_sample_duration());
 
   m_next_sample_to_be_decoded++;
 
