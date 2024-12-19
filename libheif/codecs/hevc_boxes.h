@@ -116,20 +116,6 @@ public:
   {
     set_short_type(fourcc("hvc1"));
   }
-
-  std::string dump(Indent&) const override;
-
-  const VisualSampleEntry& get_VisualSampleEntry_const() const override { return m_visualSampleEntry; }
-
-  VisualSampleEntry& get_VisualSampleEntry() override { return m_visualSampleEntry; }
-
-  void set_VisualSampleEntry(const VisualSampleEntry& entry) override { m_visualSampleEntry = entry; }
-
-protected:
-  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
-
-private:
-  VisualSampleEntry m_visualSampleEntry;
 };
 
 

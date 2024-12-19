@@ -485,13 +485,19 @@ struct VisualSampleEntry
 class Box_VisualSampleEntry : public Box
 {
 public:
-  virtual const VisualSampleEntry& get_VisualSampleEntry_const() const = 0;
-
-  virtual VisualSampleEntry& get_VisualSampleEntry() = 0;
-
-  virtual void set_VisualSampleEntry(const VisualSampleEntry&) { } // TODO: make pure
-
   Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+  const VisualSampleEntry& get_VisualSampleEntry_const() const { return m_visualSampleEntry; }
+
+  VisualSampleEntry& get_VisualSampleEntry() { return m_visualSampleEntry; }
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+private:
+  VisualSampleEntry m_visualSampleEntry;
 };
 
 #endif //SEQ_BOXES_H

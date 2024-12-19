@@ -373,20 +373,6 @@ public:
   {
     set_short_type(fourcc("uncv"));
   }
-
-  std::string dump(Indent&) const override;
-
-  const VisualSampleEntry& get_VisualSampleEntry_const() const override { return m_visualSampleEntry; }
-
-  VisualSampleEntry& get_VisualSampleEntry() override { return m_visualSampleEntry; }
-
-  // TODO Error write(StreamWriter& writer) const override;
-
-protected:
-  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
-
-private:
-  VisualSampleEntry m_visualSampleEntry;
 };
 
 

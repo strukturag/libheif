@@ -653,29 +653,3 @@ Error parse_sps_for_hvcC_configuration(const uint8_t* sps, size_t size,
 
   return Error::Ok;
 }
-
-
-std::string Box_hvc1::dump(Indent& indent) const
-{
-  std::stringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << m_visualSampleEntry.dump(indent);
-  sstr << dump_children(indent);
-  return sstr.str();
-}
-
-
-Error Box_hvc1::parse(BitstreamRange& range, const heif_security_limits* limits)
-{
-  auto err = m_visualSampleEntry.parse(range, limits);
-  if (err) {
-    return err;
-  }
-
-  err = read_children(range, READ_CHILDREN_ALL, limits);
-  if (err) {
-    return err;
-  }
-
-  return Error::Ok;
-}

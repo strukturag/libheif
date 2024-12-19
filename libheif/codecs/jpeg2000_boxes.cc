@@ -516,30 +516,3 @@ heif_chroma JPEG2000MainHeader::get_chroma_format() const
 
   return heif_chroma_undefined;
 }
-
-
-
-std::string Box_j2ki::dump(Indent& indent) const
-{
-  std::stringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << m_visualSampleEntry.dump(indent);
-  sstr << dump_children(indent);
-  return sstr.str();
-}
-
-
-Error Box_j2ki::parse(BitstreamRange& range, const heif_security_limits* limits)
-{
-  auto err = m_visualSampleEntry.parse(range, limits);
-  if (err) {
-    return err;
-  }
-
-  err = read_children(range, READ_CHILDREN_ALL, limits);
-  if (err) {
-    return err;
-  }
-
-  return Error::Ok;
-}

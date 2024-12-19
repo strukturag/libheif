@@ -76,31 +76,3 @@ Error Box_jpgC::parse(BitstreamRange& range, const heif_security_limits* limits)
   range.read(m_data.data(), nBytes);
   return range.get_error();
 }
-
-
-// TODO: move to Box_VisualSampleEntry
-std::string Box_mjpg::dump(Indent& indent) const
-{
-  std::stringstream sstr;
-  sstr << Box::dump(indent);
-  sstr << m_visualSampleEntry.dump(indent);
-  sstr << dump_children(indent);
-  return sstr.str();
-}
-
-
-// TODO: move to Box_VisualSampleEntry
-Error Box_mjpg::parse(BitstreamRange& range, const heif_security_limits* limits)
-{
-  auto err = m_visualSampleEntry.parse(range, limits);
-  if (err) {
-    return err;
-  }
-
-  err = read_children(range, READ_CHILDREN_ALL, limits);
-  if (err) {
-    return err;
-  }
-
-  return Error::Ok;
-}
