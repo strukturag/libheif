@@ -626,6 +626,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_jpgC>();
       break;
 
+    case fourcc("mjpg"):
+      box = std::make_shared<Box_mjpg>();
+      break;
+
 #if WITH_UNCOMPRESSED_CODEC
     case fourcc("cmpd"):
       box = std::make_shared<Box_cmpd>();

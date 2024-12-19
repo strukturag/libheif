@@ -177,6 +177,11 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
       return std::make_shared<Decoder_JPEG2000>(j2kH);
     }
 
+    case fourcc("mjpg"): {
+      auto jpgC = sample_description_box->get_child_box<Box_jpgC>();
+      return std::make_shared<Decoder_JPEG>(jpgC);
+    }
+
     default:
       return nullptr;
   }

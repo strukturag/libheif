@@ -1,6 +1,6 @@
 /*
- * HEIF JPEG codec.
- * Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
+ * HEIF codec.
+ * Copyright (c) 2024 Dirk Farin <dirk.farin@gmail.com>
  *
  * This file is part of libheif.
  *
@@ -18,22 +18,20 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "jpeg.h"
-#include "codecs/jpeg_dec.h"
-#include "codecs/jpeg_boxes.h"
-#include "security_limits.h"
-#include "pixelimage.h"
-#include "api/libheif/api_structs.h"
+#include "jpeg_enc.h"
+#include "jpeg_boxes.h"
+#include "error.h"
+#include "context.h"
+#include "libheif/api_structs.h"
 #include <cstring>
-#include <utility>
+
+#include <string>
 
 
-// TODO: remove. Now in jpeg_enc.cc
 static uint8_t JPEG_SOS = 0xDA;
 
 
-// TODO: remove. Now in jpeg_enc.cc
-const heif_color_profile_nclx* ImageItem_JPEG::get_forced_output_nclx() const
+const heif_color_profile_nclx* Encoder_JPEG::get_forced_output_nclx() const
 {
   // JPEG always uses CCIR-601
 
@@ -48,11 +46,10 @@ const heif_color_profile_nclx* ImageItem_JPEG::get_forced_output_nclx() const
 }
 
 
-// TODO: remove. Now in jpeg_enc.cc
-Result<Encoder::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
-                                                         struct heif_encoder* encoder,
-                                                         const struct heif_encoding_options& options,
-                                                         enum heif_image_input_class input_class)
+Result<Encoder::CodedImageData> Encoder_JPEG::encode(const std::shared_ptr<HeifPixelImage>& image,
+                                                     struct heif_encoder* encoder,
+                                                     const struct heif_encoding_options& options,
+                                                     enum heif_image_input_class input_class)
 {
   Encoder::CodedImageData codedImage;
 
@@ -115,28 +112,18 @@ Result<Encoder::CodedImageData> ImageItem_JPEG::encode(const std::shared_ptr<Hei
 }
 
 
-Result<std::vector<uint8_t>> ImageItem_JPEG::read_bitstream_configuration_data() const
+std::shared_ptr<class Box_VisualSampleEntry> Encoder_JPEG::get_sample_description_box(const CodedImageData& data) const
 {
-  return m_decoder->read_bitstream_configuration_data();
-}
+  auto mjpg = std::make_shared<Box_mjpg>();
 
+  VisualSampleEntry sampleEntry;
+  sampleEntry.compressorname = "JPEG";
 
-std::shared_ptr<Decoder> ImageItem_JPEG::get_decoder() const
-{
-  return m_decoder;
-}
+  for (auto prop : data.properties) {
+    if (prop->get_short_type() == fourcc("jpgC")) {
+      mjpg->append_child_box(prop);
+    }
+  }
 
-Error ImageItem_JPEG::on_load_file()
-{
-  // Note: jpgC box is optional. NULL is a valid value.
-  auto jpgC_box = get_property<Box_jpgC>();
-
-  m_decoder = std::make_shared<Decoder_JPEG>(jpgC_box);
-
-  DataExtent extent;
-  extent.set_from_image_item(get_context()->get_heif_file(), get_id());
-
-  m_decoder->set_data_extent(std::move(extent));
-
-  return Error::Ok;
+  return mjpg;
 }

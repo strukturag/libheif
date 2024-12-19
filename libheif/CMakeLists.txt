@@ -73,6 +73,8 @@ set(libheif_sources
         codecs/jpeg_boxes.cc
         codecs/jpeg_dec.h
         codecs/jpeg_dec.cc
+        codecs/jpeg_enc.h
+        codecs/jpeg_enc.cc
         image-items/jpeg2000.h
         image-items/jpeg2000.cc
         codecs/jpeg2000_dec.h
