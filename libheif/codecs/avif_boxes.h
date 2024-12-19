@@ -31,6 +31,7 @@
 #include "box.h"
 #include "error.h"
 #include "image-items/image_item.h"
+#include "sequences/seq_boxes.h"
 
 
 class Box_av1C : public Box
@@ -113,6 +114,15 @@ private:
   std::vector<uint8_t> m_config_OBUs;
 };
 
+
+class Box_av01 : public Box_VisualSampleEntry
+{
+public:
+  Box_av01()
+  {
+    set_short_type(fourcc("av01"));
+  }
+};
 
 class Box_a1op : public Box
 {

@@ -63,6 +63,8 @@ set(libheif_sources
         codecs/hevc_enc.h
         image-items/avif.cc
         image-items/avif.h
+        codecs/avif_enc.cc
+        codecs/avif_enc.h
         codecs/avif_dec.cc
         codecs/avif_dec.h
         codecs/avif_boxes.cc

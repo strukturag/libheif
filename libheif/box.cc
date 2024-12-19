@@ -538,6 +538,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_av1C>();
       break;
 
+    case fourcc("av01"):
+      box = std::make_shared<Box_av01>();
+      break;
+
     case fourcc("vvcC"):
       box = std::make_shared<Box_vvcC>();
       break;
