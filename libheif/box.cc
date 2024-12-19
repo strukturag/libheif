@@ -715,6 +715,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_avcC>();
       break;
 
+    case fourcc("avc1"):
+      box = std::make_shared<Box_avc1>();
+      break;
+
 #if HEIF_ENABLE_EXPERIMENTAL_FEATURES
     case fourcc("tilC"):
       box = std::make_shared<Box_tilC>();
