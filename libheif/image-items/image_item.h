@@ -65,10 +65,6 @@ public:
 
   static uint32_t compression_format_to_fourcc_infe_type(heif_compression_format);
 
-  Result<std::shared_ptr<HeifPixelImage>> convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
-                                                                          struct heif_encoder* encoder,
-                                                                          const struct heif_encoding_options& options);
-
   virtual uint32_t get_infe_type() const { return 0; }
 
   virtual const char* get_auxC_alpha_channel_type() const { return "urn:mpeg:mpegB:cicp:systems:auxiliary:alpha"; }

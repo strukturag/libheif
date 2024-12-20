@@ -573,63 +573,6 @@ static bool nclx_profile_matches_spec(heif_colorspace colorspace,
 }
 
 
-// TODO: remove me (use get_encoder()->convert_colorspace_for_encoding() instead.
-Result<std::shared_ptr<HeifPixelImage>> ImageItem::convert_colorspace_for_encoding(const std::shared_ptr<HeifPixelImage>& image,
-                                                                                   struct heif_encoder* encoder,
-                                                                                   const struct heif_encoding_options& options)
-{
-  const heif_color_profile_nclx* output_nclx_profile;
-
-  if (get_encoder() == nullptr) {
-    // TODO: this case can be removed later, after we switched completely to the Encoder class
-    output_nclx_profile = options.output_nclx_profile;
-  }
-  else if (const auto* nclx = get_encoder()->get_forced_output_nclx()) {
-    output_nclx_profile = nclx;
-  }
-  else {
-    output_nclx_profile = options.output_nclx_profile;
-  }
-
-
-  heif_colorspace colorspace = image->get_colorspace();
-  heif_chroma chroma = image->get_chroma_format();
-
-  if (encoder->plugin->plugin_api_version >= 2) {
-    encoder->plugin->query_input_colorspace2(encoder->encoder, &colorspace, &chroma);
-  }
-  else {
-    encoder->plugin->query_input_colorspace(&colorspace, &chroma);
-  }
-
-
-  // If output format forces an NCLX, use that. Otherwise use user selected NCLX.
-
-  std::shared_ptr<color_profile_nclx> target_nclx_profile = compute_target_nclx_profile(image, output_nclx_profile);
-
-  // --- convert colorspace
-
-  std::shared_ptr<HeifPixelImage> output_image;
-
-  if (colorspace == image->get_colorspace() &&
-      chroma == image->get_chroma_format() &&
-      nclx_profile_matches_spec(colorspace, image->get_color_profile_nclx(), output_nclx_profile)) {
-    return image;
-  }
-
-
-  // @TODO: use color profile when converting
-  int output_bpp = 0; // same as input
-
-  //auto target_nclx = std::make_shared<color_profile_nclx>();
-  //target_nclx->set_from_heif_color_profile_nclx(target_heif_nclx);
-
-  return convert_colorspace(image, colorspace, chroma, target_nclx_profile,
-                            output_bpp, options.color_conversion_options,
-                            get_context()->get_security_limits());
-}
-
-
 Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                   struct heif_encoder* h_encoder,
                                                   const struct heif_encoding_options& options,
