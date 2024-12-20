@@ -512,67 +512,6 @@ int ImageItem::get_chroma_bits_per_pixel() const
 }
 
 
-// TODO: remove me, moved to encoder.cc
-static std::shared_ptr<color_profile_nclx> compute_target_nclx_profile(const std::shared_ptr<HeifPixelImage>& image, const heif_color_profile_nclx* output_nclx_profile)
-{
-  auto target_nclx_profile = std::make_shared<color_profile_nclx>();
-
-  // If there is an output NCLX specified, use that.
-  if (output_nclx_profile) {
-    target_nclx_profile->set_from_heif_color_profile_nclx(output_nclx_profile);
-  }
-    // Otherwise, if there is an input NCLX, keep that.
-  else if (auto input_nclx = image->get_color_profile_nclx()) {
-    *target_nclx_profile = *input_nclx;
-  }
-    // Otherwise, just use the defaults (set below)
-  else {
-    target_nclx_profile->set_undefined();
-  }
-
-  target_nclx_profile->replace_undefined_values_with_sRGB_defaults();
-
-  return target_nclx_profile;
-}
-
-
-// TODO: remove me, moved to encoder.cc
-static bool nclx_profile_matches_spec(heif_colorspace colorspace,
-                                      std::shared_ptr<const color_profile_nclx> image_nclx,
-                                      const struct heif_color_profile_nclx* spec_nclx)
-{
-  if (colorspace != heif_colorspace_YCbCr) {
-    return true;
-  }
-
-  // No target specification -> always matches
-  if (!spec_nclx) {
-    return true;
-  }
-
-  if (!image_nclx) {
-    // if no input nclx is specified, compare against default one
-    image_nclx = std::make_shared<color_profile_nclx>();
-  }
-
-  if (image_nclx->get_full_range_flag() != (spec_nclx->full_range_flag == 0 ? false : true)) {
-    return false;
-  }
-
-  if (image_nclx->get_matrix_coefficients() != spec_nclx->matrix_coefficients) {
-    return false;
-  }
-
-  // TODO: are the colour primaries relevant for matrix-coefficients != 12,13 ?
-  //       If not, we should skip this test for anything else than matrix-coefficients != 12,13.
-  if (image_nclx->get_colour_primaries() != spec_nclx->color_primaries) {
-    return false;
-  }
-
-  return true;
-}
-
-
 Result<Encoder::CodedImageData> ImageItem::encode(const std::shared_ptr<HeifPixelImage>& image,
                                                   struct heif_encoder* h_encoder,
                                                   const struct heif_encoding_options& options,
