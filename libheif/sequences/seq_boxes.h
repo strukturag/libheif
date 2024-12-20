@@ -423,6 +423,14 @@ private:
 };
 
 
+struct CodingConstraints
+{
+  bool all_ref_pics_intra = false;
+  bool intra_pred_used = false;
+  uint8_t max_ref_per_pic = 0; // 4 bit
+};
+
+
 // Coding Constraints Box
 class Box_ccst : public FullBox
 {
@@ -436,13 +444,15 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  void set_coding_constraints(const CodingConstraints& c) { m_codingConstraints = c; }
+
+  const CodingConstraints& get_coding_constraints() const { return m_codingConstraints; }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  bool all_ref_pics_intra = false;
-  bool intra_pred_used = false;
-  uint8_t max_ref_per_pic = 0; // 4 bit
+  CodingConstraints m_codingConstraints;
 };
 
 

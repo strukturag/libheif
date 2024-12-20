@@ -63,6 +63,10 @@ Result<Encoder::CodedImageData> Encoder_JPEG2000::encode(const std::shared_ptr<H
 
   codedImageData.properties.push_back(j2kH);
 
+  codedImageData.codingConstraints.intra_pred_used = false;
+  codedImageData.codingConstraints.all_ref_pics_intra = true;
+  codedImageData.codingConstraints.max_ref_per_pic = 0;
+
   return codedImageData;
 }
 

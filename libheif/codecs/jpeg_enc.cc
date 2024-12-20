@@ -108,6 +108,10 @@ Result<Encoder::CodedImageData> Encoder_JPEG::encode(const std::shared_ptr<HeifP
   // TODO: extract 'jpgC' header data
 #endif
 
+  codedImage.codingConstraints.intra_pred_used = false;
+  codedImage.codingConstraints.all_ref_pics_intra = true;
+  codedImage.codingConstraints.max_ref_per_pic = 0;
+
   return {codedImage};
 }
 

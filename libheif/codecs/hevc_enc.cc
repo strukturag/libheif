@@ -109,6 +109,9 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
     assert((int)check_encoded_height == encoded_height);
   }
 
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+
   return codedImage;
 }
 

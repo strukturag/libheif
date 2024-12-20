@@ -314,6 +314,10 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     visualSampleEntry.height = static_cast<uint16_t>(colorConvertedImage->get_height());
     m_stsd->add_sample_entry(sample_description_box);
 
+    auto ccst = std::make_shared<Box_ccst>();
+    ccst->set_coding_constraints(data.codingConstraints);
+    sample_description_box->append_child_box(ccst);
+
     m_stsc->add_chunk((uint32_t) m_chunks.size());
   }
 

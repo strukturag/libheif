@@ -89,6 +89,10 @@ Result<Encoder::CodedImageData> Encoder_VVC::encode(const std::shared_ptr<HeifPi
     }
   }
 
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+  codedImage.codingConstraints.max_ref_per_pic = 0;
+
   return codedImage;
 }
 

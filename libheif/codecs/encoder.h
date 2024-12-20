@@ -29,6 +29,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "sequences/seq_boxes.h"
 
 class HeifPixelImage;
 
@@ -42,6 +43,7 @@ public:
   struct CodedImageData {
     std::vector<std::shared_ptr<Box>> properties;
     std::vector<uint8_t> bitstream;
+    CodingConstraints codingConstraints;
 
     // If 0, the encoded size is equal to the input size.
     uint32_t encoded_image_width = 0;

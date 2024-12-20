@@ -70,6 +70,9 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
   av1C->set_configuration(config);
   codedImage.properties.push_back(av1C);
 
+  codedImage.codingConstraints.intra_pred_used = true;
+  codedImage.codingConstraints.all_ref_pics_intra = true; // TODO: change when we use predicted frames
+
   return codedImage;
 }
 
