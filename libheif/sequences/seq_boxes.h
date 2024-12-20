@@ -510,12 +510,71 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  uint32_t m_grouping_type = 0;
+  uint32_t m_grouping_type = 0; // 4cc
   std::optional<uint32_t> m_grouping_type_parameter;
 
   struct Entry {
     uint32_t sample_count;
     uint32_t group_description_index;
+  };
+
+  std::vector<Entry> m_entries;
+};
+
+
+class SampleGroupEntry
+{
+public:
+  virtual ~SampleGroupEntry() = default;
+
+  virtual std::string dump() const = 0;
+
+  virtual Error write(StreamWriter& writer) const = 0;
+
+  virtual Error parse(BitstreamRange& range, const heif_security_limits*) = 0;
+};
+
+
+class SampleGroupEntry_refs : public SampleGroupEntry
+{
+public:
+  std::string dump() const override;
+
+  Error write(StreamWriter& writer) const override;
+
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_sample_id;
+  std::vector<uint32_t> m_direct_reference_sample_id;
+};
+
+
+// Sample Group Description
+class Box_sgpd : public FullBox {
+public:
+  Box_sgpd()
+  {
+    set_short_type(fourcc("sgpd"));
+  }
+
+  void derive_box_version() override;
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_grouping_type = 0; // 4cc
+  std::optional<uint32_t> m_default_length; // version 1  (0 -> variable length)
+  std::optional<uint32_t> m_default_sample_description_index;; // version >= 2
+
+  struct Entry {
+    uint32_t description_length = 0; // if version==1 && m_default_length == 0
+    std::shared_ptr<SampleGroupEntry> sample_group_entry;
   };
 
   std::vector<Entry> m_entries;

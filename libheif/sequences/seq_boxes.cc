@@ -1122,3 +1122,132 @@ Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   return range.get_error();
 }
+
+
+std::string SampleGroupEntry_refs::dump() const
+{
+  std::stringstream sstr;
+  if (m_sample_id==0) {
+    sstr << "0 (non-ref) refs =";
+  }
+  else {
+    sstr << m_sample_id << " refs =";
+  }
+  for (uint32_t ref : m_direct_reference_sample_id) {
+    sstr << ' ' << ref;
+  }
+
+  return sstr.str();
+}
+
+Error SampleGroupEntry_refs::write(StreamWriter& writer) const
+{
+  return {};
+}
+
+Error SampleGroupEntry_refs::parse(BitstreamRange& range, const heif_security_limits*)
+{
+  m_sample_id = range.read32();
+  uint8_t cnt = range.read8();
+  for (uint8_t i = 0; i < cnt; i++) {
+    m_direct_reference_sample_id.push_back(range.read32());
+  }
+
+  return Error::Ok;
+}
+
+
+void Box_sgpd::derive_box_version()
+{
+  if (m_default_length) {
+    set_version(1);
+    assert(!m_default_sample_description_index);
+    return;
+  }
+
+  if (m_default_sample_description_index) {
+    set_version(2);
+    return;
+  }
+
+  set_version(0);
+}
+
+
+std::string Box_sgpd::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "grouping_type: " << fourcc_to_string(m_grouping_type) << "\n";
+  if (m_default_length) {
+    sstr << indent << "default_length: " << *m_default_length << "\n";
+  }
+  if (m_default_sample_description_index) {
+    sstr << indent << "default_sample_description_index: " << *m_default_sample_description_index << "\n";
+  }
+
+  for (size_t i=0; i<m_entries.size(); i++) {
+    sstr << indent << "[" << (i+1) << "] : ";
+    if (m_entries[i].sample_group_entry) {
+      sstr << m_entries[i].sample_group_entry->dump() << "\n";
+    }
+    else {
+      sstr << "empty (description_length=" << m_entries[i].description_length << ")\n";
+    }
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_sgpd::write(StreamWriter& writer) const
+{
+return {};
+}
+
+
+Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  m_grouping_type = range.read32();
+
+  if (get_version() == 1) {
+    m_default_length = range.read32();
+  }
+
+  if (get_version() >= 2) {
+    m_default_sample_description_index = range.read32();
+  }
+
+  uint32_t entry_count = range.read32();
+  for (uint32_t i = 0; i < entry_count; i++) {
+    Entry entry;
+
+    if (get_version() == 1) {
+      if (*m_default_length == 0) {
+        entry.description_length = range.read32();
+      }
+    }
+
+    switch (m_grouping_type) {
+      case fourcc("refs"): {
+        entry.sample_group_entry = std::make_shared<SampleGroupEntry_refs>();
+        Error err = entry.sample_group_entry->parse(range, limits);
+        if (err) {
+          return err;
+        }
+
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    m_entries.emplace_back(std::move(entry));
+  }
+
+  return Error::Ok;
+}

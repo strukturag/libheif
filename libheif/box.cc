@@ -818,6 +818,10 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_sbgp>();
       break;
 
+    case fourcc("sgpd"):
+      box = std::make_shared<Box_sgpd>();
+      break;
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;
