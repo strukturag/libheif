@@ -197,7 +197,7 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const HeifCo
 
     const auto unit = units[tile_idx];
 
-    // get all data and decode all
+    // get data needed for one tile
     std::vector<uint8_t> compressed_bytes;
     Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes, unit.unit_offset, unit.unit_size);
     if (err) {

@@ -580,4 +580,25 @@ private:
   std::vector<Entry> m_entries;
 };
 
+// Bitrate
+class Box_btrt : public FullBox {
+public:
+  Box_btrt()
+  {
+    set_short_type(fourcc("btrt"));
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_bufferSizeDB;
+  uint32_t m_maxBitrate;
+  uint32_t m_avgBitrate;
+};
+
 #endif //SEQ_BOXES_H

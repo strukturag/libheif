@@ -1251,3 +1251,40 @@ Error Box_sgpd::parse(BitstreamRange& range, const heif_security_limits* limits)
 
   return Error::Ok;
 }
+
+
+std::string Box_btrt::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "bufferSizeDB: " << m_bufferSizeDB << " bytes\n";
+  sstr << indent << "max bitrate: " << m_maxBitrate << " bits/sec\n";
+  sstr << indent << "avg bitrate: " << m_avgBitrate << " bits/sec\n";
+
+  return sstr.str();
+}
+
+
+Error Box_btrt::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_bufferSizeDB);
+  writer.write32(m_maxBitrate);
+  writer.write32(m_avgBitrate);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_btrt::parse(BitstreamRange& range, const heif_security_limits*)
+{
+  m_bufferSizeDB = range.read32();
+  m_maxBitrate = range.read32();
+  m_avgBitrate = range.read32();
+
+  return Error::Ok;
+}
