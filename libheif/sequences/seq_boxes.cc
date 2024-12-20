@@ -19,6 +19,7 @@
  */
 
 #include "sequences/seq_boxes.h"
+#include <iomanip>
 
 
 Error Box_container::parse(BitstreamRange& range, const heif_security_limits* limits)
@@ -1035,4 +1036,89 @@ Error Box_VisualSampleEntry::parse(BitstreamRange& range, const heif_security_li
   }
 
   return Error::Ok;
+}
+
+
+std::string Box_sbgp::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "grouping_type: " << fourcc_to_string(m_grouping_type) << "\n";
+
+  if (m_grouping_type_parameter) {
+    sstr << indent << "grouping_type_parameter: " << *m_grouping_type_parameter << "\n";
+  }
+
+  uint32_t total_samples = 0;
+  for (size_t i = 0; i < m_entries.size(); i++) {
+    sstr << indent << "[" << std::setw(2) << (i + 1) << "] : " << std::setw(3) << m_entries[i].sample_count << "x " << m_entries[i].group_description_index << "\n";
+    total_samples += m_entries[i].sample_count;
+  }
+  sstr << indent << "total samples: " << total_samples << "\n";
+
+  return sstr.str();
+}
+
+
+void Box_sbgp::derive_box_version()
+{
+  if (m_grouping_type_parameter) {
+    set_version(1);
+  }
+  else {
+    set_version(0);
+  }
+}
+
+
+Error Box_sbgp::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(m_grouping_type);
+  if (m_grouping_type_parameter) {
+    writer.write32(*m_grouping_type_parameter);
+  }
+
+  if (m_entries.size() > 0xFFFFFFFF) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Too many sbgp entries."};
+  }
+
+  writer.write32(static_cast<uint32_t>(m_entries.size()));
+  for (const auto& entry : m_entries) {
+    writer.write32(entry.sample_count);
+    writer.write32(entry.group_description_index);
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_sbgp::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 1) {
+    return unsupported_version_error("sbgp");
+  }
+
+  m_grouping_type = range.read32();
+
+  if (get_version() == 1) {
+    m_grouping_type_parameter = range.read32();
+  }
+
+  uint32_t count = range.read32();
+  for (uint32_t i = 0; i < count; i++) {
+    Entry e;
+    e.sample_count = range.read32();
+    e.group_description_index = range.read32();
+    m_entries.push_back(e);
+  }
+
+  return range.get_error();
 }

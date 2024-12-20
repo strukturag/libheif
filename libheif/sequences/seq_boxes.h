@@ -23,8 +23,7 @@
 
 #include "box.h"
 
-class Box_container : public Box
-{
+class Box_container : public Box {
 public:
   Box_container(const char* type)
   {
@@ -39,16 +38,14 @@ protected:
 
 
 // Movie Box
-class Box_moov : public Box_container
-{
+class Box_moov : public Box_container {
 public:
   Box_moov() : Box_container("moov") {}
 };
 
 
 // Movie Header Box
-class Box_mvhd : public FullBox
-{
+class Box_mvhd : public FullBox {
 public:
   Box_mvhd()
   {
@@ -62,6 +59,7 @@ public:
   void derive_box_version() override;
 
   double get_rate() const { return m_rate / double(0x10000); }
+
   float get_volume() const { return float(m_volume) / float(0x100); }
 
   double get_matrix_element(int idx) const;
@@ -92,16 +90,14 @@ private:
 
 
 // Track Box
-class Box_trak : public Box_container
-{
+class Box_trak : public Box_container {
 public:
   Box_trak() : Box_container("trak") {}
 };
 
 
 // Track Header Box
-class Box_tkhd : public FullBox
-{
+class Box_tkhd : public FullBox {
 public:
   Box_tkhd()
   {
@@ -126,9 +122,10 @@ public:
 
   void set_track_id(uint32_t track_id) { m_track_id = track_id; }
 
-  void set_resolution(double width, double height) {
-    m_width = (uint32_t)(width * 0x10000);
-    m_height = (uint32_t)(height * 0x10000);
+  void set_resolution(double width, double height)
+  {
+    m_width = (uint32_t) (width * 0x10000);
+    m_height = (uint32_t) (height * 0x10000);
   }
 
   uint64_t get_duration() const { return m_duration; }
@@ -156,16 +153,14 @@ private:
 
 
 // Media Box
-class Box_mdia : public Box_container
-{
+class Box_mdia : public Box_container {
 public:
   Box_mdia() : Box_container("mdia") {}
 };
 
 
 // Media Header Box
-class Box_mdhd : public FullBox
-{
+class Box_mdhd : public FullBox {
 public:
   Box_mdhd()
   {
@@ -193,21 +188,19 @@ private:
   uint32_t m_timescale = 0;
   uint64_t m_duration = 0;
 
-  char m_language[4] = { 'u','n','k',0 };
+  char m_language[4] = {'u', 'n', 'k', 0};
 };
 
 
 // Media Information Box (container)
-class Box_minf : public Box_container
-{
+class Box_minf : public Box_container {
 public:
   Box_minf() : Box_container("minf") {}
 };
 
 
 // Video Media Header
-class Box_vmhd : public FullBox
-{
+class Box_vmhd : public FullBox {
 public:
   Box_vmhd()
   {
@@ -224,21 +217,19 @@ protected:
 
 private:
   uint16_t m_graphics_mode = 0;
-  uint16_t m_op_color[3] = { 0,0,0 };
+  uint16_t m_op_color[3] = {0, 0, 0};
 };
 
 
 // Sample Table Box (container)
-class Box_stbl : public Box_container
-{
+class Box_stbl : public Box_container {
 public:
   Box_stbl() : Box_container("stbl") {}
 };
 
 
 // Sample Description Box
-class Box_stsd : public FullBox
-{
+class Box_stsd : public FullBox {
 public:
   Box_stsd()
   {
@@ -249,16 +240,17 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::shared_ptr<const class Box_VisualSampleEntry> get_sample_entry(size_t idx) const {
+  std::shared_ptr<const class Box_VisualSampleEntry> get_sample_entry(size_t idx) const
+  {
     if (idx >= m_sample_entries.size()) {
       return nullptr;
-    }
-    else {
+    } else {
       return m_sample_entries[idx];
     }
   }
 
-  void add_sample_entry(std::shared_ptr<class Box_VisualSampleEntry> entry) {
+  void add_sample_entry(std::shared_ptr<class Box_VisualSampleEntry> entry)
+  {
     m_sample_entries.push_back(entry);
   }
 
@@ -271,8 +263,7 @@ private:
 
 
 // Decoding Time to Sample Box
-class Box_stts : public FullBox
-{
+class Box_stts : public FullBox {
 public:
   Box_stts()
   {
@@ -283,8 +274,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  struct TimeToSample
-  {
+  struct TimeToSample {
     uint32_t sample_count;
     uint32_t sample_delta;
   };
@@ -304,8 +294,7 @@ private:
 
 
 // Sample to Chunk Box
-class Box_stsc : public FullBox
-{
+class Box_stsc : public FullBox {
 public:
   Box_stsc()
   {
@@ -316,8 +305,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  struct SampleToChunk
-  {
+  struct SampleToChunk {
     uint32_t first_chunk;
     uint32_t samples_per_chunk;
     uint32_t sample_description_index;
@@ -341,8 +329,7 @@ private:
 
 
 // Chunk Offset Box
-class Box_stco : public FullBox
-{
+class Box_stco : public FullBox {
 public:
   Box_stco()
   {
@@ -370,8 +357,7 @@ private:
 
 
 // Sample Size Box
-class Box_stsz : public FullBox
-{
+class Box_stsz : public FullBox {
 public:
   Box_stsz()
   {
@@ -401,8 +387,7 @@ private:
 
 
 // Sync Sample Box
-class Box_stss : public FullBox
-{
+class Box_stss : public FullBox {
 public:
   Box_stss()
   {
@@ -423,8 +408,7 @@ private:
 };
 
 
-struct CodingConstraints
-{
+struct CodingConstraints {
   bool all_ref_pics_intra = false;
   bool intra_pred_used = false;
   uint8_t max_ref_per_pic = 0; // 4 bit
@@ -432,8 +416,7 @@ struct CodingConstraints
 
 
 // Coding Constraints Box
-class Box_ccst : public FullBox
-{
+class Box_ccst : public FullBox {
 public:
   Box_ccst()
   {
@@ -456,8 +439,7 @@ private:
 };
 
 
-struct VisualSampleEntry
-{
+struct VisualSampleEntry {
   // from SampleEntry
   //const unsigned int(8)[6] reserved = 0;
   uint16_t data_reference_index;
@@ -466,7 +448,7 @@ struct VisualSampleEntry
 
   uint16_t pre_defined = 0;
   //uint16_t reserved = 0;
-  uint32_t pre_defined2[3] = {0,0,0};
+  uint32_t pre_defined2[3] = {0, 0, 0};
   uint16_t width = 0;
   uint16_t height = 0;
   uint32_t horizresolution = 0x00480000; // 72 dpi
@@ -492,8 +474,7 @@ struct VisualSampleEntry
 };
 
 
-class Box_VisualSampleEntry : public Box
-{
+class Box_VisualSampleEntry : public Box {
 public:
   Error write(StreamWriter& writer) const override;
 
@@ -508,6 +489,36 @@ protected:
 
 private:
   VisualSampleEntry m_visualSampleEntry;
+};
+
+
+// Sample to Group
+class Box_sbgp : public FullBox {
+public:
+  Box_sbgp()
+  {
+    set_short_type(fourcc("sbgp"));
+  }
+
+  void derive_box_version() override;
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_grouping_type = 0;
+  std::optional<uint32_t> m_grouping_type_parameter;
+
+  struct Entry {
+    uint32_t sample_count;
+    uint32_t group_description_index;
+  };
+
+  std::vector<Entry> m_entries;
 };
 
 #endif //SEQ_BOXES_H
