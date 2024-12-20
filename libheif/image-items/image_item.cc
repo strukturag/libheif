@@ -849,32 +849,6 @@ Result<std::vector<uint8_t>> ImageItem::read_bitstream_configuration_data_overri
 }
 #endif
 
-Result<std::vector<uint8_t>> ImageItem::get_compressed_image_data() const
-{
-  // TODO: Remove this later when decoding is done through Decoder.
-
-  // --- get the compressed image data
-
-  // data from configuration blocks
-
-  Result<std::vector<uint8_t>> confData = read_bitstream_configuration_data();
-  if (confData.error) {
-    return confData.error;
-  }
-
-  std::vector<uint8_t> data = confData.value;
-
-  // image data, usually from 'mdat'
-
-  Error error = m_heif_context->get_heif_file()->append_data_from_iloc(m_id, data);
-  if (error) {
-    return error;
-  }
-
-  return data;
-}
-
-
 Result<std::shared_ptr<HeifPixelImage>> ImageItem::decode_compressed_image(const struct heif_decoding_options& options,
                                                                            bool decode_tile_only, uint32_t tile_x0, uint32_t tile_y0) const
 {
