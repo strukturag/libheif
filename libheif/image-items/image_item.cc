@@ -386,6 +386,17 @@ Error ImageItem::encode_to_item(HeifContext* ctx,
   auto infe_box = ctx->get_heif_file()->add_new_infe_box(get_infe_type());
   heif_item_id image_id = infe_box->get_item_ID();
   set_id(image_id);
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  if (input_class == heif_image_input_class_gain_map) {
+    if (encoder->plugin->compression_format != heif_compression_HEVC &&
+        encoder->plugin->compression_format != heif_compression_AV1) {
+      return Error(heif_error_Encoder_plugin_error, heif_suberror_Unsupported_codec);
+    }
+    infe_box->set_item_name("GMap");
+    infe_box->set_hidden_item(true);
+  }
+#endif
+
 
   ctx->get_heif_file()->append_iloc_data(image_id, codedImage.bitstream, 0);
 
@@ -646,7 +657,13 @@ void ImageItem::add_color_profile(const std::shared_ptr<HeifPixelImage>& image,
                                   const heif_color_profile_nclx* target_heif_nclx,
                                   ImageItem::CodedImageData& inout_codedImage)
 {
+#if WITH_EXPERIMENTAL_GAIN_MAP
+  if (input_class == heif_image_input_class_normal ||
+      input_class == heif_image_input_class_thumbnail ||
+      input_class == heif_image_input_class_gain_map) {
+#else
   if (input_class == heif_image_input_class_normal || input_class == heif_image_input_class_thumbnail) {
+#endif
     auto icc_profile = image->get_color_profile_icc();
     if (icc_profile) {
       auto colr = std::make_shared<Box_colr>();

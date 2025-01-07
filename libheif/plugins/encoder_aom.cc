@@ -1073,7 +1073,12 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
+#if WITH_EXPERIMENTAL_GAIN_MAP
+       input_class == heif_image_input_class_thumbnail ||
+       input_class == heif_image_input_class_gain_map)) {
+#else
        input_class == heif_image_input_class_thumbnail)) {
+#endif
     aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries); CHECK_ERROR
     aom_error = aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients); CHECK_ERROR;
     aom_error = aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics); CHECK_ERROR;
