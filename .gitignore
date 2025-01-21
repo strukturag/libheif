@@ -2,7 +2,10 @@
 # see here: https://stackoverflow.com/questions/7335420/global-git-ignore
 
 build
+_build
 third-party/SVT-AV1/
 third-party/dav1d/
 third-party/libwebp/
 third-party/rav1e/
+
+*.DS_Store
