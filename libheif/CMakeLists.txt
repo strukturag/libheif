@@ -119,7 +119,7 @@ set(libheif_sources
         color-conversion/chroma_sampling.h
         ${libheif_headers})
 
-add_library(heif ${libheif_sources} ${libheif_headers})
+add_library(heif ${libheif_sources})
 
 if (ENABLE_PLUGIN_LOADING)
     if (WIN32)
