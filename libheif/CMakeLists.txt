@@ -154,10 +154,26 @@ set_target_properties(heif
         SOVERSION ${PROJECT_VERSION_MAJOR})
 
 if (APPLE)
-    set_target_properties(heif
-            PROPERTIES
+    set_target_properties(heif PROPERTIES
 	    LINK_FLAGS "-Wl,-compatibility_version,${MACOS_COMPATIBLE_VERSION}")
 endif ()
+
+if (BUILD_FRAMEWORK) 
+  set_target_properties(heif PROPERTIES
+    FRAMEWORK TRUE
+    FRAMEWORK_VERSION "${PACKAGE_VERSION}"
+    PRODUCT_BUNDLE_IDENTIFIER "github.com/strukturag/libheif"
+    XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
+    # OUTPUT_NAME "heif"
+    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+    PUBLIC_HEADER "${libheif_headers}"
+    MACOSX_FRAMEWORK_IDENTIFIER "github.com/strukturag/libheif"
+    MACOSX_FRAMEWORK_BUNDLE_VERSION "${PACKAGE_VERSION}"
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
+    MACOSX_RPATH TRUE)
+endif()
 
 target_compile_definitions(heif
         PUBLIC
@@ -239,6 +255,7 @@ install(TARGETS heif EXPORT ${PROJECT_NAME}-config
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FRAMEWORK DESTINATION Library/Frameworks COMPONENT runtime OPTIONAL
         )
 
 install(FILES ${libheif_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
