@@ -48,6 +48,8 @@ public:
   // Instead of storing alpha in a separate unci, this is put into the main image item
   const char* get_auxC_alpha_channel_type() const override { return nullptr; }
 
+  bool has_coded_alpha_channel() const override;
+
   const heif_color_profile_nclx* get_forced_output_nclx() const override { return nullptr; }
 
   bool is_ispe_essential() const override { return true; }

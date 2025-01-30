@@ -47,6 +47,8 @@ public:
 
   Error get_coded_image_colorspace(heif_colorspace*, heif_chroma*) const override;
 
+  bool has_alpha_component() const;
+
   Result<std::vector<uint8_t>> read_bitstream_configuration_data() const override;
 
 private:

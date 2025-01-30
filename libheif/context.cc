@@ -941,6 +941,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
     return true;
   }
 
+  if (img->has_coded_alpha_channel()) {
+    return true;
+  }
+
   heif_colorspace colorspace;
   heif_chroma chroma;
   Error err = img->get_coded_image_colorspace(&colorspace, &chroma);

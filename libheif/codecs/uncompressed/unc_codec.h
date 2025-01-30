@@ -63,7 +63,8 @@ public:
   static Error get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
                                             const std::shared_ptr<const Box_cmpd>& cmpd,
                                             heif_chroma* out_chroma,
-                                            heif_colorspace* out_colourspace);
+                                            heif_colorspace* out_colourspace,
+                                            bool* out_has_alpha);
 
   static Result<std::shared_ptr<HeifPixelImage>> create_image(std::shared_ptr<const Box_cmpd>,
                                                               std::shared_ptr<const Box_uncC>,

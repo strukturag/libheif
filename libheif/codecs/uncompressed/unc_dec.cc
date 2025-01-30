@@ -140,7 +140,7 @@ Error Decoder_uncompressed::get_coded_image_colorspace(heif_colorspace* out_colo
     return Error::Ok;
   }
   else if (m_cmpd) {
-    UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, out_chroma, out_colorspace);
+    UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, out_chroma, out_colorspace, nullptr);
     return Error::Ok;
   }
   else {
@@ -148,4 +148,16 @@ Error Decoder_uncompressed::get_coded_image_colorspace(heif_colorspace* out_colo
             heif_suberror_Unspecified,
             "Missing 'cmpd' box."};
   }
+}
+
+
+bool Decoder_uncompressed::has_alpha_component() const
+{
+  heif_colorspace dummy_colorspace;
+  heif_chroma dummy_chroma;
+  bool has_alpha;
+
+  UncompressedImageCodec::get_heif_chroma_uncompressed(m_uncC, m_cmpd, &dummy_chroma, &dummy_colorspace, &has_alpha);
+
+  return has_alpha;
 }

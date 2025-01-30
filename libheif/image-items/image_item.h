@@ -192,6 +192,8 @@ public:
 
   bool is_premultiplied_alpha() const { return m_premultiplied_alpha; }
 
+  // Whether the image has an alpha channel coded in the main image (not as an auxiliary image)
+  virtual bool has_coded_alpha_channel() const { return false; }
 
   // --- depth channel
 

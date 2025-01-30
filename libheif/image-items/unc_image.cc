@@ -530,3 +530,9 @@ Error ImageItem_uncompressed::on_load_file()
 
   return Error::Ok;
 }
+
+
+bool ImageItem_uncompressed::has_coded_alpha_channel() const
+{
+  return m_decoder->has_alpha_component();
+}
