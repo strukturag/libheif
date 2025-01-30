@@ -60,6 +60,18 @@ public:
                                               std::shared_ptr<HeifPixelImage>& img,
                                               uint32_t tile_x0, uint32_t tile_y0);
 
+  struct unci_properties {
+    std::shared_ptr<const Box_ispe> ispe;
+    std::shared_ptr<const Box_cmpd> cmpd;
+    std::shared_ptr<const Box_uncC> uncC;
+    // ...
+  };
+
+  static Result<std::shared_ptr<HeifPixelImage>> decode_uncompressed_image(const unci_properties& properties,
+                                                                           const class DataExtent& extent,
+                                                                           const heif_security_limits*);
+
+
   static Error get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
                                             const std::shared_ptr<const Box_cmpd>& cmpd,
                                             heif_chroma* out_chroma,

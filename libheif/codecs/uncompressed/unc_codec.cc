@@ -441,7 +441,7 @@ bool map_uncompressed_component_to_channel(const std::shared_ptr<const Box_cmpd>
 
 
 
-static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd>& cmpd, const std::shared_ptr<Box_uncC>& uncC)
+static AbstractDecoder* makeDecoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd>& cmpd, const std::shared_ptr<const Box_uncC>& uncC)
 {
   switch (uncC->get_interleave_type()) {
     case interleave_mode_component:
@@ -611,6 +611,7 @@ Error UncompressedImageCodec::check_header_validity(std::optional<const std::sha
 }
 
 
+// TODO: this should be deprecated and replaced with the function taking unci_properties/DataExtent
 Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* context,
                                                         heif_item_id ID,
                                                         std::shared_ptr<HeifPixelImage>& img)
@@ -690,6 +691,77 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   delete decoder;
   return Error::Ok;
 }
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+UncompressedImageCodec::decode_uncompressed_image(const UncompressedImageCodec::unci_properties& properties,
+                                                  const DataExtent& extent,
+                                                  const heif_security_limits* securityLimits)
+{
+  std::shared_ptr<HeifPixelImage> img;
+
+  const std::shared_ptr<const Box_ispe>& ispe = properties.ispe;
+  const std::shared_ptr<const Box_cmpd>& cmpd = properties.cmpd;
+  const std::shared_ptr<const Box_uncC>& uncC = properties.uncC;
+
+  Error error = check_header_validity(ispe, cmpd, uncC);
+  if (error) {
+    return error;
+  }
+
+  // check if we support the type of image
+
+  error = uncompressed_image_type_is_supported(uncC, cmpd); // TODO TODO TODO
+  if (error) {
+    return error;
+  }
+
+  assert(ispe);
+  uint32_t width = ispe->get_width();
+  uint32_t height = ispe->get_height();
+  error = check_for_valid_image_size(securityLimits, width, height);
+  if (error) {
+    return error;
+  }
+
+  Result<std::shared_ptr<HeifPixelImage>> createImgResult = create_image(cmpd, uncC, width, height, securityLimits);
+  if (createImgResult.error) {
+    return createImgResult.error;
+  }
+  else {
+    img = *createImgResult;
+  }
+
+  AbstractDecoder* decoder = makeDecoder(width, height, cmpd, uncC);
+  if (decoder == nullptr) {
+    std::stringstream sstr;
+    sstr << "Uncompressed interleave_type of " << ((int) uncC->get_interleave_type()) << " is not implemented yet";
+    return Error(heif_error_Unsupported_feature,
+                 heif_suberror_Unsupported_data_version,
+                 sstr.str());
+  }
+
+  decoder->buildChannelList(img);
+
+  uint32_t tile_width = width / uncC->get_number_of_tile_columns();
+  uint32_t tile_height = height / uncC->get_number_of_tile_rows();
+
+  for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
+    for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
+      error = decoder->decode_tile(extent, properties, img, tile_x0, tile_y0,
+                                   width, height,
+                                   tile_x0 / tile_width, tile_y0 / tile_height);
+      if (error) {
+        delete decoder;
+        return error;
+      }
+    }
+
+  //Error result = decoder->decode(source_data, img);
+  delete decoder;
+  return img;
+}
+
 
 Error fill_cmpd_and_uncC(std::shared_ptr<Box_cmpd>& cmpd,
                          std::shared_ptr<Box_uncC>& uncC,

@@ -75,6 +75,8 @@ public:
 
   void set_data_extent(DataExtent extent) { m_data_extent = std::move(extent); }
 
+  const DataExtent& get_data_extent() const { return m_data_extent; }
+
   // --- information about the image format
 
   [[nodiscard]] virtual int get_luma_bits_per_pixel() const = 0;

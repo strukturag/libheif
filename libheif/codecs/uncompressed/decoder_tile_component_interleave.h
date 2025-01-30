@@ -30,7 +30,7 @@ class TileComponentInterleaveDecoder : public AbstractDecoder
 {
 public:
   TileComponentInterleaveDecoder(uint32_t width, uint32_t height,
-                                 std::shared_ptr<Box_cmpd> cmpd, std::shared_ptr<Box_uncC> uncC) :
+                                 std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
       AbstractDecoder(width, height, std::move(cmpd), std::move(uncC)) {}
 
   Error decode_tile(const HeifContext* context,

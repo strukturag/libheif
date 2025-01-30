@@ -39,9 +39,11 @@
 #include "unc_boxes.h"
 #include "unc_codec.h"
 #include "decoder_abstract.h"
+#include "codecs/decoder.h"
+#include "codecs/uncompressed/unc_codec.h"
 
 
-AbstractDecoder::AbstractDecoder(uint32_t width, uint32_t height, const std::shared_ptr<Box_cmpd> cmpd, const std::shared_ptr<Box_uncC> uncC) :
+AbstractDecoder::AbstractDecoder(uint32_t width, uint32_t height, const std::shared_ptr<const Box_cmpd> cmpd, const std::shared_ptr<const Box_uncC> uncC) :
     m_width(width),
     m_height(height),
     m_cmpd(std::move(cmpd)),
@@ -255,6 +257,105 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const HeifCo
 
   return Error::Ok;
 }
+
+
+const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
+                                                                    const UncompressedImageCodec::unci_properties& properties,
+                                                                    std::vector<uint8_t>* data,
+                                                                    uint64_t range_start_offset, uint64_t range_size,
+                                                                    uint32_t tile_idx,
+                                                                    const Box_iloc::Item* item) const
+{
+  // --- get codec configuration
+
+  std::shared_ptr<const Box_cmpC> cmpC_box; // TODO = image->get_property<const Box_cmpC>();
+  std::shared_ptr<const Box_icef> icef_box; // TODO = image->get_property<const Box_icef>();
+
+  if (!cmpC_box) {
+    // assume no generic compression
+    auto readResult = dataExtent.read_data(range_start_offset, range_size);
+    if (readResult.error) {
+      return readResult.error;
+    }
+
+    data->insert(data->end(), readResult.value.begin(), readResult.value.end());
+
+    return Error::Ok;
+  }
+
+#if 0 // TODO
+  if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
+    const auto& units = icef_box->get_units();
+    if (tile_idx >= units.size()) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "no icef-box entry for tile index"};
+    }
+
+    const auto unit = units[tile_idx];
+
+    // get data needed for one tile
+    std::vector<uint8_t> compressed_bytes;
+    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes, unit.unit_offset, unit.unit_size);
+    if (err) {
+      return err;
+    }
+
+    // decompress only the unit
+    err = do_decompress_data(cmpC_box, compressed_bytes, data);
+    if (err) {
+      return err;
+    }
+  }
+  else if (icef_box) {
+    // get all data and decode all
+    std::vector<uint8_t> compressed_bytes;
+    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
+    if (err) {
+      return err;
+    }
+
+    for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
+      auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
+      auto unit_end = unit_start + unit_info.unit_size;
+      std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
+      std::vector<uint8_t> uncompressed_unit_data;
+      err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
+      if (err) {
+        return err;
+      }
+      data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
+    }
+
+    // cut out the range that we actually need
+    memcpy(data->data(), data->data() + range_start_offset, range_size);
+    data->resize(range_size);
+  }
+  else
+#endif
+  {
+    // get all data and decode all
+    Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
+    if (readResult.error) {
+      return readResult.error;
+    }
+
+    std::vector<uint8_t> compressed_bytes = *readResult.value;
+
+    // Decode as a single blob
+    Error err = do_decompress_data(cmpC_box, compressed_bytes, data);
+    if (err) {
+      return err;
+    }
+
+    // cut out the range that we actually need
+    memcpy(data->data(), data->data() + range_start_offset, range_size);
+    data->resize(range_size);
+  }
+
+  return Error::Ok;
+}
+
 
 const Error AbstractDecoder::do_decompress_data(std::shared_ptr<const Box_cmpC>& cmpC_box,
                                                 std::vector<uint8_t> compressed_data,

@@ -521,6 +521,7 @@ Error ImageItem_uncompressed::on_load_file()
 {
   std::shared_ptr<Box_cmpd> cmpd = get_property<Box_cmpd>();
   std::shared_ptr<Box_uncC> uncC = get_property<Box_uncC>();
+  std::shared_ptr<Box_ispe> ispe = get_property<Box_ispe>();
 
   if (!uncC) {
     return Error{heif_error_Invalid_input,
@@ -528,7 +529,7 @@ Error ImageItem_uncompressed::on_load_file()
                  "No 'uncC' box found."};
   }
 
-  m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd);
+  m_decoder = std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
 
   DataExtent extent;
   extent.set_from_image_item(get_context()->get_heif_file(), get_id());

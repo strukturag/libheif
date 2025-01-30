@@ -103,9 +103,13 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
     return data;
   }
   else {
-    // sequence
-    assert(false); // TODO
-    return Error::Ok;
+    // file range
+    Error err = m_file->append_data_from_file_range(data, m_offset, m_size);
+    if (err) {
+      return err;
+    }
+
+    return data;
   }
 }
 
@@ -143,7 +147,8 @@ std::shared_ptr<Decoder> Decoder::alloc_for_infe_type(const ImageItem* item)
     case fourcc("unci"): {
       auto uncC = item->get_property<Box_uncC>();
       auto cmpd = item->get_property<Box_cmpd>();
-      return std::make_shared<Decoder_uncompressed>(uncC,cmpd);
+      auto ispe = item->get_property<Box_ispe>();
+      return std::make_shared<Decoder_uncompressed>(uncC,cmpd,ispe);
     }
 #endif
     case fourcc("mski"): {
@@ -184,7 +189,10 @@ std::shared_ptr<Decoder> Decoder::alloc_for_sequence_sample_description_box(std:
     case fourcc("uncv"): {
       auto uncC = sample_description_box->get_child_box<Box_uncC>();
       auto cmpd = sample_description_box->get_child_box<Box_cmpd>();
-      return std::make_shared<Decoder_uncompressed>(uncC, cmpd);
+      auto ispe = std::make_shared<Box_ispe>();
+      ispe->set_size(sample_description_box->get_VisualSampleEntry_const().width,
+                     sample_description_box->get_VisualSampleEntry_const().height);
+      return std::make_shared<Decoder_uncompressed>(uncC, cmpd, ispe);
     }
 
     case fourcc("j2ki"): {
