@@ -161,3 +161,28 @@ bool Decoder_uncompressed::has_alpha_component() const
 
   return has_alpha;
 }
+
+
+Result<std::shared_ptr<HeifPixelImage>>
+Decoder_uncompressed::decode_single_frame_from_compressed_data(const struct heif_decoding_options& options)
+{
+  std::shared_ptr<HeifPixelImage> img;
+
+  Error err;
+
+  assert(false);
+#if 0
+  // TODO: pass data into UNCI codec through DataExtent and list of property boxes
+
+  err = UncompressedImageCodec::decode_uncompressed_image(get_context(),
+                                                          get_id(),
+                                                          img);
+#endif
+
+  if (err) {
+    return err;
+  }
+  else {
+    return img;
+  }
+}
