@@ -155,9 +155,7 @@ void HeifFile::new_empty_file()
   m_iinf_box = std::make_shared<Box_iinf>();
   m_iprp_box = std::make_shared<Box_iprp>();
   m_pitm_box = std::make_shared<Box_pitm>();
-#if ENABLE_EXPERIMENTAL_MINI_FORMAT
-  m_mini_box = std::make_shared<Box_mini>();
-#endif
+
   m_meta_box->append_child_box(m_hdlr_box);
   m_meta_box->append_child_box(m_pitm_box);
   m_meta_box->append_child_box(m_iloc_box);
@@ -172,7 +170,10 @@ void HeifFile::new_empty_file()
   m_top_level_boxes.push_back(m_ftyp_box);
   m_top_level_boxes.push_back(m_meta_box);
 #if ENABLE_EXPERIMENTAL_MINI_FORMAT
-  m_top_level_boxes.push_back(m_mini_box);
+  // TODO: do not create 'mini' box as we cannot write them yet.
+  //       if we include it in the top_level_boxes, it will be written into every file.
+  //m_mini_box = std::make_shared<Box_mini>();
+  //m_top_level_boxes.push_back(m_mini_box);
 #endif
 }
 
