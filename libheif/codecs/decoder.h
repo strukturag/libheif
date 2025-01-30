@@ -49,7 +49,7 @@ struct DataExtent
 
   // --- file range
   uint64_t m_offset = 0;
-  uint32_t m_size;
+  uint32_t m_size = 0;
 
   void set_from_image_item(std::shared_ptr<HeifFile> file, heif_item_id item);
 

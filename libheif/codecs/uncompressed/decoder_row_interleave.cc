@@ -26,8 +26,8 @@
 #include <vector>
 
 
-Error RowInterleaveDecoder::decode_tile(const HeifContext* context,
-                                        heif_item_id image_id,
+Error RowInterleaveDecoder::decode_tile(const DataExtent& dataExtent,
+                                        const UncompressedImageCodec::unci_properties& properties,
                                         std::shared_ptr<HeifPixelImage>& img,
                                         uint32_t out_x0, uint32_t out_y0,
                                         uint32_t image_width, uint32_t image_height,
@@ -83,7 +83,7 @@ Error RowInterleaveDecoder::decode_tile(const HeifContext* context,
   // --- read required file range
 
   std::vector<uint8_t> src_data;
-  Error err = get_compressed_image_data_uncompressed(context, image_id, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
+  Error err = get_compressed_image_data_uncompressed(dataExtent, properties, &src_data, tile_start_offset, total_tile_size, tileIdx, nullptr);
   //Error err = context->get_heif_file()->append_data_from_iloc(image_id, src_data, tile_start_offset, total_tile_size);
   if (err) {
     return err;
@@ -95,6 +95,7 @@ Error RowInterleaveDecoder::decode_tile(const HeifContext* context,
 
   return Error::Ok;
 }
+
 
 void RowInterleaveDecoder::processTile(UncompressedBitReader& srcBits, uint32_t tile_row, uint32_t tile_column, uint32_t out_x0, uint32_t out_y0)
 {

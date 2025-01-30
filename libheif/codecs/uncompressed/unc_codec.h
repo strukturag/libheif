@@ -64,7 +64,11 @@ public:
     std::shared_ptr<const Box_ispe> ispe;
     std::shared_ptr<const Box_cmpd> cmpd;
     std::shared_ptr<const Box_uncC> uncC;
+    std::shared_ptr<const Box_cmpC> cmpC;
+    std::shared_ptr<const Box_icef> icef;
     // ...
+
+    void fill_from_image_item(const std::shared_ptr<const ImageItem>&);
   };
 
   static Result<std::shared_ptr<HeifPixelImage>> decode_uncompressed_image(const unci_properties& properties,

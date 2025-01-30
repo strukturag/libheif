@@ -166,99 +166,6 @@ AbstractDecoder::ChannelListEntry AbstractDecoder::buildChannelListEntry(Box_unc
 }
 
 
-// generic compression and uncompressed, per 23001-17
-const Error AbstractDecoder::get_compressed_image_data_uncompressed(const HeifContext* context, heif_item_id ID,
-                                                                    std::vector<uint8_t>* data,
-                                                                    uint64_t range_start_offset, uint64_t range_size,
-                                                                    uint32_t tile_idx,
-                                                                    const Box_iloc::Item* item) const
-{
-  auto image = context->get_image(ID, false);
-  if (!image) {
-    return {heif_error_Invalid_input,
-            heif_suberror_Nonexisting_item_referenced};
-  }
-
-  // --- get codec configuration
-
-  std::shared_ptr<const Box_cmpC> cmpC_box = image->get_property<const Box_cmpC>();
-  std::shared_ptr<const Box_icef> icef_box = image->get_property<const Box_icef>();
-
-  if (!cmpC_box) {
-    // assume no generic compression
-    return context->get_heif_file()->append_data_from_iloc(ID, *data, range_start_offset, range_size);
-  }
-
-  if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
-    const auto& units = icef_box->get_units();
-    if (tile_idx >= units.size()) {
-      return {heif_error_Invalid_input,
-              heif_suberror_Unspecified,
-              "no icef-box entry for tile index"};
-    }
-
-    const auto unit = units[tile_idx];
-
-    // get data needed for one tile
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes, unit.unit_offset, unit.unit_size);
-    if (err) {
-      return err;
-    }
-
-    // decompress only the unit
-    err = do_decompress_data(cmpC_box, compressed_bytes, data);
-    if (err) {
-      return err;
-    }
-  }
-  else if (icef_box) {
-    // get all data and decode all
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
-    if (err) {
-      return err;
-    }
-
-    for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
-      auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
-      auto unit_end = unit_start + unit_info.unit_size;
-      std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
-      std::vector<uint8_t> uncompressed_unit_data;
-      err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
-      if (err) {
-        return err;
-      }
-      data->insert(data->end(), uncompressed_unit_data.data(), uncompressed_unit_data.data() + uncompressed_unit_data.size());
-    }
-
-    // cut out the range that we actually need
-    memcpy(data->data(), data->data() + range_start_offset, range_size);
-    data->resize(range_size);
-  }
-  else {
-    // get all data and decode all
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
-    if (err) {
-      return err;
-    }
-
-    // Decode as a single blob
-    err = do_decompress_data(cmpC_box, compressed_bytes, data);
-    if (err) {
-      return err;
-    }
-
-    // cut out the range that we actually need
-    memcpy(data->data(), data->data() + range_start_offset, range_size);
-    data->resize(range_size);
-  }
-
-  return Error::Ok;
-}
-
-
 const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataExtent& dataExtent,
                                                                     const UncompressedImageCodec::unci_properties& properties,
                                                                     std::vector<uint8_t>* data,
@@ -268,8 +175,8 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
 {
   // --- get codec configuration
 
-  std::shared_ptr<const Box_cmpC> cmpC_box; // TODO = image->get_property<const Box_cmpC>();
-  std::shared_ptr<const Box_icef> icef_box; // TODO = image->get_property<const Box_icef>();
+  std::shared_ptr<const Box_cmpC> cmpC_box = properties.cmpC;
+  std::shared_ptr<const Box_icef> icef_box = properties.icef;
 
   if (!cmpC_box) {
     // assume no generic compression
@@ -283,7 +190,6 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     return Error::Ok;
   }
 
-#if 0 // TODO
   if (icef_box && cmpC_box->get_compressed_unit_type() == heif_cmpC_compressed_unit_type_image_tile) {
     const auto& units = icef_box->get_units();
     if (tile_idx >= units.size()) {
@@ -295,32 +201,34 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     const auto unit = units[tile_idx];
 
     // get data needed for one tile
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes, unit.unit_offset, unit.unit_size);
-    if (err) {
-      return err;
+    Result<std::vector<uint8_t>> readingResult = dataExtent.read_data(unit.unit_offset, unit.unit_size);
+    if (readingResult.error) {
+      return readingResult.error;
     }
 
+    const std::vector<uint8_t>& compressed_bytes = readingResult.value;
+
     // decompress only the unit
-    err = do_decompress_data(cmpC_box, compressed_bytes, data);
+    Error err = do_decompress_data(cmpC_box, compressed_bytes, data);
     if (err) {
       return err;
     }
   }
   else if (icef_box) {
     // get all data and decode all
-    std::vector<uint8_t> compressed_bytes;
-    Error err = context->get_heif_file()->append_data_from_iloc(ID, compressed_bytes); // image_id, src_data, tile_start_offset, total_tile_size);
-    if (err) {
-      return err;
+    Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
+    if (readResult.error) {
+      return readResult.error;
     }
+
+    const std::vector<uint8_t>& compressed_bytes = *readResult.value;
 
     for (Box_icef::CompressedUnitInfo unit_info : icef_box->get_units()) {
       auto unit_start = compressed_bytes.begin() + unit_info.unit_offset;
       auto unit_end = unit_start + unit_info.unit_size;
       std::vector<uint8_t> compressed_unit_data = std::vector<uint8_t>(unit_start, unit_end);
       std::vector<uint8_t> uncompressed_unit_data;
-      err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
+      Error err = do_decompress_data(cmpC_box, std::move(compressed_unit_data), &uncompressed_unit_data);
       if (err) {
         return err;
       }
@@ -331,9 +239,7 @@ const Error AbstractDecoder::get_compressed_image_data_uncompressed(const DataEx
     memcpy(data->data(), data->data() + range_start_offset, range_size);
     data->resize(range_size);
   }
-  else
-#endif
-  {
+  else {
     // get all data and decode all
     Result<std::vector<uint8_t>*> readResult = dataExtent.read_data();
     if (readResult.error) {

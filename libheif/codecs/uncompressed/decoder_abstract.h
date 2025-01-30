@@ -122,20 +122,12 @@ class AbstractDecoder
 public:
   virtual ~AbstractDecoder() = default;
 
-  // TODO: deprecate this
-  virtual Error decode_tile(const HeifContext* context,
-                            heif_item_id item_id,
-                            std::shared_ptr<HeifPixelImage>& img,
-                            uint32_t out_x0, uint32_t out_y0,
-                            uint32_t image_width, uint32_t image_height,
-                            uint32_t tile_x, uint32_t tile_y) = 0;
-
   virtual Error decode_tile(const DataExtent& dataExtent,
                             const UncompressedImageCodec::unci_properties& properties,
                             std::shared_ptr<HeifPixelImage>& img,
                             uint32_t out_x0, uint32_t out_y0,
                             uint32_t image_width, uint32_t image_height,
-                            uint32_t tile_x, uint32_t tile_y) { assert(false); return Error::Ok; }
+                            uint32_t tile_x, uint32_t tile_y) = 0;
 
   void buildChannelList(std::shared_ptr<HeifPixelImage>& img);
 
@@ -197,14 +189,6 @@ protected:
   // Not valid for the Cb/Cr channels in Mixed Interleave
   // Not valid for multi-Y pixel interleave
   void processComponentTileRow(ChannelListEntry& entry, UncompressedBitReader& srcBits, uint64_t dst_offset);
-
-  // TODO: deprecate this
-  // generic compression and uncompressed, per 23001-17
-  const Error get_compressed_image_data_uncompressed(const HeifContext* context, heif_item_id ID,
-                                                     std::vector<uint8_t>* data,
-                                                     uint64_t range_start_offset, uint64_t range_size,
-                                                     uint32_t tile_idx,
-                                                     const Box_iloc::Item* item) const;
 
   // generic compression and uncompressed, per 23001-17
   const Error get_compressed_image_data_uncompressed(const DataExtent& dataExtent,

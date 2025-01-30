@@ -51,13 +51,6 @@ public:
   PixelInterleaveDecoder(uint32_t width, uint32_t height, std::shared_ptr<const Box_cmpd> cmpd, std::shared_ptr<const Box_uncC> uncC) :
       AbstractDecoder(width, height, std::move(cmpd), std::move(uncC)) {}
 
-  Error decode_tile(const HeifContext* context,
-                    heif_item_id image_id,
-                    std::shared_ptr<HeifPixelImage>& img,
-                    uint32_t out_x0, uint32_t out_y0,
-                    uint32_t image_width, uint32_t image_height,
-                    uint32_t tile_x, uint32_t tile_y) override;
-
   Error decode_tile(const DataExtent& dataExtent,
                     const UncompressedImageCodec::unci_properties& properties,
                     std::shared_ptr<HeifPixelImage>& img,

@@ -96,7 +96,7 @@ Result<std::vector<uint8_t>> DataExtent::read_data(uint64_t offset, uint64_t siz
     // TODO: cache data
 
     // image
-    Error err = m_file->append_data_from_iloc(m_item_id, m_raw, 0, size);
+    Error err = m_file->append_data_from_iloc(m_item_id, data, 0, size);
     if (err) {
       return err;
     }

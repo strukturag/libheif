@@ -517,9 +517,12 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
             heif_suberror_Nonexisting_item_referenced};
   }
 
-  std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
-  std::shared_ptr<Box_cmpd> cmpd = image->get_property<Box_cmpd>();
-  std::shared_ptr<Box_uncC> uncC = image->get_property<Box_uncC>();
+  UncompressedImageCodec::unci_properties properties;
+  properties.fill_from_image_item(image);
+
+  auto ispe = properties.ispe;
+  auto uncC = properties.uncC;
+  auto cmpd = properties.cmpd;
 
   Error error = check_header_validity(ispe, cmpd, uncC);
   if (error) {
@@ -548,7 +551,10 @@ Error UncompressedImageCodec::decode_uncompressed_image_tile(const HeifContext* 
 
   decoder->buildChannelList(img);
 
-  Error result = decoder->decode_tile(context, ID, img, 0, 0,
+  DataExtent dataExtent;
+  dataExtent.set_from_image_item(file, ID);
+
+  Error result = decoder->decode_tile(dataExtent, properties, img, 0, 0,
                                       ispe->get_width(), ispe->get_height(),
                                       tile_x0, tile_y0);
   delete decoder;
@@ -630,9 +636,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
             heif_suberror_Nonexisting_item_referenced};
   }
 
-  std::shared_ptr<Box_ispe> ispe = image->get_property<Box_ispe>();
-  std::shared_ptr<Box_cmpd> cmpd = image->get_property<Box_cmpd>();
-  std::shared_ptr<Box_uncC> uncC = image->get_property<Box_uncC>();
+  UncompressedImageCodec::unci_properties properties;
+  properties.fill_from_image_item(image);
+
+  auto ispe = properties.ispe;
+  auto uncC = properties.uncC;
+  auto cmpd = properties.cmpd;
 
   error = check_header_validity(ispe, cmpd, uncC);
   if (error) {
@@ -676,9 +685,12 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   uint32_t tile_width = width / uncC->get_number_of_tile_columns();
   uint32_t tile_height = height / uncC->get_number_of_tile_rows();
 
+  DataExtent dataExtent;
+  dataExtent.set_from_image_item(context->get_heif_file(), ID);
+
   for (uint32_t tile_y0 = 0; tile_y0 < height; tile_y0 += tile_height)
     for (uint32_t tile_x0 = 0; tile_x0 < width; tile_x0 += tile_width) {
-      error = decoder->decode_tile(context, ID, img, tile_x0, tile_y0,
+      error = decoder->decode_tile(dataExtent, properties, img, tile_x0, tile_y0,
                                    width, height,
                                    tile_x0 / tile_width, tile_y0 / tile_height);
       if (error) {
@@ -690,6 +702,16 @@ Error UncompressedImageCodec::decode_uncompressed_image(const HeifContext* conte
   //Error result = decoder->decode(source_data, img);
   delete decoder;
   return Error::Ok;
+}
+
+
+void UncompressedImageCodec::unci_properties::fill_from_image_item(const std::shared_ptr<const ImageItem>& image)
+{
+  ispe = image->get_property<Box_ispe>();
+  cmpd = image->get_property<Box_cmpd>();
+  uncC = image->get_property<Box_uncC>();
+  cmpC = image->get_property<Box_cmpC>();
+  icef = image->get_property<Box_icef>();
 }
 
 
