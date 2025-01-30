@@ -262,6 +262,13 @@ Result<Encoder::CodedImageData> ImageItem_uncompressed::encode(const std::shared
                                                                  const struct heif_encoding_options& options,
                                                                  enum heif_image_input_class input_class)
 {
+  return encode_static(src_image, options);
+}
+
+
+Result<Encoder::CodedImageData> ImageItem_uncompressed::encode_static(const std::shared_ptr<HeifPixelImage>& src_image,
+                                                               const struct heif_encoding_options& options)
+{
   heif_unci_image_parameters parameters{};
   parameters.image_width = src_image->get_width();
   parameters.image_height = src_image->get_height();

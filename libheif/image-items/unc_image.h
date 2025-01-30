@@ -74,6 +74,9 @@ public:
                                          const struct heif_encoding_options& options,
                                          enum heif_image_input_class input_class) override;
 
+  static Result<Encoder::CodedImageData> encode_static(const std::shared_ptr<HeifPixelImage>& image,
+                                                       const struct heif_encoding_options& options);
+
   static Result<std::shared_ptr<ImageItem_uncompressed>> add_unci_item(HeifContext* ctx,
                                                                 const heif_unci_image_parameters* parameters,
                                                                 const struct heif_encoding_options* encoding_options,

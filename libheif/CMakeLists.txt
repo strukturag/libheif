@@ -246,6 +246,8 @@ if (WITH_UNCOMPRESSED_CODEC)
             codecs/uncompressed/unc_codec.cc
             codecs/uncompressed/unc_dec.h
             codecs/uncompressed/unc_dec.cc
+            codecs/uncompressed/unc_enc.h
+            codecs/uncompressed/unc_enc.cc
             codecs/uncompressed/decoder_abstract.h
             codecs/uncompressed/decoder_abstract.cc
             codecs/uncompressed/decoder_component_interleave.h

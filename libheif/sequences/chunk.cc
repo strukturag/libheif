@@ -25,6 +25,7 @@
 #include "codecs/vvc_enc.h"
 #include "codecs/jpeg2000_enc.h"
 #include "codecs/jpeg_enc.h"
+#include "codecs/uncompressed/unc_enc.h"
 
 
 Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format)
@@ -47,6 +48,9 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format
       break;
     case heif_compression_JPEG:
       m_encoder = std::make_shared<Encoder_JPEG>();
+      break;
+    case heif_compression_uncompressed:
+      m_encoder = std::make_shared<Encoder_uncompressed>();
       break;
     default:
       assert(false);
