@@ -241,21 +241,41 @@ static Error uncompressed_image_type_is_supported(const std::shared_ptr<const Bo
 
 Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr<const Box_uncC>& uncC,
                                                            const std::shared_ptr<const Box_cmpd>& cmpd,
-                                                           heif_chroma* out_chroma, heif_colorspace* out_colourspace)
+                                                           heif_chroma* out_chroma, heif_colorspace* out_colourspace,
+                                                           bool* out_has_alpha)
 {
+  bool dummy_has_alpha;
+  if (out_has_alpha == nullptr) {
+    out_has_alpha = &dummy_has_alpha;
+  }
+
   *out_chroma = heif_chroma_undefined;
   *out_colourspace = heif_colorspace_undefined;
+  *out_has_alpha = false;
 
   Error error = check_header_validity(std::nullopt, cmpd, uncC);
   if (error) {
     return error;
   }
 
-  if (isKnownUncompressedFrameConfigurationBoxProfile(uncC)) {
-    *out_chroma = heif_chroma_444;
-    *out_colourspace = heif_colorspace_RGB;
-    return Error::Ok;
+
+  if (uncC != nullptr && uncC->get_version() == 1) {
+    switch (uncC->get_profile()) {
+      case fourcc("rgb3"): {
+        *out_chroma = heif_chroma_444;
+        *out_colourspace = heif_colorspace_RGB;
+        *out_has_alpha = false;
+        return Error::Ok;
+      }
+      case fourcc("abgr"): {
+        *out_chroma = heif_chroma_444;
+        *out_colourspace = heif_colorspace_RGB;
+        *out_has_alpha = true;
+        return Error::Ok;
+      }
+    }
   }
+
 
   // each 1-bit represents an existing component in the image
   uint16_t componentSet = 0;
@@ -275,6 +295,8 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
     }
     componentSet |= (1 << component_type);
   }
+
+  *out_has_alpha = (componentSet & (1 << component_type_alpha)) != 0;
 
   if (componentSet == ((1 << component_type_red) | (1 << component_type_green) | (1 << component_type_blue)) ||
       componentSet == ((1 << component_type_red) | (1 << component_type_green) | (1 << component_type_blue) | (1 << component_type_alpha))) {
@@ -448,7 +470,7 @@ Result<std::shared_ptr<HeifPixelImage>> UncompressedImageCodec::create_image(con
   heif_chroma chroma = heif_chroma_undefined;
   heif_colorspace colourspace = heif_colorspace_undefined;
 
-  Error error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace);
+  Error error = get_heif_chroma_uncompressed(uncC, cmpd, &chroma, &colourspace, nullptr);
   if (error) {
     return error;
   }

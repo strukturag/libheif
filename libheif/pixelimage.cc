@@ -1014,7 +1014,7 @@ int HeifPixelImage::ImagePlane::get_bytes_per_pixel() const
 Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint32_t right, uint32_t top, uint32_t bottom,
                                                              const heif_security_limits* limits) const
 {
-  // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before rotation
+  // --- for some subsampled chroma colorspaces, we have to transform to 4:4:4 before cropping
 
   bool need_conversion = false;
 
@@ -1050,13 +1050,10 @@ Result<std::shared_ptr<HeifPixelImage>> HeifPixelImage::crop(uint32_t left, uint
     heif_channel channel = plane_pair.first;
     const ImagePlane& plane = plane_pair.second;
 
-    uint32_t w = plane.m_width;
-    uint32_t h = plane.m_height;
-
-    uint32_t plane_left = left * w / m_width;
-    uint32_t plane_right = right * w / m_width;
-    uint32_t plane_top = top * h / m_height;
-    uint32_t plane_bottom = bottom * h / m_height;
+    uint32_t plane_left = get_subsampled_size_h(left, channel, m_chroma, scaling_mode::is_divisible);
+    uint32_t plane_right = get_subsampled_size_h(right, channel, m_chroma, scaling_mode::round_up); // keep more chroma
+    uint32_t plane_top = get_subsampled_size_v(top, channel, m_chroma, scaling_mode::is_divisible); // is always divisible
+    uint32_t plane_bottom = get_subsampled_size_v(bottom, channel, m_chroma, scaling_mode::round_up); // keep more chroma
 
     auto err = out_img->add_channel(channel,
                                     plane_right - plane_left + 1,

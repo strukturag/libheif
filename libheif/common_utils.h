@@ -49,6 +49,22 @@ uint8_t chroma_h_subsampling(heif_chroma c);
 
 uint8_t chroma_v_subsampling(heif_chroma c);
 
+enum class scaling_mode : uint8_t {
+  round_down,
+  round_up,
+  is_divisible
+};
+
+uint32_t get_subsampled_size_h(uint32_t width,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode);
+
+uint32_t get_subsampled_size_v(uint32_t height,
+                               heif_channel channel,
+                               heif_chroma chroma,
+                               scaling_mode mode);
+
 void get_subsampled_size(uint32_t width, uint32_t height,
                          heif_channel channel,
                          heif_chroma chroma,

@@ -1822,11 +1822,8 @@ struct heif_error heif_image_add_channel(struct heif_image* image,
                                          int width, int height,
                                          heif_channel_datatype datatype, int bit_depth)
 {
-  if (!image->image->add_channel(channel, width, height, datatype, bit_depth, nullptr)) {
-    struct heif_error err = {heif_error_Memory_allocation_error,
-                             heif_suberror_Unspecified,
-                             "Cannot allocate memory for image plane"};
-    return err;
+  if (auto err = image->image->add_channel(channel, width, height, datatype, bit_depth, nullptr)) {
+    return err.error_struct(image->image.get());
   }
   else {
     return heif_error_success;

@@ -668,16 +668,18 @@ Error HeifContext::interpret_heif_file_images()
 
               const auto& subtypes = auxC_property->get_subtypes();
 
-              std::vector<std::shared_ptr<SEIMessage>> sei_messages;
-              Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
-              if (err) {
-                return err;
-              }
+              if (!subtypes.empty()) {
+                std::vector<std::shared_ptr<SEIMessage>> sei_messages;
+                Error err = decode_hevc_aux_sei_messages(subtypes, sei_messages);
+                if (err) {
+                  return err;
+                }
 
-              for (auto& msg : sei_messages) {
-                auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
-                if (depth_msg) {
-                  image->set_depth_representation_info(*depth_msg);
+                for (auto& msg : sei_messages) {
+                  auto depth_msg = std::dynamic_pointer_cast<SEIMessage_depth_representation_info>(msg);
+                  if (depth_msg) {
+                    image->set_depth_representation_info(*depth_msg);
+                  }
                 }
               }
             }
@@ -970,6 +972,10 @@ bool HeifContext::has_alpha(heif_item_id ID) const
   // --- has the image an auxiliary alpha image?
 
   if (img->get_alpha_channel() != nullptr) {
+    return true;
+  }
+
+  if (img->has_coded_alpha_channel()) {
     return true;
   }
 

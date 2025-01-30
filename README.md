@@ -264,7 +264,7 @@ You have to enable SVT-AV1 with CMake.
 
 ## Codec plugins
 
-Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin (currently Linux only).
+Starting with v1.14.0, each codec backend can be compiled statically into libheif or as a dynamically loaded plugin.
 You can choose this individually for each codec backend in the CMake settings.
 Compiling a codec backend as dynamic plugin will generate a shared library that is installed in the system together with libheif.
 The advantage is that only the required plugins have to be installed and libheif has fewer dependencies.

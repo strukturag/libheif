@@ -151,7 +151,7 @@ struct heif_error heif_item_set_item_name(struct heif_context* ctx,
 LIBHEIF_API
 struct heif_error heif_item_get_item_data(const struct heif_context* ctx,
                                           heif_item_id item_id,
-                                          heif_metadata_compression* out_compression_format,
+                                          enum heif_metadata_compression* out_compression_format,
                                           uint8_t** out_data, size_t* out_data_size);
 
 /**
@@ -213,7 +213,7 @@ struct heif_error heif_context_add_item(struct heif_context* ctx,
 LIBHEIF_API
 struct heif_error heif_context_add_mime_item(struct heif_context* ctx,
                                              const char* content_type,
-                                             heif_metadata_compression content_encoding,
+                                             enum heif_metadata_compression content_encoding,
                                              const void* data, int size,
                                              heif_item_id* out_item_id);
 

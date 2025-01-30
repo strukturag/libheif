@@ -690,11 +690,6 @@ Error ImageItem_Tiled::add_image_tile(uint32_t tile_x, uint32_t tile_y,
 
   if (image->get_width() != header.get_parameters().tile_width ||
       image->get_height() != header.get_parameters().tile_height) {
-
-    std::cout << "tx:" << tile_x << " ty:" << tile_y << "\n";
-    std::cout << image->get_width() << " " << header.get_parameters().tile_width << " | "
-              << image->get_height() << " " << header.get_parameters().tile_height <<"\n";
-
     return {heif_error_Usage_error,
             heif_suberror_Unspecified,
             "Tile image size does not match the specified tile size."};

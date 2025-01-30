@@ -40,6 +40,9 @@ extern "C" {
   heif_item_property_type_camera_extrinsic_matrix = heif_fourcc('c', 'm', 'e', 'x')
 */
 
+struct heif_property_camera_intrinsic_matrix;
+struct heif_property_camera_extrinsic_matrix;
+
 //LIBHEIF_API
 struct heif_error heif_item_get_property_camera_intrinsic_matrix(const struct heif_context* context,
                                                                  heif_item_id itemId,
@@ -380,7 +383,7 @@ int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               const heif_tai_clock_info* clock,
+                                               const struct heif_tai_clock_info* clock,
                                                heif_property_id* out_propertyId);
 
 // The `out_clock` struct passed in needs to have the `version` field set so that this
@@ -389,7 +392,7 @@ struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
 LIBHEIF_API
 struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
                                                heif_item_id itemId,
-                                               heif_tai_clock_info* out_clock);
+                                               struct heif_tai_clock_info* out_clock);
 #endif
 
 struct heif_tai_timestamp_packet
@@ -411,13 +414,13 @@ struct heif_tai_timestamp_packet
 LIBHEIF_API
 struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  heif_tai_timestamp_packet* timestamp,
+                                                  struct heif_tai_timestamp_packet* timestamp,
                                                   heif_property_id* out_propertyId);
 
 LIBHEIF_API
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
-                                                  heif_tai_timestamp_packet* out_timestamp);
+                                                  struct heif_tai_timestamp_packet* out_timestamp);
 
 #endif
 

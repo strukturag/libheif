@@ -3966,6 +3966,9 @@ Error Box_EntityToGroup::parse(BitstreamRange& range, const heif_security_limits
     std::stringstream sstr;
     sstr << "entity group box contains " << nEntities << " entities, but the security limit is set to " << limits->max_size_entity_group << " entities.";
 
+    return {heif_error_Invalid_input,
+            heif_suberror_Security_limit_exceeded,
+            sstr.str()};
   }
 
   entity_ids.resize(nEntities);

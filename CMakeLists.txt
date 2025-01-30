@@ -25,6 +25,10 @@ if (HAVE_UNISTD_H)
   add_definitions(-DHAVE_UNISTD_H)
 endif()
 
+if (APPLE)
+  option(BUILD_FRAMEWORK "Build as Apple Frameworks" OFF)
+endif()
+
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON CACHE BOOL "Treat compilation warning as error")
 
 if(NOT MSVC)
