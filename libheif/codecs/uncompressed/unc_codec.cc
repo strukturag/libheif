@@ -261,18 +261,22 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
 
   if (uncC != nullptr && uncC->get_version() == 1) {
     switch (uncC->get_profile()) {
-      case fourcc("rgb3"): {
+      case fourcc("rgb3"):
         *out_chroma = heif_chroma_444;
         *out_colourspace = heif_colorspace_RGB;
         *out_has_alpha = false;
         return Error::Ok;
-      }
-      case fourcc("abgr"): {
+
+      case fourcc("abgr"):
+      case fourcc("rgba"):
         *out_chroma = heif_chroma_444;
         *out_colourspace = heif_colorspace_RGB;
         *out_has_alpha = true;
         return Error::Ok;
-      }
+
+      default:
+        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type,
+                     "unci image has unsupported profile");
     }
   }
 
