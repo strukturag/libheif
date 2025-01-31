@@ -35,6 +35,7 @@
 #include "codecs/uncompressed/unc_boxes.h"
 #include "unc_image.h"
 #include "codecs/uncompressed/unc_dec.h"
+#include "codecs/uncompressed/unc_enc.h"
 #include "codecs/uncompressed/unc_codec.h"
 #include "image_item.h"
 
@@ -58,6 +59,19 @@ static void maybe_make_minimised_uncC(std::shared_ptr<Box_uncC>& uncC, const std
     uncC->set_profile(fourcc("rgb3"));
   }
   uncC->set_version(1);
+}
+
+
+ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx, heif_item_id id)
+    : ImageItem(ctx, id)
+{
+  m_encoder = std::make_shared<Encoder_uncompressed>();
+}
+
+ImageItem_uncompressed::ImageItem_uncompressed(HeifContext* ctx)
+    : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_uncompressed>();
 }
 
 
@@ -515,6 +529,11 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
 std::shared_ptr<Decoder> ImageItem_uncompressed::get_decoder() const
 {
   return m_decoder;
+}
+
+std::shared_ptr<Encoder> ImageItem_uncompressed::get_encoder() const
+{
+  return m_encoder;
 }
 
 Error ImageItem_uncompressed::on_load_file()

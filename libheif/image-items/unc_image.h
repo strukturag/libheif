@@ -37,9 +37,9 @@ class HeifContext;
 class ImageItem_uncompressed : public ImageItem
 {
 public:
-  ImageItem_uncompressed(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_uncompressed(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_uncompressed(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_uncompressed(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("unci"); }
 
@@ -87,8 +87,12 @@ public:
 protected:
   std::shared_ptr<Decoder> get_decoder() const override;
 
+  std::shared_ptr<Encoder> get_encoder() const override;
+
 private:
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
+  std::shared_ptr<class Encoder_uncompressed> m_encoder;
+
   /*
   Result<ImageItem::CodedImageData> generate_headers(const std::shared_ptr<const HeifPixelImage>& src_image,
                                                      const heif_unci_image_parameters* parameters,
