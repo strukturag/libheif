@@ -273,6 +273,10 @@ Error UncompressedImageCodec::get_heif_chroma_uncompressed(const std::shared_ptr
         *out_colourspace = heif_colorspace_RGB;
         *out_has_alpha = true;
         return Error::Ok;
+
+      default:
+        return Error(heif_error_Unsupported_feature, heif_suberror_Unsupported_image_type,
+                     "unci image has unsupported profile");
     }
   }
 
