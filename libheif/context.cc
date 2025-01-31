@@ -1223,21 +1223,27 @@ Result<std::shared_ptr<ImageItem>> HeifContext::encode_image(const std::shared_p
 
   heif_encoding_options options = in_options;
 
-  if (const auto* nclx = output_image_item->get_encoder()->get_forced_output_nclx()) {
-    options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+  std::shared_ptr<HeifPixelImage> colorConvertedImage;
+
+  if (output_image_item->get_encoder()) {
+    if (const auto* nclx = output_image_item->get_encoder()->get_forced_output_nclx()) {
+      options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
+    }
+
+    Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
+    srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
+                                                                                       encoder,
+                                                                                       options,
+                                                                                       get_security_limits());
+    if (srcImageResult.error) {
+      return srcImageResult.error;
+    }
+
+    colorConvertedImage = srcImageResult.value;
   }
-
-  Result<std::shared_ptr<HeifPixelImage>> srcImageResult;
-  srcImageResult = output_image_item->get_encoder()->convert_colorspace_for_encoding(pixel_image,
-                                                                                     encoder,
-                                                                                     options,
-                                                                                     get_security_limits());
-  if (srcImageResult.error) {
-    return srcImageResult.error;
+  else {
+    colorConvertedImage = pixel_image;
   }
-
-  std::shared_ptr<HeifPixelImage> colorConvertedImage = srcImageResult.value;
-
 
   Error err = output_image_item->encode_to_item(this,
                                                 colorConvertedImage,

@@ -21,6 +21,7 @@
 #include "pixelimage.h"
 #include "avif.h"
 #include "codecs/avif_dec.h"
+#include "codecs/avif_enc.h"
 #include "codecs/avif_boxes.h"
 #include "bitstream.h"
 #include "common_utils.h"
@@ -34,6 +35,16 @@
 
 // https://aomediacodec.github.io/av1-spec/av1-spec.pdf
 
+
+ImageItem_AVIF::ImageItem_AVIF(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id)
+{
+  m_encoder = std::make_shared<Encoder_AVIF>();
+}
+
+ImageItem_AVIF::ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx)
+{
+  m_encoder = std::make_shared<Encoder_AVIF>();
+}
 
 
 Error ImageItem_AVIF::on_load_file()
@@ -64,4 +75,10 @@ Result<std::vector<uint8_t>> ImageItem_AVIF::read_bitstream_configuration_data()
 std::shared_ptr<class Decoder> ImageItem_AVIF::get_decoder() const
 {
   return m_decoder;
+}
+
+
+std::shared_ptr<class Encoder> ImageItem_AVIF::get_encoder() const
+{
+  return m_encoder;
 }

@@ -36,9 +36,9 @@
 class ImageItem_AVIF : public ImageItem
 {
 public:
-  ImageItem_AVIF(HeifContext* ctx, heif_item_id id) : ImageItem(ctx, id) {}
+  ImageItem_AVIF(HeifContext* ctx, heif_item_id id);
 
-  ImageItem_AVIF(HeifContext* ctx) : ImageItem(ctx) {}
+  ImageItem_AVIF(HeifContext* ctx);
 
   uint32_t get_infe_type() const override { return fourcc("av01"); }
 
@@ -53,8 +53,12 @@ protected:
 
   std::shared_ptr<class Decoder> get_decoder() const override;
 
+  std::shared_ptr<class Encoder> get_encoder() const override;
+
 private:
   std::shared_ptr<class Decoder_AVIF> m_decoder;
+
+  std::shared_ptr<class Encoder_AVIF> m_encoder;
 };
 
 #endif
