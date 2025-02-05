@@ -47,6 +47,8 @@ struct encoder_struct_svt
   int tile_rows = 1; // 1,2,4,8,16,32,64
   int tile_cols = 1; // 1,2,4,8,16,32,64
 
+  int tune = 1; // 0: VQ, 1: PSNR, 2: SSIM.
+
   heif_chroma chroma = heif_chroma_420;
 
   // --- output
@@ -62,6 +64,9 @@ static const char* kParam_max_q = "max-q";
 static const char* kParam_qp = "qp";
 static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
+
+static const char* kParam_tune = "tune";
+static int valid_tune_values[] = {0, 1, 2};
 
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
@@ -109,7 +114,7 @@ int int_log2(int pow2_value)
   return v;
 }
 
-#define MAX_NPARAMETERS 10
+#define MAX_NPARAMETERS 11
 
 static struct heif_encoder_parameter svt_encoder_params[MAX_NPARAMETERS];
 static const struct heif_encoder_parameter* svt_encoder_parameter_ptrs[MAX_NPARAMETERS + 1];
@@ -238,6 +243,16 @@ static void svt_init_parameters()
   p->integer.maximum = 63;
   p->integer.valid_values = nullptr;
   p->integer.num_valid_values = 0;
+  d[i++] = p++;
+
+  assert(i < MAX_NPARAMETERS);
+  p->version = 2;
+  p->name = kParam_tune;
+  p->type = heif_encoder_parameter_type_integer;
+  p->integer.default_value = 1;
+  p->has_default = true;
+  p->integer.valid_values = valid_tune_values;
+  p->integer.num_valid_values = 3;
   d[i++] = p++;
 
   d[i++] = nullptr;
@@ -382,6 +397,7 @@ struct heif_error svt_set_parameter_integer(void* encoder_raw, const char* name,
   set_value(kParam_speed, speed);
   set_value("tile-rows", tile_rows);
   set_value("tile-cols", tile_cols);
+  set_value(kParam_tune, tune);
 
   return heif_error_unsupported_parameter;
 }
@@ -404,6 +420,7 @@ struct heif_error svt_get_parameter_integer(void* encoder_raw, const char* name,
   get_value(kParam_speed, speed);
   get_value("tile-rows", tile_rows);
   get_value("tile-cols", tile_cols);
+  get_value(kParam_tune, tune);
 
   return heif_error_unsupported_parameter;
 }
@@ -692,6 +709,8 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
 
   svt_config.tile_rows = int_log2(encoder->tile_rows);
   svt_config.tile_columns = int_log2(encoder->tile_cols);
+
+  svt_config.tune = static_cast<uint8_t>(encoder->tune);
 
   svt_config.enc_mode = (int8_t) encoder->speed;
 
