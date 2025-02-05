@@ -187,7 +187,8 @@ public:
 
   uint64_t get_sequence_duration() const;
 
-  Result<std::shared_ptr<Track>> add_sequence_track(uint16_t width, uint16_t height);
+  Result<std::shared_ptr<Track>> add_sequence_track(uint16_t width, uint16_t height,
+                                                    heif_track_info*);
 
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;

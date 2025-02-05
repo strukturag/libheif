@@ -23,6 +23,7 @@
 
 #include "error.h"
 #include "libheif/heif_plugin.h"
+#include "libheif/heif_experimental.h"
 
 class HeifContext;
 
@@ -37,11 +38,12 @@ class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height);
+  Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
+        heif_track_info* info);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 
-  virtual ~Track() = default;
+  virtual ~Track();
 
   heif_item_id get_id() const { return m_id; }
 
@@ -76,6 +78,8 @@ private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;
 
+  heif_track_info* m_track_info = nullptr;
+
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
   uint32_t m_next_sample_to_be_decoded = 0;
@@ -91,6 +95,11 @@ private:
   std::shared_ptr<class Box_stts> m_stts;
   std::shared_ptr<class Box_stss> m_stss;
   std::shared_ptr<class Box_stsz> m_stsz;
+
+  // --- sample auxiliary information
+
+  std::shared_ptr<class Box_saiz> m_saiz_tai;
+  std::shared_ptr<class Box_saio> m_saio_tai;
 };
 
 

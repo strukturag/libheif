@@ -383,9 +383,11 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
 }
 
 
-struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height, heif_track** out_track)
+struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
+                                                  struct heif_track_info* info,
+                                                  heif_track** out_track)
 {
-  Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height);
+  Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height, info);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }

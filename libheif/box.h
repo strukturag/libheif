@@ -1638,6 +1638,13 @@ public:
   
   uint8_t get_clock_type() const { return m_clock_type; }
 
+  void set_from_tai_clock_info(const heif_tai_clock_info* info) {
+    m_time_uncertainty = info->time_uncertainty;
+    m_clock_resolution = info->clock_resolution;
+    m_clock_drift_rate = info->clock_drift_rate;
+    m_clock_type = info->clock_type;
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

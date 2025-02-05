@@ -27,6 +27,72 @@
 #include "codecs/hevc_boxes.h"
 #include "libheif/api_structs.h"
 
+heif_tai_clock_info* heif_tai_clock_info_alloc()
+{
+  auto* taic = new heif_tai_clock_info;
+  taic->version = 1;
+
+  taic->time_uncertainty = 0; // TODO
+  taic->clock_resolution = 0; // TODO
+  taic->clock_drift_rate = 0; // TODO
+  taic->clock_type = 0; // TODO
+
+  return taic;
+}
+
+void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_info* src)
+{
+  if (dst->version >= 1 && src->version >= 1) {
+    dst->time_uncertainty = src->time_uncertainty;
+    dst->clock_resolution = src->clock_resolution;
+    dst->clock_drift_rate = src->clock_drift_rate;
+    dst->clock_type = src->clock_type;
+  }
+}
+
+void heif_tai_clock_info_release(heif_tai_clock_info* info)
+{
+  delete info;
+}
+
+
+void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
+{
+  if (src->version >= 1 && dst->version >= 1) {
+    dst->with_tai_timestamps = src->with_tai_timestamps;
+
+    if (src->tai_clock_info) {
+      dst->tai_clock_info = heif_tai_clock_info_alloc();
+      heif_tai_clock_info_copy(dst->tai_clock_info, src->tai_clock_info);
+    }
+
+    dst->with_sample_uuids = src->with_sample_uuids;
+  }
+}
+
+
+heif_track_info* heif_track_info_alloc()
+{
+  auto* info = new heif_track_info;
+  info->version = 1;
+
+  info->with_tai_timestamps = heif_sample_aux_info_presence_none;
+  info->tai_clock_info = nullptr;
+  info->with_sample_uuids = heif_sample_aux_info_presence_none;
+
+  return info;
+}
+
+
+void heif_track_info_release(struct heif_track_info* info)
+{
+  if (info) {
+    heif_tai_clock_info_release(info->tai_clock_info);
+
+    delete info;
+  }
+}
+
 
 std::shared_ptr<class HeifFile> Track::get_file() const
 {
@@ -122,7 +188,14 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 }
 
 
-Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height)
+Track::~Track()
+{
+  delete m_track_info;
+}
+
+
+Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
+             heif_track_info* info)
 {
   m_heif_context = ctx;
 
@@ -191,6 +264,19 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
 
   m_stss = std::make_shared<Box_stss>();
   stbl->append_child_box(m_stss);
+
+  if (info) {
+    m_track_info = heif_track_info_alloc();
+    heif_track_info_copy(m_track_info, info);
+
+    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+      m_saiz_tai = std::make_shared<Box_saiz>();
+      m_saio_tai = std::make_shared<Box_saio>();
+
+      stbl->append_child_box(m_saiz_tai);
+      stbl->append_child_box(m_saio_tai);
+    }
+  }
 }
 
 
@@ -317,6 +403,14 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     auto ccst = std::make_shared<Box_ccst>();
     ccst->set_coding_constraints(data.codingConstraints);
     sample_description_box->append_child_box(ccst);
+
+    // --- add 'taic' when we store timestamps as sample auxiliary information
+
+    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+      auto taic = std::make_shared<Box_taic>();
+      taic->set_from_tai_clock_info(m_track_info->tai_clock_info);
+      sample_description_box->append_child_box(taic);
+    }
 
     m_stsc->add_chunk((uint32_t) m_chunks.size());
   }

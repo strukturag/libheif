@@ -1197,9 +1197,23 @@ int main(int argc, char** argv)
 #endif
 
     if (first_image) {
+      heif_tai_clock_info taic;
+      taic.version = 1;
+      taic.time_uncertainty = 1;
+      taic.clock_resolution = 2;
+      taic.clock_drift_rate = 3;
+      taic.clock_type = 4;
+
+      heif_track_info track_info;
+      track_info.version = 1;
+      track_info.with_tai_timestamps = heif_sample_aux_info_presence_none;
+      track_info.tai_clock_info = &taic;
+      track_info.with_sample_uuids = heif_sample_aux_info_presence_none;
+
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
                                       heif_image_get_primary_height(image.get()),
+                                      &track_info,
                                       &track);
       first_image = false;
     }

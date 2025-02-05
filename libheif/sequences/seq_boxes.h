@@ -601,4 +601,64 @@ private:
   uint32_t m_avgBitrate;
 };
 
+
+class Box_saiz : public FullBox {
+public:
+  Box_saiz()
+  {
+    set_short_type(fourcc("saiz"));
+  }
+
+  void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
+
+  void add_sample_size(uint8_t s);
+
+  void add_nonpresent_sample() { add_sample_size(0); }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_aux_info_type = 0;
+  uint32_t m_aux_info_type_parameter = 0;
+  uint8_t  m_default_sample_info_size = 0;  // 0 -> variable length
+  uint32_t m_num_samples = 0; // needed in case we are using the default sample size
+
+  std::vector<uint8_t> m_sample_sizes;
+};
+
+
+class Box_saio : public FullBox {
+public:
+  Box_saio()
+  {
+    set_short_type(fourcc("saio"));
+  }
+
+  void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
+
+  void add_sample_offset(uint64_t offset);
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+private:
+  uint32_t m_aux_info_type = 0;
+  uint32_t m_aux_info_type_parameter = 0;
+
+  bool m_need_64bit = false;
+
+  // If sample_offset==1, all samples are stored contiguous in the file
+  std::vector<uint64_t> m_sample_offset;
+};
+
+
 #endif //SEQ_BOXES_H

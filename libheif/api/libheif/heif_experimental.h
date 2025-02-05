@@ -379,6 +379,7 @@ struct heif_tai_clock_info
 int heif_is_tai_clock_info_drift_rate_undefined(int32_t drift_rate);
 
 
+
 // Creates a new clock info property if it doesn't already exist.
 LIBHEIF_API
 struct heif_error heif_property_set_clock_info(struct heif_context* ctx,
@@ -451,8 +452,34 @@ struct heif_error heif_context_get_sequence_resolution(heif_context*, uint32_t t
 
 struct heif_track;
 
+enum heif_sample_aux_info_presence {
+  heif_sample_aux_info_presence_none = 0,
+  heif_sample_aux_info_presence_optional = 1,
+  heif_sample_aux_info_presence_mandatory = 2
+};
+
+struct heif_track_info
+{
+  uint8_t version;
+
+  // --- version 1
+
+  enum heif_sample_aux_info_presence with_tai_timestamps;
+  struct heif_tai_clock_info* tai_clock_info;
+
+  enum heif_sample_aux_info_presence with_sample_uuids;
+};
+
 LIBHEIF_API
-struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height, heif_track** out_track);
+struct heif_track_info* heif_track_info_alloc();
+
+LIBHEIF_API
+void heif_track_info_release(struct heif_track_info*);
+
+LIBHEIF_API
+struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height,
+                                                  struct heif_track_info* info,
+                                                  heif_track** out_track);
 
 LIBHEIF_API
 void heif_track_release(heif_track*);

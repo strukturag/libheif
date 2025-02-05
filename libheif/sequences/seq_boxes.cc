@@ -1288,3 +1288,238 @@ Error Box_btrt::parse(BitstreamRange& range, const heif_security_limits*)
 
   return Error::Ok;
 }
+
+
+
+void Box_saiz::set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter)
+{
+  m_aux_info_type = aux_info_type;
+  m_aux_info_type_parameter = aux_info_type_parameter;
+
+  bool nonnull = (m_aux_info_type != 0 || m_aux_info_type_parameter != 0);
+  set_flags(nonnull ? 1 : 0);
+}
+
+
+void Box_saiz::add_sample_size(uint8_t s)
+{
+  // --- it is the first sample -> put into default size (except if it is a zero size = no sample aux info)
+
+  if (s != 0 && m_sample_sizes.empty()) {
+    m_default_sample_info_size = s;
+    m_num_samples = 1;
+    return;
+  }
+
+  // --- if it's the default size, just add more to the number of default sizes
+
+  if (s != 0 && s == m_default_sample_info_size) {
+    m_num_samples++;
+    return;
+  }
+
+  // --- it is different from the default size -> add the list
+
+  // first copy samples with the default size into the list
+
+  for (uint32_t i = 0; i < m_num_samples; i++) {
+    m_sample_sizes.push_back(m_default_sample_info_size);
+    m_default_sample_info_size = 0;
+  }
+
+  // add the new sample size
+
+  m_num_samples++;
+  m_sample_sizes.push_back(s);
+}
+
+
+std::string Box_saiz::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "aux_info_type: ";
+  if (m_aux_info_type == 0) {
+    sstr << "0\n";
+  }
+  else {
+    sstr << fourcc_to_string(m_aux_info_type) << "\n";
+  }
+
+  sstr << indent << "aux_info_type_parameter: ";
+  if (m_aux_info_type_parameter == 0) {
+    sstr << "0\n";
+  }
+  else {
+    sstr << fourcc_to_string(m_aux_info_type_parameter) << "\n";
+  }
+
+  sstr << indent << "default sample size: ";
+  if (m_default_sample_info_size == 0) {
+    sstr << "0 (variable)\n";
+  }
+  else {
+    sstr << ((int)m_default_sample_info_size) << "\n";
+  }
+
+  if (m_default_sample_info_size == 0) {
+    for (size_t i = 0; i < m_sample_sizes.size(); i++) {
+      sstr << indent << "[" << i << "] : " << ((int) m_sample_sizes[i]) << "\n";
+    }
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_saiz::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (get_flags() & 1) {
+    writer.write32(m_aux_info_type);
+    writer.write32(m_aux_info_type_parameter);
+  }
+
+  writer.write8(m_default_sample_info_size);
+  writer.write32(m_num_samples);
+
+  if (m_default_sample_info_size == 0) {
+    assert(m_num_samples == m_sample_sizes.size());
+
+    for (uint8_t size : m_sample_sizes) {
+      writer.write8(size);
+    }
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits*)
+{
+  if (get_flags() & 1) {
+    m_aux_info_type = range.read32();
+    m_aux_info_type_parameter = range.read32();
+  }
+
+  m_default_sample_info_size = range.read8();
+  m_num_samples = range.read32();
+
+  if (m_default_sample_info_size == 0) {
+    for (uint32_t i = 0; i < m_num_samples; i++) {
+      m_sample_sizes.push_back(range.read8());
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+
+void Box_saio::set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter)
+{
+  m_aux_info_type = aux_info_type;
+  m_aux_info_type_parameter = aux_info_type_parameter;
+
+  bool nonnull = (m_aux_info_type != 0 || m_aux_info_type_parameter != 0);
+  set_flags(nonnull ? 1 : 0);
+}
+
+
+void Box_saio::add_sample_offset(uint64_t s)
+{
+  if (s > 0xFFFFFFFF) {
+    m_need_64bit = true;
+    set_version(1);
+  }
+
+  m_sample_offset.push_back(s);
+}
+
+
+std::string Box_saio::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+
+  sstr << indent << "aux_info_type: ";
+  if (m_aux_info_type == 0) {
+    sstr << "0\n";
+  }
+  else {
+    sstr << fourcc_to_string(m_aux_info_type) << "\n";
+  }
+
+  sstr << indent << "aux_info_type_parameter: ";
+  if (m_aux_info_type_parameter == 0) {
+    sstr << "0\n";
+  }
+  else {
+    sstr << fourcc_to_string(m_aux_info_type_parameter) << "\n";
+  }
+
+  for (size_t i = 0; i < m_sample_offset.size(); i++) {
+    sstr << indent << "[" << i << "] : " << m_sample_offset[i] << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+Error Box_saio::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  if (get_flags() & 1) {
+    writer.write32(m_aux_info_type);
+    writer.write32(m_aux_info_type_parameter);
+  }
+
+  if (m_sample_offset.size() > std::numeric_limits<uint32_t>::max()) {
+    return Error{heif_error_Unsupported_feature,
+                 heif_suberror_Unspecified,
+                 "Maximum number of samples exceeded"};
+  }
+  writer.write32(static_cast<uint32_t>(m_sample_offset.size()));
+
+  for (uint64_t size : m_sample_offset) {
+    if (m_need_64bit) {
+      writer.write64(size);
+    } else {
+      writer.write32(static_cast<uint32_t>(size));
+    }
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
+{
+  if (get_flags() & 1) {
+    m_aux_info_type = range.read32();
+    m_aux_info_type_parameter = range.read32();
+  }
+
+  uint32_t num_samples = range.read32();
+
+  for (uint32_t i = 0; i < num_samples; i++) {
+    uint64_t offset;
+    if (get_version() == 1) {
+      offset = range.read64();
+    }
+    else {
+      offset = range.read32();
+    }
+
+    m_sample_offset.push_back(offset);
+  }
+
+  return Error::Ok;
+}
