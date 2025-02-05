@@ -521,6 +521,64 @@ struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx
 
   return heif_error_success;
 }
+
+
+struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
+                                               const struct heif_tai_timestamp_packet* timestamp)
+{
+  Error err = img->image->set_tai_timestamp(timestamp);
+  if (err) {
+    return err.error_struct(img->image.get());
+  }
+  else {
+    return heif_error_success;
+  }
+}
+
+
+void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src)
+{
+  if (dst->version >= 1 && src->version >= 1) {
+    dst->tai_timestamp = src->tai_timestamp;
+    dst->synchronization_state = src->synchronization_state;
+    dst->timestamp_is_modified = src->timestamp_is_modified;
+    dst->timestamp_generation_failure = src->timestamp_generation_failure;
+  }
+
+  // in the future when copying with "src->version > dst->version",
+  // the remaining dst fields have to be filled with defaults
+}
+
+struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
+                                               struct heif_tai_timestamp_packet* timestamp)
+{
+  Result<const heif_tai_timestamp_packet*> result = img->image->get_tai_timestamp();
+  if (result.error) {
+    return result.error.error_struct(img->image.get());
+  }
+
+  heif_tai_timestamp_packet_copy(timestamp, result.value);
+
+  return heif_error_success;
+}
+
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
+{
+  auto* tai = new heif_tai_timestamp_packet;
+  tai->version = 1;
+  tai->tai_timestamp = 0;
+  tai->synchronization_state = false; // TODO: or true ?
+  tai->timestamp_generation_failure = false;
+  tai->timestamp_is_modified = false;
+
+  return tai;
+}
+
+void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet* tai)
+{
+  delete tai;
+}
+
 #endif
 
 

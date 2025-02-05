@@ -95,6 +95,8 @@ HeifPixelImage::~HeifPixelImage()
   for (auto& iter : m_planes) {
     delete[] iter.second.allocated_mem;
   }
+
+  heif_tai_timestamp_packet_release(m_tai_timestamp);
 }
 
 

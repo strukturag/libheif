@@ -238,6 +238,20 @@ public:
 
   void unset_mdcv() { m_mdcv_set = false; }
 
+#if HEIF_ENABLE_EXPERIMENTAL_FEATURES
+  Error set_tai_timestamp(const heif_tai_timestamp_packet* tai) {
+    delete m_tai_timestamp;
+
+    m_tai_timestamp = heif_tai_timestamp_packet_alloc();
+    heif_tai_timestamp_packet_copy(m_tai_timestamp, tai);
+    return Error::Ok;
+  }
+
+  Result<const heif_tai_timestamp_packet*> get_tai_timestamp() const {
+    return m_tai_timestamp;
+  }
+#endif
+
   // --- sequences
 
   void set_sample_duration(uint32_t d) { m_sample_duration = d; }
@@ -302,6 +316,8 @@ private:
   bool m_mdcv_set = false; // replace with std::optional<> when we are on C*+17
 
   uint32_t m_sample_duration = 0; // duration of a sequence frame
+
+  heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
 
   std::vector<Error> m_warnings;
 };

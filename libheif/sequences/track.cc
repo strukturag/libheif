@@ -48,6 +48,9 @@ void heif_tai_clock_info_copy(heif_tai_clock_info* dst, const heif_tai_clock_inf
     dst->clock_drift_rate = src->clock_drift_rate;
     dst->clock_type = src->clock_type;
   }
+
+  // in the future when copying with "src->version > dst->version",
+  // the remaining dst fields have to be filled with defaults
 }
 
 void heif_tai_clock_info_release(heif_tai_clock_info* info)

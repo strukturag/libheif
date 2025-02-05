@@ -418,11 +418,32 @@ struct heif_error heif_property_set_tai_timestamp(struct heif_context* ctx,
                                                   struct heif_tai_timestamp_packet* timestamp,
                                                   heif_property_id* out_propertyId);
 
+// TODO: check whether it would be better to return an allocated heif_tai_timestamp_packet struct because if we pass it in, we have
+//       to set the version field in the input and check the version of the output (in case the library is older than the application).
+//       Pro: it would be more consistent
+//       Contra: it is an unnecessary alloc/release memory operation
 LIBHEIF_API
 struct heif_error heif_property_get_tai_timestamp(const struct heif_context* ctx,
                                                   heif_item_id itemId,
                                                   struct heif_tai_timestamp_packet* out_timestamp);
 
+LIBHEIF_API
+struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
+                                               const struct heif_tai_timestamp_packet* timestamp);
+
+LIBHEIF_API
+struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
+                                               struct heif_tai_timestamp_packet* timestamp);
+
+LIBHEIF_API
+heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
+
+LIBHEIF_API
+void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet*);
+
+// version field has to be set in both structs
+LIBHEIF_API
+void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_tai_timestamp_packet* src);
 #endif
 
 // --- sequences
