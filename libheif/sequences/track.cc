@@ -62,6 +62,7 @@ void heif_tai_clock_info_release(heif_tai_clock_info* info)
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 {
   if (src->version >= 1 && dst->version >= 1) {
+    dst->write_aux_info_interleaved = src->write_aux_info_interleaved;
     dst->with_tai_timestamps = src->with_tai_timestamps;
 
     if (src->tai_clock_info) {
@@ -79,6 +80,7 @@ heif_track_info* heif_track_info_alloc()
   auto* info = new heif_track_info;
   info->version = 1;
 
+  info->write_aux_info_interleaved = false;
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
   info->with_sample_uuids = heif_sample_aux_info_presence_none;
@@ -97,8 +99,8 @@ void heif_track_info_release(struct heif_track_info* info)
 }
 
 
-
-SampleAuxInfoHelper::SampleAuxInfoHelper()
+SampleAuxInfoHelper::SampleAuxInfoHelper(bool interleaved)
+    : m_interleaved(interleaved)
 {
   m_saiz = std::make_shared<Box_saiz>();
   m_saio = std::make_shared<Box_saio>();
@@ -131,14 +133,26 @@ void SampleAuxInfoHelper::add_nonpresent_sample()
   m_saiz->add_nonpresent_sample();
 }
 
+
+void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<class HeifFile>& file)
+{
+  if (m_interleaved) {
+    uint64_t pos = file->append_mdat_data(m_data);
+    m_saio->add_sample_offset(pos);
+
+    m_data.clear();
+  }
+}
+
 void SampleAuxInfoHelper::write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file)
 {
   parent->append_child_box(m_saiz);
   parent->append_child_box(m_saio);
 
-  uint64_t pos = file->append_mdat_data(m_data);
-
-  m_saio->add_sample_offset(pos);
+  if (!m_interleaved) {
+    uint64_t pos = file->append_mdat_data(m_data);
+    m_saio->add_sample_offset(pos);
+  }
 }
 
 
@@ -318,7 +332,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
     heif_track_info_copy(m_track_info, info);
 
     if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>();
+      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
       m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
   }
@@ -493,6 +507,8 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     else {
       m_aux_helper_tai_timestamps->add_nonpresent_sample();
     }
+
+    m_aux_helper_tai_timestamps->write_interleaved(get_file());
   }
 
   m_next_sample_to_be_decoded++;

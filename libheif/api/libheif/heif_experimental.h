@@ -485,6 +485,8 @@ struct heif_track_info
 
   // --- version 1
 
+  uint8_t write_aux_info_interleaved; // bool
+
   enum heif_sample_aux_info_presence with_tai_timestamps;
   struct heif_tai_clock_info* tai_clock_info;
 

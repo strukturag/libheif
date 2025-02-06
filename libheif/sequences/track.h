@@ -37,13 +37,15 @@ class Box_trak;
 class SampleAuxInfoHelper
 {
 public:
-  SampleAuxInfoHelper();
+  SampleAuxInfoHelper(bool interleaved = false);
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
   Error add_sample_info(const std::vector<uint8_t>& data);
 
   void add_nonpresent_sample();
+
+  void write_interleaved(const std::shared_ptr<class HeifFile>& file);
 
   void write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file);
 
@@ -52,6 +54,8 @@ private:
   std::shared_ptr<class Box_saio> m_saio;
 
   std::vector<uint8_t> m_data;
+
+  bool m_interleaved;
 };
 
 
