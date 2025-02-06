@@ -18,6 +18,7 @@
  * along with libheif.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
 #include "track.h"
 #include "context.h"
 #include "codecs/decoder.h"
@@ -71,6 +72,16 @@ void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
     }
 
     dst->with_sample_contentid_uuids = src->with_sample_contentid_uuids;
+
+    dst->with_gimi_track_uuid = src->with_gimi_track_uuid;
+    if (src->with_gimi_track_uuid && src->gimi_track_uuid) {
+      char* dst_id = new char[strlen(src->gimi_track_uuid)+1];
+      strcpy(dst_id, src->gimi_track_uuid);
+      dst->gimi_track_uuid = dst_id;
+    }
+    else {
+      dst->gimi_track_uuid = nullptr;
+    }
   }
 }
 
@@ -84,6 +95,8 @@ heif_track_info* heif_track_info_alloc()
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
   info->with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
+  info->with_gimi_track_uuid = false;
+  info->gimi_track_uuid = nullptr;
 
   return info;
 }
@@ -93,6 +106,7 @@ void heif_track_info_release(struct heif_track_info* info)
 {
   if (info) {
     heif_tai_clock_info_release(info->tai_clock_info);
+    delete[] info->gimi_track_uuid;
 
     delete info;
   }
@@ -347,11 +361,13 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
 
       auto uuid_box = std::make_shared<Box_infe>();
       uuid_box->set_item_type_4cc(fourcc("uri "));
-      uuid_box->set_item_uri_type("urn:uuid:25d7f5a6-7a80-5c0f-b9fb-30f64edf2712");
+      uuid_box->set_item_uri_type("urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73");
       uuid_box->set_item_ID(1);
 
       std::vector<uint8_t> track_uuid_vector;
-      track_uuid_vector.insert(track_uuid_vector.begin(), info->gimi_track_uuid, info->gimi_track_uuid + 16);
+      track_uuid_vector.insert(track_uuid_vector.begin(),
+                               info->gimi_track_uuid,
+                               info->gimi_track_uuid + strlen(info->gimi_track_uuid)+1);
 
       auto iloc_box = std::make_shared<Box_iloc>();
       iloc_box->append_data(1, track_uuid_vector, 1);

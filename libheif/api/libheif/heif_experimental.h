@@ -495,7 +495,7 @@ struct heif_track_info
 
   // TODO: should this be in an extension API as it is not in the HEIF standard?
   uint8_t with_gimi_track_uuid;
-  uint8_t gimi_track_uuid[16];
+  const char* gimi_track_uuid;
 };
 
 LIBHEIF_API
