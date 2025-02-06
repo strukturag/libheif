@@ -250,6 +250,12 @@ public:
   const heif_tai_timestamp_packet* get_tai_timestamp() const {
     return m_tai_timestamp;
   }
+
+  void set_content_id(std::array<uint8_t,16> uuid) { m_content_id_uuid = uuid; }
+
+  bool has_content_id() const { return m_content_id_uuid.has_value(); }
+
+  std::array<uint8_t,16> get_content_id() const { assert(has_content_id()); return *m_content_id_uuid; }
 #endif
 
   // --- sequences
@@ -318,6 +324,8 @@ private:
   uint32_t m_sample_duration = 0; // duration of a sequence frame
 
   heif_tai_timestamp_packet* m_tai_timestamp = nullptr;
+
+  std::optional<std::array<uint8_t,16>> m_content_id_uuid;
 
   std::vector<Error> m_warnings;
 };

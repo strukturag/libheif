@@ -70,7 +70,7 @@ void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
       heif_tai_clock_info_copy(dst->tai_clock_info, src->tai_clock_info);
     }
 
-    dst->with_sample_uuids = src->with_sample_uuids;
+    dst->with_sample_contentid_uuids = src->with_sample_contentid_uuids;
   }
 }
 
@@ -83,7 +83,7 @@ heif_track_info* heif_track_info_alloc()
   info->write_aux_info_interleaved = false;
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
-  info->with_sample_uuids = heif_sample_aux_info_presence_none;
+  info->with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
 
   return info;
 }

@@ -421,6 +421,30 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 }
 
 
+void heif_image_set_content_id(heif_image* img, uint8_t uuid[16])
+{
+  std::array<uint8_t, 16> uuid_array;
+  std::copy(uuid, uuid+16, uuid_array.begin());
+
+  img->image->set_content_id(uuid_array);
+}
+
+
+bool heif_image_get_content_id(heif_image* img, uint8_t uuid[16])
+{
+  if (!img->image->has_content_id()) {
+    return false;
+  }
+
+  if (uuid) {
+    std::array<uint8_t, 16> uuid_array = img->image->get_content_id();
+    std::copy(uuid_array.begin(), uuid_array.end(), uuid);
+  }
+
+  return true;
+}
+
+
 extern void set_default_encoding_options(heif_encoding_options& options);
 extern void copy_options(heif_encoding_options& options, const heif_encoding_options& input_options);
 

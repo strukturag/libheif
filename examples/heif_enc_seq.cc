@@ -1208,7 +1208,7 @@ int main(int argc, char** argv)
       track_info.version = 1;
       track_info.with_tai_timestamps = heif_sample_aux_info_presence_mandatory;
       track_info.tai_clock_info = &taic;
-      track_info.with_sample_uuids = heif_sample_aux_info_presence_none;
+      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
 
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
