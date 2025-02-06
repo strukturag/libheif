@@ -64,7 +64,7 @@ public:
 
   double get_matrix_element(int idx) const;
 
-  uint64_t get_time_scale() const { return m_timescale; }
+  uint32_t get_time_scale() const { return m_timescale; }
 
   uint64_t get_duration() const { return m_duration; }
 
@@ -78,7 +78,7 @@ protected:
 private:
   uint64_t m_creation_time = 0;
   uint64_t m_modification_time = 0;
-  uint64_t m_timescale = 0;
+  uint32_t m_timescale = 0;
   uint64_t m_duration = 0;
 
   uint32_t m_rate = 0x00010000; // typically 1.0

@@ -59,7 +59,7 @@ Error Box_mvhd::parse(BitstreamRange& range, const heif_security_limits* limits)
   if (get_version() == 1) {
     m_creation_time = range.read64();
     m_modification_time = range.read64();
-    m_timescale = range.read64();
+    m_timescale = range.read32();
     m_duration = range.read64();
   }
   else {

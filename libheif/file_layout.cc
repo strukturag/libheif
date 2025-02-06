@@ -107,7 +107,7 @@ Error FileLayout::read(const std::shared_ptr<StreamReader>& stream, const heif_s
       m_max_length = stream->request_range(next_box_start, next_box_header_end);
     }
 
-    if (next_box_header_end >= m_max_length) {
+    if (next_box_header_end > m_max_length) {
       if (meta_found || mini_found || moov_found) {
         return Error::Ok;
       }
