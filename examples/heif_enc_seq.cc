@@ -1210,6 +1210,11 @@ int main(int argc, char** argv)
       track_info.tai_clock_info = &taic;
       track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;
 
+      track_info.with_gimi_track_uuid = true;
+      for (int i=0;i<16;i++) {
+        track_info.gimi_track_uuid[i] = 0xFF - (17*i);
+      }
+
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
                                       heif_image_get_primary_height(image.get()),

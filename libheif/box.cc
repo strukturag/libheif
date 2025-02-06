@@ -2121,6 +2121,8 @@ Error Box_iloc::write(StreamWriter& writer) const
   writer.skip(nSkip);
   prepend_header(writer, box_start);
 
+  patch_iloc_header(writer); // Write iloc box. If there is an mdat, it will later be overwritten.
+
   return Error::Ok;
 }
 

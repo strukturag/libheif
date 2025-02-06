@@ -340,6 +340,29 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
       m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
       m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
     }
+
+    if (info->with_gimi_track_uuid) {
+      auto hdlr_box = std::make_shared<Box_hdlr>();
+      hdlr_box->set_handler_type(fourcc("meta"));
+
+      auto uuid_box = std::make_shared<Box_infe>();
+      uuid_box->set_item_type_4cc(fourcc("uri "));
+      uuid_box->set_item_uri_type("urn:uuid:25d7f5a6-7a80-5c0f-b9fb-30f64edf2712");
+      uuid_box->set_item_ID(1);
+
+      std::vector<uint8_t> track_uuid_vector;
+      track_uuid_vector.insert(track_uuid_vector.begin(), info->gimi_track_uuid, info->gimi_track_uuid + 16);
+
+      auto iloc_box = std::make_shared<Box_iloc>();
+      iloc_box->append_data(1, track_uuid_vector, 1);
+
+      auto meta_box = std::make_shared<Box_meta>();
+      meta_box->append_child_box(hdlr_box);
+      meta_box->append_child_box(uuid_box);
+      meta_box->append_child_box(iloc_box);
+
+      trak->append_child_box(meta_box);
+    }
   }
 }
 

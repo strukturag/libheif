@@ -494,8 +494,8 @@ struct heif_track_info
   enum heif_sample_aux_info_presence with_sample_contentid_uuids;
 
   // TODO: should this be in an extension API as it is not in the HEIF standard?
-  //uint8_t with_track_uuid;
-  //uint8_t track_uuid[16];
+  uint8_t with_gimi_track_uuid;
+  uint8_t gimi_track_uuid[16];
 };
 
 LIBHEIF_API
