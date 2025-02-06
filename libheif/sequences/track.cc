@@ -495,20 +495,25 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   // --- sample timestamp
 
-  if (m_track_info && m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-    const auto* tai = image->get_tai_timestamp();
-    if (tai) {
-      std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
-      auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
-      if (err) {
-        return err;
+  if (m_track_info) {
+    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+      const auto* tai = image->get_tai_timestamp();
+      if (tai) {
+        std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
+        auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
+        if (err) {
+          return err;
+        }
+      } else if (m_track_info->with_tai_timestamps == heif_sample_aux_info_presence_optional) {
+        m_aux_helper_tai_timestamps->add_nonpresent_sample();
+      } else {
+        return {heif_error_Encoding_error,
+                heif_suberror_Unspecified,
+                "Mandatory TAI timestamp missing"};
       }
-    }
-    else {
-      m_aux_helper_tai_timestamps->add_nonpresent_sample();
-    }
 
-    m_aux_helper_tai_timestamps->write_interleaved(get_file());
+      m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    }
   }
 
   m_next_sample_to_be_decoded++;
