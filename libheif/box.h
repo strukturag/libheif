@@ -1656,7 +1656,7 @@ private:
 };
 
 
-class Box_itai : public FullBox 
+class Box_itai : public FullBox
 {
 public:
   Box_itai()
@@ -1668,42 +1668,47 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
+  static std::vector<uint8_t> encode_tai_to_bitstream(const heif_tai_timestamp_packet*);
+
   /**
    * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
    */
-  void set_tai_timestamp(uint64_t timestamp) { m_tai_timestamp = timestamp; }
+  void set_tai_timestamp(uint64_t timestamp) { m_timestamp.tai_timestamp = timestamp; }
 
   /**
   * synchronization_state (0=unsynchronized, 1=synchronized)
   */
-  void set_synchronization_state(bool state) { m_synchronization_state = state; }
+  void set_synchronization_state(bool state) { m_timestamp.synchronization_state = state; }
 
   /**
   * timestamp_generation_failure (0=generated, 1=failed)
   */
-  void set_timestamp_generation_failure(bool failure) { m_timestamp_generation_failure = failure; }
+  void set_timestamp_generation_failure(bool failure) { m_timestamp.timestamp_generation_failure = failure; }
 
   /**
    * timestamp_is_modified (0=original 1=modified)
    */
-  void set_timestamp_is_modified(bool is_modified) { m_timestamp_is_modified = is_modified; }
+  void set_timestamp_is_modified(bool is_modified) { m_timestamp.timestamp_is_modified = is_modified; }
 
-  uint64_t get_tai_timestamp() const { return m_tai_timestamp; }
+  uint64_t get_tai_timestamp() const { return m_timestamp.tai_timestamp; }
 
-  bool get_synchronization_state() const { return m_synchronization_state; }
+  bool get_synchronization_state() const { return m_timestamp.synchronization_state; }
 
-  bool get_timestamp_generation_failure() const { return m_timestamp_generation_failure; }
+  bool get_timestamp_generation_failure() const { return m_timestamp.timestamp_generation_failure; }
 
-  bool get_timestamp_is_modified() const { return m_timestamp_is_modified; }
+  bool get_timestamp_is_modified() const { return m_timestamp.timestamp_is_modified; }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
+  heif_tai_timestamp_packet m_timestamp;
+  /*
   uint64_t m_tai_timestamp = 0;
   bool m_synchronization_state = false;
   bool m_timestamp_generation_failure = false;
   bool m_timestamp_is_modified = false;
+   */
 };
 #endif
 

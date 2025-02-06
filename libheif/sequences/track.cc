@@ -97,6 +97,51 @@ void heif_track_info_release(struct heif_track_info* info)
 }
 
 
+
+SampleAuxInfoHelper::SampleAuxInfoHelper()
+{
+  m_saiz = std::make_shared<Box_saiz>();
+  m_saio = std::make_shared<Box_saio>();
+}
+
+
+void SampleAuxInfoHelper::set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter)
+{
+  m_saiz->set_aux_info_type(aux_info_type, aux_info_type_parameter);
+  m_saio->set_aux_info_type(aux_info_type, aux_info_type_parameter);
+}
+
+Error SampleAuxInfoHelper::add_sample_info(const std::vector<uint8_t>& data)
+{
+  if (data.size() > 0xFF) {
+    return {heif_error_Encoding_error,
+            heif_suberror_Unspecified,
+            "Encoded sample auxiliary information exceeds maximum size"};
+  }
+
+  m_saiz->add_sample_size(static_cast<uint8_t>(data.size()));
+
+  m_data.insert(m_data.end(), data.begin(), data.end());
+
+  return Error::Ok;
+}
+
+void SampleAuxInfoHelper::add_nonpresent_sample()
+{
+  m_saiz->add_nonpresent_sample();
+}
+
+void SampleAuxInfoHelper::write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file)
+{
+  parent->append_child_box(m_saiz);
+  parent->append_child_box(m_saio);
+
+  uint64_t pos = file->append_mdat_data(m_data);
+
+  m_saio->add_sample_offset(pos);
+}
+
+
 std::shared_ptr<class HeifFile> Track::get_file() const
 {
   return m_heif_context->get_heif_file();
@@ -246,38 +291,35 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   auto vmhd = std::make_shared<Box_vmhd>();
   minf->append_child_box(vmhd);
 
-  auto stbl = std::make_shared<Box_stbl>();
-  minf->append_child_box(stbl);
+  m_stbl = std::make_shared<Box_stbl>();
+  minf->append_child_box(m_stbl);
 
   m_stsd = std::make_shared<Box_stsd>();
-  stbl->append_child_box(m_stsd);
+  m_stbl->append_child_box(m_stsd);
 
   auto stts = std::make_shared<Box_stts>();
-  stbl->append_child_box(stts);
+  m_stbl->append_child_box(stts);
   m_stts = stts;
 
   m_stsc = std::make_shared<Box_stsc>();
-  stbl->append_child_box(m_stsc);
+  m_stbl->append_child_box(m_stsc);
 
   m_stsz = std::make_shared<Box_stsz>();
-  stbl->append_child_box(m_stsz);
+  m_stbl->append_child_box(m_stsz);
 
   m_stco = std::make_shared<Box_stco>();
-  stbl->append_child_box(m_stco);
+  m_stbl->append_child_box(m_stco);
 
   m_stss = std::make_shared<Box_stss>();
-  stbl->append_child_box(m_stss);
+  m_stbl->append_child_box(m_stss);
 
   if (info) {
     m_track_info = heif_track_info_alloc();
     heif_track_info_copy(m_track_info, info);
 
     if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      m_saiz_tai = std::make_shared<Box_saiz>();
-      m_saio_tai = std::make_shared<Box_saio>();
-
-      stbl->append_child_box(m_saiz_tai);
-      stbl->append_child_box(m_saio_tai);
+      m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>();
+      m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
   }
 }
@@ -436,6 +478,23 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   m_stts->append_sample_duration(colorConvertedImage->get_sample_duration());
 
+
+  // --- sample timestamp
+
+  if (m_track_info && m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+    const auto* tai = image->get_tai_timestamp();
+    if (tai) {
+      std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
+      auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
+      if (err) {
+        return err;
+      }
+    }
+    else {
+      m_aux_helper_tai_timestamps->add_nonpresent_sample();
+    }
+  }
+
   m_next_sample_to_be_decoded++;
 
   return Error::Ok;
@@ -444,6 +503,8 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
 void Track::finalize_track()
 {
+  m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
+
   uint64_t duration = m_stts->get_total_duration(false);
   m_tkhd->set_duration(duration);
   m_mdhd->set_duration(duration);

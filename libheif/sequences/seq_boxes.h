@@ -650,11 +650,14 @@ public:
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
+  void patch_file_pointers(StreamWriter& writer, size_t offset) override;
+
 private:
   uint32_t m_aux_info_type = 0;
   uint32_t m_aux_info_type_parameter = 0;
 
   bool m_need_64bit = false;
+  mutable uint64_t m_offset_start_pos;
 
   // If sample_offset==1, all samples are stored contiguous in the file
   std::vector<uint64_t> m_sample_offset;

@@ -34,6 +34,27 @@ class Chunk;
 class Box_trak;
 
 
+class SampleAuxInfoHelper
+{
+public:
+  SampleAuxInfoHelper();
+
+  void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
+
+  Error add_sample_info(const std::vector<uint8_t>& data);
+
+  void add_nonpresent_sample();
+
+  void write_all(const std::shared_ptr<class Box>& parent, const std::shared_ptr<class HeifFile>& file);
+
+private:
+  std::shared_ptr<class Box_saiz> m_saiz;
+  std::shared_ptr<class Box_saio> m_saio;
+
+  std::vector<uint8_t> m_data;
+};
+
+
 class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
@@ -89,6 +110,7 @@ private:
   std::shared_ptr<class Box_moov> m_moov;
   std::shared_ptr<class Box_tkhd> m_tkhd;
   std::shared_ptr<class Box_mdhd> m_mdhd;
+  std::shared_ptr<class Box_stbl> m_stbl;
   std::shared_ptr<class Box_stsd> m_stsd;
   std::shared_ptr<class Box_stsc> m_stsc;
   std::shared_ptr<class Box_stco> m_stco;
@@ -98,8 +120,7 @@ private:
 
   // --- sample auxiliary information
 
-  std::shared_ptr<class Box_saiz> m_saiz_tai;
-  std::shared_ptr<class Box_saio> m_saio_tai;
+  std::unique_ptr<SampleAuxInfoHelper> m_aux_helper_tai_timestamps;
 };
 
 

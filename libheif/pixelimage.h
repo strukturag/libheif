@@ -247,7 +247,7 @@ public:
     return Error::Ok;
   }
 
-  Result<const heif_tai_timestamp_packet*> get_tai_timestamp() const {
+  const heif_tai_timestamp_packet* get_tai_timestamp() const {
     return m_tai_timestamp;
   }
 #endif

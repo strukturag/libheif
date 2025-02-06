@@ -4790,23 +4790,37 @@ Error Box_taic::parse(BitstreamRange& range, const heif_security_limits*) {
 std::string Box_itai::dump(Indent& indent) const {
   std::ostringstream sstr;
   sstr << Box::dump(indent);
-  sstr << indent << "tai_timestamp: " << m_tai_timestamp << "\n";
-  sstr << indent << "synchronization_state: " << m_synchronization_state << "\n";
-  sstr << indent << "timestamp_generation_failure: " << m_timestamp_generation_failure << "\n";
-  sstr << indent << "timestamp_is_modified: " << m_timestamp_is_modified << "\n";
+  sstr << indent << "tai_timestamp: " << m_timestamp.tai_timestamp << "\n";
+  sstr << indent << "synchronization_state: " << m_timestamp.synchronization_state << "\n";
+  sstr << indent << "timestamp_generation_failure: " << m_timestamp.timestamp_generation_failure << "\n";
+  sstr << indent << "timestamp_is_modified: " << m_timestamp.timestamp_is_modified << "\n";
   return sstr.str();
 }
 
-Error Box_itai::write(StreamWriter& writer) const {
-  size_t box_start = reserve_box_header_space(writer);
-  writer.write64(m_tai_timestamp);
+
+std::vector<uint8_t> Box_itai::encode_tai_to_bitstream(const heif_tai_timestamp_packet* tai)
+{
+  StreamWriter writer;
+  writer.write64(tai->tai_timestamp);
 
   uint8_t status_bits = 0;
-  status_bits |= m_synchronization_state ? (1 << 7) : 0;
-  status_bits |= m_timestamp_generation_failure ? (1 << 6) : 0;
-  status_bits |= m_timestamp_is_modified ? (1 << 5) : 0;
+  status_bits |= tai->synchronization_state ? (1 << 7) : 0;
+  status_bits |= tai->timestamp_generation_failure ? (1 << 6) : 0;
+  status_bits |= tai->timestamp_is_modified ? (1 << 5) : 0;
 
   writer.write8(status_bits);
+
+  return writer.get_data();
+}
+
+
+Error Box_itai::write(StreamWriter& writer) const {
+  size_t box_start = reserve_box_header_space(writer);
+
+  std::vector<uint8_t> tai_data = encode_tai_to_bitstream(&m_timestamp);
+
+  writer.write(tai_data);
+
   prepend_header(writer, box_start);
   return Error::Ok;
 }
@@ -4814,13 +4828,13 @@ Error Box_itai::write(StreamWriter& writer) const {
 Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
-  m_tai_timestamp = range.read64();
+  m_timestamp.tai_timestamp = range.read64();
 
   uint8_t status_bits = range.read8();
 
-  m_synchronization_state = !!(status_bits & 0x80);
-  m_timestamp_generation_failure = !!(status_bits & 0x40);
-  m_timestamp_is_modified = !!(status_bits & 0x20);
+  m_timestamp.synchronization_state = !!(status_bits & 0x80);
+  m_timestamp.timestamp_generation_failure = !!(status_bits & 0x40);
+  m_timestamp.timestamp_is_modified = !!(status_bits & 0x20);
 
   return range.get_error();
 }

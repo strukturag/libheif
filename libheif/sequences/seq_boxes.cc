@@ -1305,7 +1305,7 @@ void Box_saiz::add_sample_size(uint8_t s)
 {
   // --- it is the first sample -> put into default size (except if it is a zero size = no sample aux info)
 
-  if (s != 0 && m_sample_sizes.empty()) {
+  if (s != 0 && m_num_samples == 0) {
     m_default_sample_info_size = s;
     m_num_samples = 1;
     return;
@@ -1322,9 +1322,11 @@ void Box_saiz::add_sample_size(uint8_t s)
 
   // first copy samples with the default size into the list
 
-  for (uint32_t i = 0; i < m_num_samples; i++) {
-    m_sample_sizes.push_back(m_default_sample_info_size);
-    m_default_sample_info_size = 0;
+  if (m_default_sample_info_size != 0) {
+    for (uint32_t i = 0; i < m_num_samples; i++) {
+      m_sample_sizes.push_back(m_default_sample_info_size);
+      m_default_sample_info_size = 0;
+    }
   }
 
   // add the new sample size
@@ -1401,6 +1403,8 @@ Error Box_saiz::write(StreamWriter& writer) const
 
 Error Box_saiz::parse(BitstreamRange& range, const heif_security_limits*)
 {
+  parse_full_box_header(range);
+
   if (get_flags() & 1) {
     m_aux_info_type = range.read32();
     m_aux_info_type_parameter = range.read32();
@@ -1463,10 +1467,30 @@ std::string Box_saio::dump(Indent& indent) const
   }
 
   for (size_t i = 0; i < m_sample_offset.size(); i++) {
-    sstr << indent << "[" << i << "] : " << m_sample_offset[i] << "\n";
+    sstr << indent << "[" << i << "] : 0x" << std::hex << m_sample_offset[i] << "\n";
   }
 
   return sstr.str();
+}
+
+
+void Box_saio::patch_file_pointers(StreamWriter& writer, size_t offset)
+{
+  size_t oldPosition = writer.get_position();
+
+  writer.set_position(m_offset_start_pos);
+
+  for (uint64_t ptr : m_sample_offset) {
+    if (get_version() == 0 && ptr + offset > std::numeric_limits<uint32_t>::max()) {
+      writer.write32(0); // TODO: error
+    } else if (get_version() == 0) {
+      writer.write32(static_cast<uint32_t>(ptr + offset));
+    } else {
+      writer.write64(ptr + offset);
+    }
+  }
+
+  writer.set_position(oldPosition);
 }
 
 
@@ -1486,6 +1510,8 @@ Error Box_saio::write(StreamWriter& writer) const
   }
   writer.write32(static_cast<uint32_t>(m_sample_offset.size()));
 
+  m_offset_start_pos = writer.get_position();
+
   for (uint64_t size : m_sample_offset) {
     if (m_need_64bit) {
       writer.write64(size);
@@ -1502,6 +1528,8 @@ Error Box_saio::write(StreamWriter& writer) const
 
 Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
 {
+  parse_full_box_header(range);
+
   if (get_flags() & 1) {
     m_aux_info_type = range.read32();
     m_aux_info_type_parameter = range.read32();
