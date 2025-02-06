@@ -335,6 +335,11 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
       m_aux_helper_tai_timestamps = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
       m_aux_helper_tai_timestamps->set_aux_info_type(fourcc("stai"));
     }
+
+    if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
+      m_aux_helper_content_ids = std::make_unique<SampleAuxInfoHelper>(m_track_info->write_aux_info_interleaved);
+      m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
+    }
   }
 }
 
@@ -514,6 +519,26 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 
       m_aux_helper_tai_timestamps->write_interleaved(get_file());
     }
+
+    if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
+      if (image->has_content_id()) {
+        auto uuid = image->get_content_id();
+        std::vector<uint8_t> uuid_vector;
+        uuid_vector.insert(uuid_vector.begin(), uuid.begin(), uuid.end());
+        auto err = m_aux_helper_content_ids->add_sample_info(uuid_vector);
+        if (err) {
+          return err;
+        }
+      } else if (m_track_info->with_sample_contentid_uuids == heif_sample_aux_info_presence_optional) {
+        m_aux_helper_content_ids->add_nonpresent_sample();
+      } else {
+        return {heif_error_Encoding_error,
+                heif_suberror_Unspecified,
+                "Mandatory ContentID missing"};
+      }
+
+      m_aux_helper_content_ids->write_interleaved(get_file());
+    }
   }
 
   m_next_sample_to_be_decoded++;
@@ -525,6 +550,7 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
 void Track::finalize_track()
 {
   m_aux_helper_tai_timestamps->write_all(m_stbl, get_file());
+  m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
   uint64_t duration = m_stts->get_total_duration(false);
   m_tkhd->set_duration(duration);

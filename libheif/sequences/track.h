@@ -125,6 +125,7 @@ private:
   // --- sample auxiliary information
 
   std::unique_ptr<SampleAuxInfoHelper> m_aux_helper_tai_timestamps;
+  std::unique_ptr<SampleAuxInfoHelper> m_aux_helper_content_ids;
 };
 
 

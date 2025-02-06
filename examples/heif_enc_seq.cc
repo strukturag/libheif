@@ -1208,7 +1208,7 @@ int main(int argc, char** argv)
       track_info.version = 1;
       track_info.with_tai_timestamps = heif_sample_aux_info_presence_mandatory;
       track_info.tai_clock_info = &taic;
-      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
+      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;
 
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
@@ -1223,6 +1223,10 @@ int main(int argc, char** argv)
     heif_image_set_tai_timestamp(image.get(), tai);
     heif_tai_timestamp_packet_release(tai);
 
+    uint8_t contentId[16];
+    for (int i=0;i<16;i++)
+      contentId[i] = i*16 + i;
+    heif_image_set_content_id(image.get(), contentId);
 
     heif_color_profile_nclx* nclx;
     heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless);
