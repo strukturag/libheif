@@ -1210,9 +1210,9 @@ int main(int argc, char** argv)
       track_info.tai_clock_info = &taic;
       track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;
 
-      track_info.with_gimi_track_uuid = true;
+      track_info.with_gimi_track_contentID = true;
       std::string track_id{"track-ContentID-test"};
-      track_info.gimi_track_uuid = track_id.c_str();
+      track_info.gimi_track_contentID = track_id.c_str();
 
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
@@ -1222,15 +1222,15 @@ int main(int argc, char** argv)
       first_image = false;
     }
 
+    // add a dummy timestamp
     heif_tai_timestamp_packet* tai = heif_tai_timestamp_packet_alloc();
     tai->tai_timestamp = optind; // just some increasing dummy number
     heif_image_set_tai_timestamp(image.get(), tai);
     heif_tai_timestamp_packet_release(tai);
 
-    uint8_t contentId[16];
-    for (int i=0;i<16;i++)
-      contentId[i] = i*16 + i;
-    heif_image_set_content_id(image.get(), contentId);
+    // add a dummy sample ContentID
+    std::string contentId = input_filename;
+    heif_image_set_gimi_content_id(image.get(), contentId.c_str());
 
     heif_color_profile_nclx* nclx;
     heif_error error = create_output_nclx_profile_and_configure_encoder(encoder, &nclx, image, lossless);

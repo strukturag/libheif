@@ -73,14 +73,14 @@ void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 
     dst->with_sample_contentid_uuids = src->with_sample_contentid_uuids;
 
-    dst->with_gimi_track_uuid = src->with_gimi_track_uuid;
-    if (src->with_gimi_track_uuid && src->gimi_track_uuid) {
-      char* dst_id = new char[strlen(src->gimi_track_uuid)+1];
-      strcpy(dst_id, src->gimi_track_uuid);
-      dst->gimi_track_uuid = dst_id;
+    dst->with_gimi_track_contentID = src->with_gimi_track_contentID;
+    if (src->with_gimi_track_contentID && src->gimi_track_contentID) {
+      char* dst_id = new char[strlen(src->gimi_track_contentID) + 1];
+      strcpy(dst_id, src->gimi_track_contentID);
+      dst->gimi_track_contentID = dst_id;
     }
     else {
-      dst->gimi_track_uuid = nullptr;
+      dst->gimi_track_contentID = nullptr;
     }
   }
 }
@@ -95,8 +95,8 @@ heif_track_info* heif_track_info_alloc()
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
   info->with_sample_contentid_uuids = heif_sample_aux_info_presence_none;
-  info->with_gimi_track_uuid = false;
-  info->gimi_track_uuid = nullptr;
+  info->with_gimi_track_contentID = false;
+  info->gimi_track_contentID = nullptr;
 
   return info;
 }
@@ -106,7 +106,7 @@ void heif_track_info_release(struct heif_track_info* info)
 {
   if (info) {
     heif_tai_clock_info_release(info->tai_clock_info);
-    delete[] info->gimi_track_uuid;
+    delete[] info->gimi_track_contentID;
 
     delete info;
   }
@@ -355,7 +355,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
       m_aux_helper_content_ids->set_aux_info_type(fourcc("suid"));
     }
 
-    if (info->with_gimi_track_uuid) {
+    if (info->with_gimi_track_contentID) {
       auto hdlr_box = std::make_shared<Box_hdlr>();
       hdlr_box->set_handler_type(fourcc("meta"));
 
@@ -366,8 +366,8 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
 
       std::vector<uint8_t> track_uuid_vector;
       track_uuid_vector.insert(track_uuid_vector.begin(),
-                               info->gimi_track_uuid,
-                               info->gimi_track_uuid + strlen(info->gimi_track_uuid)+1);
+                               info->gimi_track_contentID,
+                               info->gimi_track_contentID + strlen(info->gimi_track_contentID) + 1);
 
       auto iloc_box = std::make_shared<Box_iloc>();
       iloc_box->append_data(1, track_uuid_vector, 1);
@@ -560,11 +560,12 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
     }
 
     if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
-      if (image->has_content_id()) {
-        auto uuid = image->get_content_id();
-        std::vector<uint8_t> uuid_vector;
-        uuid_vector.insert(uuid_vector.begin(), uuid.begin(), uuid.end());
-        auto err = m_aux_helper_content_ids->add_sample_info(uuid_vector);
+      if (image->has_gimi_content_id()) {
+        auto id = image->get_gimi_content_id();
+        const char* id_str = id.c_str();
+        std::vector<uint8_t> id_vector;
+        id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
+        auto err = m_aux_helper_content_ids->add_sample_info(id_vector);
         if (err) {
           return err;
         }

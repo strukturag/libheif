@@ -421,27 +421,29 @@ void heif_image_set_duration(heif_image* img, uint32_t duration)
 }
 
 
-void heif_image_set_content_id(heif_image* img, uint8_t uuid[16])
+void heif_image_set_gimi_content_id(heif_image* img, const char* contentID)
 {
-  std::array<uint8_t, 16> uuid_array;
-  std::copy(uuid, uuid+16, uuid_array.begin());
-
-  img->image->set_content_id(uuid_array);
+  img->image->set_gimi_content_id(contentID);
 }
 
 
-bool heif_image_get_content_id(heif_image* img, uint8_t uuid[16])
+const char* heif_image_get_gimi_content_id(heif_image* img)
 {
-  if (!img->image->has_content_id()) {
-    return false;
+  if (!img->image->has_gimi_content_id()) {
+    return nullptr;
   }
 
-  if (uuid) {
-    std::array<uint8_t, 16> uuid_array = img->image->get_content_id();
-    std::copy(uuid_array.begin(), uuid_array.end(), uuid);
-  }
+  auto id_string = img->image->get_gimi_content_id();
+  char* id = new char[id_string.length() + 1];
+  strcpy(id, id_string.c_str());
 
-  return true;
+  return id;
+}
+
+
+void heif_gimi_content_id_release(const char* id)
+{
+  delete[] id;
 }
 
 

@@ -494,8 +494,8 @@ struct heif_track_info
   enum heif_sample_aux_info_presence with_sample_contentid_uuids;
 
   // TODO: should this be in an extension API as it is not in the HEIF standard?
-  uint8_t with_gimi_track_uuid;
-  const char* gimi_track_uuid;
+  uint8_t with_gimi_track_contentID;
+  const char* gimi_track_contentID;
 };
 
 LIBHEIF_API
@@ -519,11 +519,14 @@ LIBHEIF_API
 void heif_image_set_duration(heif_image*, uint32_t duration);
 
 LIBHEIF_API
-void heif_image_set_content_id(heif_image*, uint8_t uuid[16]);
+void heif_image_set_gimi_content_id(heif_image*, const char* contentID);
 
-// Returns whether the image has a content ID. You may pass uuid==nullptr if you do not need the UUID.
+// Free returned content id with heif_gimi_content_id_release();
 LIBHEIF_API
-bool heif_image_get_content_id(heif_image*, uint8_t uuid[16]);
+const char* heif_image_get_gimi_content_id(heif_image*);
+
+LIBHEIF_API
+void heif_gimi_content_id_release(const char*);
 
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,
