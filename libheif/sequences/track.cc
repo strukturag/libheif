@@ -296,6 +296,13 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     m_width = sample_description->get_VisualSampleEntry_const().width;
     m_height = sample_description->get_VisualSampleEntry_const().height;
 
+    if (m_first_taic == nullptr) {
+      auto taic = sample_description->get_child_box<Box_taic>();
+      if (taic) {
+        m_first_taic = taic;
+      }
+    }
+
     auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
                                          stco->get_offsets()[chunk_idx],

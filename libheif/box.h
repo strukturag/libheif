@@ -1645,6 +1645,16 @@ public:
     m_clock_type = info->clock_type;
   }
 
+  void get_tai_clock_info(heif_tai_clock_info* out_clock)
+  {
+    if (out_clock->version >= 1) {
+      out_clock->time_uncertainty = get_time_uncertainty();
+      out_clock->clock_resolution = get_clock_resolution();
+      out_clock->clock_drift_rate = get_clock_drift_rate();
+      out_clock->clock_type = get_clock_type();
+    }
+  }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

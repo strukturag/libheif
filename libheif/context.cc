@@ -1647,7 +1647,19 @@ Error HeifContext::interpret_heif_file_sequences()
 }
 
 
-Result<std::shared_ptr<Track>> HeifContext::get_visual_track(uint32_t track_id)
+std::vector<uint32_t> HeifContext::get_track_IDs() const
+{
+  std::vector<uint32_t> ids;
+
+  for (const auto& track : m_tracks) {
+    ids.push_back(track.first);
+  }
+
+  return ids;
+}
+
+
+Result<std::shared_ptr<Track>> HeifContext::get_track(uint32_t track_id)
 {
   assert(has_sequence());
 

@@ -434,13 +434,7 @@ struct heif_error heif_property_get_clock_info(const struct heif_context* ctx,
 
   }
 
-  if (out_clock->version >= 1) {
-    out_clock->version = 1;
-    out_clock->time_uncertainty = taic->get_time_uncertainty();
-    out_clock->clock_resolution = taic->get_clock_resolution();
-    out_clock->clock_drift_rate = taic->get_clock_drift_rate();
-    out_clock->clock_type = taic->get_clock_type();
-  }
+  taic->get_tai_clock_info(out_clock);
 
   return heif_error_success;
 }

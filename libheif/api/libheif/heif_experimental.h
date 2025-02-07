@@ -545,6 +545,22 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
                                                    struct heif_encoder* encoder,
                                                    const struct heif_encoding_options* options);
 
+LIBHEIF_API
+int heif_context_number_of_sequence_tracks(const struct heif_context*);
+
+// output array must have heif_context_number_of_sequence_tracks() entries
+LIBHEIF_API
+void heif_context_get_track_ids(const struct heif_context*, uint32_t* out_track_id_array);
+
+// Use id=0 for the first visual track.
+LIBHEIF_API
+struct heif_track* heif_context_get_track(const struct heif_context*, int32_t id);
+
+// The passed taic structure will be filled by this function. The version field has to be set before this.
+// The function returns 0 if there is no taic.
+LIBHEIF_API
+int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track*, struct heif_tai_clock_info*);
+
 #ifdef __cplusplus
 }
 #endif

@@ -826,6 +826,16 @@ int main(int argc, char** argv)
     std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
     encoder->UpdateDecodingOptions(nullptr, decode_options.get());
 
+    struct heif_track* track = heif_context_get_track(ctx, 0);
+    heif_tai_clock_info taic;
+    taic.version=1;
+    int have_taic = heif_track_get_tai_clock_info_of_first_cluster(track, &taic);
+    if (have_taic) {
+      std::cout << "taic: " << taic.time_uncertainty << " / " << taic.clock_resolution << " / "
+                << taic.clock_drift_rate << " / " << int(taic.clock_type) << "\n";
+    }
+    heif_track_release(track);
+
     for (int i=0; ;i++) {
       heif_image* out_image = nullptr;
       int bit_depth = 8; // TODO

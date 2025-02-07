@@ -106,6 +106,8 @@ public:
   // The context will compute the duration in global movie units and set this.
   void set_track_duration_in_movie_units(uint64_t total_duration);
 
+  std::shared_ptr<class Box_taic> get_first_cluster_taic() { return m_first_taic; }
+
   bool end_of_sequence_reached() const;
 
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
@@ -151,6 +153,8 @@ private:
 
   std::unique_ptr<SampleAuxInfoReader> m_aux_reader_tai_timestamps;
   std::unique_ptr<SampleAuxInfoReader> m_aux_reader_content_ids;
+
+  std::shared_ptr<class Box_taic> m_first_taic; // the TAIC of the first chunk
 };
 
 

@@ -180,8 +180,12 @@ public:
 
   bool has_sequence() const { return !m_tracks.empty(); }
 
+  int get_number_of_tracks() const { return static_cast<int>(m_tracks.size()); }
+
+  std::vector<uint32_t> get_track_IDs() const;
+
   // If 0 is passed as track_id, the main visual track is returned (we assume that there is only one visual track).
-  Result<std::shared_ptr<Track>> get_visual_track(uint32_t track_id);
+  Result<std::shared_ptr<Track>> get_track(uint32_t track_id);
 
   uint64_t get_sequence_timescale() const;
 

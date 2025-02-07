@@ -302,7 +302,7 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   // --- get the visual track
 
-  auto trackResult = ctx->context->get_visual_track(track_id);
+  auto trackResult = ctx->context->get_track(track_id);
   if (trackResult.error) {
     return trackResult.error.error_struct(ctx->context.get());
   }
@@ -375,7 +375,7 @@ uint64_t heif_context_get_sequence_duration(heif_context* ctx)
 
 struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32_t trackId, uint16_t* out_width, uint16_t* out_height)
 {
-  auto trackResult = ctx->context->get_visual_track(trackId);
+  auto trackResult = ctx->context->get_track(trackId);
   if (trackResult.error) {
     return trackResult.error.error_struct(ctx->context.get());
   }
@@ -490,4 +490,46 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
   }
 
   return heif_error_ok;
+}
+
+
+int heif_context_number_of_sequence_tracks(const struct heif_context* ctx)
+{
+  return ctx->context->get_number_of_tracks();
+}
+
+void heif_context_get_track_ids(const struct heif_context* ctx, uint32_t* out_track_id_array)
+{
+  std::vector<uint32_t> IDs;
+  ctx->context->get_track_IDs();
+
+  for (uint32_t id : IDs) {
+    *out_track_id_array++ = id;
+  }
+}
+
+// Use id=0 for the first visual track.
+struct heif_track* heif_context_get_track(const struct heif_context* ctx, int32_t track_id)
+{
+  auto trackResult = ctx->context->get_track(track_id);
+  if (trackResult.error) {
+    return nullptr;
+  }
+
+  auto* track = new heif_track;
+  track->track = trackResult.value;
+  track->context = ctx->context;
+
+  return track;
+}
+
+int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, struct heif_tai_clock_info* taic)
+{
+  auto first_taic = track->track->get_first_cluster_taic();
+  if (!first_taic) {
+    return 0;
+  }
+
+  first_taic->get_tai_clock_info(taic);
+  return 1;
 }
