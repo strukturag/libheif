@@ -357,10 +357,16 @@ uint32_t heif_image_get_sample_duration(heif_image* img)
 }
 
 
-uint64_t heif_context_get_sequence_time_scale(heif_context* ctx)
+uint64_t heif_context_get_sequence_timescale(heif_context* ctx)
 {
-  return ctx->context->get_sequence_time_scale();
+  return ctx->context->get_sequence_timescale();
 }
+
+void heif_context_set_sequence_timescale(heif_context* ctx, uint32_t timescale)
+{
+  ctx->context->set_sequence_timescale(timescale);
+}
+
 
 uint64_t heif_context_get_sequence_duration(heif_context* ctx)
 {

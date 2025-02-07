@@ -82,7 +82,12 @@ public:
 
   uint16_t get_height() const { return m_height; }
 
-  uint64_t get_duration() const;
+  uint64_t get_duration_in_media_units() const;
+
+  uint32_t get_timescale() const;
+
+  // The context will compute the duration in global movie units and set this.
+  void set_track_duration_in_movie_units(uint64_t total_duration);
 
   bool end_of_sequence_reached() const;
 

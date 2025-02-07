@@ -463,7 +463,10 @@ LIBHEIF_API
 uint32_t heif_image_get_sample_duration(heif_image*);
 
 LIBHEIF_API
-uint64_t heif_context_get_sequence_time_scale(heif_context*);
+uint64_t heif_context_get_sequence_timescale(heif_context*);
+
+LIBHEIF_API
+void heif_context_set_sequence_timescale(heif_context*, uint32_t);
 
 LIBHEIF_API
 uint64_t heif_context_get_sequence_duration(heif_context*);
@@ -484,6 +487,8 @@ struct heif_track_info
   uint8_t version;
 
   // --- version 1
+
+  uint32_t timescale;
 
   uint8_t write_aux_info_interleaved; // bool
 

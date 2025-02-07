@@ -252,6 +252,19 @@ void HeifContext::add_region_referenced_mask_ref(heif_item_id region_item_id, he
   m_heif_file->add_iref_reference(region_item_id, fourcc("mask"), {mask_item_id});
 }
 
+
+static uint64_t rescale(uint64_t duration, uint32_t old_base, uint32_t new_base)
+{
+  // prevent division by zero
+  // TODO: we might emit an error in this case
+  if (old_base == 0) {
+    return 0;
+  }
+
+  return duration * new_base / old_base;
+}
+
+
 void HeifContext::write(StreamWriter& writer)
 {
   // --- finalize some parameters
@@ -261,7 +274,21 @@ void HeifContext::write(StreamWriter& writer)
     for (const auto& track : m_tracks) {
       track.second->finalize_track();
 
-      max_sequence_duration = std::max(max_sequence_duration, track.second->get_duration());
+      // rescale track duration to movie timescale units
+
+      uint64_t track_duration_in_media_units = track.second->get_duration_in_media_units();
+      uint32_t media_timescale = track.second->get_timescale();
+
+      uint32_t mvhd_timescale = m_heif_file->get_mvhd_box()->get_time_scale();
+      if (mvhd_timescale==0) {
+        mvhd_timescale = track.second->get_timescale();
+        m_heif_file->get_mvhd_box()->set_time_scale(mvhd_timescale);
+      }
+
+      uint64_t movie_duration = rescale(track_duration_in_media_units, media_timescale, mvhd_timescale);
+      track.second->set_track_duration_in_movie_units(movie_duration);
+
+      max_sequence_duration = std::max(max_sequence_duration, movie_duration);
     }
 
     mvhd->set_duration(max_sequence_duration);
@@ -1643,7 +1670,7 @@ Result<std::shared_ptr<Track>> HeifContext::get_visual_track(uint32_t track_id)
 }
 
 
-uint64_t HeifContext::get_sequence_time_scale() const
+uint64_t HeifContext::get_sequence_timescale() const
 {
   auto mvhd = m_heif_file->get_mvhd_box();
   if (!mvhd) {
@@ -1651,6 +1678,25 @@ uint64_t HeifContext::get_sequence_time_scale() const
   }
 
   return mvhd->get_time_scale();
+}
+
+
+void HeifContext::set_sequence_timescale(uint32_t timescale)
+{
+  get_heif_file()->init_for_sequence();
+
+  auto mvhd = m_heif_file->get_mvhd_box();
+
+  /* unnecessary, since mvhd duration is set during writing
+
+  uint32_t old_timescale = mvhd->get_time_scale();
+  if (old_timescale != 0) {
+    uint64_t scaled_duration = mvhd->get_duration() * timescale / old_timescale;
+    mvhd->set_duration(scaled_duration);
+  }
+  */
+
+  mvhd->set_time_scale(timescale);
 }
 
 

@@ -70,6 +70,8 @@ public:
 
   void set_duration(uint64_t duration) { m_duration = duration; }
 
+  void set_time_scale(uint32_t timescale) { m_timescale = timescale; }
+
   void set_next_track_id(uint32_t next_id) { m_next_track_ID = next_id; }
 
 protected:
@@ -174,6 +176,10 @@ public:
   void derive_box_version() override;
 
   double get_matrix_element(int idx) const;
+
+  uint32_t get_timescale() const { return m_timescale; }
+
+  void set_timescale(uint32_t timescale) { m_timescale = timescale; }
 
   uint64_t get_duration() const { return m_duration; }
 

@@ -63,6 +63,7 @@ void heif_tai_clock_info_release(heif_tai_clock_info* info)
 void heif_track_info_copy(heif_track_info* dst, const heif_track_info* src)
 {
   if (src->version >= 1 && dst->version >= 1) {
+    dst->timescale = src->timescale;
     dst->write_aux_info_interleaved = src->write_aux_info_interleaved;
     dst->with_tai_timestamps = src->with_tai_timestamps;
 
@@ -91,6 +92,7 @@ heif_track_info* heif_track_info_alloc()
   auto* info = new heif_track_info;
   info->version = 1;
 
+  info->timescale = 90000;
   info->write_aux_info_interleaved = false;
   info->with_tai_timestamps = heif_sample_aux_info_presence_none;
   info->tai_clock_info = nullptr;
@@ -307,6 +309,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t heigh
   trak->append_child_box(mdia);
 
   m_mdhd = std::make_shared<Box_mdhd>();
+  m_mdhd->set_timescale(info->timescale);
   mdia->append_child_box(m_mdhd);
 
   auto hdlr = std::make_shared<Box_hdlr>();
@@ -593,12 +596,23 @@ void Track::finalize_track()
   m_aux_helper_content_ids->write_all(m_stbl, get_file());
 
   uint64_t duration = m_stts->get_total_duration(false);
-  m_tkhd->set_duration(duration);
   m_mdhd->set_duration(duration);
 }
 
 
-uint64_t Track::get_duration() const
+uint64_t Track::get_duration_in_media_units() const
 {
-  return m_tkhd->get_duration();
+  return m_mdhd->get_duration();
+}
+
+
+uint32_t Track::get_timescale() const
+{
+  return m_mdhd->get_timescale();
+}
+
+
+void Track::set_track_duration_in_movie_units(uint64_t total_duration)
+{
+  m_tkhd->set_duration(total_duration);
 }

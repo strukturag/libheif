@@ -1206,6 +1206,8 @@ int main(int argc, char** argv)
 
       heif_track_info track_info;
       track_info.version = 1;
+      track_info.timescale = 90000;
+      track_info.write_aux_info_interleaved = false;
       track_info.with_tai_timestamps = heif_sample_aux_info_presence_mandatory;
       track_info.tai_clock_info = &taic;
       track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;
@@ -1213,6 +1215,8 @@ int main(int argc, char** argv)
       track_info.with_gimi_track_contentID = true;
       std::string track_id{"track-ContentID-test"};
       track_info.gimi_track_contentID = track_id.c_str();
+
+      heif_context_set_sequence_timescale(context.get(), 30);
 
       heif_context_add_sequence_track(context.get(),
                                       heif_image_get_primary_width(image.get()),
@@ -1270,7 +1274,7 @@ int main(int argc, char** argv)
     }
 
 
-    heif_image_set_duration(image.get(), 3000); // TODO
+    heif_image_set_duration(image.get(), 90000);
 
     error = heif_track_encode_sequence_image(track, image.get(), encoder, nullptr);
     if (error.code) {
