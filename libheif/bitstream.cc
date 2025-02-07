@@ -879,11 +879,15 @@ void StreamWriter::write_fixed_string(std::string s, size_t len)
     m_data.resize(required_size);
   }
 
-  for (size_t i = 0; i < s.size() && i < len; i++) {
+  size_t n_chars = std::min(s.length(), len - 1);
+  assert(n_chars <= 255);
+  m_data[m_position++] = static_cast<uint8_t>(n_chars);
+
+  for (size_t i = 0; i < s.size() && i < len - 1; i++) {
     m_data[m_position++] = s[i];
   }
 
-  for (size_t i = s.size(); i < len; i++) {
+  for (size_t i = s.size(); i < len - 1; i++) {
     m_data[m_position++] = 0;
   }
 }
