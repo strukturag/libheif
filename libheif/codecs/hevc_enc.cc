@@ -119,9 +119,7 @@ Result<Encoder::CodedImageData> Encoder_HEVC::encode(const std::shared_ptr<HeifP
 std::shared_ptr<class Box_VisualSampleEntry> Encoder_HEVC::get_sample_description_box(const CodedImageData& data) const
 {
   auto hvc1 = std::make_shared<Box_hvc1>();
-
-  VisualSampleEntry sampleEntry;
-  sampleEntry.compressorname = "HEVC";
+  hvc1->get_VisualSampleEntry().compressorname = "HEVC";
 
   for (auto prop : data.properties) {
     if (prop->get_short_type() == fourcc("hvcC")) {

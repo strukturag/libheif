@@ -100,9 +100,7 @@ Result<Encoder::CodedImageData> Encoder_VVC::encode(const std::shared_ptr<HeifPi
 std::shared_ptr<class Box_VisualSampleEntry> Encoder_VVC::get_sample_description_box(const CodedImageData& data) const
 {
   auto vvc1 = std::make_shared<Box_vvc1>();
-
-  VisualSampleEntry sampleEntry;
-  sampleEntry.compressorname = "VVC";
+  vvc1->get_VisualSampleEntry().compressorname = "VVC";
 
   for (auto prop : data.properties) {
     if (prop->get_short_type() == fourcc("vvcC")) {

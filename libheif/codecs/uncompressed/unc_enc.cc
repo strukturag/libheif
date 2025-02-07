@@ -56,9 +56,7 @@ Result<Encoder::CodedImageData> Encoder_uncompressed::encode(const std::shared_p
 std::shared_ptr<class Box_VisualSampleEntry> Encoder_uncompressed::get_sample_description_box(const CodedImageData& data) const
 {
   auto uncv = std::make_shared<Box_uncv>();
-
-  VisualSampleEntry sampleEntry;
-  sampleEntry.compressorname = "iso23001-17";
+  uncv->get_VisualSampleEntry().compressorname = "iso23001-17";
 
   for (auto prop : data.properties) {
     switch (prop->get_short_type()) {

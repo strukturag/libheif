@@ -119,9 +119,7 @@ Result<Encoder::CodedImageData> Encoder_JPEG::encode(const std::shared_ptr<HeifP
 std::shared_ptr<class Box_VisualSampleEntry> Encoder_JPEG::get_sample_description_box(const CodedImageData& data) const
 {
   auto mjpg = std::make_shared<Box_mjpg>();
-
-  VisualSampleEntry sampleEntry;
-  sampleEntry.compressorname = "JPEG";
+  mjpg->get_VisualSampleEntry().compressorname = "JPEG";
 
   for (auto prop : data.properties) {
     if (prop->get_short_type() == fourcc("jpgC")) {

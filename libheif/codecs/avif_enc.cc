@@ -80,9 +80,7 @@ Result<Encoder::CodedImageData> Encoder_AVIF::encode(const std::shared_ptr<HeifP
 std::shared_ptr<class Box_VisualSampleEntry> Encoder_AVIF::get_sample_description_box(const CodedImageData& data) const
 {
   auto av01 = std::make_shared<Box_av01>();
-
-  VisualSampleEntry sampleEntry;
-  sampleEntry.compressorname = "AVIF";
+  av01->get_VisualSampleEntry().compressorname = "AVIF";
 
   for (auto prop : data.properties) {
     if (prop->get_short_type() == fourcc("av1C")) {
