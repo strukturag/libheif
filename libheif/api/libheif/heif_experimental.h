@@ -432,6 +432,9 @@ struct heif_error heif_image_set_tai_timestamp(struct heif_image* img,
                                                const struct heif_tai_timestamp_packet* timestamp);
 
 LIBHEIF_API
+int heif_image_has_tai_timestamp(const struct heif_image* img);
+
+LIBHEIF_API
 struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
                                                struct heif_tai_timestamp_packet* timestamp);
 

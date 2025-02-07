@@ -549,16 +549,24 @@ void heif_tai_timestamp_packet_copy(heif_tai_timestamp_packet* dst, const heif_t
   // the remaining dst fields have to be filled with defaults
 }
 
+
+int heif_image_has_tai_timestamp(const struct heif_image* img)
+{
+  return img->image->get_tai_timestamp() != nullptr;
+}
+
+
 struct heif_error heif_image_get_tai_timestamp(const struct heif_image* img,
                                                struct heif_tai_timestamp_packet* timestamp)
 {
-  Result<const heif_tai_timestamp_packet*> result = img->image->get_tai_timestamp();
-  if (result.error) {
-    return result.error.error_struct(img->image.get());
+  auto* tai = img->image->get_tai_timestamp();
+  if (!tai) {
+    return {heif_error_Usage_error,
+            heif_suberror_Unspecified,
+            "No timestamp attached to image"};
   }
 
-  heif_tai_timestamp_packet_copy(timestamp, result.value);
-
+  heif_tai_timestamp_packet_copy(timestamp, tai);
   return heif_error_success;
 }
 

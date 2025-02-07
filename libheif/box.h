@@ -1670,6 +1670,8 @@ public:
 
   static std::vector<uint8_t> encode_tai_to_bitstream(const heif_tai_timestamp_packet*);
 
+  static Result<heif_tai_timestamp_packet> decode_tai_from_vector(const std::vector<uint8_t>&);
+
   /**
    * The number of nanoseconds since the TAI epoch of 1958-01-01T00:00:00.0Z.
    */

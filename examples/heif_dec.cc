@@ -850,6 +850,14 @@ int main(int argc, char** argv)
         heif_gimi_content_id_release(contentID);
       }
 
+      if (heif_image_has_tai_timestamp(out_image)) {
+        struct heif_tai_timestamp_packet timestamp;
+        timestamp.version = 1;
+        heif_image_get_tai_timestamp(out_image, &timestamp);
+        std::cout << "timestamp: " << timestamp.tai_timestamp << "\n";
+      }
+
+
       std::ostringstream s;
       s << output_filename_stem;
       s << "-" << i+1;

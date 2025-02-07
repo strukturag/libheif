@@ -4816,6 +4816,42 @@ std::vector<uint8_t> Box_itai::encode_tai_to_bitstream(const heif_tai_timestamp_
 }
 
 
+uint64_t uint8_vector_to_uint64_BE(const uint8_t* data)
+{
+  uint64_t value = ((static_cast<uint64_t>(data[0]) << 56) |
+                    (static_cast<uint64_t>(data[1]) << 48) |
+                    (static_cast<uint64_t>(data[2]) << 40) |
+                    (static_cast<uint64_t>(data[3]) << 32) |
+                    (static_cast<uint64_t>(data[4]) << 24) |
+                    (static_cast<uint64_t>(data[5]) << 16) |
+                    (static_cast<uint64_t>(data[6]) << 8) |
+                    (static_cast<uint64_t>(data[7]) << 0));
+
+  return value;
+}
+
+
+Result<heif_tai_timestamp_packet> Box_itai::decode_tai_from_vector(const std::vector<uint8_t>& data)
+{
+  if (data.size() != 9) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Wrong size of TAI timestamp data"};
+  }
+
+  uint8_t status_bits = data[8];
+
+  heif_tai_timestamp_packet tai;
+  tai.version = 1;
+  tai.tai_timestamp = uint8_vector_to_uint64_BE(data.data());
+  tai.synchronization_state = !!(status_bits & 0x80);
+  tai.timestamp_generation_failure = !!(status_bits & 0x40);
+  tai.timestamp_is_modified = !!(status_bits & 0x20);
+
+  return tai;
+}
+
+
 Error Box_itai::write(StreamWriter& writer) const {
   size_t box_start = reserve_box_header_space(writer);
 
@@ -4830,6 +4866,7 @@ Error Box_itai::write(StreamWriter& writer) const {
 Error Box_itai::parse(BitstreamRange& range, const heif_security_limits*) {
   parse_full_box_header(range);
 
+  m_timestamp.version = 1;
   m_timestamp.tai_timestamp = range.read64();
 
   uint8_t status_bits = range.read8();

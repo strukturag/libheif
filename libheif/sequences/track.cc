@@ -555,6 +555,13 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
     if (readResult.error) {
       return readResult.error;
     }
+
+    auto resultTai = Box_itai::decode_tai_from_vector(readResult.value);
+    if (resultTai.error) {
+      return resultTai.error;
+    }
+
+    image->set_tai_timestamp(&resultTai.value);
   }
 
   m_next_sample_to_be_decoded++;
