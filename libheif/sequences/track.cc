@@ -25,7 +25,6 @@
 #include "codecs/encoder.h"
 #include "sequences/seq_boxes.h"
 #include "sequences/chunk.h"
-#include "codecs/hevc_boxes.h"
 #include "libheif/api_structs.h"
 
 heif_tai_clock_info* heif_tai_clock_info_alloc()
@@ -172,6 +171,49 @@ void SampleAuxInfoHelper::write_all(const std::shared_ptr<class Box>& parent, co
 }
 
 
+SampleAuxInfoReader::SampleAuxInfoReader(std::shared_ptr<Box_saiz> saiz,
+                                         std::shared_ptr<Box_saio> saio)
+{
+  m_saiz = saiz;
+  m_saio = saio;
+
+  m_contiguous = (saio->get_num_samples() == 1);
+  if (m_contiguous) {
+    uint64_t offset = saio->get_sample_offset(0);
+    auto nSamples = saiz->get_num_samples();
+
+    for (uint32_t i=0;i<nSamples;i++) {
+      m_contiguous_offsets.push_back(offset);
+      offset += saiz->get_sample_size(i);
+    }
+
+    // TODO: we could add a special case for contiguous data with constant size
+  }
+}
+
+
+Result<std::vector<uint8_t>> SampleAuxInfoReader::get_sample_info(const HeifFile* file, uint32_t idx)
+{
+  uint64_t offset;
+  if (m_contiguous) {
+    offset = m_contiguous_offsets[idx];
+  }
+  else {
+    offset = m_saio->get_sample_offset(idx);
+  }
+
+  uint8_t size = m_saiz->get_sample_size(idx);
+
+  std::vector<uint8_t> data;
+  Error err = file->append_data_from_file_range(data, offset, size);
+  if (err) {
+    return err;
+  }
+
+  return data;
+}
+
+
 std::shared_ptr<class HeifFile> Track::get_file() const
 {
   return m_heif_context->get_heif_file();
@@ -262,6 +304,37 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     m_chunks.push_back(chunk);
 
     current_sample_idx += sampleToChunk.samples_per_chunk;
+  }
+
+  // --- read sample auxiliary information boxes
+
+  std::vector<std::shared_ptr<Box_saiz>> saiz_boxes = stbl->get_child_boxes<Box_saiz>();
+  std::vector<std::shared_ptr<Box_saio>> saio_boxes = stbl->get_child_boxes<Box_saio>();
+
+  for (const auto& saiz : saiz_boxes) {
+    uint32_t aux_info_type = saiz->get_aux_info_type();
+    uint32_t aux_info_type_parameter = saiz->get_aux_info_type_parameter();
+
+    // find the corresponding saio box
+
+    std::shared_ptr<Box_saio> saio;
+    for (const auto& candidate : saio_boxes) {
+      if (candidate->get_aux_info_type() == aux_info_type &&
+          candidate->get_aux_info_type_parameter() == aux_info_type_parameter) {
+        saio = candidate;
+        break;
+      }
+    }
+
+    if (saio) {
+      if (aux_info_type == fourcc("suid")) {
+        m_aux_reader_content_ids = std::make_unique<SampleAuxInfoReader>(saiz, saio);
+      }
+
+      if (aux_info_type == fourcc("stai")) {
+        m_aux_reader_tai_timestamps = std::make_unique<SampleAuxInfoReader>(saiz, saio);
+      }
+    }
   }
 }
 
@@ -398,6 +471,32 @@ bool Track::end_of_sequence_reached() const
 }
 
 
+static Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
+{
+  if (vec.empty()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Null length string"};
+  }
+
+  if (vec.back() != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "utf8string not null-terminated"};
+  }
+
+  for (size_t i=0;i<vec.size()-1;i++) {
+    if (vec[i] == 0) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "utf8string with null character"};
+    }
+  }
+
+  return std::string(vec.begin(), vec.end()-1);
+}
+
+
 Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const struct heif_decoding_options& options)
 {
   if (m_current_chunk > m_chunks.size()) {
@@ -429,13 +528,38 @@ Result<std::shared_ptr<HeifPixelImage>> Track::decode_next_image_sample(const st
     return decodingResult.error;
   }
 
+  auto image = decodingResult.value;
+
   if (m_stts) {
-    decodingResult.value->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_decoded));
+    image->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_decoded));
+  }
+
+  // --- read sample auxiliary data
+
+  if (m_aux_reader_content_ids) {
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), m_next_sample_to_be_decoded);
+    if (readResult.error) {
+      return readResult.error;
+    }
+
+    Result<std::string> convResult = vector_to_string(readResult.value);
+    if (convResult.error) {
+      return convResult.error;
+    }
+
+    image->set_gimi_content_id(convResult.value);
+  }
+
+  if (m_aux_reader_tai_timestamps) {
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_decoded);
+    if (readResult.error) {
+      return readResult.error;
+    }
   }
 
   m_next_sample_to_be_decoded++;
 
-  return decodingResult;
+  return image;
 }
 
 

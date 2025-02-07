@@ -529,6 +529,7 @@ LIBHEIF_API
 void heif_image_set_gimi_content_id(heif_image*, const char* contentID);
 
 // Free returned content id with heif_gimi_content_id_release();
+// If there is no content ID, nullptr is returned.
 LIBHEIF_API
 const char* heif_image_get_gimi_content_id(heif_image*);
 

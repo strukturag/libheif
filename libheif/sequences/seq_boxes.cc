@@ -1336,6 +1336,20 @@ void Box_saiz::add_sample_size(uint8_t s)
 }
 
 
+uint8_t Box_saiz::get_sample_size(uint32_t idx)
+{
+  if (m_default_sample_info_size != 0) {
+    return m_default_sample_info_size;
+  }
+
+  if (idx >= m_sample_sizes.size()) {
+    return 0;
+  }
+
+  return m_sample_sizes[idx];
+}
+
+
 std::string Box_saiz::dump(Indent& indent) const
 {
   std::stringstream sstr;
@@ -1442,6 +1456,17 @@ void Box_saio::add_sample_offset(uint64_t s)
   }
 
   m_sample_offset.push_back(s);
+}
+
+
+uint64_t Box_saio::get_sample_offset(uint32_t idx) const
+{
+  if (idx >= m_sample_offset.size()) {
+    return 0;
+  }
+  else {
+    return m_sample_offset[idx];
+  }
 }
 
 

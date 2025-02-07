@@ -59,6 +59,23 @@ private:
 };
 
 
+class SampleAuxInfoReader
+{
+public:
+  SampleAuxInfoReader(std::shared_ptr<Box_saiz>,
+                      std::shared_ptr<Box_saio>);
+
+  Result<std::vector<uint8_t>> get_sample_info(const HeifFile* file, uint32_t idx);
+
+private:
+  std::shared_ptr<class Box_saiz> m_saiz;
+  std::shared_ptr<class Box_saio> m_saio;
+
+  bool m_contiguous;
+  std::vector<uint64_t> m_contiguous_offsets;
+};
+
+
 class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
@@ -131,6 +148,9 @@ private:
 
   std::unique_ptr<SampleAuxInfoHelper> m_aux_helper_tai_timestamps;
   std::unique_ptr<SampleAuxInfoHelper> m_aux_helper_content_ids;
+
+  std::unique_ptr<SampleAuxInfoReader> m_aux_reader_tai_timestamps;
+  std::unique_ptr<SampleAuxInfoReader> m_aux_reader_content_ids;
 };
 
 

@@ -844,6 +844,12 @@ int main(int argc, char** argv)
 
       std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
 
+      const char* contentID = heif_image_get_gimi_content_id(out_image);
+      if (contentID) {
+        std::cout << "content ID " << contentID << "\n";
+        heif_gimi_content_id_release(contentID);
+      }
+
       std::ostringstream s;
       s << output_filename_stem;
       s << "-" << i+1;

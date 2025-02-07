@@ -617,9 +617,17 @@ public:
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
+  uint32_t get_aux_info_type() const { return m_aux_info_type; }
+
+  uint32_t get_aux_info_type_parameter() const { return m_aux_info_type_parameter; }
+
   void add_sample_size(uint8_t s);
 
   void add_nonpresent_sample() { add_sample_size(0); }
+
+  uint8_t get_sample_size(uint32_t idx);
+
+  uint32_t get_num_samples() const { return m_num_samples; }
 
   std::string dump(Indent&) const override;
 
@@ -647,7 +655,16 @@ public:
 
   void set_aux_info_type(uint32_t aux_info_type, uint32_t aux_info_type_parameter = 0);
 
+  uint32_t get_aux_info_type() const { return m_aux_info_type; }
+
+  uint32_t get_aux_info_type_parameter() const { return m_aux_info_type_parameter; }
+
   void add_sample_offset(uint64_t offset);
+
+  // This will be 1 if all infos are written contiguously
+  size_t get_num_samples() const { return m_sample_offset.size(); }
+
+  uint64_t get_sample_offset(uint32_t idx) const;
 
   std::string dump(Indent&) const override;
 
