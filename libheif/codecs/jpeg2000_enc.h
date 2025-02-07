@@ -44,4 +44,10 @@ public:
 };
 
 
+class Encoder_HTJ2K : public Encoder_JPEG2000 {
+public:
+  std::shared_ptr<class Box_VisualSampleEntry> get_sample_description_box(const CodedImageData&) const override;
+};
+
+
 #endif

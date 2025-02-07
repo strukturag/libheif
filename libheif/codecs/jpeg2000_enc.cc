@@ -88,3 +88,22 @@ std::shared_ptr<class Box_VisualSampleEntry> Encoder_JPEG2000::get_sample_descri
   assert(false); // no hvcC generated
   return nullptr;
 }
+
+
+std::shared_ptr<class Box_VisualSampleEntry> Encoder_HTJ2K::get_sample_description_box(const CodedImageData& data) const
+{
+  auto hvc1 = std::make_shared<Box_j2ki>();
+
+  VisualSampleEntry sampleEntry;
+  hvc1->get_VisualSampleEntry().compressorname = "HTJ2K";
+
+  for (auto prop : data.properties) {
+    if (prop->get_short_type() == fourcc("j2kH")) {
+      hvc1->append_child_box(prop);
+      return hvc1;
+    }
+  }
+
+  assert(false); // no hvcC generated
+  return nullptr;
+}

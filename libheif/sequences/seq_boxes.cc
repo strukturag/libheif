@@ -795,13 +795,13 @@ Error Box_stsz::write(StreamWriter& writer) const
 
 void Box_stsz::append_sample_size(uint32_t size)
 {
-  if (m_sample_count == 0) {
+  if (m_sample_count == 0 && size != 0) {
     m_fixed_sample_size = size;
     m_sample_count = 1;
     return;
   }
 
-  if (m_fixed_sample_size == size) {
+  if (m_fixed_sample_size == size && size != 0) {
     m_sample_count++;
     return;
   }

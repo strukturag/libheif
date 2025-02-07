@@ -46,6 +46,9 @@ Chunk::Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format
     case heif_compression_JPEG2000:
       m_encoder = std::make_shared<Encoder_JPEG2000>();
       break;
+    case heif_compression_HTJ2K:
+      m_encoder = std::make_shared<Encoder_HTJ2K>();
+      break;
     case heif_compression_JPEG:
       m_encoder = std::make_shared<Encoder_JPEG>();
       break;
