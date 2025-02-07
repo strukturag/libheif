@@ -465,6 +465,8 @@ uint32_t heif_image_get_sample_duration(heif_image*);
 LIBHEIF_API
 uint64_t heif_context_get_sequence_timescale(heif_context*);
 
+// Set an independent global timescale for the sequence.
+// If no timescale is set with this function, the timescale of the first track will be taken.
 LIBHEIF_API
 void heif_context_set_sequence_timescale(heif_context*, uint32_t);
 
