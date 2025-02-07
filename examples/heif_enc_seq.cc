@@ -1207,7 +1207,7 @@ int main(int argc, char** argv)
       heif_track_info track_info;
       track_info.version = 1;
       track_info.timescale = 90000;
-      track_info.write_aux_info_interleaved = false;
+      track_info.write_aux_info_interleaved = true;
       track_info.with_tai_timestamps = heif_sample_aux_info_presence_mandatory;
       track_info.tai_clock_info = &taic;
       track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;

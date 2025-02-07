@@ -152,7 +152,7 @@ void SampleAuxInfoHelper::add_nonpresent_sample()
 
 void SampleAuxInfoHelper::write_interleaved(const std::shared_ptr<class HeifFile>& file)
 {
-  if (m_interleaved) {
+  if (m_interleaved && !m_data.empty()) {
     uint64_t pos = file->append_mdat_data(m_data);
     m_saio->add_sample_offset(pos);
 
@@ -165,7 +165,7 @@ void SampleAuxInfoHelper::write_all(const std::shared_ptr<class Box>& parent, co
   parent->append_child_box(m_saiz);
   parent->append_child_box(m_saio);
 
-  if (!m_interleaved) {
+  if (!m_data.empty()) {
     uint64_t pos = file->append_mdat_data(m_data);
     m_saio->add_sample_offset(pos);
   }
@@ -526,6 +526,10 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
   size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(data.bitstream);
 
   if (new_chunk) {
+    // if auxiliary data is interleaved, write it between the chunks
+    m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    m_aux_helper_content_ids->write_interleaved(get_file());
+
     // TODO
     assert(data_start < 0xFF000000); // add some headroom for header data
     m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
@@ -558,8 +562,6 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
                 heif_suberror_Unspecified,
                 "Mandatory TAI timestamp missing"};
       }
-
-      m_aux_helper_tai_timestamps->write_interleaved(get_file());
     }
 
     if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
@@ -579,8 +581,6 @@ Error Track::encode_image(std::shared_ptr<HeifPixelImage> image,
                 heif_suberror_Unspecified,
                 "Mandatory ContentID missing"};
       }
-
-      m_aux_helper_content_ids->write_interleaved(get_file());
     }
   }
 
