@@ -827,6 +827,13 @@ int main(int argc, char** argv)
     encoder->UpdateDecodingOptions(nullptr, decode_options.get());
 
     struct heif_track* track = heif_context_get_track(ctx, 0);
+
+    const char* track_contentId = heif_track_get_gimi_content_id(track);
+    if (track_contentId) {
+      std::cout << "track content ID: " << track_contentId << "\n";
+      heif_gimi_content_id_release(track_contentId);
+    }
+
     heif_tai_clock_info taic;
     taic.version=1;
     int have_taic = heif_track_get_tai_clock_info_of_first_cluster(track, &taic);

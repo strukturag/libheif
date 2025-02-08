@@ -447,6 +447,20 @@ const char* heif_image_get_gimi_content_id(heif_image* img)
 }
 
 
+const char* heif_track_get_gimi_content_id(struct heif_track* track)
+{
+  const char* contentId = track->track->get_track_info()->gimi_track_contentID;
+  if (!contentId) {
+    return nullptr;
+  }
+
+  char* id = new char[strlen(contentId) + 1];
+  strcpy(id, contentId);
+
+  return id;
+}
+
+
 void heif_gimi_content_id_release(const char* id)
 {
   delete[] id;

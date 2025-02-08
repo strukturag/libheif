@@ -537,6 +537,9 @@ LIBHEIF_API
 const char* heif_image_get_gimi_content_id(heif_image*);
 
 LIBHEIF_API
+const char* heif_track_get_gimi_content_id(struct heif_track*);
+
+LIBHEIF_API
 void heif_gimi_content_id_release(const char*);
 
 LIBHEIF_API

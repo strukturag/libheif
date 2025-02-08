@@ -120,6 +120,8 @@ public:
   // Compute some parameters after all frames have been encoded (for example: track duration).
   void finalize_track();
 
+  const heif_track_info* get_track_info() const { return m_track_info; }
+
 private:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;

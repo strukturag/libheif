@@ -114,6 +114,33 @@ void heif_track_info_release(struct heif_track_info* info)
 }
 
 
+static Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
+{
+  if (vec.empty()) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "Null length string"};
+  }
+
+  if (vec.back() != 0) {
+    return Error{heif_error_Invalid_input,
+                 heif_suberror_Unspecified,
+                 "utf8string not null-terminated"};
+  }
+
+  for (size_t i=0;i<vec.size()-1;i++) {
+    if (vec[i] == 0) {
+      return Error{heif_error_Invalid_input,
+                   heif_suberror_Unspecified,
+                   "utf8string with null character"};
+    }
+  }
+
+  return std::string(vec.begin(), vec.end()-1);
+}
+
+
+
 SampleAuxInfoHelper::SampleAuxInfoHelper(bool interleaved)
     : m_interleaved(interleaved)
 {
@@ -343,6 +370,38 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
       }
     }
   }
+
+  // --- read track properties
+
+  m_track_info = heif_track_info_alloc();
+
+  if (auto meta = trak_box->get_child_box<Box_meta>()) {
+    auto iloc = meta->get_child_box<Box_iloc>();
+    auto idat = meta->get_child_box<Box_idat>();
+
+    auto infe_boxes = meta->get_child_boxes<Box_infe>();
+    for (const auto& box : infe_boxes) {
+      if (box->get_item_type_4cc() == fourcc("uri ") &&
+          box->get_item_uri_type() == "urn:uuid:15beb8e4-944d-5fc6-a3dd-cb5a7e655c73") {
+        heif_item_id id = box->get_item_ID();
+
+        std::vector<uint8_t> data;
+        Error err = iloc->read_data(id, ctx->get_heif_file()->get_reader(), idat, &data, ctx->get_security_limits());
+        if (err) {
+          // TODO
+        }
+
+        Result contentIdResult = vector_to_string(data);
+        if (contentIdResult.error) {
+          // TODO
+        }
+
+        char* track_contentID = new char[contentIdResult.value.length() + 1];
+        strcpy(track_contentID, contentIdResult.value.c_str());
+        m_track_info->gimi_track_contentID = track_contentID;
+      }
+    }
+  }
 }
 
 
@@ -475,32 +534,6 @@ bool Track::is_visual_track() const
 bool Track::end_of_sequence_reached() const
 {
   return (m_next_sample_to_be_decoded > m_chunks.back()->last_sample_number());
-}
-
-
-static Result<std::string> vector_to_string(const std::vector<uint8_t>& vec)
-{
-  if (vec.empty()) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "Null length string"};
-  }
-
-  if (vec.back() != 0) {
-    return Error{heif_error_Invalid_input,
-                 heif_suberror_Unspecified,
-                 "utf8string not null-terminated"};
-  }
-
-  for (size_t i=0;i<vec.size()-1;i++) {
-    if (vec[i] == 0) {
-      return Error{heif_error_Invalid_input,
-                   heif_suberror_Unspecified,
-                   "utf8string with null character"};
-    }
-  }
-
-  return std::string(vec.begin(), vec.end()-1);
 }
 
 
