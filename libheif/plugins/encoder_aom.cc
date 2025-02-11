@@ -176,7 +176,7 @@ static const char* const kParam_chroma_valid_values[] = {
 
 static const char* kParam_tune = "tune";
 static const char* const kParam_tune_valid_values[] = {
-    "psnr", "ssim", nullptr
+    "psnr", "ssim", "iq", nullptr
 };
 
 static const int AOM_PLUGIN_PRIORITY = 60;
@@ -654,6 +654,12 @@ struct heif_error aom_set_parameter_string(void* encoder_raw, const char* name, 
       encoder->tune = AOM_TUNE_SSIM;
       return heif_error_ok;
     }
+#if defined(AOM_HAVE_TUNE_IQ)
+    else if (strcmp(value, "iq") == 0) {
+      encoder->tune = AOM_TUNE_IQ;
+      return heif_error_ok;
+    }
+#endif
     else {
       return heif_error_invalid_parameter_value;
     }
@@ -707,6 +713,11 @@ struct heif_error aom_get_parameter_string(void* encoder_raw, const char* name,
       case AOM_TUNE_SSIM:
         save_strcpy(value, value_size, "ssim");
         break;
+#if defined(AOM_HAVE_TUNE_IQ)
+      case AOM_TUNE_IQ:
+        save_strcpy(value, value_size, "iq");
+        break;
+#endif
       default:
         assert(false);
         return heif_error_invalid_parameter_value;
