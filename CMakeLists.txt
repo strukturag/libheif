@@ -252,6 +252,16 @@ plugin_option(OpenJPEG_ENCODER "OpenJPEG J2K encoder" OFF ON)
 plugin_option(OpenJPEG_DECODER "OpenJPEG J2K decoder" OFF ON)
 if (WITH_OpenJPEG_ENCODER OR WITH_OpenJPEG_DECODER)
     find_package(OpenJPEG 2)
+
+    # Since the above does not work with Ubuntu 22.04 and Ubuntu 24.04, check again without version number
+    if (NOT OpenJPEG_FOUND)
+      find_package(OpenJPEG)
+
+      if (OpenJPEG_FOUND AND NOT OPENJPEG_MAJOR_VERSION STREQUAL "2")
+          message("OpenJPEG found, but we need version 2.x.x")
+          set(OpenJPEG_FOUND FALSE)
+      endif()
+    endif()
 endif()
 
 # ffmpeg
