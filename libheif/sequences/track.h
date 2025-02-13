@@ -150,7 +150,9 @@ protected:
   std::shared_ptr<class Box_taic> m_first_taic; // the TAIC of the first chunk
 
 
-  void add_chunk(heif_compression_format format, std::shared_ptr<Box> sample_description_box);
+  void add_chunk(heif_compression_format format);
+
+  void set_sample_description_box(std::shared_ptr<Box> sample_description_box);
 
   Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
                           const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID);

@@ -160,16 +160,11 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   // generate new chunk for first image or when compression formats don't match
 
   bool add_sample_description = false;
-  bool new_chunk = false;
 
   if (m_chunks.empty() || m_chunks.back()->get_compression_format() != h_encoder->plugin->compression_format) {
-    auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, h_encoder->plugin->compression_format);
-    m_chunks.push_back(chunk);
+    add_chunk(h_encoder->plugin->compression_format);
     add_sample_description = true;
-    new_chunk = true;
   }
-
-  auto encoder = m_chunks.back()->get_encoder();
 
   // --- check whether we have to convert the image color space
 
@@ -177,6 +172,8 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
   // will extract the alpha plane anyway. We can reuse that plane below instead of having to do a new conversion.
 
   heif_encoding_options options = in_options;
+
+  auto encoder = m_chunks.back()->get_encoder();
 
   if (const auto* nclx = encoder->get_forced_output_nclx()) {
     options.output_nclx_profile = const_cast<heif_color_profile_nclx*>(nclx);
@@ -201,94 +198,27 @@ Error Track_Visual::encode_image(std::shared_ptr<HeifPixelImage> image,
 
   const Encoder::CodedImageData& data = encodeResult.value;
 
-  if (add_sample_description) {
-    auto props = data.properties;
 
+  // --- generate SampleDescriptionBox
+
+  if (add_sample_description) {
     auto sample_description_box = encoder->get_sample_description_box(data);
     VisualSampleEntry& visualSampleEntry = sample_description_box->get_VisualSampleEntry();
     visualSampleEntry.width = static_cast<uint16_t>(colorConvertedImage->get_width());
     visualSampleEntry.height = static_cast<uint16_t>(colorConvertedImage->get_height());
-    m_stsd->add_sample_entry(sample_description_box);
 
     auto ccst = std::make_shared<Box_ccst>();
     ccst->set_coding_constraints(data.codingConstraints);
     sample_description_box->append_child_box(ccst);
 
-    // --- add 'taic' when we store timestamps as sample auxiliary information
-
-    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      auto taic = std::make_shared<Box_taic>();
-      taic->set_from_tai_clock_info(m_track_info->tai_clock_info);
-      sample_description_box->append_child_box(taic);
-    }
-
-    m_stsc->add_chunk((uint32_t) m_chunks.size());
+    set_sample_description_box(sample_description_box);
   }
 
-  m_stsc->increase_samples_in_chunk(1);
-
-  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(data.bitstream);
-
-  if (new_chunk) {
-    // if auxiliary data is interleaved, write it between the chunks
-    m_aux_helper_tai_timestamps->write_interleaved(get_file());
-    m_aux_helper_content_ids->write_interleaved(get_file());
-
-    // TODO
-    assert(data_start < 0xFF000000); // add some headroom for header data
-    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
-  }
-
-  m_stsz->append_sample_size((uint32_t)data.bitstream.size());
-
-  if (data.is_sync_frame) {
-    m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
-  }
-
-  m_stts->append_sample_duration(colorConvertedImage->get_sample_duration());
-
-
-  // --- sample timestamp
-
-  if (m_track_info) {
-    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
-      const auto* tai = image->get_tai_timestamp();
-      if (tai) {
-        std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
-        auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
-        if (err) {
-          return err;
-        }
-      } else if (m_track_info->with_tai_timestamps == heif_sample_aux_info_presence_optional) {
-        m_aux_helper_tai_timestamps->add_nonpresent_sample();
-      } else {
-        return {heif_error_Encoding_error,
-                heif_suberror_Unspecified,
-                "Mandatory TAI timestamp missing"};
-      }
-    }
-
-    if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
-      if (image->has_gimi_content_id()) {
-        auto id = image->get_gimi_content_id();
-        const char* id_str = id.c_str();
-        std::vector<uint8_t> id_vector;
-        id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
-        auto err = m_aux_helper_content_ids->add_sample_info(id_vector);
-        if (err) {
-          return err;
-        }
-      } else if (m_track_info->with_sample_contentid_uuids == heif_sample_aux_info_presence_optional) {
-        m_aux_helper_content_ids->add_nonpresent_sample();
-      } else {
-        return {heif_error_Encoding_error,
-                heif_suberror_Unspecified,
-                "Mandatory ContentID missing"};
-      }
-    }
-  }
-
-  m_next_sample_to_be_decoded++;
+  write_sample_data(data.bitstream,
+                    colorConvertedImage->get_sample_duration(),
+                    data.is_sync_frame,
+                    image->get_tai_timestamp(),
+                    image->has_gimi_content_id() ? image->get_gimi_content_id() : std::string{});
 
   return Error::Ok;
 }

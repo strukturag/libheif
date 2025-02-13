@@ -556,15 +556,17 @@ void Track::set_track_duration_in_movie_units(uint64_t total_duration)
 }
 
 
-void Track::add_chunk(heif_compression_format format, std::shared_ptr<Box> sample_description_box)
+void Track::add_chunk(heif_compression_format format)
 {
   auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, format);
   m_chunks.push_back(chunk);
 
   int chunkIdx = (uint32_t) m_chunks.size();
   m_stsc->add_chunk(chunkIdx);
+}
 
-
+void Track::set_sample_description_box(std::shared_ptr<Box> sample_description_box)
+{
   // --- add 'taic' when we store timestamps as sample auxiliary information
 
   if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {

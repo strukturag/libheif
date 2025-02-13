@@ -136,7 +136,7 @@ Result<std::shared_ptr<const Track_Metadata::Metadata>> Track_Metadata::read_nex
 
 Error Track_Metadata::write_raw_metadata(const Metadata& metadata)
 {
-  // generate new chunk for first image or when compression formats don't match
+  // generate new chunk for first metadata packet
 
   if (m_chunks.empty()) {
 
@@ -147,7 +147,8 @@ Error Track_Metadata::write_raw_metadata(const Metadata& metadata)
     uri->set_uri(m_uri);
     sample_description_box->append_child_box(uri);
 
-    add_chunk(heif_compression_undefined, sample_description_box);
+    add_chunk(heif_compression_undefined);
+    set_sample_description_box(sample_description_box);
   }
 
   write_sample_data(metadata.raw_metadata, metadata.duration, true,
