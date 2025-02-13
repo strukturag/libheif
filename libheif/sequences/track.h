@@ -113,6 +113,8 @@ public:
 
   const heif_track_info* get_track_info() const { return m_track_info; }
 
+  void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
+
 protected:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
@@ -127,6 +129,7 @@ protected:
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
   std::shared_ptr<class Box_moov> m_moov;
+  std::shared_ptr<class Box_trak> m_trak;
   std::shared_ptr<class Box_tkhd> m_tkhd;
   std::shared_ptr<class Box_minf> m_minf;
   std::shared_ptr<class Box_mdhd> m_mdhd;
@@ -138,6 +141,8 @@ protected:
   std::shared_ptr<class Box_stts> m_stts;
   std::shared_ptr<class Box_stss> m_stss;
   std::shared_ptr<class Box_stsz> m_stsz;
+
+  std::shared_ptr<class Box_tref> m_tref; // optional
 
   // --- sample auxiliary information
 

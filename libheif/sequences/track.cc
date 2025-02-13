@@ -224,6 +224,8 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 {
   m_heif_context = ctx;
 
+  m_trak = trak_box;
+
   auto tkhd = trak_box->get_child_box<Box_tkhd>();
   if (!tkhd) {
     return; // TODO: error or dummy error track ?
@@ -403,17 +405,19 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
 
     auto mvhd = m_moov->get_child_box<Box_mvhd>();
     mvhd->set_next_track_id(track_id + 1);
+
+    m_id = track_id;
   }
 
-  auto trak = std::make_shared<Box_trak>();
-  m_moov->append_child_box(trak);
+  m_trak = std::make_shared<Box_trak>();
+  m_moov->append_child_box(m_trak);
 
   m_tkhd = std::make_shared<Box_tkhd>();
-  trak->append_child_box(m_tkhd);
+  m_trak->append_child_box(m_tkhd);
   m_tkhd->set_track_id(track_id);
 
   auto mdia = std::make_shared<Box_mdia>();
-  trak->append_child_box(mdia);
+  m_trak->append_child_box(mdia);
 
   m_mdhd = std::make_shared<Box_mdhd>();
   m_mdhd->set_timescale(info->timescale);
@@ -486,7 +490,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
       meta_box->append_child_box(uuid_box);
       meta_box->append_child_box(iloc_box);
 
-      trak->append_child_box(meta_box);
+      m_trak->append_child_box(meta_box);
     }
   }
 }
@@ -649,4 +653,15 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   m_next_sample_to_be_processed++;
 
   return Error::Ok;
+}
+
+
+void Track::add_reference_to_track(uint32_t referenceType, uint32_t to_track_id)
+{
+  if (!m_tref) {
+    m_tref = std::make_shared<Box_tref>();
+    m_trak->append_child_box(m_tref);
+  }
+
+  m_tref->add_references(to_track_id, referenceType);
 }

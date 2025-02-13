@@ -755,4 +755,35 @@ private:
 };
 
 
+class Box_tref : public Box
+{
+public:
+  Box_tref()
+  {
+    set_short_type(fourcc("tref"));
+  }
+
+  struct Reference {
+    uint32_t reference_type;
+    std::vector<uint32_t> to_track_id;
+  };
+
+  std::string dump(Indent&) const override;
+
+  std::vector<uint32_t> get_references(uint32_t ref_type) const;
+
+  void add_references(uint32_t to_track_id, uint32_t type);
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+
+  Error write(StreamWriter& writer) const override;
+
+  Error check_for_double_references() const;
+
+private:
+  std::vector<Reference> m_references;
+};
+
+
 #endif //SEQ_BOXES_H

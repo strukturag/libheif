@@ -523,6 +523,15 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*, st
                                                                const char* uri,
                                                                heif_track** out_track);
 
+enum heif_track_reference_type {
+  heif_track_reference_type_description_of = heif_fourcc('c','d','s','c') // track_description
+};
+
+
+// reference type can be one of heif_track_reference_type or any other type
+LIBHEIF_API
+void heif_track_add_reference_to_track(heif_track*, uint32_t reference_type, heif_track* to_track);
+
 LIBHEIF_API
 void heif_track_release(heif_track*);
 

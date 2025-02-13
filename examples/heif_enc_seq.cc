@@ -1231,6 +1231,8 @@ int main(int argc, char** argv)
                                                    "urn:smpte:ul:0123456789abcdef",
                                                    &metadata_track);
 
+      heif_track_add_reference_to_track(metadata_track, heif_track_reference_type_description_of, track);
+
       for (int i=0;i<5;i++) {
         uint8_t data[] = {0x10, 0x20, 0x02, 0x01};
         heif_error err = heif_track_add_metadata(metadata_track, data, 4, nullptr, nullptr);

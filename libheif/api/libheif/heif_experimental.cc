@@ -446,6 +446,12 @@ struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx
 }
 
 
+void heif_track_add_reference_to_track(heif_track* track, uint32_t reference_type, heif_track* to_track)
+{
+  track->track->add_reference_to_track(reference_type, to_track->track->get_id());
+}
+
+
 void heif_track_release(heif_track* track)
 {
   delete track;

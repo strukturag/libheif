@@ -20,6 +20,7 @@
 
 #include "sequences/seq_boxes.h"
 #include <iomanip>
+#include <set>
 
 
 Error Box_container::parse(BitstreamRange& range, const heif_security_limits* limits)
@@ -1685,4 +1686,155 @@ Error Box_saio::parse(BitstreamRange& range, const heif_security_limits*)
   }
 
   return Error::Ok;
+}
+
+
+Error Box_tref::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  while (!range.eof()) {
+    BoxHeader header;
+    Error err = header.parse_header(range);
+    if (err != Error::Ok) {
+      return err;
+    }
+
+    uint64_t dataSize = (header.get_box_size() - header.get_header_size());
+
+    if (dataSize % 4 != 0 || dataSize < 4) {
+      return {heif_error_Invalid_input,
+              heif_suberror_Unspecified,
+              "Input file has a 'tref' TrackReferenceTypeBox with invalid size."};
+    }
+
+    uint64_t nRefs = dataSize / 4;
+
+    if (limits->max_items && nRefs > limits->max_items) {
+      std::stringstream sstr;
+      sstr << "Number of references in tref box (" << nRefs << ") exceeds the security limits of " << limits->max_items << " references.";
+
+      return {heif_error_Invalid_input,
+              heif_suberror_Security_limit_exceeded,
+              sstr.str()};
+    }
+
+    Reference ref;
+    ref.reference_type = header.get_short_type();
+
+    for (uint64_t i = 0; i < nRefs; i++) {
+      if (range.eof()) {
+        std::stringstream sstr;
+        sstr << "tref box should contain " << nRefs << " references, but we can only read " << i << " references.";
+
+        return {heif_error_Invalid_input,
+                heif_suberror_End_of_data,
+                sstr.str()};
+      }
+
+      ref.to_track_id.push_back(static_cast<uint32_t>(range.read32()));
+    }
+
+    m_references.push_back(ref);
+  }
+
+
+  // --- check for duplicate references
+
+  if (auto error = check_for_double_references()) {
+    return error;
+  }
+
+  return range.get_error();
+}
+
+
+Error Box_tref::check_for_double_references() const
+{
+  for (const auto& ref : m_references) {
+    std::set<uint32_t> to_ids;
+    for (const auto to_id : ref.to_track_id) {
+      if (to_ids.find(to_id) == to_ids.end()) {
+        to_ids.insert(to_id);
+      }
+      else {
+        return {heif_error_Invalid_input,
+                heif_suberror_Unspecified,
+                "'tref' has double references"};
+      }
+    }
+  }
+
+  return Error::Ok;
+}
+
+
+Error Box_tref::write(StreamWriter& writer) const
+{
+  if (auto error = check_for_double_references()) {
+    return error;
+  }
+
+  size_t box_start = reserve_box_header_space(writer);
+
+  for (const auto& ref : m_references) {
+    uint32_t box_size = 8 + uint32_t(ref.to_track_id.size() * 4);
+
+    // we write the BoxHeader ourselves since it is very simple
+    writer.write32(box_size);
+    writer.write32(ref.reference_type);
+
+    for (uint32_t r : ref.to_track_id) {
+      writer.write32(r);
+    }
+  }
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_tref::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  for (const auto& ref : m_references) {
+    sstr << indent << "reference with type '" << fourcc_to_string(ref.reference_type) << "'"
+         << " to track IDs: ";
+    for (uint32_t id : ref.to_track_id) {
+      sstr << id << " ";
+    }
+    sstr << "\n";
+  }
+
+  return sstr.str();
+}
+
+
+std::vector<uint32_t> Box_tref::get_references(uint32_t ref_type) const
+{
+  for (const Reference& ref : m_references) {
+    if (ref.reference_type == ref_type) {
+      return ref.to_track_id;
+    }
+  }
+
+  return {};
+}
+
+
+void Box_tref::add_references(uint32_t to_track_id, uint32_t type)
+{
+  for (auto& ref : m_references) {
+    if (ref.reference_type == type) {
+      ref.to_track_id.push_back(to_track_id);
+      return;
+    }
+  }
+
+  Reference ref;
+  ref.reference_type = type;
+  ref.to_track_id = {to_track_id};
+
+  m_references.push_back(ref);
 }
