@@ -429,6 +429,37 @@ Error Box_vmhd::write(StreamWriter& writer) const
 }
 
 
+Error Box_nmhd::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("nmhd");
+  }
+
+  return range.get_error();
+}
+
+
+std::string Box_nmhd::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+
+  return sstr.str();
+}
+
+
+Error Box_nmhd::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
 Error Box_stsd::parse(BitstreamRange& range, const heif_security_limits* limits)
 {
   parse_full_box_header(range);
@@ -445,14 +476,16 @@ Error Box_stsd::parse(BitstreamRange& range, const heif_security_limits* limits)
       return err;
     }
 
+#if 0
     auto visualSampleEntry_box = std::dynamic_pointer_cast<Box_VisualSampleEntry>(entrybox);
     if (!visualSampleEntry_box) {
       return Error{heif_error_Invalid_input,
                    heif_suberror_Unspecified,
                    "Invalid or unknown VisualSampleEntry in stsd box."};
     }
+#endif
 
-    m_sample_entries.push_back(visualSampleEntry_box);
+    m_sample_entries.push_back(entrybox);
   }
 
   return range.get_error();
@@ -934,6 +967,83 @@ std::string VisualSampleEntry::dump(Indent& indent) const
 
   return sstr.str();
 }
+
+
+Error Box_URIMetaSampleEntry::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write32(0);
+  writer.write16(0);
+  writer.write16(data_reference_index);
+
+  write_children(writer);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
+
+std::string Box_URIMetaSampleEntry::dump(Indent& indent) const
+{
+  std::stringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "data reference index: " << data_reference_index << "\n";
+  sstr << dump_children(indent);
+  return sstr.str();
+}
+
+
+Error Box_URIMetaSampleEntry::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  range.skip(6);
+  data_reference_index = range.read16();
+
+  Error err = read_children(range, READ_CHILDREN_ALL, limits);
+  if (err) {
+    return err;
+  }
+
+  return Error::Ok;
+}
+
+
+Error Box_uri::parse(BitstreamRange& range, const heif_security_limits* limits)
+{
+  parse_full_box_header(range);
+
+  if (get_version() > 0) {
+    return unsupported_version_error("uri ");
+  }
+
+  m_uri = range.read_string();
+
+  return range.get_error();
+}
+
+
+std::string Box_uri::dump(Indent& indent) const
+{
+  std::ostringstream sstr;
+  sstr << Box::dump(indent);
+  sstr << indent << "uri: " << m_uri << "\n";
+
+  return sstr.str();
+}
+
+
+Error Box_uri::write(StreamWriter& writer) const
+{
+  size_t box_start = reserve_box_header_space(writer);
+
+  writer.write(m_uri);
+
+  prepend_header(writer, box_start);
+
+  return Error::Ok;
+}
+
 
 
 Error Box_ccst::parse(BitstreamRange& range, const heif_security_limits* limits)

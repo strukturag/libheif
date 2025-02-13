@@ -44,11 +44,16 @@ Track_Visual::Track_Visual(HeifContext* ctx, const std::shared_ptr<Box_trak>& tr
 
     auto sample_description = m_stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
     if (!sample_description) {
-      return;
+      return; // TODO
     }
 
-    m_width = sample_description->get_VisualSampleEntry_const().width;
-    m_height = sample_description->get_VisualSampleEntry_const().height;
+    auto visual_sample_description = std::dynamic_pointer_cast<const Box_VisualSampleEntry>(sample_description);
+    if (!visual_sample_description) {
+      return; // TODO
+    }
+
+    m_width = visual_sample_description->get_VisualSampleEntry_const().width;
+    m_height = visual_sample_description->get_VisualSampleEntry_const().height;
   }
 }
 
@@ -57,8 +62,8 @@ Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, 
                            heif_track_info* info, uint32_t handler_type)
     : Track(ctx, track_id, info, handler_type)
 {
-    m_tkhd->set_resolution(width, height);
-    m_hdlr->set_handler_type(handler_type);
+  m_tkhd->set_resolution(width, height);
+  //m_hdlr->set_handler_type(handler_type);  already done in Track()
 
   auto vmhd = std::make_shared<Box_vmhd>();
   m_minf->append_child_box(vmhd);

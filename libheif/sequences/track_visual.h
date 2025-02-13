@@ -46,8 +46,6 @@ public:
                      const struct heif_encoding_options& options,
                      heif_image_input_class image_class);
 
-  const heif_track_info* get_track_info() const { return m_track_info; }
-
 private:
   uint16_t m_width = 0;
   uint16_t m_height = 0;

@@ -520,6 +520,11 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context*, uint16_t
                                                          heif_track** out_track);
 
 LIBHEIF_API
+struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context*, struct heif_track_info* info,
+                                                               const char* uri,
+                                                               heif_track** out_track);
+
+LIBHEIF_API
 void heif_track_release(heif_track*);
 
 LIBHEIF_API
@@ -547,6 +552,10 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
                                                    const struct heif_image* image,
                                                    struct heif_encoder* encoder,
                                                    const struct heif_encoding_options* options);
+
+LIBHEIF_API
+struct heif_error heif_track_add_metadata(struct heif_track*,
+                                          const uint8_t* data, uint32_t length);
 
 LIBHEIF_API
 int heif_context_number_of_sequence_tracks(const struct heif_context*);

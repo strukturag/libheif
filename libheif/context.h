@@ -193,8 +193,10 @@ public:
 
   void set_sequence_timescale(uint32_t timescale);
 
-  Result<std::shared_ptr<Track>> add_visual_sequence_track(uint16_t width, uint16_t height,
-                                                           heif_track_info*, uint32_t handler_type);
+  Result<std::shared_ptr<class Track_Visual>> add_visual_sequence_track(heif_track_info*, uint32_t handler_type,
+                                                                        uint16_t width, uint16_t height);
+
+  Result<std::shared_ptr<class Track_Metadata>> add_uri_metadata_sequence_track(heif_track_info*, std::string uri);
 
 private:
   std::map<heif_item_id, std::shared_ptr<ImageItem>> m_all_images;

@@ -1165,6 +1165,7 @@ int main(int argc, char** argv)
   bool first_image = true;
 
   heif_track* track = nullptr;
+  heif_track* metadata_track = nullptr;
 
   for (; optind < argc; optind++) {
     std::string input_filename = argv[optind];
@@ -1223,6 +1224,15 @@ int main(int argc, char** argv)
                                              heif_image_get_primary_height(image.get()),
                                              &track_info,
                                              &track);
+
+      heif_context_add_uri_metadata_sequence_track(context.get(),
+                                                   &track_info,
+                                                   "urn:smpte:ul:0123456789abcdef",
+                                                   &metadata_track);
+
+      uint8_t data[]={0x10,0x20,0x02,0x01};
+      heif_track_add_metadata(metadata_track, data, 4);
+
       first_image = false;
     }
 
@@ -1411,6 +1421,7 @@ int main(int argc, char** argv)
   }
 
   heif_track_release(track);
+  heif_track_release(metadata_track);
 
   return 0;
 }

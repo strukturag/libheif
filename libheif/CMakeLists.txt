@@ -137,6 +137,8 @@ set(libheif_sources
         sequences/track.cc
         sequences/track_visual.h
         sequences/track_visual.cc
+        sequences/track_metadata.h
+        sequences/track_metadata.cc
         ${libheif_headers})
 
 add_library(heif ${libheif_sources})

@@ -834,6 +834,18 @@ Error Box::read(BitstreamRange& range, std::shared_ptr<Box>* result, const heif_
       box = std::make_shared<Box_saio>();
       break;
 
+    case fourcc("urim"):
+      box = std::make_shared<Box_URIMetaSampleEntry>();
+      break;
+
+    case fourcc("uri "):
+      box = std::make_shared<Box_uri>();
+      break;
+
+    case fourcc("nmhd"):
+      box = std::make_shared<Box_nmhd>();
+      break;
+
     default:
       box = std::make_shared<Box_other>(hdr.get_short_type());
       break;

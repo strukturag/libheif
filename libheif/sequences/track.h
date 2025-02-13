@@ -108,15 +108,6 @@ public:
 
   bool end_of_sequence_reached() const;
 
-  /*
-  Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
-
-  Error encode_image(std::shared_ptr<HeifPixelImage> image,
-                     struct heif_encoder* encoder,
-                     const struct heif_encoding_options& options,
-                     heif_image_input_class image_class);
-*/
-
   // Compute some parameters after all frames have been encoded (for example: track duration).
   void finalize_track();
 
@@ -157,6 +148,12 @@ protected:
   std::unique_ptr<SampleAuxInfoReader> m_aux_reader_content_ids;
 
   std::shared_ptr<class Box_taic> m_first_taic; // the TAIC of the first chunk
+
+
+  void add_chunk(heif_compression_format format, std::shared_ptr<Box> sample_description_box);
+
+  Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
+                          const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID);
 };
 
 

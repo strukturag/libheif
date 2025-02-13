@@ -24,6 +24,7 @@
 #include "sequences/seq_boxes.h"
 #include "sequences/chunk.h"
 #include "sequences/track_visual.h"
+#include "sequences/track_metadata.h"
 #include "libheif/api_structs.h"
 
 heif_tai_clock_info* heif_tai_clock_info_alloc()
@@ -508,7 +509,7 @@ std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_pt
     case fourcc("vide"):
       return std::make_shared<Track_Visual>(ctx, trak);
     case fourcc("meta"):
-      // TODO return std::make_shared<Track_Metadata>(ctx, trak);
+      return std::make_shared<Track_Metadata>(ctx, trak);
     default:
       return nullptr;
   }
@@ -552,4 +553,96 @@ uint32_t Track::get_timescale() const
 void Track::set_track_duration_in_movie_units(uint64_t total_duration)
 {
   m_tkhd->set_duration(total_duration);
+}
+
+
+void Track::add_chunk(heif_compression_format format, std::shared_ptr<Box> sample_description_box)
+{
+  auto chunk = std::make_shared<Chunk>(m_heif_context, m_id, format);
+  m_chunks.push_back(chunk);
+
+  int chunkIdx = (uint32_t) m_chunks.size();
+  m_stsc->add_chunk(chunkIdx);
+
+
+  // --- add 'taic' when we store timestamps as sample auxiliary information
+
+  if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+    auto taic = std::make_shared<Box_taic>();
+    taic->set_from_tai_clock_info(m_track_info->tai_clock_info);
+    sample_description_box->append_child_box(taic);
+  }
+
+  m_stsd->add_sample_entry(sample_description_box);
+}
+
+
+Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
+                               const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID)
+{
+  size_t data_start = m_heif_context->get_heif_file()->append_mdat_data(raw_data);
+
+  // first sample in chunk? -> write chunk offset
+
+  if (m_stsc->last_chunk_empty()) {
+    // if auxiliary data is interleaved, write it between the chunks
+    m_aux_helper_tai_timestamps->write_interleaved(get_file());
+    m_aux_helper_content_ids->write_interleaved(get_file());
+
+    // TODO
+    assert(data_start < 0xFF000000); // add some headroom for header data
+    m_stco->add_chunk_offset(static_cast<uint32_t>(data_start));
+  }
+
+  m_stsc->increase_samples_in_chunk(1);
+
+  m_stsz->append_sample_size((uint32_t)raw_data.size());
+
+  if (is_sync_sample) {
+    m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
+  }
+
+  m_stts->append_sample_duration(sample_duration);
+
+
+  // --- sample timestamp
+
+  if (m_track_info) {
+    if (m_track_info->with_tai_timestamps != heif_sample_aux_info_presence_none) {
+      if (tai) {
+        std::vector<uint8_t> tai_data = Box_itai::encode_tai_to_bitstream(tai);
+        auto err = m_aux_helper_tai_timestamps->add_sample_info(tai_data);
+        if (err) {
+          return err;
+        }
+      } else if (m_track_info->with_tai_timestamps == heif_sample_aux_info_presence_optional) {
+        m_aux_helper_tai_timestamps->add_nonpresent_sample();
+      } else {
+        return {heif_error_Encoding_error,
+                heif_suberror_Unspecified,
+                "Mandatory TAI timestamp missing"};
+      }
+    }
+
+    if (m_track_info->with_sample_contentid_uuids != heif_sample_aux_info_presence_none) {
+      if (!gimi_contentID.empty()) {
+        auto id = gimi_contentID;
+        const char* id_str = id.c_str();
+        std::vector<uint8_t> id_vector;
+        id_vector.insert(id_vector.begin(), id_str, id_str + id.length() + 1);
+        auto err = m_aux_helper_content_ids->add_sample_info(id_vector);
+        if (err) {
+          return err;
+        }
+      } else if (m_track_info->with_sample_contentid_uuids == heif_sample_aux_info_presence_optional) {
+        m_aux_helper_content_ids->add_nonpresent_sample();
+      } else {
+        return {heif_error_Encoding_error,
+                heif_suberror_Unspecified,
+                "Mandatory ContentID missing"};
+      }
+    }
+  }
+
+  return Error::Ok;
 }

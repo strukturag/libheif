@@ -24,6 +24,7 @@
 #include "file.h"
 #include "sequences/track.h"
 #include "sequences/track_visual.h"
+#include "sequences/track_metadata.h"
 
 #include <array>
 #include <cstring>
@@ -410,7 +411,7 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint
 {
   uint32_t handler_type = fourcc("pict"); // TODO: or "vide"
 
-  Result<std::shared_ptr<Track>> addResult = ctx->context->add_visual_sequence_track(width,height, info, handler_type);
+  Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(info, handler_type, width,height);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }
@@ -425,6 +426,28 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint
 
   return heif_error_ok;
 }
+
+
+struct heif_error heif_context_add_uri_metadata_sequence_track(heif_context* ctx, struct heif_track_info* info,
+                                                               const char* uri,
+                                                               heif_track** out_track)
+{
+  Result<std::shared_ptr<Track_Metadata>> addResult = ctx->context->add_uri_metadata_sequence_track(info, uri);
+  if (addResult.error) {
+    return addResult.error.error_struct(ctx->context.get());
+  }
+
+  if (out_track) {
+    auto* track = new heif_track;
+    track->track = *addResult;
+    track->context = ctx->context;
+
+    *out_track = track;
+  }
+
+  return heif_error_ok;
+}
+
 
 void heif_track_release(heif_track* track)
 {
@@ -523,6 +546,30 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
                                           encoder,
                                           options,
                                           heif_image_input_class_normal);
+  if (error.error_code) {
+    return error.error_struct(track->context.get());
+  }
+
+  return heif_error_ok;
+}
+
+
+struct heif_error heif_track_add_metadata(struct heif_track* track,
+                                          const uint8_t* data, uint32_t length)
+{
+  auto metadata_track = std::dynamic_pointer_cast<Track_Metadata>(track->track);
+  if (!metadata_track) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Cannot save metadata in a non-metadata track."};
+  }
+
+  Track_Metadata::Metadata metadata;
+  metadata.raw_metadata.resize(length);
+  memcpy(metadata.raw_metadata.data(), data, length);
+  metadata.duration = 10;
+
+  auto error = metadata_track->write_raw_metadata(metadata);
   if (error.error_code) {
     return error.error_struct(track->context.get());
   }

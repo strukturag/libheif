@@ -34,6 +34,7 @@
 #include <codecs/hevc_boxes.h>
 #include "sequences/track.h"
 #include "sequences/track_visual.h"
+#include "sequences/track_metadata.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -1724,13 +1725,25 @@ uint64_t HeifContext::get_sequence_duration() const
 }
 
 
-Result<std::shared_ptr<Track>> HeifContext::add_visual_sequence_track(uint16_t width, uint16_t height,
-                                                                      heif_track_info* info,
-                                                                      uint32_t handler_type)
+Result<std::shared_ptr<Track_Visual>> HeifContext::add_visual_sequence_track(heif_track_info* info,
+                                                                             uint32_t handler_type,
+                                                                             uint16_t width, uint16_t height)
 {
   m_heif_file->init_for_sequence();
 
-  std::shared_ptr<Track> trak = std::make_shared<Track_Visual>(this, 0, width, height, info, handler_type);
+  std::shared_ptr<Track_Visual> trak = std::make_shared<Track_Visual>(this, 0, width, height, info, handler_type);
+  m_tracks.insert({trak->get_id(), trak});
+
+  return trak;
+}
+
+
+Result<std::shared_ptr<class Track_Metadata>> HeifContext::add_uri_metadata_sequence_track(heif_track_info* info,
+                                                                                           std::string uri)
+{
+  m_heif_file->init_for_sequence();
+
+  std::shared_ptr<Track_Metadata> trak = std::make_shared<Track_Metadata>(this, 0, uri, info);
   m_tracks.insert({trak->get_id(), trak});
 
   return trak;

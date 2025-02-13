@@ -227,6 +227,24 @@ private:
 };
 
 
+// Null Media Header
+class Box_nmhd : public FullBox {
+public:
+  Box_nmhd()
+  {
+    set_short_type(fourcc("nmhd"));
+    set_flags(1);
+  }
+
+  std::string dump(Indent&) const override;
+
+  Error write(StreamWriter& writer) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits*) override;
+};
+
+
 // Sample Table Box (container)
 class Box_stbl : public Box_container {
 public:
@@ -246,7 +264,7 @@ public:
 
   Error write(StreamWriter& writer) const override;
 
-  std::shared_ptr<const class Box_VisualSampleEntry> get_sample_entry(size_t idx) const
+  std::shared_ptr<const class Box> get_sample_entry(size_t idx) const
   {
     if (idx >= m_sample_entries.size()) {
       return nullptr;
@@ -255,7 +273,7 @@ public:
     }
   }
 
-  void add_sample_entry(std::shared_ptr<class Box_VisualSampleEntry> entry)
+  void add_sample_entry(std::shared_ptr<class Box> entry)
   {
     m_sample_entries.push_back(entry);
   }
@@ -264,7 +282,7 @@ protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 
 private:
-  std::vector<std::shared_ptr<class Box_VisualSampleEntry>> m_sample_entries;
+  std::vector<std::shared_ptr<class Box>> m_sample_entries;
 };
 
 
@@ -325,6 +343,12 @@ public:
   void add_chunk(uint32_t description_index);
 
   void increase_samples_in_chunk(uint32_t nFrames);
+
+  bool last_chunk_empty() const {
+    assert(!m_entries.empty());
+
+    return m_entries.back().samples_per_chunk == 0;
+  }
 
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
@@ -495,6 +519,50 @@ protected:
 
 private:
   VisualSampleEntry m_visualSampleEntry;
+};
+
+
+class Box_URIMetaSampleEntry : public Box {
+public:
+  Box_URIMetaSampleEntry()
+  {
+    set_short_type(fourcc("urim"));
+  }
+
+  Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+private:
+  // from SampleEntry
+  //const unsigned int(8)[6] reserved = 0;
+  uint16_t data_reference_index;
+};
+
+
+class Box_uri : public FullBox {
+public:
+  Box_uri()
+  {
+    set_short_type(fourcc("uri "));
+  }
+
+  void set_uri(std::string uri) { m_uri = uri; }
+
+  std::string get_uri() const { return m_uri; }
+
+  Error write(StreamWriter& writer) const override;
+
+  std::string dump(Indent&) const override;
+
+protected:
+  Error parse(BitstreamRange& range, const heif_security_limits* limits) override;
+
+private:
+  std::string m_uri;
 };
 
 

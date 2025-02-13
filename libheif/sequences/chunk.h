@@ -34,7 +34,7 @@ class Chunk
 public:
   Chunk(HeifContext* ctx, uint32_t track_id, heif_compression_format format);
 
-  Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box_VisualSampleEntry> sample_description_box,
+  Chunk(HeifContext* ctx, uint32_t track_id, std::shared_ptr<const Box> sample_description_box,
         uint32_t first_sample, uint32_t num_samples, uint64_t file_offset, const std::shared_ptr<const Box_stsz>& sample_sizes);
 
   virtual ~Chunk() = default;
