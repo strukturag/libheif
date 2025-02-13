@@ -137,6 +137,7 @@ protected:
 
   std::shared_ptr<class Box_moov> m_moov;
   std::shared_ptr<class Box_tkhd> m_tkhd;
+  std::shared_ptr<class Box_minf> m_minf;
   std::shared_ptr<class Box_mdhd> m_mdhd;
   std::shared_ptr<class Box_hdlr> m_hdlr;
   std::shared_ptr<class Box_stbl> m_stbl;

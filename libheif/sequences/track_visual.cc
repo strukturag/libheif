@@ -58,7 +58,10 @@ Track_Visual::Track_Visual(HeifContext* ctx, uint32_t track_id, uint16_t width, 
     : Track(ctx, track_id, info, handler_type)
 {
     m_tkhd->set_resolution(width, height);
-    m_hdlr->set_handler_type(fourcc("pict"));
+    m_hdlr->set_handler_type(handler_type);
+
+  auto vmhd = std::make_shared<Box_vmhd>();
+  m_minf->append_child_box(vmhd);
 }
 
 

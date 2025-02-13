@@ -242,12 +242,12 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
   m_handler_type = hdlr->get_handler_type();
 
-  auto minf = mdia->get_child_box<Box_minf>();
-  if (!minf) {
+  m_minf = mdia->get_child_box<Box_minf>();
+  if (!m_minf) {
     return;
   }
 
-  auto stbl = minf->get_child_box<Box_stbl>();
+  auto stbl = m_minf->get_child_box<Box_stbl>();
   if (!stbl) {
     return;
   }
@@ -422,14 +422,13 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_
   mdia->append_child_box(m_hdlr);
   m_hdlr->set_handler_type(handler_type);
 
-  auto minf = std::make_shared<Box_minf>();
-  mdia->append_child_box(minf);
+  m_minf = std::make_shared<Box_minf>();
+  mdia->append_child_box(m_minf);
 
-  auto vmhd = std::make_shared<Box_vmhd>();
-  minf->append_child_box(vmhd);
+  // vmhd is added in Track_Visual
 
   m_stbl = std::make_shared<Box_stbl>();
-  minf->append_child_box(m_stbl);
+  m_minf->append_child_box(m_stbl);
 
   m_stsd = std::make_shared<Box_stsd>();
   m_stbl->append_child_box(m_stsd);
