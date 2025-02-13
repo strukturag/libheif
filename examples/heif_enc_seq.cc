@@ -1223,6 +1223,7 @@ int main(int argc, char** argv)
                                              heif_image_get_primary_width(image.get()),
                                              heif_image_get_primary_height(image.get()),
                                              &track_info,
+                                             heif_track_type_video,
                                              &track);
 
       heif_context_add_uri_metadata_sequence_track(context.get(),

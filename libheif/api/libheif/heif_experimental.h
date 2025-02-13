@@ -476,9 +476,6 @@ void heif_context_set_sequence_timescale(heif_context*, uint32_t);
 LIBHEIF_API
 uint64_t heif_context_get_sequence_duration(heif_context*);
 
-LIBHEIF_API
-struct heif_error heif_context_get_sequence_resolution(heif_context*, uint32_t track_id, uint16_t* out_width, uint16_t* out_height);
-
 struct heif_track;
 
 enum heif_sample_aux_info_presence {
@@ -514,9 +511,19 @@ struct heif_track_info* heif_track_info_alloc();
 LIBHEIF_API
 void heif_track_info_release(struct heif_track_info*);
 
+enum heif_track_type {
+  heif_track_type_unknown = 0,
+  heif_track_type_video = heif_fourcc('v', 'i', 'd', 'e'),
+  heif_track_type_image_sequence = heif_fourcc('p', 'i', 'c', 't'),
+  heif_track_type_metadata = heif_fourcc('m', 'e', 't', 'a')
+};
+
+
+// 'track_type' has to be heif_track_type_video or heif_track_type_image_sequence
 LIBHEIF_API
 struct heif_error heif_context_add_visual_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height,
                                                          struct heif_track_info* info,
+                                                         enum heif_track_type track_type,
                                                          heif_track** out_track);
 
 LIBHEIF_API
@@ -569,6 +576,15 @@ void heif_context_get_track_ids(const struct heif_context*, uint32_t* out_track_
 // Use id=0 for the first visual track.
 LIBHEIF_API
 struct heif_track* heif_context_get_track(const struct heif_context*, int32_t id);
+
+LIBHEIF_API
+uint32_t heif_track_get_handler_type(struct heif_track*);
+
+LIBHEIF_API
+struct heif_error heif_track_get_image_resolution(heif_track*, uint16_t* out_width, uint16_t* out_height);
+
+LIBHEIF_API
+enum heif_track_type heif_track_get_track_type(struct heif_track*);
 
 // The passed taic structure will be filled by this function. The version field has to be set before this.
 // The function returns 0 if there is no taic.

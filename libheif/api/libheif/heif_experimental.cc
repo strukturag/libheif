@@ -382,14 +382,9 @@ uint64_t heif_context_get_sequence_duration(heif_context* ctx)
   return ctx->context->get_sequence_duration();
 }
 
-struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32_t trackId, uint16_t* out_width, uint16_t* out_height)
+struct heif_error heif_track_get_image_resolution(heif_track* track_ptr, uint16_t* out_width, uint16_t* out_height)
 {
-  auto trackResult = ctx->context->get_track(trackId);
-  if (trackResult.error) {
-    return trackResult.error.error_struct(ctx->context.get());
-  }
-
-  auto track = *trackResult;
+  auto track = track_ptr->track;
 
   auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track);
   if (!visual_track) {
@@ -407,9 +402,17 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
 
 struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
                                                          struct heif_track_info* info,
+                                                         enum heif_track_type track_type,
                                                          heif_track** out_track)
 {
-  uint32_t handler_type = fourcc("pict"); // TODO: or "vide"
+  if (track_type != heif_track_type_video &&
+      track_type != heif_track_type_image_sequence) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "visual track has to be of type video or image sequence"};
+  }
+
+  uint32_t handler_type = static_cast<uint32_t>(track_type);
 
   Result<std::shared_ptr<Track_Visual>> addResult = ctx->context->add_visual_sequence_track(info, handler_type, width,height);
   if (addResult.error) {
@@ -592,7 +595,7 @@ int heif_context_number_of_sequence_tracks(const struct heif_context* ctx)
 void heif_context_get_track_ids(const struct heif_context* ctx, uint32_t* out_track_id_array)
 {
   std::vector<uint32_t> IDs;
-  ctx->context->get_track_IDs();
+  IDs = ctx->context->get_track_IDs();
 
   for (uint32_t id : IDs) {
     *out_track_id_array++ = id;
@@ -613,6 +616,27 @@ struct heif_track* heif_context_get_track(const struct heif_context* ctx, int32_
 
   return track;
 }
+
+uint32_t heif_track_get_handler_type(struct heif_track* track)
+{
+  return track->track->get_handler();
+}
+
+enum heif_track_type heif_track_get_track_type(struct heif_track* track)
+{
+  uint32_t handler_type = track->track->get_handler();
+
+  switch (handler_type) {
+    case heif_track_type_video:
+    case heif_track_type_image_sequence:
+    case heif_track_type_metadata:
+      return static_cast<heif_track_type>(handler_type);
+
+    default:
+      return heif_track_type_unknown;
+  }
+}
+
 
 int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, struct heif_tai_clock_info* taic)
 {

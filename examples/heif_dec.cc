@@ -71,6 +71,18 @@
 
 #define UNUSED(x) (void)x
 
+static std::string fourcc_to_string(uint32_t fourcc)
+{
+  char s[5];
+  s[0] = static_cast<char>((fourcc>>24) & 0xFF);
+  s[1] = static_cast<char>((fourcc>>16) & 0xFF);
+  s[2] = static_cast<char>((fourcc>>8) & 0xFF);
+  s[3] = static_cast<char>((fourcc) & 0xFF);
+  s[4]=0;
+
+  return s;
+}
+
 static void show_help(const char* argv0)
 {
   std::cerr << " " << argv0 << "  libheif version: " << heif_get_version() << "\n"
@@ -821,6 +833,26 @@ int main(int argc, char** argv)
     if (!heif_context_has_sequence(ctx)) {
       std::cerr << "File contains no image sequence\n";
       return 1;
+    }
+
+    int nTracks = heif_context_number_of_sequence_tracks(ctx);
+    std::cout << "number of tracks: " << nTracks << "\n";
+
+    std::vector<uint32_t> track_ids(nTracks);
+    heif_context_get_track_ids(ctx, track_ids.data());
+
+    for (uint32_t id : track_ids) {
+      heif_track* track = heif_context_get_track(ctx, id);
+      std::cout << "#" << id << " : " << fourcc_to_string(heif_track_get_handler_type(track));
+
+      if (heif_track_get_track_type(track) == heif_track_type_image_sequence ||
+          heif_track_get_track_type(track) == heif_track_type_video) {
+        uint16_t w,h;
+        heif_track_get_image_resolution(track, &w, &h);
+        std::cout << " " << w << "x" << h;
+      }
+
+      std::cout << "\n";
     }
 
     std::unique_ptr<heif_decoding_options, void(*)(heif_decoding_options*)> decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
