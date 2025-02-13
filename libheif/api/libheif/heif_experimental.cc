@@ -291,12 +291,11 @@ int heif_context_has_sequence(heif_context* ctx)
 extern void fill_default_decoding_options(heif_decoding_options& options);
 
 
-struct heif_error heif_context_decode_next_sequence_image(const struct heif_context* ctx,
-                                                          uint32_t track_id, // use 0 for first visual track
-                                                          struct heif_image** out_img,
-                                                          enum heif_colorspace colorspace,
-                                                          enum heif_chroma chroma,
-                                                          const struct heif_decoding_options* options)
+struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
+                                               struct heif_image** out_img,
+                                               enum heif_colorspace colorspace,
+                                               enum heif_chroma chroma,
+                                               const struct heif_decoding_options* options)
 {
   if (out_img == nullptr) {
     return {heif_error_Usage_error, heif_suberror_Null_pointer_argument, "Output image pointer is NULL."};
@@ -304,12 +303,7 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   // --- get the visual track
 
-  auto trackResult = ctx->context->get_track(track_id);
-  if (trackResult.error) {
-    return trackResult.error.error_struct(ctx->context.get());
-  }
-
-  auto track = *trackResult;
+  auto track = track_ptr->track;
 
   // --- reached end of sequence ?
 
@@ -337,7 +331,7 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   auto decodingResult = visual_track->decode_next_image_sample(*opts);
   if (!decodingResult) {
-    return decodingResult.error.error_struct(ctx->context.get());
+    return decodingResult.error.error_struct(track_ptr->context.get());
   }
 
   std::shared_ptr<HeifPixelImage> img = *decodingResult;
@@ -345,9 +339,9 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
 
   // --- convert to output colorspace
 
-  auto conversion_result = ctx->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
+  auto conversion_result = track_ptr->context->convert_to_output_colorspace(img, colorspace, chroma, *opts);
   if (conversion_result.error) {
-    return conversion_result.error.error_struct(ctx->context.get());
+    return conversion_result.error.error_struct(track_ptr->context.get());
   }
   else {
     img = *conversion_result;

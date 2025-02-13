@@ -873,22 +873,21 @@ int main(int argc, char** argv)
       std::cout << "taic: " << taic.time_uncertainty << " / " << taic.clock_resolution << " / "
                 << taic.clock_drift_rate << " / " << int(taic.clock_type) << "\n";
     }
-    heif_track_release(track);
 
     for (int i=0; ;i++) {
       heif_image* out_image = nullptr;
       int bit_depth = 8; // TODO
-      err = heif_context_decode_next_sequence_image(ctx, 0, &out_image,
-                                                    encoder->colorspace(false),
-                                                    encoder->chroma(false, bit_depth),
-                                                    decode_options.get());
+      err = heif_track_decode_next_image(track, &out_image,
+                                         encoder->colorspace(false),
+                                         encoder->chroma(false, bit_depth),
+                                         decode_options.get());
       if (err.code) {
         std::cerr << err.message << "\n";
         return 1;
       }
 
       if (out_image == nullptr) {
-        return 0;
+        break;
       }
 
       std::cout << "sample duration " << heif_image_get_sample_duration(out_image) << "\n";
@@ -924,6 +923,8 @@ int main(int argc, char** argv)
       }
       heif_image_release(out_image);
     }
+
+    heif_track_release(track);
 
     return 0;
   }

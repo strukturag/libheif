@@ -455,14 +455,6 @@ LIBHEIF_API
 int heif_context_has_sequence(heif_context*);
 
 LIBHEIF_API
-struct heif_error heif_context_decode_next_sequence_image(const struct heif_context*,
-                                                          uint32_t track_id, // use 0 for first visual track
-                                                          struct heif_image** out_img,
-                                                          enum heif_colorspace colorspace,
-                                                          enum heif_chroma chroma,
-                                                          const struct heif_decoding_options* options);
-
-LIBHEIF_API
 uint32_t heif_image_get_sample_duration(heif_image*);
 
 LIBHEIF_API
@@ -553,6 +545,13 @@ const char* heif_track_get_gimi_content_id(struct heif_track*);
 
 LIBHEIF_API
 void heif_gimi_content_id_release(const char*);
+
+LIBHEIF_API
+struct heif_error heif_track_decode_next_image(struct heif_track*,
+                                               struct heif_image** out_img,
+                                               enum heif_colorspace colorspace,
+                                               enum heif_chroma chroma,
+                                               const struct heif_decoding_options* options);
 
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,
