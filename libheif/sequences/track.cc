@@ -23,6 +23,7 @@
 #include "context.h"
 #include "sequences/seq_boxes.h"
 #include "sequences/chunk.h"
+#include "sequences/track_visual.h"
 #include "libheif/api_structs.h"
 
 heif_tai_clock_info* heif_tai_clock_info_alloc()
@@ -251,18 +252,18 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
     return;
   }
 
-  auto stsd = stbl->get_child_box<Box_stsd>();
-  if (!stsd) {
+  m_stsd = stbl->get_child_box<Box_stsd>();
+  if (!m_stsd) {
     return;
   }
 
-  auto stsc = stbl->get_child_box<Box_stsc>();
-  if (!stsc) {
+  m_stsc = stbl->get_child_box<Box_stsc>();
+  if (!m_stsc) {
     return;
   }
 
-  auto stco = stbl->get_child_box<Box_stco>();
-  if (!stco) {
+  m_stco = stbl->get_child_box<Box_stco>();
+  if (!m_stco) {
     return;
   }
 
@@ -273,20 +274,20 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
   m_stts = stbl->get_child_box<Box_stts>();
 
-  const std::vector<uint32_t>& chunk_offsets = stco->get_offsets();
+  const std::vector<uint32_t>& chunk_offsets = m_stco->get_offsets();
   assert(chunk_offsets.size() <= (size_t) std::numeric_limits<uint32_t>::max()); // There cannot be more than uint32_t chunks.
 
   uint32_t current_sample_idx = 0;
 
   for (size_t chunk_idx = 0; chunk_idx < chunk_offsets.size(); chunk_idx++) {
-    auto* s2c = stsc->get_chunk(static_cast<uint32_t>(chunk_idx + 1));
+    auto* s2c = m_stsc->get_chunk(static_cast<uint32_t>(chunk_idx + 1));
     if (!s2c) {
       return;
     }
 
     Box_stsc::SampleToChunk sampleToChunk = *s2c;
 
-    auto sample_description = stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
+    auto sample_description = m_stsd->get_sample_entry(sampleToChunk.sample_description_index - 1);
     if (!sample_description) {
       return;
     }
@@ -300,7 +301,7 @@ Track::Track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak_box)
 
     auto chunk = std::make_shared<Chunk>(ctx, m_id, sample_description,
                                          current_sample_idx, sampleToChunk.samples_per_chunk,
-                                         stco->get_offsets()[chunk_idx],
+                                         m_stco->get_offsets()[chunk_idx],
                                          m_stsz);
 
     m_chunks.push_back(chunk);
@@ -379,7 +380,7 @@ Track::~Track()
 }
 
 
-Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info)
+Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_t handler_type)
 {
   m_heif_context = ctx;
 
@@ -419,7 +420,7 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info)
 
   m_hdlr = std::make_shared<Box_hdlr>();
   mdia->append_child_box(m_hdlr);
-  m_hdlr->set_handler_type(fourcc("pict")); // TODO: adapt to track type
+  m_hdlr->set_handler_type(handler_type);
 
   auto minf = std::make_shared<Box_minf>();
   mdia->append_child_box(minf);
@@ -487,6 +488,30 @@ Track::Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info)
 
       trak->append_child_box(meta_box);
     }
+  }
+}
+
+
+std::shared_ptr<Track> Track::alloc_track(HeifContext* ctx, const std::shared_ptr<Box_trak>& trak)
+{
+  auto mdia = trak->get_child_box<Box_mdia>();
+  if (!mdia) {
+    return nullptr;
+  }
+
+  auto hdlr = mdia->get_child_box<Box_hdlr>();
+  if (!mdia) {
+    return nullptr;
+  }
+
+  switch (hdlr->get_handler_type()) {
+    case fourcc("pict"):
+    case fourcc("vide"):
+      return std::make_shared<Track_Visual>(ctx, trak);
+    case fourcc("meta"):
+      // TODO return std::make_shared<Track_Metadata>(ctx, trak);
+    default:
+      return nullptr;
   }
 }
 

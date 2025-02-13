@@ -80,11 +80,14 @@ class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info);
+  Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info, uint32_t handler_type);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 
   virtual ~Track();
+
+  // Allocate a Track of the correct sub-class (visual or metadata)
+  static std::shared_ptr<Track> alloc_track(HeifContext*, const std::shared_ptr<Box_trak>&);
 
   heif_item_id get_id() const { return m_id; }
 

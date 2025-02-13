@@ -408,7 +408,9 @@ struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint
                                                          struct heif_track_info* info,
                                                          heif_track** out_track)
 {
-  Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height, info);
+  uint32_t handler_type = fourcc("pict"); // TODO: or "vide"
+
+  Result<std::shared_ptr<Track>> addResult = ctx->context->add_visual_sequence_track(width,height, info, handler_type);
   if (addResult.error) {
     return addResult.error.error_struct(ctx->context.get());
   }

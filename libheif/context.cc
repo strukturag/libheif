@@ -1636,7 +1636,7 @@ Error HeifContext::interpret_heif_file_sequences()
 
   auto tracks = moov->get_child_boxes<Box_trak>();
   for (const auto& track_box : tracks) {
-    auto track = std::make_shared<Track>(this, track_box);
+    auto track = Track::alloc_track(this, track_box);
     m_tracks.insert({track->get_id(), track});
 
     if (track->is_visual_track()) {
@@ -1724,12 +1724,13 @@ uint64_t HeifContext::get_sequence_duration() const
 }
 
 
-Result<std::shared_ptr<Track>> HeifContext::add_sequence_track(uint16_t width, uint16_t height,
-                                                               heif_track_info* info)
+Result<std::shared_ptr<Track>> HeifContext::add_visual_sequence_track(uint16_t width, uint16_t height,
+                                                                      heif_track_info* info,
+                                                                      uint32_t handler_type)
 {
   m_heif_file->init_for_sequence();
 
-  std::shared_ptr<Track> trak = std::make_shared<Track_Visual>(this, 0, width, height, info);
+  std::shared_ptr<Track> trak = std::make_shared<Track_Visual>(this, 0, width, height, info, handler_type);
   m_tracks.insert({trak->get_id(), trak});
 
   return trak;
