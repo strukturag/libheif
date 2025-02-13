@@ -442,7 +442,7 @@ LIBHEIF_API
 heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc();
 
 LIBHEIF_API
-void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet*);
+void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet*);
 
 // version field has to be set in both structs
 LIBHEIF_API
@@ -555,7 +555,9 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
 
 LIBHEIF_API
 struct heif_error heif_track_add_metadata(struct heif_track*,
-                                          const uint8_t* data, uint32_t length);
+                                          const uint8_t* data, uint32_t length,
+                                          const heif_tai_timestamp_packet* timestamp,
+                                          const char* gimi_contentID);
 
 LIBHEIF_API
 int heif_context_number_of_sequence_tracks(const struct heif_context*);

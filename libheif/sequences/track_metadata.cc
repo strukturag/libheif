@@ -151,8 +151,11 @@ Error Track_Metadata::write_raw_metadata(const Metadata& metadata)
     set_sample_description_box(sample_description_box);
   }
 
-  write_sample_data(metadata.raw_metadata, metadata.duration, true,
-                    metadata.timestamp, metadata.gimi_contentID);
+  Error err = write_sample_data(metadata.raw_metadata, metadata.duration, true,
+                                metadata.timestamp, metadata.gimi_contentID);
+  if (err) {
+    return err;
+  }
 
   return Error::Ok;
 }

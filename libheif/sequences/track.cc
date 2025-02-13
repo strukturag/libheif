@@ -524,7 +524,7 @@ bool Track::is_visual_track() const
 
 bool Track::end_of_sequence_reached() const
 {
-  return (m_next_sample_to_be_decoded > m_chunks.back()->last_sample_number());
+  return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());
 }
 
 
@@ -601,7 +601,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
   m_stsz->append_sample_size((uint32_t)raw_data.size());
 
   if (is_sync_sample) {
-    m_stss->add_sync_sample(m_next_sample_to_be_decoded + 1);
+    m_stss->add_sync_sample(m_next_sample_to_be_processed + 1);
   }
 
   m_stts->append_sample_duration(sample_duration);
@@ -645,6 +645,8 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
       }
     }
   }
+
+  m_next_sample_to_be_processed++;
 
   return Error::Ok;
 }

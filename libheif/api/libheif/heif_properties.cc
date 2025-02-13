@@ -576,7 +576,7 @@ heif_tai_timestamp_packet* heif_tai_timestamp_packet_alloc()
   return tai;
 }
 
-void heif_tai_timestamp_packet_release(heif_tai_timestamp_packet* tai)
+void heif_tai_timestamp_packet_release(const heif_tai_timestamp_packet* tai)
 {
   delete tai;
 }

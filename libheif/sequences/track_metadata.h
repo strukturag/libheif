@@ -41,7 +41,7 @@ public:
     std::vector<uint8_t> raw_metadata;
     uint32_t duration = 0;
 
-    heif_tai_timestamp_packet* timestamp = nullptr;
+    const heif_tai_timestamp_packet* timestamp = nullptr;
     std::string gimi_contentID;
   };
 

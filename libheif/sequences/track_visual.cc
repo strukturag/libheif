@@ -78,7 +78,7 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
                  "End of sequence"};
   }
 
-  while (m_next_sample_to_be_decoded > m_chunks[m_current_chunk]->last_sample_number()) {
+  while (m_next_sample_to_be_processed > m_chunks[m_current_chunk]->last_sample_number()) {
     m_current_chunk++;
 
     if (m_current_chunk > m_chunks.size()) {
@@ -93,24 +93,24 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
   auto decoder = chunk->get_decoder();
   assert(decoder);
 
-  decoder->set_data_extent(chunk->get_data_extent_for_sample(m_next_sample_to_be_decoded));
+  decoder->set_data_extent(chunk->get_data_extent_for_sample(m_next_sample_to_be_processed));
 
   Result<std::shared_ptr<HeifPixelImage>> decodingResult = decoder->decode_single_frame_from_compressed_data(options);
   if (decodingResult.error) {
-    m_next_sample_to_be_decoded++;
+    m_next_sample_to_be_processed++;
     return decodingResult.error;
   }
 
   auto image = decodingResult.value;
 
   if (m_stts) {
-    image->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_decoded));
+    image->set_sample_duration(m_stts->get_sample_duration(m_next_sample_to_be_processed));
   }
 
   // --- read sample auxiliary data
 
   if (m_aux_reader_content_ids) {
-    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), m_next_sample_to_be_decoded);
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
     if (readResult.error) {
       return readResult.error;
     }
@@ -124,7 +124,7 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
   }
 
   if (m_aux_reader_tai_timestamps) {
-    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_decoded);
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
     if (readResult.error) {
       return readResult.error;
     }
@@ -137,7 +137,7 @@ Result<std::shared_ptr<HeifPixelImage>> Track_Visual::decode_next_image_sample(c
     image->set_tai_timestamp(&resultTai.value);
   }
 
-  m_next_sample_to_be_decoded++;
+  m_next_sample_to_be_processed++;
 
   return image;
 }

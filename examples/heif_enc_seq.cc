@@ -1209,9 +1209,9 @@ int main(int argc, char** argv)
       track_info.version = 1;
       track_info.timescale = 90000;
       track_info.write_aux_info_interleaved = true;
-      track_info.with_tai_timestamps = heif_sample_aux_info_presence_mandatory;
+      track_info.with_tai_timestamps = heif_sample_aux_info_presence_optional;
       track_info.tai_clock_info = &taic;
-      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_mandatory;
+      track_info.with_sample_contentid_uuids = heif_sample_aux_info_presence_optional;
 
       track_info.with_gimi_track_contentID = true;
       std::string track_id{"track-ContentID-test"};
@@ -1230,8 +1230,14 @@ int main(int argc, char** argv)
                                                    "urn:smpte:ul:0123456789abcdef",
                                                    &metadata_track);
 
-      uint8_t data[]={0x10,0x20,0x02,0x01};
-      heif_track_add_metadata(metadata_track, data, 4);
+      for (int i=0;i<5;i++) {
+        uint8_t data[] = {0x10, 0x20, 0x02, 0x01};
+        heif_error err = heif_track_add_metadata(metadata_track, data, 4, nullptr, nullptr);
+        if (err.code) {
+          std::cerr << "error: " << err.message << "\n";
+          exit(1);
+        }
+      }
 
       first_image = false;
     }

@@ -122,7 +122,7 @@ protected:
 
   uint32_t m_num_samples = 0;
   uint32_t m_current_chunk = 0;
-  uint32_t m_next_sample_to_be_decoded = 0;
+  uint32_t m_next_sample_to_be_processed = 0;
 
   std::vector<std::shared_ptr<Chunk>> m_chunks;
 
@@ -150,10 +150,19 @@ protected:
   std::shared_ptr<class Box_taic> m_first_taic; // the TAIC of the first chunk
 
 
+  // --- Helper functions for writing samples.
+
+  // Call when we begin a new chunk of samples, e.g. because the compression format changed
   void add_chunk(heif_compression_format format);
 
+  // Call to set the sample_description_box for the last added chunk.
+  // Has to be called when we call add_chunk().
+  // It is not merged with add_chunk() because the sample_description_box may need information from the
+  // first encoded frame.
   void set_sample_description_box(std::shared_ptr<Box> sample_description_box);
 
+  // Write the actual sample data. `tai` may be null and `gimi_contentID` may be empty.
+  // In these cases, no timestamp or no contentID will be written, respectively.
   Error write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sample_duration, bool is_sync_sample,
                           const heif_tai_timestamp_packet* tai, const std::string& gimi_contentID);
 };
