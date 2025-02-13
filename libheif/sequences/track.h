@@ -80,8 +80,7 @@ class Track : public ErrorBuffer {
 public:
   //Track(HeifContext* ctx);
 
-  Track(HeifContext* ctx, uint32_t track_id, uint16_t width, uint16_t height,
-        heif_track_info* info);
+  Track(HeifContext* ctx, uint32_t track_id, heif_track_info* info);
 
   Track(HeifContext* ctx, const std::shared_ptr<Box_trak>&); // when reading the file
 
@@ -95,10 +94,6 @@ public:
 
   bool is_visual_track() const;
 
-  uint16_t get_width() const { return m_width; }
-
-  uint16_t get_height() const { return m_height; }
-
   uint64_t get_duration_in_media_units() const;
 
   uint32_t get_timescale() const;
@@ -110,24 +105,24 @@ public:
 
   bool end_of_sequence_reached() const;
 
+  /*
   Result<std::shared_ptr<HeifPixelImage>> decode_next_image_sample(const struct heif_decoding_options& options);
 
   Error encode_image(std::shared_ptr<HeifPixelImage> image,
                      struct heif_encoder* encoder,
                      const struct heif_encoding_options& options,
                      heif_image_input_class image_class);
+*/
 
   // Compute some parameters after all frames have been encoded (for example: track duration).
   void finalize_track();
 
   const heif_track_info* get_track_info() const { return m_track_info; }
 
-private:
+protected:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
   uint32_t m_handler_type = 0;
-  uint16_t m_width = 0;
-  uint16_t m_height = 0;
 
   heif_track_info* m_track_info = nullptr;
 
@@ -140,6 +135,7 @@ private:
   std::shared_ptr<class Box_moov> m_moov;
   std::shared_ptr<class Box_tkhd> m_tkhd;
   std::shared_ptr<class Box_mdhd> m_mdhd;
+  std::shared_ptr<class Box_hdlr> m_hdlr;
   std::shared_ptr<class Box_stbl> m_stbl;
   std::shared_ptr<class Box_stsd> m_stsd;
   std::shared_ptr<class Box_stsc> m_stsc;

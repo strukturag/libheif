@@ -22,8 +22,11 @@
 #define LIBHEIF_COMMON_UTILS_H
 
 #include <cinttypes>
-#include "libheif/heif.h"
 #include <string>
+#include <vector>
+
+#include "libheif/heif.h"
+#include "error.h"
 
 #ifdef _MSC_VER
 #define MAYBE_UNUSED
@@ -97,5 +100,7 @@ inline uint8_t clip_f_u8(float fx)
   if (x > 255) return 255;
   return static_cast<uint8_t>(x);
 }
+
+Result<std::string> vector_to_string(const std::vector<uint8_t>& vec);
 
 #endif //LIBHEIF_COMMON_UTILS_H

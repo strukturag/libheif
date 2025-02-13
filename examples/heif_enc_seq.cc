@@ -1218,11 +1218,11 @@ int main(int argc, char** argv)
 
       heif_context_set_sequence_timescale(context.get(), 30);
 
-      heif_context_add_sequence_track(context.get(),
-                                      heif_image_get_primary_width(image.get()),
-                                      heif_image_get_primary_height(image.get()),
-                                      &track_info,
-                                      &track);
+      heif_context_add_visual_sequence_track(context.get(),
+                                             heif_image_get_primary_width(image.get()),
+                                             heif_image_get_primary_height(image.get()),
+                                             &track_info,
+                                             &track);
       first_image = false;
     }
 

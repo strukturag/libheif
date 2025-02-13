@@ -33,6 +33,7 @@
 #include "image-items/image_item.h"
 #include <codecs/hevc_boxes.h>
 #include "sequences/track.h"
+#include "sequences/track_visual.h"
 
 #if ENABLE_PARALLEL_TILE_DECODING
 #include <future>
@@ -1728,7 +1729,7 @@ Result<std::shared_ptr<Track>> HeifContext::add_sequence_track(uint16_t width, u
 {
   m_heif_file->init_for_sequence();
 
-  auto trak = std::make_shared<Track>(this, 0, width, height, info);
+  std::shared_ptr<Track> trak = std::make_shared<Track_Visual>(this, 0, width, height, info);
   m_tracks.insert({trak->get_id(), trak});
 
   return trak;

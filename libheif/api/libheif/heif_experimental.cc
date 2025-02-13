@@ -22,13 +22,14 @@
 #include "context.h"
 #include "api_structs.h"
 #include "file.h"
+#include "sequences/track.h"
+#include "sequences/track_visual.h"
 
 #include <array>
 #include <cstring>
 #include <memory>
 #include <vector>
 #include <string>
-#include "sequences/track.h"
 
 
 struct heif_property_camera_intrinsic_matrix
@@ -326,7 +327,14 @@ struct heif_error heif_context_decode_next_sequence_image(const struct heif_cont
     opts = &default_options;
   }
 
-  auto decodingResult = track->decode_next_image_sample(*opts);
+  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track);
+  if (!visual_track) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Cannot get image from non-visual track."};
+  }
+
+  auto decodingResult = visual_track->decode_next_image_sample(*opts);
   if (!decodingResult) {
     return decodingResult.error.error_struct(ctx->context.get());
   }
@@ -382,16 +390,23 @@ struct heif_error heif_context_get_sequence_resolution(heif_context* ctx, uint32
 
   auto track = *trackResult;
 
-  if (out_width) *out_width = track->get_width();
-  if (out_height) *out_height = track->get_height();
+  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track);
+  if (!visual_track) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Cannot get resolution of non-visual track."};
+  }
+
+  if (out_width) *out_width = visual_track->get_width();
+  if (out_height) *out_height = visual_track->get_height();
 
   return heif_error_ok;
 }
 
 
-struct heif_error heif_context_add_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
-                                                  struct heif_track_info* info,
-                                                  heif_track** out_track)
+struct heif_error heif_context_add_visual_sequence_track(heif_context* ctx, uint16_t width, uint16_t height,
+                                                         struct heif_track_info* info,
+                                                         heif_track** out_track)
 {
   Result<std::shared_ptr<Track>> addResult = ctx->context->add_sequence_track(width,height, info);
   if (addResult.error) {
@@ -495,10 +510,17 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
     }
   }
 
-  auto error = track->track->encode_image(input_image->image,
-                                                   encoder,
-                                                   options,
-                                                   heif_image_input_class_normal);
+  auto visual_track = std::dynamic_pointer_cast<Track_Visual>(track->track);
+  if (!visual_track) {
+    return {heif_error_Usage_error,
+            heif_suberror_Invalid_parameter_value,
+            "Cannot encode image for non-visual track."};
+  }
+
+  auto error = visual_track->encode_image(input_image->image,
+                                          encoder,
+                                          options,
+                                          heif_image_input_class_normal);
   if (error.error_code) {
     return error.error_struct(track->context.get());
   }

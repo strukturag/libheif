@@ -515,9 +515,9 @@ LIBHEIF_API
 void heif_track_info_release(struct heif_track_info*);
 
 LIBHEIF_API
-struct heif_error heif_context_add_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height,
-                                                  struct heif_track_info* info,
-                                                  heif_track** out_track);
+struct heif_error heif_context_add_visual_sequence_track(heif_context*, uint16_t out_width, uint16_t out_height,
+                                                         struct heif_track_info* info,
+                                                         heif_track** out_track);
 
 LIBHEIF_API
 void heif_track_release(heif_track*);
