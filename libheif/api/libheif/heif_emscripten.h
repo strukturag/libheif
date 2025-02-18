@@ -243,7 +243,7 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   int height = heif_image_handle_get_height(handle);
   result.set("height", height);
 
-  std::basic_string<unsigned char> data;
+  std::vector<unsigned char> data;
   result.set("chroma", heif_image_get_chroma_format(image));
   result.set("colorspace", heif_image_get_colorspace(image));
 
