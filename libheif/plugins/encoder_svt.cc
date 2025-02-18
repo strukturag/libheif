@@ -47,7 +47,12 @@ struct encoder_struct_svt
   int tile_rows = 1; // 1,2,4,8,16,32,64
   int tile_cols = 1; // 1,2,4,8,16,32,64
 
-  int tune = 1; // 0: VQ, 1: PSNR, 2: SSIM.
+  enum Tune {
+    Tune_VQ = 0,
+    Tune_PSNR = 1,
+    Tune_SSIM = 2
+  };
+  uint8_t tune = Tune_PSNR;
 
   heif_chroma chroma = heif_chroma_420;
 
@@ -66,7 +71,7 @@ static const char* kParam_threads = "threads";
 static const char* kParam_speed = "speed";
 
 static const char* kParam_tune = "tune";
-static int valid_tune_values[] = {0, 1, 2};
+static const char* const kParam_tune_valid_values[] = {"vq","psnr","ssim", nullptr};
 
 static const char* kParam_chroma = "chroma";
 static const char* const kParam_chroma_valid_values[] = {
@@ -248,11 +253,10 @@ static void svt_init_parameters()
   assert(i < MAX_NPARAMETERS);
   p->version = 2;
   p->name = kParam_tune;
-  p->type = heif_encoder_parameter_type_integer;
-  p->integer.default_value = 1;
+  p->type = heif_encoder_parameter_type_string;
+  p->string.default_value = "psnr";
   p->has_default = true;
-  p->integer.valid_values = valid_tune_values;
-  p->integer.num_valid_values = 3;
+  p->string.valid_values = kParam_tune_valid_values;
   d[i++] = p++;
 
   d[i++] = nullptr;
@@ -397,7 +401,6 @@ struct heif_error svt_set_parameter_integer(void* encoder_raw, const char* name,
   set_value(kParam_speed, speed);
   set_value("tile-rows", tile_rows);
   set_value("tile-cols", tile_cols);
-  set_value(kParam_tune, tune);
 
   return heif_error_unsupported_parameter;
 }
@@ -420,7 +423,6 @@ struct heif_error svt_get_parameter_integer(void* encoder_raw, const char* name,
   get_value(kParam_speed, speed);
   get_value("tile-rows", tile_rows);
   get_value("tile-cols", tile_cols);
-  get_value(kParam_tune, tune);
 
   return heif_error_unsupported_parameter;
 }
@@ -475,6 +477,21 @@ struct heif_error svt_set_parameter_string(void* encoder_raw, const char* name, 
     }
   }
 
+  if (strcmp(name, kParam_tune) == 0) {
+    if (strcmp(value, "vq") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_VQ;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "psnr") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_PSNR;
+      return heif_error_ok;
+    }
+    else if (strcmp(value, "ssim") == 0) {
+      encoder->tune = encoder_struct_svt::Tune_SSIM;
+      return heif_error_ok;
+    }
+  }
+
   return heif_error_unsupported_parameter;
 }
 
@@ -505,6 +522,25 @@ struct heif_error svt_get_parameter_string(void* encoder_raw, const char* name,
       default:
         assert(false);
         return heif_error_invalid_parameter_value;
+    }
+    return heif_error_ok;
+  }
+
+  if (strcmp(name, kParam_tune) == 0) {
+    switch (encoder->tune) {
+      case encoder_struct_svt::Tune_VQ:
+        save_strcpy(value, value_size, "vq");
+      break;
+      case encoder_struct_svt::Tune_PSNR:
+        save_strcpy(value, value_size, "psnr");
+      break;
+      case encoder_struct_svt::Tune_SSIM:
+        save_strcpy(value, value_size, "ssim");
+      break;
+      default:
+        assert(false);
+
+      return heif_error_invalid_parameter_value;
     }
     return heif_error_ok;
   }
@@ -710,7 +746,7 @@ struct heif_error svt_encode_image(void* encoder_raw, const struct heif_image* i
   svt_config.tile_rows = int_log2(encoder->tile_rows);
   svt_config.tile_columns = int_log2(encoder->tile_cols);
 
-  svt_config.tune = static_cast<uint8_t>(encoder->tune);
+  svt_config.tune = encoder->tune;
 
   svt_config.enc_mode = (int8_t) encoder->speed;
 
