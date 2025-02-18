@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
-#include <iostream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <thread>
@@ -1060,8 +1060,17 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   // These should always be applied last as they can override the values that were set above.
   for (const auto& p : encoder->custom_options) {
     if (aom_codec_set_option(&codec, p.name.c_str(), p.value.c_str()) != AOM_CODEC_OK) {
-      std::cerr << "[libheif] warning: AOM encoder option (name: " << p.name << ", value: " << p.value << ") setting failed: "
-        << aom_codec_error(&codec) << " - " << aom_codec_error_detail(&codec) << "\n";
+      std::stringstream sstr;
+      sstr << "Cannot set AOM encoder option (name: " << p.name << ", value: " << p.value << "): "
+           << aom_codec_error(&codec) << " - " << aom_codec_error_detail(&codec);
+
+      err = {
+        heif_error_Encoder_plugin_error,
+        heif_suberror_Unsupported_parameter,
+        encoder->set_aom_error(sstr.str().c_str())
+      };
+      aom_codec_destroy(&codec);
+      return err;
     }
   }
 #endif
