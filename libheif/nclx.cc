@@ -378,7 +378,7 @@ Error Box_colr::parse(BitstreamRange& range, const heif_security_limits* limits)
     }
 
     uint64_t profile_size_64 = get_box_size() - get_header_size() - 4;
-    if (profile_size_64 > limits->max_color_profile_size) {
+    if (limits->max_color_profile_size && profile_size_64 > limits->max_color_profile_size) {
       return Error(heif_error_Invalid_input, heif_suberror_Security_limit_exceeded, "Color profile exceeds maximum supported size");
     }
 
