@@ -25,6 +25,7 @@ ENABLE_AOM="${ENABLE_AOM:-0}"
 AOM_VERSION="${AOM_VERSION:-3.6.1}"
 STANDALONE="${STANDALONE:-0}"
 DEBUG="${DEBUG:-0}"
+USE_ES6="${USE_ES6:-0}"
 USE_WASM="${USE_WASM:-1}"
 USE_TYPESCRIPT="${USE_TYPESCRIPT:-1}"
 USE_UNSAFE_EVAL="${USE_UNSAFE_EVAL:-1}"
@@ -127,6 +128,10 @@ fi
 if [ "$DEBUG" = "1" ]; then
     echo "Building in debug mode"
     RELEASE_BUILD_FLAGS="--profile -g"
+fi
+
+if [ "$USE_ES6" = "1" ]; then
+    BUILD_FLAGS="$BUILD_FLAGS -sEXPORT_ES6"
 fi
 
 emcc -Wl,--whole-archive "$LIBHEIFA" -Wl,--no-whole-archive \
