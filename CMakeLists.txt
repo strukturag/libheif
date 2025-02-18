@@ -29,8 +29,6 @@ if (APPLE)
   option(BUILD_FRAMEWORK "Build as Apple Frameworks" OFF)
 endif()
 
-set(CMAKE_COMPILE_WARNING_AS_ERROR ON CACHE BOOL "Treat compilation warning as error")
-
 if(NOT MSVC)
   # cmake 3.24 introduces this variable, but for backward compatibility, we set it explicitly
   if (CMAKE_COMPILE_WARNING_AS_ERROR)
