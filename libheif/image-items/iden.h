@@ -43,6 +43,8 @@ public:
 
   //Error on_load_file() override;
 
+  Error get_coded_image_colorspace(heif_colorspace* out_colorspace, heif_chroma* out_chroma) const override;
+
   int get_luma_bits_per_pixel() const override;
 
   int get_chroma_bits_per_pixel() const override;
