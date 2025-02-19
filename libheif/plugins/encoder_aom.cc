@@ -771,6 +771,29 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
   }
 }
 
+// returns 'true' when an error was detected
+static bool check_aom_error(aom_codec_err_t aom_error, const aom_codec_ctx_t* codec, encoder_struct_aom* encoder, struct heif_error* heif_error)
+{
+  if (aom_error == AOM_CODEC_OK) {
+    return false;
+  }
+
+  std::stringstream sstr;
+  sstr << "AOM encoder error: " << aom_codec_error(codec) << " - " << aom_codec_error_detail(codec);
+
+  heif_error->code = heif_error_Encoder_plugin_error;
+  heif_error->subcode = heif_suberror_Unsupported_parameter;
+  heif_error->message = encoder->set_aom_error(sstr.str().c_str());
+
+  return true;
+}
+
+#define CHECK_ERROR \
+if (check_aom_error(aom_error, &codec, encoder, &err)) { \
+  aom_codec_destroy(&codec); \
+  return err; \
+}
+
 
 struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* image,
                                    heif_image_input_class input_class)
@@ -1010,20 +1033,22 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     return err;
   }
 
-  aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used);
+  aom_codec_err_t aom_error;
 
-  aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level);
+  aom_error = aom_codec_control(&codec, AOME_SET_CPUUSED, encoder->cpu_used); CHECK_ERROR;
+
+  aom_error = aom_codec_control(&codec, AOME_SET_CQ_LEVEL, cq_level); CHECK_ERROR;
 
   if (encoder->threads > 1) {
 #if defined(AOM_CTRL_AV1E_SET_ROW_MT)
     // aom 2.0
-    aom_codec_control(&codec, AV1E_SET_ROW_MT, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_ROW_MT, 1); CHECK_ERROR;
 #endif
   }
 
 #if defined(AOM_CTRL_AV1E_SET_AUTO_TILES)
   // aom 3.10.0
-  aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles);
+  aom_error = aom_codec_control(&codec, AV1E_SET_AUTO_TILES, encoder->auto_tiles); CHECK_ERROR;
 #endif
 
   // TODO: set AV1E_SET_TILE_ROWS and AV1E_SET_TILE_COLUMNS.
@@ -1039,32 +1064,32 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
   auto nclx_deleter = std::unique_ptr<heif_color_profile_nclx, void (*)(heif_color_profile_nclx*)>(nclx, heif_nclx_color_profile_free);
 
   // In aom, color_range defaults to limited range (0). Set it to full range (1).
-  aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1);
-  aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position);
+  aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_RANGE, nclx ? nclx->full_range_flag : 1); CHECK_ERROR;
+  aom_error = aom_codec_control(&codec, AV1E_SET_CHROMA_SAMPLE_POSITION, chroma_sample_position); CHECK_ERROR;
 
   if (nclx &&
       (input_class == heif_image_input_class_normal ||
        input_class == heif_image_input_class_thumbnail)) {
-    aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries);
-    aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients);
-    aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics);
+    aom_error = aom_codec_control(&codec, AV1E_SET_COLOR_PRIMARIES, nclx->color_primaries); CHECK_ERROR
+    aom_error = aom_codec_control(&codec, AV1E_SET_MATRIX_COEFFICIENTS, nclx->matrix_coefficients); CHECK_ERROR;
+    aom_error = aom_codec_control(&codec, AV1E_SET_TRANSFER_CHARACTERISTICS, nclx->transfer_characteristics); CHECK_ERROR;
   }
 
-  aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune);
+  aom_error = aom_codec_control(&codec, AOME_SET_TUNING, encoder->tune); CHECK_ERROR;
 
   if (encoder->lossless || (input_class == heif_image_input_class_alpha && encoder->lossless_alpha)) {
-    aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_LOSSLESS, 1); CHECK_ERROR;
   }
 
 #if defined(AOM_CTRL_AV1E_SET_SKIP_POSTPROC_FILTERING)
   if (cfg.g_usage == AOM_USAGE_ALL_INTRA) {
     // Enable AV1E_SET_SKIP_POSTPROC_FILTERING for still-picture encoding,
     // which is disabled by default.
-    aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1);
+    aom_error = aom_codec_control(&codec, AV1E_SET_SKIP_POSTPROC_FILTERING, 1); CHECK_ERROR;
   }
 #endif
 
-  aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy);
+  aom_error = aom_codec_control(&codec, AV1E_SET_ENABLE_INTRABC, encoder->enable_intra_block_copy); CHECK_ERROR;
 
 #if defined(HAVE_AOM_CODEC_SET_OPTION)
   // Apply the custom AOM encoder options.
