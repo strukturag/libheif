@@ -24,6 +24,7 @@
 #include <memory>
 #include <cstring>
 #include <cassert>
+#include <csetjmp>
 #include <vector>
 #include <cstdio>
 
@@ -123,13 +124,34 @@ struct heif_error jpeg_push_data(void* decoder_raw, const void* frame_data, size
 }
 
 
+struct my_error_manager {
+  struct jpeg_error_mgr mgr;
+  jmp_buf setjmp_buffer;
+};
+
+static char last_libjpeg_error_message[JMSG_LENGTH_MAX];
+
+void on_jpeg_error(j_common_ptr cinfo)
+{
+  /* cinfo->err actually points to a jpegErrorManager struct */
+  auto* my_err_mgr = (my_error_manager*) cinfo->err;
+  /* note : *(cinfo->err) is now equivalent to myerr->mgr */
+
+  // Create the message
+  ( *(cinfo->err->format_message) ) (cinfo, last_libjpeg_error_message);
+
+  // Jump to the setjmp point
+  longjmp(my_err_mgr->setjmp_buffer, 1);
+}
+
+
 struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_img)
 {
   struct jpeg_decoder* decoder = (struct jpeg_decoder*) decoder_raw;
 
 
   struct jpeg_decompress_struct cinfo;
-  struct jpeg_error_mgr jerr;
+  struct my_error_manager jerr;
 
   // to store embedded icc profile
 //  uint32_t iccLen;
@@ -142,7 +164,21 @@ struct heif_error jpeg_decode_image(void* decoder_raw, struct heif_image** out_i
 
   jpeg_create_decompress(&cinfo);
 
-  cinfo.err = jpeg_std_error(&jerr);
+  cinfo.err = jpeg_std_error(&jerr.mgr);
+  jerr.mgr.error_exit = on_jpeg_error;
+  if (setjmp(jerr.setjmp_buffer)) {
+    // If we get here, the JPEG code has signaled an error.
+
+    jpeg_destroy_decompress(&cinfo);
+
+    return heif_error{
+      heif_error_Decoder_plugin_error,
+      heif_suberror_Unspecified,
+      last_libjpeg_error_message,
+    };
+  }
+
+
   jpeg_mem_src(&cinfo, decoder->data.data(), static_cast<unsigned long>(decoder->data.size()));
 
   /* Adding this part to prepare for icc profile reading. */
