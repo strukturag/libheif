@@ -361,6 +361,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_js_context_get_list_of_item_IDs);
     EXPORT_HEIF_FUNCTION(heif_item_get_item_type);
     EXPORT_HEIF_FUNCTION(heif_js_item_get_item_type_string);
+    EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
