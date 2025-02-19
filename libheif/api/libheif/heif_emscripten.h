@@ -100,6 +100,37 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   return result;
 }
 
+static emscripten::val heif_js_context_get_list_of_item_IDs(
+    struct heif_context* context)
+{
+  emscripten::val result = emscripten::val::array();
+  if (!context) {
+    return result;
+  }
+
+  int count = heif_context_get_number_of_items(context);
+  if (count <= 0) {
+    return result;
+  }
+
+  heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
+  if (!ids) {
+    struct heif_error err;
+    err.code = heif_error_Memory_allocation_error;
+    err.subcode = heif_suberror_Security_limit_exceeded;
+    return emscripten::val(err);
+  }
+
+  int num_ids_received = heif_context_get_list_of_item_IDs(context, ids, count);
+
+  for (int i = 0; i < num_ids_received; i++) {
+    result.set(i, ids[i]);
+  }
+
+  free(ids);
+  return result;
+}
+
 #if 0
 static void strided_copy(void* dest, const void* src, int width, int height,
                          int stride)
@@ -316,6 +347,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_release);
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
+    EXPORT_HEIF_FUNCTION(heif_js_context_get_list_of_item_IDs);
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
