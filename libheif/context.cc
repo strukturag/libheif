@@ -1049,6 +1049,18 @@ Error HeifContext::get_id_of_non_virtual_child_image(heif_item_id id, heif_item_
     }
   }
   else {
+    if (m_all_images.find(id) == m_all_images.end()) {
+      std::stringstream sstr;
+      sstr << "Image item " << id << " referenced, but it does not exist\n";
+
+      return Error(heif_error_Invalid_input,
+        heif_suberror_Nonexisting_item_referenced,
+        sstr.str());
+    }
+    else if (dynamic_cast<ImageItem_Error*>(m_all_images.find(id)->second.get())) {
+      // Should er return an error here or leave it to the follow-up code to detect that?
+    }
+
     out = id;
     return Error::Ok;
   }

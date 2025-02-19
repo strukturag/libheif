@@ -145,9 +145,9 @@ Result<std::vector<uint8_t>> ImageItem_HEVC::read_bitstream_configuration_data()
 }
 
 
-std::shared_ptr<class Decoder> ImageItem_HEVC::get_decoder() const
+Result<std::shared_ptr<class Decoder>> ImageItem_HEVC::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 

@@ -381,7 +381,7 @@ public:
 
   Error transform_requested_tile_position_to_original_tile_position(uint32_t& tile_x, uint32_t& tile_y) const;
 
-  virtual std::shared_ptr<class Decoder> get_decoder() const { return nullptr; }
+  virtual Result<std::shared_ptr<class Decoder>> get_decoder() const { return {nullptr}; }
 
 private:
   HeifContext* m_heif_context;

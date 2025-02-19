@@ -88,9 +88,9 @@ Result<std::vector<uint8_t>> ImageItem_JPEG2000::read_bitstream_configuration_da
   return std::vector<uint8_t>{};
 }
 
-std::shared_ptr<Decoder> ImageItem_JPEG2000::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_JPEG2000::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 Error ImageItem_JPEG2000::on_load_file()

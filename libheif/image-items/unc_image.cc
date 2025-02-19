@@ -505,9 +505,9 @@ heif_image_tiling ImageItem_uncompressed::get_heif_image_tiling() const
   return tiling;
 }
 
-std::shared_ptr<Decoder> ImageItem_uncompressed::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_uncompressed::get_decoder() const
 {
-  return m_decoder;
+  return {m_decoder};
 }
 
 Error ImageItem_uncompressed::on_load_file()

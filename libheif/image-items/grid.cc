@@ -596,17 +596,21 @@ int ImageItem_Grid::get_chroma_bits_per_pixel() const
   return image->get_chroma_bits_per_pixel();
 }
 
-std::shared_ptr<Decoder> ImageItem_Grid::get_decoder() const
+Result<std::shared_ptr<Decoder>> ImageItem_Grid::get_decoder() const
 {
   heif_item_id child;
   Error err = get_context()->get_id_of_non_virtual_child_image(get_id(), child);
   if (err) {
-    return nullptr;
+    return {err};
   }
 
   auto image = get_context()->get_image(child, true);
-  if (image->get_item_error()) {
-    return nullptr;
+  if (!image) {
+    return Error{heif_error_Invalid_input,
+      heif_suberror_Nonexisting_item_referenced};
+  }
+  else if (auto err = image->get_item_error()) {
+    return err;
   }
 
   return image->get_decoder();

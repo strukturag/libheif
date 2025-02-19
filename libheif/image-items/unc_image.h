@@ -82,7 +82,7 @@ public:
   Error add_image_tile(uint32_t tile_x, uint32_t tile_y, const std::shared_ptr<const HeifPixelImage>& image);
 
 protected:
-  std::shared_ptr<Decoder> get_decoder() const override;
+  Result<std::shared_ptr<Decoder>> get_decoder() const override;
 
 private:
   std::shared_ptr<class Decoder_uncompressed> m_decoder;
