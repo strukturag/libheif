@@ -790,7 +790,6 @@ static bool check_aom_error(aom_codec_err_t aom_error, const aom_codec_ctx_t* co
 
 #define CHECK_ERROR \
 if (check_aom_error(aom_error, &codec, encoder, &err)) { \
-  aom_codec_destroy(&codec); \
   return err; \
 }
 
@@ -1024,14 +1023,18 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     encoder_flags = (aom_codec_flags_t) (encoder_flags | AOM_CODEC_USE_HIGHBITDEPTH);
   }
 
+  // allocate aom_codec_ctx_t
   if (aom_codec_enc_init(&codec, iface, &cfg, encoder_flags)) {
     // AOM makes sure that the error text returned by aom_codec_error_detail() is always a static
-    // text that is valid even through the codec allocation failed (#788).
+    // text that is valid even though the codec allocation failed (#788).
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_initialization,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
     return err;
   }
+
+  // automatically destroy aom_codec_ctx_t when we leave the function
+  auto codec_ctx_deleter = std::unique_ptr<aom_codec_ctx_t, aom_codec_err_t (*)(aom_codec_ctx_t*)>(&codec, aom_codec_destroy);
 
   aom_codec_err_t aom_error;
 
@@ -1105,7 +1108,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
         heif_suberror_Unsupported_parameter,
         encoder->set_aom_error(sstr.str().c_str())
       };
-      aom_codec_destroy(&codec);
       return err;
     }
   }
@@ -1124,7 +1126,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
         heif_suberror_Encoder_encoding,
         encoder->set_aom_error(aom_codec_error_detail(&codec))
     };
-    aom_codec_destroy(&codec);
     return err;
   }
 
@@ -1161,7 +1162,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
     err = {heif_error_Encoder_plugin_error,
            heif_suberror_Encoder_encoding,
            encoder->set_aom_error(aom_codec_error_detail(&codec))};
-    aom_codec_destroy(&codec);
     return err;
   }
 
@@ -1188,17 +1188,6 @@ struct heif_error aom_encode_image(void* encoder_raw, const struct heif_image* i
 
       encoder->data_read = false;
     }
-  }
-
-
-  // --- clean up
-
-  if (aom_codec_destroy(&codec)) {
-    // Note: do not call aom_codec_error_detail(), because it is not set in aom_codec_destroy(). (see #788)
-    err = {heif_error_Encoder_plugin_error,
-           heif_suberror_Encoder_cleanup,
-           kError_undefined_error};
-    return err;
   }
 
   return heif_error_ok;
