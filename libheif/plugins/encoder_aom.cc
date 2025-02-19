@@ -772,7 +772,8 @@ void aom_query_input_colorspace2(void* encoder_raw, heif_colorspace* colorspace,
 }
 
 // returns 'true' when an error was detected
-static bool check_aom_error(aom_codec_err_t aom_error, const aom_codec_ctx_t* codec, encoder_struct_aom* encoder, struct heif_error* heif_error)
+// Note: some older AOM versions take a non-const pointer to aom_codec_error(). Thus, we also have to use a non-const pointer here.
+static bool check_aom_error(aom_codec_err_t aom_error, /*const*/ aom_codec_ctx_t* codec, encoder_struct_aom* encoder, struct heif_error* heif_error)
 {
   if (aom_error == AOM_CODEC_OK) {
     return false;
