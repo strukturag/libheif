@@ -1436,6 +1436,33 @@ Error HeifPixelImage::scale_nearest_neighbor(std::shared_ptr<HeifPixelImage>& ou
 }
 
 
+void HeifPixelImage::forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image)
+{
+  set_color_profile_nclx(src_image->get_color_profile_nclx());
+  set_color_profile_icc(src_image->get_color_profile_icc());
+
+  if (src_image->has_nonsquare_pixel_ratio()) {
+    uint32_t h,v;
+    src_image->get_pixel_ratio(&h,&v);
+    set_pixel_ratio(h,v);
+  }
+
+  if (src_image->has_clli()) {
+    set_clli(src_image->get_clli());
+  }
+
+  if (src_image->has_mdcv()) {
+    set_mdcv(src_image->get_mdcv());
+  }
+
+  set_premultiplied_alpha(src_image->is_premultiplied_alpha());
+
+  // TODO: TAI timestamp and contentID (once we merge that branch)
+
+  // TODO: should we also forward the warnings? It might be better to do that in ImageItem_Grid.
+}
+
+
 void HeifPixelImage::debug_dump() const
 {
   auto channels = get_channel_set();

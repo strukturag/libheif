@@ -193,6 +193,8 @@ public:
 
   const std::shared_ptr<const color_profile_raw>& get_color_profile_icc() const { return m_color_profile_icc; }
 
+  void forward_all_metadata_from(const std::shared_ptr<const HeifPixelImage>& src_image);
+
   void debug_dump() const;
 
   Error extend_padding_to_size(uint32_t width, uint32_t height, bool adjust_size,

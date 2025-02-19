@@ -468,6 +468,8 @@ Error ImageItem_Grid::decode_and_paste_tile_image(heif_item_id tileID, uint32_t 
         grid_image->fill_plane(heif_channel_Alpha, alpha_default_value);
       }
 
+      grid_image->forward_all_metadata_from(tile_img);
+
       inout_image = grid_image; // We have to set this at the very end because of the unlocked check to `inout_image` above.
     }
   }
