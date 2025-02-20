@@ -144,11 +144,23 @@ static emscripten::val heif_js_item_get_mime_item_content_type(
   const struct heif_context* ctx, heif_item_id id)
 {
   std::string content_type = "";
-  const char* content_type_cstr = heif_item_get_mime_item_content_type(ctx, id);
-  if (content_type_cstr) {
-    content_type = content_type_cstr;
+  const char* cstring = heif_item_get_mime_item_content_type(ctx, id);
+  if (cstring) {
+    content_type = cstring;
   }
   return emscripten::val(content_type);
+}
+
+
+static emscripten::val heif_js_item_get_mime_item_content_encoding(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string content_encoding = "";
+  const char* cstring = heif_item_get_mime_item_content_encoding(ctx, id);
+  if (cstring) {
+    content_encoding = cstring;
+  }
+  return emscripten::val(content_encoding);
 }
 
 
@@ -364,6 +376,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     emscripten::function("heif_context_get_list_of_item_IDs", &heif_js_context_get_list_of_item_IDs, emscripten::allow_raw_pointers());
     emscripten::function("heif_item_get_item_type", heif_js_item_get_item_type, emscripten::allow_raw_pointers());
     emscripten::function("heif_item_get_mime_item_content_type", heif_js_item_get_mime_item_content_type, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_mime_item_content_encoding", heif_js_item_get_mime_item_content_encoding, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
     EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
 
