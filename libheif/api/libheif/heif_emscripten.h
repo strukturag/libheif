@@ -131,7 +131,7 @@ static emscripten::val heif_js_context_get_list_of_item_IDs(
 }
 
 
-static emscripten::val heif_js_item_get_item_type_string(
+static emscripten::val heif_js_item_get_item_type(
   const struct heif_context* ctx, heif_item_id id)
 {
   uint32_t type = heif_item_get_item_type(ctx, id);
@@ -362,10 +362,9 @@ EMSCRIPTEN_BINDINGS(libheif) {
 
     // heif_items.h
     emscripten::function("heif_context_get_list_of_item_IDs", &heif_js_context_get_list_of_item_IDs, emscripten::allow_raw_pointers());
-    emscripten::function("heif_item_get_item_type_string", heif_js_item_get_item_type_string, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_item_type", heif_js_item_get_item_type, emscripten::allow_raw_pointers());
     emscripten::function("heif_item_get_mime_item_content_type", heif_js_item_get_mime_item_content_type, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
-    EXPORT_HEIF_FUNCTION(heif_item_get_item_type);
     EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
 
     // DEPRECATED, use functions without the 'js' prefix.
