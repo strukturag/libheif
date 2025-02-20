@@ -345,10 +345,10 @@ EMSCRIPTEN_BINDINGS(libheif) {
     // heif.h
     emscripten::function("heif_get_version", &_heif_get_version, emscripten::allow_raw_pointers());
     emscripten::function("heif_context_read_from_memory", &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
     emscripten::function("heif_js_decode_image2", &heif_js_decode_image2, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_get_version_number);
     EXPORT_HEIF_FUNCTION(heif_context_alloc);
@@ -361,12 +361,18 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_image_release);
 
     // heif_items.h
+    emscripten::function("heif_context_get_list_of_item_IDs", &heif_js_context_get_list_of_item_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_item_type_string", heif_js_item_get_item_type_string, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_mime_item_content_type", heif_js_item_get_mime_item_content_type, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
-    EXPORT_HEIF_FUNCTION(heif_js_context_get_list_of_item_IDs);
     EXPORT_HEIF_FUNCTION(heif_item_get_item_type);
-    EXPORT_HEIF_FUNCTION(heif_js_item_get_item_type_string);
     EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
-    EXPORT_HEIF_FUNCTION(heif_js_item_get_mime_item_content_type);
+
+    // DEPRECATED, use functions without the 'js' prefix.
+    emscripten::function("heif_js_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
