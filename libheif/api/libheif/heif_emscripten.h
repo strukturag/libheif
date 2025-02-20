@@ -79,7 +79,7 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
+  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
   if (!ids) {
     struct heif_error err;
     err.code = heif_error_Memory_allocation_error;
@@ -96,7 +96,6 @@ static emscripten::val heif_js_context_get_list_of_top_level_image_IDs(
   for (int i = 0; i < received; i++) {
     result.set(i, ids[i]);
   }
-  free(ids);
   return result;
 }
 
@@ -114,7 +113,7 @@ static emscripten::val heif_js_context_get_list_of_item_IDs(
     return result;
   }
 
-  heif_item_id* ids = (heif_item_id*) malloc(count * sizeof(heif_item_id));
+  heif_item_id* ids = (heif_item_id*) alloca(count * sizeof(heif_item_id));
   if (!ids) {
     struct heif_error err;
     err.code = heif_error_Memory_allocation_error;
@@ -128,7 +127,6 @@ static emscripten::val heif_js_context_get_list_of_item_IDs(
     result.set(i, ids[i]);
   }
 
-  free(ids);
   return result;
 }
 
