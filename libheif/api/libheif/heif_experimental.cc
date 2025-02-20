@@ -354,6 +354,41 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
 }
 
 
+struct heif_error heif_track_get_raw_sample_data(struct heif_track* track_ptr,
+                                                 const uint8_t** out_data,
+                                                 size_t* out_data_size)
+{
+  auto track = track_ptr->track;
+
+  // --- reached end of sequence ?
+
+  if (track->end_of_sequence_reached()) {
+    return {heif_error_End_of_sequence, heif_suberror_Unspecified, "End of sequence"};
+  }
+
+  // --- get next raw sample
+
+  auto decodingResult = track->get_next_sample_raw_data();
+  if (!decodingResult) {
+    return decodingResult.error.error_struct(track_ptr->context.get());
+  }
+
+  uint8_t* data = new uint8_t[decodingResult.value.size()];
+  memcpy(data, decodingResult.value.data(), decodingResult.value.size());
+
+  *out_data = data;
+  *out_data_size = decodingResult.value.size();
+
+  return heif_error_success;
+}
+
+
+void heif_metadata_raw_sample_data_release(const uint8_t* data)
+{
+  delete[] data;
+}
+
+
 uint32_t heif_image_get_sample_duration(heif_image* img)
 {
   return img->image->get_sample_duration();

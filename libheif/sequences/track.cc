@@ -696,3 +696,35 @@ void Track::add_reference_to_track(uint32_t referenceType, uint32_t to_track_id)
 
   m_tref->add_references(to_track_id, referenceType);
 }
+
+
+Result<std::vector<uint8_t>> Track::get_next_sample_raw_data()
+{
+  if (m_current_chunk > m_chunks.size()) {
+    return Error{heif_error_End_of_sequence,
+                 heif_suberror_Unspecified,
+                 "End of sequence"};
+  }
+
+  while (m_next_sample_to_be_processed > m_chunks[m_current_chunk]->last_sample_number()) {
+    m_current_chunk++;
+
+    if (m_current_chunk > m_chunks.size()) {
+      return Error{heif_error_End_of_sequence,
+                   heif_suberror_Unspecified,
+                   "End of sequence"};
+    }
+  }
+
+  const std::shared_ptr<Chunk>& chunk = m_chunks[m_current_chunk];
+
+  DataExtent extent = chunk->get_data_extent_for_sample(m_next_sample_to_be_processed);
+  auto readResult = extent.read_data();
+  if (readResult.error) {
+    return readResult.error;
+  }
+
+  m_next_sample_to_be_processed++;
+
+  return *readResult.value;
+}

@@ -859,6 +859,24 @@ int main(int argc, char** argv)
           std::cout << "\n  URI: " << uri;
           heif_release_string(uri);
         }
+
+        // get metadata track samples
+
+        for (;;) {
+          const uint8_t* data;
+          size_t dataSize;
+          heif_error err = heif_track_get_raw_sample_data(track, &data, &dataSize);
+          if (err.code != 0) {
+            break;
+          }
+
+          std::cout << "\n  raw sample: ";
+          for (uint32_t i = 0; i < dataSize; i++) {
+            std::cout << " " << std::hex << (int)data[i];
+          }
+
+          heif_metadata_raw_sample_data_release(data);
+        }
       }
 
       std::cout << "\n";

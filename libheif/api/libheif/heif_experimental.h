@@ -562,6 +562,15 @@ struct heif_error heif_track_decode_next_image(struct heif_track*,
                                                enum heif_chroma chroma,
                                                const struct heif_decoding_options* options);
 
+// TODO: get duration and sample auxiliary information
+LIBHEIF_API
+struct heif_error heif_track_get_raw_sample_data(struct heif_track*,
+                                                 const uint8_t** out_data,
+                                                 size_t* out_data_size);
+
+LIBHEIF_API
+void heif_metadata_raw_sample_data_release(const uint8_t*);
+
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,
                                                    const struct heif_image* image,

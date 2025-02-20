@@ -119,6 +119,8 @@ public:
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
+  Result<std::vector<uint8_t>> get_next_sample_raw_data();
+
 protected:
   HeifContext* m_heif_context = nullptr;
   uint32_t m_id = 0;
