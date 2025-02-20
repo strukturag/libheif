@@ -97,6 +97,10 @@ public:
 
   bool is_visual_track() const;
 
+  uint32_t get_first_cluster_sample_entry_type() const;
+
+  std::string get_first_cluster_urim_uri() const;
+
   uint64_t get_duration_in_media_units() const;
 
   uint32_t get_timescale() const;

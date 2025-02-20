@@ -526,6 +526,37 @@ bool Track::is_visual_track() const
 }
 
 
+uint32_t Track::get_first_cluster_sample_entry_type() const
+{
+  if (m_stsd->get_num_sample_entries() == 0) {
+    return 0; // TODO: error ? Or can we assume at this point that there is at least one sample entry?
+  }
+
+  return m_stsd->get_sample_entry(0)->get_short_type();
+}
+
+
+std::string Track::get_first_cluster_urim_uri() const
+{
+  if (m_stsd->get_num_sample_entries() == 0) {
+    return {};
+  }
+
+  std::shared_ptr<const Box> sampleEntry = m_stsd->get_sample_entry(0);
+  auto urim = std::dynamic_pointer_cast<const Box_URIMetaSampleEntry>(sampleEntry);
+  if (!urim) {
+    return {};
+  }
+
+  std::shared_ptr<const Box_uri> uri = urim->get_child_box<const Box_uri>();
+  if (!uri) {
+    return {};
+  }
+
+  return uri->get_uri();
+}
+
+
 bool Track::end_of_sequence_reached() const
 {
   return (m_next_sample_to_be_processed > m_chunks.back()->last_sample_number());

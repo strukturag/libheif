@@ -595,6 +595,16 @@ struct heif_error heif_track_get_image_resolution(heif_track*, uint16_t* out_wid
 LIBHEIF_API
 enum heif_track_type heif_track_get_track_type(struct heif_track*);
 
+LIBHEIF_API
+uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track*);
+
+// Free the returned string with 'heif_release_string()'
+LIBHEIF_API
+const char* heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track*);
+
+LIBHEIF_API
+void heif_release_string(const char*);
+
 // The passed taic structure will be filled by this function. The version field has to be set before this.
 // The function returns 0 if there is no taic.
 LIBHEIF_API

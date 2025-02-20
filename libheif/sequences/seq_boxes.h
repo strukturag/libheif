@@ -278,6 +278,8 @@ public:
     m_sample_entries.push_back(entry);
   }
 
+  size_t get_num_sample_entries() const { return m_sample_entries.size(); }
+
 protected:
   Error parse(BitstreamRange& range, const heif_security_limits*) override;
 

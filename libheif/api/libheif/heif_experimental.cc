@@ -639,6 +639,29 @@ enum heif_track_type heif_track_get_track_type(struct heif_track* track)
 }
 
 
+uint32_t heif_track_get_sample_entry_type_of_first_cluster(struct heif_track* track)
+{
+  return track->track->get_first_cluster_sample_entry_type();
+}
+
+
+const char* heif_track_get_urim_sample_entry_uri_of_first_cluster(struct heif_track* track)
+{
+  std::string uri = track->track->get_first_cluster_urim_uri();
+
+  char* s = new char[uri.size() + 1];
+  strncpy(s, uri.c_str(), uri.size());
+  s[uri.size()] = '\0';
+
+  return s;
+}
+
+void heif_release_string(const char* str)
+{
+  delete[] str;
+}
+
+
 int heif_track_get_tai_clock_info_of_first_cluster(struct heif_track* track, struct heif_tai_clock_info* taic)
 {
   auto first_taic = track->track->get_first_cluster_taic();
