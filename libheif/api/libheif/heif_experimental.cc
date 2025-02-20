@@ -559,6 +559,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track* track,
 
 struct heif_error heif_track_add_metadata(struct heif_track* track,
                                           const uint8_t* data, uint32_t length,
+                                          uint32_t duration,
                                           const heif_tai_timestamp_packet* timestamp,
                                           const char* gimi_contentID)
 {
@@ -572,7 +573,7 @@ struct heif_error heif_track_add_metadata(struct heif_track* track,
   Track_Metadata::Metadata metadata;
   metadata.raw_metadata.resize(length);
   memcpy(metadata.raw_metadata.data(), data, length);
-  metadata.duration = 10;
+  metadata.duration = duration;
   metadata.timestamp = timestamp;
   if (gimi_contentID) {
     metadata.gimi_contentID = gimi_contentID;

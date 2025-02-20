@@ -1235,7 +1235,8 @@ int main(int argc, char** argv)
 
       for (int i=0;i<5;i++) {
         uint8_t data[] = {0x10, 0x20, 0x02, 0x01};
-        heif_error err = heif_track_add_metadata(metadata_track, data, 4, nullptr, nullptr);
+        heif_error err = heif_track_add_metadata(metadata_track, data, 4,
+                                                 10, nullptr, nullptr);
         if (err.code) {
           std::cerr << "error: " << err.message << "\n";
           exit(1);

@@ -571,6 +571,7 @@ struct heif_error heif_track_encode_sequence_image(struct heif_track*,
 LIBHEIF_API
 struct heif_error heif_track_add_metadata(struct heif_track*,
                                           const uint8_t* data, uint32_t length,
+                                          uint32_t duration,
                                           const heif_tai_timestamp_packet* timestamp,
                                           const char* gimi_contentID);
 
