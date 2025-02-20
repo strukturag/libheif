@@ -341,32 +341,26 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
   emscripten::function(#name, &name, emscripten::allow_raw_pointers())
 
 EMSCRIPTEN_BINDINGS(libheif) {
-    emscripten::function("heif_get_version", &_heif_get_version,
-                         emscripten::allow_raw_pointers());
+  
+    // heif.h
+    emscripten::function("heif_get_version", &_heif_get_version, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_read_from_memory", &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_context_get_primary_image_handle", &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
+    emscripten::function("heif_js_decode_image2", &heif_js_decode_image2, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_get_version_number);
-
     EXPORT_HEIF_FUNCTION(heif_context_alloc);
     EXPORT_HEIF_FUNCTION(heif_context_free);
-    emscripten::function("heif_context_read_from_memory",
-    &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_check_filetype",
-    &heif_js_check_filetype, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_top_level_images);
-    emscripten::function("heif_js_context_get_list_of_top_level_image_IDs",
-    &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_image_handle",
-    &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_context_get_primary_image_handle",
-    &heif_js_context_get_primary_image_handle, emscripten::allow_raw_pointers());
-    //emscripten::function("heif_js_decode_image",
-    //&heif_js_decode_image, emscripten::allow_raw_pointers());
-    emscripten::function("heif_js_decode_image2",
-    &heif_js_decode_image2, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_image_handle_release);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_width);
     EXPORT_HEIF_FUNCTION(heif_image_handle_get_height);
     EXPORT_HEIF_FUNCTION(heif_image_handle_is_primary_image);
     EXPORT_HEIF_FUNCTION(heif_image_release);
+
+    // heif_items.h
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
     EXPORT_HEIF_FUNCTION(heif_js_context_get_list_of_item_IDs);
     EXPORT_HEIF_FUNCTION(heif_item_get_item_type);
