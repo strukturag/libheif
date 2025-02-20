@@ -35,6 +35,7 @@ Supported codecs:
 | AVC          | openh264            | -                            |
 | JPEG         | libjpeg(-turbo)     | libjpeg(-turbo)              |
 | JPEG2000     | OpenJPEG            | OpenJPEG                     |
+| HTJ2K        | OpenJPEG            | OpenJPH                      |
 | uncompressed | built-in            | built-in                     |
 
 ## API
