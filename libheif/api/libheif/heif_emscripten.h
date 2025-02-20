@@ -164,6 +164,18 @@ static emscripten::val heif_js_item_get_mime_item_content_encoding(
 }
 
 
+static emscripten::val heif_js_item_get_uri_item_uri_type(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string uri_type = "";
+  const char* cstring = heif_item_get_uri_item_uri_type(ctx, id);
+  if (cstring) {
+    uri_type = cstring;
+  }
+  return emscripten::val(uri_type);
+}
+
+
 #if 0
 static void strided_copy(void* dest, const void* src, int width, int height,
                          int stride)
@@ -377,6 +389,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     emscripten::function("heif_item_get_item_type", heif_js_item_get_item_type, emscripten::allow_raw_pointers());
     emscripten::function("heif_item_get_mime_item_content_type", heif_js_item_get_mime_item_content_type, emscripten::allow_raw_pointers());
     emscripten::function("heif_item_get_mime_item_content_encoding", heif_js_item_get_mime_item_content_encoding, emscripten::allow_raw_pointers());
+    emscripten::function("heif_item_get_uri_item_uri_type", heif_js_item_get_uri_item_uri_type, emscripten::allow_raw_pointers());
     EXPORT_HEIF_FUNCTION(heif_context_get_number_of_items);
     EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
 
