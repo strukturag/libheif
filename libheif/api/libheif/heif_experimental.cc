@@ -354,9 +354,8 @@ struct heif_error heif_track_decode_next_image(struct heif_track* track_ptr,
 }
 
 
-struct heif_error heif_track_get_raw_sample_data(struct heif_track* track_ptr,
-                                                 const uint8_t** out_data,
-                                                 size_t* out_data_size)
+struct heif_error heif_track_get_raw_sequence_sample(struct heif_track* track_ptr,
+                                                     heif_raw_sequence_sample** out_sample)
 {
   auto track = track_ptr->track;
 
@@ -373,19 +372,60 @@ struct heif_error heif_track_get_raw_sample_data(struct heif_track* track_ptr,
     return decodingResult.error.error_struct(track_ptr->context.get());
   }
 
-  uint8_t* data = new uint8_t[decodingResult.value.size()];
-  memcpy(data, decodingResult.value.data(), decodingResult.value.size());
-
-  *out_data = data;
-  *out_data_size = decodingResult.value.size();
+  *out_sample = decodingResult.value;
 
   return heif_error_success;
 }
 
 
-void heif_metadata_raw_sample_data_release(const uint8_t* data)
+void heif_raw_sequence_sample_release(const heif_raw_sequence_sample* sample)
 {
-  delete[] data;
+  delete sample;
+}
+
+const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample* sample)
+{
+  return sample->data.data();
+}
+
+size_t heif_raw_sequence_sample_get_data_size(const heif_raw_sequence_sample* sample)
+{
+  return sample->data.size();
+}
+
+uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample* sample)
+{
+  return sample->duration;
+}
+
+const char* heif_raw_sequence_sample_get_gimi_content_id(const heif_raw_sequence_sample* sample)
+{
+  char* s = new char[sample->gimi_contentId.size() + 1];
+  strcpy(s, sample->gimi_contentId.c_str());
+  return s;
+}
+
+int heif_raw_sequence_sample_has_tai_timestamp(const struct heif_raw_sequence_sample* sample)
+{
+  return sample->timestamp ? 1 : 0;
+}
+
+struct heif_error heif_raw_sequence_sample_get_tai_timestamp(const struct heif_raw_sequence_sample* sample,
+                                                             struct heif_tai_timestamp_packet* out_timestamp)
+{
+  if (!sample->timestamp) {
+    return {
+      heif_error_Usage_error,
+      heif_suberror_Unspecified,
+      "sample has no TAI timestamp"
+    };
+  }
+
+  if (out_timestamp) {
+    heif_tai_timestamp_packet_copy(out_timestamp, sample->timestamp);
+  }
+
+  return heif_error_ok;
 }
 
 
@@ -493,7 +533,7 @@ void heif_track_release(heif_track* track)
 }
 
 
-uint32_t heif_image_get_duration(heif_image* img)
+uint32_t heif_image_get_duration(const heif_image* img)
 {
   return img->image->get_sample_duration();
 }
@@ -511,7 +551,7 @@ void heif_image_set_gimi_content_id(heif_image* img, const char* contentID)
 }
 
 
-const char* heif_image_get_gimi_content_id(heif_image* img)
+const char* heif_image_get_gimi_content_id(const heif_image* img)
 {
   if (!img->image->has_gimi_content_id()) {
     return nullptr;
@@ -525,7 +565,7 @@ const char* heif_image_get_gimi_content_id(heif_image* img)
 }
 
 
-const char* heif_track_get_gimi_content_id(struct heif_track* track)
+const char* heif_track_get_gimi_content_id(const heif_track* track)
 {
   const char* contentId = track->track->get_track_info()->gimi_track_contentID;
   if (!contentId) {

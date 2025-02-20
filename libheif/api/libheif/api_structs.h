@@ -44,6 +44,20 @@ struct heif_track
   std::shared_ptr<HeifContext> context;
 };
 
+struct heif_raw_sequence_sample
+{
+  ~heif_raw_sequence_sample()
+  {
+    heif_tai_timestamp_packet_release(timestamp);
+  }
+
+  std::vector<uint8_t> data;
+  uint32_t duration = 0;
+
+  heif_tai_timestamp_packet* timestamp = nullptr;
+  std::string gimi_contentId;
+};
+
 
 struct heif_image
 {

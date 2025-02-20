@@ -863,19 +863,21 @@ int main(int argc, char** argv)
         // get metadata track samples
 
         for (;;) {
-          const uint8_t* data;
-          size_t dataSize;
-          heif_error err = heif_track_get_raw_sample_data(track, &data, &dataSize);
+          struct heif_raw_sequence_sample* sample;
+          err = heif_track_get_raw_sequence_sample(track, &sample);
           if (err.code != 0) {
             break;
           }
+
+          const uint8_t* data = heif_raw_sequence_sample_get_data(sample);
+          size_t dataSize = heif_raw_sequence_sample_get_data_size(sample);
 
           std::cout << "\n  raw sample: ";
           for (uint32_t i = 0; i < dataSize; i++) {
             std::cout << " " << std::hex << (int)data[i];
           }
 
-          heif_metadata_raw_sample_data_release(data);
+          heif_raw_sequence_sample_release(sample);
         }
       }
 

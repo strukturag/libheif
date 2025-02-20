@@ -22,6 +22,7 @@
 #define LIBHEIF_TRACK_H
 
 #include "error.h"
+#include "libheif/api_structs.h"
 #include "libheif/heif_plugin.h"
 #include "libheif/heif_experimental.h"
 
@@ -119,7 +120,7 @@ public:
 
   void add_reference_to_track(uint32_t referenceType, uint32_t to_track_id);
 
-  Result<std::vector<uint8_t>> get_next_sample_raw_data();
+  Result<heif_raw_sequence_sample*> get_next_sample_raw_data();
 
 protected:
   HeifContext* m_heif_context = nullptr;

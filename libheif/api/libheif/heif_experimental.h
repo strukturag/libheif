@@ -536,7 +536,7 @@ LIBHEIF_API
 void heif_track_release(heif_track*);
 
 LIBHEIF_API
-uint32_t heif_image_get_duration(heif_image*);
+uint32_t heif_image_get_duration(const heif_image*);
 
 LIBHEIF_API
 void heif_image_set_duration(heif_image*, uint32_t duration);
@@ -547,10 +547,10 @@ void heif_image_set_gimi_content_id(heif_image*, const char* contentID);
 // Free returned content id with heif_gimi_content_id_release();
 // If there is no content ID, nullptr is returned.
 LIBHEIF_API
-const char* heif_image_get_gimi_content_id(heif_image*);
+const char* heif_image_get_gimi_content_id(const heif_image*);
 
 LIBHEIF_API
-const char* heif_track_get_gimi_content_id(struct heif_track*);
+const char* heif_track_get_gimi_content_id(const struct heif_track*);
 
 LIBHEIF_API
 void heif_gimi_content_id_release(const char*);
@@ -562,14 +562,35 @@ struct heif_error heif_track_decode_next_image(struct heif_track*,
                                                enum heif_chroma chroma,
                                                const struct heif_decoding_options* options);
 
+struct heif_raw_sequence_sample;
+
 // TODO: get duration and sample auxiliary information
 LIBHEIF_API
-struct heif_error heif_track_get_raw_sample_data(struct heif_track*,
-                                                 const uint8_t** out_data,
-                                                 size_t* out_data_size);
+struct heif_error heif_track_get_raw_sequence_sample(struct heif_track*,
+                                                     heif_raw_sequence_sample** out_sample);
 
 LIBHEIF_API
-void heif_metadata_raw_sample_data_release(const uint8_t*);
+void heif_raw_sequence_sample_release(const heif_raw_sequence_sample*);
+
+LIBHEIF_API
+const uint8_t* heif_raw_sequence_sample_get_data(const heif_raw_sequence_sample*);
+
+LIBHEIF_API
+size_t heif_raw_sequence_sample_get_data_size(const heif_raw_sequence_sample*);
+
+LIBHEIF_API
+uint32_t heif_raw_sequence_sample_get_duration(const heif_raw_sequence_sample*);
+
+LIBHEIF_API
+const char* heif_raw_sequence_sample_get_gimi_content_id(const heif_raw_sequence_sample*);
+
+LIBHEIF_API
+int heif_raw_sequence_sample_has_tai_timestamp(const struct heif_raw_sequence_sample*);
+
+LIBHEIF_API
+struct heif_error heif_raw_sequence_sample_get_tai_timestamp(const struct heif_raw_sequence_sample*,
+                                                             struct heif_tai_timestamp_packet* timestamp);
+
 
 LIBHEIF_API
 struct heif_error heif_track_encode_sequence_image(struct heif_track*,

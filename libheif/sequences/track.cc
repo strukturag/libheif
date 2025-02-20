@@ -681,6 +681,7 @@ Error Track::write_sample_data(const std::vector<uint8_t>& raw_data, uint32_t sa
     }
   }
 
+
   m_next_sample_to_be_processed++;
 
   return Error::Ok;
@@ -698,7 +699,7 @@ void Track::add_reference_to_track(uint32_t referenceType, uint32_t to_track_id)
 }
 
 
-Result<std::vector<uint8_t>> Track::get_next_sample_raw_data()
+Result<heif_raw_sequence_sample*> Track::get_next_sample_raw_data()
 {
   if (m_current_chunk > m_chunks.size()) {
     return Error{heif_error_End_of_sequence,
@@ -724,7 +725,45 @@ Result<std::vector<uint8_t>> Track::get_next_sample_raw_data()
     return readResult.error;
   }
 
+  heif_raw_sequence_sample* sample = new heif_raw_sequence_sample();
+  sample->data = *readResult.value;
+
+  // --- read sample auxiliary data
+
+  if (m_aux_reader_content_ids) {
+    auto readResult = m_aux_reader_content_ids->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
+    if (readResult.error) {
+      return readResult.error;
+    }
+
+    if (!readResult.value.empty()) {
+      Result<std::string> convResult = vector_to_string(readResult.value);
+      if (convResult.error) {
+        return convResult.error;
+      }
+
+      sample->gimi_contentId = convResult.value;
+    }
+  }
+
+  if (m_aux_reader_tai_timestamps) {
+    auto readResult = m_aux_reader_tai_timestamps->get_sample_info(get_file().get(), m_next_sample_to_be_processed);
+    if (readResult.error) {
+      return readResult.error;
+    }
+
+    if (!readResult.value.empty()) {
+      auto resultTai = Box_itai::decode_tai_from_vector(readResult.value);
+      if (resultTai.error) {
+        return resultTai.error;
+      }
+
+      sample->timestamp = heif_tai_timestamp_packet_alloc();
+      heif_tai_timestamp_packet_copy(sample->timestamp, &resultTai.value);
+    }
+  }
+
   m_next_sample_to_be_processed++;
 
-  return *readResult.value;
+  return sample;
 }
