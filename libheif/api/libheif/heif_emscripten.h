@@ -134,11 +134,23 @@ static emscripten::val heif_js_context_get_list_of_item_IDs(
 
 
 static emscripten::val heif_js_item_get_item_type_string(
-  const struct heif_context* context, heif_item_id id)
+  const struct heif_context* ctx, heif_item_id id)
 {
-  uint32_t type = heif_item_get_item_type(context, id);
+  uint32_t type = heif_item_get_item_type(ctx, id);
   std::string type_string = fourcc_to_string(type);
   return emscripten::val(type_string);
+}
+
+
+static emscripten::val heif_js_item_get_mime_item_content_type(
+  const struct heif_context* ctx, heif_item_id id)
+{
+  std::string content_type = "";
+  const char* content_type_cstr = heif_item_get_mime_item_content_type(ctx, id);
+  if (content_type_cstr) {
+    content_type = content_type_cstr;
+  }
+  return emscripten::val(content_type);
 }
 
 
@@ -362,6 +374,7 @@ EMSCRIPTEN_BINDINGS(libheif) {
     EXPORT_HEIF_FUNCTION(heif_item_get_item_type);
     EXPORT_HEIF_FUNCTION(heif_js_item_get_item_type_string);
     EXPORT_HEIF_FUNCTION(heif_item_is_item_hidden);
+    EXPORT_HEIF_FUNCTION(heif_js_item_get_mime_item_content_type);
 
     emscripten::enum_<heif_error_code>("heif_error_code")
     .value("heif_error_Ok", heif_error_Ok)
