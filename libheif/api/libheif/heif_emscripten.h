@@ -14,12 +14,12 @@
 #include "heif.h"
 #include "heif_items.h"
 
-static std::string _heif_get_version()
+static std::string heif_js_get_version()
 {
   return heif_get_version();
 }
 
-static struct heif_error _heif_context_read_from_memory(
+static struct heif_error heif_js_context_read_from_memory(
     struct heif_context* context, const std::string& data)
 {
   return heif_context_read_from_memory(context, data.data(), data.size(), nullptr);
@@ -343,8 +343,8 @@ static emscripten::val heif_js_decode_image2(struct heif_image_handle* handle,
 EMSCRIPTEN_BINDINGS(libheif) {
   
     // heif.h
-    emscripten::function("heif_get_version", &_heif_get_version, emscripten::allow_raw_pointers());
-    emscripten::function("heif_context_read_from_memory", &_heif_context_read_from_memory, emscripten::allow_raw_pointers());
+    emscripten::function("heif_get_version", &heif_js_get_version, emscripten::allow_raw_pointers());
+    emscripten::function("heif_context_read_from_memory", &heif_js_context_read_from_memory, emscripten::allow_raw_pointers());
     emscripten::function("heif_check_filetype", &heif_js_check_filetype, emscripten::allow_raw_pointers());
     emscripten::function("heif_context_get_list_of_top_level_image_IDs", &heif_js_context_get_list_of_top_level_image_IDs, emscripten::allow_raw_pointers());
     emscripten::function("heif_context_get_image_handle", &heif_js_context_get_image_handle, emscripten::allow_raw_pointers());
