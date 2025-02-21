@@ -781,6 +781,11 @@ public:
     heif_error err = heif_image_extract_area(mImage.image.get(), tx * mTileSize, ty * mTileSize, mTileSize, mTileSize,
                                              heif_get_global_security_limits(),
                                              &tileImage);
+    if (err.code) {
+      std::cerr << "error extracting tile " << tx << ";" << ty << std::endl;
+      exit(1);
+    }
+
     InputImage tile;
     tile.image = std::shared_ptr<heif_image>(tileImage,
                                              [](heif_image* img) { heif_image_release(img); });
